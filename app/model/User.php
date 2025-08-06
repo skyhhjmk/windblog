@@ -10,7 +10,7 @@ class User extends Model
      *
      * @var string
      */
-    protected $table = 'posts';
+    protected $table = 'users';
 
     /**
      * 重定义主键，默认是id

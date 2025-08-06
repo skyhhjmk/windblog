@@ -34,10 +34,7 @@ Route::group('/debug', function () {
     Route::get('/response-info', [app\api\controller\DebugController::class, 'responseInfo']);
 });
 
-Route::fallback(function () {
-    return view('index/404');
-});
-
+// 导入数据路由
 Route::group('/admin/import', function () {
     Route::any('', [app\admin\controller\ImportController::class, 'index'])->name('admin.import.index');
     Route::post('/upload', [app\admin\controller\ImportController::class, 'upload'])->name('admin.import.upload');
@@ -60,4 +57,9 @@ Route::group('/admin/media', function () {
 // 编辑器路由
 Route::group('/admin/editor', function () {
     Route::post('/upload-image', [app\admin\controller\EditorController::class, 'uploadImage'])->name('admin.editor.upload-image');
+});
+
+
+Route::fallback(function () {
+    return view('index/404');
 });
