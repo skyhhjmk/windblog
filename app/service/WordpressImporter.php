@@ -102,6 +102,9 @@ class WordpressImporter
                     'completed_at' => date('Y-m-d H:i:s')
                 ]);
                 
+                // 清理runtime/imports目录
+                $this->cleanImportDirectory();
+                
                 \support\Log::info("导入任务完成 (无项目): " . $this->importJob->name);
                 return true;
             }
@@ -150,6 +153,9 @@ class WordpressImporter
                 'completed_at' => date('Y-m-d H:i:s')
             ]);
 
+            // 清理runtime/imports目录
+            $this->cleanImportDirectory();
+
             \support\Log::info("导入任务完成: " . $this->importJob->name);
             return true;
         } catch (\Exception $e) {
@@ -166,6 +172,9 @@ class WordpressImporter
                 'status' => 'failed',
                 'message' => '导入失败: ' . $e->getMessage()
             ]);
+            
+            // 即使失败也要清理runtime/imports目录
+            $this->cleanImportDirectory();
             
             return false;
         }
@@ -611,28 +620,56 @@ class WordpressImporter
         $html = preg_replace('/<img\s+src="(.*?)"\s+alt="(.*?)"[^>]*>/i', '![$2]($1)', $html);
         $html = preg_replace('/<img\s+src="(.*?)"[^>]*>/i', '![]($1)', $html);
         
-        // 处理无序列表
-        $html = preg_replace('/<ul>(.*?)<\/ul>/is', "\n$1\n", $html);
-        $html = preg_replace('/<li>(.*?)<\/li>/i', "- $1", $html);
+        // 处理列表
+        $html = preg_replace('/<ul[^>]*>(.*?)<\/ul>/is', "\n$1\n", $html);
+        $html = preg_replace('/<ol[^>]*>(.*?)<\/ol>/is', "\n$1\n", $html);
+        $html = preg_replace('/<li[^>]*>(.*?)<\/li>/i', "- $1\n", $html);
         
-        // 处理有序列表
-        $html = preg_replace('/<ol>(.*?)<\/ol>/is', "\n$1\n", $html);
-        // 注意：有序列表的数字需要特殊处理，这里简化处理
+        // 处理段落
+        $html = preg_replace('/<p[^>]*>(.*?)<\/p>/is', "$1\n\n", $html);
         
-        // 处理代码块
-        $html = preg_replace('/<pre><code>(.*?)<\/code><\/pre>/is', "```\n$1\n```", $html);
-        $html = preg_replace('/<code>(.*?)<\/code>/i', '`$1`', $html);
-        
-        // 处理段落和换行
-        $html = preg_replace('/<p>(.*?)<\/p>/i', "$1\n", $html);
+        // 处理换行
         $html = preg_replace('/<br\s*\/?>/i', "\n", $html);
         
-        // 移除剩余HTML标签
+        // 移除其他HTML标签
         $html = strip_tags($html);
         
-        // 清理多余的空白行
-        $html = preg_replace('/\n\s*\n/', "\n\n", $html);
-        
         return trim($html);
+    }
+    
+    /**
+     * 清理runtime/imports目录
+     *
+     * @return void
+     */
+    protected function cleanImportDirectory(): void
+    {
+        try {
+            $importDir = runtime_path('imports');
+            if (!is_dir($importDir)) {
+                return;
+            }
+            
+            // 获取目录中的所有文件
+            $files = scandir($importDir);
+            foreach ($files as $file) {
+                // 跳过当前目录和上级目录
+                if ($file === '.' || $file === '..') {
+                    continue;
+                }
+                
+                $filePath = $importDir . DIRECTORY_SEPARATOR . $file;
+                
+                // 删除文件（不删除目录）
+                if (is_file($filePath)) {
+                    unlink($filePath);
+                    \support\Log::info("删除导入临时文件: " . $filePath);
+                }
+            }
+            
+            \support\Log::info("导入目录清理完成: " . $importDir);
+        } catch (\Exception $e) {
+            \support\Log::error('清理导入目录时出错: ' . $e->getMessage(), ['exception' => $e]);
+        }
     }
 }
