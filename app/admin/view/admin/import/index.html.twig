@@ -1,0 +1,301 @@
+{% extends 'admin/base.html.twig' %}
+
+{% block title %}WordPress导入工具{% endblock %}
+
+{% block content %}
+<div class="container mx-auto max-w-4xl bg-white p-6 rounded-lg shadow-md my-8">
+    <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">WordPress导入工具</h1>
+    
+    <!-- 实时更新提示 -->
+    <div id="liveUpdateIndicator" class="hidden mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded flex items-center">
+        <svg class="animate-spin h-5 w-5 mr-2 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span>实时更新中，无需手动刷新页面</span>
+    </div>
+    
+    <form id="importForm" enctype="multipart/form-data" class="mb-10">
+        <div class="mb-4">
+            <label for="import_file" class="block text-gray-700 font-bold mb-2">选择WordPress导出文件 (XML格式):</label>
+            <input type="file" id="import_file" name="import_file" accept=".xml" required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        
+        <div class="mb-4">
+            <label for="default_author" class="block text-gray-700 font-bold mb-2">默认作者:</label>
+            <select id="default_author" name="default_author" required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="system">System (不归属任何用户)</option>
+                {% for user in users %}
+                <option value="{{ user.id }}">{{ user.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="mb-4">
+            <div class="flex items-center">
+                <input type="checkbox" id="create_users" name="create_users" value="1"
+                    class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                <label for="create_users" class="ml-2 text-sm font-medium text-gray-900">为WordPress中不存在的用户创建新用户</label>
+            </div>
+        </div>
+        
+        <div class="mb-4">
+            <div class="flex items-center">
+                <input type="checkbox" id="import_attachments" name="import_attachments" value="1"
+                    class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                <label for="import_attachments" class="ml-2 text-sm font-medium text-gray-900">导入附件</label>
+            </div>
+        </div>
+        
+        <div class="mb-6">
+            <div class="flex items-center">
+                <input type="checkbox" id="download_attachments" name="download_attachments" value="1"
+                    class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                <label for="download_attachments" class="ml-2 text-sm font-medium text-gray-900">下载并保存附件文件</label>
+            </div>
+        </div>
+        
+        <!-- 重复处理模式 -->
+        <div class="mb-6">
+            <label class="block text-gray-700 font-bold mb-2">重复文章处理方式:</label>
+            <div class="flex items-center mb-2">
+                <input type="radio" id="duplicate_skip" name="duplicate_mode" value="skip" checked
+                    class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500">
+                <label for="duplicate_skip" class="ml-2 text-sm font-medium text-gray-900">跳过重复文章</label>
+            </div>
+            <div class="flex items-center mb-2">
+                <input type="radio" id="duplicate_overwrite" name="duplicate_mode" value="overwrite"
+                    class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500">
+                <label for="duplicate_overwrite" class="ml-2 text-sm font-medium text-gray-900">覆盖重复文章</label>
+            </div>
+        </div>
+        
+        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+            开始导入
+        </button>
+    </form>
+    
+    <!-- 重复导入确认模态框 -->
+    <div id="duplicateModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 w-1/2">
+            <h3 class="text-lg font-bold mb-4">检测到重复导入任务</h3>
+            <p class="mb-4" id="duplicateMessage">检测到相同文件名的导入任务正在进行中，请选择处理方式：</p>
+            <div class="flex justify-end gap-2">
+                <button id="cancelDuplicate" class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">取消</button>
+                <button id="forceImport" class="px-4 py-2 bg-yellow-500 rounded hover:bg-yellow-600 text-white">强制导入</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="job-list">
+        <h2 class="text-2xl font-bold text-gray-800 mb-4">导入任务列表</h2>
+        <div id="jobsContainer">
+            {% for job in jobs %}
+            <div class="job-item border border-gray-200 rounded-lg p-4 mb-4 bg-white shadow-sm" data-job-id="{{ job.id }}">
+                <div class="flex justify-between items-center mb-3">
+                    <div class="font-bold text-lg text-gray-800">{{ job.name }}</div>
+                    <div class="job-status px-2 py-1 rounded text-xs font-medium
+                        {% if job.status == 'pending' %}bg-yellow-100 text-yellow-800
+                        {% elseif job.status == 'processing' %}bg-blue-100 text-blue-800
+                        {% elseif job.status == 'completed' %}bg-green-100 text-green-800
+                        {% else %}bg-red-100 text-red-800{% endif %}">
+                        {{ job.status == 'pending' ? '待处理' : 
+                           job.status == 'processing' ? '处理中' : 
+                           job.status == 'completed' ? '已完成' : '失败' }}
+                    </div>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2.5 mb-3">
+                    <div class="bg-blue-600 h-2.5 rounded-full progress-fill" style="width: {{ job.progress }}%"></div>
+                </div>
+                <div class="job-message text-gray-600 text-sm italic mb-3">{{ job.message }}</div>
+                <div class="job-actions flex gap-2">
+                    {% if job.status == 'failed' or job.status == 'completed' %}
+                    <button class="bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-1 px-3 rounded text-sm" 
+                        onclick="resetJob({{ job.id }})">
+                        重置
+                    </button>
+                    {% endif %}
+                    <button class="bg-red-600 hover:bg-red-700 text-white font-medium py-1 px-3 rounded text-sm" 
+                        onclick="deleteJob({{ job.id }})">
+                        删除
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+    // 显示实时更新提示
+    document.getElementById('liveUpdateIndicator').classList.remove('hidden');
+    
+    let duplicateJobId = null;
+    
+    document.getElementById('importForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        
+        fetch('/admin/import/upload', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.code === 200) {
+                alert('导入任务创建成功');
+                location.reload();
+            } else if (data.code === 409) {
+                // 显示重复导入确认模态框
+                duplicateJobId = data.data.job_id;
+                document.getElementById('duplicateMessage').textContent = 
+                    '检测到相同文件名的导入任务正在进行中（状态：' + 
+                    (data.data.status === 'pending' ? '待处理' : 
+                     data.data.status === 'processing' ? '处理中' : 
+                     data.data.status === 'completed' ? '已完成' : '失败') + 
+                    '），请选择处理方式：';
+                document.getElementById('duplicateModal').classList.remove('hidden');
+                document.getElementById('duplicateModal').classList.add('flex');
+            } else {
+                alert('导入失败: ' + data.msg);
+            }
+        })
+        .catch(error => {
+            alert('导入过程中发生错误');
+            console.error(error);
+        });
+    });
+    
+    // 取消重复导入
+    document.getElementById('cancelDuplicate').addEventListener('click', function() {
+        document.getElementById('duplicateModal').classList.add('hidden');
+        document.getElementById('duplicateModal').classList.remove('flex');
+    });
+    
+    // 强制导入
+    document.getElementById('forceImport').addEventListener('click', function() {
+        const formData = new FormData(document.getElementById('importForm'));
+        formData.append('duplicate_mode', document.querySelector('input[name="duplicate_mode"]:checked').value);
+        
+        fetch('/admin/import/force-upload', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.code === 200) {
+                alert('导入任务创建成功');
+                location.reload();
+            } else {
+                alert('导入失败: ' + data.msg);
+            }
+        })
+        .catch(error => {
+            alert('导入过程中发生错误');
+            console.error(error);
+        })
+        .finally(() => {
+            document.getElementById('duplicateModal').classList.add('hidden');
+            document.getElementById('duplicateModal').classList.remove('flex');
+        });
+    });
+    
+    // 重置任务
+    function resetJob(jobId) {
+        if (confirm('确定要重置这个任务吗？这将使任务重新进入待处理队列。')) {
+            fetch('/admin/import/reset/' + jobId, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 200) {
+                    alert('任务重置成功');
+                    location.reload();
+                } else {
+                    alert('重置失败: ' + data.msg);
+                }
+            })
+            .catch(error => {
+                alert('重置过程中发生错误');
+                console.error(error);
+            });
+        }
+    }
+    
+    // 删除任务
+    function deleteJob(jobId) {
+        if (confirm('确定要删除这个任务吗？此操作不可恢复。')) {
+            fetch('/admin/import/delete/' + jobId, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 200) {
+                    alert('任务删除成功');
+                    location.reload();
+                } else {
+                    alert('删除失败: ' + data.msg);
+                }
+            })
+            .catch(error => {
+                alert('删除过程中发生错误');
+                console.error(error);
+            });
+        }
+    }
+    
+    // 定时刷新任务状态
+    setInterval(function() {
+        document.querySelectorAll('.job-item').forEach(function(jobItem) {
+            const jobId = jobItem.getAttribute('data-job-id');
+            const statusElement = jobItem.querySelector('.job-status');
+            
+            // 只有处理中和待处理的任务才需要刷新状态
+            if (statusElement.classList.contains('bg-blue-100') || 
+                statusElement.classList.contains('bg-yellow-100')) {
+                
+                fetch('/admin/import/status/' + jobId)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 200) {
+                        const status = data.data.status;
+                        const progress = data.data.progress;
+                        const message = data.data.message;
+                        
+                        // 更新状态
+                        statusElement.className = 'job-status px-2 py-1 rounded text-xs font-medium ';
+                        if (status === 'pending') {
+                            statusElement.classList.add('bg-yellow-100', 'text-yellow-800');
+                            statusElement.textContent = '待处理';
+                        } else if (status === 'processing') {
+                            statusElement.classList.add('bg-blue-100', 'text-blue-800');
+                            statusElement.textContent = '处理中';
+                        } else if (status === 'completed') {
+                            statusElement.classList.add('bg-green-100', 'text-green-800');
+                            statusElement.textContent = '已完成';
+                        } else {
+                            statusElement.classList.add('bg-red-100', 'text-red-800');
+                            statusElement.textContent = '失败';
+                        }
+                        
+                        // 更新进度条
+                        jobItem.querySelector('.progress-fill').style.width = progress + '%';
+                        
+                        // 更新消息
+                        jobItem.querySelector('.job-message').textContent = message;
+                    }
+                });
+            }
+        });
+    }, 30000);  // 30s
+</script>
+{% endblock %}

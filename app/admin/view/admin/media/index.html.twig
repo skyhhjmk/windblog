@@ -1,0 +1,144 @@
+{% extends 'admin/base.html.twig' %}
+
+{% block title %}媒体库{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-lg shadow-md p-6">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">媒体库</h1>
+        <a href="{{ path('admin.media.upload') }}" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+            上传文件
+        </a>
+    </div>
+    
+    <form class="mb-6 flex gap-2" method="GET">
+        <input type="text" name="search" value="{{ search }}" placeholder="搜索文件名..." 
+               class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <button type="submit" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
+            搜索
+        </button>
+    </form>
+    
+    <div id="message" class="hidden mb-6 p-4 rounded"></div>
+    
+    {% if media.total > 0 %}
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {% for item in media %}
+                <div class="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                    <div class="h-32 flex items-center justify-center bg-gray-100">
+                        {% if item.is_image %}
+                            <img src="{{ item.thumb_url }}" alt="{{ item.alt_text }}" class="max-h-full max-w-full object-contain">
+                        {% else %}
+                            <div class="text-4xl">📁</div>
+                        {% endif %}
+                    </div>
+                    <div class="p-3">
+                        <div class="text-sm font-medium text-gray-900 truncate" title="{{ item.original_name }}">{{ item.original_name }}</div>
+                        <div class="mt-2 flex justify-between gap-2">
+                            <a href="{{ path('admin.media.edit', {'id': item.id}) }}" 
+                               class="text-xs bg-blue-500 hover:bg-blue-700 text-white py-1 px-2 rounded">
+                                编辑
+                            </a>
+                            <button class="delete-btn text-xs bg-red-500 hover:bg-red-700 text-white py-1 px-2 rounded" 
+                                    data-id="{{ item.id }}">
+                                删除
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        
+        {% if media.lastPage > 1 %}
+            <div class="mt-8 flex justify-center">
+                <nav class="flex items-center space-x-1">
+                    {% if media.currentPage > 1 %}
+                        <a href="{{ path('admin.media.index', {'page': media.currentPage - 1, 'search': search}) }}" 
+                           class="px-3 py-2 rounded-md bg-white border border-gray-300 text-gray-700 hover:bg-gray-50">
+                            上一页
+                        </a>
+                    {% endif %}
+                    
+                    {% for i in 1..media.lastPage %}
+                        {% if i == media.currentPage %}
+                            <span class="px-3 py-2 rounded-md bg-blue-500 text-white">
+                                {{ i }}
+                            </span>
+                        {% else %}
+                            <a href="{{ path('admin.media.index', {'page': i, 'search': search}) }}" 
+                               class="px-3 py-2 rounded-md bg-white border border-gray-300 text-gray-700 hover:bg-gray-50">
+                                {{ i }}
+                            </a>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if media.currentPage < media.lastPage %}
+                        <a href="{{ path('admin.media.index', {'page': media.currentPage + 1, 'search': search}) }}" 
+                           class="px-3 py-2 rounded-md bg-white border border-gray-300 text-gray-700 hover:bg-gray-50">
+                            下一页
+                        </a>
+                    {% endif %}
+                </nav>
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="text-center py-12">
+            <div class="text-gray-500 mb-4">媒体库中还没有文件。</div>
+            <a href="{{ path('admin.media.upload') }}" 
+               class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                上传第一个文件
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+    // 删除确认
+    document.querySelectorAll('.delete-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const id = this.getAttribute('data-id');
+            if (confirm('确定要删除这个文件吗？')) {
+                fetch('{{ path("admin.media.delete", {"id": "ID_PLACEHOLDER"}) }}'.replace('ID_PLACEHOLDER', id), {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    const messageEl = document.getElementById('message');
+                    messageEl.classList.remove('hidden');
+                    
+                    if (data.code === 200) {
+                        messageEl.className = 'mb-6 p-4 rounded bg-green-100 text-green-700';
+                        messageEl.textContent = data.msg;
+                        // 重新加载页面以更新列表
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1000);
+                    } else {
+                        messageEl.className = 'mb-6 p-4 rounded bg-red-100 text-red-700';
+                        messageEl.textContent = data.msg;
+                    }
+                    
+                    // 3秒后隐藏消息
+                    setTimeout(() => {
+                        messageEl.classList.add('hidden');
+                    }, 3000);
+                })
+                .catch(error => {
+                    const messageEl = document.getElementById('message');
+                    messageEl.classList.remove('hidden');
+                    messageEl.className = 'mb-6 p-4 rounded bg-red-100 text-red-700';
+                    messageEl.textContent = '删除过程中发生错误: ' + error.message;
+                    
+                    // 3秒后隐藏消息
+                    setTimeout(() => {
+                        messageEl.classList.add('hidden');
+                    }, 3000);
+                });
+            }
+        });
+    });
+</script>
+{% endblock %}

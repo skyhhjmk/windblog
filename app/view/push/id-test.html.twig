@@ -1,0 +1,15 @@
+<h2>{{ id }}</h2>
+<script src="/plugin/webman/push/push.js"></script>
+<script>
+    // 建立连接
+    var connection = new Push({
+        url: 'ws://127.0.0.1:3131', // websocket地址
+        app_key: 'e9d56e94590f9f922259c05c1753e5f8',
+        auth: '/plugin/webman/push/auth' // 订阅鉴权(仅限于私有频道)
+    });
+    var user_channel = connection.subscribe('private-user-1');
+    user_channel.on('client-message', function (data) {
+        //
+    });
+    user_channel.trigger('client-message', {form_uid:2, content:"hello"});
+</script>

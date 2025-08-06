@@ -1,0 +1,141 @@
+{% extends 'admin/base.html.twig' %}
+
+{% block title %}上传媒体文件 - 后台管理{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-lg shadow-md p-6">
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">上传媒体文件</h1>
+        <p class="text-gray-600 mt-2">选择并上传媒体文件到媒体库</p>
+    </div>
+    
+    <form id="uploadForm" enctype="multipart/form-data" class="space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="md:col-span-2">
+                <label for="file" class="block text-sm font-medium text-gray-700 mb-1">选择文件 *</label>
+                <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                    <div class="space-y-1 text-center">
+                        <div class="mx-auto h-12 w-12 text-gray-400">
+                            <i class="fas fa-cloud-upload-alt fa-3x"></i>
+                        </div>
+                        <div class="flex text-sm text-gray-600">
+                            <label for="file" class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none">
+                                <span>上传文件</span>
+                                <input id="file" name="file" type="file" class="sr-only" required>
+                            </label>
+                            <p class="pl-1">或拖拽文件到此处</p>
+                        </div>
+                        <p class="text-xs text-gray-500">支持图片、视频、音频、文档等格式</p>
+                        <p id="file-name" class="text-xs text-gray-500 mt-2 hidden">已选择文件: <span></span></p>
+                    </div>
+                </div>
+            </div>
+            
+            <div>
+                <label for="alt_text" class="block text-sm font-medium text-gray-700 mb-1">替代文本 (Alt Text)</label>
+                <input type="text" id="alt_text" name="alt_text" placeholder="图片的替代文本描述"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <p class="mt-1 text-xs text-gray-500">为图片提供替代文本，有助于SEO和无障碍访问</p>
+            </div>
+            
+            <div>
+                <label for="caption" class="block text-sm font-medium text-gray-700 mb-1">标题 (Caption)</label>
+                <input type="text" id="caption" name="caption" placeholder="媒体文件的标题"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            
+            <div class="md:col-span-2">
+                <label for="description" class="block text-sm font-medium text-gray-700 mb-1">描述 (Description)</label>
+                <textarea id="description" name="description" rows="3" placeholder="媒体文件的详细描述"
+                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+            </div>
+        </div>
+        
+        <div class="flex justify-end space-x-4 pt-4">
+            <a href="{{ path('admin.media.index') }}" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <i class="fas fa-arrow-left mr-1"></i> 返回媒体库
+            </a>
+            <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <i class="fas fa-upload mr-1"></i> 上传文件
+            </button>
+        </div>
+    </form>
+    
+    <div id="message" class="hidden mt-6 p-4 rounded">
+    </div>
+</div>
+
+<script>
+    // 文件选择预览功能
+    document.getElementById('file').addEventListener('change', function(e) {
+        const fileName = e.target.files[0]?.name;
+        const fileNameElement = document.getElementById('file-name');
+        
+        if (fileName) {
+            fileNameElement.querySelector('span').textContent = fileName;
+            fileNameElement.classList.remove('hidden');
+        } else {
+            fileNameElement.classList.add('hidden');
+        }
+    });
+
+    document.getElementById('uploadForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalBtnText = submitBtn.innerHTML;
+        
+        // 显示加载状态
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> 上传中...';
+        submitBtn.disabled = true;
+        
+        // 发送上传请求
+        fetch('{{ path("admin.media.do-upload") }}', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            const messageEl = document.getElementById('message');
+            messageEl.classList.remove('hidden');
+            
+            if (data.code === 200) {
+                messageEl.className = 'mt-6 p-4 rounded bg-green-100 text-green-700';
+                messageEl.innerHTML = '<i class="fas fa-check-circle mr-1"></i> ' + data.msg;
+                // 重置表单
+                document.getElementById('uploadForm').reset();
+                // 隐藏文件名显示
+                document.getElementById('file-name').classList.add('hidden');
+            } else {
+                messageEl.className = 'mt-6 p-4 rounded bg-red-100 text-red-700';
+                messageEl.innerHTML = '<i class="fas fa-exclamation-circle mr-1"></i> ' + data.msg;
+            }
+            
+            // 恢复按钮状态
+            submitBtn.innerHTML = originalBtnText;
+            submitBtn.disabled = false;
+            
+            // 3秒后隐藏消息
+            setTimeout(() => {
+                messageEl.classList.add('hidden');
+            }, 3000);
+        })
+        .catch(error => {
+            const messageEl = document.getElementById('message');
+            messageEl.classList.remove('hidden');
+            messageEl.className = 'mt-6 p-4 rounded bg-red-100 text-red-700';
+            messageEl.innerHTML = '<i class="fas fa-exclamation-circle mr-1"></i> 上传过程中发生错误: ' + error.message;
+            
+            // 恢复按钮状态
+            submitBtn.innerHTML = originalBtnText;
+            submitBtn.disabled = false;
+            
+            // 3秒后隐藏消息
+            setTimeout(() => {
+                messageEl.classList.add('hidden');
+            }, 3000);
+        });
+    });
+</script>
+{% endblock %}

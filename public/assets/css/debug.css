@@ -1,0 +1,27 @@
+/* 由于使用Tailwind CSS重写，大部分样式已移除 */
+/* 仅保留必要的基础样式 */
+
+.debug-info {
+    font-family: monospace;
+    white-space: pre-wrap;
+    overflow-x: auto;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.debug-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.debug-table th,
+.debug-table td {
+    padding: 8px;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.debug-table th {
+    background-color: #f3f4f6;
+    font-weight: bold;
+}

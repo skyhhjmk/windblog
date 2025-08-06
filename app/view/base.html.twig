@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ page_title|default('风屿雨博客') }}{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css"
+          integrity="sha512-DxV+EoADOkOygM4IR9yXP8Sb2qwgidEmeqAEmDKIOfPRQZOWbXCzLC6vjbZyy0vPisbH2SyW27+ddLVCN+OMzQ=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"/>
+    <style>
+        .blog-container {
+            max-width: 1200px;
+        }
+
+        /* 添加平滑过渡效果 */
+        body {
+            transition: all 0.3s ease;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col">
+<!-- 顶部导航 -->
+<header class="bg-white shadow-sm sticky top-0 z-10">
+    <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+        <a href="/" class="text-2xl font-bold text-gray-800 flex items-center">
+            <i class="fas fa-blog text-blue-600 mr-2"></i>
+            <span>风屿雨博客</span>
+        </a>
+        <nav class="hidden md:block">
+            <ul class="flex space-x-6">
+                <li>
+                    <a href="/"
+                       class="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center">
+                        <i class="fas fa-home mr-1"></i>
+                        首页
+                    </a>
+                </li>
+                <li>
+                    <a href="#"
+                       class="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center">
+                        <i class="fas fa-tags mr-1"></i>
+                        分类
+                    </a>
+                </li>
+                <li>
+                    <a href="/link"
+                       class="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        友情链接
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin"
+                       class="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center">
+                        <i class="fas fa-cog mr-1"></i>
+                        管理后台
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        <button class="md:hidden text-gray-600">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+        </button>
+    </div>
+</header>
+
+<!-- 主要内容区 -->
+<main class="flex-grow container mx-auto px-4 py-8 blog-container">
+    <div class="flex flex-col md:flex-row gap-8">
+        <!-- 主内容区域 - 占3/4宽度 -->
+        <div class="w-full md:w-3/4">
+            {% block content %}{% endblock %}
+        </div>
+        <!-- 侧边栏 - 占1/4宽度 -->
+        <div class="w-full md:w-1/4">
+            <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">关于博主</h3>
+                <p class="text-gray-600">欢迎访问我的博客，这里记录了我的技术分享和生活感悟。</p>
+            </div>
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">最新文章</h3>
+                <ul class="space-y-2">
+                    <li><a href="#" class="text-blue-600 hover:underline">Webman框架使用教程</a></li>
+                    <li><a href="#" class="text-blue-600 hover:underline">PHP设计模式详解</a></li>
+                    <li><a href="#" class="text-blue-600 hover:underline">前端开发技巧分享</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- 页脚 -->
+<footer class="bg-white border-t mt-12 py-8">
+    <div class="container mx-auto px-4">
+        <div class="flex flex-col md:flex-row justify-between items-center">
+            <div class="mb-4 md:mb-0">
+                <p class="text-gray-600">
+                    &copy; {{ 'now'|date('Y') }} {{ page_title|default('风屿雨博客') }} - 基于 Webman 框架构建
+                </p>
+            </div>
+            <div class="flex space-x-4">
+                <a href="#" class="text-gray-500 hover:text-blue-600">
+                    <i class="fab fa-github fa-lg"></i>
+                </a>
+                <a href="#" class="text-gray-500 hover:text-blue-600">
+                    <i class="fab fa-twitter fa-lg"></i>
+                </a>
+                <a href="#" class="text-gray-500 hover:text-blue-600">
+                    <i class="fab fa-weibo fa-lg"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
+        integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

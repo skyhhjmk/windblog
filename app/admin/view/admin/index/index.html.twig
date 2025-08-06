@@ -1,0 +1,130 @@
+{% extends 'admin/base.html.twig' %}
+
+{% block title %}仪表盘{% endblock %}
+
+{% block content %}
+    <div class="mx-auto max-w-6xl">
+        <div class="mb-6">
+            <h1 class="text-3xl font-bold text-gray-800">仪表盘</h1>
+            <p class="text-gray-600">欢迎使用后台管理系统</p>
+        </div>
+
+        <!-- 统计卡片 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
+                        <i class="fas fa-file-alt text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-gray-500">文章总数</p>
+                        <p class="text-2xl font-bold">{{ post_count }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-green-100 text-green-600 mr-4">
+                        <i class="fas fa-image text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-gray-500">媒体文件</p>
+                        <p class="text-2xl font-bold">{{ media_count }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-yellow-100 text-yellow-600 mr-4">
+                        <i class="fas fa-users text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-gray-500">用户数量</p>
+                        <p class="text-2xl font-bold">{{ user_count }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-purple-100 text-purple-600 mr-4">
+                        <i class="fas fa-comments text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-gray-500">评论数量</p>
+                        <p class="text-2xl font-bold">{{ comment_count }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 最近活动 -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">最近文章</h2>
+                <div class="space-y-4">
+                    <div class="border-b border-gray-100 pb-4">
+                        <h3 class="font-medium text-gray-800">如何使用Markdown编辑器</h3>
+                        <p class="text-gray-600 text-sm">发布于 2023-06-15</p>
+                    </div>
+                    <div class="border-b border-gray-100 pb-4">
+                        <h3 class="font-medium text-gray-800">系统更新日志</h3>
+                        <p class="text-gray-600 text-sm">发布于 2023-06-10</p>
+                    </div>
+                    <div class="border-b border-gray-100 pb-4">
+                        <h3 class="font-medium text-gray-800">媒体库管理指南</h3>
+                        <p class="text-gray-600 text-sm">发布于 2023-06-05</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">系统状态</h2>
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600">服务器状态</span>
+                        {% if server_status == 'normal' %}
+                            <span class="px-2 py-1 bg-green-100 text-green-800 rounded text-sm">{{ server_status_text }}</span>
+                        {% elseif server_status == 'warning' %}
+                            <span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-sm">{{ server_status_text }}</span>
+                        {% elseif server_status == 'error' %}
+                            <span class="px-2 py-1 bg-red-100 text-red-800 rounded text-sm">{{ server_status_text }}</span>
+                        {% else %}
+                            <span class="px-2 py-1 bg-gray-100 text-gray-800 rounded text-sm">未知状态</span>
+                        {% endif %}
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600">数据库连接</span>
+                        {% if db_connection_status == 'normal' %}
+                            <span class="px-2 py-1 bg-green-100 text-green-800 rounded text-sm">{{ db_connection_status_text }}</span>
+                        {% elseif db_connection_status == 'warning' %}
+                            <span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-sm">{{ db_connection_status_text }}</span>
+                        {% elseif db_connection_status == 'error' %}
+                            <span class="px-2 py-1 bg-red-100 text-red-800 rounded text-sm">{{ db_connection_status_text }}</span>
+                        {% else %}
+                            <span class="px-2 py-1 bg-gray-100 text-gray-800 rounded text-sm">未知状态</span>
+                        {% endif %}
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600">缓存状态</span>
+                        {% if cache_status == 'normal' %}
+                            <span class="px-2 py-1 bg-green-100 text-green-800 rounded text-sm">{{ cache_status_text }}</span>
+                        {% elseif cache_status == 'warning' %}
+                            <span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-sm">{{ cache_status_text }}</span>
+                        {% elseif cache_status == 'error' %}
+                            <span class="px-2 py-1 bg-red-100 text-red-800 rounded text-sm">{{ cache_status_text }}</span>
+                        {% else %}
+                            <span class="px-2 py-1 bg-gray-100 text-gray-800 rounded text-sm">未知状态</span>
+                        {% endif %}
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600">磁盘使用率</span>
+                        <span class="text-gray-800">{{ disk_usage_text|default('未知') }}%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ post.title }} - {{ page_title|default('风屿雨博客') }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <article class="bg-white rounded-xl shadow-md overflow-hidden">
+        <!-- 文章头部 -->
+        <div class="p-6 border-b border-gray-100">
+            <h1 class="text-3xl font-bold text-gray-800 mb-4">{{ post.title }}</h1>
+            <div class="flex items-center text-gray-500 text-sm">
+                <span class="mr-4 flex items-center">
+                    <i class="far fa-calendar-alt mr-1"></i>
+                    {{ post.created_at|date('Y-m-d H:i') }}
+                </span>
+                <span class="flex items-center">
+                    <i class="far fa-user mr-1"></i>
+                    {{ post.author }}
+                </span>
+            </div>
+        </div>
+        
+        <!-- 文章内容 -->
+        <div class="p-6">
+            <div class="prose max-w-none">
+                {% if post.content_type == 'markdown' %}
+                    {{ post.content|nl2br }}
+                {% elseif post.content_type == 'html' %}
+                    {{ post.content|raw }}
+                {% else %}
+                    {{ post.content|nl2br }}
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- 文章底部 -->
+        <div class="p-6 border-t border-gray-100">
+            <div class="flex justify-between items-center">
+                <a href="/"
+                   class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium">
+                    <i class="fas fa-arrow-left mr-1"></i>
+                    返回首页
+                </a>
+                <div class="text-sm text-gray-500">
+                    <i class="far fa-clock mr-1"></i>
+                    最后更新: {{ post.updated_at|date('Y-m-d H:i') }}
+                </div>
+            </div>
+        </div>
+    </article>
+</div>
+{% endblock %}

@@ -1,0 +1,34 @@
+<script src="/plugin/webman/push/push.js"></script>
+<script>
+    // 建立连接
+    var connection = new Push({
+        url: 'ws://127.0.0.1:3131', // websocket地址
+        app_key: 'e9d56e94590f9f922259c05c1753e5f8',
+        auth: '/plugin/webman/push/auth' // 订阅鉴权(仅限于私有频道)
+    });
+    // 假设用户uid为1
+    var uid = 2;
+    // 浏览器监听user-1频道的消息，也就是用户uid为1的用户消息
+    var user_channel = connection.subscribe('private-user-' + uid);
+
+    // 当user-1频道有message事件的消息时
+    user_channel.on('client-message', function (data) {
+        // data里是消息内容
+        console.log(data);
+    });
+    // 当user-1频道有friendApply事件时消息时
+    user_channel.on('friendApply', function (data) {
+        // data里是好友申请相关信息
+        console.log(data);
+    });
+
+    // 假设群组id为2
+    var group_id = 2;
+    // 浏览器监听group-2频道的消息，也就是监听群组2的群消息
+    var group_channel = connection.subscribe('group-' + group_id);
+    // 当群组2有message消息事件时
+    group_channel.on('message', function (data) {
+        // data里是消息内容
+        console.log(data);
+    });
+</script>
