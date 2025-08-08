@@ -8,3 +8,4 @@
 /tests/.phpunit.result.cache
 /public/uploads/
 /installed.lock
+/.phpunit.cache/

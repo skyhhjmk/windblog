@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "a2c6f84ddff85c6dd4dfd64e6eb194cf",
+    "content-hash": "18102ed279213133a3e71438da3d8146",
     "packages": [
         {
             "name": "brick/math",
@@ -1359,6 +1359,60 @@
                 "source": "https://github.com/laravel/framework"
             },
             "time": "2025-05-13T15:08:45+00:00"
+        },
+        {
+            "name": "illuminate/redis",
+            "version": "v12.21.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/illuminate/redis.git",
+                "reference": "f9bd649332a58298b63e8d254e414833ccfad15f"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/illuminate/redis/zipball/f9bd649332a58298b63e8d254e414833ccfad15f",
+                "reference": "f9bd649332a58298b63e8d254e414833ccfad15f",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/collections": "^12.0",
+                "illuminate/contracts": "^12.0",
+                "illuminate/macroable": "^12.0",
+                "illuminate/support": "^12.0",
+                "php": "^8.2"
+            },
+            "suggest": {
+                "ext-redis": "Required to use the phpredis connector (^4.0|^5.0|^6.0).",
+                "predis/predis": "Required to use the predis connector (^2.3|^3.0)."
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "12.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Illuminate\\Redis\\": ""
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Taylor Otwell",
+                    "email": "taylor@laravel.com"
+                }
+            ],
+            "description": "The Illuminate Redis package.",
+            "homepage": "https://laravel.com",
+            "support": {
+                "issues": "https://github.com/laravel/framework/issues",
+                "source": "https://github.com/laravel/framework"
+            },
+            "time": "2025-07-16T13:18:38+00:00"
         },
         {
             "name": "illuminate/session",
@@ -4881,6 +4935,42 @@
                 "source": "https://github.com/webman-php/push/tree/v1.1.1"
             },
             "time": "2025-05-15T14:32:34+00:00"
+        },
+        {
+            "name": "webman/redis",
+            "version": "v2.1.3",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/webman-php/redis.git",
+                "reference": "559eb1692d39c6fef5cf526223fff728be6c0fb9"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/webman-php/redis/zipball/559eb1692d39c6fef5cf526223fff728be6c0fb9",
+                "reference": "559eb1692d39c6fef5cf526223fff728be6c0fb9",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/redis": "^10.0 || ^11.0 || ^12.0",
+                "workerman/webman-framework": "^2.1 || dev-master"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "support\\": "src/support",
+                    "Webman\\Redis\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "Webman redis",
+            "support": {
+                "issues": "https://github.com/webman-php/redis/issues",
+                "source": "https://github.com/webman-php/redis/tree/v2.1.3"
+            },
+            "time": "2025-03-14T03:52:14+00:00"
         },
         {
             "name": "workerman/coroutine",

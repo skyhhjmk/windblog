@@ -32,11 +32,13 @@ class StaticFile implements MiddlewareInterface
         }
         /** @var Response $response */
         $response = $handler($request);
-        // Add cross domain HTTP header
-        /*$response->withHeaders([
-            'Access-Control-Allow-Origin'      => '*',
-            'Access-Control-Allow-Credentials' => 'true',
-        ]);*/
+        if (blog_config('allow_static_cors', false)){
+            // Add cross domain HTTP header
+            $response->withHeaders([
+                'Access-Control-Allow-Origin'      => blog_config('allow_static_cors_origin', '*'),
+                'Access-Control-Allow-Credentials' => blog_config('allow_static_cors_credentials', true),
+            ]);
+        }
         return $response;
     }
 }

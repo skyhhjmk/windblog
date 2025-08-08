@@ -56,6 +56,7 @@ Route::group('/admin/media', function () {
 
 // 编辑器路由
 Route::group('/admin/editor', function () {
+    Route::any('', [app\admin\controller\EditorController::class, 'index'])->name('admin.editor.index');
     Route::post('/upload-image', [app\admin\controller\EditorController::class, 'uploadImage'])->name('admin.editor.upload-image');
 });
 

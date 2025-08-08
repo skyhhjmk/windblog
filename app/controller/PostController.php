@@ -11,7 +11,7 @@ class PostController
 
     public function index(Request $request, mixed $keyword = null)
     {
-        switch (get_blog_config('url_mode', 'mix')) {
+        switch (blog_config('url_mode', 'mix')) {
             case 'slug':
                 // slug模式
                 $post = Post::where('slug', $keyword)->first();
@@ -39,7 +39,7 @@ class PostController
                 break;
         }
         return view('index/post', [
-            'page_title' => get_blog_config('title', 'WindBlog') . ' - ' . $post['title'],
+            'page_title' => blog_config('title', 'WindBlog') . ' - ' . $post['title'],
             'post' => $post,
         ]);
     }

@@ -1,5 +1,7 @@
 <?php
-
+/*
+ * 这里面有很多屎山
+ */
 namespace app\controller;
 
 use support\Request;
@@ -16,7 +18,7 @@ class IndexController
     {
         $count = Post::count('*');
 
-        $posts_per_page = get_blog_config('posts_per_page', 10);
+        $posts_per_page = blog_config('posts_per_page', 10);
 
         if ($count <= $posts_per_page) {
             // 文章总数小于每页数量，则不需要分页
@@ -127,7 +129,7 @@ class IndexController
 
         }
         return view('index/index', [
-            'page_title' => get_blog_config('title', 'WindBlog') . ' - count is -' . $count,
+            'page_title' => blog_config('title', 'WindBlog') . ' - count is -' . $count,
             'posts' => $posts,
             'pagination' => $pagination_html,
         ]);

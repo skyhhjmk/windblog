@@ -39,7 +39,7 @@ class FunctionsTest extends TestCase
         Settings::create(['key' => 'test_key', 'value' => 'test_value']);
         
         // 测试获取已存在的配置
-        $result = get_blog_config('test_key', 'default_value');
+        $result = blog_config('test_key', 'default_value');
         $this->assertEquals('test_value', $result);
     }
 
@@ -50,7 +50,7 @@ class FunctionsTest extends TestCase
     public function testGetBlogConfigReturnsDefaultWhenKeyNotFound()
     {
         // 测试获取不存在的配置，应该返回默认值
-        $result = get_blog_config('nonexistent_key', 'default_value');
+        $result = blog_config('nonexistent_key', 'default_value');
         $this->assertEquals('default_value', $result);
     }
 
@@ -61,7 +61,7 @@ class FunctionsTest extends TestCase
     public function testGetBlogConfigCreatesRecordWhenSetIsTrue()
     {
         // 测试当set为true时，会创建记录
-        $result = get_blog_config('new_key', 'default_value', true);
+        $result = blog_config('new_key', 'default_value', true);
         $this->assertEquals('default_value', $result);
         
         // 验证记录已创建

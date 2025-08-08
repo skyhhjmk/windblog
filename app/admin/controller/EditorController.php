@@ -126,7 +126,7 @@ class EditorController
             $media->save();
 
             // 返回图片URL
-            $imageUrl = '/uploads/' . $subDir . '/' . $filename;
+            $imageUrl = config('image.external_url_prefix') . '/uploads/' . $subDir . '/' . $filename;
 
             return json([
                 'success' => 1,
