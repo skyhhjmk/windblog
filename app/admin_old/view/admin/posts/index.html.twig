@@ -1,0 +1,450 @@
+{% extends 'admin/base.html.twig' %}
+
+{% block title %}文章管理{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-lg shadow-md overflow-hidden">
+    <!-- 页面标题和操作按钮 -->
+    <div class="px-6 py-4 border-b border-gray-200 flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0">
+        <div>
+            <h1 class="text-2xl font-semibold text-gray-800">文章管理</h1>
+            <p class="mt-1 text-sm text-gray-600">管理网站的所有文章</p>
+        </div>
+        <div class="flex space-x-2">
+            <a href="/admin/editor" class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition duration-150 ease-in-out">
+                <i class="fas fa-plus mr-2"></i>
+                新建文章
+            </a>
+        </div>
+    </div>
+
+    <!-- 筛选和搜索区域 -->
+    <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
+            <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
+                <!-- 状态筛选 -->
+                <select id="statusFilter" class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                    <option value="">所有状态</option>
+                    <option value="published" {% if status == 'published' %}selected{% endif %}>已发布</option>
+                    <option value="draft" {% if status == 'draft' %}selected{% endif %}>草稿</option>
+                    <option value="archived" {% if status == 'archived' %}selected{% endif %}>已归档</option>
+                </select>
+            </div>
+            
+            <div class="flex">
+                <!-- 搜索框 -->
+                <div class="relative rounded-md shadow-sm">
+                    <input type="text" id="searchInput" value="{{ search }}" class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-l-md" placeholder="搜索文章...">
+                    <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <i class="fas fa-search text-gray-400"></i>
+                    </div>
+                </div>
+                <button id="searchButton" class="ml-2 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-r-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    搜索
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 批量操作区域 -->
+    <div class="px-6 py-3 bg-gray-50 border-b border-gray-200 flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
+        <div class="flex items-center">
+            <input id="selectAll" type="checkbox" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+            <label for="selectAll" class="ml-2 block text-sm text-gray-700">全选</label>
+        </div>
+        
+        <div class="flex space-x-2">
+            <select id="batchAction" class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                <option value="">批量操作</option>
+                <option value="publish">发布</option>
+                <option value="draft">设为草稿</option>
+                <option value="delete">删除</option>
+            </select>
+            <button id="applyBatch" class="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                应用
+            </button>
+        </div>
+    </div>
+
+    <!-- 文章列表 -->
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
+                        <span class="sr-only">选择</span>
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        标题
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        作者
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        分类
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        标签
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        日期
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        状态
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        操作
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% if posts.total == 0 %}
+                <tr>
+                    <td colspan="8" class="px-6 py-4 text-center text-sm text-gray-500">
+                        暂无文章数据
+                    </td>
+                </tr>
+                {% else %}
+                {% for post in posts %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <input type="checkbox" class="post-checkbox h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" data-id="{{ post.id }}">
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="text-sm font-medium text-gray-900">{{ post.title }}</div>
+                        <div class="text-sm text-gray-500 mt-1">
+                            {% if post.slug %}
+                            <span class="inline-flex items-center">
+                                <i class="fas fa-link mr-1 text-xs"></i>
+                                {{ post.slug }}
+                            </span>
+                            {% endif %}
+                        </div>
+                        <div class="mt-2 flex space-x-3">
+                            <a href="/post/{{ post.id }}" target="_blank" class="text-sm text-blue-600 hover:text-blue-900">
+                                <i class="fas fa-external-link-alt mr-1"></i>查看
+                            </a>
+                            <a href="/admin/editor/{{ post.id }}" class="text-sm text-blue-600 hover:text-blue-900">
+                                <i class="fas fa-edit mr-1"></i>编辑
+                            </a>
+                            <a href="javascript:void(0)" class="text-sm text-red-600 hover:text-red-900 delete-post" data-id="{{ post.id }}">
+                                <i class="fas fa-trash-alt mr-1"></i>删除
+                            </a>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-900">
+                            {% if post.author_id %}
+                                作者 #{{ post.author_id }}
+                            {% else %}
+                                匿名
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-900">
+                            {% if post.category_id %}
+                                分类 #{{ post.category_id }}
+                            {% else %}
+                                未分类
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <!-- 标签占位 -->
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            示例标签
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {% if post.created_at %}
+                            {{ post.created_at|date('Y-m-d H:i') }}
+                        {% else %}
+                            未知
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if post.status == 'published' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                已发布
+                            </span>
+                        {% elseif post.status == 'draft' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                草稿
+                            </span>
+                        {% elseif post.status == 'archived' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                已归档
+                            </span>
+                        {% else %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                未知
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <a href="/admin/editor/{{ post.id }}" class="text-blue-600 hover:text-blue-900 mr-3">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <a href="javascript:void(0)" class="text-red-600 hover:text-red-900 delete-post" data-id="{{ post.id }}">
+                            <i class="fas fa-trash-alt"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 分页 -->
+    {% if posts.total > 0 %}
+    <div class="px-6 py-4 bg-white border-t border-gray-200">
+        <div class="flex items-center justify-between">
+            <div class="text-sm text-gray-700">
+                显示第 <span class="font-medium">{{ (posts.currentPage-1)*posts.perPage+1 }}</span> 到 <span class="font-medium">{{ (posts.currentPage-1)*posts.perPage+posts.items|length }}</span> 条结果，共 <span class="font-medium">{{ posts.total }}</span> 条
+            </div>
+            <div class="flex space-x-2">
+                {% if posts.currentPage > 1 %}
+                <a href="?page={{ posts.currentPage-1 }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                    上一页
+                </a>
+                {% endif %}
+                
+                {% if posts.currentPage < posts.lastPage %}
+                <a href="?page={{ posts.currentPage+1 }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                    下一页
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- 删除确认模态框 -->
+<div id="deleteModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3 text-center">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                <i class="fas fa-exclamation-triangle text-red-600"></i>
+            </div>
+            <h3 class="text-lg leading-6 font-medium text-gray-900 mt-4">确认删除</h3>
+            <div class="mt-2 px-7 py-3">
+                <p class="text-sm text-gray-500">确定要删除这篇文章吗？此操作无法撤销。</p>
+            </div>
+            <div class="items-center px-4 py-3">
+                <button id="confirmDelete" class="px-4 py-2 bg-red-600 text-white text-base font-medium rounded-md w-24 mr-2 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500" data-id="">
+                    确认
+                </button>
+                <button id="cancelDelete" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-base font-medium rounded-md w-24 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300">
+                    取消
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 全选功能
+        const selectAll = document.getElementById('selectAll');
+        const checkboxes = document.querySelectorAll('.post-checkbox');
+        
+        selectAll.addEventListener('change', function() {
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = selectAll.checked;
+            });
+        });
+        
+        // 批量操作
+        document.getElementById('applyBatch').addEventListener('click', function() {
+            const action = document.getElementById('batchAction').value;
+            if (!action) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: '提示',
+                    text: '请选择批量操作'
+                });
+                return;
+            }
+
+            const selectedIds = Array.from(checkboxes)
+                .filter(checkbox => checkbox.checked)
+                .map(checkbox => checkbox.dataset.id);
+
+            if (selectedIds.length === 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: '提示',
+                    text: '请至少选择一篇文章'
+                });
+                return;
+            }
+
+            // 确认删除操作
+            if (action === 'delete') {
+                Swal.fire({
+                    title: '确认删除',
+                    text: '确定要删除选中的文章吗？此操作无法撤销。',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        performBatchAction(selectedIds, action);
+                    }
+                });
+            } else {
+                performBatchAction(selectedIds, action);
+            }
+        });
+
+        // 执行批量操作
+        function performBatchAction(ids, action) {
+            fetch('/admin/posts/batch', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    ids: ids,
+                    action: action
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 0) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '操作成功',
+                        text: data.msg,
+                        timer: 1500,
+                        showConfirmButton: false
+                    }).then(() => {
+                        location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: '操作失败',
+                        text: data.msg
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: '操作失败',
+                    text: '请求出现错误'
+                });
+            });
+        }
+
+        // 删除功能
+        const deleteButtons = document.querySelectorAll('.delete-post');
+
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const postId = this.dataset.id;
+                const postRow = document.querySelector(`tr[data-id="${postId}"]`);
+                const postTitle = postRow.querySelector('.text-sm.font-medium').textContent;
+
+                Swal.fire({
+                    title: '确认删除',
+                    html: `确定要删除文章 <strong>"${postTitle}"</strong> 吗？此操作无法撤销。`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: '确定删除',
+                    cancelButtonText: '取消',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        fetch('/admin/posts/delete/' + postId, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-Token': '{{ csrf_token() }}'
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.code === 0) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: '删除成功',
+                                    text: data.msg,
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                }).then(() => {
+                                    // 删除表格行
+                                    postRow.remove();
+                                });
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: '删除失败',
+                                    text: data.msg
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            Swal.fire({
+                                icon: 'error',
+                                title: '删除失败',
+                                text: '请求出现错误'
+                            });
+                        });
+                    }
+                });
+            });
+        });
+        
+        // 搜索功能
+        document.getElementById('searchButton').addEventListener('click', function() {
+            const search = document.getElementById('searchInput').value;
+            const status = document.getElementById('statusFilter').value;
+            
+            let url = new URL(window.location);
+            url.searchParams.set('search', search);
+            if (status) {
+                url.searchParams.set('status', status);
+            } else {
+                url.searchParams.delete('status');
+            }
+            window.location.href = url.toString();
+        });
+        
+        // 状态筛选
+        document.getElementById('statusFilter').addEventListener('change', function() {
+            const status = this.value;
+            const search = document.getElementById('searchInput').value;
+            
+            let url = new URL(window.location);
+            if (status) {
+                url.searchParams.set('status', status);
+            } else {
+                url.searchParams.delete('status');
+            }
+            if (search) {
+                url.searchParams.set('search', search);
+            }
+            window.location.href = url.toString();
+        });
+        
+        // 回车搜索
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('searchButton').click();
+            }
+        });
+    });
+</script>
+{% endblock %}

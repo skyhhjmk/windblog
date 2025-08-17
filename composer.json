@@ -42,9 +42,10 @@
     "ext-dom": "*",
     "ext-libxml": "*",
     "ext-pdo": "*",
-    "intervention/image": "^3.11",
     "minishlink/web-push": "^9.0",
-    "webman/redis": "^2.1"
+    "webman/redis": "^2.1",
+    "league/html-to-markdown": "^5.1",
+    "webman/admin": "~2.0"
   },
   "suggest": {
     "ext-event": "For better performance. "

@@ -18,5 +18,8 @@ return [
         app\middleware\AuthCheck::class,
         app\middleware\Lang::class,
         app\middleware\DebugToolkit::class,
-    ]
+    ],
+    'admin' => [
+        plugin\admin\api\Middleware::class
+    ],
 ];

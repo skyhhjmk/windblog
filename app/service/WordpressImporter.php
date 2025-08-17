@@ -6,6 +6,7 @@ use app\model\ImportJob;
 use app\model\Post;
 use app\model\Media;
 use app\model\Settings;
+use League\HTMLToMarkdown\HtmlConverter;
 use support\Db;
 use XMLReader;
 
@@ -42,7 +43,7 @@ class WordpressImporter
         $this->importJob = $importJob;
         $this->options = json_decode($importJob->options ?? '{}', true);
         $this->defaultAuthorId = $importJob->author_id;
-        
+
         \support\Log::info("初始化WordPress导入器，任务ID: " . $importJob->id);
     }
 
@@ -54,7 +55,7 @@ class WordpressImporter
     public function execute()
     {
         \support\Log::info("开始执行导入任务: " . $this->importJob->name);
-        
+
         try {
             // 确保任务状态是processing
             if ($this->importJob->status !== 'processing') {
@@ -66,9 +67,9 @@ class WordpressImporter
             }
 
             $xmlFile = $this->importJob->file_path;
-            
+
             \support\Log::info("检查导入文件: " . $xmlFile);
-            
+
             if (!file_exists($xmlFile)) {
                 throw new \Exception('导入文件不存在: ' . $xmlFile);
             }
@@ -76,7 +77,7 @@ class WordpressImporter
             // 先尝试修复XML中的命名空间问题
             \support\Log::info("修复XML命名空间");
             $fixedXmlFile = $this->fixXmlNamespaces($xmlFile);
-            
+
             $reader = new XMLReader();
             \support\Log::info("打开XML文件: " . $fixedXmlFile);
             if (!$reader->open($fixedXmlFile)) {
@@ -87,28 +88,25 @@ class WordpressImporter
             \support\Log::info("计算XML项目总数");
             $totalItems = $this->countItems($fixedXmlFile);
             \support\Log::info("XML项目总数: " . $totalItems);
-            
+
             // 如果没有项目，直接完成任务
             if ($totalItems == 0) {
                 $reader->close();
                 if ($fixedXmlFile !== $xmlFile && file_exists($fixedXmlFile)) {
                     unlink($fixedXmlFile);
                 }
-                
+
                 $this->importJob->update([
                     'status' => 'completed',
                     'progress' => 100,
                     'message' => '导入完成 (无项目需要导入)',
                     'completed_at' => date('Y-m-d H:i:s')
                 ]);
-                
-                // 清理runtime/imports目录
-                $this->cleanImportDirectory();
-                
+
                 \support\Log::info("导入任务完成 (无项目): " . $this->importJob->name);
                 return true;
             }
-            
+
             $processedItems = 0;
 
             // 解析XML并导入
@@ -124,14 +122,14 @@ class WordpressImporter
                                 \support\Log::error('处理项目时出错: ' . $e->getMessage(), ['exception' => $e]);
                             }
                             $processedItems++;
-                            
+
                             // 更新进度
                             $progress = intval(($processedItems / max(1, $totalItems)) * 100);
                             $this->importJob->update([
                                 'progress' => $progress,
                                 'message' => "已处理 {$processedItems}/{$totalItems} 个项目"
                             ]);
-                            
+
                             \support\Log::debug("处理项目进度: {$processedItems}/{$totalItems} ({$progress}%)");
                             break;
                     }
@@ -153,29 +151,24 @@ class WordpressImporter
                 'completed_at' => date('Y-m-d H:i:s')
             ]);
 
-            // 清理runtime/imports目录
-            $this->cleanImportDirectory();
 
             \support\Log::info("导入任务完成: " . $this->importJob->name);
             return true;
         } catch (\Exception $e) {
             \support\Log::error('导入执行错误: ' . $e->getMessage(), ['exception' => $e]);
-            
+
             // 删除临时修复的文件
             $fixedXmlFile = runtime_path('imports') . '/fixed_' . basename($this->importJob->file_path);
             if (isset($fixedXmlFile) && $fixedXmlFile !== $this->importJob->file_path && file_exists($fixedXmlFile)) {
                 unlink($fixedXmlFile);
                 \support\Log::info("删除临时修复文件: " . $fixedXmlFile);
             }
-            
+
             $this->importJob->update([
                 'status' => 'failed',
                 'message' => '导入失败: ' . $e->getMessage()
             ]);
-            
-            // 即使失败也要清理runtime/imports目录
-            $this->cleanImportDirectory();
-            
+
             return false;
         }
     }
@@ -191,7 +184,7 @@ class WordpressImporter
         try {
             \support\Log::info("读取XML文件内容");
             $content = file_get_contents($xmlFile);
-            
+
             // 添加常见的WordPress导出文件中可能缺失的命名空间定义
             $namespaceFixes = [
                 'xmlns:excerpt="http://wordpress.org/export/1.2/excerpt/"',
@@ -201,7 +194,7 @@ class WordpressImporter
                 'xmlns:wp="http://wordpress.org/export/1.2/"',
                 'xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"' // 添加itunes命名空间
             ];
-            
+
             // 检查是否已经包含这些命名空间
             $rssTagPos = strpos($content, '<rss');
             if ($rssTagPos !== false) {
@@ -210,20 +203,20 @@ class WordpressImporter
                     $rssTag = substr($content, $rssTagPos, $rssEndPos - $rssTagPos + 1);
                     \support\Log::info("原始RSS标签: " . $rssTag);
                     $missingNamespaces = [];
-                    
+
                     foreach ($namespaceFixes as $namespace) {
                         // 检查是否已经存在该命名空间
                         if (strpos($rssTag, explode('=', $namespace)[0]) === false) {
                             $missingNamespaces[] = $namespace;
                         }
                     }
-                    
+
                     // 如果有缺失的命名空间，添加它们
                     if (!empty($missingNamespaces)) {
                         $newRssTag = substr($rssTag, 0, -1) . ' ' . implode(' ', $missingNamespaces) . '>';
                         \support\Log::info("修复后的RSS标签: " . $newRssTag);
                         $content = substr_replace($content, $newRssTag, $rssTagPos, strlen($rssTag));
-                        
+
                         // 保存修复后的文件
                         $fixedXmlFile = runtime_path('imports') . '/fixed_' . basename($xmlFile);
                         file_put_contents($fixedXmlFile, $content);
@@ -234,7 +227,7 @@ class WordpressImporter
                     }
                 }
             }
-            
+
             // 如果没有需要修复的，返回原文件路径
             return $xmlFile;
         } catch (\Exception $e) {
@@ -258,14 +251,14 @@ class WordpressImporter
             \support\Log::warning("无法打开XML文件进行计数: " . $xmlFile);
             return 0;
         }
-        
+
         $count = 0;
         while ($reader->read()) {
             if ($reader->nodeType == XMLReader::ELEMENT && $reader->localName == 'item') {
                 $count++;
             }
         }
-        
+
         $reader->close();
         \support\Log::info("XML项目数计算完成: " . $count);
         return $count;
@@ -285,20 +278,20 @@ class WordpressImporter
         $libxmlErrors = libxml_use_internal_errors(true);
         $node = $doc->importNode($reader->expand(), true);
         $doc->appendChild($node);
-        
+
         $xpath = new \DOMXPath($doc);
         $xpath->registerNamespace('content', 'http://purl.org/rss/1.0/modules/content/');
         $xpath->registerNamespace('excerpt', 'http://wordpress.org/export/1.2/excerpt/');
         $xpath->registerNamespace('wp', 'http://wordpress.org/export/1.2/');
         $xpath->registerNamespace('dc', 'http://search.yahoo.com/mrss/');
         $xpath->registerNamespace('itunes', 'http://www.itunes.com/dtds/podcast-1.0.dtd');
-        
+
         // 恢复错误报告设置
         libxml_use_internal_errors($libxmlErrors);
-        
+
         $postType = $xpath->evaluate('string(wp:post_type)', $node);
         \support\Log::debug("项目类型: " . $postType);
-        
+
         // 根据不同类型处理
         switch ($postType) {
             case 'post':
@@ -327,30 +320,30 @@ class WordpressImporter
     {
         \support\Log::debug("处理文章/页面");
         $title = $xpath->evaluate('string(title)', $node);
-        $content_type = 'html'; // 将wordpress文章导入为html类型
+        $content_type = 'markdown'; // 会自动转换为markdown
         $content = $xpath->evaluate('string(content:encoded)', $node);
         $excerpt = $xpath->evaluate('string(excerpt:encoded)', $node);
         $status = $xpath->evaluate('string(wp:status)', $node);
         $slug = $xpath->evaluate('string(wp:post_name)', $node);
         $postDate = $xpath->evaluate('string(wp:post_date)', $node);
-        
+
         \support\Log::debug("文章信息 - 标题: " . $title . ", 状态: " . $status . ", 类型: " . $postType);
-        
+
         // 将HTML内容转换为Markdown
         if (!empty($content)) {
             $content = $this->convertHtmlToMarkdown($content);
         }
-        
+
         if (!empty($excerpt)) {
             $excerpt = $this->convertHtmlToMarkdown($excerpt);
         }
-        
+
         // 处理作者
         $authorId = $this->processAuthor($xpath, $node);
-        
+
         // 处理分类
         $categoryId = $this->processCategories($xpath, $node);
-        
+
         // 转换状态
         $statusMap = [
             'publish' => 'published',
@@ -360,16 +353,16 @@ class WordpressImporter
             'future' => 'draft'
         ];
         $status = $statusMap[$status] ?? 'draft';
-        
+
         // 检查是否已存在相同标题的文章
         $existingPost = null;
         if ($title) {
             $existingPost = Post::where('title', $title)->first();
         }
-        
+
         // 根据重复处理模式决定如何处理
         $duplicateMode = $this->options['duplicate_mode'] ?? 'skip';
-        
+
         // 如果存在相同标题的文章
         if ($existingPost) {
             switch ($duplicateMode) {
@@ -387,7 +380,7 @@ class WordpressImporter
                     $existingPost->save();
                     \support\Log::debug("文章更新完成，ID: " . $existingPost->id);
                     return;
-                    
+
                 case 'skip':
                 default:
                     // 跳过模式：记录日志并跳过
@@ -395,7 +388,7 @@ class WordpressImporter
                     return;
             }
         }
-        
+
         // 保存新文章
         $post = new Post();
         $post->title = $title ?: '无标题';
@@ -408,7 +401,7 @@ class WordpressImporter
         $post->category_id = $categoryId;
         $post->created_at = $postDate && $postDate !== '0000-00-00 00:00:00' ? date('Y-m-d H:i:s', strtotime($postDate)) : date('Y-m-d H:i:s');
         $post->updated_at = date('Y-m-d H:i:s');
-        
+
         \support\Log::debug("保存文章: " . $post->title);
         $post->save();
         \support\Log::debug("文章保存完成，ID: " . $post->id);
@@ -425,27 +418,27 @@ class WordpressImporter
     {
         $authorName = $xpath->evaluate('string(dc:creator)', $node);
         \support\Log::debug("处理作者: " . $authorName);
-        
+
         // 如果没有默认作者且没有文章作者，则返回null
         if (is_null($this->defaultAuthorId) && empty($authorName)) {
             \support\Log::debug("作者为空，返回null");
             return null;
         }
-        
+
         // 如果没有文章作者，使用默认作者
         if (empty($authorName)) {
             \support\Log::debug("使用默认作者ID: " . $this->defaultAuthorId);
             return $this->defaultAuthorId;
         }
-        
+
         // 查找现有用户
         $user = Db::table('users')->where('username', $authorName)->first();
-        
+
         if ($user) {
             \support\Log::debug("找到现有用户: " . $user->username . " (ID: " . $user->id . ")");
             return $user->id;
         }
-        
+
         // 根据选项决定是否创建新用户
         if (!empty($this->options['create_users'])) {
             $email = $authorName . '@example.com'; // 简化处理
@@ -457,11 +450,11 @@ class WordpressImporter
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s')
             ]);
-            
+
             \support\Log::debug("新用户创建完成，ID: " . $userId);
             return $userId;
         }
-        
+
         // 使用默认作者
         \support\Log::debug("使用默认作者ID: " . $this->defaultAuthorId);
         return $this->defaultAuthorId;
@@ -477,19 +470,19 @@ class WordpressImporter
     protected function processCategories(\DOMXPath $xpath, \DOMNode $node): ?int
     {
         $categories = $xpath->query('category[@domain="category"]', $node);
-        
+
         if ($categories->length > 0) {
             $categoryName = $categories->item(0)->nodeValue;
             \support\Log::debug("处理分类: " . $categoryName);
-            
+
             // 查找现有分类
             $category = Db::table('categories')->where('name', $categoryName)->first();
-            
+
             if ($category) {
                 \support\Log::debug("找到现有分类: " . $category->name . " (ID: " . $category->id . ")");
                 return $category->id;
             }
-            
+
             // 创建新分类
             \support\Log::debug("创建新分类: " . $categoryName);
             $categoryId = Db::table('categories')->insertGetId([
@@ -498,11 +491,11 @@ class WordpressImporter
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s')
             ]);
-            
+
             \support\Log::debug("新分类创建完成，ID: " . $categoryId);
             return $categoryId;
         }
-        
+
         \support\Log::debug("无分类信息");
         return null;
     }
@@ -518,14 +511,14 @@ class WordpressImporter
     {
         $title = $xpath->evaluate('string(title)', $node);
         $url = $xpath->evaluate('string(wp:attachment_url)', $node);
-        
+
         \support\Log::debug("处理附件 - 标题: " . $title . ", URL: " . $url);
-        
+
         if (empty($url)) {
             \support\Log::debug("附件URL为空，跳过");
             return;
         }
-        
+
         // 如果需要下载附件
         if (!empty($this->options['download_attachments'])) {
             $this->downloadAttachment($url, $title);
@@ -596,47 +589,21 @@ class WordpressImporter
      * @param string $html
      * @return string
      */
-    protected function convertHtmlToMarkdown(string $html): string
+    protected function convertHtmlToMarkdown(string $html, array $config = []): string
     {
-        // 基本的HTML到Markdown转换
-        // 处理标题
-        $html = preg_replace('/<h1>(.*?)<\/h1>/i', '# $1', $html);
-        $html = preg_replace('/<h2>(.*?)<\/h2>/i', '## $1', $html);
-        $html = preg_replace('/<h3>(.*?)<\/h3>/i', '### $1', $html);
-        $html = preg_replace('/<h4>(.*?)<\/h4>/i', '#### $1', $html);
-        $html = preg_replace('/<h5>(.*?)<\/h5>/i', '##### $1', $html);
-        $html = preg_replace('/<h6>(.*?)<\/h6>/i', '###### $1', $html);
-        
-        // 处理粗体和斜体
-        $html = preg_replace('/<strong>(.*?)<\/strong>/i', '**$1**', $html);
-        $html = preg_replace('/<b>(.*?)<\/b>/i', '**$1**', $html);
-        $html = preg_replace('/<em>(.*?)<\/em>/i', '*$1*', $html);
-        $html = preg_replace('/<i>(.*?)<\/i>/i', '*$1*', $html);
-        
-        // 处理链接
-        $html = preg_replace('/<a\s+href="(.*?)"[^>]*>(.*?)<\/a>/i', '[$2]($1)', $html);
-        
-        // 处理图片
-        $html = preg_replace('/<img\s+src="(.*?)"\s+alt="(.*?)"[^>]*>/i', '![$2]($1)', $html);
-        $html = preg_replace('/<img\s+src="(.*?)"[^>]*>/i', '![]($1)', $html);
-        
-        // 处理列表
-        $html = preg_replace('/<ul[^>]*>(.*?)<\/ul>/is', "\n$1\n", $html);
-        $html = preg_replace('/<ol[^>]*>(.*?)<\/ol>/is', "\n$1\n", $html);
-        $html = preg_replace('/<li[^>]*>(.*?)<\/li>/i', "- $1\n", $html);
-        
-        // 处理段落
-        $html = preg_replace('/<p[^>]*>(.*?)<\/p>/is', "$1\n\n", $html);
-        
-        // 处理换行
-        $html = preg_replace('/<br\s*\/?>/i', "\n", $html);
-        
-        // 移除其他HTML标签
-        $html = strip_tags($html);
-        
-        return trim($html);
+        if (empty($config)) {
+            $config = [
+                'strip_tags' => true,
+            ];
+        }
+
+        $converter = new HtmlConverter($config);
+
+        $markdown = $converter->convert($html);
+
+        return trim($markdown);
     }
-    
+
     /**
      * 清理runtime/imports目录
      *
@@ -649,7 +616,7 @@ class WordpressImporter
             if (!is_dir($importDir)) {
                 return;
             }
-            
+
             // 获取目录中的所有文件
             $files = scandir($importDir);
             foreach ($files as $file) {
@@ -657,16 +624,16 @@ class WordpressImporter
                 if ($file === '.' || $file === '..') {
                     continue;
                 }
-                
+
                 $filePath = $importDir . DIRECTORY_SEPARATOR . $file;
-                
+
                 // 删除文件（不删除目录）
                 if (is_file($filePath)) {
                     unlink($filePath);
                     \support\Log::info("删除导入临时文件: " . $filePath);
                 }
             }
-            
+
             \support\Log::info("导入目录清理完成: " . $importDir);
         } catch (\Exception $e) {
             \support\Log::error('清理导入目录时出错: ' . $e->getMessage(), ['exception' => $e]);

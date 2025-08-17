@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}后台管理{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css"
+          integrity="sha512-DxV+EoADOkOygM4IR9yXP8Sb2qwgidEmeqAEmDKIOfPRQZOWbXCzLC6vjbZyy0vPisbH2SyW27+ddLVCN+OMzQ=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/sweetalert2/11.22.4/sweetalert2.min.css"
+          integrity="sha512-Nedhxx3wE5Vtf1ZVxN7QSpNPigYCwZDf8jiwzcV0PxCxm5uEpEtqxGQrz5IR5KkaypLyu3GU1qOgWMH9wI3uXQ=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sweetalert2/11.22.4/sweetalert2.all.min.js"
+            integrity="sha512-9oqNtAXd8jzcomU1hlr+BzK9JCIk8teznj7mqhQP8c+G8eF0gsMn0kFQ82qN1ix+VxQVCC3iC0RzuYDNhsQg+Q=="
+            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <style>
+        .sidebar {
+            transition: all 0.3s ease;
+        }
+
+        .sidebar.collapsed {
+            width: 64px;
+        }
+
+        .sidebar.collapsed .menu-text {
+            display: none;
+        }
+
+        .sidebar.collapsed .menu-item {
+            justify-content: center;
+        }
+
+        .sidebar.collapsed .sidebar-header span {
+            display: none;
+        }
+
+        .sidebar.collapsed .sidebar-header i {
+            margin-right: 0;
+        }
+
+        .main-content {
+            transition: all 0.3s ease;
+        }
+
+        .user-dropdown {
+            display: none;
+        }
+
+        .user-dropdown.show {
+            display: block;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+<div class="flex h-screen">
+    <!-- 侧边栏 -->
+    <aside id="sidebar" class="sidebar bg-gray-800 text-white w-64 flex-shrink-0">
+        <div class="flex items-center justify-between p-4 border-b border-gray-700 sidebar-header">
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-blog text-xl"></i>
+                <span class="font-bold text-lg">管理后台</span>
+            </div>
+            <button id="sidebarToggle" class="text-gray-400 hover:text-white">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+
+        <nav class="mt-4">
+            {% block sidebar_menu %}
+                <!-- 侧边栏菜单项 -->
+                {% if sidebar_menu_items is defined %}
+                    {% for item in sidebar_menu_items %}
+                        <a href="{{ item.url }}"
+                           class="menu-item flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 {% if item.active is defined and item.active %}bg-gray-900{% endif %}">
+                            <i class="{{ item.icon }} mr-3"></i>
+                            <span class="menu-text">{{ item.label }}</span>
+                        </a>
+                    {% endfor %}
+                {% else %}
+                    {% set default_menu_items = [
+                        {'url': '/admin', 'icon': 'fas fa-home', 'label': '仪表盘'},
+                        {'url': '/admin/posts', 'icon': 'fas fa-file-alt', 'label': '文章管理'},
+                        {'url': '/admin/media', 'icon': 'fas fa-image', 'label': '媒体库'},
+                        {'url': '/admin/wordpress-import', 'icon': 'fas fa-file-import', 'label': '导入工具'},
+                        {'url': '/admin/editor', 'icon': 'fas fa-edit', 'label': '编辑器'}
+                    ] %}
+
+                    {% for item in default_menu_items %}
+                        <a href="{{ item.url }}"
+                           class="menu-item flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700">
+                            <i class="{{ item.icon }} mr-3"></i>
+                            <span class="menu-text">{{ item.label }}</span>
+                        </a>
+                    {% endfor %}
+                {% endif %}
+            {% endblock %}
+        </nav>
+    </aside>
+
+    <!-- 主内容区 -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+        <!-- 顶部快捷栏 -->
+        <header class="bg-white shadow-sm z-10">
+            <div class="flex items-center justify-between px-4 py-3">
+                <div class="flex items-center">
+                    <!-- 顶部快捷操作 -->
+                    {% block top_bar %}
+                        {% if top_bar_items is defined %}
+                            {% for item in top_bar_items %}
+                                <button class="text-gray-500 hover:text-gray-700 mr-4" title="{{ item.title }}">
+                                    <i class="{{ item.icon }}"></i>
+                                </button>
+                            {% endfor %}
+                        {% else %}
+                            <button class="text-gray-500 hover:text-gray-700 mr-4" title="刷新">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                            <button class="text-gray-500 hover:text-gray-700 mr-4" title="设置">
+                                <i class="fas fa-cog"></i>
+                            </button>
+                        {% endif %}
+                    {% endblock %}
+                </div>
+
+                <!-- 用户菜单 -->
+                <div class="relative">
+                    <button id="userMenuButton" class="flex items-center space-x-2 focus:outline-none">
+                        <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <span class="text-gray-700 hidden md:inline">
+                                {% if user is defined %}{{ user.name }}{% else %}管理员{% endif %}
+                            </span>
+                        <i class="fas fa-chevron-down text-gray-500 hidden md:inline"></i>
+                    </button>
+
+                    <!-- 下拉菜单 -->
+                    <div id="userDropdown"
+                         class="user-dropdown absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-20">
+                        {% block user_menu %}
+                            {% if user_menu_items is defined %}
+                                {% for item in user_menu_items %}
+                                    <a href="{{ item.url }}"
+                                       class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 {% if loop.last %}border-t border-gray-100{% endif %}">
+                                        <i class="{{ item.icon }} mr-2"></i>{{ item.label }}
+                                    </a>
+                                {% endfor %}
+                            {% else %}
+                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                    <i class="fas fa-user mr-2"></i>个人资料
+                                </a>
+                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                    <i class="fas fa-cog mr-2"></i>设置
+                                </a>
+                                <a href="#"
+                                   class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 border-t border-gray-100">
+                                    <i class="fas fa-sign-out-alt mr-2"></i>退出登录
+                                </a>
+                            {% endif %}
+                        {% endblock %}
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- 页面内容 -->
+        <main class="flex-1 overflow-y-auto p-4 bg-gray-100">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</div>
+
+<script>
+    // 侧边栏切换
+    document.getElementById('sidebarToggle').addEventListener('click', function () {
+        document.getElementById('sidebar').classList.toggle('collapsed');
+        // 可以根据需要调整主内容区域的宽度
+    });
+
+    // 用户菜单切换
+    document.getElementById('userMenuButton').addEventListener('click', function (e) {
+        e.stopPropagation();
+        document.getElementById('userDropdown').classList.toggle('show');
+    });
+
+    // 点击其他地方隐藏用户菜单
+    document.addEventListener('click', function (e) {
+        const userMenu = document.getElementById('userDropdown');
+        const userButton = document.getElementById('userMenuButton');
+
+        if (!userMenu.contains(e.target) && !userButton.contains(e.target)) {
+            userMenu.classList.remove('show');
+        }
+    });
+</script>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>
