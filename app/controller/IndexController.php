@@ -6,6 +6,7 @@ namespace app\controller;
 
 use support\Request;
 use app\model\Post;
+use function Symfony\Component\Translation\t;
 
 class IndexController
 {
@@ -118,7 +119,17 @@ class IndexController
             $pagination_html .= '</div>';
         }
 
-        $posts = Post::where('status', 'published')->orderByDesc('id')->forPage($page, $posts_per_page)->get();
+        if (empty($request->get())){
+            $cached = cache('blog_posts_page_' . $page);
+            if ($cached) {
+                return $cached;
+            } else {
+                $posts = Post::where('status', 'published')->orderByDesc('id')->forPage($page, $posts_per_page)->get();
+                cache('blog_posts_page_' . $page . '_per_' . $posts_per_page, $posts, true);
+            }
+        } else {
+            $posts = Post::where('status', 'published')->orderByDesc('id')->forPage($page, $posts_per_page)->get();
+        }
 
         foreach ($posts as $post) {
             if ($post->excerpt === null || $post->excerpt === ''){

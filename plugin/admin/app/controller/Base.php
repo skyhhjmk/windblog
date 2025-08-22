@@ -43,21 +43,26 @@ class Base
     protected $dataLimitField = 'admin_id';
 
     /**
-     * 返回格式化json数据
+     * 返回格式化为layui响应的json数据
      *
      * @param int $code
      * @param string $msg
      * @param array $data
      * @return Response
      */
-    protected function json(int $code, string $msg = 'ok', array $data = []): Response
+    protected function json(int $code, string $msg = 'ok', array $data = [], int $total = 0): Response
     {
-        return json(['code' => $code, 'data' => $data, 'msg' => $msg]);
+        return json([
+            'code' => $code,
+            'total' => $total,
+            'data' => $data,
+            'msg' => $msg
+        ]);
     }
 
-    protected function success(string $msg = '成功', array $data = []): Response
+    protected function success(string $msg = '成功', array $data = [], int $total = 0): Response
     {
-        return $this->json(0, $msg, $data);
+        return $this->json(0, $msg, $data, $total);
     }
 
     protected function fail(string $msg = '失败', array $data = []): Response

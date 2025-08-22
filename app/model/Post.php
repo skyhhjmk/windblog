@@ -25,4 +25,25 @@ class Post extends Model
      * @var bool
      */
     public $timestamps = true;
+    
+    /**
+     * 可以被批量赋值的属性
+     *
+     * @var array
+     */
+    protected $fillable = [
+        'title', 'slug', 'content_type', 'content', 'excerpt', 
+        'status', 'category_id', 'author_id', 'view_count'
+    ];
+    
+    /**
+     * 属性类型转换
+     *
+     * @var array
+     */
+    protected $casts = [
+        'view_count' => 'integer',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
 }

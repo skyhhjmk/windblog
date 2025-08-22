@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>编辑-{{ title }}</title>
+    <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css" />
+    <link rel="stylesheet" href="/assets/css/all.min.css">
+    <script src="/assets/js/highlight.min.js"></script>
+    <link rel="stylesheet" href="/assets/css/github-dark.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vditor/3.11.1/index.min.css"
+          integrity="sha512-Tj6qPPqMhdET85Eu0Hy663goieFRcOde8i0J3DT8L+wb0sSDfgzPwoAYW63yijDXFzrzxOSvPuXfjHqL07hVcg=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vditor/3.11.1/index.min.js"
+            integrity="sha512-oWE+EVJHubnxaqkZy5k5ZBs/TSNarmZyNhHevcfDIqhTza3rlwj1r5Vn8E+KiUPJMmCke08/W7HpN4qj/uHwmQ=="
+            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vditor/3.11.1/css/content-theme/light.min.css"
+          integrity="sha512-o50pASvlcfHhtl2lTNfVkSBCgBSO2YeMZmRs1F7P6dD8m6XWWRr7nx9wbum75mBfMTeU8S+OQuIfkzLbLkk/Jw=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"
+            integrity="sha512-LQNxIMR5rXv7o+b1l8+N1EZMfhG7iFZ9HhnbJkTp4zjNr5Wvst75AqUeFDxeRUa7l5vEDyUiAip//r+EFLLCyA=="
+            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css"
+          integrity="sha512-fHwaWebuwA7NSF5Qg/af4UeDx9XqUpYpOGgubo3yWu+b2IQR4UeQwbb42Ti7gVAjNtVoI/I9TEoYeu9omwcC6g=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.9.0/mermaid.min.js"
+            integrity="sha512-OAr6bl1pt/FD0oVcuPzJ9VIMso+HQhHoodVI7mnDst19p8rNkNiraPLsDCYVhit3Mjd6B7AUHFsoDhq3dDeI7g=="
+            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+<body class="pear-container">
+<div class="layui-card">
+    <div class="layui-card-body">
+        <div class="max-w-6xl mx-auto px-4 py-8 h-full">
+            <!-- 编辑器容器 -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <!-- 标题 -->
+                <h1 class="text-2xl font-bold text-gray-800 mb-6">{{ post.title }}</h1>
+
+                <!-- 操作按钮 -->
+                <div class="flex flex-wrap gap-4 mb-6">
+                    <button id="preview-btn"
+                            class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+                        预览
+                    </button>
+                    <button id="save-btn"
+                            class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">
+                        保存
+                    </button>
+                    <button id="clear-btn"
+                            class="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50">
+                        清除缓存
+                    </button>
+                </div>
+
+                <!-- 编辑器区域 -->
+                <div id="vditor"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/app/admin/component/layui/layui.js"></script>
+<script src="/app/admin/component/pear/pear.js"></script>
+<script>
+    let vditor;
+    let postId = {{ post.post_id }};
+
+    // 初始化 Vditor
+    document.addEventListener('DOMContentLoaded', function () {
+        vditor = new Vditor('vditor', {
+            height: 'auto',
+            minHeight: 300,
+            counter: {
+                enable: true,
+            },
+            // cdn: 'https://cdnjs.cloudflare.com/ajax/libs/vditor/3.11.1', // 无法使用cf公共cdn，没有dist目录
+            mode: 'sv', // 分屏
+            toolbarConfig: {
+                pin: true,
+            },
+            comment: {
+                enable: false, // 不好用
+            },
+            cache: {
+                enable: true,
+                id: postId,
+            },
+            preview: {
+                markdown: {
+                    sanitize: true,
+                },
+                hljs: {
+                    enable: true,
+                    defaultLang: 'bash',
+                    style: 'github-dark',
+                    lineNumber: true,
+                },
+                theme: {
+                    path: 'https://cdn.jsdelivr.net/npm/vditor/dist/css/content-theme'
+                }
+            },
+            upload: {
+                accept: 'image/*',
+                url: '/app/admin/posts/upload-image',
+                fieldName: 'image',
+                max: 50 * 1024 * 1024,
+                filename(name) {
+                    return name.replace(/\?|\\|\/|:|\||<|>|\*|\[|\]|\s+/g, '-')
+                },
+                linkToImgUrl: '/app/admin/posts/upload-image',
+                handler(files) {
+                    const data = new FormData()
+                    data.append('image', files[0])
+
+                    fetch('/app/admin/posts/upload-image', {
+                        method: 'POST',
+                        body: data,
+                    }).then(response => response.json()).then(data => {
+                        if (data.success === 1) {
+                            vditor.insertValue(`![](${data.file.url})`)
+                        } else {
+                            alert('图片上传失败: ' + data.message)
+                        }
+                    }).catch(err => {
+                        alert('网络错误: ' + err)
+                    })
+                }
+            },
+            hint: {
+                // emojiPath: 'https://cdn.jsdelivr.net/npm/vditor/dist/images/emoji',
+                emoji: {
+                    "+1": "👍",
+                    "-1": "👎",
+                    "heart": "❤️",
+                    "smile": "😄",
+                    "laughing": "😆",
+                    "smirk": "😏",
+                    "expressionless": "😑",
+                    "tired_face": "😫",
+                    "sleeping": "😴",
+                    "flushed": "😳",
+                    "scream": "😱",
+                    "rage": "😡",
+                    "smiling_imp": "😈",
+                    "sunglasses": "😎",
+                    "thumbsup": "👍",
+                    "thumbsdown": "👎",
+                    "ok_hand": "👌",
+                    "punch": "👊",
+                    "wave": "👋",
+                    "clap": "👏",
+                    "open_hands": "👐",
+                    "pray": "🙏",
+                    "eyes": "👀",
+                    "zzz": "💤",
+                    "poop": "💩",
+                    "muscle": "💪",
+                    "trumpet": "🎺",
+                    "cake": "🍰",
+                    "coffee": "☕",
+                    "bomb": "💣",
+                    "gem": "💎",
+                    "ring": "💍",
+                    "rocket": "🚀",
+                    "train": "🚋",
+                    "bike": "🚲",
+                    "bus": "🚌",
+                    "airplane": "✈️",
+                    "rocket2": "🚀",
+                    "moon": "🌙",
+                    "star2": "🌟",
+                    "sunny": "☀️",
+                    "rainbow": "🌈",
+                    "snowman": "⛄",
+                    "zap": "⚡",
+                    "fire": "🔥",
+                    "ghost": "👻",
+                    "alien": "👽",
+                    "robot": "🤖",
+                    "skull": "💀",
+                    "heart_eyes": "😍",
+                    "kiss": "😘",
+                    "sweat": "😓",
+                    "sob": "😭",
+                    "joy": "😂",
+                    "tongue": "😛",
+                    "v": "✌️",
+                    "santa": "🎅",
+                    "christmas_tree": "🎄",
+                    "gift": "🎁",
+                    "jack_o_lantern": "🎃",
+                    "bamboo": "🎍",
+                    "grapes": "🍇",
+                    "watermelon": "🍉",
+                    "ramen": "🍜",
+                    "soccer": "⚽",
+                    "football": "🏈",
+                    "basketball": "🏀",
+                    "dart": "🎯",
+                    "slot_machine": "🎰",
+                    "8ball": "🎱",
+                    "game_die": "🎲",
+                    "spades": "♠️",
+                    "clubs": "♣️",
+                    "hearts": "♥️",
+                    "diamonds": "♦️",
+                    "clubhouse": "🛖",
+                    "house": "🏠",
+                    "city_sunrise": "🌇",
+                    "bridge_at_night": "🌉",
+                    "ferris_wheel": "🎡",
+                    "roller_coaster": "🎢",
+                    "ship": "🚢",
+                    "speedboat": "🚤",
+                    "sailboat": "⛵",
+                    "anchor": "⚓",
+                    "rocketship": "🚀",
+                    "flying_saucer": "🛸",
+                    "helicopter": "🚁",
+                    "steam_locomotive": "🚂",
+                    "car": "🚗",
+                    "taxi": "🚕",
+                    "busstop": "🚏",
+                    "fuelpump": "⛽",
+                    "rotating_light": "🚨",
+                    "triangular_flag_on_post": "🚩",
+                    "crossed_flags": "🎌",
+                    "waving_black_flag": "🏴",
+                    "waving_white_flag": "🏳️",
+                    "rainbow-flag": "🏳️‍🌈",
+                    "pirate_flag": "🏴‍☠️"
+                }
+            }
+        })
+
+        // 设置初始内容
+        const content = {{ post.content ? post.content|json_encode|raw : '""' }};
+        if (content && content !== "") {
+            // 等待编辑器完全初始化后再设置内容
+            setTimeout(function() {
+                vditor.setValue(content);
+            }, 100);
+        }
+    })
+
+    // 预览按钮事件
+    document.getElementById('preview-btn').addEventListener('click', function () {
+        if (vditor) {
+            vditor.preview()
+        }
+    });
+
+    // 保存按钮事件
+    document.getElementById('save-btn').addEventListener('click', function () {
+        if (vditor) {
+            // 发送到服务器保存
+            fetch('/app/admin/posts/save-content', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                },
+                body: JSON.stringify({
+                    post_id: postId,
+                    content: vditor.getValue()
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 200) {
+                        alert('保存成功');
+                        localStorage.removeItem('vditor' + postId);
+                    } else {
+                        alert('保存失败: ' + data.msg);
+                    }
+                })
+                .catch(error => {
+                    alert('保存失败: ' + error.message);
+                });
+        }
+    });
+
+    // 清除缓存按钮事件
+    document.getElementById('clear-btn').addEventListener('click', function () {
+        if (confirm('确定要清除自动保存的内容吗？')) {
+            if (vditor) {
+                vditor.clearCache()
+                alert('已清除自动保存的内容');
+            }
+        }
+    });
+</script>
+</body>
+</html>

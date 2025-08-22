@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="utf-8">
+    <title>浏览页面</title>
+    <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css"/>
+    <link rel="stylesheet" href="/app/admin/admin/css/reset.css"/>
+</head>
+<body class="pear-container">
+
+<!-- 顶部查询表单 -->
+<div class="layui-card">
+    <div class="layui-card-body">
+        <form class="layui-form top-search-from">
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">文件名</label>
+                <div class="layui-input-block">
+                    <input type="text" name="filename" value="" class="layui-input">
+                </div>
+            </div>
+
+            <div class="layui-form-item layui-inline">
+                <label class="layui-form-label"></label>
+                <button class="pear-btn pear-btn-md pear-btn-primary" lay-submit lay-filter="table-query">
+                    <i class="layui-icon layui-icon-search"></i>查询
+                </button>
+                <button type="reset" class="pear-btn pear-btn-md" lay-submit lay-filter="table-reset">
+                    <i class="layui-icon layui-icon-refresh"></i>重置
+                </button>
+            </div>
+            <div class="toggle-btn">
+                <a class="layui-hide">展开<i class="layui-icon layui-icon-down"></i></a>
+                <a class="layui-hide">收起<i class="layui-icon layui-icon-up"></i></a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 数据表格 -->
+<div class="layui-card">
+    <div class="layui-card-body">
+        <table id="data-table" lay-filter="data-table"></table>
+    </div>
+</div>
+
+<!-- 表格顶部工具栏 -->
+<script type="text/html" id="table-toolbar">
+</script>
+
+<!-- 表格行工具栏 -->
+<script type="text/html" id="table-bar">
+    {{# if(d.type === 'file'){ }}
+    <button class="pear-btn pear-btn-xs tool-btn" lay-event="filelist" permission="app.webmanlogs.index.filedetail">查看
+    </button>
+    {{# } }}
+
+</script>
+
+<script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+<script src="/app/admin/component/pear/pear.js"></script>
+<script src="/app/admin/admin/js/permission.js"></script>
+<script src="/app/admin/admin/js/common.js"></script>
+
+<script>
+
+    // 相关常量
+    const SELECT_API = "/app/webmanlogs/index/index";
+
+
+    // 表格渲染
+    layui.use(["treeTable", "form", "common", "popup", "util"], function () {
+        let table = layui.treeTable;
+        let form = layui.form;
+        let $ = layui.$;
+        let common = layui.common;
+        let util = layui.util;
+
+        // 表头参数
+        let cols = [
+            {
+                title: "文件名",
+                // align: "center",
+                field: "name",
+            }, {
+                title: "行数", align: "center",
+                field: "lines",
+            }, {
+                title: "大小", align: "center",
+                field: "size",
+            }, {
+                title: "更新时间", align: "center",
+                field: "modification_time",
+            },
+            {
+                title: "操作",
+                toolbar: "#table-bar",
+                align: "center",
+                fixed: "right",
+                width: 200,
+            }
+        ];
+
+        // 渲染表格
+        table.render({
+            elem: "#data-table",
+            url: SELECT_API,
+            cols: [cols],
+            skin: "grid",
+            size: "lg",
+            height: "full-200",
+            toolbar: "#table-toolbar",
+            cellMinWidth: 200,
+            autoSort: false,
+            defaultToolbar: [{
+                title: "刷新",
+                layEvent: "refresh",
+                icon: "layui-icon-refresh",
+            }, "filter", "print", "exports"],
+            done: function () {
+                layer.photos({photos: 'div[lay-id="data-table"]', anim: 5});
+            }
+        });
+
+
+        table.on("tool(data-table)", function (obj) {
+            if (obj.event === "filelist") {
+                filelist(obj);
+            }
+        });
+
+        // 表格顶部工具栏事件
+        table.on("toolbar(data-table)", function (obj) {
+            if (obj.event === "refresh") {
+                refreshTable();
+            }
+        });
+
+        // 表格顶部搜索事件
+        form.on("submit(table-query)", function (data) {
+            table.reload("data-table", {
+                where: data.field
+            })
+            return false;
+        });
+
+        // 表格顶部搜索重置事件
+        form.on("submit(table-reset)", function (data) {
+            table.reload("data-table", {
+                where: []
+            })
+        });
+
+        let filelist = function (obj) {
+            layer.open({
+                type: 2,
+                title: "日志明细",
+                shade: 0.1,
+                maxmin: true,
+                shadeClose: false,
+                area: [common.isModile() ? "100%" : "90%", common.isModile() ? "100%" : "80%"],
+                content: '/app/webmanlogs/index/filedetail' + "?path=" + obj.data.path
+            });
+        }
+
+        // 刷新表格数据
+        window.refreshTable = function (param) {
+            table.reloadData("data-table", {
+                scrollPos: "fixed"
+            });
+        }
+    })
+
+</script>
+</body>
+</html>

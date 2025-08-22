@@ -45,7 +45,9 @@
     "minishlink/web-push": "^9.0",
     "webman/redis": "^2.1",
     "league/html-to-markdown": "^5.1",
-    "webman/admin": "~2.0"
+    "webman/admin": "*",
+    "intervention/image": "*",
+    "ext-gd": "*"
   },
   "suggest": {
     "ext-event": "For better performance. "

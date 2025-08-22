@@ -8,8 +8,6 @@ use support\Log;
 use support\Request;
 use support\Response;
 use Webman\Http\UploadFile;
-use Intervention\Image\ImageManager;
-use Intervention\Image\Drivers\Gd\Driver as GdDriver;
 
 class EditorController
 {
@@ -184,14 +182,14 @@ class EditorController
      */
     private function generateThumbnail(Media $media, string $filePath)
     {
-        // 检查是否已安装 Intervention Image 库
-        if (!class_exists(ImageManager::class)) {
-            Log::warning('Intervention Image library not found');
+        // 检查GD扩展是否可用
+        if (!extension_loaded('gd')) {
+            Log::warning('GD extension not found');
             return null;
         }
 
         // 只对支持的图片格式生成缩略图
-        $supportedFormats = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'];
+        $supportedFormats = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
         $extension = strtolower(pathinfo($media->file_path, PATHINFO_EXTENSION));
         
         if (!in_array($extension, $supportedFormats)) {
@@ -212,15 +210,37 @@ class EditorController
 
             // 生成缩略图文件名
             $filename = pathinfo($media->file_path, PATHINFO_FILENAME);
-            $extension = pathinfo($media->file_path, PATHINFO_EXTENSION);
             $thumbFilename = $filename . '_thumb.' . $extension;
             $thumbPath = $thumbDir . '/' . $thumbFilename;
 
-            // 生成缩略图 (使用 Intervention Image v3 的正确方式)
-            $manager = new ImageManager(new GdDriver());
-            $image = $manager->read($filePath);
-            $image->cover(200, 200, 'center');
-            $image->save($thumbPath);
+            // 使用 GD 函数生成缩略图
+            $thumb = $this->createThumbnailGD($filePath, 200, 200);
+            if ($thumb === false) {
+                return null;
+            }
+
+            // 根据图片类型保存缩略图
+            switch (strtolower($extension)) {
+                case 'jpg':
+                case 'jpeg':
+                    imagejpeg($thumb, $thumbPath, 80);
+                    break;
+                case 'png':
+                    imagepng($thumb, $thumbPath, 6);
+                    break;
+                case 'gif':
+                    imagegif($thumb, $thumbPath);
+                    break;
+                case 'webp':
+                    imagewebp($thumb, $thumbPath, 80);
+                    break;
+                default:
+                    imagedestroy($thumb);
+                    return null;
+            }
+
+            // 释放内存
+            imagedestroy($thumb);
 
             return dirname($media->file_path) . '/thumbs/' . $thumbFilename;
         } catch (\Exception $e) {
@@ -228,5 +248,81 @@ class EditorController
             Log::warning('thumbnail generation failed: ' . $e->getMessage(), ['file' => $filePath]);
             return null;
         }
+    }
+
+    /**
+     * 使用 GD 创建缩略图
+     *
+     * @param string $srcPath 源图片路径
+     * @param int $thumbWidth 缩略图宽度
+     * @param int $thumbHeight 缩略图高度
+     * @return resource|false 返回缩略图资源或false
+     */
+    private function createThumbnailGD($srcPath, $thumbWidth, $thumbHeight)
+    {
+        // 获取源图片信息
+        $info = getimagesize($srcPath);
+        if ($info === false) {
+            return false;
+        }
+
+        $srcWidth = $info[0];
+        $srcHeight = $info[1];
+        $mimeType = $info['mime'];
+
+        // 创建源图片资源
+        $src = null;
+        switch ($mimeType) {
+            case 'image/jpeg':
+                $src = imagecreatefromjpeg($srcPath);
+                break;
+            case 'image/png':
+                $src = imagecreatefrompng($srcPath);
+                break;
+            case 'image/gif':
+                $src = imagecreatefromgif($srcPath);
+                break;
+            case 'image/webp':
+                $src = imagecreatefromwebp($srcPath);
+                break;
+            default:
+                return false;
+        }
+
+        if ($src === false) {
+            return false;
+        }
+
+        // 计算缩略图尺寸（保持比例）
+        $ratio = min($srcWidth, $srcHeight) / $thumbWidth;
+        $newWidth = (int)($srcWidth / $ratio);
+        $newHeight = (int)($srcHeight / $ratio);
+
+        // 创建缩略图资源
+        $thumb = imagecreatetruecolor($newWidth, $newHeight);
+        if ($thumb === false) {
+            imagedestroy($src);
+            return false;
+        }
+
+        // 保持 PNG 和 GIF 透明度
+        if ($mimeType === 'image/png' || $mimeType === 'image/gif') {
+            imagealphablending($thumb, false);
+            imagesavealpha($thumb, true);
+            $transparent = imagecolorallocatealpha($thumb, 255, 255, 255, 127);
+            imagefilledrectangle($thumb, 0, 0, $newWidth, $newHeight, $transparent);
+        }
+
+        // 缩放图片
+        if (!imagecopyresampled($thumb, $src, 0, 0, 0, 0, $newWidth, $newHeight, $srcWidth, $srcHeight)) {
+            imagedestroy($src);
+            imagedestroy($thumb);
+            return false;
+        }
+
+        // 释放源图片资源
+        imagedestroy($src);
+
+        return $thumb;
     }
 }

@@ -9,3 +9,4 @@
 /public/uploads/
 /installed.lock
 /.phpunit.cache/
+/plugin/admin/public/upload/

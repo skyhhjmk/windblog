@@ -41,6 +41,15 @@ function blog_config(string $key, mixed $default = null, bool $set = false, bool
         $cfg = cache('blog_config_' . $key);
         if ($cfg) {
             return $cfg;
+        } else {
+            if ($set) {
+                try {
+                    cache('blog_config_' . $key, $default, true);
+                } catch (\Exception $e) {
+                    \support\Log::channel('system_function')->error('[blog_config] error: ' . $e->getMessage());
+                    return false;
+                }
+            }
         }
     }
 
