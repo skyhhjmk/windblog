@@ -654,7 +654,7 @@
 		$DOM.toast.appendChild($DOM.toastBody);
 		$DOM.toastCapsule.appendChild($DOM.toast);
 
-		// CSS Settings
+		// CSS Setting
 		(function(){
 
 			$DOM.toast.classList.add(PLUGIN_NAME);

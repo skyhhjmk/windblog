@@ -3,7 +3,7 @@
 namespace plugin\admin\app\controller;
 
 use plugin\admin\app\controller\Base;
-use app\model\Posts;
+use app\model\Post;
 use support\Request;
 use support\Response;
 
@@ -39,7 +39,7 @@ class PostsController extends Base
         $sort = $request->get('sort', 'desc');
         
         // 构建查询
-        $query = Posts::query();
+        $query = Post::query();
         
         // 搜索条件
         if ($realName) {
@@ -65,7 +65,7 @@ class PostsController extends Base
             ->toArray();
         
         // 返回JSON数据
-        return $this->success('成功',$list, $total);
+        return $this->success(trans('Success'),$list, $total);
     }
     
     /**
@@ -77,7 +77,7 @@ class PostsController extends Base
      */
     public function remove(Request $request, $id)
     {
-        $post = Posts::find($id);
+        $post = Post::find($id);
         if (!$post) {
             return $this->fail('文章不存在');
         }
@@ -100,7 +100,7 @@ class PostsController extends Base
         }
         
         $idArray = explode(',', $ids);
-        $count = Posts::destroy($idArray);
+        $count = Post::destroy($idArray);
         return $this->success("成功删除 {$count} 篇文章");
     }
     
@@ -124,7 +124,7 @@ class PostsController extends Base
      */
     public function edit(Request $request, $id)
     {
-        $post = Posts::find($id);
+        $post = Post::find($id);
         if (!$post) {
             return $this->fail('文章不存在');
         }
@@ -141,7 +141,7 @@ class PostsController extends Base
      */
     public function view(Request $request, $id)
     {
-        $post = Posts::find($id);
+        $post = Post::find($id);
         if (!$post) {
             return $this->fail('文章不存在');
         }
@@ -168,14 +168,14 @@ class PostsController extends Base
             return $this->fail('内容不能为空');
         }
         
-        $post = new Posts();
+        $post = new Post();
         $post->title = $data['title'];
         $post->content = $data['content'];
         $post->status = $data['status'] ?? 'draft';
         $post->summary = $data['summary'] ?? '';
         $post->save();
         
-        return $this->success('成功',['id' => $post->id]);
+        return $this->success(trans('Success'),['id' => $post->id]);
     }
     
     /**
@@ -187,7 +187,7 @@ class PostsController extends Base
      */
     public function update(Request $request, $id)
     {
-        $post = Posts::find($id);
+        $post = Post::find($id);
         if (!$post) {
             return $this->fail('文章不存在');
         }

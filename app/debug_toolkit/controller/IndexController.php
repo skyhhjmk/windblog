@@ -2,7 +2,7 @@
 namespace app\debug_toolkit\controller;
 
 use support\Request;
-use app\model\Posts;
+use app\model\Post;
 
 class IndexController
 {

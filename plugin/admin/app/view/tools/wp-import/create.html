@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>WordPress导入</title>
+    <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css"/>
+</head>
+<body class="pear-container">
+<div class="layui-row layui-col-space10">
+    <div class="layui-col-md12">
+        <div class="layui-card">
+            <div class="layui-card">
+                <div class="layui-card-body" style="padding-top: 40px;">
+                    <div class="layui-carousel" id="stepForm" lay-filter="stepForm" style="margin: 0 auto;">
+                        <div carousel-item>
+                            <div>
+                                <form class="layui-form" action="javascript:void(0);"
+                                      style="margin: 0 auto;max-width: 460px;padding-top: 40px;">
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">选择文件:</label>
+                                        <div class="layui-input-block">
+                                            <button type="button" class="layui-btn" id="selectFile">
+                                                <i class="layui-icon">&#xe67c;</i>选择WordPress导出文件
+                                            </button>
+                                            <button type="button" class="layui-btn layui-btn-normal" id="uploadBtn" style="margin-left: 10px; display: none;">
+                                                <i class="layui-icon">&#xe681;</i>上传文件
+                                            </button>
+                                            <div class="layui-upload-list">
+                                                <p id="fileName" style="margin-top: 10px;"></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="layui-form-item">
+                                        <div class="layui-input-block">
+                                            <button class="pear-btn pear-btn-success" lay-submit lay-filter="formStep">
+                                                &emsp;下一步&emsp;
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                            
+                            <div>
+                                <form class="layui-form" action="javascript:void(0);"
+                                      style="margin: 0 auto;max-width: 460px;padding-top: 40px;" id="importForm">
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">作者处理:</label>
+                                        <div class="layui-input-block">
+                                            <select name="author_action" lay-verify="required">
+                                                <option value="create">创建新作者</option>
+                                                <option value="map_to_admin">映射到管理员</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">图片导入:</label>
+                                        <div class="layui-input-block">
+                                            <input type="checkbox" name="import_images" lay-skin="switch" lay-text="是|否" checked>
+                                        </div>
+                                    </div>
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">文章状态:</label>
+                                        <div class="layui-input-block">
+                                            <select name="post_status">
+                                                <option value="publish">发布</option>
+                                                <option value="draft">草稿</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="layui-form-item">
+                                        <div class="layui-input-block">
+                                            <button type="button" class="pear-btn pear-btn-primary pre">&emsp;上一步&emsp;</button>
+                                            <button class="pear-btn pear-btn-success" lay-submit lay-filter="formStep2">
+                                                &emsp;开始导入&emsp;
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                            
+                            <div>
+                                <div style="text-align: center;margin-top: 90px;">
+                                    <i class="layui-icon layui-circle"
+                                       style="color: white;font-size:30px;font-weight:bold;background: #52C41A;padding: 20px;line-height: 80px;">&#xe605;</i>
+                                    <div style="font-size: 24px;color: #333;font-weight: 500;margin-top: 30px;">
+                                        导入成功
+                                    </div>
+                                    <div style="font-size: 14px;color: #666;margin-top: 20px;">WordPress数据已成功导入</div>
+                                </div>
+                                <div style="text-align: center;margin-top: 50px;">
+                                    <button class="pear-btn pear-btn-success next">再次导入</button>
+                                    <button class="pear-btn pear-btn-success">查看文章</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="/app/admin/component/layui/layui.js?v=2.11.5"></script>
+<script src="/app/admin/component/pear/pear.js"></script>
+<script>
+    // 相关接口
+    const UPLOAD_URL = '/app/admin/tools/wp-import/upload';
+
+    layui.use(['form', 'step', 'element', 'upload'], function () {
+        var $ = layui.$,
+            form = layui.form,
+            step = layui.step,
+            upload = layui.upload;
+
+        step.render({
+            elem: '#stepForm',
+            filter: 'stepForm',
+            width: '100%',
+            stepWidth: '600px',
+            height: '500px',
+            stepItems: [{
+                title: '上传文件'
+            }, {
+                title: '导入设置'
+            }, {
+                title: '完成'
+            }]
+        });
+
+        // 文件上传
+        var uploadInst = upload.render({
+            elem: '#selectFile',
+            url: UPLOAD_URL,
+            accept: 'file',
+            exts: 'xml',
+            acceptMime: 'text/xml,application/xml',
+            field: 'import_file', // 设置文件字段名，与后端一致
+            auto: false,
+            bindAction: '#uploadBtn',
+            choose: function(obj) {
+                // 文件选择后的回调函数
+                obj.preview(function(index, file, result) {
+                    // 显示文件名
+                    $('#fileName').html('<span style="color: #1E9FFF;">已选择文件：' + file.name + '</span>');
+                    // 显示上传按钮
+                    $('#uploadBtn').show();
+                    // 保存文件对象用于后续上传
+                    window.uploadFile = obj;
+                });
+            },
+            before: function(obj) {
+                // 在上传前检查文件扩展名
+                var file = obj.file || (obj.getFiles && obj.getFiles()[0]);
+                if (file) {
+                    var fileName = file.name || file.fileName;
+                    var fileExt = fileName.slice(fileName.lastIndexOf('.') + 1).toLowerCase();
+                    if (fileExt !== 'xml') {
+                        layer.msg('请选择XML格式的文件');
+                        return false;
+                    }
+                }
+                layer.load();
+            },
+            done: function(res) {
+                layer.closeAll('loading');
+                if (res.code === 0) {
+                    $('#fileName').html('<span style="color: #5FB878;">' + res.data.name + '</span>');
+                    $('#uploadBtn').hide();
+                    // 保存文件信息用于后续提交
+                    window.uploadedFile = res.data;
+                } else {
+                    $('#fileName').html('<span style="color: #FF5722;">上传失败：' + res.msg + '</span>');
+                    $('#uploadBtn').show(); // 上传失败时重新显示上传按钮
+                }
+            },
+            error: function() {
+                layer.closeAll('loading');
+                $('#fileName').html('<span style="color: #FF5722;">上传失败，请重试</span>');
+                $('#uploadBtn').show(); // 上传失败时重新显示上传按钮
+            }
+        });
+
+        form.on('submit(formStep)', function (data) {
+            // 检查是否已选择文件
+            if (!$('#fileName').text()) {
+                layer.msg('请先选择并上传WordPress文件');
+                return false;
+            }
+            
+            // 检查是否上传成功
+            if ($('#fileName').find('span').css('color') === 'rgb(255, 87, 34)' || 
+                $('#fileName').find('span').css('color') === '#FF5722') {
+                layer.msg('请先上传WordPress文件');
+                return false;
+            }
+            
+            step.next('#stepForm');
+            return false;
+        });
+
+        // 处理表单提交
+        form.on('submit(formStep2)', function (data) {
+            // 检查是否已上传文件
+            if (!window.uploadedFile) {
+                layer.msg('请先上传文件');
+                return false;
+            }
+            
+            // 收集表单数据
+            var formData = {
+                author_action: data.field.author_action,
+                import_images: data.field.import_images === 'on' ? 1 : 0,
+                post_status: data.field.post_status
+            };
+            
+            // 发送统一请求
+            $.ajax({
+                url: '/admin/tools/wp-import/submit',
+                type: 'POST',
+                data: {
+                    import_file: window.uploadedFile.name,
+                    author_action: formData.author_action,
+                    import_images: formData.import_images,
+                    post_status: formData.post_status,
+                    create_users: formData.author_action === 'create' ? 1 : 0,
+                    import_attachments: formData.import_images,
+                    download_attachments: formData.import_images,
+                    duplicate_mode: 'skip',
+                    default_author: 'system', // 设置为system以避免外键约束问题
+                    force: 0
+                },
+                success: function(res) {
+                    if (res.code === 0) {
+                        step.next('#stepForm');
+                    } else {
+                        layer.msg('导入失败：' + res.msg);
+                    }
+                },
+                error: function() {
+                    layer.msg('请求失败，请重试');
+                }
+            });
+            
+            return false;
+        });
+
+        $('.pre').click(function () {
+            step.pre('#stepForm');
+            return false;
+        });
+
+        $('.next').click(function () {
+            step.next('#stepForm');
+            return false;
+        });
+    })
+</script>
+</body>
+</html>

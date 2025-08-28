@@ -3,7 +3,7 @@ namespace app\model;
 
 use support\Model;
 
-class Settings extends Model
+class Setting extends Model
 {
     /**
      * 与模型关联的表名

@@ -2,7 +2,7 @@
 
 namespace app\api\controller\v1;
 
-use app\model\Posts;
+use app\model\Post;
 use support\Request;
 use support\Response;
 use Webman\RateLimiter\Annotation\RateLimiter;
@@ -19,7 +19,7 @@ class ApiPostController
     {
         return json([
             'code' => 200,
-            'message' => trans('success'),
+            'message' => trans('Success'),
         ]);
     }
 
@@ -33,11 +33,11 @@ class ApiPostController
                 'message' => trans('Missing input parameter :parameter', ['parameter' => 'id']) // 缺少输入参数 id
             ]);
         }
-        $post = Posts::where('id', $id)->where('status', 'published');
+        $post = Post::where('id', $id)->where('status', 'published');
         var_dump($post);
         return json([
             'code' => 200,
-            'message' => trans('success'),
+            'message' => trans('Success'),
             'id' => $id,
             'title' => $post->title,
             'slug' => $post->slug,

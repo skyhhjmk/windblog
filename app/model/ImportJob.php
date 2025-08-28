@@ -54,6 +54,5 @@ class ImportJob extends Model
         'progress' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
-        'deleted_at' => 'datetime',
     ];
 }

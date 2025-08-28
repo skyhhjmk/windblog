@@ -6,7 +6,7 @@
 namespace app\controller;
 
 use support\Request;
-use app\model\Posts;
+use app\model\Post;
 use function Symfony\Component\Translation\t;
 
 class IndexController
@@ -18,7 +18,7 @@ class IndexController
 
     public function index(Request $request, int $page = 1)
     {
-        $count = Posts::count('*');
+        $count = Post::count('*');
 
         $posts_per_page = blog_config('posts_per_page', 10, true);
 
@@ -125,11 +125,11 @@ class IndexController
             if ($cached) {
                 return $cached;
             } else {
-                $posts = Posts::where('status', 'published')->orderByDesc('id')->forPage($page, $posts_per_page)->get();
+                $posts = Post::where('status', 'published')->orderByDesc('id')->forPage($page, $posts_per_page)->get();
                 cache('blog_posts_page_' . $page . '_per_' . $posts_per_page, $posts, true);
             }
         } else {
-            $posts = Posts::where('status', 'published')->orderByDesc('id')->forPage($page, $posts_per_page)->get();
+            $posts = Post::where('status', 'published')->orderByDesc('id')->forPage($page, $posts_per_page)->get();
         }
 
         foreach ($posts as $post) {

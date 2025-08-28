@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <title>数据表格</title>
-    <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css" />
+    <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css"/>
     <style>
         .expand.pear-btn:hover {
             color: currentColor;
@@ -102,15 +102,15 @@
 
 <div style="display: none;">
     <div class="layer-top">
-        <br />
+        <br/>
         <h3>上侧弹层内容...</h3>
     </div>
 </div>
 
-<script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+<script src="/app/admin/component/layui/layui.js?v=2.11.5"></script>
 <script src="/app/admin/component/pear/pear.js"></script>
 <script>
-    layui.use(['table', 'form', 'jquery', 'drawer', 'dropdown'], function() {
+    layui.use(['table', 'form', 'jquery', 'drawer', 'dropdown'], function () {
         let table = layui.table;
         let form = layui.form;
         let $ = layui.jquery;
@@ -140,7 +140,7 @@
 
             var eleDOM = $(elem + " .layui-inline");
             var firstElTop = eleDOM.first().offset().top;
-            var targetEl = eleDOM.filter(function(index) {
+            var targetEl = eleDOM.filter(function (index) {
                 var isGtMin = (index + 1) > min;
                 var isGtFirstElTop = $(this).offset().top > firstElTop;
                 var isNeqLast = (index + 1) != eleDOM.length;
@@ -162,7 +162,7 @@
                     $(btnSelector + ">i").addClass(unExpandIcon)
                     targetEl.addClass("layui-hide");
                 }
-                $(btnSelector).click(function() {
+                $(btnSelector).click(function () {
                     isExpand = !isExpand;
                     if (isExpand) {
                         $(btnSelector + ">span").html(expandText);
@@ -199,6 +199,12 @@
                     width: 100,
                     templet: '#post-status'
                 },
+                // {
+                //     title: '文章状态',
+                //     field: 'status',
+                //     align: 'center',
+                //     width: 100,
+                // },
                 {
                     title: '创建时间',
                     field: 'created_at',
@@ -227,7 +233,7 @@
                 layEvent: 'refresh',
                 icon: 'layui-icon-refresh',
             }, 'filter', 'print', 'exports'],
-            done: function(res, curr, count) {
+            done: function (res, curr, count) {
                 for (var i = 0; i < res.data.length; i++) {
                     dropdown.render({
                         elem: '#more_' + res.data[i].id,
@@ -242,7 +248,7 @@
                             id: 102
                         }],
                         id: '#more_' + res.data[i].id,
-                        click: function(obj) {
+                        click: function (obj) {
                             layer.tips('点击了：' + obj.title, this.elem, {
                                 tips: [1, '#5FB878']
                             })
@@ -252,7 +258,7 @@
             }
         });
 
-        table.on('tool(post-table)', function(obj) {
+        table.on('tool(post-table)', function (obj) {
             if (obj.event === 'remove') {
                 window.remove(obj);
             } else if (obj.event === 'edit') {
@@ -260,7 +266,7 @@
             }
         });
 
-        table.on('toolbar(post-table)', function(obj) {
+        table.on('toolbar(post-table)', function (obj) {
             if (obj.event === 'add') {
                 window.add();
             } else if (obj.event === 'refresh') {
@@ -270,18 +276,18 @@
             }
         });
 
-        form.on('submit(post-query)', function(data) {
+        form.on('submit(post-query)', function (data) {
             table.reload('post-table', {
                 where: data.field
             })
             return false;
         });
 
-        form.on('switch(post-enable)', function(obj) {
+        form.on('switch(post-enable)', function (obj) {
             layer.tips(this.value + ' ' + this.name + '：' + obj.elem.checked, obj.othis);
         });
 
-        window.add = function() {
+        window.add = function () {
             drawer.open({
                 direction: "top",
                 dom: ".layer-top",
@@ -289,28 +295,28 @@
             });
         }
 
-        window.edit = function(obj) {
+        window.edit = function (obj) {
             layer.msg("修改");
         }
 
-        window.remove = function(obj) {
+        window.remove = function (obj) {
             layer.confirm('确定要删除该文章', {
                 icon: 3,
                 title: '提示'
-            }, function(index) {
+            }, function (index) {
                 layer.close(index);
                 let loading = layer.load();
                 $.ajax({
                     url: MODULE_PATH + "remove/" + obj.data['id'],
                     dataType: 'json',
                     type: 'delete',
-                    success: function(result) {
+                    success: function (result) {
                         layer.close(loading);
                         if (result.success) {
                             layer.msg(result.msg, {
                                 icon: 1,
                                 time: 1000
-                            }, function() {
+                            }, function () {
                                 obj.del();
                             });
                         } else {
@@ -324,7 +330,7 @@
             });
         }
 
-        window.batchRemove = function(obj) {
+        window.batchRemove = function (obj) {
             let data = table.checkStatus(obj.config.id).data;
             if (data.length === 0) {
                 layer.msg("未选中数据", {
@@ -341,20 +347,20 @@
             layer.confirm('确定要删除这些文章', {
                 icon: 3,
                 title: '提示'
-            }, function(index) {
+            }, function (index) {
                 layer.close(index);
                 let loading = layer.load();
                 $.ajax({
                     url: MODULE_PATH + "batchRemove/" + ids,
                     dataType: 'json',
                     type: 'delete',
-                    success: function(result) {
+                    success: function (result) {
                         layer.close(loading);
                         if (result.success) {
                             layer.msg(result.msg, {
                                 icon: 1,
                                 time: 1000
-                            }, function() {
+                            }, function () {
                                 table.reload('post-table');
                             });
                         } else {
@@ -368,7 +374,7 @@
             });
         }
 
-        window.refresh = function(param) {
+        window.refresh = function (param) {
             table.reload('post-table');
         }
     })

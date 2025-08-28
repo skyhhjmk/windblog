@@ -52,12 +52,12 @@ Route::group('/api', function () {
     Route::any('', [app\admin\controller\IndexController::class, 'index'])->name('admin.index.index');
     // wordpress 导入数据路由
     Route::group('/wordpress-import', function () {
-        Route::any('', [app\admin\controller\ImportController::class, 'index'])->name('admin.import.index');
-        Route::post('/upload', [app\admin\controller\ImportController::class, 'upload'])->name('admin.import.upload');
-        Route::post('/force-upload', [app\admin\controller\ImportController::class, 'forceUpload'])->name('admin.import.force-upload');
-        Route::any('/status/{id}', [app\admin\controller\ImportController::class, 'status'])->name('admin.import.status');
-        Route::post('/reset/{id}', [app\admin\controller\ImportController::class, 'reset'])->name('admin.import.reset');
-        Route::post('/delete/{id}', [app\admin\controller\ImportController::class, 'delete'])->name('admin.import.delete');
+        Route::any('', [app\admin\controller\WpImportController::class, 'index'])->name('admin.import.index');
+        Route::post('/upload', [app\admin\controller\WpImportController::class, 'upload'])->name('admin.import.upload');
+        Route::post('/force-upload', [app\admin\controller\WpImportController::class, 'forceUpload'])->name('admin.import.force-upload');
+        Route::any('/status/{id}', [app\admin\controller\WpImportController::class, 'status'])->name('admin.import.status');
+        Route::post('/reset/{id}', [app\admin\controller\WpImportController::class, 'reset'])->name('admin.import.reset');
+        Route::post('/delete/{id}', [app\admin\controller\WpImportController::class, 'delete'])->name('admin.import.delete');
     });
 
     // 文章管理路由

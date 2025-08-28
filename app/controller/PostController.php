@@ -3,7 +3,7 @@
 namespace app\controller;
 
 use support\Request;
-use app\model\Posts;
+use app\model\Post;
 use support\Response;
 
 class PostController
@@ -15,11 +15,11 @@ class PostController
         switch (blog_config('url_mode', 'mix', true)) {
             case 'slug':
                 // slug模式
-                $post = Posts::where('slug', $keyword)->first();
+                $post = Post::where('slug', $keyword)->first();
                 break;
             case 'id':
                 // id模式
-                $post = Posts::where('id', $keyword)->first();
+                $post = Post::where('id', $keyword)->first();
                 if (!$post || $post['status'] != 'published') {
                     return view('index/404');
                 }
@@ -27,12 +27,12 @@ class PostController
             case 'mix':
                 // 混合模式
                 if (is_numeric($keyword)) {
-                    $post = Posts::where('id', $keyword)->first();
+                    $post = Post::where('id', $keyword)->first();
                     if ($post === null) {
-                        $post = Posts::where('slug', $keyword)->first();
+                        $post = Post::where('slug', $keyword)->first();
                     }
                 } elseif (is_string($keyword)) {
-                    $post = Posts::where('slug', $keyword)->first();
+                    $post = Post::where('slug', $keyword)->first();
                 } else {
                     return view('index/404');
                 }

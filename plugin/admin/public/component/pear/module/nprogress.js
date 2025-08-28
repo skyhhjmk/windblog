@@ -339,7 +339,7 @@
 
   /**
    * (Internal) returns the correct CSS for changing the bar's
-   * position given an n percentage, and speed and ease from Settings
+   * position given an n percentage, and speed and ease from Setting
    */
 
   function barPositionCSS(n, speed, ease) {

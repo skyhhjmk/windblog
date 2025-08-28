@@ -137,7 +137,7 @@ layui.define(['table', 'jquery', 'element'], function (exports) {
 		}
     };
 
-	// Notiflix: Notify Default Settings on
+	// Notiflix: Notify Default Setting on
 	var notifySettings = {
 	    wrapID: 'NotiflixNotifyWrap', // can not customizable
 	    width: '280px',
@@ -205,9 +205,9 @@ layui.define(['table', 'jquery', 'element'], function (exports) {
 	        fontAwesomeIconColor: 'rgba(0,0,0,0.2)',
 	    },
 	};
-	// Notiflix: Notify Default Settings off
+	// Notiflix: Notify Default Setting off
 
-	// Notiflix: Report Default Settings on
+	// Notiflix: Report Default Setting on
 	var reportSettings = {
 	    ID: 'NotiflixReportWrap', // can not customizable
 	    className: 'notiflix-report',
@@ -264,9 +264,9 @@ layui.define(['table', 'jquery', 'element'], function (exports) {
 	        buttonColor: '#fff',
 	    },
 	};
-	// Notiflix: Report Default Settings off
+	// Notiflix: Report Default Setting off
 
-	// Notiflix: Confirm Default Settings on
+	// Notiflix: Confirm Default Setting on
 	var confirmSettings = {
 	    ID: 'NotiflixConfirmWrap', // can not customizable
 	    className: 'notiflix-confirm',
@@ -301,9 +301,9 @@ layui.define(['table', 'jquery', 'element'], function (exports) {
 	    cancelButtonColor: '#f8f8f8',
 	    cancelButtonBackground: '#a9a9a9',
 	};
-	// Notiflix: Confirm Default Settings off
+	// Notiflix: Confirm Default Setting off
 
-	// Notiflix: Loading Default Settings on
+	// Notiflix: Loading Default Setting on
 	var loadingSettings = {
 	    ID: 'NotiflixLoadingWrap', // can not customizable
 	    className: 'notiflix-loading',
@@ -323,9 +323,9 @@ layui.define(['table', 'jquery', 'element'], function (exports) {
 	    messageMaxLength: 34,
 	    messageColor: '#dcdcdc',
 	};
-	// Notiflix: Loading Default Settings off
+	// Notiflix: Loading Default Setting off
 
-	// Notiflix: Block Default Settings on
+	// Notiflix: Block Default Setting on
 	var blockSettings = {
 	    ID: 'NotiflixBlockWrap', // can not customizable
 	    querySelectorLimit: 200,
@@ -344,7 +344,7 @@ layui.define(['table', 'jquery', 'element'], function (exports) {
 	    messageMaxLength: 34,
 	    messageColor: '#383838',
 	};
-	// Notiflix: Block Default Settings off
+	// Notiflix: Block Default Setting off
 
 	// Notiflix: Extend on
 	var extendNotiflix = function () {

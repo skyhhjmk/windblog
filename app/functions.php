@@ -40,18 +40,18 @@ function blog_config(string $key, mixed $default = null, bool $set = false, bool
 {
     $key = trim($key);
     if ($key === '') {
-        return app\model\Settings::all();
+        return app\model\Setting::all();
     }
 
     // 如果需要设置值，则直接设置并返回default
     if ($set) {
         try {
             // 查找或创建设置项
-            $setting = app\model\Settings::where('key', $key)->first();
+            $setting = app\model\Setting::where('key', $key)->first();
 
             if (!$setting) {
                 // 如果不存在则创建新记录
-                $setting = new app\model\Settings();
+                $setting = new app\model\Setting();
                 $setting->key = $key;
             }
             $setting->value = serialize($default);
@@ -75,7 +75,7 @@ function blog_config(string $key, mixed $default = null, bool $set = false, bool
         }
     }
 
-    $cfg = app\model\Settings::where('key', $key)->value('value');
+    $cfg = app\model\Setting::where('key', $key)->value('value');
     if ($cfg !== null && $cfg !== false) {
         $unserialized = unserialize($cfg);
         // 如果反序列化失败，返回原始值

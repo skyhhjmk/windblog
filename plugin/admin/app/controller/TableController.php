@@ -815,7 +815,7 @@ EOF
             <button class="pear-btn pear-btn-xs tool-btn" lay-event="remove" permission="$code_base.delete">删除</button>
         </script>
 
-        <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+        <script src="/app/admin/component/layui/layui.js?v=2.11.5"></script>
         <script src="/app/admin/component/pear/pear.js"></script>
         <script src="/app/admin/admin/js/permission.js"></script>
         <script src="/app/admin/admin/js/common.js"></script>
@@ -1027,7 +1027,7 @@ EOF;
             
         </form>
 
-        <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+        <script src="/app/admin/component/layui/layui.js?v=2.11.5"></script>
         <script src="/app/admin/component/pear/pear.js"></script>
         <script src="/app/admin/component/jsoneditor/jsoneditor.js"></script>
         <script src="/app/admin/admin/js/permission.js"></script>
@@ -1116,7 +1116,7 @@ EOF;
             
         </form>
 
-        <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+        <script src="/app/admin/component/layui/layui.js?v=2.11.5"></script>
         <script src="/app/admin/component/pear/pear.js"></script>
         <script src="/app/admin/component/jsoneditor/jsoneditor.js"></script>
         <script src="/app/admin/admin/js/permission.js"></script>

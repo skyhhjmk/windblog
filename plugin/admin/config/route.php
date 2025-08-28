@@ -15,27 +15,45 @@
 use plugin\admin\app\controller\AccountController;
 use plugin\admin\app\controller\DictController;
 use plugin\admin\app\controller\PostsController;
+use plugin\admin\app\controller\WpImportController;
 use Webman\Route;
 use support\Request;
 
-Route::any('/app/admin/account/captcha/{type}', [AccountController::class, 'captcha']);
+Route::group('/app/admin', function () {
+    Route::any('/account/captcha/{type}', [AccountController::class, 'captcha']);
 
-Route::any('/app/admin/dict/get/{name}', [DictController::class, 'get']);
+    Route::any('/dict/get/{name}', [DictController::class, 'get']);
 
-// Posts 路由
-Route::group('/app/admin/posts', function () {
-    Route::get('/', [PostsController::class, 'index']);
-    Route::get('/index', [PostsController::class, 'index']);
-    Route::get('/list', [PostsController::class, 'list']);
-    Route::get('/create', [PostsController::class, 'create']);
-    Route::post('/store', [PostsController::class, 'store']);
-    Route::get('/edit/{id}', [PostsController::class, 'edit']);
-    Route::post('/update/{id}', [PostsController::class, 'update']);
-    Route::get('/view/{id}', [PostsController::class, 'view']);
-    Route::delete('/remove/{id}', [PostsController::class, 'remove']);
-    Route::delete('/batchRemove/{ids}', [PostsController::class, 'batchRemove']);
+    // Post 路由
+    Route::group('/posts', function () {
+        Route::get('', [PostsController::class, 'index']);
+        Route::get('/', [PostsController::class, 'index']);
+        Route::get('/index', [PostsController::class, 'index']);
+        Route::get('/list', [PostsController::class, 'list']);
+        Route::get('/create', [PostsController::class, 'create']);
+        Route::post('/store', [PostsController::class, 'store']);
+        Route::get('/edit/{id}', [PostsController::class, 'edit']);
+        Route::post('/update/{id}', [PostsController::class, 'update']);
+        Route::get('/view/{id}', [PostsController::class, 'view']);
+        Route::delete('/remove/{id}', [PostsController::class, 'remove']);
+        Route::delete('/batchRemove/{ids}', [PostsController::class, 'batchRemove']);
+    });
+
+    // 工具路由
+    Route::group('/tools', function () {
+        Route::group('/wp-import', function () {
+            Route::get('', [WpImportController::class, 'index'])->name('admin.tools.wp-import.index');
+            Route::get('/', [WpImportController::class, 'index']);
+            Route::get('/index', [WpImportController::class, 'index']);
+            Route::get('/list', [WpImportController::class, 'list'])->name('admin.tools.wp-import.list');
+            Route::any('/create', [WpImportController::class, 'create'])->name('admin.tools.wp-import.create');
+            Route::post('/upload', [WpImportController::class, 'upload'])->name('admin.tools.wp-import.upload');
+            Route::post('/submit', [WpImportController::class, 'submit'])->name('admin.tools.wp-import.submit');
+        });
+    });
+
 });
 
 Route::fallback(function (Request $request) {
-    return response($request->uri() . ' not found' , 404);
+    return response($request->uri() . ' not found', 404);
 }, 'admin');

@@ -60,7 +60,7 @@ class Base
         ]);
     }
 
-    protected function success(string $msg = '成功', array $data = [], int $total = 0): Response
+    protected function success(string $msg = 'success', array $data = [], int $total = 0): Response
     {
         return $this->json(0, $msg, $data, $total);
     }

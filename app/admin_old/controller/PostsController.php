@@ -4,7 +4,7 @@ namespace app\admin\controller;
 
 use support\Request;
 use support\Response;
-use app\model\Posts;
+use app\model\Post;
 use Twig\Error\LoaderError;
 use Twig\Error\RuntimeError;
 use Twig\Error\SyntaxError;
@@ -33,7 +33,7 @@ class PostsController
         $orderDir = $request->get('order_dir', 'desc');
         
         // 构建查询
-        $query = Posts::query();
+        $query = Post::query();
         
         // 搜索条件
         if ($search) {
@@ -70,7 +70,7 @@ class PostsController
      */
     public function delete(Request $request, $id)
     {
-        $post = Posts::find($id);
+        $post = Post::find($id);
         if ($post) {
             $post->delete();
             return json(['code' => 0, 'msg' => '文章删除成功']);
@@ -95,13 +95,13 @@ class PostsController
         
         switch ($action) {
             case 'delete':
-                Posts::destroy($ids);
+                Post::destroy($ids);
                 return json(['code' => 0, 'msg' => '文章删除成功']);
             case 'publish':
-                Posts::whereIn('id', $ids)->update(['status' => 'published']);
+                Post::whereIn('id', $ids)->update(['status' => 'published']);
                 return json(['code' => 0, 'msg' => '文章已发布']);
             case 'draft':
-                Posts::whereIn('id', $ids)->update(['status' => 'draft']);
+                Post::whereIn('id', $ids)->update(['status' => 'draft']);
                 return json(['code' => 0, 'msg' => '文章已设为草稿']);
             default:
                 return json(['code' => 1, 'msg' => '未知操作']);
