@@ -3,14 +3,14 @@ namespace app\model;
 
 use support\Model;
 
-class Post extends Model
+class PostAuthor extends Model
 {
     /**
      * 与模型关联的表名
      *
      * @var string
      */
-    protected $table = 'posts';
+    protected $table = 'post_author';
 
     /**
      * 重定义主键，默认是id
@@ -32,8 +32,10 @@ class Post extends Model
      * @var array
      */
     protected $fillable = [
-        'title', 'slug', 'content_type', 'content', 'excerpt', 
-        'status', 'category_id', 'author_id', 'view_count'
+        'post_id',
+        'author_id',
+        'is_primary',
+        'contribution',
     ];
     
     /**
@@ -45,5 +47,6 @@ class Post extends Model
         'view_count' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'deleted_at' => 'datetime',
     ];
 }

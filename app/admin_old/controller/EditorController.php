@@ -3,7 +3,7 @@
 namespace app\admin\controller;
 
 use app\model\Media;
-use app\model\Post;
+use app\model\Posts;
 use support\Log;
 use support\Request;
 use support\Response;
@@ -23,7 +23,7 @@ class EditorController
         if (!in_array($editor, ['vditor', 'easymde'])){
             $editor = 'vditor';
         }
-        $post = Post::where('id', $id)->first();
+        $post = Posts::where('id', $id)->first();
         $content = $post ? $post->content : '';
         $title = $post ? $post->title : '未命名文章';
         return view('admin/editor/vditor', [
@@ -38,7 +38,7 @@ class EditorController
         $postId = $request->post('post_id');
         $content = $request->post('content');
         
-        $post = Post::where('id', $postId)->first();
+        $post = Posts::where('id', $postId)->first();
         if (!$post) {
             return json(['code' => 404, 'msg' => '文章不存在']);
         }

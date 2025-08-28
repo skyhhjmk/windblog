@@ -34,6 +34,19 @@ Route::group('/debug', function () {
     Route::get('/response-info', [app\api\controller\DebugController::class, 'responseInfo']);
 });
 
+// API路由
+Route::group('/api', function () {
+    Route::group('/v1', function () { // v1版本
+        Route::group('/posts', function () { // 文章路由
+            Route::any('', [app\api\controller\v1\ApiPostController::class, 'index'])->name('api.v1.posts.index');
+            Route::post('/raw', [app\api\controller\v1\ApiPostController::class, 'get'])->name('api.v1.posts.raw');
+            Route::fallback(function () {
+                return json(['code' => 404, 'msg' => '404 not found']);
+            });
+        });
+    });
+});
+
 // 管理后台路由
 /*Route::group('/admin', function () {
     Route::any('', [app\admin\controller\IndexController::class, 'index'])->name('admin.index.index');

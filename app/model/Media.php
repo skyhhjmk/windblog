@@ -79,4 +79,15 @@ class Media extends Model
         $imageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
         return in_array($this->mime_type, $imageTypes);
     }
+
+    /**
+     * 属性类型转换
+     *
+     * @var array
+     */
+    protected $casts = [
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+        'deleted_at' => 'datetime',
+    ];
 }

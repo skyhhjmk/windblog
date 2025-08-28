@@ -2,10 +2,11 @@
 /*
  * 这里面有很多屎山
  */
+
 namespace app\controller;
 
 use support\Request;
-use app\model\Post;
+use app\model\Posts;
 use function Symfony\Component\Translation\t;
 
 class IndexController
@@ -17,9 +18,9 @@ class IndexController
 
     public function index(Request $request, int $page = 1)
     {
-        $count = Post::count('*');
+        $count = Posts::count('*');
 
-        $posts_per_page = blog_config('posts_per_page', 10);
+        $posts_per_page = blog_config('posts_per_page', 10, true);
 
         if ($count <= $posts_per_page) {
             // 文章总数小于每页数量，则不需要分页
@@ -35,7 +36,7 @@ class IndexController
 
             // 上一页按钮
             $prev_disabled = ($page <= 1) ? 'pointer-events-none opacity-50' : '';
-            $pagination_html .= '<a class="flex items-center justify-center w-10 h-10 rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 ' . $prev_disabled . '" href="' . (($page > 1) ? route('index.page', ['page' => $page-1]) : 'javascript:void(0)') . '">';
+            $pagination_html .= '<a class="flex items-center justify-center w-10 h-10 rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 ' . $prev_disabled . '" href="' . (($page > 1) ? route('index.page', ['page' => $page - 1]) : 'javascript:void(0)') . '">';
             $pagination_html .= '<span class="sr-only">上一页</span>';
             $pagination_html .= '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>';
             $pagination_html .= '</a>';
@@ -91,7 +92,7 @@ class IndexController
 
             // 下一页按钮
             $next_disabled = ($page >= $total_pages) ? 'pointer-events-none opacity-50' : '';
-            $pagination_html .= '<a class="flex items-center justify-center w-10 h-10 rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 ' . $next_disabled . '" href="' . (($page < $total_pages) ? route('index.page', ['page' => $page+1]) : 'javascript:void(0)') . '">';
+            $pagination_html .= '<a class="flex items-center justify-center w-10 h-10 rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 ' . $next_disabled . '" href="' . (($page < $total_pages) ? route('index.page', ['page' => $page + 1]) : 'javascript:void(0)') . '">';
             $pagination_html .= '<span class="sr-only">下一页</span>';
             $pagination_html .= '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>';
             $pagination_html .= '</a>';
@@ -119,20 +120,20 @@ class IndexController
             $pagination_html .= '</div>';
         }
 
-        if (empty($request->get())){
+        if (empty($request->get())) {
             $cached = cache('blog_posts_page_' . $page);
             if ($cached) {
                 return $cached;
             } else {
-                $posts = Post::where('status', 'published')->orderByDesc('id')->forPage($page, $posts_per_page)->get();
+                $posts = Posts::where('status', 'published')->orderByDesc('id')->forPage($page, $posts_per_page)->get();
                 cache('blog_posts_page_' . $page . '_per_' . $posts_per_page, $posts, true);
             }
         } else {
-            $posts = Post::where('status', 'published')->orderByDesc('id')->forPage($page, $posts_per_page)->get();
+            $posts = Posts::where('status', 'published')->orderByDesc('id')->forPage($page, $posts_per_page)->get();
         }
 
         foreach ($posts as $post) {
-            if ($post->excerpt === null || $post->excerpt === ''){
+            if ($post->excerpt === null || $post->excerpt === '') {
                 // 自动生成文章摘要并保存
                 $post->excerpt = mb_substr(strip_tags($post->content), 0, 200, 'UTF-8');
                 $post->save();
@@ -140,7 +141,7 @@ class IndexController
 
         }
         return view('index/index', [
-            'page_title' => blog_config('title', 'WindBlog') . ' - count is -' . $count,
+            'page_title' => blog_config('title', 'WindBlog', true) . ' - count is -' . $count,
             'posts' => $posts,
             'pagination' => $pagination_html,
         ]);

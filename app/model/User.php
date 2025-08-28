@@ -25,4 +25,15 @@ class User extends Model
      * @var bool
      */
     public $timestamps = true;
+
+    /**
+     * 属性类型转换
+     *
+     * @var array
+     */
+    protected $casts = [
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+        'deleted_at' => 'datetime',
+    ];
 }

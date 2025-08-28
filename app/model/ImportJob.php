@@ -51,6 +51,9 @@ class ImportJob extends Model
         'options' => 'string', // 作为字符串存储，手动处理JSON
         'completed_at' => 'datetime',
         'author_id' => 'integer',
-        'progress' => 'integer'
+        'progress' => 'integer',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+        'deleted_at' => 'datetime',
     ];
 }

@@ -3,7 +3,7 @@
 namespace app\service;
 
 use app\model\ImportJob;
-use app\model\Post;
+use app\model\Posts;
 use app\model\Media;
 use app\model\Settings;
 use League\HTMLToMarkdown\HtmlConverter;
@@ -357,7 +357,7 @@ class WordpressImporter
         // 检查是否已存在相同标题的文章
         $existingPost = null;
         if ($title) {
-            $existingPost = Post::where('title', $title)->first();
+            $existingPost = Posts::where('title', $title)->first();
         }
 
         // 根据重复处理模式决定如何处理
@@ -390,7 +390,7 @@ class WordpressImporter
         }
 
         // 保存新文章
-        $post = new Post();
+        $post = new Posts();
         $post->title = $title ?: '无标题';
         $post->content_type = $content_type;
         $post->content = $content;

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "98c6aadfabb1e7851339124afa82a64f",
+    "content-hash": "346a1b861265c48645b25245cb4a3e53",
     "packages": [
         {
             "name": "brick/math",
@@ -5292,6 +5292,41 @@
             "time": "2025-05-15T14:32:34+00:00"
         },
         {
+            "name": "webman/rate-limiter",
+            "version": "v1.1.3",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/webman-php/rate-limiter.git",
+                "reference": "f6ff79366ab56ac66bc507515d747cdef752db2d"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/webman-php/rate-limiter/zipball/f6ff79366ab56ac66bc507515d747cdef752db2d",
+                "reference": "f6ff79366ab56ac66bc507515d747cdef752db2d",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=8.0",
+                "workerman/webman-framework": ">=1.5.15"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Webman\\RateLimiter\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "Webman plugin webman/rate-limiter",
+            "support": {
+                "issues": "https://github.com/webman-php/rate-limiter/issues",
+                "source": "https://github.com/webman-php/rate-limiter/tree/v1.1.3"
+            },
+            "time": "2024-12-27T10:02:44+00:00"
+        },
+        {
             "name": "webman/redis",
             "version": "v2.1.3",
             "source": {
@@ -7210,7 +7245,8 @@
         "ext-xmlreader": "*",
         "ext-dom": "*",
         "ext-libxml": "*",
-        "ext-pdo": "*"
+        "ext-pdo": "*",
+        "ext-gd": "*"
     },
     "platform-dev": {},
     "plugin-api-version": "2.6.0"

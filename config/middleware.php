@@ -19,7 +19,4 @@ return [
         app\middleware\Lang::class,
         app\middleware\DebugToolkit::class,
     ],
-    'admin' => [
-        plugin\admin\api\Middleware::class
-    ],
 ];

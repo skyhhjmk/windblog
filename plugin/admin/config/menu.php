@@ -109,7 +109,7 @@ return [
             ],
             [
                 'title' => '系统设置',
-                'key' => 'plugin\\admin\\app\\controller\\ConfigController',
+                'key' => 'plugin\\admin\\app\\controller\\ResCdnController',
                 'href' => '/app/admin/config/index',
                 'type' => 1,
                 'weight' => 500,

@@ -1,0 +1,6 @@
+POST http://127.0.0.1:8787/api/v1/posts/raw
+Content-Type: application/json
+
+{
+  "id": 1
+}
