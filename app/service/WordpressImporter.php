@@ -10,6 +10,7 @@ use DOMNode;
 use DOMXPath;
 use League\HTMLToMarkdown\HtmlConverter;
 use support\Db;
+use support\Log;
 use Throwable;
 use XMLReader;
 
@@ -47,7 +48,7 @@ class WordpressImporter
         $this->options = json_decode($importJob->options ?? '{}', true);
         $this->defaultAuthorId = $importJob->author_id;
 
-        \support\Log::info("初始化WordPress导入器，任务ID: " . $importJob->id);
+        Log::info("初始化WordPress导入器，任务ID: " . $importJob->id);
     }
 
     /**
@@ -57,7 +58,7 @@ class WordpressImporter
      */
     public function execute()
     {
-        \support\Log::info("开始执行导入任务: " . $this->importJob->name);
+        Log::info("开始执行导入任务: " . $this->importJob->name);
 
         try {
             // 确保任务状态是processing
@@ -71,26 +72,26 @@ class WordpressImporter
 
             $xmlFile = $this->importJob->file_path;
 
-            \support\Log::info("检查导入文件: " . $xmlFile);
+            Log::info("检查导入文件: " . $xmlFile);
 
             if (!file_exists($xmlFile)) {
                 throw new \Exception('导入文件不存在: ' . $xmlFile);
             }
 
             // 先尝试修复XML中的命名空间问题
-            \support\Log::info("修复XML命名空间");
+            Log::info("修复XML命名空间");
             $fixedXmlFile = $this->fixXmlNamespaces($xmlFile);
 
             $reader = new XMLReader();
-            \support\Log::info("打开XML文件: " . $fixedXmlFile);
+            Log::info("打开XML文件: " . $fixedXmlFile);
             if (!$reader->open($fixedXmlFile)) {
                 throw new \Exception('无法打开XML文件: ' . $fixedXmlFile);
             }
 
             // 计算总项目数用于进度显示
-            \support\Log::info("计算XML项目总数");
+            Log::info("计算XML项目总数");
             $totalItems = $this->countItems($fixedXmlFile);
-            \support\Log::info("XML项目总数: " . $totalItems);
+            Log::info("XML项目总数: " . $totalItems);
 
             // 如果没有项目，直接完成任务
             if ($totalItems == 0) {
@@ -106,14 +107,14 @@ class WordpressImporter
                     'completed_at' => date('Y-m-d H:i:s')
                 ]);
 
-                \support\Log::info("导入任务完成 (无项目): " . $this->importJob->name);
+                Log::info("导入任务完成 (无项目): " . $this->importJob->name);
                 return true;
             }
 
             $processedItems = 0;
 
             // 解析XML并导入
-            \support\Log::info("开始解析XML并导入");
+            Log::info("开始解析XML并导入");
             while ($reader->read()) {
                 if ($reader->nodeType == XMLReader::ELEMENT) {
                     switch ($reader->localName) {
@@ -121,8 +122,9 @@ class WordpressImporter
                             try {
                                 $this->processItem($reader);
                             } catch (\Exception $e) {
-                                // 记录单项处理错误，但继续处理其他项目
-                                \support\Log::error('处理项目时出错: ' . $e->getMessage(), ['exception' => $e]);
+                                // 重新抛出错误
+                                Log::error('处理项目时出错: ' . $e->getMessage(), ['exception' => $e]);
+                                throw $e;
                             }
                             $processedItems++;
 
@@ -133,7 +135,7 @@ class WordpressImporter
                                 'message' => "已处理 {$processedItems}/{$totalItems} 个项目"
                             ]);
 
-                            \support\Log::debug("处理项目进度: {$processedItems}/{$totalItems} ({$progress}%)");
+                            Log::debug("处理项目进度: {$processedItems}/{$totalItems} ({$progress}%)");
                             break;
                     }
                 }
@@ -144,7 +146,7 @@ class WordpressImporter
             // 删除临时修复的文件
             if ($fixedXmlFile !== $xmlFile && file_exists($fixedXmlFile)) {
                 unlink($fixedXmlFile);
-                \support\Log::info("删除临时修复文件: " . $fixedXmlFile);
+                Log::info("删除临时修复文件: " . $fixedXmlFile);
             }
 
             $this->importJob->update([
@@ -155,16 +157,16 @@ class WordpressImporter
             ]);
 
 
-            \support\Log::info("导入任务完成: " . $this->importJob->name);
+            Log::info("导入任务完成: " . $this->importJob->name);
             return true;
         } catch (\Exception $e) {
-            \support\Log::error('导入执行错误: ' . $e->getMessage(), ['exception' => $e]);
+            Log::error('导入执行错误: ' . $e->getMessage(), ['exception' => $e]);
 
             // 删除临时修复的文件
             $fixedXmlFile = runtime_path('imports') . '/fixed_' . basename($this->importJob->file_path);
             if (isset($fixedXmlFile) && $fixedXmlFile !== $this->importJob->file_path && file_exists($fixedXmlFile)) {
                 unlink($fixedXmlFile);
-                \support\Log::info("删除临时修复文件: " . $fixedXmlFile);
+                Log::info("删除临时修复文件: " . $fixedXmlFile);
             }
 
             $this->importJob->update([
@@ -185,7 +187,7 @@ class WordpressImporter
     protected function fixXmlNamespaces($xmlFile)
     {
         try {
-            \support\Log::info("读取XML文件内容");
+            Log::info("读取XML文件内容");
             $content = file_get_contents($xmlFile);
 
             // 添加常见的WordPress导出文件中可能缺失的命名空间定义
@@ -204,7 +206,7 @@ class WordpressImporter
                 $rssEndPos = strpos($content, '>', $rssTagPos);
                 if ($rssEndPos !== false) {
                     $rssTag = substr($content, $rssTagPos, $rssEndPos - $rssTagPos + 1);
-                    \support\Log::info("原始RSS标签: " . $rssTag);
+                    Log::info("原始RSS标签: " . $rssTag);
                     $missingNamespaces = [];
 
                     foreach ($namespaceFixes as $namespace) {
@@ -217,16 +219,16 @@ class WordpressImporter
                     // 如果有缺失的命名空间，添加它们
                     if (!empty($missingNamespaces)) {
                         $newRssTag = substr($rssTag, 0, -1) . ' ' . implode(' ', $missingNamespaces) . '>';
-                        \support\Log::info("修复后的RSS标签: " . $newRssTag);
+                        Log::info("修复后的RSS标签: " . $newRssTag);
                         $content = substr_replace($content, $newRssTag, $rssTagPos, strlen($rssTag));
 
                         // 保存修复后的文件
                         $fixedXmlFile = runtime_path('imports') . '/fixed_' . basename($xmlFile);
                         file_put_contents($fixedXmlFile, $content);
-                        \support\Log::info("创建修复后的XML文件: " . $fixedXmlFile);
+                        Log::info("创建修复后的XML文件: " . $fixedXmlFile);
                         return $fixedXmlFile;
                     } else {
-                        \support\Log::info("XML文件命名空间完整，无需修复");
+                        Log::info("XML文件命名空间完整，无需修复");
                     }
                 }
             }
@@ -234,7 +236,7 @@ class WordpressImporter
             // 如果没有需要修复的，返回原文件路径
             return $xmlFile;
         } catch (\Exception $e) {
-            \support\Log::warning('修复XML命名空间时出错: ' . $e->getMessage());
+            Log::warning('修复XML命名空间时出错: ' . $e->getMessage());
             // 出错时返回原始文件路径
             return $xmlFile;
         }
@@ -248,10 +250,10 @@ class WordpressImporter
      */
     protected function countItems($xmlFile)
     {
-        \support\Log::info("计算XML项目数: " . $xmlFile);
+        Log::info("计算XML项目数: " . $xmlFile);
         $reader = new XMLReader();
         if (!$reader->open($xmlFile)) {
-            \support\Log::warning("无法打开XML文件进行计数: " . $xmlFile);
+            Log::warning("无法打开XML文件进行计数: " . $xmlFile);
             return 0;
         }
 
@@ -263,7 +265,7 @@ class WordpressImporter
         }
 
         $reader->close();
-        \support\Log::info("XML项目数计算完成: " . $count);
+        Log::info("XML项目数计算完成: " . $count);
         return $count;
     }
 
@@ -275,7 +277,7 @@ class WordpressImporter
      */
     protected function processItem(XMLReader $reader): void
     {
-        \support\Log::debug("处理XML项目");
+        Log::debug("处理XML项目");
         $doc = new \DOMDocument();
         // 禁用错误报告以避免命名空间警告
         $libxmlErrors = libxml_use_internal_errors(true);
@@ -293,7 +295,7 @@ class WordpressImporter
         libxml_use_internal_errors($libxmlErrors);
 
         $postType = $xpath->evaluate('string(wp:post_type)', $node);
-        \support\Log::debug("项目类型: " . $postType);
+        Log::debug("项目类型: " . $postType);
 
         // 根据不同类型处理
         switch ($postType) {
@@ -307,7 +309,7 @@ class WordpressImporter
                 }
                 break;
             default:
-                \support\Log::debug("忽略不支持的项目类型: " . $postType);
+                Log::debug("忽略不支持的项目类型: " . $postType);
         }
     }
 
@@ -322,7 +324,7 @@ class WordpressImporter
      */
     protected function processPost(DOMXPath $xpath, DOMNode $node, string $postType): void
     {
-        \support\Log::debug("处理文章/页面");
+        Log::debug("处理文章/页面");
         $title = $xpath->evaluate('string(title)', $node);
         $content = $xpath->evaluate('string(content:encoded)', $node);
         $excerpt = $xpath->evaluate('string(excerpt:encoded)', $node);
@@ -331,7 +333,7 @@ class WordpressImporter
         $postDate = $xpath->evaluate('string(wp:post_date)', $node);
         $postId = $xpath->evaluate('string(wp:post_id)', $node);
 
-        \support\Log::debug("文章信息 - 标题: " . $title . ", 状态: " . $status . ", 类型: " . $postType);
+        Log::debug("文章信息 - 标题: " . $title . ", 状态: " . $status . ", 类型: " . $postType);
 
         switch ($this->options['convert_to']) {
             case 'markdown':
@@ -427,7 +429,7 @@ class WordpressImporter
             switch ($duplicateMode) {
                 case 'overwrite':
                     // 覆盖模式：更新现有文章
-                    \support\Log::debug("覆盖模式：更新现有文章，ID: " . $existingPost->id);
+                    Log::debug("覆盖模式：更新现有文章，ID: " . $existingPost->id);
                     $existingPost->content_type = $content_type;
                     $existingPost->content = $content;
                     $existingPost->excerpt = $excerpt;
@@ -463,13 +465,13 @@ class WordpressImporter
                         );
                     }
 
-                    \support\Log::debug("文章更新完成，ID: " . $existingPost->id);
+                    Log::debug("文章更新完成，ID: " . $existingPost->id);
                     return;
 
                 case 'skip':
                 default:
                     // 跳过模式：记录日志并跳过
-                    \support\Log::debug("跳过模式：跳过重复文章，标题: " . $title);
+                    Log::debug("跳过模式：跳过重复文章，标题: " . $title);
                     return;
             }
         }
@@ -485,7 +487,7 @@ class WordpressImporter
         $post->created_at = $postDate && $postDate !== '0000-00-00 00:00:00' ? date('Y-m-d H:i:s', strtotime($postDate)) : date('Y-m-d H:i:s');
         $post->updated_at = date('Y-m-d H:i:s');
 
-        \support\Log::debug("保存文章: " . $post->title);
+        Log::debug("保存文章: " . $post->title);
         $post->save();
 
         // 保存文章作者关联
@@ -497,7 +499,7 @@ class WordpressImporter
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s')
             ]);
-            \support\Log::debug("文章作者关联已保存，文章ID: " . $post->id . "，作者ID: " . $authorId);
+            Log::debug("文章作者关联已保存，文章ID: " . $post->id . "，作者ID: " . $authorId);
         }
 
         // 保存文章分类关联
@@ -508,10 +510,10 @@ class WordpressImporter
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s')
             ]);
-            \support\Log::debug("文章分类关联已保存，文章ID: " . $post->id . "，分类ID: " . $categoryId);
+            Log::debug("文章分类关联已保存，文章ID: " . $post->id . "，分类ID: " . $categoryId);
         }
 
-        \support\Log::debug("文章保存完成，ID: " . $post->id);
+        Log::debug("文章保存完成，ID: " . $post->id);
     }
 
     /**
@@ -559,7 +561,7 @@ class WordpressImporter
                 }
             }
         } catch (\Exception $e) {
-            \support\Log::warning('翻译标题时出错: ' . $e->getMessage());
+            Log::warning('翻译标题时出错: ' . $e->getMessage());
         }
 
         // 翻译失败时返回格式化后的原标题
@@ -605,17 +607,17 @@ class WordpressImporter
     protected function processAuthor(DOMXPath $xpath, DOMNode $node): ?int
     {
         $authorName = $xpath->evaluate('string(dc:creator)', $node);
-        \support\Log::debug("处理作者: " . $authorName);
+        Log::debug("处理作者: " . $authorName);
 
         // 如果没有默认作者且没有文章作者，则返回null
         if (is_null($this->defaultAuthorId) && empty($authorName)) {
-            \support\Log::debug("作者为空，返回null");
+            Log::debug("作者为空，返回null");
             return null;
         }
 
         // 如果没有文章作者，使用默认作者
         if (empty($authorName)) {
-            \support\Log::debug("使用默认作者ID: " . $this->defaultAuthorId);
+            Log::debug("使用默认作者ID: " . $this->defaultAuthorId);
             return $this->defaultAuthorId;
         }
 
@@ -623,14 +625,14 @@ class WordpressImporter
         $user = Db::table('wa_users')->where('username', $authorName)->first();
 
         if ($user) {
-            \support\Log::debug("找到现有用户: " . $user->username . " (ID: " . $user->id . ")");
+            Log::debug("找到现有用户: " . $user->username . " (ID: " . $user->id . ")");
             return $user->id;
         }
 
         // 根据选项决定是否创建新用户 (修改表名为wa_users)
         if (!empty($this->options['create_users'])) {
             $email = $authorName . '@example.com'; // 简化处理
-            \support\Log::debug("创建新用户: " . $authorName . " (" . $email . ")");
+            Log::debug("创建新用户: " . $authorName . " (" . $email . ")");
             $userId = Db::table('wa_users')->insertGetId([
                 'username' => $authorName,
                 'email' => $email,
@@ -639,12 +641,12 @@ class WordpressImporter
                 'updated_at' => date('Y-m-d H:i:s')
             ]);
 
-            \support\Log::debug("新用户创建完成，ID: " . $userId);
+            Log::debug("新用户创建完成，ID: " . $userId);
             return $userId;
         }
 
         // 使用默认作者
-        \support\Log::debug("使用默认作者ID: " . $this->defaultAuthorId);
+        Log::debug("使用默认作者ID: " . $this->defaultAuthorId);
         return $this->defaultAuthorId;
     }
 
@@ -662,18 +664,18 @@ class WordpressImporter
 
         if ($categories->length > 0) {
             $categoryName = $categories->item(0)->nodeValue;
-            \support\Log::debug("处理分类: " . $categoryName);
+            Log::debug("处理分类: " . $categoryName);
 
             // 查找现有分类
             $category = Db::table('categories')->where('name', $categoryName)->first();
 
             if ($category) {
-                \support\Log::debug("找到现有分类: " . $category->name . " (ID: " . $category->id . ")");
+                Log::debug("找到现有分类: " . $category->name . " (ID: " . $category->id . ")");
                 return $category->id;
             }
 
             // 创建新分类
-            \support\Log::debug("创建新分类: " . $categoryName);
+            Log::debug("创建新分类: " . $categoryName);
 
             // 生成slug，确保不为空
             $slug = \Illuminate\Support\Str::slug($categoryName);
@@ -697,11 +699,11 @@ class WordpressImporter
                 'updated_at' => date('Y-m-d H:i:s')
             ]);
 
-            \support\Log::debug("新分类创建完成，ID: " . $categoryId);
+            Log::debug("新分类创建完成，ID: " . $categoryId);
             return $categoryId;
         }
 
-        \support\Log::debug("无分类信息");
+        Log::debug("无分类信息");
         return null;
     }
 
@@ -718,10 +720,10 @@ class WordpressImporter
         $title = $xpath->evaluate('string(title)', $node);
         $url = $xpath->evaluate('string(wp:attachment_url)', $node);
 
-        \support\Log::debug("处理附件 - 标题: " . $title . ", URL: " . $url);
+        Log::debug("处理附件 - 标题: " . $title . ", URL: " . $url);
 
         if (empty($url)) {
-            \support\Log::debug("附件URL为空，跳过");
+            Log::debug("附件URL为空，跳过");
             return;
         }
 
@@ -836,13 +838,13 @@ class WordpressImporter
                 // 删除文件（不删除目录）
                 if (is_file($filePath)) {
                     unlink($filePath);
-                    \support\Log::info("删除导入临时文件: " . $filePath);
+                    Log::info("删除导入临时文件: " . $filePath);
                 }
             }
 
-            \support\Log::info("导入目录清理完成: " . $importDir);
+            Log::info("导入目录清理完成: " . $importDir);
         } catch (\Exception $e) {
-            \support\Log::error('清理导入目录时出错: ' . $e->getMessage(), ['exception' => $e]);
+            Log::error('清理导入目录时出错: ' . $e->getMessage(), ['exception' => $e]);
         }
     }
 }
