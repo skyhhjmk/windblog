@@ -22,9 +22,6 @@
                                             <button type="button" class="layui-btn" id="selectFile">
                                                 <i class="layui-icon">&#xe67c;</i>选择WordPress导出文件
                                             </button>
-                                            <button type="button" class="layui-btn layui-btn-normal" id="uploadBtn" style="margin-left: 10px; display: none;">
-                                                <i class="layui-icon">&#xe681;</i>上传文件
-                                            </button>
                                             <div class="layui-upload-list">
                                                 <p id="fileName" style="margin-top: 10px;"></p>
                                             </div>
@@ -39,7 +36,7 @@
                                     </div>
                                 </form>
                             </div>
-                            
+
                             <div>
                                 <form class="layui-form" action="javascript:void(0);"
                                       style="margin: 0 auto;max-width: 460px;padding-top: 40px;" id="importForm">
@@ -49,22 +46,32 @@
                                             <select name="author_action" lay-verify="required">
                                                 <option value="create">创建新作者</option>
                                                 <option value="map_to_admin">映射到管理员</option>
+                                                <option value="map_to_system" selected>映射到system（即不归属任何用户）
+                                                </option>
                                             </select>
                                         </div>
                                     </div>
                                     <div class="layui-form-item">
-                                        <label class="layui-form-label">图片导入:</label>
+                                        <label class="layui-form-label">下载并导入附件:</label>
                                         <div class="layui-input-block">
-                                            <input type="checkbox" name="import_images" lay-skin="switch" lay-text="是|否" checked>
+                                            <input type="checkbox" name="import_attachments" lay-skin="switch"
+                                                   lay-text="是|否">
                                         </div>
                                     </div>
                                     <div class="layui-form-item">
-                                        <label class="layui-form-label">文章状态:</label>
+                                        <label class="layui-form-label">转换文章类型:</label>
                                         <div class="layui-input-block">
-                                            <select name="post_status">
-                                                <option value="publish">发布</option>
-                                                <option value="draft">草稿</option>
+                                            <select name="convert_to">
+                                                <option value="html">HTML（WordPress 默认格式，即不转换）</option>
+                                                <option value="markdown" selected>Markdown（推荐）</option>
                                             </select>
+                                        </div>
+                                    </div>
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">是否强制导入:</label>
+                                        <div class="layui-input-block">
+                                            <input type="checkbox" name="force" lay-skin="switch"
+                                                   lay-text="是|否">
                                         </div>
                                     </div>
                                     <div class="layui-form-item">
@@ -77,19 +84,20 @@
                                     </div>
                                 </form>
                             </div>
-                            
+
                             <div>
                                 <div style="text-align: center;margin-top: 90px;">
                                     <i class="layui-icon layui-circle"
                                        style="color: white;font-size:30px;font-weight:bold;background: #52C41A;padding: 20px;line-height: 80px;">&#xe605;</i>
                                     <div style="font-size: 24px;color: #333;font-weight: 500;margin-top: 30px;">
-                                        导入成功
+                                        导入任务创建成功
                                     </div>
-                                    <div style="font-size: 14px;color: #666;margin-top: 20px;">WordPress数据已成功导入</div>
+                                    <div style="font-size: 14px;color: #666;margin-top: 20px;">WordPress数据导入任务已成功创建
+                                    </div>
                                 </div>
                                 <div style="text-align: center;margin-top: 50px;">
                                     <button class="pear-btn pear-btn-success next">再次导入</button>
-                                    <button class="pear-btn pear-btn-success">查看文章</button>
+<!--                                    <button class="pear-btn pear-btn-success">查看文章</button>-->
                                 </div>
                             </div>
                         </div>
@@ -103,7 +111,7 @@
 <script src="/app/admin/component/pear/pear.js"></script>
 <script>
     // 相关接口
-    const UPLOAD_URL = '/app/admin/tools/wp-import/upload';
+    const SUBMIT_URL = '/app/admin/tools/wp-import/submit';
 
     layui.use(['form', 'step', 'element', 'upload'], function () {
         var $ = layui.$,
@@ -126,122 +134,91 @@
             }]
         });
 
-        // 文件上传
-        var uploadInst = upload.render({
+        // 文件选择
+        var selectedFile = null;
+        upload.render({
             elem: '#selectFile',
-            url: UPLOAD_URL,
             accept: 'file',
             exts: 'xml',
             acceptMime: 'text/xml,application/xml',
-            field: 'import_file', // 设置文件字段名，与后端一致
             auto: false,
-            bindAction: '#uploadBtn',
-            choose: function(obj) {
-                // 文件选择后的回调函数
-                obj.preview(function(index, file, result) {
-                    // 显示文件名
-                    $('#fileName').html('<span style="color: #1E9FFF;">已选择文件：' + file.name + '</span>');
-                    // 显示上传按钮
-                    $('#uploadBtn').show();
-                    // 保存文件对象用于后续上传
-                    window.uploadFile = obj;
-                });
-            },
-            before: function(obj) {
-                // 在上传前检查文件扩展名
-                var file = obj.file || (obj.getFiles && obj.getFiles()[0]);
-                if (file) {
-                    var fileName = file.name || file.fileName;
-                    var fileExt = fileName.slice(fileName.lastIndexOf('.') + 1).toLowerCase();
+            choose: function (obj) {
+                // 预读文件，如果是多文件，则会遍历
+                obj.preview(function (index, file, result) {
+                    // 检查文件扩展名
+                    var fileExt = file.name.slice(file.name.lastIndexOf('.') + 1).toLowerCase();
                     if (fileExt !== 'xml') {
                         layer.msg('请选择XML格式的文件');
-                        return false;
+                        return;
                     }
-                }
-                layer.load();
-            },
-            done: function(res) {
-                layer.closeAll('loading');
-                if (res.code === 0) {
-                    $('#fileName').html('<span style="color: #5FB878;">' + res.data.name + '</span>');
-                    $('#uploadBtn').hide();
-                    // 保存文件信息用于后续提交
-                    window.uploadedFile = res.data;
-                } else {
-                    $('#fileName').html('<span style="color: #FF5722;">上传失败：' + res.msg + '</span>');
-                    $('#uploadBtn').show(); // 上传失败时重新显示上传按钮
-                }
-            },
-            error: function() {
-                layer.closeAll('loading');
-                $('#fileName').html('<span style="color: #FF5722;">上传失败，请重试</span>');
-                $('#uploadBtn').show(); // 上传失败时重新显示上传按钮
+
+                    // 显示文件名
+                    $('#fileName').html('<span style="color: #1E9FFF;">已选择文件：' + file.name + '</span>');
+                    // 保存文件对象
+                    selectedFile = file;
+                });
             }
         });
 
         form.on('submit(formStep)', function (data) {
             // 检查是否已选择文件
-            if (!$('#fileName').text()) {
-                layer.msg('请先选择并上传WordPress文件');
+            if (!selectedFile) {
+                layer.msg('请先选择WordPress文件');
                 return false;
             }
-            
-            // 检查是否上传成功
-            if ($('#fileName').find('span').css('color') === 'rgb(255, 87, 34)' || 
-                $('#fileName').find('span').css('color') === '#FF5722') {
-                layer.msg('请先上传WordPress文件');
-                return false;
-            }
-            
+
             step.next('#stepForm');
             return false;
         });
 
         // 处理表单提交
         form.on('submit(formStep2)', function (data) {
-            // 检查是否已上传文件
-            if (!window.uploadedFile) {
-                layer.msg('请先上传文件');
+            // 检查是否已选择文件
+            if (!selectedFile) {
+                layer.msg('请先选择文件');
                 return false;
             }
-            
-            // 收集表单数据
-            var formData = {
-                author_action: data.field.author_action,
-                import_images: data.field.import_images === 'on' ? 1 : 0,
-                post_status: data.field.post_status
-            };
-            
+
+            // 创建FormData对象用于文件上传
+            var uploadData = new FormData();
+            uploadData.append('import_file', selectedFile);
+            uploadData.append('author_action', data.field.author_action);
+            uploadData.append('import_images', (data.field.import_images === 'on' ? 1 : 0).toString());
+            uploadData.append('convert_to', data.field.convert_to || 'html');
+            uploadData.append('force', (data.field.force === 'on' ? 1 : 0).toString());
+            uploadData.append('create_users', (data.field.author_action === 'create' ? 1 : 0).toString());
+            uploadData.append('import_attachments', (data.field.import_images === 'on' ? 1 : 0).toString());
+            uploadData.append('download_attachments', (data.field.import_images === 'on' ? 1 : 0).toString());
+            uploadData.append('duplicate_mode', 'skip');
+            uploadData.append('default_author', 'system');
+
             // 发送统一请求
             $.ajax({
-                url: '/admin/tools/wp-import/submit',
+                url: SUBMIT_URL,
                 type: 'POST',
-                data: {
-                    import_file: window.uploadedFile.name,
-                    author_action: formData.author_action,
-                    import_images: formData.import_images,
-                    post_status: formData.post_status,
-                    create_users: formData.author_action === 'create' ? 1 : 0,
-                    import_attachments: formData.import_images,
-                    download_attachments: formData.import_images,
-                    duplicate_mode: 'skip',
-                    default_author: 'system', // 设置为system以避免外键约束问题
-                    force: 0
+                data: uploadData,
+                processData: false,
+                contentType: false,
+                beforeSend: function () {
+                    layer.load();
                 },
-                success: function(res) {
+                success: function (res) {
+                    layer.closeAll('loading');
                     if (res.code === 0) {
                         step.next('#stepForm');
                     } else {
                         layer.msg('导入失败：' + res.msg);
                     }
                 },
-                error: function() {
+                error: function () {
+                    layer.closeAll('loading');
                     layer.msg('请求失败，请重试');
                 }
             });
-            
+
             return false;
         });
+
 
         $('.pre').click(function () {
             step.pre('#stepForm');
@@ -249,6 +226,9 @@
         });
 
         $('.next').click(function () {
+            // 重置表单
+            selectedFile = null;
+            $('#fileName').html('');
             step.next('#stepForm');
             return false;
         });

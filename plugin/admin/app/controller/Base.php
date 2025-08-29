@@ -55,6 +55,7 @@ class Base
         return json([
             'code' => $code,
             'total' => $total,
+            'count' => $total,
             'data' => $data,
             'msg' => $msg
         ]);

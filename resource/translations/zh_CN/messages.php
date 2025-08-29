@@ -10,4 +10,5 @@ return [
     'File upload failed' => '文件上传失败',
     'Please select a file to import' => '请选择要导入的文件',
     'Only XML files are supported' => '只支持 XML 文件',
+    ':error_code error' => ':error_code 错误' // 通用错误码翻译
 ];

@@ -1,6 +1,6 @@
 <?php
 
-namespace app\admin\controller;
+namespace app\admin_old\controller;
 
 use app\model\ImportJob;
 use support\Request;

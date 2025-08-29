@@ -6,8 +6,11 @@ use app\model\ImportJob;
 use app\model\Post;
 use app\model\Media;
 use app\model\Setting;
+use DOMNode;
+use DOMXPath;
 use League\HTMLToMarkdown\HtmlConverter;
 use support\Db;
+use Throwable;
 use XMLReader;
 
 class WordpressImporter
@@ -279,7 +282,7 @@ class WordpressImporter
         $node = $doc->importNode($reader->expand(), true);
         $doc->appendChild($node);
 
-        $xpath = new \DOMXPath($doc);
+        $xpath = new DOMXPath($doc);
         $xpath->registerNamespace('content', 'http://purl.org/rss/1.0/modules/content/');
         $xpath->registerNamespace('excerpt', 'http://wordpress.org/export/1.2/excerpt/');
         $xpath->registerNamespace('wp', 'http://wordpress.org/export/1.2/');
@@ -311,31 +314,40 @@ class WordpressImporter
     /**
      * 处理文章或页面
      *
-     * @param \DOMXPath $xpath
-     * @param \DOMNode $node
+     * @param DOMXPath $xpath
+     * @param DOMNode $node
      * @param string $postType
      * @return void
+     * @throws Throwable
      */
-    protected function processPost(\DOMXPath $xpath, \DOMNode $node, string $postType): void
+    protected function processPost(DOMXPath $xpath, DOMNode $node, string $postType): void
     {
         \support\Log::debug("处理文章/页面");
         $title = $xpath->evaluate('string(title)', $node);
-        $content_type = 'markdown'; // 会自动转换为markdown
         $content = $xpath->evaluate('string(content:encoded)', $node);
         $excerpt = $xpath->evaluate('string(excerpt:encoded)', $node);
         $status = $xpath->evaluate('string(wp:status)', $node);
         $slug = $xpath->evaluate('string(wp:post_name)', $node);
         $postDate = $xpath->evaluate('string(wp:post_date)', $node);
+        $postId = $xpath->evaluate('string(wp:post_id)', $node);
 
         \support\Log::debug("文章信息 - 标题: " . $title . ", 状态: " . $status . ", 类型: " . $postType);
 
-        // 将HTML内容转换为Markdown
-        if (!empty($content)) {
-            $content = $this->convertHtmlToMarkdown($content);
-        }
+        switch ($this->options['convert_to']) {
+            case 'markdown':
+                $content_type = 'markdown';
+                // 将HTML内容转换为Markdown
+                if (!empty($content)) {
+                    $content = $this->convertHtmlToMarkdown($content);
+                }
 
-        if (!empty($excerpt)) {
-            $excerpt = $this->convertHtmlToMarkdown($excerpt);
+                if (!empty($excerpt)) {
+                    $excerpt = $this->convertHtmlToMarkdown($excerpt);
+                }
+                break;
+            case 'html':
+                $content_type = 'html';
+                break;
         }
 
         // 处理作者
@@ -353,6 +365,53 @@ class WordpressImporter
             'future' => 'draft'
         ];
         $status = $statusMap[$status] ?? 'draft';
+
+        // 处理slug
+        if (empty($slug)) {
+            if (!empty($title)) {
+                // 检查是否为"未命名"之类的标题
+                $trimmedTitle = trim($title);
+                $unnamedPatterns = ['未命名', 'unnamed', 'untitled', '无标题', 'default', 'new post'];
+
+                $isUnnamed = false;
+                foreach ($unnamedPatterns as $pattern) {
+                    if (stripos($trimmedTitle, $pattern) !== false) {
+                        $isUnnamed = true;
+                        break;
+                    }
+                }
+
+                if ($isUnnamed || mb_strlen($trimmedTitle) == 0) {
+                    // 使用ID作为slug
+                    $slug = !empty($postId) ? $postId : uniqid();
+                } else {
+                    // 尝试翻译标题
+                    $translatedTitle = $this->translateTitle($title);
+                    $slug = \Illuminate\Support\Str::slug($translatedTitle);
+
+                    // 如果翻译后的slug仍然为空，则使用原文
+                    if (empty($slug)) {
+                        $slug = \Illuminate\Support\Str::slug($title);
+                    }
+
+                    // 如果仍然为空，则使用ID
+                    if (empty($slug)) {
+                        $slug = !empty($postId) ? $postId : uniqid();
+                    }
+                }
+            } else {
+                // 标题为空，使用ID作为slug
+                $slug = !empty($postId) ? $postId : uniqid();
+            }
+        }
+
+        // 确保slug唯一性
+        $originalSlug = $slug;
+        $suffix = 1;
+        while (Post::where('slug', $slug)->exists()) {
+            $slug = $originalSlug . '-' . $suffix;
+            $suffix++;
+        }
 
         // 检查是否已存在相同标题的文章
         $existingPost = null;
@@ -373,11 +432,37 @@ class WordpressImporter
                     $existingPost->content = $content;
                     $existingPost->excerpt = $excerpt;
                     $existingPost->status = $status;
-                    $existingPost->slug = $slug ?: uniqid();
-                    $existingPost->author_id = $authorId;
-                    $existingPost->category_id = $categoryId;
+                    $existingPost->slug = $slug;
                     $existingPost->updated_at = date('Y-m-d H:i:s');
                     $existingPost->save();
+
+                    // 更新作者关联
+                    if ($authorId) {
+                        Db::table('post_author')->updateOrInsert(
+                            ['post_id' => $existingPost->id],
+                            [
+                                'post_id' => $existingPost->id,
+                                'author_id' => $authorId,
+                                'is_primary' => 1,
+                                'created_at' => date('Y-m-d H:i:s'),
+                                'updated_at' => date('Y-m-d H:i:s')
+                            ]
+                        );
+                    }
+
+                    // 更新分类关联
+                    if ($categoryId) {
+                        Db::table('post_category')->updateOrInsert(
+                            ['post_id' => $existingPost->id],
+                            [
+                                'post_id' => $existingPost->id,
+                                'category_id' => $categoryId,
+                                'created_at' => date('Y-m-d H:i:s'),
+                                'updated_at' => date('Y-m-d H:i:s')
+                            ]
+                        );
+                    }
+
                     \support\Log::debug("文章更新完成，ID: " . $existingPost->id);
                     return;
 
@@ -396,25 +481,128 @@ class WordpressImporter
         $post->content = $content;
         $post->excerpt = $excerpt;
         $post->status = $status;
-        $post->slug = $slug ?: uniqid();
-        $post->author_id = $authorId;
-        $post->category_id = $categoryId;
+        $post->slug = $slug;
         $post->created_at = $postDate && $postDate !== '0000-00-00 00:00:00' ? date('Y-m-d H:i:s', strtotime($postDate)) : date('Y-m-d H:i:s');
         $post->updated_at = date('Y-m-d H:i:s');
 
         \support\Log::debug("保存文章: " . $post->title);
         $post->save();
+
+        // 保存文章作者关联
+        if ($authorId) {
+            Db::table('post_author')->insert([
+                'post_id' => $post->id,
+                'author_id' => $authorId,
+                'is_primary' => 1,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s')
+            ]);
+            \support\Log::debug("文章作者关联已保存，文章ID: " . $post->id . "，作者ID: " . $authorId);
+        }
+
+        // 保存文章分类关联
+        if ($categoryId) {
+            Db::table('post_category')->insert([
+                'post_id' => $post->id,
+                'category_id' => $categoryId,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s')
+            ]);
+            \support\Log::debug("文章分类关联已保存，文章ID: " . $post->id . "，分类ID: " . $categoryId);
+        }
+
         \support\Log::debug("文章保存完成，ID: " . $post->id);
     }
 
     /**
+     * 翻译标题（使用免费翻译API）
+     *
+     * @param string $title
+     * @return string
+     * @throws Throwable
+     */
+    protected function translateTitle(string $title): string
+    {
+        try {
+            // 使用百度翻译API（免费版）
+            $appid = blog_config('baidu_translate_appid', '', true); // 你的百度翻译API AppID
+            $secret = blog_config('baidu_translate_secret', '', true); // 你的百度翻译API密钥
+
+            // 如果没有配置API密钥，则直接返回原标题
+            if (empty($appid) || empty($secret)) {
+                return $this->formatTitleAsSlug($title);
+            }
+
+            // 检查标题是否已经是英文
+            if (preg_match('/^[A-Za-z0-9\s\-_]+$/', $title)) {
+                return $this->formatTitleAsSlug($title);
+            }
+
+            $url = 'https://fanyi-api.baidu.com/api/trans/vip/translate';
+            $salt = time();
+            $sign = md5($appid . $title . $salt . $secret);
+
+            $params = [
+                'q' => $title,
+                'from' => 'auto',
+                'to' => 'en',
+                'appid' => $appid,
+                'salt' => $salt,
+                'sign' => $sign
+            ];
+
+            $response = @file_get_contents($url . '?' . http_build_query($params));
+            if ($response) {
+                $result = json_decode($response, true);
+                if (isset($result['trans_result'][0]['dst'])) {
+                    return $this->formatTitleAsSlug($result['trans_result'][0]['dst']);
+                }
+            }
+        } catch (\Exception $e) {
+            \support\Log::warning('翻译标题时出错: ' . $e->getMessage());
+        }
+
+        // 翻译失败时返回格式化后的原标题
+        return $this->formatTitleAsSlug($title);
+    }
+
+    /**
+     * 将标题格式化为slug形式（单词间用连字符连接）
+     *
+     * @param string $title
+     * @return string
+     */
+    protected function formatTitleAsSlug(string $title): string
+    {
+        // 移除多余空格并转换为小写
+        $title = trim(strtolower($title));
+
+        // 将空格和特殊字符替换为连字符
+        $title = preg_replace('/[^a-zA-Z0-9\x{4e00}-\x{9fa5}]+/u', '-', $title);
+
+        // 将驼峰命名转换为连字符分隔
+        $title = preg_replace('/([a-z])([A-Z])/', '$1-$2', $title);
+
+        // 移除开头和结尾的连字符
+        $title = trim($title, '-');
+
+        // 如果结果为空，返回唯一标识
+        if (empty($title)) {
+            return uniqid();
+        }
+
+        return $title;
+    }
+
+
+    /**
      * 处理作者
      *
-     * @param \DOMXPath $xpath
-     * @param \DOMNode $node
+     * @param DOMXPath $xpath
+     * @param DOMNode $node
      * @return int|null
      */
-    protected function processAuthor(\DOMXPath $xpath, \DOMNode $node): ?int
+    protected function processAuthor(DOMXPath $xpath, DOMNode $node): ?int
     {
         $authorName = $xpath->evaluate('string(dc:creator)', $node);
         \support\Log::debug("处理作者: " . $authorName);
@@ -431,19 +619,19 @@ class WordpressImporter
             return $this->defaultAuthorId;
         }
 
-        // 查找现有用户
-        $user = Db::table('users')->where('username', $authorName)->first();
+        // 查找现有用户 (修改表名为wa_users)
+        $user = Db::table('wa_users')->where('username', $authorName)->first();
 
         if ($user) {
             \support\Log::debug("找到现有用户: " . $user->username . " (ID: " . $user->id . ")");
             return $user->id;
         }
 
-        // 根据选项决定是否创建新用户
+        // 根据选项决定是否创建新用户 (修改表名为wa_users)
         if (!empty($this->options['create_users'])) {
             $email = $authorName . '@example.com'; // 简化处理
             \support\Log::debug("创建新用户: " . $authorName . " (" . $email . ")");
-            $userId = Db::table('users')->insertGetId([
+            $userId = Db::table('wa_users')->insertGetId([
                 'username' => $authorName,
                 'email' => $email,
                 'password' => '', // 空密码
@@ -460,14 +648,15 @@ class WordpressImporter
         return $this->defaultAuthorId;
     }
 
+
     /**
      * 处理分类
      *
-     * @param \DOMXPath $xpath
-     * @param \DOMNode $node
+     * @param DOMXPath $xpath
+     * @param DOMNode $node
      * @return int|null
      */
-    protected function processCategories(\DOMXPath $xpath, \DOMNode $node): ?int
+    protected function processCategories(DOMXPath $xpath, DOMNode $node): ?int
     {
         $categories = $xpath->query('category[@domain="category"]', $node);
 
@@ -485,9 +674,25 @@ class WordpressImporter
 
             // 创建新分类
             \support\Log::debug("创建新分类: " . $categoryName);
+
+            // 生成slug，确保不为空
+            $slug = \Illuminate\Support\Str::slug($categoryName);
+            if (empty($slug)) {
+                // 如果生成的slug为空，则使用分类名加上时间戳
+                $slug = 'category-' . time();
+            }
+
+            // 检查slug是否已存在，如果存在则添加唯一后缀
+            $originalSlug = $slug;
+            $suffix = 1;
+            while (Db::table('categories')->where('slug', $slug)->exists()) {
+                $slug = $originalSlug . '-' . $suffix;
+                $suffix++;
+            }
+
             $categoryId = Db::table('categories')->insertGetId([
                 'name' => $categoryName,
-                'slug' => \Illuminate\Support\Str::slug($categoryName),
+                'slug' => $slug,
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s')
             ]);
@@ -500,14 +705,15 @@ class WordpressImporter
         return null;
     }
 
+
     /**
      * 处理附件
      *
-     * @param \DOMXPath $xpath
-     * @param \DOMNode $node
+     * @param DOMXPath $xpath
+     * @param DOMNode $node
      * @return void
      */
-    protected function processAttachment(\DOMXPath $xpath, \DOMNode $node): void
+    protected function processAttachment(DOMXPath $xpath, DOMNode $node): void
     {
         $title = $xpath->evaluate('string(title)', $node);
         $url = $xpath->evaluate('string(wp:attachment_url)', $node);
