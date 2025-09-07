@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of webman.
  *
@@ -14,6 +15,8 @@
 
 use plugin\admin\app\controller\AccountController;
 use plugin\admin\app\controller\DictController;
+use plugin\admin\app\controller\EditorController;
+use plugin\admin\app\controller\MediaController;
 use plugin\admin\app\controller\PostsController;
 use plugin\admin\app\controller\WpImportController;
 use Webman\Route;
@@ -30,13 +33,30 @@ Route::group('/app/admin', function () {
         Route::get('/', [PostsController::class, 'index']);
         Route::get('/index', [PostsController::class, 'index']);
         Route::get('/list', [PostsController::class, 'list']);
-        Route::get('/create', [PostsController::class, 'create']);
-        Route::post('/store', [PostsController::class, 'store']);
-        Route::get('/edit/{id}', [PostsController::class, 'edit']);
-        Route::post('/update/{id}', [PostsController::class, 'update']);
-        Route::get('/view/{id}', [PostsController::class, 'view']);
         Route::delete('/remove/{id}', [PostsController::class, 'remove']);
         Route::delete('/batchRemove/{ids}', [PostsController::class, 'batchRemove']);
+    });
+    
+    // Editor 路由
+    Route::group('/editor', function () {
+        Route::get('/vditor', [EditorController::class, 'vditor']);
+        Route::get('/vditor/{id}', [EditorController::class, 'vditor']);
+        Route::post('/save', [EditorController::class, 'save']);
+        Route::post('/upload-image', [EditorController::class, 'uploadImage']);
+    });
+    
+    // Media 路由
+    Route::group('/media', function () {
+        Route::get('', [MediaController::class, 'index']);
+        Route::get('/', [MediaController::class, 'index']);
+        Route::get('/index', [MediaController::class, 'index']);
+        Route::get('/list', [MediaController::class, 'list']);
+        Route::post('/upload', [MediaController::class, 'upload']);
+        Route::post('/update/{id}', [MediaController::class, 'update']);
+        Route::delete('/remove/{id}', [MediaController::class, 'remove']);
+        Route::delete('/batchRemove/{ids}', [MediaController::class, 'batchRemove']);
+        Route::get('/selector', [MediaController::class, 'selector']);
+        Route::post('/regenerateThumbnail/{id}', [MediaController::class, 'regenerateThumbnail']);
     });
 
     // 工具路由

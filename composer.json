@@ -48,7 +48,8 @@
     "webman/admin": "*",
     "intervention/image": "*",
     "ext-gd": "*",
-    "webman/rate-limiter": "^1.1"
+    "webman/rate-limiter": "^1.1",
+    "league/commonmark": "^2.7"
   },
   "suggest": {
     "ext-event": "For better performance. "

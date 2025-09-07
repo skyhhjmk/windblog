@@ -14,7 +14,7 @@
 
 use Webman\Route;
 
-Route::disableDefaultRoute();
+//Route::disableDefaultRoute();
 
 Route::any('/push/{id}', function ($id) {
     return view('push/id-test', ['id' => $id]);
@@ -27,24 +27,16 @@ Route::any('/post/{keyword}', [app\controller\PostController::class, 'index']);
 Route::any('/', [app\controller\IndexController::class, 'index'])->name('index.index');
 Route::any('/page/{page}', [app\controller\IndexController::class, 'index'])->name('index.page');
 
-// 调试API路由
-Route::group('/debug', function () {
-    Route::get('/server-info', [app\api\controller\DebugController::class, 'serverInfo']);
-    Route::get('/request-info', [app\api\controller\DebugController::class, 'requestInfo']);
-    Route::get('/response-info', [app\api\controller\DebugController::class, 'responseInfo']);
+// 调试 API
+Route::get('/api/hello', function() {
+    return json(['hello' => 'webman']);
 });
 
-// API路由
-Route::group('/api', function () {
-    Route::group('/v1', function () { // v1版本
-        Route::group('/posts', function () { // 文章路由
-            Route::any('', [app\api\controller\v1\ApiPostController::class, 'index'])->name('api.v1.posts.index');
-            Route::post('/raw', [app\api\controller\v1\ApiPostController::class, 'get'])->name('api.v1.posts.raw');
-            Route::fallback(function () {
-                return json(['code' => 404, 'msg' => '404 not found']);
-            });
-        });
-    });
+// REST API v1
+Route::group('/api/v1', function () {
+    // 文章相关API
+    Route::get('/post/{id}', [\app\api\controller\v1\ApiPostController::class, 'get']);
+    Route::get('/posts', [\app\api\controller\v1\ApiPostController::class, 'index']);
 });
 
 // 管理后台路由

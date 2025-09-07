@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS `wa_users`
     `token`      varchar(50)             DEFAULT NULL COMMENT 'token',
     `created_at` datetime                DEFAULT NULL COMMENT '创建时间',
     `updated_at` datetime                DEFAULT NULL COMMENT '更新时间',
+    `deleted_at` datetime                DEFAULT NULL COMMENT '删除时间',
     `role`       int            NOT NULL DEFAULT '1' COMMENT '角色',
     `status`     tinyint        NOT NULL DEFAULT '0' COMMENT '禁用',
     PRIMARY KEY (`id`),
@@ -123,7 +124,7 @@ CREATE TABLE IF NOT EXISTS `links`
     `description` text                         DEFAULT NULL COMMENT '友链描述',
     `image`       varchar(255)                 DEFAULT NULL COMMENT '友链图片',
     `sort_order`  int(10) unsigned             DEFAULT 0 COMMENT '排序顺序',
-    `status`      tinyint(1)          NOT NULL DEFAULT 1 COMMENT '状态：1显示，0隐藏',
+    `status`      boolean             NOT NULL DEFAULT true COMMENT '状态：1显示，0隐藏',
     `created_at`  datetime                     DEFAULT NULL COMMENT '创建时间',
     `updated_at`  datetime                     DEFAULT NULL COMMENT '更新时间',
     `deleted_at`  datetime                     DEFAULT NULL COMMENT '删除时间',
@@ -183,15 +184,16 @@ CREATE TABLE IF NOT EXISTS `media`
     `caption`       text                         DEFAULT NULL COMMENT '标题',
     `description`   text                         DEFAULT NULL COMMENT '描述',
     `author_id`     int unsigned                 DEFAULT NULL COMMENT '作者ID',
+    `author_type`   enum ('admin','user')        DEFAULT 'user' COMMENT '作者类型',
     `created_at`    timestamp           NULL     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `updated_at`    timestamp           NULL     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     `deleted_at`    timestamp           NULL     DEFAULT NULL COMMENT '删除时间',
     PRIMARY KEY (`id`),
     KEY `author_id` (`author_id`),
+    KEY `author_type` (`author_type`),
     KEY `filename` (`filename`),
     KEY `mime_type` (`mime_type`),
-    KEY `deleted_at` (`deleted_at`),
-    CONSTRAINT `media_author_id_foreign` FOREIGN KEY (`author_id`) REFERENCES `wa_users` (`id`) ON DELETE SET NULL
+    KEY `deleted_at` (`deleted_at`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4 COMMENT ='媒体附件表';
 

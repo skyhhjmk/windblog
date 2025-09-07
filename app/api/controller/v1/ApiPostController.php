@@ -9,7 +9,6 @@ use Webman\RateLimiter\Annotation\RateLimiter;
 
 class ApiPostController
 {
-
     /**
      * 不需要登录的方法
      */
@@ -33,16 +32,32 @@ class ApiPostController
                 'message' => trans('Missing input parameter :parameter', ['parameter' => 'id']) // 缺少输入参数 id
             ]);
         }
-        $post = Post::where('id', $id)->where('status', 'published');
-        var_dump($post);
+        
+        // 查询文章
+        $post = Post::find($id);
+        
+        if (!$post) {
+            return json([
+                'code' => 404,
+                'message' => '文章不存在'
+            ]);
+        }
+        
+        // 返回文章详情
         return json([
             'code' => 200,
             'message' => trans('Success'),
-            'id' => $id,
-            'title' => $post->title,
-            'slug' => $post->slug,
-            'content_type' => $post->content_type,
-            'data' => $post->content
+            'data' => [
+                'id' => $post->id,
+                'title' => $post->title,
+                'slug' => $post->slug,
+                'content' => $post->content,
+                'content_type' => $post->content_type ?? 'markdown',
+                'summary' => $post->summary,
+                'status' => $post->status,
+                'created_at' => $post->created_at,
+                'updated_at' => $post->updated_at
+            ]
         ]);
     }
 }

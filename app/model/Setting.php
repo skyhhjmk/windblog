@@ -1,8 +1,19 @@
 <?php
 namespace app\model;
 
+use Illuminate\Database\Eloquent\Builder;
 use support\Model;
+use Throwable;
 
+/**
+ * 设置模型
+ *
+ * @property int $id 主键
+ * @property string $key 设置键名
+ * @property string $value 设置值
+ * @property string|null $created_at 创建时间
+ * @property string|null $updated_at 更新时间
+ */
 class Setting extends Model
 {
     /**
@@ -25,6 +36,16 @@ class Setting extends Model
      * @var bool
      */
     public $timestamps = true;
+
+    /**
+     * 模型的"启动"方法
+     *
+     * @return void
+     */
+    protected static function booted()
+    {
+        // 设置模型启动时的逻辑
+    }
     
     /**
      * 允许批量赋值的字段
@@ -41,6 +62,7 @@ class Setting extends Model
     protected $casts = [
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
-        'deleted_at' => 'datetime',
     ];
+    
+
 }

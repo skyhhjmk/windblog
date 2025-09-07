@@ -2,19 +2,36 @@
 
 namespace app\model;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use support\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Collection;
+use Throwable;
 
 /**
- * @property int $id 作者ID
- * @property string $name 作者名称
- * @property string $email 作者邮箱
- * @property string $bio 作者简介
- * @property Carbon|null $created_at 创建时间
- * @property Carbon|null $updated_at 更新时间
- * @property-read Collection|Post[] $posts 作者发布的所有文章
+ * @property integer $id 主键(主键)
+ * @property string $username 用户名
+ * @property string $nickname 昵称
+ * @property string $password 密码
+ * @property string $sex 性别
+ * @property string $avatar 头像
+ * @property string $email 邮箱
+ * @property string $mobile 手机
+ * @property integer $level 等级
+ * @property string $birthday 生日
+ * @property integer $money 余额
+ * @property integer $score 积分
+ * @property string $last_time 登录时间
+ * @property string $last_ip 登录ip
+ * @property string $join_time 注册时间
+ * @property string $join_ip 注册ip
+ * @property string $token token
+ * @property string $created_at 创建时间
+ * @property string $updated_at 更新时间
+ * @property string|null $deleted_at 软删除时间
+ * @property integer $role 角色
+ * @property integer $status 禁用
  */
 class Author extends Model
 {
@@ -43,12 +60,12 @@ class Author extends Model
      *
      * @var array
      */
-    protected $fillable = [
-        'name',
-        'email',
-        'bio',
-        // 如果你的表还有其他允许用户填写的字段，请在这里添加
-    ];
+//    protected $fillable = [
+//        'name',
+//        'email',
+//        'bio',
+//        // 如果你的表还有其他允许用户填写的字段，请在这里添加
+//    ];
 
     /**
      * 需要被隐藏的属性。
@@ -70,40 +87,106 @@ class Author extends Model
      */
     protected $casts = [
         'id' => 'integer',
-        'email_verified_at' => 'datetime', // 如果有邮箱验证时间字段
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',
     ];
 
-    // ========================================================================
-    // 模型事件
+    /**
+     * 模型的"启动"方法
+     *
+     * @return void
+     */
+    protected static function booted()
+    {
+        // 添加全局作用域，只查询未软删除的记录
+        static::addGlobalScope('notDeleted', function (Builder $builder) {
+            $builder->whereNull('deleted_at');
+        });
+    }
+    
+    // ========================================================================    
+    // 查询作用域    
     // ========================================================================
 
     /**
-     * 模型的 "booted" 方法。
-     * 在这里可以注册模型事件监听器，例如在创建、更新、删除模型时执行一些操作。
-     * 这与你之前在 post_author 模型中使用的方法是相同的。
+     * 查询作用域：包含软删除的记录。
+     *
+     * @param Builder $query
+     * @return Builder
      */
-    protected static function booted(): void
+    public function scopeWithTrashed(Builder $query): Builder
     {
-        // 示例：在作者被创建时，自动做一些处理
-        static::created(function (self $author) {
-            // 例如：向管理员发送新作者注册的通知
-            // info("新作者已注册: {$author->name} (ID: {$author->id})");
-        });
+        return $query->withoutGlobalScope('notDeleted');
+    }
 
-        // 示例：在作者被删除前，检查他是否还有文章
-        static::deleting(function (self $author) {
-            // 如果设置了数据库级联删除（ON DELETE CASCADE），这里的逻辑可能不是必须的。
-            // 但如果需要做一些额外的清理工作（比如删除用户头像文件），可以在这里进行。
-            if ($author->posts()->count() > 0) {
-                // 注意：如果数据库没有设置级联删除，这里会报错，因为 post_author 表中仍有引用该作者的记录。
-                // 手动删除关联：
-                // $author->posts()->detach(); // 对于多对多关系
-                // 或者 $author->posts()->delete(); // 如果你想删除文章本身
+    /**
+     * 查询作用域：只查询软删除的记录。
+     *
+     * @param Builder $query
+     * @return Builder
+     */
+    public function scopeOnlyTrashed(Builder $query): Builder
+    {
+        return $query->withoutGlobalScope('notDeleted')->whereNotNull('deleted_at');
+    }
+
+    /**
+     * 软删除方法，根据配置决定是软删除还是硬删除
+     *
+     * @param bool $forceDelete 是否强制删除（绕过软删除配置）
+     * @return bool|null
+     * @throws Throwable
+     */
+    public function softDelete(bool $forceDelete = false): ?bool
+    {
+        // 判断是否启用软删除，除非强制硬删除
+        $useSoftDelete = blog_config('soft_delete', true);
+        \support\Log::debug("Soft delete config value: " . var_export($useSoftDelete, true));
+        \support\Log::debug("Force delete flag: " . var_export($forceDelete, true));
+        
+        if (!$forceDelete && $useSoftDelete) {
+            // 软删除：设置 deleted_at 字段
+            try {
+                \support\Log::debug("Executing soft delete for author ID: " . $this->id);
+                // 使用save方法而不是update方法，确保模型状态同步
+                $this->deleted_at = date('Y-m-d H:i:s');
+                $result = $this->save();
+                \support\Log::debug("Soft delete result: " . var_export($result, true));
+                \support\Log::debug("Author deleted_at value after save: " . var_export($this->deleted_at, true));
+                return $result !== false; // 确保返回布尔值
+            } catch (\Exception $e) {
+                \support\Log::error('Soft delete failed for author ID ' . $this->id . ': ' . $e->getMessage());
+                return false;
             }
-        });
+        } else {
+            // 硬删除：直接从数据库中删除记录
+            \support\Log::debug("Executing hard delete for author ID: " . $this->id);
+            try {
+                return $this->delete();
+            } catch (\Exception $e) {
+                \support\Log::error('Hard delete failed for author ID ' . $this->id . ': ' . $e->getMessage());
+                return false;
+            }
+        }
+    }
+
+    /**
+     * 恢复软删除的记录
+     *
+     * @return bool
+     */
+    public function restore(): bool
+    {
+        try {
+            // 使用save方法而不是update方法，确保模型状态同步
+            $this->deleted_at = null;
+            $result = $this->save();
+            return $result !== false;
+        } catch (\Exception $e) {
+            \support\Log::error('Restore failed for author ID ' . $this->id . ': ' . $e->getMessage());
+            return false;
+        }
     }
 
     // ========================================================================

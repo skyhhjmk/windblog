@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 use support\Model;
+use Throwable;
 
 /**
  * 文章模型
@@ -22,6 +23,7 @@ use support\Model;
  * @property int $view_count 浏览次数
  * @property \Illuminate\Support\Carbon|null $created_at 创建时间
  * @property \Illuminate\Support\Carbon|null $updated_at 更新时间
+ * @property \Illuminate\Support\Carbon|null $deleted_at 软删除时间
  * @property-read \app\model\Author $author 文章作者
  * @property-read \app\model\Category|null $category 文章分类
  * @property-read \app\model\PostAuthor[] $postAuthors 文章-作者关联记录 (用于多作者场景)
@@ -29,6 +31,8 @@ use support\Model;
  * @method static Builder|Post published() 只查询已发布的文章
  * @method static Builder|Post draft() 只查询草稿箱的文章
  * @method static Builder|Post byAuthor(int $authorId) 查询指定作者的文章
+ * @method static Builder|Post withTrashed() 包含软删除的记录
+ * @method static Builder|Post onlyTrashed() 只查询软删除的记录
  */
 class Post extends Model
 {
@@ -75,11 +79,16 @@ class Post extends Model
     ];
 
     /**
-     * 模型的“启动”方法。
+     * 模型的"启动"方法。
      * 用于注册模型事件，如创建、更新时自动执行某些操作。
      */
     protected static function booted()
     {
+        // 添加全局作用域，只查询未软删除的记录
+        static::addGlobalScope('notDeleted', function (Builder $builder) {
+            $builder->whereNull('deleted_at');
+        });
+        
         // 当文章正在创建时
         static::creating(function (Post $post) {
             // 如果没有提供 slug，则根据标题自动生成
@@ -100,6 +109,12 @@ class Post extends Model
             }
         });
     }
+    /**
+     * 指示是否自动维护时间戳
+     *
+     * @var bool
+     */
+    public $timestamps = true;
 
     // -----------------------------------------------------
     // 模型关系定义
@@ -107,7 +122,7 @@ class Post extends Model
 
     /**
      * 获取文章的作者（主要作者）。
-     * 定义一个“属于”关系，Post 模型属于 Author 模型。
+     * 定义一个"属于"关系，Post 模型属于 Author 模型。
      * Eloquent 会自动使用 `author_id` 作为外键去 `authors` 表查找。
      *
      * @return BelongsTo
@@ -119,7 +134,7 @@ class Post extends Model
 
     /**
      * 获取文章所属的分类。
-     * 定义一个“属于”关系，Post 模型属于 Category 模型。
+     * 定义一个"属于"关系，Post 模型属于 Category 模型。
      * Eloquent 会自动使用 `category_id` 作为外键去 `categories` 表查找。
      *
      * @return BelongsTo
@@ -131,7 +146,7 @@ class Post extends Model
 
     /**
      * 获取文章的所有作者（用于多作者场景）。
-     * 定义一个“一对多”关系，一篇文章可以有多条 post_author 关联记录。
+     * 定义一个"一对多"关系，一篇文章可以有多条 post_author 关联记录。
      * 通过这个关系，可以方便地管理一篇文章的多个作者。
      *
      * @return HasMany
@@ -141,8 +156,8 @@ class Post extends Model
         return $this->hasMany(PostAuthor::class, 'postid');
     }
 
-    // -----------------------------------------------------
-    // 查询作用域
+    // -----------------------------------------------------    
+    // 查询作用域    
     // -----------------------------------------------------
 
     /**
@@ -177,5 +192,85 @@ class Post extends Model
     public function scopeByAuthor(Builder $query, int $authorId): Builder
     {
         return $query->where('author_id', $authorId);
+    }
+    
+    /**
+     * 查询作用域：包含软删除的记录。
+     *
+     * @param Builder $query
+     * @return Builder
+     */
+    public function scopeWithTrashed(Builder $query): Builder
+    {
+        return $query->withoutGlobalScope('notDeleted');
+    }
+
+    /**
+     * 查询作用域：只查询软删除的记录。
+     *
+     * @param Builder $query
+     * @return Builder
+     */
+    public function scopeOnlyTrashed(Builder $query): Builder
+    {
+        return $query->withoutGlobalScope('notDeleted')->whereNotNull('deleted_at');
+    }
+
+    /**
+     * 软删除方法，根据配置决定是软删除还是硬删除
+     *
+     * @param bool $forceDelete 是否强制删除（绕过软删除配置）
+     * @return bool|null
+     * @throws Throwable
+     */
+    public function softDelete(bool $forceDelete = false): ?bool
+    {
+        // 判断是否启用软删除，除非强制硬删除
+        $useSoftDelete = blog_config('soft_delete', true);
+        \support\Log::debug("Soft delete config value: " . var_export($useSoftDelete, true));
+        \support\Log::debug("Force delete flag: " . var_export($forceDelete, true));
+        
+        if (!$forceDelete && $useSoftDelete) {
+            // 软删除：设置 deleted_at 字段
+            try {
+                \support\Log::debug("Executing soft delete for post ID: " . $this->id);
+                // 使用save方法而不是update方法，确保模型状态同步
+                $this->deleted_at = date('Y-m-d H:i:s');
+                $result = $this->save();
+                \support\Log::debug("Soft delete result: " . var_export($result, true));
+                \support\Log::debug("Post deleted_at value after save: " . var_export($this->deleted_at, true));
+                return $result !== false; // 确保返回布尔值
+            } catch (\Exception $e) {
+                \support\Log::error('Soft delete failed for post ID ' . $this->id . ': ' . $e->getMessage());
+                return false;
+            }
+        } else {
+            // 硬删除：直接从数据库中删除记录
+            \support\Log::debug("Executing hard delete for post ID: " . $this->id);
+            try {
+                return $this->delete();
+            } catch (\Exception $e) {
+                \support\Log::error('Hard delete failed for post ID ' . $this->id . ': ' . $e->getMessage());
+                return false;
+            }
+        }
+    }
+
+    /**
+     * 恢复软删除的记录
+     *
+     * @return bool
+     */
+    public function restore(): bool
+    {
+        try {
+            // 使用save方法而不是update方法，确保模型状态同步
+            $this->deleted_at = null;
+            $result = $this->save();
+            return $result !== false;
+        } catch (\Exception $e) {
+            \support\Log::error('Restore failed for post ID ' . $this->id . ': ' . $e->getMessage());
+            return false;
+        }
     }
 }

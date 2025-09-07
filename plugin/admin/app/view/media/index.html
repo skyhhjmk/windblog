@@ -1,0 +1,1484 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>媒体库</title>
+    <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css"/>
+    <!-- Animista动画库 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animsition/4.0.2/css/animsition.min.css"
+          integrity="sha512-SagM1PHxt5mWDyWARVY6UOdhM5A8J+R1UqIWcGfiwOd+be7uHQagB+JQOmfVZF8jjJQqbyuWzw/KXfb4yqjBkQ=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"/>
+    <style>
+        /* Animista自定义动画 */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translate3d(0, 30px, 0);
+            }
+            to {
+                opacity: 1;
+                transform: translate3d(0, 0, 0);
+            }
+        }
+
+        @keyframes scale-in-center {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slide-in-top {
+            0% {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            100% {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        @keyframes shake-lr {
+            0%, 100% {
+                transform: rotate(0deg);
+            }
+            25% {
+                transform: rotate(5deg);
+            }
+            75% {
+                transform: rotate(-5deg);
+            }
+        }
+
+    </style>
+    <style>
+        /* 基础样式增强 */
+        body {
+            background-color: #f5f7fa;
+        }
+
+        /* 动画和过渡效果 */
+        .media-item,
+        .pear-btn,
+        .layui-input,
+        .layui-select,
+        .layui-card {
+            transition: all 0.3s ease;
+        }
+
+        /* 展开按钮样式 */
+        .expand.pear-btn {
+            border: 1px solid rgba(255, 255, 255, 0);
+            background: transparent;
+        }
+
+        .expand.pear-btn:hover {
+            color: #1E9FFF;
+            background: rgba(30, 159, 255, 0.05);
+            border-color: #1E9FFF;
+        }
+
+        /* 媒体项样式 */
+        .media-item {
+            border: 1px solid #e6e6e6;
+            border-radius: 8px;
+            padding: 8px;
+            margin-bottom: 16px;
+            position: relative;
+            cursor: pointer;
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+        }
+
+        .media-item:hover {
+            border-color: #1E9FFF;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .media-item.selected {
+            border-color: #1E9FFF;
+            background-color: rgba(30, 159, 255, 0.05);
+        }
+
+        /* 缩略图样式 */
+        .media-thumbnail {
+            width: 100%;
+            height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .media-thumbnail img {
+            max-width: 100%;
+            max-height: 100%;
+            transition: transform 0.3s ease;
+        }
+
+        .media-item:hover .media-thumbnail img {
+            transform: scale(1.05);
+        }
+
+        .media-thumbnail i {
+            font-size: 48px;
+            color: #999;
+        }
+
+        /* 文件类型图标颜色 */
+        .media-thumbnail i.layui-icon-video {
+            color: #FF5722;
+        }
+
+        .media-thumbnail i.layui-icon-music {
+            color: #009688;
+        }
+
+        .media-thumbnail i.layui-icon-file-pdf {
+            color: #F44336;
+        }
+
+        .media-thumbnail i.layui-icon-file {
+            color: #607D8B;
+        }
+
+        /* 媒体信息样式 */
+        .media-info {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .media-name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+
+        .media-size {
+            color: #999;
+        }
+
+        /* 复选框样式 */
+        .media-checkbox {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            z-index: 10;
+        }
+
+        /* 操作按钮样式 */
+        .media-actions {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            display: flex;
+            gap: 4px;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s ease;
+        }
+
+        .media-item:hover .media-actions {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .media-actions .pear-btn {
+            padding: 4px 8px;
+            font-size: 14px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+        }
+
+        .media-actions .pear-btn i {
+            font-size: 16px;
+        }
+
+        /* 为按钮添加动画效果 */
+        .pear-btn:not(.animate__animated) {
+            transition: all 0.3s ease;
+        }
+
+        .pear-btn:hover:not(:disabled) {
+            animation: pulse 0.5s ease-in-out;
+        }
+
+        /* 卡片加载动画 */
+        .layui-card {
+            animation: fadeInUp 0.6s ease both;
+        }
+
+        /* 表单元素动画 */
+        .layui-input:focus, .layui-select:focus {
+            animation: scale-in-center 0.2s ease;
+        }
+
+        /* 媒体项选中状态 */
+        .media-item.selected {
+            animation: pulse 0.3s ease-in-out;
+            border-color: #1E9FFF;
+            background-color: rgba(30, 159, 255, 0.05);
+        }
+        
+        /* 确保始终不会重新触发动画 */
+        .media-item {
+            animation: none !important;
+        }
+        
+        /* 确保选中和未选中状态切换时不会触发动画 */
+        .media-item.selected,
+        .media-item:not(.selected) {
+            animation: none !important;
+        }
+
+        /* 媒体项点击反馈 */
+        .media-item:active {
+            transform: scale(0.98);
+            transition: transform 0.1s ease;
+        }
+
+        /* 按钮间距 */
+        .btn-spacing {
+            margin-right: 10px;
+        }
+
+        /* 卡片样式增强 */
+        .layui-card {
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .layui-card-header {
+            font-weight: 600;
+            font-size: 14px;
+            padding: 12px 16px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        /* 表单样式增强 */
+        .layui-form-item {
+            margin-bottom: 16px;
+        }
+
+        .layui-form-label {
+            font-weight: 500;
+        }
+
+        .layui-input,
+        .layui-select {
+            border-radius: 4px;
+            border-color: #e6e6e6;
+        }
+
+        .layui-input:focus,
+        .layui-select:focus {
+            border-color: #1E9FFF;
+            box-shadow: 0 0 0 2px rgba(30, 159, 255, 0.2);
+        }
+
+        /* 按钮样式增强 */
+        .pear-btn {
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .pear-btn-primary {
+            background-color: #1E9FFF;
+            border-color: #1E9FFF;
+        }
+
+        .pear-btn-primary:hover {
+            background-color: #40a9ff;
+            border-color: #40a9ff;
+        }
+
+        /* 弹窗样式 */
+        .layui-layer-title {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            font-weight: 600;
+        }
+
+        /* 初始加载动画类 - 只在首次加载时生效 */
+        .media-item-load {
+            animation: fadeInUp 0.5s ease both;
+        }
+        
+        /* 确保动画只在初始加载时执行一次 */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translate3d(0, 20px, 0);
+            }
+            to {
+                opacity: 1;
+                transform: translate3d(0, 0, 0);
+            }
+        }
+
+        /* Animista动画类 */
+        .animate__animated {
+            animation-duration: 1s;
+            animation-fill-mode: both;
+        }
+
+        .animate__fadeInUp {
+            animation-name: fadeInUp;
+        }
+
+        .animate__scaleInCenter {
+            animation-name: scale-in-center;
+            animation-duration: 0.5s;
+        }
+
+        .animate__slideInTop {
+            animation-name: slide-in-top;
+            animation-duration: 0.5s;
+        }
+
+        .animate__pulse {
+            animation-name: pulse;
+            animation-duration: 1.5s;
+            animation-iteration-count: infinite;
+        }
+
+        .animate__shakeLr {
+            animation-name: shake-lr;
+            animation-duration: 0.5s;
+        }
+
+        /* 响应式调整 */
+        @media (max-width: 768px) {
+            .layui-col-xs6 {
+                width: 50%;
+            }
+
+            .layui-col-sm4 {
+                width: 50%;
+            }
+
+            .layui-form-item .layui-inline {
+                display: block;
+                margin-bottom: 10px;
+            }
+
+            .layui-form-label {
+                width: auto;
+            }
+
+            .layui-input-inline {
+                width: 100%;
+                margin-left: 0;
+            }
+        }
+
+        /* 加载效果 */
+        .media-grid-loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 60px 0;
+            color: #999;
+        }
+
+        /* 空状态样式 */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state i {
+            font-size: 64px;
+            margin-bottom: 16px;
+            display: block;
+            color: #ddd;
+        }
+    </style>
+</head>
+
+<body class="pear-container">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/animsition/4.0.2/js/animsition.min.js"
+        integrity="sha512-pYd2QwnzV9JgtoARJf1Ui1q5+p1WHpeAz/M0sUJNprhDviO4zRo12GLlk4/sKBRUCtMHEmjgqo5zcrn8pkdhmQ=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animsition/4.0.2/css/animsition.min.css"
+      integrity="sha512-SagM1PHxt5mWDyWARVY6UOdhM5A8J+R1UqIWcGfiwOd+be7uHQagB+JQOmfVZF8jjJQqbyuWzw/KXfb4yqjBkQ=="
+      crossorigin="anonymous" referrerpolicy="no-referrer"/>
+<div class="layui-card">
+    <div class="layui-card-body">
+        <form id="mediaForm" class="layui-form" action="">
+            <div class="layui-form-item">
+                <div class="layui-inline">
+                    <label class="layui-form-label">文件名称</label>
+                    <div class="layui-input-inline">
+                        <input type="text" name="search" placeholder="请输入文件名称" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <label class="layui-form-label">文件类型</label>
+                    <div class="layui-input-inline">
+                        <select name="mime_type" class="layui-input">
+                            <option value="">全部类型</option>
+                            <option value="image">图片</option>
+                            <option value="video">视频</option>
+                            <option value="audio">音频</option>
+                            <option value="document">文档</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-inline" style="margin-left: 50px;">
+                    <button class="pear-btn pear-btn-md pear-btn-primary" lay-submit lay-filter="media-query">
+                        <i class="layui-icon layui-icon-search"></i>
+                        查询
+                    </button>
+                    <button type="reset" class="pear-btn pear-btn-md">
+                        <i class="layui-icon layui-icon-refresh"></i>
+                        重置
+                    </button>
+                    <button type="button" class="pear-btn pear-btn-md expand">
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+<div class="layui-card">
+    <div class="layui-card-body">
+        <div class="layui-btn-group" style="margin-bottom: 16px;">
+            <button class="pear-btn pear-btn-primary pear-btn-md btn-spacing" id="upload-btn">
+                <i class="layui-icon layui-icon-upload"></i>
+                上传文件
+            </button>
+            <button class="pear-btn pear-btn-danger pear-btn-md btn-spacing" id="batch-remove-btn">
+                <i class="layui-icon layui-icon-delete"></i>
+                批量删除
+            </button>
+            <button class="pear-btn pear-btn-md" id="refresh-btn">
+                <i class="layui-icon layui-icon-refresh"></i>
+                刷新
+            </button>
+        </div>
+
+        <!-- 媒体网格视图 -->
+        <div id="media-grid" class="layui-row"></div>
+
+        <!-- 分页控件 -->
+        <div id="media-pagination" class="layui-box layui-laypage layui-laypage-default"
+             style="margin-top: 16px;"></div>
+    </div>
+</div>
+
+<!-- 编辑媒体弹窗 -->
+<div id="edit-media-modal" style="display: none;">
+    <form class="layui-form" id="edit-media-form">
+        <input type="hidden" name="id" id="media-id">
+        <div class="layui-form-item">
+            <label class="layui-form-label">替代文本</label>
+            <div class="layui-input-block">
+                <input type="text" name="alt_text" id="alt_text" placeholder="请输入替代文本" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">说明文字</label>
+            <div class="layui-input-block">
+                <input type="text" name="caption" id="caption" placeholder="请输入说明文字" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">描述</label>
+            <div class="layui-input-block">
+                <textarea name="description" id="description" placeholder="请输入描述"
+                          class="layui-textarea"></textarea>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <div class="layui-input-block">
+                <button class="layui-btn layui-btn-primary" type="button" id="cancel-edit">取消</button>
+                <button class="layui-btn layui-btn-normal" lay-submit lay-filter="save-media">保存</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- 上传文件弹窗 -->
+<div id="upload-modal" style="display: none;">
+    <form class="layui-form" id="upload-form">
+        <div class="layui-form-item">
+            <label class="layui-form-label">选择文件</label>
+            <div class="layui-input-block">
+                <button type="button" class="layui-btn" id="select-file-btn">
+                    <i class="layui-icon">&#xe67c;</i>选择文件
+                </button>
+                <input type="file" name="file" id="file-input" style="display: none;">
+                <div id="file-name" style="margin-top: 10px;"></div>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">替代文本</label>
+            <div class="layui-input-block">
+                <input type="text" name="alt_text" placeholder="请输入替代文本" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">说明文字</label>
+            <div class="layui-input-block">
+                <input type="text" name="caption" placeholder="请输入说明文字" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">描述</label>
+            <div class="layui-input-block">
+                <textarea name="description" placeholder="请输入描述" class="layui-textarea"></textarea>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <div class="layui-input-block">
+                <button class="layui-btn layui-btn-primary" type="button" id="cancel-upload">取消</button>
+                <button class="layui-btn layui-btn-normal" type="button" id="submit-upload">上传</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script src="/app/admin/component/layui/layui.js?v=2.11.5"></script>
+<script src="/app/admin/component/pear/pear.js"></script>
+<script>
+    layui.use(['table', 'form', 'jquery', 'layer', 'upload'], function () {
+        let table = layui.table;
+        let form = layui.form;
+        let $ = layui.jquery;
+        let layer = layui.layer;
+        let upload = layui.upload;
+
+        // 重新生成缩略图
+        function regenerateThumbnail(id) {
+            layer.confirm('确定要重新生成缩略图吗？', {
+                icon: 3,
+                title: '提示'
+            }, function (index) {
+                layer.close(index);
+
+                const loading = layer.load();
+
+                $.ajax({
+                    url: MODULE_PATH + 'regenerateThumbnail/' + id,
+                    dataType: 'json',
+                    type: 'post',
+                    success: function (result) {
+                        layer.close(loading);
+                        if (result.code === 0) {
+                            layer.msg('缩略图生成成功', {icon: 1});
+                            // 重新加载媒体列表
+                            loadMediaList();
+                            // 关闭当前弹窗
+                            layer.closeAll('page');
+                        } else {
+                            layer.msg(result.msg, {icon: 2});
+                        }
+                    },
+                    error: function () {
+                        layer.close(loading);
+                        layer.msg('操作失败', {icon: 2});
+                    }
+                });
+            });
+        }
+
+        // 复制到剪贴板
+        function copyToClipboard(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+
+            layer.msg('已复制到剪贴板', {icon: 1});
+        }
+
+        // 获取缩略图大小
+        function getThumbSize(thumbPath, itemId) {
+            // 创建一个临时的图片对象来获取尺寸
+            const img = new Image();
+            img.onload = function () {
+                const sizeElement = document.getElementById(`thumb-size-${itemId}`);
+                if (sizeElement) {
+                    sizeElement.innerHTML = `${this.width} × ${this.height} 像素`;
+                }
+            };
+            img.src = thumbPath;
+        }
+
+        // 定义 preview 函数
+        window.preview = function (item) {
+            // 获取文件路径
+            let filePath = '/uploads/' + item.file_path;
+            let thumbPath = item.thumb_path ? '/uploads/' + item.thumb_path : null;
+
+            // 创建弹窗内容，包含文件详细信息
+            let content = `
+                <div style="display: flex; flex-direction: column; height: 100%;">
+                    <div style="padding: 20px; background-color: #f8f9fa; border-bottom: 1px solid #e6e6e6;">
+                        <h4 style="margin: 0; color: #333;">${item.original_name}</h4>
+                        <div style="margin-top: 10px; color: #666; font-size: 14px;">
+                            <p>文件类型: ${item.mime_type}</p>
+                            <p>文件大小: ${formatFileSize(item.file_size)}</p>
+                            <p>上传时间: ${formatDate(item.created_at)}</p>
+                            <p>作者: ${item.author ? item.author.nickname : '未知'}</p>
+                        </div>
+                    </div>
+                    <div style="flex: 1; display: flex; flex-direction: row; overflow: hidden;">
+                        <div style="flex: 1; padding: 20px; overflow: auto;">
+                            <div style="display: flex; justify-content: center; align-items: center; height: 100%; min-height: 300px;">
+                                ${item.mime_type && item.mime_type.startsWith('image/') ?
+                `<div style="max-width: 100%; max-height: 100%; display: flex; justify-content: center; align-items: center;">
+                                    <img src="${filePath}" alt="${item.original_name}" style="max-width: 100%; max-height: 400px; object-fit: contain;">
+                                </div>` : ''}
+                                ${item.mime_type && item.mime_type.startsWith('video/') ?
+                `<div style="width: 100%; height: 100%; display: flex; justify-content: center; align-items: center;">
+                                    <video src="${filePath}" controls style="max-width: 100%; max-height: 100%;"></video>
+                                </div>` : ''}
+                                ${item.mime_type && item.mime_type.startsWith('audio/') ?
+                `<div style="width: 100%; display: flex; justify-content: center; align-items: center; flex: 1;">
+                                    <audio src="${filePath}" controls style="width: 100%;"></audio>
+                                </div>` : ''}
+                                ${item.mime_type && item.mime_type.includes('pdf') ?
+                `<div style="width: 100%; height: 100%;">
+                                    <embed src="${filePath}" type="application/pdf" width="100%" height="100%">
+                                </div>` : ''}
+                            </div>
+                            
+                            <!-- 操作按钮 -->
+                            <div style="margin-top: 20px; text-align: center;">
+                                ${item.mime_type && item.mime_type.startsWith('image/') ?
+                `<a href="${filePath}" target="_blank" class="pear-btn pear-btn-primary pear-btn-sm" style="margin: 0 5px;">
+                                    <i class="layui-icon layui-icon-release"></i>新窗口预览
+                                </a>` : ''}
+                                <a href="${filePath}" download="${item.original_name}" class="pear-btn pear-btn-success pear-btn-sm" style="margin: 0 5px;">
+                                    <i class="layui-icon layui-icon-download-circle"></i>下载文件
+                                </a>
+                                <button class="pear-btn pear-btn-warming pear-btn-sm" id="copy-link-btn" style="margin: 0 5px;">
+                                    <i class="layui-icon layui-icon-link"></i>复制链接
+                                </button>
+                                ${item.mime_type && item.mime_type.startsWith('image/') ?
+                `<button class="pear-btn pear-btn-normal pear-btn-sm" id="copy-md-btn" style="margin: 0 5px;">
+                                    <i class="layui-icon layui-icon-code-circle"></i>Markdown
+                                </button>` : ''}
+                            </div>
+                        </div>
+                        
+                        <div style="width: 300px; border-left: 1px solid #e6e6e6; padding: 20px; overflow: auto; background-color: #f8f9fa;">
+                            <h4 style="margin-top: 0; color: #333;">文件详细信息</h4>
+                            <table class="layui-table">
+                                <tbody>
+                                    <tr>
+                                        <td style="width: 100px;">ID</td>
+                                        <td>${item.id}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>文件名</td>
+                                        <td>${item.filename}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>原始文件名</td>
+                                        <td>${item.original_name}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>作者</td>
+                                        <td>${item.author ? item.author.nickname : '未知'}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>文件路径</td>
+                                        <td>${item.file_path}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>文件大小</td>
+                                        <td>${formatFileSize(item.file_size)}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>MIME类型</td>
+                                        <td>${item.mime_type}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>替代文本</td>
+                                        <td>${item.alt_text || '无'}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>说明文字</td>
+                                        <td>${item.caption || '无'}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>描述</td>
+                                        <td>${item.description || '无'}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>文件上传时间</td>
+                                        <td>${formatDate(item.created_at)}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>元数据更新时间</td>
+                                        <td>${formatDate(item.updated_at)}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            
+                            ${item.mime_type && item.mime_type.startsWith('image/') ?
+                `<h4 style="color: #333;">缩略图信息</h4>
+                            ${thumbPath ?
+                    `<div style="text-align: center; margin-bottom: 15px;">
+                                <img src="${thumbPath}" alt="缩略图" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px;">
+                            </div>
+                            <table class="layui-table">
+                                <tbody>
+                                    <tr>
+                                        <td style="width: 100px;">缩略图路径</td>
+                                        <td>${item.thumb_path}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>缩略图大小</td>
+                                        <td id="thumb-size-${item.id}">计算中...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <button class="pear-btn pear-btn-danger pear-btn-sm" id="regenerate-thumb-btn">
+                                <i class="layui-icon layui-icon-refresh"></i>重新生成缩略图
+                            </button>` :
+                    `<p>该图片尚未生成缩略图</p>
+                            <button class="pear-btn pear-btn-danger pear-btn-sm" id="regenerate-thumb-btn">
+                                <i class="layui-icon layui-icon-refresh"></i>生成缩略图
+                            </button>`}` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // 显示弹窗
+            layer.open({
+                type: 1,
+                title: item.original_name,
+                area: ['90%', '90%'],
+                content: content,
+                maxmin: true,
+                btn: ['关闭'],
+                yes: function (index, layero) {
+                    layer.close(index);
+                },
+                success: function (layero, index) {
+                    layer.full(index); // 最大化
+                    // 获取缩略图大小
+                    if (thumbPath) {
+                        getThumbSize(thumbPath, item.id);
+                    }
+
+                    // 绑定事件
+                    const container = layero.find('.layui-layer-content');
+                    container.find('#regenerate-thumb-btn').on('click', function () {
+                        regenerateThumbnail(item.id);
+                    });
+
+                    container.find('#copy-link-btn').on('click', function () {
+                        copyToClipboard(window.location.origin + filePath);
+                    });
+
+                    container.find('#copy-md-btn').on('click', function () {
+                        copyToClipboard(`![](${window.location.origin + filePath})`);
+                    });
+                }
+            });
+        };
+
+        // 添加格式化日期的函数
+        function formatDate(dateString) {
+            if (!dateString) return '未知';
+            const date = new Date(dateString);
+            return date.toLocaleString();
+        }
+
+        // 添加格式化文件大小的函数
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        let MODULE_PATH = "/app/admin/media/";
+        let currentPage = 1;
+        let totalCount = 0;
+        let pageSize = 16;
+        let selectedItems = [];
+
+        // 展开/折叠表单
+        formToggle({
+            elem: "#mediaForm",
+        });
+
+        function formToggle(options) {
+            var defaultsOpt = {
+                isExpand: false,
+                prefixIcon: "layui-icon",
+                toggleIcon: ['layui-icon-down', 'layui-icon-up'],
+                toggleText: ['展开', '折叠'],
+            }
+            var opt = $.extend({}, defaultsOpt, options);
+            var elem = opt.elem; // 绑定的表单元素,必填
+            var min = opt.min; // 最小显示数,默认显示一行
+            var isExpand = opt.isExpand; // 初始展开
+            var prefixIcon = opt.prefixIcon + " "; // 图标前缀
+            var toggleIcon = opt.toggleIcon; // 折叠和展开时的图标类[unExpandIcon, ExpandIcon]
+            var toggleText = opt.toggleText; // 折叠和展开时的文本
+
+            var eleDOM = $(elem + " .layui-inline");
+            var firstElTop = eleDOM.first().offset().top;
+            var targetEl = eleDOM.filter(function (index) {
+                var isGtMin = (index + 1) > min;
+                var isGtFirstElTop = $(this).offset().top > firstElTop;
+                var isNeqLast = (index + 1) != eleDOM.length;
+                return min ? isGtMin && isNeqLast : isGtFirstElTop && isNeqLast;
+            });
+
+            var unExpandIcon = prefixIcon + toggleIcon[0];
+            var expandIcon = prefixIcon + toggleIcon[1];
+            var unExpandText = toggleText[0];
+            var expandText = toggleText[1];
+            var btnSelector = elem + " .expand";
+            $(btnSelector).append("<i></i>")
+            if (targetEl.length > 0) {
+                if (isExpand) {
+                    $(btnSelector).prepend("<span>" + expandText + "</span>");
+                    $(btnSelector + ">i").addClass(expandIcon);
+                } else {
+                    $(btnSelector).prepend("<span>" + unExpandText + "</span>")
+                    $(btnSelector + ">i").addClass(unExpandIcon)
+                    targetEl.addClass("layui-hide");
+                }
+                $(btnSelector).click(function () {
+                    isExpand = !isExpand;
+                    if (isExpand) {
+                        $(btnSelector + ">span").html(expandText);
+                        $(btnSelector + ">i").removeClass(unExpandIcon).addClass(expandIcon);
+                        targetEl.removeClass("layui-hide")
+                    } else {
+                        $(btnSelector + ">span").html(unExpandText);
+                        $(btnSelector + ">i").removeClass(expandIcon).addClass(unExpandIcon);
+                        targetEl.addClass("layui-hide")
+                    }
+                })
+            }
+        }
+
+        // 渲染媒体网格
+        function renderMediaGrid(data) {
+            let html = '';
+
+            // 显示空状态
+            if (!data || data.length === 0) {
+                html = `
+                <div class="empty-state">
+                    <i class="layui-icon layui-icon-picture"></i>
+                    <p>暂无媒体文件</p>
+                    <button class="pear-btn pear-btn-primary pear-btn-sm" style="margin-top: 16px;" onclick="window.upload()">
+                        <i class="layui-icon layui-icon-upload"></i>上传文件
+                    </button>
+                </div>
+                `;
+                $('#media-grid').html(html);
+                return;
+            }
+
+            // 渲染媒体项
+            data.forEach(function (item, index) {
+                let isChecked = selectedItems.indexOf(item.id) > -1 ? 'checked' : '';
+                let isSelectedClass = selectedItems.indexOf(item.id) > -1 ? 'selected' : '';
+                let thumbnailHtml = '';
+
+                // 根据文件类型显示不同的缩略图和样式
+                if (item.mime_type && item.mime_type.startsWith('image/')) {
+                    thumbnailHtml = `<img src="/uploads/${item.file_path}" alt="${item.original_name}">`;
+                } else if (item.mime_type && item.mime_type.startsWith('video/')) {
+                    thumbnailHtml = `
+                        <i class="layui-icon layui-icon-video"></i>
+                        <div style="position: absolute; bottom: 10px; left: 10px; background: rgba(0,0,0,0.5); color: white; padding: 2px 6px; border-radius: 3px; font-size: 11px;">
+                            视频
+                        </div>
+                    `;
+                } else if (item.mime_type && item.mime_type.startsWith('audio/')) {
+                    thumbnailHtml = `
+                        <i class="layui-icon layui-icon-music"></i>
+                        <div style="position: absolute; bottom: 10px; left: 10px; background: rgba(0,0,0,0.5); color: white; padding: 2px 6px; border-radius: 3px; font-size: 11px;">
+                            音频
+                        </div>
+                    `;
+                } else if (item.mime_type && item.mime_type.includes('pdf')) {
+                    thumbnailHtml = `
+                        <i class="layui-icon layui-icon-file-pdf"></i>
+                        <div style="position: absolute; bottom: 10px; left: 10px; background: rgba(0,0,0,0.5); color: white; padding: 2px 6px; border-radius: 3px; font-size: 11px;">
+                            PDF
+                        </div>
+                    `;
+                } else {
+                    thumbnailHtml = `<i class="layui-icon layui-icon-file"></i>`;
+                }
+
+                // 添加延迟动画效果
+                let animationDelay = (index % 8) * 0.05 + 's';
+
+                html += `
+                <div class="layui-col-xs6 layui-col-sm4 layui-col-md3 layui-col-lg2">
+                    <div class="media-item ${isSelectedClass} media-item-load" style="animation-delay: ${animationDelay}">
+                        <div class="media-checkbox">
+                            <input type="checkbox" name="media-item" lay-skin="primary" value="${item.id}" ${isChecked}>
+                        </div>
+                        <div class="media-thumbnail">
+                            ${thumbnailHtml}
+                        </div>
+                        <div class="media-info">
+                            <div class="media-name" title="${item.original_name}">${item.original_name}</div>
+                            <div class="media-size">${formatFileSize(item.file_size)} · ${formatDateShort(item.created_at)}</div>
+                        </div>
+                        <div class="media-actions">
+                            <button class="pear-btn pear-btn-primary pear-btn-sm" onclick="window.preview(${JSON.stringify(item).replace(/"/g, '&quot;')})" title="预览">
+                                <i class="layui-icon layui-icon-eye"></i>
+                            </button>
+                            <button class="pear-btn pear-btn-sm" onclick="window.edit(${JSON.stringify(item).replace(/"/g, '&quot;')})" title="编辑">
+                                <i class="layui-icon layui-icon-edit"></i>
+                            </button>
+                            <button class="pear-btn pear-btn-danger pear-btn-sm" onclick="window.remove(${JSON.stringify(item).replace(/"/g, '&quot;')})" title="删除">
+                                <i class="layui-icon layui-icon-delete"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                `;
+            });
+
+            $('#media-grid').html(html);
+            form.render('checkbox');
+            
+            // 等待动画完成后移除动画类，防止状态变化时重新触发
+            setTimeout(() => {
+                $('.media-item-load').removeClass('media-item-load');
+            }, 600);
+
+            // 绑定复选框事件
+            $('input[name="media-item"]').on('change', function () {
+                updateSelectedItems();
+            });
+
+            // 点击媒体项选中复选框
+            $('.media-item').on('click', function (e) {
+                // 避免点击操作按钮时触发复选框切换
+                if (!$(e.target).closest('.media-actions, .media-checkbox').length) {
+                    const checkbox = $(this).find('input[name="media-item"]');
+                    checkbox.prop('checked', !checkbox.prop('checked'));
+                    form.render('checkbox');
+                    updateSelectedItems();
+
+                    // 选中状态会由updateSelectedItems函数处理
+                    // 这里不需要额外的动画类管理
+                }
+            });
+        }
+
+        // 简短日期格式
+        function formatDateShort(dateString) {
+            if (!dateString) return '未知';
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffTime = Math.abs(now - date);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            if (diffDays <= 1) {
+                return '今天';
+            } else if (diffDays <= 7) {
+                return diffDays + '天前';
+            } else {
+                return date.getFullYear() + '-' +
+                    String(date.getMonth() + 1).padStart(2, '0') + '-' +
+                    String(date.getDate()).padStart(2, '0');
+            }
+        }
+
+        // 渲染分页控件
+        function renderPagination(total, current, limit) {
+            layui.laypage.render({
+                elem: 'media-pagination',
+                count: total,
+                limit: limit,
+                curr: current,
+                layout: ['count', 'prev', 'page', 'next', 'skip'],
+                jump: function (obj, first) {
+                    if (!first) {
+                        currentPage = obj.curr;
+                        loadMediaList();
+                    }
+                }
+            });
+        }
+
+        // 加载媒体列表
+        function loadMediaList() {
+            // 显示加载状态
+            $('#media-grid').html(`
+                <div class="media-grid-loading animate__animated animate__fadeInUp">
+                    <div style="text-align: center;">
+                        <i class="layui-icon layui-icon-loading layui-icon layui-anim layui-anim-spin" style="font-size: 32px;"></i>
+                        <p style="margin-top: 10px;">加载中...</p>
+                    </div>
+                </div>
+            `);
+
+            // 获取文件类型筛选条件
+            let mimeTypeFilter = $('#mediaForm select[name="mime_type"]').val();
+            let mimeType = '';
+
+            // 根据选择的文件类型设置对应的MIME类型前缀
+            switch (mimeTypeFilter) {
+                case 'image':
+                    mimeType = 'image';
+                    break;
+                case 'video':
+                    mimeType = 'video';
+                    break;
+                case 'audio':
+                    mimeType = 'audio';
+                    break;
+                case 'document':
+                    mimeType = 'application';
+                    break;
+                default:
+                    mimeType = '';
+            }
+
+            $.ajax({
+                url: MODULE_PATH + 'list',
+                dataType: 'json',
+                type: 'get',
+                data: {
+                    page: currentPage,
+                    limit: pageSize,
+                    search: $('#mediaForm input[name="search"]').val(),
+                    mime_type: mimeType
+                },
+                success: function (result) {
+                    if (result.code === 0) {
+                        totalCount = result.total;
+                        renderMediaGrid(result.data);
+                        renderPagination(totalCount, currentPage, pageSize);
+                    } else {
+                        // 显示错误状态
+                        $('#media-grid').html(`
+                            <div class="empty-state animate__animated animate__fadeInUp">
+                                <i class="layui-icon layui-icon-error-circle animate__shakeLr"></i>
+                                <p>${result.msg || '加载失败'}</p>
+                                <button class="pear-btn pear-btn-primary pear-btn-sm" style="margin-top: 16px;" onclick="window.refresh()">
+                                    <i class="layui-icon layui-icon-refresh"></i>重试
+                                </button>
+                            </div>
+                        `);
+                        layer.msg(result.msg, {icon: 2});
+                    }
+                },
+                error: function () {
+                    // 显示网络错误状态
+                    $('#media-grid').html(`
+                        <div class="empty-state animate__animated animate__fadeInUp">
+                            <i class="layui-icon layui-icon-disconnect animate__shakeLr"></i>
+                            <p>网络连接失败</p>
+                            <button class="pear-btn pear-btn-primary pear-btn-sm" style="margin-top: 16px;" onclick="window.refresh()">
+                                <i class="layui-icon layui-icon-refresh"></i>重试
+                            </button>
+                        </div>
+                    `);
+                }
+            });
+        }
+
+        // 更新选中的项目
+        function updateSelectedItems() {
+            selectedItems = [];
+            $('.media-item').each(function () {
+                const checkbox = $(this).find('input[name="media-item"]');
+                if (checkbox.prop('checked')) {
+                    selectedItems.push(parseInt(checkbox.val()));
+                    $(this).addClass('selected');
+                } else {
+                    $(this).removeClass('selected');
+                }
+            });
+
+            // 更新批量删除按钮状态
+            if (selectedItems.length > 0) {
+                $('#batch-remove-btn').removeClass('layui-btn-disabled').prop('disabled', false);
+            } else {
+                $('#batch-remove-btn').addClass('layui-btn-disabled').prop('disabled', true);
+            }
+        }
+
+        // 查询表单提交
+        form.on('submit(media-query)', function (data) {
+            currentPage = 1;
+            loadMediaList();
+            return false;
+        });
+
+        // 保存媒体信息
+        form.on('submit(save-media)', function (data) {
+            let loading = layer.load();
+
+            $.ajax({
+                url: MODULE_PATH + 'update/' + $('#media-id').val(),
+                dataType: 'json',
+                type: 'post',
+                data: data.field,
+                success: function (result) {
+                    layer.close(loading);
+                    if (result.code === 0) {
+                        layer.closeAll('iframe');
+                        layer.msg(result.msg, {icon: 1, time: 1000}, function () {
+                            loadMediaList();
+                        });
+                    } else {
+                        layer.msg(result.msg, {icon: 2});
+                    }
+                },
+                error: function () {
+                    layer.close(loading);
+                    layer.msg('保存失败', {icon: 2});
+                }
+            });
+
+            return false;
+        });
+
+        // 绑定按钮事件
+        $('#upload-btn').click(function () {
+            window.upload();
+        });
+
+        $('#batch-remove-btn').click(function () {
+            if (selectedItems.length === 0) {
+                layer.msg('请选择要删除的文件', {icon: 3});
+                return;
+            }
+            window.batchRemove();
+        });
+
+        $('#refresh-btn').click(function () {
+            $(this).addClass('layui-btn-warm');
+            setTimeout(() => {
+                $(this).removeClass('layui-btn-warm');
+            }, 300);
+            loadMediaList();
+        });
+
+        // 初始化批量删除按钮状态
+        $('#batch-remove-btn').addClass('layui-btn-disabled').prop('disabled', true);
+
+        // 选择文件按钮
+        $('#select-file-btn').click(function () {
+            $('#file-input').click();
+        });
+
+        // 文件选择变化
+        $('#file-input').change(function () {
+            if (this.files && this.files[0]) {
+                const file = this.files[0];
+                let fileType = file.type.split('/')[0];
+                let iconClass = 'layui-icon-file';
+
+                // 根据文件类型显示不同的图标
+                if (file.type.startsWith('image/')) {
+                    iconClass = 'layui-icon-picture';
+                } else if (file.type.startsWith('video/')) {
+                    iconClass = 'layui-icon-video';
+                } else if (file.type.startsWith('audio/')) {
+                    iconClass = 'layui-icon-music';
+                } else if (file.type.includes('pdf')) {
+                    iconClass = 'layui-icon-file-pdf';
+                }
+
+                $('#file-name').html(`
+                    <div style="display: flex; align-items: center; padding: 8px; background: #f8f9fa; border-radius: 4px;">
+                        <i class="layui-icon ${iconClass}" style="margin-right: 8px; font-size: 18px;"></i>
+                        <div style="flex: 1;">
+                            <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${file.name}</div>
+                            <div style="font-size: 12px; color: #999;">${formatFileSize(file.size)}</div>
+                        </div>
+                        <button type="button" class="layui-btn layui-btn-danger layui-btn-xs" id="remove-selected-file">
+                            <i class="layui-icon layui-icon-close"></i>
+                        </button>
+                    </div>
+                `);
+
+                // 绑定移除文件事件
+                $('#remove-selected-file').on('click', function () {
+                    $('#file-input').val('');
+                    $('#file-name').empty();
+                });
+            }
+        });
+
+        // 取消编辑
+        $('#cancel-edit').click(function () {
+            layer.closeAll('iframe');
+        });
+
+        // 取消上传
+        $('#cancel-upload').click(function () {
+            layer.closeAll('iframe');
+        });
+
+        // 提交上传
+        $('#submit-upload').click(function () {
+            let fileInput = $('#file-input')[0];
+            if (!fileInput.files || !fileInput.files[0]) {
+                layer.msg('请选择文件', {icon: 2});
+                return;
+            }
+
+            let formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('alt_text', $('#upload-form input[name="alt_text"]').val());
+            formData.append('caption', $('#upload-form input[name="caption"]').val());
+            formData.append('description', $('#upload-form textarea[name="description"]').val());
+
+            // 创建上传进度弹窗
+            let uploadLayer = layer.open({
+                type: 1,
+                title: '上传中',
+                area: ['400px', '200px'],
+                content: `
+                    <div style="padding: 30px;">
+                        <div style="margin-bottom: 20px;">正在上传文件...</div>
+                        <div class="layui-progress layui-progress-big" lay-filter="upload-progress">
+                            <div class="layui-progress-bar layui-bg-blue" lay-percent="0%"></div>
+                        </div>
+                        <div style="text-align: right; margin-top: 10px; font-size: 12px; color: #666;">
+                            <span id="upload-percent">0%</span>
+                        </div>
+                    </div>
+                `,
+                closeBtn: 0,
+                shadeClose: false
+            });
+
+            form.render('progress');
+
+            // 上传请求
+            $.ajax({
+                url: MODULE_PATH + 'upload',
+                dataType: 'json',
+                type: 'post',
+                data: formData,
+                processData: false,
+                contentType: false,
+                xhr: function () {
+                    const xhr = $.ajaxSettings.xhr();
+                    if (xhr.upload) {
+                        xhr.upload.addEventListener('progress', function (evt) {
+                            if (evt.lengthComputable) {
+                                const percent = Math.round((evt.loaded / evt.total) * 100);
+                                $('#upload-percent').text(percent + '%');
+                                $('.layui-progress-bar').css('width', percent + '%');
+                            }
+                        }, false);
+                    }
+                    return xhr;
+                },
+                success: function (result) {
+                    layer.close(uploadLayer);
+                    if (result.code === 0) {
+                        layer.closeAll('iframe');
+                        layer.msg(result.msg, {icon: 1, time: 1500}, function () {
+                            loadMediaList();
+                        });
+                    } else {
+                        layer.msg(result.msg, {icon: 2});
+                    }
+                },
+                error: function () {
+                    layer.close(uploadLayer);
+                    layer.msg('上传失败，请检查网络连接', {icon: 2});
+                }
+            });
+        })
+
+        // 全局函数
+        window.edit = function (item) {
+            $('#media-id').val(item.id);
+            $('#alt_text').val(item.alt_text || '');
+            $('#caption').val(item.caption || '');
+            $('#description').val(item.description || '');
+
+            layer.open({
+                type: 1,
+                title: '编辑媒体信息',
+                area: ['600px', '400px'],
+                content: $('#edit-media-modal'),
+                success: function (layero, index) {
+                    form.render();
+                }
+            });
+        }
+
+        window.remove = function (item) {
+            layer.confirm('确定要删除该文件吗？', {
+                icon: 3,
+                title: '提示'
+            }, function (index) {
+                layer.close(index);
+                let loading = layer.load();
+
+                $.ajax({
+                    url: MODULE_PATH + 'remove/' + item.id,
+                    dataType: 'json',
+                    type: 'delete',
+                    success: function (result) {
+                        layer.close(loading);
+                        if (result.code === 0) {
+                            layer.msg(result.msg, {icon: 1, time: 1000}, function () {
+                                loadMediaList();
+                            });
+                        } else {
+                            layer.msg(result.msg, {icon: 2});
+                        }
+                    },
+                    error: function () {
+                        layer.close(loading);
+                        layer.msg('删除失败', {icon: 2});
+                    }
+                });
+            });
+        }
+
+        window.batchRemove = function () {
+            layer.confirm('确定要删除选中的' + selectedItems.length + '个文件吗？', {
+                icon: 3,
+                title: '提示'
+            }, function (index) {
+                layer.close(index);
+                let loading = layer.load();
+
+                $.ajax({
+                    url: MODULE_PATH + 'batchRemove/' + selectedItems.join(','),
+                    dataType: 'json',
+                    type: 'delete',
+                    success: function (result) {
+                        layer.close(loading);
+                        if (result.code === 0) {
+                            layer.msg(result.msg, {icon: 1, time: 1000}, function () {
+                                selectedItems = [];
+                                loadMediaList();
+                            });
+                        } else {
+                            layer.msg(result.msg, {icon: 2});
+                        }
+                    },
+                    error: function () {
+                        layer.close(loading);
+                        layer.msg('删除失败', {icon: 2});
+                    }
+                });
+            });
+        }
+
+        window.upload = function () {
+            // 重置上传表单
+            $('#upload-form')[0].reset();
+            $('#file-name').text('');
+
+            // 为弹窗内容添加动画类
+            $('#upload-modal').addClass('animate__animated animate__scaleInCenter');
+
+            layer.open({
+                type: 1,
+                title: '上传文件',
+                area: ['600px', '400px'],
+                content: $('#upload-modal'),
+                success: function (layero, index) {
+                    form.render();
+                },
+                end: function () {
+                    // 关闭弹窗后移除动画类，以便下次打开时重新应用动画
+                    $('#upload-modal').removeClass('animate__scaleInCenter');
+                }
+            });
+        }
+
+        // 为编辑弹窗添加动画效果
+        window.edit = function (item) {
+            // 先移除可能存在的动画类
+            $('#edit-media-modal').removeClass('animate__scaleInCenter');
+
+            // 设置媒体信息
+            $('#media-id').val(item.id);
+            $('#alt_text').val(item.alt_text || '');
+            $('#caption').val(item.caption || '');
+            $('#description').val(item.description || '');
+
+            // 添加动画类
+            setTimeout(function () {
+                $('#edit-media-modal').addClass('animate__animated animate__scaleInCenter');
+            }, 10);
+
+            layer.open({
+                type: 1,
+                title: '编辑媒体',
+                area: ['600px', '400px'],
+                content: $('#edit-media-modal'),
+                success: function (layero, index) {
+                    form.render();
+                },
+                end: function () {
+                    // 关闭弹窗后移除动画类
+                    $('#edit-media-modal').removeClass('animate__scaleInCenter');
+                }
+            });
+        }
+
+        window.refresh = function () {
+            loadMediaList();
+        }
+
+        // 初始加载媒体列表
+        loadMediaList();
+    });
+</script>
+</body>
+
+</html>

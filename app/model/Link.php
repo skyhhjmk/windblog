@@ -1,0 +1,192 @@
+<?php
+
+namespace app\model;
+
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
+use support\Model;
+use Throwable;
+
+/**
+ * 链接模型
+ * 用于存储友情链接或其他网址信息。
+ *
+ * @property int $id 链接ID
+ * @property string $name 链接名称
+ * @property string $url 链接地址
+ * @property string|null $description 链接描述
+ * @property string|null $image 链接配图URL
+ * @property int $sort_order 排序权重，数字越小越靠前
+ * @property bool $status 状态 (true: 显示, false: 隐藏)
+ * @property Carbon|null $created_at 创建时间
+ * @property Carbon|null $updated_at 更新时间
+ * @property Carbon|null $deleted_at 软删除时间
+ *
+ * @method static Builder|Link active() 只查询显示状态的链接
+ * @method static Builder|Link ordered() 按排序权重升序查询
+ */
+class Link extends Model
+{
+    /**
+     * 与模型关联的表名
+     *
+     * @var string
+     */
+    protected $table = 'links';
+
+    /**
+     * 可批量赋值的属性
+     *
+     * @var array
+     */
+    protected $fillable = [
+        'name',
+        'url',
+        'description',
+        'image',
+        'sort_order',
+        'status',
+    ];
+
+    /**
+     * 属性类型转换
+     *
+     * @var array
+     */
+    protected $casts = [
+        'id' => 'integer',
+        'name' => 'string',
+        'url' => 'string',
+        'image' => 'string',
+        'description' => 'string',
+        'sort_order' => 'integer',
+        'status' => 'boolean',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+        'deleted_at' => 'datetime',
+    ];
+    /**
+     * 指示是否自动维护时间戳
+     *
+     * @var bool
+     */
+    public $timestamps = true;
+
+    /**
+     * 模型的"启动"方法
+     *
+     * @return void
+     */
+    protected static function booted()
+    {
+        // 添加全局作用域，只查询未软删除的记录
+        static::addGlobalScope('notDeleted', function (Builder $builder) {
+            $builder->whereNull('deleted_at');
+        });
+    }
+    // -----------------------------------------------------
+    // 查询作用域
+    // -----------------------------------------------------
+
+    /**
+     * 查询作用域：只查询显示状态的链接。
+     *
+     * @param Builder $query
+     * @return Builder
+     */
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('status', true);
+    }
+
+    /**
+     * 查询作用域：按排序权重升序查询。
+     *
+     * @param Builder $query
+     * @return Builder
+     */
+    public function scopeOrdered(Builder $query): Builder
+    {
+        return $query->orderBy('sort_order', 'asc');
+    }
+
+    /**
+     * 查询作用域：包含软删除的记录。
+     *
+     * @param Builder $query
+     * @return Builder
+     */
+    public function scopeWithTrashed(Builder $query): Builder
+    {
+        return $query->withoutGlobalScope('notDeleted');
+    }
+
+    /**
+     * 查询作用域：只查询软删除的记录。
+     *
+     * @param Builder $query
+     * @return Builder
+     */
+    public function scopeOnlyTrashed(Builder $query): Builder
+    {
+        return $query->withoutGlobalScope('notDeleted')->whereNotNull('deleted_at');
+    }
+
+    /**
+     * 软删除方法，根据配置决定是软删除还是硬删除
+     *
+     * @param bool $forceDelete 是否强制删除（绕过软删除配置）
+     * @return bool|null
+     * @throws Throwable
+     */
+    public function softDelete(bool $forceDelete = false): ?bool
+    {
+        // 判断是否启用软删除，除非强制硬删除
+        $useSoftDelete = blog_config('soft_delete', true);
+        \support\Log::debug("Soft delete config value: " . var_export($useSoftDelete, true));
+        \support\Log::debug("Force delete flag: " . var_export($forceDelete, true));
+        
+        if (!$forceDelete && $useSoftDelete) {
+            // 软删除：设置 deleted_at 字段
+            try {
+                \support\Log::debug("Executing soft delete for link ID: " . $this->id);
+                // 使用save方法而不是update方法，确保模型状态同步
+                $this->deleted_at = date('Y-m-d H:i:s');
+                $result = $this->save();
+                \support\Log::debug("Soft delete result: " . var_export($result, true));
+                \support\Log::debug("Link deleted_at value after save: " . var_export($this->deleted_at, true));
+                return $result !== false; // 确保返回布尔值
+            } catch (\Exception $e) {
+                \support\Log::error('Soft delete failed for link ID ' . $this->id . ': ' . $e->getMessage());
+                return false;
+            }
+        } else {
+            // 硬删除：直接从数据库中删除记录
+            \support\Log::debug("Executing hard delete for link ID: " . $this->id);
+            try {
+                return $this->delete();
+            } catch (\Exception $e) {
+                \support\Log::error('Hard delete failed for link ID ' . $this->id . ': ' . $e->getMessage());
+                return false;
+            }
+        }
+    }
+
+    /**
+     * 恢复软删除的记录
+     *
+     * @return bool
+     */
+    public function restore(): bool
+    {
+        try {
+            // 使用save方法而不是update方法，确保模型状态同步
+            $this->deleted_at = null;
+            $result = $this->save();
+            return $result !== false;
+        } catch (\Exception $e) {
+            \support\Log::error('Restore failed for link ID ' . $this->id . ': ' . $e->getMessage());
+            return false;
+        }
+    }
+}

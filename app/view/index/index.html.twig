@@ -17,7 +17,7 @@
                     <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
                         <div class="p-6">
                             <h2 class="text-2xl font-bold text-gray-800 mb-2">
-                                <a href="/post/{{ post.id }}"
+                                <a href="/post/{{ post.id }}" target="_blank"
                                    class="hover:text-blue-600 transition-colors duration-200">
                                     {{ post.title }}
                                 </a>
@@ -55,7 +55,7 @@
 
             <!-- 分页 -->
             <div class="mt-12">
-            {{ pagination|raw }}
+                {{ pagination|raw }}
             </div>
         {% else %}
             <div class="bg-white rounded-xl shadow-md p-12 text-center">
@@ -80,7 +80,6 @@
                 return;
             }
 
-            // 构造跳转URL，这里需要根据你的路由格式调整
             window.location.href = '/page/' + page;
         }
     </script>

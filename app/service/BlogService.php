@@ -1,0 +1,187 @@
+<?php
+
+namespace app\service;
+
+use app\model\Post;
+use app\service\PaginationService;
+use support\Redis;
+
+class BlogService
+{
+    /**
+     * 获取博客配置
+     *
+     * @param string $key 配置键名
+     * @param mixed $default 默认值
+     * @return mixed 配置值
+     */
+    public static function getConfig(string $key, mixed $default = null): mixed
+    {
+        return blog_config($key, $default);
+    }
+    
+    /**
+     * 获取博客标题
+     *
+     * @return string 博客标题
+     */
+    public static function getBlogTitle(): string
+    {
+        return self::getConfig('title', 'WindBlog');
+    }
+    
+    /**
+     * 获取每页显示的文章数量
+     *
+     * @return int 每页文章数
+     */
+    public static function getPostsPerPage(): int
+    {
+        return self::getConfig('posts_per_page', 10);
+    }
+    
+    /**
+     * 获取博客文章列表
+     *
+     * @param int $page 当前页码
+     * @param array $filters 筛选条件
+     * @return array 包含文章列表和分页信息的数组
+     */
+    public static function getBlogPosts(int $page = 1, array $filters = []): array
+    {
+        $postsPerPage = self::getPostsPerPage();
+        $cacheKey = 'blog_posts_page_' . $page . '_per_' . $postsPerPage;
+        
+        // 当没有筛选条件时尝试从缓存获取
+        if (empty($filters)) {
+            $cached = self::getFromCache($cacheKey);
+            if ($cached) {
+                return $cached;
+            }
+            
+            // 尝试兼容旧的缓存格式
+            $oldCacheKey = 'blog_posts_page_' . $page;
+            $oldCached = self::getFromCache($oldCacheKey);
+            if ($oldCached) {
+                // 清理旧缓存并返回新格式
+                \support\Redis::connection('cache')->del($oldCacheKey);
+                
+                // 确保返回数组格式
+                if (!is_array($oldCached)) {
+                    // 统计总文章数
+                    $totalCount = Post::where('status', 'published')->count();
+                    
+                    // 生成分页HTML
+                    $paginationHtml = PaginationService::generatePagination(
+                        $page,
+                        $totalCount,
+                        $postsPerPage,
+                        'index.page',
+                        [],
+                        10
+                    );
+                    
+                    return [
+                        'posts' => $oldCached,
+                        'pagination' => $paginationHtml,
+                        'totalCount' => $totalCount,
+                        'currentPage' => $page,
+                        'postsPerPage' => $postsPerPage
+                    ];
+                }
+                return $oldCached;
+            }
+        }
+        
+        // 统计总文章数
+        $totalCount = Post::where('status', 'published')->count();
+        
+        // 获取文章列表
+        $posts = Post::where('status', 'published')
+            ->orderByDesc('id')
+            ->forPage($page, $postsPerPage)
+            ->get();
+        
+        // 处理文章摘要
+        self::processPostExcerpts($posts);
+        
+        // 生成分页HTML
+        $paginationHtml = PaginationService::generatePagination(
+            $page,
+            $totalCount,
+            $postsPerPage,
+            'index.page',
+            [],
+            10
+        );
+        
+        // 构建结果数组
+        $result = [
+            'posts' => $posts,
+            'pagination' => $paginationHtml,
+            'totalCount' => $totalCount,
+            'currentPage' => $page,
+            'postsPerPage' => $postsPerPage
+        ];
+        
+        // 缓存结果
+        if (empty($filters)) {
+            self::cacheResult($cacheKey, $result);
+        }
+        
+        return $result;
+    }
+    
+    /**
+     * 处理文章摘要
+     *
+     * @param 	hink\Collection $posts 文章集合
+     */
+    protected static function processPostExcerpts($posts): void
+    {
+        foreach ($posts as $post) {
+            if (empty($post->excerpt)) {
+                // 自动生成文章摘要并保存
+                $post->excerpt = mb_substr(strip_tags($post->content), 0, 200, 'UTF-8');
+                $post->save();
+            }
+        }
+    }
+    
+    /**
+     * 从缓存获取数据
+     *
+     * @param string $key 缓存键名
+     * @return mixed 缓存数据或false
+     */
+    protected static function getFromCache(string $key): mixed
+    {
+        try {
+            $cached = cache($key);
+            // 确保返回的是数组格式
+            if (is_array($cached)) {
+                return $cached;
+            }
+            return false;
+        } catch (\Throwable $e) {
+            // 缓存获取失败时静默返回false
+            return false;
+        }
+    }
+    
+    /**
+     * 缓存结果数据
+     *
+     * @param string $key 缓存键名
+     * @param mixed $data 要缓存的数据
+     */
+    protected static function cacheResult(string $key, mixed $data): void
+    {
+        try {
+            cache($key, $data, true);
+        } catch (\Throwable $e) {
+            // 缓存设置失败时记录错误但不中断流程
+            \support\Log::channel('blog_service')->error('[cacheResult] Error caching data: ' . $e->getMessage());
+        }
+    }
+}

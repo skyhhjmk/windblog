@@ -33,13 +33,25 @@ class PostsController extends Base
         $realName = $request->get('realName', '');
         $username = $request->get('username', '');
         $status = $request->get('status', '');
+        $isTrashed = $request->get('isTrashed', 'false');
         $page = (int)$request->get('page', 1);
         $limit = (int)$request->get('limit', 15);
         $order = $request->get('order', 'id');
         $sort = $request->get('sort', 'desc');
         
         // 构建查询
-        $query = Post::query();
+        if ($isTrashed === 'true') {
+            // 查询垃圾箱中的文章
+            $query = Post::onlyTrashed();
+        } else {
+            // 查询正常文章
+            $query = Post::query();
+        }
+        
+        // 状态筛选（在所有模式下都应用）
+        if ($status) {
+            $query->where('status', $status);
+        }
         
         // 搜索条件
         if ($realName) {
@@ -48,11 +60,6 @@ class PostsController extends Base
         
         if ($username) {
             $query->where('slug', 'like', "%{$username}%");
-        }
-        
-        // 状态筛选
-        if ($status) {
-            $query->where('status', $status);
         }
         
         // 获取总数
@@ -69,7 +76,7 @@ class PostsController extends Base
     }
     
     /**
-     * 删除文章
+     * 软删除文章
      *
      * @param Request $request
      * @param int $id
@@ -82,8 +89,121 @@ class PostsController extends Base
             return $this->fail('文章不存在');
         }
         
-        $post->delete();
-        return $this->success('删除成功');
+        // 记录软删除前的状态
+        $useSoftDelete = blog_config('soft_delete', true);
+        \support\Log::debug('Soft delete config: ' . var_export($useSoftDelete, true));
+        \support\Log::debug('Post before soft delete: ' . var_export($post->toArray(), true));
+        
+        // 执行软删除并检查结果
+        $result = $post->softDelete();
+        \support\Log::debug('Soft delete result: ' . var_export($result, true));
+        
+        if ($result === false) {
+            return $this->fail('删除失败');
+        }
+        
+        // 检查删除后的状态
+        $updatedPost = Post::withTrashed()->find($id);
+        if ($updatedPost) {
+            \support\Log::debug('Post after soft delete: ' . var_export($updatedPost->toArray(), true));
+        }
+        
+        return $this->success('文章已移至垃圾箱');
+    }
+    
+    /**
+     * 恢复软删除的文章
+     *
+     * @param Request $request
+     * @param int $id
+     * @return Response
+     */
+    public function restore(Request $request, $id)
+    {
+        $post = Post::withTrashed()->find($id);
+        if (!$post) {
+            return $this->fail('文章不存在');
+        }
+        
+        if ($post->restore()) {
+            return $this->success('文章已恢复');
+        } else {
+            return $this->fail('恢复失败');
+        }
+    }
+    
+    /**
+     * 永久删除文章
+     *
+     * @param Request $request
+     * @param int $id
+     * @return Response
+     */
+    public function forceDelete(Request $request, $id)
+    {
+        $post = Post::withTrashed()->find($id);
+        if (!$post) {
+            return $this->fail('文章不存在');
+        }
+        
+        // 使用 forceDelete 参数来强制删除
+        if ($post->softDelete(true)) {
+            return $this->success('文章已永久删除');
+        } else {
+            return $this->fail('删除失败');
+        }
+    }
+    
+    /**
+     * 批量恢复文章
+     *
+     * @param Request $request
+     * @param string $ids
+     * @return Response
+     */
+    public function batchRestore(Request $request, $ids)
+    {
+        if (empty($ids)) {
+            return $this->fail('参数错误');
+        }
+        
+        $idArray = explode(',', $ids);
+        $count = 0;
+        
+        foreach ($idArray as $id) {
+            $post = Post::withTrashed()->find($id);
+            if ($post && $post->restore()) {
+                $count++;
+            }
+        }
+        
+        return $this->success("成功恢复 {$count} 篇文章");
+    }
+    
+    /**
+     * 批量永久删除文章
+     *
+     * @param Request $request
+     * @param string $ids
+     * @return Response
+     */
+    public function batchForceDelete(Request $request, $ids)
+    {
+        if (empty($ids)) {
+            return $this->fail('参数错误');
+        }
+        
+        $idArray = explode(',', $ids);
+        $count = 0;
+        
+        foreach ($idArray as $id) {
+            $post = Post::withTrashed()->find($id);
+            if ($post && $post->softDelete(true)) {
+                $count++;
+            }
+        }
+        
+        return $this->success("成功永久删除 {$count} 篇文章");
     }
     
     /**
@@ -100,36 +220,19 @@ class PostsController extends Base
         }
         
         $idArray = explode(',', $ids);
-        $count = Post::destroy($idArray);
-        return $this->success("成功删除 {$count} 篇文章");
-    }
-    
-    /**
-     * 创建文章页面
-     *
-     * @param Request $request
-     * @return Response
-     */
-    public function create(Request $request)
-    {
-        return view('posts/create');
-    }
-    
-    /**
-     * 编辑文章页面
-     *
-     * @param Request $request
-     * @param int $id
-     * @return Response
-     */
-    public function edit(Request $request, $id)
-    {
-        $post = Post::find($id);
-        if (!$post) {
-            return $this->fail('文章不存在');
-        }
+        $count = 0;
         
-        return view('posts/edit', ['post' => $post]);
+        // 使用软删除而不是 destroy 方法
+        foreach ($idArray as $id) {
+            $post = Post::find($id);
+            if ($post) {
+                // 检查软删除是否成功
+                if ($post->softDelete() !== false) {
+                    $count++;
+                }
+            }
+        }
+        return $this->success("成功删除 {$count} 篇文章");
     }
     
     /**
@@ -147,68 +250,5 @@ class PostsController extends Base
         }
         
         return view('posts/view', ['post' => $post]);
-    }
-    
-    /**
-     * 保存文章
-     *
-     * @param Request $request
-     * @return Response
-     */
-    public function store(Request $request)
-    {
-        $data = $request->post();
-        
-        // 验证数据
-        if (empty($data['title'])) {
-            return $this->fail('标题不能为空');
-        }
-        
-        if (empty($data['content'])) {
-            return $this->fail('内容不能为空');
-        }
-        
-        $post = new Post();
-        $post->title = $data['title'];
-        $post->content = $data['content'];
-        $post->status = $data['status'] ?? 'draft';
-        $post->summary = $data['summary'] ?? '';
-        $post->save();
-        
-        return $this->success(trans('Success'),['id' => $post->id]);
-    }
-    
-    /**
-     * 更新文章
-     *
-     * @param Request $request
-     * @param int $id
-     * @return Response
-     */
-    public function update(Request $request, $id)
-    {
-        $post = Post::find($id);
-        if (!$post) {
-            return $this->fail('文章不存在');
-        }
-        
-        $data = $request->post();
-        
-        // 验证数据
-        if (empty($data['title'])) {
-            return $this->fail('标题不能为空');
-        }
-        
-        if (empty($data['content'])) {
-            return $this->fail('内容不能为空');
-        }
-        
-        $post->title = $data['title'];
-        $post->content = $data['content'];
-        $post->status = $data['status'] ?? 'draft';
-        $post->summary = $data['summary'] ?? '';
-        $post->save();
-        
-        return $this->success();
     }
 }

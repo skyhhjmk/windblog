@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>媒体选择器</title>
+    <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css"/>
+    <style>
+        .media-selector-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        
+        .media-selector-header {
+            padding: 10px;
+            border-bottom: 1px solid #e6e6e6;
+        }
+        
+        .media-selector-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+        
+        .media-selector-footer {
+            padding: 10px;
+            border-top: 1px solid #e6e6e6;
+            text-align: right;
+        }
+        
+        .media-item {
+            border: 1px solid #e6e6e6;
+            border-radius: 4px;
+            padding: 8px;
+            margin-bottom: 16px;
+            position: relative;
+            cursor: pointer;
+        }
+        
+        .media-item:hover {
+            border-color: #1E9FFF;
+        }
+        
+        .media-item.selected {
+            border-color: #1E9FFF;
+            background-color: #f0f7ff;
+        }
+        
+        .media-thumbnail {
+            width: 100%;
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .media-thumbnail img {
+            max-width: 100%;
+            max-height: 100%;
+        }
+        
+        .media-thumbnail i {
+            font-size: 36px;
+            color: #999;
+        }
+        
+        .media-info {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .media-name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 4px;
+        }
+        
+        .media-size {
+            color: #999;
+        }
+        
+        .selected-indicator {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            display: none;
+        }
+        
+        .media-item.selected .selected-indicator {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+<div class="media-selector-container">
+    <!-- 头部搜索区域 -->
+    <div class="media-selector-header">
+        <form id="mediaSearchForm" class="layui-form" action="">
+            <div class="layui-form-item">
+                <div class="layui-inline">
+                    <input type="text" name="search" placeholder="请输入文件名称" class="layui-input" style="width: 200px;">
+                </div>
+                <div class="layui-inline">
+                    <select name="file_type" class="layui-input" style="width: 120px;">
+                        <option value="">全部类型</option>
+                        <option value="image">图片</option>
+                        <option value="video">视频</option>
+                        <option value="audio">音频</option>
+                        <option value="document">文档</option>
+                    </select>
+                </div>
+                <button class="pear-btn pear-btn-md pear-btn-primary" lay-submit lay-filter="media-search">
+                    <i class="layui-icon layui-icon-search"></i>
+                    查询
+                </button>
+                <button type="reset" class="pear-btn pear-btn-md">
+                    <i class="layui-icon layui-icon-refresh"></i>
+                    重置
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- 媒体列表区域 -->
+    <div class="media-selector-body">
+        <div id="media-grid" class="layui-row"></div>
+        
+        <!-- 分页控件 -->
+        <div id="media-pagination" class="layui-box layui-laypage layui-laypage-default" style="margin-top: 16px;"></div>
+    </div>
+    
+    <!-- 底部按钮区域 -->
+    <div class="media-selector-footer">
+        <button class="pear-btn pear-btn-primary pear-btn-md" id="confirm-selection">
+            确定
+        </button>
+        <button class="pear-btn pear-btn-md" id="cancel-selection">
+            取消
+        </button>
+    </div>
+</div>
+
+<script src="/app/admin/component/layui/layui.js?v=2.11.5"></script>
+<script src="/app/admin/component/pear/pear.js"></script>
+<script>
+    layui.use(['form', 'jquery', 'layer'], function () {
+        let form = layui.form;
+        let $ = layui.jquery;
+        let layer = layui.layer;
+
+        let MODULE_PATH = "/app/admin/media/";
+        let currentPage = 1;
+        let totalCount = 0;
+        let pageSize = 12;
+        let selectedMedia = null;
+        let multiple = false;
+        let selectedMedias = [];
+        
+        // 从URL参数中获取配置
+        function getUrlParams() {
+            let params = {};
+            let url = window.location.search;
+            let reg = /[?&][^?&]+=[^?&]+/g;
+            let arr = url.match(reg);
+            
+            if (arr) {
+                arr.forEach(function (item) {
+                    let temp = item.substring(1).split('=');
+                    params[temp[0]] = decodeURIComponent(temp[1]);
+                });
+            }
+            
+            return params;
+        }
+        
+        // 初始化配置
+        function initConfig() {
+            let params = getUrlParams();
+            multiple = params.multiple === 'true';
+        }
+        
+        // 渲染媒体网格
+        function renderMediaGrid(data) {
+            let html = '';
+            data.forEach(function (item) {
+                let isSelected = multiple ? 
+                    selectedMedias.some(media => media.id === item.id) : 
+                    selectedMedia && selectedMedia.id === item.id;
+                
+                let selectedClass = isSelected ? 'selected' : '';
+                let thumbnailHtml = '';
+                
+                // 根据文件类型显示不同的缩略图
+                if (item.mime_type && item.mime_type.startsWith('image/')) {
+                    thumbnailHtml = `<img src="/uploads/${item.file_path}" alt="${item.original_name}">`;
+                } else if (item.mime_type && item.mime_type.startsWith('video/')) {
+                    thumbnailHtml = `<i class="layui-icon layui-icon-video"></i>`;
+                } else if (item.mime_type && item.mime_type.startsWith('audio/')) {
+                    thumbnailHtml = `<i class="layui-icon layui-icon-music"></i>`;
+                } else if (item.mime_type && item.mime_type.includes('pdf')) {
+                    thumbnailHtml = `<i class="layui-icon layui-icon-file-pdf"></i>`;
+                } else {
+                    thumbnailHtml = `<i class="layui-icon layui-icon-file"></i>`;
+                }
+                
+                html += `
+                <div class="layui-col-xs6 layui-col-sm4 layui-col-md3">
+                    <div class="media-item ${selectedClass}" data-id="${item.id}">
+                        <div class="selected-indicator">
+                            <i class="layui-icon layui-icon-ok-circle" style="font-size: 20px; color: #1E9FFF;"></i>
+                        </div>
+                        <div class="media-thumbnail">
+                            ${thumbnailHtml}
+                        </div>
+                        <div class="media-info">
+                            <div class="media-name">${item.original_name}</div>
+                            <div class="media-size">${formatFileSize(item.file_size)}</div>
+                        </div>
+                    </div>
+                </div>
+                `;
+            });
+            
+            $('#media-grid').html(html);
+            
+            // 绑定点击事件
+            $('.media-item').on('click', function () {
+                let itemId = $(this).data('id');
+                let clickedItem = null;
+                
+                // 找到对应的媒体项
+                for (let i = 0; i < mediaList.length; i++) {
+                    if (mediaList[i].id === itemId) {
+                        clickedItem = mediaList[i];
+                        break;
+                    }
+                }
+                
+                if (!clickedItem) return;
+                
+                if (multiple) {
+                    // 多选模式
+                    let index = selectedMedias.findIndex(media => media.id === itemId);
+                    if (index > -1) {
+                        // 取消选择
+                        selectedMedias.splice(index, 1);
+                        $(this).removeClass('selected');
+                    } else {
+                        // 添加选择
+                        selectedMedias.push(clickedItem);
+                        $(this).addClass('selected');
+                    }
+                } else {
+                    // 单选模式
+                    if (selectedMedia && selectedMedia.id === itemId) {
+                        // 取消选择
+                        selectedMedia = null;
+                        $(this).removeClass('selected');
+                    } else {
+                        // 选择新项
+                        if (selectedMedia) {
+                            $(`.media-item[data-id="${selectedMedia.id}"]`).removeClass('selected');
+                        }
+                        selectedMedia = clickedItem;
+                        $(this).addClass('selected');
+                    }
+                }
+            });
+        }
+        
+        // 渲染分页控件
+        function renderPagination(total, current, limit) {
+            layui.laypage.render({
+                elem: 'media-pagination',
+                count: total,
+                limit: limit,
+                curr: current,
+                layout: ['count', 'prev', 'page', 'next', 'skip'],
+                jump: function (obj, first) {
+                    if (!first) {
+                        currentPage = obj.curr;
+                        loadMediaList();
+                    }
+                }
+            });
+        }
+        
+        // 加载媒体列表
+        let mediaList = [];
+        function loadMediaList() {
+            let loading = layer.load();
+            
+            $.ajax({
+                url: MODULE_PATH + 'list',
+                dataType: 'json',
+                type: 'get',
+                data: {
+                    page: currentPage,
+                    limit: pageSize,
+                    search: $('#mediaSearchForm input[name="search"]').val(),
+                    file_type: $('#mediaSearchForm select[name="file_type"]').val()
+                },
+                success: function (result) {
+                    layer.close(loading);
+                    if (result.code === 0) {
+                        totalCount = result.total;
+                        mediaList = result.data;
+                        renderMediaGrid(result.data);
+                        renderPagination(totalCount, currentPage, pageSize);
+                    } else {
+                        layer.msg(result.msg, {icon: 2});
+                    }
+                },
+                error: function () {
+                    layer.close(loading);
+                    layer.msg('加载失败', {icon: 2});
+                }
+            });
+        }
+        
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        // 查询表单提交
+        form.on('submit(media-search)', function (data) {
+            currentPage = 1;
+            loadMediaList();
+            return false;
+        });
+        
+        // 确认选择
+        $('#confirm-selection').on('click', function () {
+            if (multiple) {
+                if (selectedMedias.length === 0) {
+                    layer.msg('请至少选择一个文件', {icon: 2});
+                    return;
+                }
+                // 返回选中的多个媒体
+                window.parent.selectMedia(selectedMedias);
+            } else {
+                if (!selectedMedia) {
+                    layer.msg('请选择一个文件', {icon: 2});
+                    return;
+                }
+                // 返回选中的单个媒体
+                window.parent.selectMedia(selectedMedia);
+            }
+        });
+        
+        // 取消选择
+        $('#cancel-selection').on('click', function () {
+            window.parent.closeMediaSelector();
+        });
+        
+        // 初始化
+        initConfig();
+        loadMediaList();
+    });
+</script>
+</body>
+
+</html>
