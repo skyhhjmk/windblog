@@ -52,6 +52,10 @@
                 <option value="published">已发布</option>
                 <option value="archived">已归档</option>
             </select>
+            <button id="media-selector-btn"
+                    class="px-4 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600 transition duration-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50">
+                选择媒体
+            </button>
             <button id="preview-btn"
                     class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
                 预览
@@ -604,6 +608,130 @@ function example() {
                 console.error('清理localStorage缓存时出错:', error);
             }
         }
+        
+        // 全局函数，确保媒体选择器能访问到
+        window.selectMedia = function(media) {
+            if (!media) return;
+            insertMediaToEditor(media);
+        };
+        
+        window.closeMediaSelector = function() {
+            // 此函数主要用于iframe方式嵌入时的关闭逻辑
+        };
+        
+        // 打开媒体选择器弹窗
+        function openMediaSelector() {
+            // 创建一个弹窗
+            const width = 900;
+            const height = 600;
+            const left = (window.innerWidth - width) / 2;
+            const top = (window.innerHeight - height) / 2;
+            
+            // 打开媒体选择器窗口，添加target参数指明来源
+            const mediaWindow = window.open('/app/admin/editor/media-selector?target=window&origin=' + encodeURIComponent(window.location.href), 'media_selector', 
+                `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`);
+            
+            if (!mediaWindow) {
+                alert('无法打开媒体选择器，请检查浏览器弹窗设置');
+                return;
+            }
+            
+            // 定期检查窗口是否被关闭
+            const checkInterval = setInterval(function() {
+                if (mediaWindow.closed) {
+                    clearInterval(checkInterval);
+                }
+            }, 500);
+        }
+        
+        // 将选择的媒体插入到编辑器中
+        function insertMediaToEditor(media) {
+            if (!vditor) {
+                console.error('编辑器未初始化');
+                return;
+            }
+            
+            if (!media) {
+                console.error('媒体数据为空');
+                return;
+            }
+            
+            // 检查是否是多选模式（media是数组）
+            if (Array.isArray(media)) {
+                // 多选模式，遍历所有选中的媒体
+                media.forEach(item => {
+                    insertSingleMedia(item);
+                });
+                return;
+            }
+            
+            // 单选模式，直接插入单个媒体
+            insertSingleMedia(media);
+        }
+        
+        // 插入单个媒体的辅助函数
+        function insertSingleMedia(media) {
+            // 获取媒体URL，支持多种可能的属性名
+            let mediaUrl = '';
+            if (media.url) {
+                mediaUrl = media.url;
+            } else if (media.file_url) {
+                mediaUrl = media.file_url;
+            } else if (media.path) {
+                mediaUrl = media.path;
+            } else if (media.src) {
+                mediaUrl = media.src;
+            } else if (media.file_path) {
+                // 关键修复：如果只有file_path，构建完整的URL
+                // 检查file_path是否已经是完整URL
+                if (media.file_path.startsWith('http://') || media.file_path.startsWith('https://')) {
+                    mediaUrl = media.file_path;
+                } else {
+                    // 构建完整URL，确保路径正确
+                    const basePath = media.file_path.startsWith('/') ? '' : '/';
+                    mediaUrl = '/uploads' + basePath + media.file_path;
+                }
+            }
+            
+            // 如果没有找到有效的URL，显示错误信息
+            if (!mediaUrl) {
+                console.error('无法获取媒体URL', media);
+                alert('无法获取媒体URL，请检查媒体文件是否存在');
+                return;
+            }
+            
+            // 根据媒体类型生成不同的Markdown格式
+            let markdown = '';
+            
+            if (media.mime_type && media.mime_type.startsWith('image/')) {
+                // 图片类型：使用Markdown图片语法
+                const altText = media.alt_text || media.original_name || '图片';
+                markdown = `![${altText}](${mediaUrl})`;
+            } else if (media.mime_type && media.mime_type.startsWith('video/')) {
+                // 视频类型：使用HTML视频标签
+                markdown = `<video src="${mediaUrl}" controls></video>`;
+            } else if (media.mime_type && media.mime_type.startsWith('audio/')) {
+                // 音频类型：使用HTML音频标签
+                markdown = `<audio src="${mediaUrl}" controls></audio>`;
+            } else {
+                // 其他类型：使用Markdown链接语法
+                const fileName = media.original_name || '文件';
+                markdown = `[${fileName}](${mediaUrl})`;
+            }
+            
+            // 插入到编辑器
+            try {
+                vditor.insertValue(markdown);
+            } catch (error) {
+                console.error('插入媒体失败:', error);
+                alert('插入媒体失败: ' + error.message);
+            }
+        }
+        
+        // 为媒体选择器按钮绑定点击事件
+        document.getElementById('media-selector-btn').addEventListener('click', function() {
+            openMediaSelector();
+        });
     });
 </script>
 </body>

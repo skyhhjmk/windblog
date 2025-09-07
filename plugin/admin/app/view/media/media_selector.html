@@ -149,42 +149,70 @@
 
 <script src="/app/admin/component/layui/layui.js?v=2.11.5"></script>
 <script src="/app/admin/component/pear/pear.js"></script>
-<script>
-    layui.use(['form', 'jquery', 'layer'], function () {
-        let form = layui.form;
-        let $ = layui.jquery;
-        let layer = layui.layer;
-
-        let MODULE_PATH = "/app/admin/media/";
-        let currentPage = 1;
-        let totalCount = 0;
-        let pageSize = 12;
-        let selectedMedia = null;
-        let multiple = false;
-        let selectedMedias = [];
+    <script>
+        // 从控制器传递过来的配置变量
+        let mediaSelectorConfig = {
+            target: '<?php echo isset($target) ? $target : "iframe"; ?>',
+            origin: '<?php echo isset($origin) ? $origin : ""; ?>',
+            multiple: <?php echo isset($multiple) && $multiple === 'true' ? 'true' : 'false'; ?>
+        };
         
-        // 从URL参数中获取配置
-        function getUrlParams() {
-            let params = {};
-            let url = window.location.search;
-            let reg = /[?&][^?&]+=[^?&]+/g;
-            let arr = url.match(reg);
+        layui.use(['form', 'jquery', 'layer'], function () {
+            let form = layui.form;
+            let $ = layui.jquery;
+            let layer = layui.layer;
+
+            let MODULE_PATH = "/app/admin/media/";
+            let currentPage = 1;
+            let totalCount = 0;
+            let pageSize = 12;
+            let selectedMedia = null;
+            let multiple = mediaSelectorConfig.multiple;
+            let selectedMedias = [];
             
-            if (arr) {
-                arr.forEach(function (item) {
-                    let temp = item.substring(1).split('=');
-                    params[temp[0]] = decodeURIComponent(temp[1]);
-                });
+            // 从URL参数中获取配置
+            function getUrlParams() {
+                let params = {};
+                let url = window.location.search;
+                let reg = /[?&][^?&]+=[^?&]+/g;
+                let arr = url.match(reg);
+                
+                if (arr) {
+                    arr.forEach(function (item) {
+                        let temp = item.substring(1).split('=');
+                        params[temp[0]] = decodeURIComponent(temp[1]);
+                    });
+                }
+                
+                return params;
             }
             
-            return params;
-        }
-        
-        // 初始化配置
-        function initConfig() {
-            let params = getUrlParams();
-            multiple = params.multiple === 'true';
-        }
+            // 初始化配置
+            function initConfig() {
+                // 优先使用控制器传递的配置，如果没有则使用URL参数
+                let urlParams = getUrlParams();
+                
+                // 合并配置，URL参数优先级高于控制器传递的参数
+                if (urlParams.target) {
+                    window.targetType = urlParams.target;
+                } else {
+                    window.targetType = mediaSelectorConfig.target;
+                }
+                
+                if (urlParams.origin) {
+                    window.origin = urlParams.origin;
+                } else if (mediaSelectorConfig.origin) {
+                    window.origin = mediaSelectorConfig.origin;
+                } else {
+                    window.origin = window.location.origin;
+                }
+                
+                if (urlParams.multiple !== undefined) {
+                    multiple = urlParams.multiple === 'true';
+                } else {
+                    multiple = mediaSelectorConfig.multiple;
+                }
+            }
         
         // 渲染媒体网格
         function renderMediaGrid(data) {
@@ -350,21 +378,66 @@
                     layer.msg('请至少选择一个文件', {icon: 2});
                     return;
                 }
-                // 返回选中的多个媒体
-                window.parent.selectMedia(selectedMedias);
+                // 根据不同的目标类型选择不同的通信方式
+                if (window.targetType === 'window') {
+                    // 如果是独立窗口，尝试使用window.opener通信
+                    if (window.opener && typeof window.opener.selectMedia === 'function') {
+                        window.opener.selectMedia(selectedMedias);
+                        window.close();
+                    } else {
+                        console.error('无法找到父窗口的selectMedia函数');
+                        layer.msg('无法完成选择，请重试', {icon: 2});
+                    }
+                } else {
+                    // 否则使用iframe方式通信
+                    if (window.parent && typeof window.parent.selectMedia === 'function') {
+                        window.parent.selectMedia(selectedMedias);
+                    } else {
+                        console.error('无法找到父窗口的selectMedia函数');
+                        layer.msg('无法完成选择，请重试', {icon: 2});
+                    }
+                }
             } else {
                 if (!selectedMedia) {
                     layer.msg('请选择一个文件', {icon: 2});
                     return;
                 }
-                // 返回选中的单个媒体
-                window.parent.selectMedia(selectedMedia);
+                // 根据不同的目标类型选择不同的通信方式
+                if (window.targetType === 'window') {
+                    // 如果是独立窗口，尝试使用window.opener通信
+                    if (window.opener && typeof window.opener.selectMedia === 'function') {
+                        window.opener.selectMedia(selectedMedia);
+                        window.close();
+                    } else {
+                        console.error('无法找到父窗口的selectMedia函数');
+                        layer.msg('无法完成选择，请重试', {icon: 2});
+                    }
+                } else {
+                    // 否则使用iframe方式通信
+                    if (window.parent && typeof window.parent.selectMedia === 'function') {
+                        window.parent.selectMedia(selectedMedia);
+                    } else {
+                        console.error('无法找到父窗口的selectMedia函数');
+                        layer.msg('无法完成选择，请重试', {icon: 2});
+                    }
+                }
             }
         });
         
         // 取消选择
         $('#cancel-selection').on('click', function () {
-            window.parent.closeMediaSelector();
+            if (window.targetType === 'window') {
+                // 如果是独立窗口，直接关闭
+                window.close();
+            } else {
+                // 否则调用父窗口的关闭函数
+                if (window.parent && typeof window.parent.closeMediaSelector === 'function') {
+                    window.parent.closeMediaSelector();
+                } else {
+                    console.error('无法找到父窗口的closeMediaSelector函数');
+                    layer.msg('无法关闭选择器，请重试', {icon: 2});
+                }
+            }
         });
         
         // 初始化

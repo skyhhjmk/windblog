@@ -6,6 +6,7 @@ use app\service\MediaLibraryService;
 use support\Request;
 use support\Response;
 use app\model\Post;
+use support\view\Raw;
 
 /**
  * 编辑器控制器
@@ -143,6 +144,70 @@ class EditorController
                 'success' => 0, 
                 'message' => '上传失败：' . $e->getMessage()
             ]);
+        }
+    }
+    
+    /**
+     * 打开媒体选择器
+     * @param Request $request
+     * @return Response
+     */
+    public function mediaSelector(Request $request): Response
+    {
+        // 获取请求参数
+        $target = $request->get('target', 'iframe'); // 通信目标类型（window或iframe）
+        $origin = $request->get('origin', ''); // 来源窗口URL
+        $multiple = $request->get('multiple', 'false'); // 是否允许多选
+        
+        // 传递参数到视图
+        return view('media/media_selector', [
+            'target' => $target,
+            'origin' => $origin,
+            'multiple' => $multiple
+        ]);
+    }
+    
+    /**
+     * 处理媒体选择
+     * @param Request $request
+     * @return Response
+     */
+    public function selectMedia(Request $request): Response
+    {
+        // 获取选中的媒体ID
+        $mediaId = $request->post('media_id', 0);
+        
+        if ($mediaId <= 0) {
+            return json(['code' => 1, 'msg' => '请选择有效的媒体文件']);
+        }
+        
+        try {
+            // 直接使用Media模型获取媒体信息
+            $media = \app\model\Media::find($mediaId);
+            
+            if (!$media) {
+                return json(['code' => 1, 'msg' => '媒体文件不存在']);
+            }
+            
+            // 构建完整的媒体URL
+            $baseUrl = rtrim(request()->root(), '/');
+            $fullUrl = $baseUrl . '/uploads/' . $media->file_path;
+            
+            // 返回媒体信息，用于在编辑器中插入
+            return json([
+                'code' => 0,
+                'msg' => '获取成功',
+                'data' => [
+                    'id' => $media->id,
+                    'url' => $fullUrl,
+                    'file_path' => $media->file_path,
+                    'alt_text' => $media->alt_text,
+                    'original_name' => $media->original_name,
+                    'mime_type' => $media->mime_type
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return json(['code' => 1, 'msg' => '获取失败：' . $e->getMessage()]);
         }
     }
 }
