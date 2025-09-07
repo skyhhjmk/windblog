@@ -62,7 +62,7 @@ function blog_config(string $key, mixed $default = null, bool $set = false, bool
                 cache('blog_config_' . $key, $default, true);
             }
         } catch (\Exception $e) {
-            \support\Log::channel('system_function')->error('[blog_config] error: ' . $e->getMessage());
+            \support\Log::error('[blog_config] error: ' . $e->getMessage());
             return false;
         }
         return $default;
