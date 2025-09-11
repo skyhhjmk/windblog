@@ -230,19 +230,31 @@ class Post extends Model
         \support\Log::debug("Soft delete config value: " . var_export($useSoftDelete, true));
         \support\Log::debug("Force delete flag: " . var_export($forceDelete, true));
         
-        if (!$forceDelete && $useSoftDelete) {
-            // 软删除：设置 deleted_at 字段
-            try {
-                \support\Log::debug("Executing soft delete for post ID: " . $this->id);
-                // 使用save方法而不是update方法，确保模型状态同步
-                $this->deleted_at = date('Y-m-d H:i:s');
-                $result = $this->save();
-                \support\Log::debug("Soft delete result: " . var_export($result, true));
-                \support\Log::debug("Post deleted_at value after save: " . var_export($this->deleted_at, true));
-                return $result !== false; // 确保返回布尔值
-            } catch (\Exception $e) {
-                \support\Log::error('Soft delete failed for post ID ' . $this->id . ': ' . $e->getMessage());
-                return false;
+        // 修复逻辑：当$forceDelete为true时，无论配置如何都应该执行硬删除
+        if ($forceDelete || ($useSoftDelete && !$forceDelete)) {
+            if ($forceDelete) {
+                // 硬删除：直接从数据库中删除记录
+                \support\Log::debug("Executing hard delete for post ID: " . $this->id);
+                try {
+                    return $this->delete();
+                } catch (\Exception $e) {
+                    \support\Log::error('Hard delete failed for post ID ' . $this->id . ': ' . $e->getMessage());
+                    return false;
+                }
+            } else {
+                // 软删除：设置 deleted_at 字段
+                try {
+                    \support\Log::debug("Executing soft delete for post ID: " . $this->id);
+                    // 使用save方法而不是update方法，确保模型状态同步
+                    $this->deleted_at = date('Y-m-d H:i:s');
+                    $result = $this->save();
+                    \support\Log::debug("Soft delete result: " . var_export($result, true));
+                    \support\Log::debug("Post deleted_at value after save: " . var_export($this->deleted_at, true));
+                    return $result !== false; // 确保返回布尔值
+                } catch (\Exception $e) {
+                    \support\Log::error('Soft delete failed for post ID ' . $this->id . ': ' . $e->getMessage());
+                    return false;
+                }
             }
         } else {
             // 硬删除：直接从数据库中删除记录

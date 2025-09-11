@@ -23,6 +23,7 @@ return [
         'handler' => Http::class,
         'listen' => 'http://0.0.0.0:8787',
         'count' => cpu_count() * 4,
+//        'count' => 1,
         'user' => '',
         'group' => '',
         'reusePort' => false,

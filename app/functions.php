@@ -5,9 +5,10 @@
 
 /**
  * get cache or set cache(and return set value)
- * @param string $key cache key
- * @param mixed|null $value cache value|default
- * @param bool $set set cache
+ * 获取或设置缓存（并返回设置的值）
+ * @param string $key cache key 缓存键
+ * @param mixed|null $value cache value|default 缓存值|默认返回值
+ * @param bool $set set cache 是否设置缓存
  * @return mixed
  * @throws Throwable
  */
@@ -83,4 +84,9 @@ function blog_config(string $key, mixed $default = null, bool $set = false, bool
     } else {
         return $default;
     }
+}
+
+function is_admin()
+{
+    
 }

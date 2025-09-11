@@ -34,7 +34,11 @@ Route::group('/app/admin', function () {
         Route::get('/index', [PostsController::class, 'index']);
         Route::get('/list', [PostsController::class, 'list']);
         Route::delete('/remove/{id}', [PostsController::class, 'remove']);
+        Route::post('/restore/{id}', [PostsController::class, 'restore']);
+        Route::delete('/forceDelete/{id}', [PostsController::class, 'forceDelete']);
         Route::delete('/batchRemove/{ids}', [PostsController::class, 'batchRemove']);
+        Route::post('/batchRestore/{ids}', [PostsController::class, 'batchRestore']);
+        Route::delete('/batchForceDelete/{ids}', [PostsController::class, 'batchForceDelete']);
     });
     
     // Editor 路由

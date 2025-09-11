@@ -147,7 +147,8 @@ class PostsController extends Base
         }
         
         // 使用 forceDelete 参数来强制删除
-        if ($post->softDelete(true)) {
+        $result = $post->softDelete(true);
+        if ($result) {
             return $this->success('文章已永久删除');
         } else {
             return $this->fail('删除失败');
@@ -198,8 +199,12 @@ class PostsController extends Base
         
         foreach ($idArray as $id) {
             $post = Post::withTrashed()->find($id);
-            if ($post && $post->softDelete(true)) {
-                $count++;
+            if ($post) {
+                // 修复：检查softDelete的返回值是否为true，而不是简单判断是否为真值
+                $result = $post->softDelete(true);
+                if ($result === true) {
+                    $count++;
+                }
             }
         }
         

@@ -5,64 +5,34 @@
     <meta charset="utf-8">
     <title>数据表格</title>
     <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css"/>
-    <style>
-        .expand.pear-btn:hover {
-            color: currentColor;
-            background: none;
-        }
-
-        .expand.pear-btn {
-            border: 1px solid rgba(255, 255, 255, 0)
-        }
-        
-        .tab-active {
-            color: #1E9FFF;
-            border-bottom: 2px solid #1E9FFF;
-        }
-        
-        .tab-nav {
-            margin-bottom: 20px;
-            border-bottom: 1px solid #e6e6e6;
-        }
-        
-        .tab-nav li {
-            display: inline-block;
-            padding: 10px 20px;
-            cursor: pointer;
-        }
-        
-        .delete-time {
-            color: #999;
-            font-size: 12px;
-        }
-    </style>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body class="pear-container">
-<div class="layui-card">
+<body class="bg-gray-100 pear-container">
+<div class="layui-card rounded-lg shadow-sm">
     <div class="layui-card-body">
         <!-- 切换选项卡 -->
-        <div class="tab-nav" id="postTab">
-            <li class="tab-item tab-active" data-type="normal">文章列表</li>
-            <li class="tab-item" data-type="trash">垃圾箱</li>
+        <div class="flex border-b border-gray-200 mb-5" id="postTab">
+            <div class="tab-item px-4 py-2 cursor-pointer text-blue-500 border-b-2 border-blue-500 font-medium" data-type="normal">文章列表</div>
+            <div class="tab-item px-4 py-2 cursor-pointer text-gray-500 hover:text-gray-700 font-medium" data-type="trash">垃圾箱</div>
         </div>
         
         <form id="postForm" class="layui-form" action="">
             <div class="layui-form-item">
                 <div class="layui-inline">
-                    <label class="layui-form-label">文章标题</label>
+                    <label class="layui-form-label font-medium">文章标题</label>
                     <div class="layui-input-inline">
                         <input type="text" name="realName" placeholder="请输入文章标题" class="layui-input">
                     </div>
                 </div>
                 <div class="layui-inline">
-                    <label class="layui-form-label">文章别名</label>
+                    <label class="layui-form-label font-medium">文章别名</label>
                     <div class="layui-input-inline">
                         <input type="text" name="username" placeholder="请输入文章别名" class="layui-input">
                     </div>
                 </div>
                 <div class="layui-inline" id="statusFilter">
-                    <label class="layui-form-label">文章状态</label>
+                    <label class="layui-form-label font-medium">文章状态</label>
                     <div class="layui-input-inline">
                         <select name="status" class="layui-input">
                             <option value="">全部状态</option>
@@ -72,7 +42,7 @@
                         </select>
                     </div>
                 </div>
-                <div class="layui-inline" style="margin-left: 50px;">
+                <div class="layui-inline ml-[50px]">
                     <button class="pear-btn pear-btn-md pear-btn-primary" lay-submit lay-filter="post-query">
                         <i class="layui-icon layui-icon-search"></i>
                         查询
@@ -81,8 +51,6 @@
                         <i class="layui-icon layui-icon-refresh"></i>
                         重置
                     </button>
-                    <button type="button" class="pear-btn pear-btn-md expand">
-                    </button>
                 </div>
             </div>
         </form>
@@ -90,8 +58,21 @@
         <!-- 隐藏的输入字段，用于传递是否显示垃圾箱的状态 -->
         <input type="hidden" id="isTrashed" name="isTrashed" value="false">
     </div>
+    
+    <!-- 搜索表单的脚本 -->
+    <script>
+        // 确保表单提交正常工作
+        layui.use('form', function() {
+            var form = layui.form;
+            
+            // 表单验证和提交处理
+            form.on('submit(post-query)', function(data) {
+                return false; // 阻止表单跳转提交，改为Ajax提交
+            });
+        });
+    </script>
 </div>
-<div class="layui-card">
+<div class="layui-card rounded-lg shadow-sm">
     <div class="layui-card-body">
         <table id="post-table" lay-filter="post-table"></table>
     </div>
@@ -111,7 +92,7 @@
     </div>
     
     <!-- 垃圾箱工具栏 -->
-    <div id="trashToolbar" style="display: none;">
+    <div id="trashToolbar" class="hidden">
         <button class="pear-btn pear-btn-success pear-btn-md" lay-event="batchRestore">
             <i class="layui-icon layui-icon-refresh-1"></i>
             恢复
@@ -125,7 +106,7 @@
 
 <script type="text/html" id="post-bar">
     <!-- 正常文章操作按钮 -->
-    <div class="normal-actions">
+    <div class="normal-actions flex space-x-1">
         <button class="pear-btn pear-btn-primary pear-btn-sm" lay-event="edit"><i
                 class="layui-icon layui-icon-edit"></i></button>
         <button class="pear-btn pear-btn-danger pear-btn-sm" lay-event="remove"><i
@@ -134,7 +115,17 @@
     </div>
     
     <!-- 垃圾箱文章操作按钮 -->
-    <div class="trash-actions" style="display: none;">
+    <div class="trash-actions flex space-x-1 hidden">
+        <button class="pear-btn pear-btn-success pear-btn-sm" lay-event="restore"><i
+                class="layui-icon layui-icon-refresh-1"></i></button>
+        <button class="pear-btn pear-btn-danger pear-btn-sm" lay-event="forceDelete"><i
+                class="layui-icon layui-icon-delete"></i></button>
+    </div>
+</script>
+
+<script type="text/html" id="trash-post-bar">
+    <!-- 垃圾箱文章操作按钮 -->
+    <div class="trash-actions flex space-x-1">
         <button class="pear-btn pear-btn-success pear-btn-sm" lay-event="restore"><i
                 class="layui-icon layui-icon-refresh-1"></i></button>
         <button class="pear-btn pear-btn-danger pear-btn-sm" lay-event="forceDelete"><i
@@ -144,23 +135,23 @@
 
 <script type="text/html" id="post-status">
     {{#if (d.status == 'draft') { }}
-    <span class="layui-badge">草稿</span>
+    <span class="px-2 py-1 text-xs rounded bg-yellow-100 text-yellow-800">草稿</span>
     {{# }else if(d.status == 'published'){ }}
-    <span class="layui-badge layui-bg-green">已发布</span>
+    <span class="px-2 py-1 text-xs rounded bg-green-100 text-green-800">已发布</span>
     {{# }else if(d.status == 'archived'){ }}
-    <span class="layui-badge layui-bg-gray">已归档</span>
+    <span class="px-2 py-1 text-xs rounded bg-gray-100 text-gray-800">已归档</span>
     {{# } }}
 </script>
 
 <!-- 删除时间模板 -->
 <script type="text/html" id="post-deleteTime">
     {{#if (d.deleted_at) { }}
-    <span class="delete-time">{{layui.util.toDateString(d.deleted_at, 'yyyy-MM-dd HH:mm:ss')}}</span>
+    <span class="text-gray-500 text-sm">{{layui.util.toDateString(d.deleted_at, 'yyyy-MM-dd HH:mm:ss')}}</span>
     {{# } }}
 </script>
 
 <script type="text/html" id="post-createTime">
-    {{layui.util.toDateString(d.created_at, 'yyyy-MM-dd HH:mm:ss')}}
+    <span class="text-gray-600">{{layui.util.toDateString(d.created_at, 'yyyy-MM-dd HH:mm:ss')}}</span>
 </script>
 
 <div style="display: none;">
@@ -182,6 +173,7 @@
 
         let MODULE_PATH = "/app/admin/posts/";
 
+        // 表单切换功能
         formToggle({
             elem: "#postForm",
         });
@@ -305,7 +297,7 @@
                 },
                 {
                     title: '操作',
-                    toolbar: '#post-bar',
+                    toolbar: '#trash-post-bar',
                     align: 'left',
                     width: 160,
                     fixed: 'right'
@@ -326,8 +318,13 @@
             $('#isTrashed').val(isTrashed ? 'true' : 'false');
             
             // 更新选项卡样式
-            $('.tab-item').removeClass('tab-active');
-            $(`.tab-item[data-type="${mode}"]`).addClass('tab-active');
+            if (isTrashed) {
+                $('.tab-item').eq(0).removeClass('text-blue-500 border-b-2 border-blue-500').addClass('text-gray-500');
+                $('.tab-item').eq(1).removeClass('text-gray-500').addClass('text-blue-500 border-b-2 border-blue-500');
+            } else {
+                $('.tab-item').eq(1).removeClass('text-blue-500 border-b-2 border-blue-500').addClass('text-gray-500');
+                $('.tab-item').eq(0).removeClass('text-gray-500').addClass('text-blue-500 border-b-2 border-blue-500');
+            }
             
             // 显示或隐藏状态筛选器
             $('#statusFilter').toggle(!isTrashed);
@@ -367,14 +364,10 @@
                         icon: 'layui-icon-refresh',
                     }, 'filter', 'print', 'exports'],
                     done: function (res, curr, count) {
-                        // 根据当前模式显示相应的操作按钮
-                        if (isTrashed) {
-                            $('.normal-actions').hide();
-                            $('.trash-actions').show();
-                        } else {
-                            $('.normal-actions').show();
-                            $('.trash-actions').hide();
-                            
+                        console.log('Table render done:', {res, curr, count, isTrashedMode});
+                        
+                        // 移除之前的手动显示/隐藏逻辑，因为现在使用了独立的模板
+                        if (!isTrashedMode) {
                             // 只有在普通模式下才渲染下拉菜单
                             for (var i = 0; i < res.data.length; i++) {
                                 dropdown.render({
@@ -408,6 +401,12 @@
         
         // 选项卡切换事件
         $('.tab-item').on('click', function() {
+            // 更新选项卡样式
+            $('.tab-item').removeClass('text-blue-500 border-b-2 border-blue-500').addClass('text-gray-500');
+            $('.tab-item').removeClass('hover:text-gray-700');
+            $(this).removeClass('text-gray-500').addClass('text-blue-500 border-b-2 border-blue-500');
+            $(this).addClass('hover:text-gray-700');
+            
             let mode = $(this).data('type');
             renderTable(mode);
         });
@@ -525,6 +524,8 @@
                                 time: 1000
                             }, function () {
                                 obj.del();
+                                // 切换到正常文章列表
+                                $('.tab-item').eq(0).click();
                             });
                         } else {
                             layer.msg(result.msg, {
@@ -646,6 +647,8 @@
                                 time: 1000
                             }, function () {
                                 table.reload('post-table');
+                                // 切换到正常文章列表
+                                $('.tab-item').eq(0).click();
                             });
                         } else {
                             layer.msg(result.msg, {

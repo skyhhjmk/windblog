@@ -45,8 +45,37 @@ class IndexController
      */
     public function getSession(Request $request)
     {
+        // 这样就可以！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
+        try {
+            // 检查session对象是否存在
+            $session = $request->session();
+            if (!$session) {
+                return response('Session object not available', 500);
+            }
+            
+            // 获取session ID
+            $sessionId = $request->sessionId();
+            
+            // 获取所有session数据
+            $all = $session->all();
+            
+            // 组织返回信息
+            $result = [
+                'session_id' => $sessionId,
+                'session_data' => $all,
+                'session_class' => get_class($session)
+            ];
+            
+            return response(json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), 200)
+                ->withHeader('Content-Type', 'application/json');
+        } catch (\Exception $e) {
+            return response('Error: ' . $e->getMessage(), 500);
+        }
+
+        // 但是这样就不行！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
+        /* 这tm可是官方示例代码的：【获取全部session】
         $session = $request->session();
-        $all = $session->all();
-        return response(var_export($all), 200);
+        $all = $session->all(); // 但是这里为什么获取的是null？？？？？？？？？？
+        */
     }
 }

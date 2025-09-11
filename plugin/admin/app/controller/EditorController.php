@@ -57,8 +57,9 @@ class EditorController
             return json(['code' => 1, 'msg' => '请输入文章内容']);
         }
         
-        // 获取当前管理员ID（假设存储在 session 中）
-        $adminId = $request->session()->get('admin_id', 0);
+        // 获取当前管理员ID（从session中的admin数组获取）
+        $adminInfo = $request->session()->get('admin', []);
+        $adminId = $adminInfo['id'] ?? 0;
         if ($adminId <= 0) {
             return json(['code' => 1, 'msg' => '管理员未登录或权限不足']);
         }
@@ -190,7 +191,7 @@ class EditorController
             }
             
             // 构建完整的媒体URL
-            $baseUrl = rtrim(request()->root(), '/');
+            $baseUrl = rtrim($request->path(), '/');
             $fullUrl = $baseUrl . '/uploads/' . $media->file_path;
             
             // 返回媒体信息，用于在编辑器中插入

@@ -6,447 +6,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>媒体库</title>
     <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css"/>
-    <!-- Animista动画库 -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animsition/4.0.2/css/animsition.min.css"
-          integrity="sha512-SagM1PHxt5mWDyWARVY6UOdhM5A8J+R1UqIWcGfiwOd+be7uHQagB+JQOmfVZF8jjJQqbyuWzw/KXfb4yqjBkQ=="
-          crossorigin="anonymous" referrerpolicy="no-referrer"/>
-    <style>
-        /* Animista自定义动画 */
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translate3d(0, 30px, 0);
-            }
-            to {
-                opacity: 1;
-                transform: translate3d(0, 0, 0);
-            }
-        }
-
-        @keyframes scale-in-center {
-            0% {
-                transform: scale(0);
-                opacity: 0;
-            }
-            100% {
-                transform: scale(1);
-                opacity: 1;
-            }
-        }
-
-        @keyframes slide-in-top {
-            0% {
-                transform: translateY(-20px);
-                opacity: 0;
-            }
-            100% {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-
-        @keyframes pulse {
-            0% {
-                transform: scale(1);
-            }
-            50% {
-                transform: scale(1.05);
-            }
-            100% {
-                transform: scale(1);
-            }
-        }
-
-        @keyframes shake-lr {
-            0%, 100% {
-                transform: rotate(0deg);
-            }
-            25% {
-                transform: rotate(5deg);
-            }
-            75% {
-                transform: rotate(-5deg);
-            }
-        }
-
-    </style>
-    <style>
-        /* 基础样式增强 */
-        body {
-            background-color: #f5f7fa;
-        }
-
-        /* 动画和过渡效果 */
-        .media-item,
-        .pear-btn,
-        .layui-input,
-        .layui-select,
-        .layui-card {
-            transition: all 0.3s ease;
-        }
-
-        /* 展开按钮样式 */
-        .expand.pear-btn {
-            border: 1px solid rgba(255, 255, 255, 0);
-            background: transparent;
-        }
-
-        .expand.pear-btn:hover {
-            color: #1E9FFF;
-            background: rgba(30, 159, 255, 0.05);
-            border-color: #1E9FFF;
-        }
-
-        /* 媒体项样式 */
-        .media-item {
-            border: 1px solid #e6e6e6;
-            border-radius: 8px;
-            padding: 8px;
-            margin-bottom: 16px;
-            position: relative;
-            cursor: pointer;
-            background-color: #fff;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            overflow: hidden;
-        }
-
-        .media-item:hover {
-            border-color: #1E9FFF;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-
-        .media-item.selected {
-            border-color: #1E9FFF;
-            background-color: rgba(30, 159, 255, 0.05);
-        }
-
-        /* 缩略图样式 */
-        .media-thumbnail {
-            width: 100%;
-            height: 150px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background-color: #f8f9fa;
-            border-radius: 6px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .media-thumbnail img {
-            max-width: 100%;
-            max-height: 100%;
-            transition: transform 0.3s ease;
-        }
-
-        .media-item:hover .media-thumbnail img {
-            transform: scale(1.05);
-        }
-
-        .media-thumbnail i {
-            font-size: 48px;
-            color: #999;
-        }
-
-        /* 文件类型图标颜色 */
-        .media-thumbnail i.layui-icon-video {
-            color: #FF5722;
-        }
-
-        .media-thumbnail i.layui-icon-music {
-            color: #009688;
-        }
-
-        .media-thumbnail i.layui-icon-file-pdf {
-            color: #F44336;
-        }
-
-        .media-thumbnail i.layui-icon-file {
-            color: #607D8B;
-        }
-
-        /* 媒体信息样式 */
-        .media-info {
-            margin-top: 8px;
-            font-size: 12px;
-            color: #666;
-        }
-
-        .media-name {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            margin-bottom: 4px;
-            font-weight: 500;
-        }
-
-        .media-size {
-            color: #999;
-        }
-
-        /* 复选框样式 */
-        .media-checkbox {
-            position: absolute;
-            top: 8px;
-            left: 8px;
-            z-index: 10;
-        }
-
-        /* 操作按钮样式 */
-        .media-actions {
-            position: absolute;
-            bottom: 8px;
-            right: 8px;
-            display: flex;
-            gap: 4px;
-            opacity: 0;
-            transform: translateY(10px);
-            transition: all 0.3s ease;
-        }
-
-        .media-item:hover .media-actions {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .media-actions .pear-btn {
-            padding: 4px 8px;
-            font-size: 14px;
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 30px;
-            height: 30px;
-        }
-
-        .media-actions .pear-btn i {
-            font-size: 16px;
-        }
-
-        /* 为按钮添加动画效果 */
-        .pear-btn:not(.animate__animated) {
-            transition: all 0.3s ease;
-        }
-
-        .pear-btn:hover:not(:disabled) {
-            animation: pulse 0.5s ease-in-out;
-        }
-
-        /* 卡片加载动画 */
-        .layui-card {
-            animation: fadeInUp 0.6s ease both;
-        }
-
-        /* 表单元素动画 */
-        .layui-input:focus, .layui-select:focus {
-            animation: scale-in-center 0.2s ease;
-        }
-
-        /* 媒体项选中状态 */
-        .media-item.selected {
-            animation: pulse 0.3s ease-in-out;
-            border-color: #1E9FFF;
-            background-color: rgba(30, 159, 255, 0.05);
-        }
-        
-        /* 确保始终不会重新触发动画 */
-        .media-item {
-            animation: none !important;
-        }
-        
-        /* 确保选中和未选中状态切换时不会触发动画 */
-        .media-item.selected,
-        .media-item:not(.selected) {
-            animation: none !important;
-        }
-
-        /* 媒体项点击反馈 */
-        .media-item:active {
-            transform: scale(0.98);
-            transition: transform 0.1s ease;
-        }
-
-        /* 按钮间距 */
-        .btn-spacing {
-            margin-right: 10px;
-        }
-
-        /* 卡片样式增强 */
-        .layui-card {
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-        }
-
-        .layui-card-header {
-            font-weight: 600;
-            font-size: 14px;
-            padding: 12px 16px;
-            border-bottom: 1px solid #f0f0f0;
-        }
-
-        /* 表单样式增强 */
-        .layui-form-item {
-            margin-bottom: 16px;
-        }
-
-        .layui-form-label {
-            font-weight: 500;
-        }
-
-        .layui-input,
-        .layui-select {
-            border-radius: 4px;
-            border-color: #e6e6e6;
-        }
-
-        .layui-input:focus,
-        .layui-select:focus {
-            border-color: #1E9FFF;
-            box-shadow: 0 0 0 2px rgba(30, 159, 255, 0.2);
-        }
-
-        /* 按钮样式增强 */
-        .pear-btn {
-            border-radius: 4px;
-            font-weight: 500;
-        }
-
-        .pear-btn-primary {
-            background-color: #1E9FFF;
-            border-color: #1E9FFF;
-        }
-
-        .pear-btn-primary:hover {
-            background-color: #40a9ff;
-            border-color: #40a9ff;
-        }
-
-        /* 弹窗样式 */
-        .layui-layer-title {
-            background-color: #f8f9fa;
-            border-bottom: 1px solid #e9ecef;
-            font-weight: 600;
-        }
-
-        /* 初始加载动画类 - 只在首次加载时生效 */
-        .media-item-load {
-            animation: fadeInUp 0.5s ease both;
-        }
-        
-        /* 确保动画只在初始加载时执行一次 */
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translate3d(0, 20px, 0);
-            }
-            to {
-                opacity: 1;
-                transform: translate3d(0, 0, 0);
-            }
-        }
-
-        /* Animista动画类 */
-        .animate__animated {
-            animation-duration: 1s;
-            animation-fill-mode: both;
-        }
-
-        .animate__fadeInUp {
-            animation-name: fadeInUp;
-        }
-
-        .animate__scaleInCenter {
-            animation-name: scale-in-center;
-            animation-duration: 0.5s;
-        }
-
-        .animate__slideInTop {
-            animation-name: slide-in-top;
-            animation-duration: 0.5s;
-        }
-
-        .animate__pulse {
-            animation-name: pulse;
-            animation-duration: 1.5s;
-            animation-iteration-count: infinite;
-        }
-
-        .animate__shakeLr {
-            animation-name: shake-lr;
-            animation-duration: 0.5s;
-        }
-
-        /* 响应式调整 */
-        @media (max-width: 768px) {
-            .layui-col-xs6 {
-                width: 50%;
-            }
-
-            .layui-col-sm4 {
-                width: 50%;
-            }
-
-            .layui-form-item .layui-inline {
-                display: block;
-                margin-bottom: 10px;
-            }
-
-            .layui-form-label {
-                width: auto;
-            }
-
-            .layui-input-inline {
-                width: 100%;
-                margin-left: 0;
-            }
-        }
-
-        /* 加载效果 */
-        .media-grid-loading {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 60px 0;
-            color: #999;
-        }
-
-        /* 空状态样式 */
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: #999;
-        }
-
-        .empty-state i {
-            font-size: 64px;
-            margin-bottom: 16px;
-            display: block;
-            color: #ddd;
-        }
-    </style>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body class="pear-container">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/animsition/4.0.2/js/animsition.min.js"
-        integrity="sha512-pYd2QwnzV9JgtoARJf1Ui1q5+p1WHpeAz/M0sUJNprhDviO4zRo12GLlk4/sKBRUCtMHEmjgqo5zcrn8pkdhmQ=="
-        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animsition/4.0.2/css/animsition.min.css"
-      integrity="sha512-SagM1PHxt5mWDyWARVY6UOdhM5A8J+R1UqIWcGfiwOd+be7uHQagB+JQOmfVZF8jjJQqbyuWzw/KXfb4yqjBkQ=="
-      crossorigin="anonymous" referrerpolicy="no-referrer"/>
-<div class="layui-card">
+<body class="bg-gray-100 pear-container">
+<div class="layui-card rounded-lg shadow-sm">
     <div class="layui-card-body">
         <form id="mediaForm" class="layui-form" action="">
             <div class="layui-form-item">
                 <div class="layui-inline">
-                    <label class="layui-form-label">文件名称</label>
+                    <label class="layui-form-label font-medium">文件名称</label>
                     <div class="layui-input-inline">
                         <input type="text" name="search" placeholder="请输入文件名称" class="layui-input">
                     </div>
                 </div>
                 <div class="layui-inline">
-                    <label class="layui-form-label">文件类型</label>
+                    <label class="layui-form-label font-medium">文件类型</label>
                     <div class="layui-input-inline">
                         <select name="mime_type" class="layui-input">
                             <option value="">全部类型</option>
@@ -457,7 +32,7 @@
                         </select>
                     </div>
                 </div>
-                <div class="layui-inline" style="margin-left: 50px;">
+                <div class="layui-inline ml-[50px]">
                     <button class="pear-btn pear-btn-md pear-btn-primary" lay-submit lay-filter="media-query">
                         <i class="layui-icon layui-icon-search"></i>
                         查询
@@ -466,21 +41,19 @@
                         <i class="layui-icon layui-icon-refresh"></i>
                         重置
                     </button>
-                    <button type="button" class="pear-btn pear-btn-md expand">
-                    </button>
                 </div>
             </div>
         </form>
     </div>
 </div>
-<div class="layui-card">
+<div class="layui-card rounded-lg shadow-sm">
     <div class="layui-card-body">
-        <div class="layui-btn-group" style="margin-bottom: 16px;">
-            <button class="pear-btn pear-btn-primary pear-btn-md btn-spacing" id="upload-btn">
+        <div class="layui-btn-group mb-4">
+            <button class="pear-btn pear-btn-primary pear-btn-md mr-2.5" id="upload-btn">
                 <i class="layui-icon layui-icon-upload"></i>
                 上传文件
             </button>
-            <button class="pear-btn pear-btn-danger pear-btn-md btn-spacing" id="batch-remove-btn">
+            <button class="pear-btn pear-btn-danger pear-btn-md mr-2.5" id="batch-remove-btn">
                 <i class="layui-icon layui-icon-delete"></i>
                 批量删除
             </button>
@@ -494,8 +67,7 @@
         <div id="media-grid" class="layui-row"></div>
 
         <!-- 分页控件 -->
-        <div id="media-pagination" class="layui-box layui-laypage layui-laypage-default"
-             style="margin-top: 16px;"></div>
+        <div id="media-pagination" class="layui-box layui-laypage layui-laypage-default mt-4"></div>
     </div>
 </div>
 
@@ -506,7 +78,7 @@
         <div class="layui-form-item">
             <label class="layui-form-label">替代文本</label>
             <div class="layui-input-block">
-                <input type="text" name="alt_text" id="alt_text" placeholder="请输入替代文本" class="layui-input">
+                <input type="text" name="alt_text" id="alt_text" placeholder="请输入替代文本" class="layui-input no-animation">
             </div>
         </div>
         <div class="layui-form-item">
@@ -541,7 +113,7 @@
                     <i class="layui-icon">&#xe67c;</i>选择文件
                 </button>
                 <input type="file" name="file" id="file-input" style="display: none;">
-                <div id="file-name" style="margin-top: 10px;"></div>
+                <div id="file-name" class="mt-2.5"></div>
             </div>
         </div>
         <div class="layui-form-item">
@@ -648,62 +220,62 @@
 
             // 创建弹窗内容，包含文件详细信息
             let content = `
-                <div style="display: flex; flex-direction: column; height: 100%;">
-                    <div style="padding: 20px; background-color: #f8f9fa; border-bottom: 1px solid #e6e6e6;">
-                        <h4 style="margin: 0; color: #333;">${item.original_name}</h4>
-                        <div style="margin-top: 10px; color: #666; font-size: 14px;">
+                <div class="flex flex-col h-full">
+                    <div class="p-5 bg-gray-100 border-b border-gray-300">
+                        <h4 class="m-0 text-gray-800">${item.original_name}</h4>
+                        <div class="mt-2.5 text-gray-600 text-sm">
                             <p>文件类型: ${item.mime_type}</p>
                             <p>文件大小: ${formatFileSize(item.file_size)}</p>
                             <p>上传时间: ${formatDate(item.created_at)}</p>
                             <p>作者: ${item.author ? item.author.nickname : '未知'}</p>
                         </div>
                     </div>
-                    <div style="flex: 1; display: flex; flex-direction: row; overflow: hidden;">
-                        <div style="flex: 1; padding: 20px; overflow: auto;">
-                            <div style="display: flex; justify-content: center; align-items: center; height: 100%; min-height: 300px;">
+                    <div class="flex-1 flex flex-row overflow-hidden">
+                        <div class="flex-1 p-5 overflow-auto">
+                            <div class="flex justify-center items-center h-full min-h-[300px]">
                                 ${item.mime_type && item.mime_type.startsWith('image/') ?
-                `<div style="max-width: 100%; max-height: 100%; display: flex; justify-content: center; align-items: center;">
-                                    <img src="${filePath}" alt="${item.original_name}" style="max-width: 100%; max-height: 400px; object-fit: contain;">
+                `<div class="max-w-full max-h-full flex justify-center items-center">
+                                    <img src="${filePath}" alt="${item.original_name}" class="max-w-full max-h-[400px] object-contain">
                                 </div>` : ''}
                                 ${item.mime_type && item.mime_type.startsWith('video/') ?
-                `<div style="width: 100%; height: 100%; display: flex; justify-content: center; align-items: center;">
-                                    <video src="${filePath}" controls style="max-width: 100%; max-height: 100%;"></video>
+                `<div class="w-full h-full flex justify-center items-center">
+                                    <video src="${filePath}" controls class="max-w-full max-h-full"></video>
                                 </div>` : ''}
                                 ${item.mime_type && item.mime_type.startsWith('audio/') ?
-                `<div style="width: 100%; display: flex; justify-content: center; align-items: center; flex: 1;">
-                                    <audio src="${filePath}" controls style="width: 100%;"></audio>
+                `<div class="w-full flex justify-center items-center flex-1">
+                                    <audio src="${filePath}" controls class="w-full"></audio>
                                 </div>` : ''}
                                 ${item.mime_type && item.mime_type.includes('pdf') ?
-                `<div style="width: 100%; height: 100%;">
+                `<div class="w-full h-full">
                                     <embed src="${filePath}" type="application/pdf" width="100%" height="100%">
                                 </div>` : ''}
                             </div>
                             
                             <!-- 操作按钮 -->
-                            <div style="margin-top: 20px; text-align: center;">
+                            <div class="mt-5 text-center">
                                 ${item.mime_type && item.mime_type.startsWith('image/') ?
-                `<a href="${filePath}" target="_blank" class="pear-btn pear-btn-primary pear-btn-sm" style="margin: 0 5px;">
+                `<a href="${filePath}" target="_blank" class="pear-btn pear-btn-primary pear-btn-sm mx-1">
                                     <i class="layui-icon layui-icon-release"></i>新窗口预览
                                 </a>` : ''}
-                                <a href="${filePath}" download="${item.original_name}" class="pear-btn pear-btn-success pear-btn-sm" style="margin: 0 5px;">
+                                <a href="${filePath}" download="${item.original_name}" class="pear-btn pear-btn-success pear-btn-sm mx-1">
                                     <i class="layui-icon layui-icon-download-circle"></i>下载文件
                                 </a>
-                                <button class="pear-btn pear-btn-warming pear-btn-sm" id="copy-link-btn" style="margin: 0 5px;">
+                                <button class="pear-btn pear-btn-warming pear-btn-sm mx-1" id="copy-link-btn">
                                     <i class="layui-icon layui-icon-link"></i>复制链接
                                 </button>
                                 ${item.mime_type && item.mime_type.startsWith('image/') ?
-                `<button class="pear-btn pear-btn-normal pear-btn-sm" id="copy-md-btn" style="margin: 0 5px;">
+                `<button class="pear-btn pear-btn-normal pear-btn-sm mx-1" id="copy-md-btn">
                                     <i class="layui-icon layui-icon-code-circle"></i>Markdown
                                 </button>` : ''}
                             </div>
                         </div>
                         
-                        <div style="width: 300px; border-left: 1px solid #e6e6e6; padding: 20px; overflow: auto; background-color: #f8f9fa;">
-                            <h4 style="margin-top: 0; color: #333;">文件详细信息</h4>
+                        <div class="w-[300px] border-l border-gray-300 p-5 overflow-auto bg-gray-100">
+                            <h4 class="mt-0 text-gray-800">文件详细信息</h4>
                             <table class="layui-table">
                                 <tbody>
                                     <tr>
-                                        <td style="width: 100px;">ID</td>
+                                        <td class="w-[100px]">ID</td>
                                         <td>${item.id}</td>
                                     </tr>
                                     <tr>
@@ -754,15 +326,15 @@
                             </table>
                             
                             ${item.mime_type && item.mime_type.startsWith('image/') ?
-                `<h4 style="color: #333;">缩略图信息</h4>
+                `<h4 class="text-gray-800">缩略图信息</h4>
                             ${thumbPath ?
-                    `<div style="text-align: center; margin-bottom: 15px;">
-                                <img src="${thumbPath}" alt="缩略图" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px;">
+                    `<div class="text-center mb-4">
+                                <img src="${thumbPath}" alt="缩略图" class="max-w-full h-auto border border-gray-300 rounded">
                             </div>
                             <table class="layui-table">
                                 <tbody>
                                     <tr>
-                                        <td style="width: 100px;">缩略图路径</td>
+                                        <td class="w-[100px]">缩略图路径</td>
                                         <td>${item.thumb_path}</td>
                                     </tr>
                                     <tr>
@@ -908,10 +480,10 @@
             // 显示空状态
             if (!data || data.length === 0) {
                 html = `
-                <div class="empty-state">
-                    <i class="layui-icon layui-icon-picture"></i>
+                <div class="text-center py-15 text-gray-500">
+                    <i class="layui-icon layui-icon-picture text-5xl block text-gray-300 mb-4"></i>
                     <p>暂无媒体文件</p>
-                    <button class="pear-btn pear-btn-primary pear-btn-sm" style="margin-top: 16px;" onclick="window.upload()">
+                    <button class="pear-btn pear-btn-primary pear-btn-sm mt-4" onclick="window.upload()">
                         <i class="layui-icon layui-icon-upload"></i>上传文件
                     </button>
                 </div>
@@ -923,35 +495,35 @@
             // 渲染媒体项
             data.forEach(function (item, index) {
                 let isChecked = selectedItems.indexOf(item.id) > -1 ? 'checked' : '';
-                let isSelectedClass = selectedItems.indexOf(item.id) > -1 ? 'selected' : '';
+                let isSelectedClass = selectedItems.indexOf(item.id) > -1 ? 'border-blue-500 bg-blue-50' : 'border-gray-300';
                 let thumbnailHtml = '';
 
                 // 根据文件类型显示不同的缩略图和样式
                 if (item.mime_type && item.mime_type.startsWith('image/')) {
-                    thumbnailHtml = `<img src="/uploads/${item.file_path}" alt="${item.original_name}">`;
+                    thumbnailHtml = `<img src="/uploads/${item.file_path}" alt="${item.original_name}" class="max-w-full max-h-full">`;
                 } else if (item.mime_type && item.mime_type.startsWith('video/')) {
                     thumbnailHtml = `
-                        <i class="layui-icon layui-icon-video"></i>
-                        <div style="position: absolute; bottom: 10px; left: 10px; background: rgba(0,0,0,0.5); color: white; padding: 2px 6px; border-radius: 3px; font-size: 11px;">
+                        <i class="layui-icon layui-icon-video text-orange-500 text-4xl"></i>
+                        <div class="absolute bottom-2.5 left-2.5 bg-black bg-opacity-50 text-white px-1.5 py-0.5 rounded text-xs">
                             视频
                         </div>
                     `;
                 } else if (item.mime_type && item.mime_type.startsWith('audio/')) {
                     thumbnailHtml = `
-                        <i class="layui-icon layui-icon-music"></i>
-                        <div style="position: absolute; bottom: 10px; left: 10px; background: rgba(0,0,0,0.5); color: white; padding: 2px 6px; border-radius: 3px; font-size: 11px;">
+                        <i class="layui-icon layui-icon-music text-teal-500 text-4xl"></i>
+                        <div class="absolute bottom-2.5 left-2.5 bg-black bg-opacity-50 text-white px-1.5 py-0.5 rounded text-xs">
                             音频
                         </div>
                     `;
                 } else if (item.mime_type && item.mime_type.includes('pdf')) {
                     thumbnailHtml = `
-                        <i class="layui-icon layui-icon-file-pdf"></i>
-                        <div style="position: absolute; bottom: 10px; left: 10px; background: rgba(0,0,0,0.5); color: white; padding: 2px 6px; border-radius: 3px; font-size: 11px;">
+                        <i class="layui-icon layui-icon-file-pdf text-red-500 text-4xl"></i>
+                        <div class="absolute bottom-2.5 left-2.5 bg-black bg-opacity-50 text-white px-1.5 py-0.5 rounded text-xs">
                             PDF
                         </div>
                     `;
                 } else {
-                    thumbnailHtml = `<i class="layui-icon layui-icon-file"></i>`;
+                    thumbnailHtml = `<i class="layui-icon layui-icon-file text-gray-500 text-4xl"></i>`;
                 }
 
                 // 添加延迟动画效果
@@ -959,26 +531,26 @@
 
                 html += `
                 <div class="layui-col-xs6 layui-col-sm4 layui-col-md3 layui-col-lg2">
-                    <div class="media-item ${isSelectedClass} media-item-load" style="animation-delay: ${animationDelay}">
-                        <div class="media-checkbox">
+                    <div class="group border ${isSelectedClass} rounded-lg p-2 mb-4 relative cursor-pointer bg-white shadow-sm hover:border-blue-500 hover:shadow-md overflow-hidden transition-all duration-300" style="animation-delay: ${animationDelay}">
+                        <div class="absolute top-2 left-2 z-10">
                             <input type="checkbox" name="media-item" lay-skin="primary" value="${item.id}" ${isChecked}>
                         </div>
-                        <div class="media-thumbnail">
+                        <div class="w-full h-[150px] flex items-center justify-center bg-gray-100 rounded overflow-hidden relative">
                             ${thumbnailHtml}
                         </div>
-                        <div class="media-info">
-                            <div class="media-name" title="${item.original_name}">${item.original_name}</div>
-                            <div class="media-size">${formatFileSize(item.file_size)} · ${formatDateShort(item.created_at)}</div>
+                        <div class="mt-2 text-xs text-gray-600">
+                            <div class="whitespace-nowrap overflow-hidden text-ellipsis mb-1 font-medium" title="${item.original_name}">${item.original_name}</div>
+                            <div class="text-gray-400">${formatFileSize(item.file_size)} · ${formatDateShort(item.created_at)}</div>
                         </div>
-                        <div class="media-actions">
-                            <button class="pear-btn pear-btn-primary pear-btn-sm" onclick="window.preview(${JSON.stringify(item).replace(/"/g, '&quot;')})" title="预览">
-                                <i class="layui-icon layui-icon-eye"></i>
+                        <div class="absolute bottom-2 right-2 flex gap-1 opacity-0 transform translate-y-2.5 transition-all duration-300 group-hover:opacity-100 group-hover:translate-y-0">
+                            <button class="pear-btn pear-btn-primary pear-btn-sm flex items-center justify-center w-7.5 h-7.5 rounded" onclick="window.preview(${JSON.stringify(item).replace(/"/g, '&quot;')})" title="预览">
+                                <i class="layui-icon layui-icon-eye text-sm"></i>
                             </button>
-                            <button class="pear-btn pear-btn-sm" onclick="window.edit(${JSON.stringify(item).replace(/"/g, '&quot;')})" title="编辑">
-                                <i class="layui-icon layui-icon-edit"></i>
+                            <button class="pear-btn pear-btn-sm flex items-center justify-center w-7.5 h-7.5 rounded" onclick="window.edit(${JSON.stringify(item).replace(/"/g, '&quot;')})" title="编辑">
+                                <i class="layui-icon layui-icon-edit text-sm"></i>
                             </button>
-                            <button class="pear-btn pear-btn-danger pear-btn-sm" onclick="window.remove(${JSON.stringify(item).replace(/"/g, '&quot;')})" title="删除">
-                                <i class="layui-icon layui-icon-delete"></i>
+                            <button class="pear-btn pear-btn-danger pear-btn-sm flex items-center justify-center w-7.5 h-7.5 rounded" onclick="window.remove(${JSON.stringify(item).replace(/"/g, '&quot;')})" title="删除">
+                                <i class="layui-icon layui-icon-delete text-sm"></i>
                             </button>
                         </div>
                     </div>
@@ -989,10 +561,6 @@
             $('#media-grid').html(html);
             form.render('checkbox');
             
-            // 等待动画完成后移除动画类，防止状态变化时重新触发
-            setTimeout(() => {
-                $('.media-item-load').removeClass('media-item-load');
-            }, 600);
 
             // 绑定复选框事件
             $('input[name="media-item"]').on('change', function () {
@@ -1000,9 +568,9 @@
             });
 
             // 点击媒体项选中复选框
-            $('.media-item').on('click', function (e) {
+            $('.border').on('click', function (e) {
                 // 避免点击操作按钮时触发复选框切换
-                if (!$(e.target).closest('.media-actions, .media-checkbox').length) {
+                if (!$(e.target).closest('.absolute.bottom-2.right-2, .absolute.top-2.left-2').length) {
                     const checkbox = $(this).find('input[name="media-item"]');
                     checkbox.prop('checked', !checkbox.prop('checked'));
                     form.render('checkbox');
@@ -1054,10 +622,10 @@
         function loadMediaList() {
             // 显示加载状态
             $('#media-grid').html(`
-                <div class="media-grid-loading animate__animated animate__fadeInUp">
-                    <div style="text-align: center;">
-                        <i class="layui-icon layui-icon-loading layui-icon layui-anim layui-anim-spin" style="font-size: 32px;"></i>
-                        <p style="margin-top: 10px;">加载中...</p>
+                <div class="flex justify-center items-center py-15 text-gray-500">
+                    <div class="text-center">
+                        <i class="layui-icon layui-icon-loading layui-icon layui-anim layui-anim-spin text-3xl"></i>
+                        <p class="mt-2.5">加载中...</p>
                     </div>
                 </div>
             `);
@@ -1102,10 +670,10 @@
                     } else {
                         // 显示错误状态
                         $('#media-grid').html(`
-                            <div class="empty-state animate__animated animate__fadeInUp">
-                                <i class="layui-icon layui-icon-error-circle animate__shakeLr"></i>
+                            <div class="text-center py-15 text-gray-500">
+                                <i class="layui-icon layui-icon-error-circle text-5xl block text-gray-300 mb-4"></i>
                                 <p>${result.msg || '加载失败'}</p>
-                                <button class="pear-btn pear-btn-primary pear-btn-sm" style="margin-top: 16px;" onclick="window.refresh()">
+                                <button class="pear-btn pear-btn-primary pear-btn-sm mt-4" onclick="window.refresh()">
                                     <i class="layui-icon layui-icon-refresh"></i>重试
                                 </button>
                             </div>
@@ -1116,10 +684,10 @@
                 error: function () {
                     // 显示网络错误状态
                     $('#media-grid').html(`
-                        <div class="empty-state animate__animated animate__fadeInUp">
-                            <i class="layui-icon layui-icon-disconnect animate__shakeLr"></i>
+                        <div class="text-center py-15 text-gray-500">
+                            <i class="layui-icon layui-icon-disconnect text-5xl block text-gray-300 mb-4"></i>
                             <p>网络连接失败</p>
-                            <button class="pear-btn pear-btn-primary pear-btn-sm" style="margin-top: 16px;" onclick="window.refresh()">
+                            <button class="pear-btn pear-btn-primary pear-btn-sm mt-4" onclick="window.refresh()">
                                 <i class="layui-icon layui-icon-refresh"></i>重试
                             </button>
                         </div>
@@ -1131,21 +699,21 @@
         // 更新选中的项目
         function updateSelectedItems() {
             selectedItems = [];
-            $('.media-item').each(function () {
+            $('.border').each(function () {
                 const checkbox = $(this).find('input[name="media-item"]');
                 if (checkbox.prop('checked')) {
                     selectedItems.push(parseInt(checkbox.val()));
-                    $(this).addClass('selected');
+                    $(this).addClass('border-blue-500 bg-blue-50').removeClass('border-gray-300');
                 } else {
-                    $(this).removeClass('selected');
+                    $(this).removeClass('border-blue-500 bg-blue-50').addClass('border-gray-300');
                 }
             });
 
             // 更新批量删除按钮状态
             if (selectedItems.length > 0) {
-                $('#batch-remove-btn').removeClass('layui-btn-disabled').prop('disabled', false);
+                $('#batch-remove-btn').removeClass('layui-btn-disabled opacity-50').prop('disabled', false);
             } else {
-                $('#batch-remove-btn').addClass('layui-btn-disabled').prop('disabled', true);
+                $('#batch-remove-btn').addClass('layui-btn-disabled opacity-50').prop('disabled', true);
             }
         }
 
@@ -1200,14 +768,11 @@
 
         $('#refresh-btn').click(function () {
             $(this).addClass('layui-btn-warm');
-            setTimeout(() => {
-                $(this).removeClass('layui-btn-warm');
-            }, 300);
             loadMediaList();
         });
 
         // 初始化批量删除按钮状态
-        $('#batch-remove-btn').addClass('layui-btn-disabled').prop('disabled', true);
+        $('#batch-remove-btn').addClass('layui-btn-disabled opacity-50').prop('disabled', true);
 
         // 选择文件按钮
         $('#select-file-btn').click(function () {
@@ -1233,11 +798,11 @@
                 }
 
                 $('#file-name').html(`
-                    <div style="display: flex; align-items: center; padding: 8px; background: #f8f9fa; border-radius: 4px;">
-                        <i class="layui-icon ${iconClass}" style="margin-right: 8px; font-size: 18px;"></i>
-                        <div style="flex: 1;">
-                            <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${file.name}</div>
-                            <div style="font-size: 12px; color: #999;">${formatFileSize(file.size)}</div>
+                    <div class="flex items-center p-2 bg-gray-100 rounded">
+                        <i class="layui-icon ${iconClass} mr-2 text-lg"></i>
+                        <div class="flex-1">
+                            <div class="whitespace-nowrap overflow-hidden text-ellipsis">${file.name}</div>
+                            <div class="text-xs text-gray-500">${formatFileSize(file.size)}</div>
                         </div>
                         <button type="button" class="layui-btn layui-btn-danger layui-btn-xs" id="remove-selected-file">
                             <i class="layui-icon layui-icon-close"></i>
@@ -1283,12 +848,12 @@
                 title: '上传中',
                 area: ['400px', '200px'],
                 content: `
-                    <div style="padding: 30px;">
-                        <div style="margin-bottom: 20px;">正在上传文件...</div>
+                    <div class="p-7.5">
+                        <div class="mb-5">正在上传文件...</div>
                         <div class="layui-progress layui-progress-big" lay-filter="upload-progress">
                             <div class="layui-progress-bar layui-bg-blue" lay-percent="0%"></div>
                         </div>
-                        <div style="text-align: right; margin-top: 10px; font-size: 12px; color: #666;">
+                        <div class="text-right mt-2.5 text-xs text-gray-600">
                             <span id="upload-percent">0%</span>
                         </div>
                     </div>
@@ -1422,8 +987,6 @@
             $('#upload-form')[0].reset();
             $('#file-name').text('');
 
-            // 为弹窗内容添加动画类
-            $('#upload-modal').addClass('animate__animated animate__scaleInCenter');
 
             layer.open({
                 type: 1,
@@ -1434,8 +997,7 @@
                     form.render();
                 },
                 end: function () {
-                    // 关闭弹窗后移除动画类，以便下次打开时重新应用动画
-                    $('#upload-modal').removeClass('animate__scaleInCenter');
+                    
                 }
             });
         }
@@ -1465,8 +1027,7 @@
                     form.render();
                 },
                 end: function () {
-                    // 关闭弹窗后移除动画类
-                    $('#edit-media-modal').removeClass('animate__scaleInCenter');
+                    
                 }
             });
         }
