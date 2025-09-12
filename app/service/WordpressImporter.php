@@ -9,6 +9,15 @@ use app\model\Setting;
 use DOMNode;
 use DOMXPath;
 use League\HTMLToMarkdown\HtmlConverter;
+use League\CommonMark\CommonMarkConverter;
+use League\CommonMark\Environment\Environment;
+use League\CommonMark\Extension\CommonMark\CommonMarkCoreExtension;
+use League\CommonMark\Extension\Table\TableExtension;
+use League\CommonMark\Extension\Autolink\AutolinkExtension;
+use League\CommonMark\Extension\Strikethrough\StrikethroughExtension;
+use League\CommonMark\Extension\Footnote\FootnoteExtension;
+use League\CommonMark\Extension\TaskList\TaskListExtension;
+use League\CommonMark\MarkdownConverter;
 use support\Db;
 use support\Log;
 use Throwable;
@@ -333,6 +342,11 @@ class WordpressImporter
         $postDate = $xpath->evaluate('string(wp:post_date)', $node);
         $postId = $xpath->evaluate('string(wp:post_id)', $node);
 
+        // 首先将内容转换为UTF-8编码
+        $title = $this->convertToUtf8($title);
+        $content = $this->convertToUtf8($content);
+        $excerpt = $this->convertToUtf8($excerpt);
+
         Log::debug("文章信息 - 标题: " . $title . ", 状态: " . $status . ", 类型: " . $postType);
 
         switch ($this->options['convert_to']) {
@@ -481,7 +495,8 @@ class WordpressImporter
         $post->title = $title ?: '无标题';
         $post->content_type = $content_type;
         $post->content = $content;
-        $post->excerpt = $excerpt;
+        // 生成文章摘要时首先参考示例代码转换成HTML，再删除HTML标签
+        $post->excerpt = $this->generateExcerpt($excerpt ?: $content);
         $post->status = $status;
         $post->slug = $slug;
         $post->created_at = $postDate && $postDate !== '0000-00-00 00:00:00' ? date('Y-m-d H:i:s', strtotime($postDate)) : date('Y-m-d H:i:s');
@@ -846,5 +861,78 @@ class WordpressImporter
         } catch (\Exception $e) {
             Log::error('清理导入目录时出错: ' . $e->getMessage(), ['exception' => $e]);
         }
+    }
+
+    /**
+     * 将字符串转换为UTF-8编码
+     *
+     * @param string $string
+     * @return string
+     */
+    protected function convertToUtf8(string $string): string
+    {
+        if (empty($string)) {
+            return $string;
+        }
+
+        // 检测当前编码
+        $encoding = mb_detect_encoding($string, ['UTF-8', 'GBK', 'GB2312', 'ASCII', 'ISO-8859-1'], true);
+        
+        // 如果不是UTF-8编码，则转换为UTF-8
+        if ($encoding !== 'UTF-8') {
+            $string = mb_convert_encoding($string, 'UTF-8', $encoding);
+        }
+
+        return $string;
+    }
+
+    /**
+     * 生成文章摘要：首先将内容转换为HTML，然后删除HTML标签
+     *
+     * @param string $content
+     * @return string
+     */
+    protected function generateExcerpt(string $content): string
+    {
+        if (empty($content)) {
+            return '';
+        }
+
+        // 使用CommonMarkConverter将内容转换为HTML，配置更多选项以提高转换质量
+        $config = [
+            'html_input' => 'allow',
+            'allow_unsafe_links' => false,
+            'max_nesting_level' => 10,
+            'renderer' => [
+                'soft_break' => "<br />\n",
+            ],
+            'commonmark' => [
+                'enable_em' => true,
+                'enable_strong' => true,
+                'use_asterisk' => true,
+                'use_underscore' => true,
+                'unordered_list_markers' => ['-', '+', '*'],
+            ],
+            'heading' => [
+                'render_modifiers' => [],
+            ]
+        ];
+        
+        $environment = new Environment($config);
+        $environment->addExtension(new CommonMarkCoreExtension());
+        $environment->addExtension(new AutolinkExtension());
+        $environment->addExtension(new StrikethroughExtension());
+        $environment->addExtension(new TableExtension());
+        $environment->addExtension(new TaskListExtension());
+        
+        $converter = new MarkdownConverter($environment);
+
+        $html = $converter->convert($content);
+        
+        // 删除HTML标签
+        $excerpt = strip_tags((string)$html);
+        
+        // 截取前200个字符作为摘要
+        return mb_substr($excerpt, 0, 200, 'UTF-8');
     }
 }

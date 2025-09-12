@@ -5,6 +5,8 @@
     <meta charset="utf-8">
     <title>数据表格</title>
     <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css"/>
+    <script src="/app/admin/component/layui/layui.js?v=2.11.5"></script>
+    <script src="/app/admin/component/pear/pear.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
@@ -16,7 +18,7 @@
             <div class="tab-item px-4 py-2 cursor-pointer text-blue-500 border-b-2 border-blue-500 font-medium" data-type="normal">文章列表</div>
             <div class="tab-item px-4 py-2 cursor-pointer text-gray-500 hover:text-gray-700 font-medium" data-type="trash">垃圾箱</div>
         </div>
-        
+
         <form id="postForm" class="layui-form" action="">
             <div class="layui-form-item">
                 <div class="layui-inline">
@@ -54,17 +56,17 @@
                 </div>
             </div>
         </form>
-        
+
         <!-- 隐藏的输入字段，用于传递是否显示垃圾箱的状态 -->
         <input type="hidden" id="isTrashed" name="isTrashed" value="false">
     </div>
-    
+
     <!-- 搜索表单的脚本 -->
     <script>
         // 确保表单提交正常工作
         layui.use('form', function() {
             var form = layui.form;
-            
+
             // 表单验证和提交处理
             form.on('submit(post-query)', function(data) {
                 return false; // 阻止表单跳转提交，改为Ajax提交
@@ -90,7 +92,7 @@
             删除
         </button>
     </div>
-    
+
     <!-- 垃圾箱工具栏 -->
     <div id="trashToolbar" class="hidden">
         <button class="pear-btn pear-btn-success pear-btn-md" lay-event="batchRestore">
@@ -113,7 +115,7 @@
                 class="layui-icon layui-icon-delete"></i></button>
         <button class="pear-btn pear-btn-sm" id="more_{{d.id}}"><i class="layui-icon layui-icon-triangle-d"></i></button>
     </div>
-    
+
     <!-- 垃圾箱文章操作按钮 -->
     <div class="trash-actions flex space-x-1 hidden">
         <button class="pear-btn pear-btn-success pear-btn-sm" lay-event="restore"><i
@@ -161,8 +163,6 @@
     </div>
 </div>
 
-<script src="/app/admin/component/layui/layui.js?v=2.11.5"></script>
-<script src="/app/admin/component/pear/pear.js"></script>
 <script>
     layui.use(['table', 'form', 'jquery', 'drawer', 'dropdown'], function () {
         let table = layui.table;
@@ -271,7 +271,7 @@
                 }
             ]
         ];
-        
+
         // 垃圾箱模式下的列配置
         let trashCols = [
             [{
@@ -308,15 +308,15 @@
         // 获取当前是否显示垃圾箱
         let currentMode = 'normal';
         let currentTable = null;
-        
+
         // 渲染表格的函数
         function renderTable(mode) {
             currentMode = mode;
             let isTrashed = mode === 'trash';
-            
+
             // 更新隐藏字段
             $('#isTrashed').val(isTrashed ? 'true' : 'false');
-            
+
             // 更新选项卡样式
             if (isTrashed) {
                 $('.tab-item').eq(0).removeClass('text-blue-500 border-b-2 border-blue-500').addClass('text-gray-500');
@@ -325,29 +325,30 @@
                 $('.tab-item').eq(1).removeClass('text-blue-500 border-b-2 border-blue-500').addClass('text-gray-500');
                 $('.tab-item').eq(0).removeClass('text-gray-500').addClass('text-blue-500 border-b-2 border-blue-500');
             }
-            
+
             // 显示或隐藏状态筛选器
             $('#statusFilter').toggle(!isTrashed);
-            
+
             // 显示或隐藏相应的工具栏
             $('#normalToolbar').toggle(!isTrashed);
             $('#trashToolbar').toggle(isTrashed);
-            
+
             // 获取当前搜索条件
             let searchData = form.val('postForm');
             searchData.isTrashed = isTrashed ? 'true' : 'false';
-            
+
             // 明确添加状态字段（确保在所有浏览器中都能正确获取）
             if (!searchData.status) {
                 searchData.status = $('select[name="status"]').val() || '';
             }
-            
+
             // 重新渲染表格
             if (currentTable) {
                 currentTable.reload({
                     url: 'list',
                     where: searchData,
                     cols: isTrashed ? trashCols : normalCols,
+                    toolbar: isTrashed ? '#trash-post-toolbar' : '#post-toolbar',
                     page: { curr: 1 }
                 });
             } else {
@@ -358,16 +359,16 @@
                     page: true,
                     cols: isTrashed ? trashCols : normalCols,
                     skin: 'line',
-                    toolbar: '#post-toolbar',
+                    toolbar: isTrashed ? '#trash-post-toolbar' : '#post-toolbar',
                     defaultToolbar: [{
                         layEvent: 'refresh',
                         icon: 'layui-icon-refresh',
                     }, 'filter', 'print', 'exports'],
                     done: function (res, curr, count) {
-                        console.log('Table render done:', {res, curr, count, isTrashedMode});
-                        
+                        console.log('Table render done:', {res, curr, count, isTrashed});
+
                         // 移除之前的手动显示/隐藏逻辑，因为现在使用了独立的模板
-                        if (!isTrashedMode) {
+                        if (!isTrashed) {
                             // 只有在普通模式下才渲染下拉菜单
                             for (var i = 0; i < res.data.length; i++) {
                                 dropdown.render({
@@ -395,10 +396,10 @@
                 });
             }
         }
-        
+
         // 初始渲染表格
         renderTable('normal');
-        
+
         // 选项卡切换事件
         $('.tab-item').on('click', function() {
             // 更新选项卡样式
@@ -406,7 +407,7 @@
             $('.tab-item').removeClass('hover:text-gray-700');
             $(this).removeClass('text-gray-500').addClass('text-blue-500 border-b-2 border-blue-500');
             $(this).addClass('hover:text-gray-700');
-            
+
             let mode = $(this).data('type');
             renderTable(mode);
         });
@@ -444,7 +445,7 @@
             formData.status = $('select[name="status"]').val() || '';
             formData.isTrashed = $('#isTrashed').val() || 'false';
             console.log('Form data being submitted:', formData);
-            
+
             // 直接重载表格而不是重新渲染
             if (currentTable) {
                 currentTable.reload({
@@ -486,7 +487,7 @@
                     type: 'delete',
                     success: function (result) {
                         layer.close(loading);
-                        if (result.success) {
+                        if (result.code === 0) {
                             layer.msg(result.msg, {
                                 icon: 1,
                                 time: 1000
@@ -503,7 +504,7 @@
                 })
             });
         }
-        
+
         // 恢复文章
         window.restore = function (obj) {
             layer.confirm('确定要恢复该文章吗？', {
@@ -518,7 +519,7 @@
                     type: 'post',
                     success: function (result) {
                         layer.close(loading);
-                        if (result.success) {
+                        if (result.code === 0) {
                             layer.msg(result.msg, {
                                 icon: 1,
                                 time: 1000
@@ -537,7 +538,7 @@
                 })
             });
         }
-        
+
         // 永久删除文章
         window.forceDelete = function (obj) {
             layer.confirm('确定要永久删除该文章吗？此操作不可恢复！', {
@@ -552,7 +553,7 @@
                     type: 'delete',
                     success: function (result) {
                         layer.close(loading);
-                        if (result.success) {
+                        if (result.code === 0) {
                             layer.msg(result.msg, {
                                 icon: 1,
                                 time: 1000
@@ -596,7 +597,7 @@
                     type: 'delete',
                     success: function (result) {
                         layer.close(loading);
-                        if (result.success) {
+                        if (result.code === 0) {
                             layer.msg(result.msg, {
                                 icon: 1,
                                 time: 1000
@@ -613,7 +614,7 @@
                 })
             });
         }
-        
+
         // 批量恢复文章
         window.batchRestore = function (obj) {
             let data = table.checkStatus(obj.config.id).data;
@@ -641,7 +642,7 @@
                     type: 'post',
                     success: function (result) {
                         layer.close(loading);
-                        if (result.success) {
+                        if (result.code === 0) {
                             layer.msg(result.msg, {
                                 icon: 1,
                                 time: 1000
@@ -660,7 +661,7 @@
                 })
             });
         }
-        
+
         // 批量永久删除文章
         window.batchForceDelete = function (obj) {
             let data = table.checkStatus(obj.config.id).data;
@@ -688,7 +689,7 @@
                     type: 'delete',
                     success: function (result) {
                         layer.close(loading);
-                        if (result.success) {
+                        if (result.code === 0) {
                             layer.msg(result.msg, {
                                 icon: 1,
                                 time: 1000

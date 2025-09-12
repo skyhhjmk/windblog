@@ -4,6 +4,14 @@ namespace app\service;
 
 use app\model\Post;
 use app\service\PaginationService;
+use League\CommonMark\CommonMarkConverter;
+use League\CommonMark\Environment\Environment;
+use League\CommonMark\Extension\CommonMark\CommonMarkCoreExtension;
+use League\CommonMark\Extension\Autolink\AutolinkExtension;
+use League\CommonMark\Extension\Strikethrough\StrikethroughExtension;
+use League\CommonMark\Extension\Table\TableExtension;
+use League\CommonMark\Extension\TaskList\TaskListExtension;
+use League\CommonMark\MarkdownConverter;
 use support\Redis;
 
 class BlogService
@@ -141,8 +149,37 @@ class BlogService
     {
         foreach ($posts as $post) {
             if (empty($post->excerpt)) {
+                // 使用CommonMarkConverter将内容转换为HTML，再删除HTML标签生成摘要
+                $config = [
+                    'html_input' => 'allow',
+                    'allow_unsafe_links' => false,
+                    'max_nesting_level' => 10,
+                    'renderer' => [
+                        'soft_break' => "<br />\n",
+                    ],
+                    'commonmark' => [
+                        'enable_em' => true,
+                        'enable_strong' => true,
+                        'use_asterisk' => true,
+                        'use_underscore' => true,
+                        'unordered_list_markers' => ['-', '+', '*'],
+                    ]
+                ];
+                
+                $environment = new Environment($config);
+                $environment->addExtension(new CommonMarkCoreExtension());
+                $environment->addExtension(new AutolinkExtension());
+                $environment->addExtension(new StrikethroughExtension());
+                $environment->addExtension(new TableExtension());
+                $environment->addExtension(new TaskListExtension());
+                
+                $converter = new MarkdownConverter($environment);
+
+                $html = $converter->convert($post->content);
+                $excerpt = mb_substr(strip_tags((string)$html), 0, 200, 'UTF-8');
+                
                 // 自动生成文章摘要并保存
-                $post->excerpt = mb_substr(strip_tags($post->content), 0, 200, 'UTF-8');
+                $post->excerpt = $excerpt;
                 $post->save();
             }
         }
