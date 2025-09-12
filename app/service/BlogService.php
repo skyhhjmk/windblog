@@ -4,6 +4,7 @@ namespace app\service;
 
 use app\model\Post;
 use app\service\PaginationService;
+use Illuminate\Support\Collection;
 use League\CommonMark\CommonMarkConverter;
 use League\CommonMark\Environment\Environment;
 use League\CommonMark\Exception\CommonMarkException;
@@ -146,10 +147,10 @@ class BlogService
     /**
      * 处理文章摘要
      *
-     * @param Post $posts 文章集合
+     * @param Collection $posts 文章集合
      * @throws CommonMarkException
      */
-    protected static function processPostExcerpts(Post $posts): void
+    protected static function processPostExcerpts(Collection $posts): void
     {
         foreach ($posts as $post) {
             if (empty($post->excerpt)) {
