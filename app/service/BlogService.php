@@ -6,6 +6,7 @@ use app\model\Post;
 use app\service\PaginationService;
 use League\CommonMark\CommonMarkConverter;
 use League\CommonMark\Environment\Environment;
+use League\CommonMark\Exception\CommonMarkException;
 use League\CommonMark\Extension\CommonMark\CommonMarkCoreExtension;
 use League\CommonMark\Extension\Autolink\AutolinkExtension;
 use League\CommonMark\Extension\Strikethrough\StrikethroughExtension;
@@ -13,6 +14,7 @@ use League\CommonMark\Extension\Table\TableExtension;
 use League\CommonMark\Extension\TaskList\TaskListExtension;
 use League\CommonMark\MarkdownConverter;
 use support\Redis;
+use Throwable;
 
 class BlogService
 {
@@ -22,6 +24,7 @@ class BlogService
      * @param string $key 配置键名
      * @param mixed $default 默认值
      * @return mixed 配置值
+     * @throws Throwable
      */
     public static function getConfig(string $key, mixed $default = null): mixed
     {
@@ -139,13 +142,14 @@ class BlogService
         
         return $result;
     }
-    
+
     /**
      * 处理文章摘要
      *
-     * @param 	hink\Collection $posts 文章集合
+     * @param Post $posts 文章集合
+     * @throws CommonMarkException
      */
-    protected static function processPostExcerpts($posts): void
+    protected static function processPostExcerpts(Post $posts): void
     {
         foreach ($posts as $post) {
             if (empty($post->excerpt)) {
@@ -189,9 +193,9 @@ class BlogService
      * 从缓存获取数据
      *
      * @param string $key 缓存键名
-     * @return mixed 缓存数据或false
+     * @return array|bool 缓存数据或false
      */
-    protected static function getFromCache(string $key): mixed
+    protected static function getFromCache(string $key): array|bool
     {
         try {
             $cached = cache($key);
@@ -200,7 +204,7 @@ class BlogService
                 return $cached;
             }
             return false;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // 缓存获取失败时静默返回false
             return false;
         }
@@ -216,7 +220,7 @@ class BlogService
     {
         try {
             cache($key, $data, true);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // 缓存设置失败时记录错误但不中断流程
             \support\Log::channel('blog_service')->error('[cacheResult] Error caching data: ' . $e->getMessage());
         }

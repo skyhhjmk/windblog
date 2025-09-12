@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 use support\Model;
 use Throwable;
+use support\Db;
 
 /**
  * 文章模型

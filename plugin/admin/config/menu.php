@@ -2,22 +2,6 @@
 
 return [
     [
-        'title' => '内容管理',
-        'key' => 'content',
-        'icon' => 'layui-icon-read',
-        'weight' => 1100,
-        'type' => 0,
-        'children' => [
-            [
-                'title' => '文章管理',
-                'key' => 'plugin\\admin\\app\\controller\\PostsController',
-                'href' => '/app/admin/posts/index',
-                'type' => 1,
-                'weight' => 1000,
-            ]
-        ]
-    ],
-    [
         'title' => '数据库',
         'key' => 'database',
         'icon' => 'layui-icon-template-1',
