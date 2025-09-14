@@ -28,7 +28,7 @@ class InstallController extends Base
      */
     public function step1(Request $request): Response
     {
-        $database_config_file = base_path() . '/plugin/admin/config/database.php';
+        $database_config_file = base_path() . '/config/database.php';
         clearstatcache();
         if (is_file($database_config_file)) {
             return $this->json(1, '管理后台已经安装！如需重新安装，请删除该插件数据库配置文件并重启');
@@ -170,7 +170,7 @@ return [
     ],
 ];
 EOF;
-        file_put_contents(base_path() . '/plugin/admin/config/thinkorm.php', $think_orm_config);
+//        file_put_contents(base_path() . '/plugin/admin/config/thinkorm.php', $think_orm_config);
 
 
         // 尝试reload
@@ -197,7 +197,7 @@ EOF;
         if ($password != $password_confirm) {
             return $this->json(1, '两次密码不一致');
         }
-        if (!is_file($config_file = base_path() . '/plugin/admin/config/database.php')) {
+        if (!is_file($config_file = base_path() . '/config/database.php')) {
             return $this->json(1, '请先完成第一步数据库配置');
         }
         $config = include $config_file;

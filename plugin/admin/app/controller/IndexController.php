@@ -2,6 +2,8 @@
 
 namespace plugin\admin\app\controller;
 
+use app\model\Media;
+use app\model\Post;
 use plugin\admin\app\common\Util;
 use plugin\admin\app\model\Option;
 use plugin\admin\app\model\User;
@@ -36,7 +38,7 @@ class IndexController
     public function index(Request $request): Response
     {
         clearstatcache();
-        if (!is_file(base_path('plugin/admin/config/database.php'))) {
+        if (!is_file(base_path('/config/database.php'))) {
             return raw_view('index/install');
         }
         $admin = admin();
@@ -67,6 +69,12 @@ class IndexController
         $day30_user_count = User::where('created_at', '>', date('Y-m-d H:i:s', time() - 30 * 24 * 60 * 60))->count();
         // 总用户数
         $user_count = User::count();
+        // 总文章数
+        $post_count = Post::count();
+        // 待发布文章数
+        $draft_count = Post::where('status', 'draft')->count();
+        // 总媒体数
+        $media_count = Media::count();
         // mysql版本
         $version = Util::db()->select('select VERSION() as version');
         $mysql_version = $version[0]->version ?? 'unknown';
@@ -84,6 +92,9 @@ class IndexController
             'day7_user_count' => $day7_user_count,
             'day30_user_count' => $day30_user_count,
             'user_count' => $user_count,
+            'post_count' => $post_count,
+            'draft_count' => $draft_count,
+            'media_count' => $media_count,
             'php_version' => PHP_VERSION,
             'workerman_version' =>  Worker::VERSION,
             'webman_version' => Util::getPackageVersion('workerman/webman-framework'),

@@ -10,7 +10,7 @@ class PaginationService
      * @param int $currentPage 当前页码
      * @param int $totalItems 总条目数
      * @param int $itemsPerPage 每页条目数
-     * @param string $routeName 路由名称
+     * @param string $routeName 路由名称 - 用于拼接分页链接
      * @param array $routeParams 路由参数
      * @param int $maxDisplayPages 最大显示页码数
      * @return string 分页HTML

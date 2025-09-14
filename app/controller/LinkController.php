@@ -28,7 +28,7 @@ class LinkController
             $page,
             $count,
             $links_per_page,
-            'index.page',
+            'link.page',
             [],
             10
         );
@@ -46,7 +46,7 @@ class LinkController
         }
 
         return view('link/index', [
-            'page_title' => blog_config('title', 'WindBlog', true) . ' - 链接',
+            'page_title' => blog_config('title', 'WindBlog', true) . ' - 链接广场',
             'links' => $links,
             'pagination' => $pagination_html,
         ]);

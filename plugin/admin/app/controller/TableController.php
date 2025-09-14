@@ -64,7 +64,7 @@ class TableController extends Base
         $limit = (int)$request->get('limit', 10);
         $page = (int)$request->get('page', 1);
         $offset = ($page - 1) * $limit;
-        $database = config('database.connections')['plugin.admin.mysql']['database'];
+        $database = config('database.connections')['mysql']['database'];
         $field = $request->get('field', 'TABLE_NAME');
         $field = Util::filterAlphaNum($field);
         $order = $request->get('order', 'asc');
@@ -567,8 +567,8 @@ class TableController extends Base
         $incrementing = '';
         $columns = [];
         try {
-            $database = config('database.connections')['plugin.admin.mysql']['database'];
-            //plugin.admin.mysql
+            $database = config('database.connections')['mysql']['database'];
+            //mysql
             foreach (Util::db()->select("select COLUMN_NAME,DATA_TYPE,COLUMN_KEY,COLUMN_COMMENT from INFORMATION_SCHEMA.COLUMNS where table_name = '$table' and table_schema = '$database' order by ORDINAL_POSITION") as $item) {
                 if ($item->COLUMN_KEY === 'PRI') {
                     $pk = $item->COLUMN_NAME;

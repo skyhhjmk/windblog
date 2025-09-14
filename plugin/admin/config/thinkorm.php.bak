@@ -14,7 +14,7 @@ return [
             // 数据库密码
             'password' => 'root',
             // 数据库连接端口
-            'hostport' => 3306,
+            'hostport' => 33061,
             // 数据库连接参数
             'params' => [
                 // 连接超时3秒

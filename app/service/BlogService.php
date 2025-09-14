@@ -14,6 +14,7 @@ use League\CommonMark\Extension\Strikethrough\StrikethroughExtension;
 use League\CommonMark\Extension\Table\TableExtension;
 use League\CommonMark\Extension\TaskList\TaskListExtension;
 use League\CommonMark\MarkdownConverter;
+use support\Log;
 use support\Redis;
 use Throwable;
 
@@ -31,7 +32,7 @@ class BlogService
     {
         return blog_config($key, $default);
     }
-    
+
     /**
      * 获取博客标题
      *
@@ -41,7 +42,7 @@ class BlogService
     {
         return self::getConfig('title', 'WindBlog');
     }
-    
+
     /**
      * 获取每页显示的文章数量
      *
@@ -51,38 +52,39 @@ class BlogService
     {
         return self::getConfig('posts_per_page', 10);
     }
-    
+
     /**
      * 获取博客文章列表
      *
      * @param int $page 当前页码
      * @param array $filters 筛选条件
      * @return array 包含文章列表和分页信息的数组
+     * @throws CommonMarkException
      */
     public static function getBlogPosts(int $page = 1, array $filters = []): array
     {
         $postsPerPage = self::getPostsPerPage();
         $cacheKey = 'blog_posts_page_' . $page . '_per_' . $postsPerPage;
-        
+
         // 当没有筛选条件时尝试从缓存获取
         if (empty($filters)) {
             $cached = self::getFromCache($cacheKey);
             if ($cached) {
                 return $cached;
             }
-            
+
             // 尝试兼容旧的缓存格式
             $oldCacheKey = 'blog_posts_page_' . $page;
             $oldCached = self::getFromCache($oldCacheKey);
             if ($oldCached) {
                 // 清理旧缓存并返回新格式
                 \support\Redis::connection('cache')->del($oldCacheKey);
-                
+
                 // 确保返回数组格式
                 if (!is_array($oldCached)) {
                     // 统计总文章数
                     $totalCount = Post::where('status', 'published')->count();
-                    
+
                     // 生成分页HTML
                     $paginationHtml = PaginationService::generatePagination(
                         $page,
@@ -92,7 +94,7 @@ class BlogService
                         [],
                         10
                     );
-                    
+
                     return [
                         'posts' => $oldCached,
                         'pagination' => $paginationHtml,
@@ -104,19 +106,24 @@ class BlogService
                 return $oldCached;
             }
         }
-        
+
         // 统计总文章数
         $totalCount = Post::where('status', 'published')->count();
-        
+
         // 获取文章列表
         $posts = Post::where('status', 'published')
             ->orderByDesc('id')
             ->forPage($page, $postsPerPage)
             ->get();
-        
+
         // 处理文章摘要
-        self::processPostExcerpts($posts);
-        
+        try {
+            self::processPostExcerpts($posts);
+        } catch (CommonMarkException $e) {
+            Log::error(trans('Failed to process post excerpts'),$e->getMessage());
+            throw $e;
+        }
+
         // 生成分页HTML
         $paginationHtml = PaginationService::generatePagination(
             $page,
@@ -126,7 +133,7 @@ class BlogService
             [],
             10
         );
-        
+
         // 构建结果数组
         $result = [
             'posts' => $posts,
@@ -135,12 +142,12 @@ class BlogService
             'currentPage' => $page,
             'postsPerPage' => $postsPerPage
         ];
-        
+
         // 缓存结果
         if (empty($filters)) {
             self::cacheResult($cacheKey, $result);
         }
-        
+
         return $result;
     }
 
@@ -170,26 +177,26 @@ class BlogService
                         'unordered_list_markers' => ['-', '+', '*'],
                     ]
                 ];
-                
+
                 $environment = new Environment($config);
                 $environment->addExtension(new CommonMarkCoreExtension());
                 $environment->addExtension(new AutolinkExtension());
                 $environment->addExtension(new StrikethroughExtension());
                 $environment->addExtension(new TableExtension());
                 $environment->addExtension(new TaskListExtension());
-                
+
                 $converter = new MarkdownConverter($environment);
 
                 $html = $converter->convert($post->content);
                 $excerpt = mb_substr(strip_tags((string)$html), 0, 200, 'UTF-8');
-                
+
                 // 自动生成文章摘要并保存
                 $post->excerpt = $excerpt;
                 $post->save();
             }
         }
     }
-    
+
     /**
      * 从缓存获取数据
      *
@@ -210,7 +217,7 @@ class BlogService
             return false;
         }
     }
-    
+
     /**
      * 缓存结果数据
      *

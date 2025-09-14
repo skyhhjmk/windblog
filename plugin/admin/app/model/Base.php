@@ -11,7 +11,7 @@ class Base extends Model
     /**
      * @var string
      */
-    protected $connection = 'plugin.admin.mysql';
+    protected $connection = 'mysql';
 
     /**
      * 格式化日期

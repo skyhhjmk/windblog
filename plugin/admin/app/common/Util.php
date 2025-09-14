@@ -42,7 +42,7 @@ class Util
      */
     public static function db(): Connection
     {
-        return Db::connection('plugin.admin.mysql');
+        return Db::connection('mysql');
     }
 
     /**
@@ -51,7 +51,7 @@ class Util
      */
     public static function schema(): Builder
     {
-        return Db::schema('plugin.admin.mysql');
+        return Db::schema('mysql');
     }
 
     /**
@@ -382,7 +382,7 @@ class Util
     public static function getSchema($table, $section = null)
     {
         Util::checkTableName($table);
-        $database = config('database.connections')['plugin.admin.mysql']['database'];
+        $database = config('database.connections')['mysql']['database'];
         $schema_raw = $section !== 'table' ? Util::db()->select("select * from information_schema.COLUMNS where TABLE_SCHEMA = '$database' and table_name = '$table' order by ORDINAL_POSITION") : [];
         $forms = [];
         $columns = [];

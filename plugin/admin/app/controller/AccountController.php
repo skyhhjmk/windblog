@@ -252,7 +252,7 @@ class AccountController extends Crud
 
     protected function checkDatabaseAvailable()
     {
-        if (!config('plugin.admin.database')) {
+        if (!config('database')) {
             throw new BusinessException('请重启webman');
         }
     }

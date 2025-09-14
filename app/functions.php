@@ -3,6 +3,8 @@
  * Here is your custom functions.
  */
 
+use support\Log;
+
 /**
  * get cache or set cache(and return set value)
  * 获取或设置缓存（并返回设置的值）
@@ -14,18 +16,25 @@
  */
 function cache(string $key, mixed $value = null, bool $set = false): mixed
 {
-    $redis = \support\Redis::connection('cache');
-    if ($set) {
-        $redis->setex($key,blog_config('cache_expire', 86400/* 24小时 */), serialize($value));
-        return $value;
-    } else {
-        $cached = $redis->get($key);
-        if ($cached === false || $cached === null) {
-            return false;
+    try {
+        $redis = \support\Redis::connection('cache');
+
+        if ($set) {
+            $redis->setex($key,blog_config('cache_expire', 86400/* 24小时 */), serialize($value));
+            return $value;
+        } else {
+            $cached = $redis->get($key);
+            if ($cached === false || $cached === null) {
+                return false;
+            }
+            $unserialized = unserialize($cached);
+            $return = $unserialized !== false ? $unserialized : $cached;
         }
-        $unserialized = unserialize($cached);
-        return $unserialized !== false ? $unserialized : $cached;
+    } catch (Exception $e) {
+        Log::error('[cache] error: ' . $e->getMessage());
+        $return = null;
     }
+    return $return;
 }
 
 /**
@@ -62,8 +71,8 @@ function blog_config(string $key, mixed $default = null, bool $set = false, bool
             if ($use_cache) {
                 cache('blog_config_' . $key, $default, true);
             }
-        } catch (\Exception $e) {
-            \support\Log::error('[blog_config] error: ' . $e->getMessage());
+        } catch (Exception $e) {
+            Log::error('[blog_config] error: ' . $e->getMessage());
             return false;
         }
         return $default;

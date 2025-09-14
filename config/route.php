@@ -27,6 +27,10 @@ Route::any('/post/{keyword}', [app\controller\PostController::class, 'index']);
 Route::any('/', [app\controller\IndexController::class, 'index'])->name('index.index');
 Route::any('/page/{page}', [app\controller\IndexController::class, 'index'])->name('index.page');
 
+// 链接页&分页路由
+Route::any('/link', [app\controller\IndexController::class, 'index'])->name('link.index');
+Route::any('/link/page/{page}', [app\controller\IndexController::class, 'index'])->name('link.page');
+
 // 调试 API
 Route::get('/api/hello', function() {
     return json(['hello' => 'webman']);

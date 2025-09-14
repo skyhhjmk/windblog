@@ -12,7 +12,7 @@ class Install
     /**
      * 数据库连接
      */
-    protected static $connection = 'plugin.admin.mysql';
+    protected static $connection = 'mysql';
     
     /**
      * 安装
