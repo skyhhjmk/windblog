@@ -1,30 +1,30 @@
 {
-  "name": "workerman/webman",
+  "name": "skyhhjmk/wind-cms",
   "type": "project",
   "keywords": [
-    "high performance",
-    "http service"
+    "windblog",
+    "blog system",
+    "webman application",
+    "high performance"
   ],
-  "homepage": "https://www.workerman.net",
+  "homepage": "https://www.biliwind.com",
   "license": "MIT",
-  "description": "High performance HTTP Service Framework.",
+  "description": "A high-performance blog system based on Webman framework.",
   "authors": [
     {
-      "name": "walkor",
-      "email": "walkor@workerman.net",
-      "homepage": "https://www.workerman.net",
+      "name": "hhjmk",
+      "email": "admin@biliwind.com",
+      "homepage": "https://www.biliwind.com",
       "role": "Developer"
     }
   ],
   "support": {
-    "email": "walkor@workerman.net",
-    "issues": "https://github.com/walkor/webman/issues",
-    "forum": "https://wenda.workerman.net/",
-    "wiki": "https://workerman.net/doc/webman",
-    "source": "https://github.com/walkor/webman"
+    "email": "admin@biliwind.com",
+    "issues": "https://github.com/skyhhjmk/wind-cms/issues",
+    "source": "https://github.com/skyhhjmk/wind-cms"
   },
   "require": {
-    "php": ">=8.1",
+    "php": ">=8.2",
     "workerman/webman-framework": "^2.1",
     "monolog/monolog": "^2.0",
     "twig/twig": "^3.21",

@@ -18,6 +18,9 @@ use support\Log;
 use support\Redis;
 use Throwable;
 
+/**
+ * 博客服务类
+ */
 class BlogService
 {
     /**
@@ -37,6 +40,7 @@ class BlogService
      * 获取博客标题
      *
      * @return string 博客标题
+     * @throws Throwable
      */
     public static function getBlogTitle(): string
     {
@@ -47,6 +51,7 @@ class BlogService
      * 获取每页显示的文章数量
      *
      * @return int 每页文章数
+     * @throws Throwable
      */
     public static function getPostsPerPage(): int
     {
@@ -58,62 +63,63 @@ class BlogService
      *
      * @param int $page 当前页码
      * @param array $filters 筛选条件
+     *
      * @return array 包含文章列表和分页信息的数组
-     * @throws CommonMarkException
+     * @throws CommonMarkException|Throwable
      */
     public static function getBlogPosts(int $page = 1, array $filters = []): array
     {
-        $postsPerPage = self::getPostsPerPage();
-        $cacheKey = 'blog_posts_page_' . $page . '_per_' . $postsPerPage;
+        $posts_per_page = self::getPostsPerPage();
+        $cache_key = 'blog_posts_page_' . $page . '_per_' . $posts_per_page;
 
         // 当没有筛选条件时尝试从缓存获取
         if (empty($filters)) {
-            $cached = self::getFromCache($cacheKey);
+            $cached = self::getFromCache($cache_key);
             if ($cached) {
                 return $cached;
             }
 
             // 尝试兼容旧的缓存格式
-            $oldCacheKey = 'blog_posts_page_' . $page;
-            $oldCached = self::getFromCache($oldCacheKey);
-            if ($oldCached) {
+            $old_ache_key = 'blog_posts_page_' . $page;
+            $old_cached = self::getFromCache($old_ache_key);
+            if ($old_cached) {
                 // 清理旧缓存并返回新格式
-                \support\Redis::connection('cache')->del($oldCacheKey);
+                \support\Redis::connection('cache')->del($old_ache_key);
 
                 // 确保返回数组格式
-                if (!is_array($oldCached)) {
+                if (!is_array($old_cached)) {
                     // 统计总文章数
-                    $totalCount = Post::where('status', 'published')->count();
+                    $total_count = Post::where('status', 'published')->count();
 
                     // 生成分页HTML
-                    $paginationHtml = PaginationService::generatePagination(
+                    $pagination_html = PaginationService::generatePagination(
                         $page,
-                        $totalCount,
-                        $postsPerPage,
+                        $total_count,
+                        $posts_per_page,
                         'index.page',
                         [],
                         10
                     );
 
                     return [
-                        'posts' => $oldCached,
-                        'pagination' => $paginationHtml,
-                        'totalCount' => $totalCount,
+                        'posts' => $old_cached,
+                        'pagination' => $pagination_html,
+                        'totalCount' => $total_count,
                         'currentPage' => $page,
-                        'postsPerPage' => $postsPerPage
+                        'postsPerPage' => $posts_per_page
                     ];
                 }
-                return $oldCached;
+                return $old_cached;
             }
         }
 
         // 统计总文章数
-        $totalCount = Post::where('status', 'published')->count();
+        $total_count = Post::where('status', 'published')->count();
 
         // 获取文章列表
         $posts = Post::where('status', 'published')
             ->orderByDesc('id')
-            ->forPage($page, $postsPerPage)
+            ->forPage($page, $posts_per_page)
             ->get();
 
         // 处理文章摘要
@@ -125,10 +131,10 @@ class BlogService
         }
 
         // 生成分页HTML
-        $paginationHtml = PaginationService::generatePagination(
+        $pagination_html = PaginationService::generatePagination(
             $page,
-            $totalCount,
-            $postsPerPage,
+            $total_count,
+            $posts_per_page,
             'index.page',
             [],
             10
@@ -137,15 +143,15 @@ class BlogService
         // 构建结果数组
         $result = [
             'posts' => $posts,
-            'pagination' => $paginationHtml,
-            'totalCount' => $totalCount,
+            'pagination' => $pagination_html,
+            'totalCount' => $total_count,
             'currentPage' => $page,
-            'postsPerPage' => $postsPerPage
+            'postsPerPage' => $posts_per_page
         ];
 
         // 缓存结果
         if (empty($filters)) {
-            self::cacheResult($cacheKey, $result);
+            self::cacheResult($cache_key, $result);
         }
 
         return $result;
@@ -230,7 +236,7 @@ class BlogService
             cache($key, $data, true);
         } catch (Throwable $e) {
             // 缓存设置失败时记录错误但不中断流程
-            \support\Log::channel('blog_service')->error('[cacheResult] Error caching data: ' . $e->getMessage());
+            \support\Log::error('[cacheResult] Error caching data: ' . $e->getMessage());
         }
     }
 }

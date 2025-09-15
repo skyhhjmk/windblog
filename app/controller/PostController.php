@@ -5,11 +5,13 @@ namespace app\controller;
 use support\Request;
 use app\model\Post;
 use support\Response;
+use Webman\RateLimiter\Annotation\RateLimiter;
 
 class PostController
 {
     protected array $noNeedLogin = ['index'];
 
+    #[RateLimiter(limit: 3,ttl: 3)]
     public function index(Request $request, mixed $keyword = null): Response
     {
         switch (blog_config('url_mode', 'mix', true)) {

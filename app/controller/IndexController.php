@@ -2,9 +2,16 @@
 
 namespace app\controller;
 
+use League\CommonMark\Exception\CommonMarkException;
 use support\Request;
 use app\service\BlogService;
+use support\Response;
+use Throwable;
+use Webman\RateLimiter\Annotation\RateLimiter;
 
+/**
+ * 博客首页控制器
+ */
 class IndexController
 {
     /**
@@ -16,10 +23,14 @@ class IndexController
      * 博客首页
      *
      * @param Request $request 请求对象
-     * @param int $page 页码
-     * @return \support\Response
+     * @param int     $page    页码
+     *
+     * @return Response
+     * @throws CommonMarkException
+     * @throws Throwable
      */
-    public function index(Request $request, int $page = 1)
+    #[RateLimiter(limit: 3,ttl: 3)]
+    public function index(Request $request, int $page = 1): Response
     {
         // 构建筛选条件
         $filters = $request->get() ?: [];
@@ -28,10 +39,10 @@ class IndexController
         $result = BlogService::getBlogPosts($page, $filters);
         
         // 获取博客标题
-        $blogTitle = BlogService::getBlogTitle();
+        $blog_title = BlogService::getBlogTitle();
         
         return view('index/index', [
-            'page_title' => $blogTitle . ' - count is -' . $result['totalCount'],
+            'page_title' => $blog_title . ' - count is -' . $result['totalCount'],
             'posts' => $result['posts'],
             'pagination' => $result['pagination'],
         ]);
@@ -41,9 +52,9 @@ class IndexController
      * 调试用获取自己的全部session内容
      *
      * @param Request $request 请求对象
-     * @return \support\Response
+     * @return Response
      */
-    public function getSession(Request $request)
+    public function getSession(Request $request): Response
     {
         // 这样就可以！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
         try {
