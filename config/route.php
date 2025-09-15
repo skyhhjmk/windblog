@@ -28,8 +28,10 @@ Route::any('/', [app\controller\IndexController::class, 'index'])->name('index.i
 Route::any('/page/{page}', [app\controller\IndexController::class, 'index'])->name('index.page');
 
 // 链接页&分页路由
-Route::any('/link', [app\controller\IndexController::class, 'index'])->name('link.index');
-Route::any('/link/page/{page}', [app\controller\IndexController::class, 'index'])->name('link.page');
+Route::any('/link', [app\controller\LinkController::class, 'index'])->name('link.index');
+Route::any('/link/goto/{id}', [app\controller\LinkController::class, 'goto'])->name('link.goto');
+Route::any('/link/info/{id}', [app\controller\LinkController::class, 'info'])->name('link.info');
+Route::any('/link/page/{page}', [app\controller\LinkController::class, 'index'])->name('link.page');
 
 // 调试 API
 Route::get('/api/hello', function() {

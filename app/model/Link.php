@@ -18,6 +18,10 @@ use Throwable;
  * @property string|null $image 链接配图URL
  * @property int $sort_order 排序权重，数字越小越靠前
  * @property bool $status 状态 (true: 显示, false: 隐藏)
+ * @property string $target 打开方式 (_blank, _self等)
+ * @property string $redirect_type 跳转方式: direct=直接跳转, goto=中转页跳转, iframe=内嵌页面, info=详情页
+ * @property bool $show_url 是否在中转页显示原始URL
+ * @property string|null $content 链接详细介绍(Markdown格式)
  * @property Carbon|null $created_at 创建时间
  * @property Carbon|null $updated_at 更新时间
  * @property Carbon|null $deleted_at 软删除时间
@@ -46,6 +50,10 @@ class Link extends Model
         'image',
         'sort_order',
         'status',
+        'target',
+        'redirect_type',
+        'show_url',
+        'content'
     ];
 
     /**
@@ -61,6 +69,8 @@ class Link extends Model
         'description' => 'string',
         'sort_order' => 'integer',
         'status' => 'boolean',
+        'show_url' => 'boolean',
+        'content' => 'string',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',

@@ -3,50 +3,70 @@
 {% block title %}{{ page_title|default('风屿雨博客') }}{% endblock %}
 
 {% block content %}
-    <div class="max-w-4xl mx-auto">
-        <!-- 博客标题区域 -->
-        <div class="text-center mb-12 mt-6">
-            <h1 class="text-4xl font-bold text-gray-800 mb-4">{{ page_title|default('风屿雨博客') }}</h1>
-            <p class="text-gray-600 text-lg">欢迎来到我的个人博客，分享技术与生活</p>
+    <div class="max-w-6xl mx-auto px-4">
+        <!-- 页面标题区域 -->
+        <div class="text-center mb-12 mt-6 animate-fade-in-down">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-800 mb-4">{{ page_title|default('风屿雨博客') }}</h1>
+            <p class="text-gray-600 text-lg md:text-xl">欢迎来到链接广场，这里汇聚了优质的网站资源</p>
         </div>
 
         <!-- 链接列表 -->
         {% if links %}
-            <div class="space-y-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {% for link in links %}
-                    <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
+                    <div class="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 group">
                         <div class="p-6">
-                            <h2 class="text-2xl font-bold text-gray-800 mb-2">
-                                <a href="/link/go/{{ link.id }}" target="_blank"
-                                   class="hover:text-blue-600 transition-colors duration-200">
-                                    {{ link.title }}
-                                </a>
-                            </h2>
-                            <div class="flex items-center text-gray-500 text-sm mb-4">
-                        <span class="mr-4">
-                            <i class="far fa-calendar-alt mr-1"></i>
-                            {{ link.created_at|date('Y-m-d') }}
-                        </span>
-                        {# 不是你 idea 自动格式化有毛病啊 #}
-{#                                <span>#}
-{#                            <i class="far fa-user mr-1"></i>#}
-{#                            {{ link.author.name }}#}
-{#                        </span>#}
+                            <div class="flex items-start mb-4">
+                                <!-- 网站图标占位 -->
+                                <div class="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16 flex items-center justify-center mr-4 transition-all duration-300 group-hover:bg-blue-100">
+                                    <i class="fas fa-link text-gray-500 text-xl group-hover:text-blue-500"></i>
+                                </div>
+                                <div>
+                                    <h2 class="text-xl font-bold text-gray-800 mb-1 group-hover:text-blue-600 transition-colors duration-200">
+                                        <a href="{% if link.redirect_type == 'info' %}/link/info/{{ link.id }}{% else %}/link/goto/{{ link.id }}{% endif %}"
+                                           {% if link.redirect_type == 'direct' %}target="{{ link.target }}"{% endif %}
+                                           class="block">
+                                            {{ link.name|length > 20 ? link.name|slice(0, 20) ~ '...' : link.name }}
+                                        </a>
+                                    </h2>
+                                    <div class="flex items-center text-gray-500 text-xs">
+                                        <i class="far fa-calendar-alt mr-1"></i>
+                                        {{ link.created_at|date('Y-m-d') }}
+                                    </div>
+                                </div>
                             </div>
-                            <p class="text-gray-600 mb-4 leading-relaxed">
-                                {{ link.excerpt|truncate(50) }}
+                            
+                            <p class="text-gray-600 mb-4 text-sm leading-relaxed line-clamp-3">
+                                {{ link.description ?: '这个网站还没有添加描述信息' }}
                             </p>
+                            
                             <div class="flex justify-between items-center">
-                                <a href="/link/go/{{ link.id }}"
-                                   class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium transition-colors duration-200">
-                                    阅读更多
-                                    <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <a href="{% if link.redirect_type == 'info' %}/link/info/{{ link.id }}{% else %}/link/goto/{{ link.id }}{% endif %}"
+                                   {% if link.redirect_type == 'direct' %}target="{{ link.target }}"{% endif %}
+                                   class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium text-sm transition-colors duration-200">
+                                    {% if link.redirect_type == 'info' %}
+                                        查看详情
+                                    {% else %}
+                                        访问网站
+                                    {% endif %}
+                                    <svg class="w-4 h-4 ml-1 transition-transform duration-200 group-hover:translate-x-1" 
+                                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                              d="M9 5l7 7-7 7"></path>
+                                              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
                                     </svg>
                                 </a>
-                                <div class="flex space-x-2">
-                                    <!-- 这里可以添加标签 -->
+                                
+                                <div class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                                    <i class="fas fa-external-link-alt mr-1"></i>
+                                    {% if link.redirect_type == 'direct' %}
+                                        直接跳转
+                                    {% elseif link.redirect_type == 'goto' %}
+                                        确认跳转
+                                    {% elseif link.redirect_type == 'iframe' %}
+                                        内嵌打开
+                                    {% elseif link.redirect_type == 'info' %}
+                                        详情页面
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
@@ -55,23 +75,76 @@
             </div>
 
             <!-- 分页 -->
-            <div class="mt-12">
+            <div class="mt-12 flex justify-center">
                 {{ pagination|raw }}
             </div>
         {% else %}
-            <div class="bg-white rounded-xl shadow-md p-12 text-center">
+            <div class="bg-white rounded-2xl shadow-lg p-12 text-center animate-fade-in">
                 <div class="text-gray-400 mb-4">
-                    <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path>
+                    <svg class="w-24 h-24 mx-auto opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                              d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1">
+                        </path>
                     </svg>
                 </div>
-                <h3 class="text-xl font-medium text-gray-700 mb-2">暂无文章</h3>
-                <p class="text-gray-500">目前还没有发布任何文章，敬请期待！</p>
+                <h3 class="text-2xl font-medium text-gray-700 mb-2">暂无链接</h3>
+                <p class="text-gray-500 max-w-md mx-auto">目前还没有添加任何友情链接，敬请期待！</p>
             </div>
         {% endif %}
     </div>
+    
+    <style>
+        @keyframes fade-in-down {
+            0% {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes fade-in {
+            0% {
+                opacity: 0;
+            }
+            100% {
+                opacity: 1;
+            }
+        }
+        
+        .animate-fade-in-down {
+            animation: fade-in-down 0.5s ease-out forwards;
+        }
+        
+        .animate-fade-in {
+            animation: fade-in 0.5s ease-out forwards;
+        }
+        
+        .line-clamp-3 {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+    </style>
+
     <script>
+        // 添加悬停效果增强
+        document.addEventListener('DOMContentLoaded', function() {
+            const linkCards = document.querySelectorAll('.group');
+            linkCards.forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    this.style.zIndex = '10';
+                });
+                
+                card.addEventListener('mouseleave', function() {
+                    this.style.zIndex = '1';
+                });
+            });
+        });
+        
         function jumpToPage(maxPage) {
             const input = document.getElementById('page-input');
             const page = parseInt(input.value);
