@@ -10,7 +10,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 class ConfigRedis extends Command
 {
     protected static $defaultName = 'config:redis';
-    protected static $defaultDescription = '显示当前Redis服务器配置';
+    protected static $defaultDescription = 'Show Redis config';
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {

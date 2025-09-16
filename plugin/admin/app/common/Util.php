@@ -42,7 +42,7 @@ class Util
      */
     public static function db(): Connection
     {
-        return Db::connection('mysql');
+        return Db::connection('pgsql');
     }
 
     /**
@@ -51,7 +51,7 @@ class Util
      */
     public static function schema(): Builder
     {
-        return Db::schema('mysql');
+        return Db::schema('pgsql');
     }
 
     /**

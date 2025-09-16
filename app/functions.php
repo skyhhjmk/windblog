@@ -25,12 +25,12 @@ function cache(string $key, mixed $value = null, bool $set = false): mixed
             Log::warning('[cache] empty key provided');
             return false;
         }
-        
+
         $redis = \support\Redis::connection('cache');
-        
+
         // 确定使用的序列化方法
         $use_igbinary = extension_loaded('igbinary');
-        
+
         if ($set) {
             // 设置缓存
             $serialized_value = $use_igbinary ? igbinary_serialize($value) : serialize($value);
@@ -38,18 +38,18 @@ function cache(string $key, mixed $value = null, bool $set = false): mixed
                 Log::error('[cache] failed to serialize value with ' . ($use_igbinary ? 'igbinary' : 'serialize'));
                 return false;
             }
-            
+
             $expire_time = blog_config('cache_expire', 86400/* 24小时 */);
             if (!is_numeric($expire_time) || $expire_time <= 0) {
                 $expire_time = 86400; // 默认24小时
             }
-            
+
             $result = $redis->setex($key, (int)$expire_time, $serialized_value);
             if ($result === false) {
                 Log::error('[cache] failed to set cache key: ' . $key);
                 return false;
             }
-            
+
             return $value;
         } else {
             // 获取缓存
@@ -58,7 +58,7 @@ function cache(string $key, mixed $value = null, bool $set = false): mixed
                 // 缓存不存在或已过期
                 return false;
             }
-            
+
             // 反序列化
             if ($use_igbinary) {
                 $unserialized = igbinary_unserialize($cached);
@@ -89,7 +89,7 @@ function cache(string $key, mixed $value = null, bool $set = false): mixed
                     }
                     Log::warning('[cache] data appears to be igbinary serialized but igbinary extension not available for key: ' . $key);
                 }
-                
+
                 $unserialized = @unserialize($cached);
                 $return = $unserialized !== false ? $unserialized : $cached;
             }
@@ -101,7 +101,7 @@ function cache(string $key, mixed $value = null, bool $set = false): mixed
         Log::error('[cache] error: ' . $e->getMessage());
         $return = null;
     }
-    
+
     return $return ?? false;
 }
 
@@ -121,116 +121,137 @@ function cache(string $key, mixed $value = null, bool $set = false): mixed
 function blog_config(string $cache_key, mixed $default = null, bool $init = false, bool $use_cache = true, bool $set = false): mixed
 {
     $cache_key = trim($cache_key);
+    $fullCacheKey = 'blog_config_' . $cache_key;
+
+    // 空key返回全量配置（建议后续优化为分页或缓存）
     if ($cache_key === '') {
         return app\model\Setting::all();
     }
 
+    // 优先处理写操作
+    if ($set) {
+        return blog_config_write($cache_key, $fullCacheKey, $default, $use_cache);
+    }
 
-    if ($init === false && $set === true) {
-        // 如果需要设置值，则直接设置并返回default
-        try {
-            // 查找或创建设置项
-            $setting_model = app\model\Setting::where('key', $cache_key)->first();
+    // 读操作主流程
+    return blog_config_read($cache_key, $fullCacheKey, $default, $init, $use_cache);
+}
 
-            if (!$setting_model) {
-                // 如果不存在则创建新记录
-                $setting_model = new app\model\Setting();
-                $setting_model->key = $cache_key;
-            }
-            $setting_model->value = serialize($default);
-            $setting_model->save();
+/**
+ * 处理配置写入操作（单一职责）
+ */
+function blog_config_write(string $cache_key, string $fullCacheKey, mixed $value, bool $use_cache): mixed
+{
+    try {
+        // 原子操作：查找或创建记录
+        $setting = app\model\Setting::firstOrNew(['key' => $cache_key]);
+        $setting->value = blog_config_convert_to_storage($value);
+        $setting->save();
 
-            // 同时更新缓存
-            if ($use_cache) {
-                cache('blog_config_' . $cache_key, $default, true);
-            }
-        } catch (Exception $exception) {
-            Log::error('[blog_config] error: ' . $exception->getMessage());
-            return $default;
-        } catch (Error $error) {
-            Log::error('[blog_config] error: ' . $error->getMessage());
-            return $default;
-        }
-        return $default;
-    } elseif ($init === true) {
-        // 如果是初始化配置，先查找是否存在
-        $cached_value = false;
+        // 更新缓存
         if ($use_cache) {
-            $cached_value = cache('blog_config_' . $cache_key);
+            cache($fullCacheKey, $value, true);
         }
-        
-        if ($cached_value !== false) {
-            // 如果缓存存在，直接返回缓存值
-            return $cached_value;
-        } else {
-            // 如果缓存不存在
-            // 从数据库中查找
-            $setting_model = app\model\Setting::where('key', $cache_key)->first();
-            if ($setting_model) {
-                // 如果存在，放入缓存，反序列化值并返回
-                $unserialized_value = @unserialize($setting_model->value);
-                // 检查反序列化是否成功
-                if ($unserialized_value !== false || $setting_model->value === serialize(false)) {
-                    if ($use_cache) {
-                        cache('blog_config_' . $cache_key, $unserialized_value, true);
-                    }
-                    return $unserialized_value;
-                } else {
-                    // 反序列化失败，记录日志并返回默认值
-                    Log::warning('[blog_config] failed to unserialize value for key: ' . $cache_key);
-                    return $default;
-                }
-            } else {
-                // 如果不存在
-                // 创建记录并且返回默认
-                $setting_model = new app\model\Setting();
-                $setting_model->key = $cache_key;
-                $setting_model->value = serialize($default);
-                $setting_model->save();
-
-                $unserialized_value = $default;
-                if ($use_cache) {
-                    cache('blog_config_' . $cache_key, $unserialized_value, true);
-                }
-                return $unserialized_value;
-            }
-        }
+        return $value;
+    } catch (Exception|Error $e) {
+        Log::error("[blog_config] 写入失败 (key: {$cache_key}): " . $e->getMessage());
+        return $value;
     }
+}
 
-    $config_value = null;
+/**
+ * 处理配置读取操作（单一职责）
+ */
+function blog_config_read(string $cache_key, string $fullCacheKey, mixed $default, bool $init, bool $use_cache): mixed
+{
+    // 1. 尝试从缓存读取
     if ($use_cache) {
-        $cached_value = cache('blog_config_' . $cache_key);
-        if ($cached_value !== false) {
-            return $cached_value;
+        $cachedValue = cache($fullCacheKey);
+        if ($cachedValue !== false) {
+            return $cachedValue;
         }
     }
 
-    $db_value = app\model\Setting::where('key', $cache_key)->value('value');
-    if ($db_value === null && $init === true) {
-        try {
-            app\model\Setting::insert(['key' => $cache_key, 'value' => serialize($default)]);
-        } catch (Exception $exception) {
-            Log::error('[blog_config] error inserting new setting: ' . $exception->getMessage());
-            return $default;
-        } catch (Error $error) {
-            Log::error('[blog_config] error inserting new setting: ' . $error->getMessage());
-            return $default;
+    // 2. 从数据库读取
+    $dbValue = blog_config_get_from_db($cache_key);
+    if ($dbValue !== null) {
+        // 缓存数据库结果
+        if ($use_cache) {
+            cache($fullCacheKey, $dbValue, true);
+        }
+        return $dbValue;
+    }
+
+    // 3. 数据库无记录，处理初始化
+    return blog_config_handle_init($cache_key, $fullCacheKey, $default, $init, $use_cache);
+}
+
+/**
+ * 从数据库获取配置并转换（单一职责）
+ */
+function blog_config_get_from_db(string $cache_key): mixed
+{
+    $setting = app\model\Setting::where('key', $cache_key)->first();
+    if (!$setting) {
+        return null;
+    }
+    return blog_config_convert_from_storage($setting->value);
+}
+
+/**
+ * 处理初始化逻辑（单一职责）
+ */
+function blog_config_handle_init(string $cache_key, string $fullCacheKey, mixed $default, bool $init, bool $use_cache): mixed
+{
+    if (!$init) {
+        return $default; // 不初始化，直接返回默认值
+    }
+
+    try {
+        // 写入默认值到数据库
+        $setting = new app\model\Setting();
+        $setting->key = $cache_key;
+        $setting->value = blog_config_convert_to_storage($default);
+        $setting->save();
+
+        // 写入缓存
+        if ($use_cache) {
+            cache($fullCacheKey, $default, true);
         }
         return $default;
-    } elseif ($db_value !== null && $db_value !== false) {
-        $unserialized_value = @unserialize($db_value);
-        // 如果反序列化成功，返回反序列化值，否则返回原始值
-        if ($unserialized_value !== false || $db_value === serialize(false)) {
-            // 更新缓存
-            if ($use_cache) {
-                cache('blog_config_' . $cache_key, $unserialized_value, true);
-            }
-            return $unserialized_value;
-        } else {
-            Log::warning('[blog_config] failed to unserialize db value for key: ' . $cache_key);
-            return $default;
-        }
-    } else {
+    } catch (Exception|Error $e) {
+        Log::error("[blog_config] 初始化失败 (key: {$cache_key}): " . $e->getMessage());
         return $default;
     }
+}
+
+/**
+ * 转换值为存储格式（复用逻辑）
+ */
+function blog_config_convert_to_storage(mixed $value): string
+{
+    if ($value === null) {
+        return json_encode(null, JSON_UNESCAPED_UNICODE);
+    }
+    if (is_string($value)) {
+        $decoded = json_decode($value, true);
+        if (json_last_error() === JSON_ERROR_NONE) {
+            return $value;
+        }
+    }
+    return json_encode($value, JSON_UNESCAPED_UNICODE);
+}
+
+/**
+ * 从存储格式转换值（复用逻辑）
+ */
+function blog_config_convert_from_storage(mixed $value): mixed
+{
+    if (is_string($value)) {
+        $decoded = json_decode($value, true);
+        if (json_last_error() === JSON_ERROR_NONE) {
+            return $decoded;
+        }
+    }
+    return $value;
 }

@@ -10,7 +10,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 class ConfigMysql extends Command
 {
     protected static $defaultName = 'config:mysql';
-    protected static $defaultDescription = '显示当前MySQL服务器配置';
+    protected static $defaultDescription = 'Show MySQL config';
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
