@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS wa_users
     UNIQUE (username)
 );
 
+COMMENT ON TABLE wa_users IS '用户表';
 COMMENT ON COLUMN wa_users.username IS '用户名';
 COMMENT ON COLUMN wa_users.nickname IS '昵称';
 COMMENT ON COLUMN wa_users.password IS '密码';
@@ -69,6 +70,7 @@ CREATE TABLE IF NOT EXISTS categories
     CONSTRAINT categories_parent_id_foreign FOREIGN KEY (parent_id) REFERENCES categories (id) ON DELETE SET NULL
 );
 
+COMMENT ON TABLE categories IS '分类表';
 COMMENT ON COLUMN categories.name IS '分类名称';
 COMMENT ON COLUMN categories.slug IS '分类别名';
 COMMENT ON COLUMN categories.description IS '分类描述';
@@ -101,6 +103,7 @@ CREATE TABLE IF NOT EXISTS posts
     CONSTRAINT chk_posts_status CHECK ("status" IN ('draft', 'published', 'archived'))
 );
 
+COMMENT ON TABLE posts IS '文章表';
 COMMENT ON COLUMN posts.title IS '文章标题';
 COMMENT ON COLUMN posts.slug IS '文章别名';
 COMMENT ON COLUMN posts.content_type IS '内容类型';
@@ -127,6 +130,7 @@ CREATE TABLE IF NOT EXISTS post_category
     CONSTRAINT post_category_category_id_foreign FOREIGN KEY (category_id) REFERENCES categories (id) ON DELETE CASCADE
 );
 
+COMMENT ON TABLE post_category IS '文章-分类关联表';
 COMMENT ON COLUMN post_category.post_id IS '文章ID';
 COMMENT ON COLUMN post_category.category_id IS '分类ID';
 COMMENT ON COLUMN post_category.created_at IS '创建时间';
@@ -147,6 +151,7 @@ CREATE TABLE IF NOT EXISTS post_author
     CONSTRAINT post_author_author_id_foreign FOREIGN KEY (author_id) REFERENCES wa_users (id) ON DELETE CASCADE
 );
 
+COMMENT ON TABLE post_author IS '文章-作者关联表';
 COMMENT ON COLUMN post_author.post_id IS '文章ID';
 COMMENT ON COLUMN post_author.author_id IS '作者ID';
 COMMENT ON COLUMN post_author.is_primary IS '是否主要作者';
@@ -173,6 +178,7 @@ CREATE TABLE IF NOT EXISTS links
     deleted_at    TIMESTAMP WITH TIME ZONE DEFAULT NULL
 );
 
+COMMENT ON TABLE links IS '友链表';
 COMMENT ON COLUMN links.name IS '友链名称';
 COMMENT ON COLUMN links.url IS '友链URL';
 COMMENT ON COLUMN links.description IS '友链描述';
@@ -203,6 +209,7 @@ CREATE TABLE IF NOT EXISTS pages
     UNIQUE (slug)
 );
 
+COMMENT ON TABLE pages IS '页面表';
 COMMENT ON COLUMN pages.title IS '页面标题';
 COMMENT ON COLUMN pages.slug IS '页面别名';
 COMMENT ON COLUMN pages.content IS '页面内容';
@@ -226,6 +233,7 @@ CREATE TABLE IF NOT EXISTS settings
     UNIQUE ("key")
 );
 
+COMMENT ON TABLE settings IS '网站设置表';
 COMMENT ON COLUMN settings."key" IS '设置键名';
 COMMENT ON COLUMN settings.value IS '设置值';
 COMMENT ON COLUMN settings."type" IS '值类型';
@@ -253,6 +261,7 @@ CREATE TABLE IF NOT EXISTS media
     deleted_at    TIMESTAMP WITH TIME ZONE NULL     DEFAULT NULL
 );
 
+COMMENT ON TABLE media IS '媒体附件表';
 COMMENT ON COLUMN media.filename IS '文件名';
 COMMENT ON COLUMN media.original_name IS '原始文件名';
 COMMENT ON COLUMN media.file_path IS '文件路径';
@@ -287,6 +296,7 @@ CREATE TABLE IF NOT EXISTS import_jobs
     CONSTRAINT import_jobs_author_id_foreign FOREIGN KEY (author_id) REFERENCES wa_users (id) ON DELETE SET NULL
 );
 
+COMMENT ON TABLE import_jobs IS '导入任务表';
 COMMENT ON COLUMN import_jobs.name IS '任务名称';
 COMMENT ON COLUMN import_jobs."type" IS '任务类型';
 COMMENT ON COLUMN import_jobs.file_path IS '文件路径';
@@ -321,6 +331,7 @@ CREATE TABLE IF NOT EXISTS comments
     CONSTRAINT comments_parent_id_foreign FOREIGN KEY (parent_id) REFERENCES comments (id) ON DELETE SET NULL
 );
 
+COMMENT ON TABLE comments IS '评论表';
 COMMENT ON COLUMN comments.post_id IS '文章ID';
 COMMENT ON COLUMN comments.user_id IS '用户ID';
 COMMENT ON COLUMN comments.parent_id IS '父评论ID';
@@ -347,6 +358,7 @@ CREATE TABLE IF NOT EXISTS tags
     UNIQUE (slug)
 );
 
+COMMENT ON TABLE tags IS '标签表';
 COMMENT ON COLUMN tags.name IS '标签名称';
 COMMENT ON COLUMN tags.slug IS '标签别名';
 COMMENT ON COLUMN tags.description IS '标签描述';
@@ -365,6 +377,7 @@ CREATE TABLE IF NOT EXISTS post_tag
     CONSTRAINT post_tag_tag_id_foreign FOREIGN KEY (tag_id) REFERENCES tags (id) ON DELETE CASCADE
 );
 
+COMMENT ON TABLE post_tag IS '文章-标签关联表';
 COMMENT ON COLUMN post_tag.post_id IS '文章ID';
 COMMENT ON COLUMN post_tag.tag_id IS '标签ID';
 COMMENT ON COLUMN post_tag.created_at IS '创建时间';
@@ -377,6 +390,7 @@ CREATE TABLE IF NOT EXISTS wa_admin_roles
     UNIQUE (role_id, admin_id)
 );
 
+COMMENT ON TABLE wa_admin_roles IS '管理员角色关联表';
 COMMENT ON COLUMN wa_admin_roles.role_id IS '角色id';
 COMMENT ON COLUMN wa_admin_roles.admin_id IS '管理员id';
 
@@ -397,6 +411,7 @@ CREATE TABLE IF NOT EXISTS wa_admins
     UNIQUE (username)
 );
 
+COMMENT ON TABLE wa_admins IS '管理员表';
 COMMENT ON COLUMN wa_admins.username IS '用户名';
 COMMENT ON COLUMN wa_admins.nickname IS '昵称';
 COMMENT ON COLUMN wa_admins.password IS '密码';
@@ -419,6 +434,7 @@ CREATE TABLE IF NOT EXISTS wa_options
     UNIQUE (name)
 );
 
+COMMENT ON TABLE wa_options IS '选项表';
 COMMENT ON COLUMN wa_options.name IS '键';
 COMMENT ON COLUMN wa_options.value IS '值';
 COMMENT ON COLUMN wa_options.created_at IS '创建时间';
@@ -435,6 +451,7 @@ CREATE TABLE IF NOT EXISTS wa_roles
     pid        INTEGER                           DEFAULT NULL
 );
 
+COMMENT ON TABLE wa_roles IS '管理员角色表';
 COMMENT ON COLUMN wa_roles.name IS '角色组';
 COMMENT ON COLUMN wa_roles.rules IS '权限';
 COMMENT ON COLUMN wa_roles.created_at IS '创建时间';
@@ -456,6 +473,7 @@ CREATE TABLE IF NOT EXISTS wa_rules
     weight     INTEGER                           DEFAULT 0
 );
 
+COMMENT ON TABLE wa_rules IS '权限规则表';
 COMMENT ON COLUMN wa_rules.title IS '标题';
 COMMENT ON COLUMN wa_rules."icon" IS '图标';
 COMMENT ON COLUMN wa_rules."key" IS '标识';
@@ -484,6 +502,7 @@ CREATE TABLE IF NOT EXISTS wa_uploads
     updated_at   TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+COMMENT ON TABLE wa_uploads IS '附件表';
 COMMENT ON COLUMN wa_uploads.name IS '名称';
 COMMENT ON COLUMN wa_uploads.url IS '文件';
 COMMENT ON COLUMN wa_uploads.admin_id IS '管理员';
@@ -505,6 +524,7 @@ CREATE TABLE IF NOT EXISTS posts_ext
     CONSTRAINT posts_ext_post_id_foreign FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE
 );
 
+COMMENT ON TABLE posts_ext IS '文章扩展表';
 COMMENT ON COLUMN posts_ext.post_id IS '文章ID';
 
 -- 添加索引
