@@ -11,5 +11,6 @@ return [
     'Please select a file to import' => '请选择要导入的文件',
     'Only XML files are supported' => '只支持 XML 文件',
     'Failed to process post excerpts' => '处理文章摘要失败',
-    ':error_code error' => ':error_code 错误' // 通用错误码翻译
+    ':error_code error' => ':error_code 错误', // 通用错误码翻译
+    'click to jump' => '点击跳转',
 ];

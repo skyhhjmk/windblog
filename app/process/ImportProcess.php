@@ -47,6 +47,13 @@ class ImportProcess
      */
     public function onWorkerStart(Worker $worker): void
     {
+        // 检查数据库配置文件是否存在
+        $config_file = base_path() . '/.env';
+        if (!is_file($config_file)) {
+            \support\Log::info("数据库配置文件不存在，跳过导入任务检查");
+            return;
+        }
+        
         // 定时检查是否有待处理的导入任务
         $this->timerId = Timer::add($this->interval, [$this, 'checkImportJobs']);
         \support\Log::info("导入进程已启动，检查间隔: " . $this->interval . " 秒");
@@ -62,17 +69,21 @@ class ImportProcess
      */
     protected function checkStuckJobs(): void
     {
-        // 查找长时间处于processing状态的任务（超过1小时）
-        $stuckJobs = ImportJob::where('status', 'processing')
-            ->where('updated_at', '<', date('Y-m-d H:i:s', strtotime('-1 hour')))
-            ->get();
-            
-        foreach ($stuckJobs as $job) {
-            \support\Log::warning("发现卡住的导入任务，重置状态为pending: ID=" . $job->id . ", 文件=" . $job->name);
-            $job->update([
-                'status' => 'pending',
-                'message' => '任务被重置，之前可能已卡住'
-            ]);
+        try {
+            // 查找长时间处于processing状态的任务（超过1小时）
+            $stuckJobs = ImportJob::where('status', 'processing')
+                ->where('updated_at', '<', date('Y-m-d H:i:s', strtotime('-1 hour')))
+                ->get();
+                
+            foreach ($stuckJobs as $job) {
+                \support\Log::warning("发现卡住的导入任务，重置状态为pending: ID=" . $job->id . ", 文件=" . $job->name);
+                $job->update([
+                    'status' => 'pending',
+                    'message' => '任务被重置，之前可能已卡住'
+                ]);
+            }
+        } catch (\Exception $e) {
+            \support\Log::error('检查卡住的任务时出错: ' . $e->getMessage(), ['exception' => $e]);
         }
     }
 

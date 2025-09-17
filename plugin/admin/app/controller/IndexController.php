@@ -38,7 +38,7 @@ class IndexController
     public function index(Request $request): Response
     {
         clearstatcache();
-        if (!is_file(base_path('/config/database.php'))) {
+        if (!is_file(base_path('/.env'))) {
             return raw_view('index/install');
         }
         $admin = admin();

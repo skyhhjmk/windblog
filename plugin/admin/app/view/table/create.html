@@ -3,7 +3,7 @@
     <head>
         <meta charset="UTF-8">
         <title>新增页面</title>
-        <link rel="stylesheet" href="/app/admin/component/layui/css/layui.css?v=2.11.5" />
+        <link rel="stylesheet" href="/app/admin/component/layui/css/layui.css?v=2.8.12" />
         <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css" />
         <link rel="stylesheet" href="/app/admin/admin/css/reset.css" />
     </head>
@@ -96,7 +96,7 @@
 
                                 <script type="text/html" id="col-type">
                                     <select name="columns[{{ d.LAY_NUM-1 }}][type]" lay-verify="">
-                                        {{# layui.each(["integer","string","text","date","enum","float","tinyInteger","smallInteger","mediumInteger","bigInteger","unsignedInteger","unsignedTinyInteger","unsignedSmallInteger","unsignedMediumInteger","unsignedBigInteger","decimal","double","mediumText","longText","dateTime","time","timestamp","char","binary","json"], function (index, item) { }}
+                                        {{# layui.each(["integer","string","text","date","enum","float","tinyInteger","smallInteger","mediumInteger","bigInteger","unsignedInteger","unsignedTinyInteger","unsignedSmallInteger","unsignedMediumInteger","unsignedBigInteger","decimal","double","mediumText","longText","dateTime","time","timestamp","char","binary","json","jsonb","uuid","inet","cidr","macaddr","citext","point","line","lseg","box","path","polygon","circle"], function (index, item) { }}
                                             <option value="{{ item }}" {{ d.type==item?"selected":""}}>{{ item }}</option>
                                         {{#  }); }}
                                     </select>
@@ -213,7 +213,7 @@
             </div>
         </form>
 
-        <script src="/app/admin/component/layui/layui.js?v=2.11.5"></script>
+        <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
         <script src="/app/admin/component/pear/pear.js"></script>
         <script src="/app/admin/admin/js/permission.js"></script>
         <script>

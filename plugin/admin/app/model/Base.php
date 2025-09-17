@@ -11,7 +11,7 @@ class Base extends Model
     /**
      * @var string
      */
-    protected $connection = 'mysql';
+    protected $connection = 'pgsql';
 
     /**
      * 格式化日期

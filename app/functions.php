@@ -4,6 +4,8 @@
  */
 
 use support\Log;
+use Symfony\Component\Translation\Translator;
+use Symfony\Component\Translation\Loader\ArrayLoader;
 
 /**
  * get cache or set cache(and return set value)
@@ -254,4 +256,69 @@ function blog_config_convert_from_storage(mixed $value): mixed
         }
     }
     return $value;
+}
+
+/**
+ * 翻译函数，用于多语言支持
+ *
+ * @param string      $id         翻译键名
+ * @param array       $parameters 替换参数
+ * @param string|null $domain     翻译域
+ * @param string|null $locale     语言代码
+ *
+ * @return string
+ */
+function translate_message(string $id, array $parameters = [], ?string $domain = null, ?string $locale = null): string
+{
+    static $translators = [];
+    
+    // 使用默认语言域
+    if ($domain === null) {
+        $domain = 'messages';
+    }
+    
+    // 使用默认语言
+    if ($locale === null) {
+        $locale = session('lang', 'zh_CN');
+    }
+    
+    // 缓存键
+    $cacheKey = "translator_$locale";
+    
+    // 获取或创建翻译器实例
+    if (!isset($translators[$cacheKey])) {
+        // 创建翻译器
+        $translator = new Translator($locale);
+        $translator->addLoader('array', new ArrayLoader());
+        
+        // 加载翻译文件
+        $translationDir = base_path() . '/resource/translations';
+        $languageFiles = [
+            $translationDir . "/$locale/messages.php",
+            $translationDir . "/$locale/validation.php"
+        ];
+        
+        foreach ($languageFiles as $file) {
+            if (file_exists($file)) {
+                $translations = require $file;
+                $translator->addResource('array', $translations, $locale, $domain);
+            }
+        }
+        
+        // 添加回退语言
+        $fallbackLocales = config('translation.fallback_locales', ['zh_CN', 'en']);
+        foreach ($fallbackLocales as $fallbackLocale) {
+            if ($fallbackLocale !== $locale) {
+                $fallbackFile = $translationDir . "/$fallbackLocale/messages.php";
+                if (file_exists($fallbackFile)) {
+                    $fallbackTranslations = require $fallbackFile;
+                    $translator->addResource('array', $fallbackTranslations, $fallbackLocale, $domain);
+                }
+            }
+        }
+        
+        $translators[$cacheKey] = $translator;
+    }
+    
+    return $translators[$cacheKey]->trans($id, $parameters, $domain, $locale);
 }

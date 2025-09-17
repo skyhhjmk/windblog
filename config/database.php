@@ -1,7 +1,7 @@
 <?php
 return [
     // 默认数据库
-    'default' => getenv('DB_DEFAULT') ?: 'mysql',
+    'default' => getenv('DB_DEFAULT') ?: 'pgsql',
     // 各种数据库配置
     'connections' => [
         'mysql' => [

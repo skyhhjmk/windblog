@@ -18,12 +18,14 @@ class TableController extends Base
 {
     /**
      * 不需要鉴权的方法
+     *
      * @var string[]
      */
     protected $noNeedAuth = ['types'];
 
     /**
      * 浏览
+     *
      * @return Response
      * @throws Throwable
      */
@@ -34,7 +36,9 @@ class TableController extends Base
 
     /**
      * 查看表
+     *
      * @param Request $request
+     *
      * @return Response
      * @throws BusinessException|Throwable
      */
@@ -53,8 +57,10 @@ class TableController extends Base
     }
 
     /**
-     * 查询表
+     * 查询表（仅支持PostgreSQL）
+     *
      * @param Request $request
+     *
      * @return Response
      * @throws BusinessException
      */
@@ -64,7 +70,6 @@ class TableController extends Base
         $limit = (int)$request->get('limit', 10);
         $page = (int)$request->get('page', 1);
         $offset = ($page - 1) * $limit;
-        $database = config('database.connections')['mysql']['database'];
         $field = $request->get('field', 'TABLE_NAME');
         $field = Util::filterAlphaNum($field);
         $order = $request->get('order', 'asc');
@@ -73,8 +78,53 @@ class TableController extends Base
             $field = 'TABLE_NAME';
         }
         $order = $order === 'asc' ? 'asc' : 'desc';
-        $total = Util::db()->select("SELECT count(*)total FROM  information_schema.`TABLES` WHERE  TABLE_SCHEMA='$database' AND TABLE_NAME like '%{$table_name}%'")[0]->total ?? 0;
-        $tables = Util::db()->select("SELECT TABLE_NAME,TABLE_COMMENT,ENGINE,TABLE_ROWS,CREATE_TIME,UPDATE_TIME,TABLE_COLLATION FROM  information_schema.`TABLES` WHERE  TABLE_SCHEMA='$database' AND TABLE_NAME like '%{$table_name}%' order by $field $order limit $offset,$limit");
+
+        // 获取当前数据库连接和数据库名
+        $connection = Util::db();
+        $database = config('database.connections.pgsql.database');
+
+        // PostgreSQL数据库专用查询
+        if ($table_name !== '') {
+            // 使用ILIKE实现不区分大小写的模糊查询
+            $total = $connection->select("SELECT count(*)total FROM information_schema.\"tables\" WHERE table_schema NOT IN ('pg_catalog', 'information_schema') AND table_name ILIKE ?", ["%{$table_name}%"])[0]->total ?? 0;
+            $tables = $connection->select("SELECT 
+        t.table_name AS \"TABLE_NAME\",
+        (SELECT d.description FROM pg_catalog.pg_description d 
+         WHERE d.objoid = (SELECT c.oid FROM pg_catalog.pg_class c 
+                         WHERE c.relname = t.table_name AND c.relnamespace = t.table_schema::regnamespace)
+         AND d.objsubid = 0
+         LIMIT 1) AS \"TABLE_COMMENT\",
+        'pgsql' AS \"ENGINE\",
+        (SELECT c.reltuples::bigint FROM pg_catalog.pg_class c 
+         WHERE c.relname = t.table_name AND c.relnamespace = t.table_schema::regnamespace
+         LIMIT 1) AS \"TABLE_ROWS\",
+        NULL AS \"CREATED_AT\",
+        NULL AS \"UPDATED_AT\",
+        '' AS \"TABLE_COLLATION\"
+    FROM information_schema.\"tables\" t 
+    WHERE t.table_schema NOT IN ('pg_catalog', 'information_schema') AND t.table_name ILIKE ? 
+    ORDER BY \"$field\" $order LIMIT ? OFFSET ?", ["%{$table_name}%", $limit, $offset]);
+        } else {
+            $total = $connection->select("SELECT count(*)total FROM information_schema.\"tables\" WHERE table_schema NOT IN ('pg_catalog', 'information_schema')")[0]->total ?? 0;
+            $tables = $connection->select("SELECT 
+        t.table_name AS \"TABLE_NAME\",
+        (SELECT d.description FROM pg_catalog.pg_description d 
+         WHERE d.objoid = (SELECT c.oid FROM pg_catalog.pg_class c 
+                         WHERE c.relname = t.table_name AND c.relnamespace = t.table_schema::regnamespace)
+         AND d.objsubid = 0
+         LIMIT 1) AS \"TABLE_COMMENT\",
+        'pgsql' AS \"ENGINE\",
+        (SELECT c.reltuples::bigint FROM pg_catalog.pg_class c 
+         WHERE c.relname = t.table_name AND c.relnamespace = t.table_schema::regnamespace
+         LIMIT 1) AS \"TABLE_ROWS\",
+        NULL AS \"CREATED_AT\",
+        NULL AS \"UPDATED_AT\",
+        '' AS \"TABLE_COLLATION\"
+    FROM information_schema.\"tables\" t 
+    WHERE t.table_schema NOT IN ('pg_catalog', 'information_schema')
+    ORDER BY \"$field\" $order LIMIT ? OFFSET ?", [$limit, $offset]);
+        }
+
 
         if ($tables) {
             $table_names = array_column($tables, 'TABLE_NAME');
@@ -92,7 +142,9 @@ class TableController extends Base
 
     /**
      * 创建表
+     *
      * @param Request $request
+     *
      * @return Response
      * @throws BusinessException|Throwable
      */
@@ -165,7 +217,8 @@ class TableController extends Base
             $table->engine = 'InnoDB';
         });
 
-        Util::db()->statement("ALTER TABLE `$table_name` COMMENT $table_comment");
+        // PostgreSQL 使用 COMMENT ON TABLE 语法设置表注释
+        Util::db()->statement("COMMENT ON TABLE \"$table_name\" IS $table_comment");
 
         // 索引
         Util::schema()->table($table_name, function (Blueprint $table) use ($keys) {
@@ -191,7 +244,9 @@ class TableController extends Base
 
     /**
      * 修改表
+     *
      * @param Request $request
+     *
      * @return Response
      * @throws BusinessException|Throwable
      */
@@ -294,7 +349,8 @@ class TableController extends Base
         $table = Util::getSchema($table_name, 'table');
         if ($table_comment !== $table['comment']) {
             $table_comment = Util::pdoQuote($table_comment);
-            Util::db()->statement("ALTER TABLE `$table_name` COMMENT $table_comment");
+        // PostgreSQL 使用 COMMENT ON TABLE 语法设置表注释
+        Util::db()->statement("COMMENT ON TABLE \"$table_name\" IS $table_comment");
         }
 
         $old_columns = Util::getSchema($table_name, 'columns');
@@ -321,7 +377,7 @@ class TableController extends Base
         $drop_column_names = array_diff($old_columns_names, $exists_column_names);
         $drop_column_names = Util::filterAlphaNum($drop_column_names);
         foreach ($drop_column_names as $drop_column_name) {
-            Util::db()->statement("ALTER TABLE `$table_name` DROP COLUMN `$drop_column_name`");
+            Util::db()->statement("ALTER TABLE \"$table_name\" DROP COLUMN \"$drop_column_name\"");
         }
 
         $old_keys = Util::getSchema($table_name, 'keys');
@@ -363,11 +419,11 @@ class TableController extends Base
         // 变更主键
         if ($old_primary_key != $primary_key) {
             if ($old_primary_key) {
-                Util::db()->statement("ALTER TABLE `$table_name` DROP PRIMARY KEY");
+                Util::db()->statement("ALTER TABLE \"$table_name\" DROP CONSTRAINT \"{$table_name}_pkey\"");
             }
             if ($primary_key) {
                 $primary_key = Util::filterAlphaNum($primary_key);
-                Util::db()->statement("ALTER TABLE `$table_name` ADD PRIMARY KEY(`$primary_key`)");
+                Util::db()->statement("ALTER TABLE \"$table_name\" ADD PRIMARY KEY(\"$primary_key\")");
             }
         }
 
@@ -389,7 +445,9 @@ class TableController extends Base
 
     /**
      * 一键菜单
+     *
      * @param Request $request
+     *
      * @return Response
      * @throws BusinessException|Throwable
      */
@@ -484,7 +542,7 @@ class TableController extends Base
             $controller_class = $controller_file_name;
             $controller_namespace = str_replace('/', '\\', trim($controller_path, '/'));
             // 创建controller
-            $controller_url_name = $controller_suffix && substr($controller_class, -strlen($controller_suffix)) === $controller_suffix ? substr($controller_class, 0, -strlen($controller_suffix)) : $controller_class;
+            $controller_url_name = $controller_suffix && str_ends_with($controller_class, $controller_suffix) ? substr($controller_class, 0, -strlen($controller_suffix)) : $controller_class;
             $controller_url_name = str_replace('_', '-', $inflector->tableize($controller_url_name));
 
             if ($plugin) {
@@ -511,14 +569,14 @@ class TableController extends Base
             $model_class_with_namespace = "$model_namespace\\$model_class";
             $primary_key = (new $model_class_with_namespace)->getKeyName();
             $url_path_base = ($plugin ? "/app/$plugin/" : '/') . ($app ? "$app/" : '') . $template_path;
-            $this->createTemplate(base_path($template_file_path), $table_name, $url_path_base, $primary_key, "$controller_namespace\\$controller_class");
+            $this->createTemplate(base_path($template_file_path), $table_name, $template_path, $url_path_base, $primary_key, "$controller_namespace\\$controller_class");
         } finally {
             Util::resumeFileMonitor();
         }
 
         $menu = Rule::where('key', $controller_class_with_namespace)->first();
         if (!$menu) {
-            $menu = new Rule;
+            $menu = new Rule();
         }
         $menu->pid = $pid;
         $menu->key = $controller_class_with_namespace;
@@ -551,10 +609,12 @@ class TableController extends Base
 
     /**
      * 创建model
+     *
      * @param $class
      * @param $namespace
      * @param $file
      * @param $table
+     *
      * @return void
      */
     protected function createModel($class, $namespace, $file, $table)
@@ -567,14 +627,27 @@ class TableController extends Base
         $incrementing = '';
         $columns = [];
         try {
-            $database = config('database.connections')['mysql']['database'];
-            //mysql
-            foreach (Util::db()->select("select COLUMN_NAME,DATA_TYPE,COLUMN_KEY,COLUMN_COMMENT from INFORMATION_SCHEMA.COLUMNS where table_name = '$table' and table_schema = '$database' order by ORDINAL_POSITION") as $item) {
-                if ($item->COLUMN_KEY === 'PRI') {
-                    $pk = $item->COLUMN_NAME;
-                    $item->COLUMN_COMMENT .= '(主键)';
-                    if (strpos(strtolower($item->DATA_TYPE), 'int') === false) {
-                        $incrementing = <<<EOF
+            // 使用当前数据库连接而不是硬编码为mysql
+            $driver = config('database.default');
+            if ($driver === 'pgsql') {
+                // PostgreSQL查询
+                $primary_key_result = Util::db()->select(
+                    "SELECT a.attname FROM pg_index i " .
+                    "JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey) " .
+                    "WHERE i.indrelid = ?::regclass AND i.indisprimary",
+                    [$table]
+                );
+
+                $primary_key_name = isset($primary_key_result[0]) ? $primary_key_result[0]->attname : 'id';
+
+                foreach (Util::db()->select(
+                    "SELECT column_name, data_type FROM information_schema.columns " .
+                    "WHERE table_name = ? AND table_schema = 'public' ORDER BY ordinal_position",
+                    [$table]) as $item) {
+                    if ($item->column_name === $primary_key_name) {
+                        $pk = $item->column_name;
+                        if (!str_contains(strtolower($item->data_type), 'int')) {
+                            $incrementing = <<<EOF
 /**
      * Indicates if the model's ID is auto-incrementing.
      *
@@ -583,11 +656,35 @@ class TableController extends Base
     public \$incrementing = false;
 
 EOF;
+                        }
                     }
+                    $type = $this->getType($item->data_type);
+                    $properties .= " * @property $type \${$item->column_name}\n";
+                    $columns[$item->column_name] = $item->column_name;
                 }
-                $type = $this->getType($item->DATA_TYPE);
-                $properties .= " * @property $type \${$item->COLUMN_NAME} {$item->COLUMN_COMMENT}\n";
-                $columns[$item->COLUMN_NAME] = $item->COLUMN_NAME;
+            } else {
+                // MySQL查询
+                $database = config('database.connections')['mysql']['database'];
+                foreach (Util::db()->select("select COLUMN_NAME,DATA_TYPE,COLUMN_KEY,COLUMN_COMMENT from INFORMATION_SCHEMA.COLUMNS where table_name = '$table' and table_schema = '$database' order by ORDINAL_POSITION") as $item) {
+                    if ($item->COLUMN_KEY === 'PRI') {
+                        $pk = $item->COLUMN_NAME;
+                        $item->COLUMN_COMMENT .= '(主键)';
+                        if (strpos(strtolower($item->DATA_TYPE), 'int') === false) {
+                            $incrementing = <<<EOF
+/**
+     * Indicates if the model's ID is auto-incrementing.
+     *
+     * @var bool
+     */
+    public \$incrementing = false;
+
+EOF;
+                        }
+                    }
+                    $type = $this->getType($item->DATA_TYPE);
+                    $properties .= " * @property $type \${$item->COLUMN_NAME} {$item->COLUMN_COMMENT}\n";
+                    $columns[$item->COLUMN_NAME] = $item->COLUMN_NAME;
+                }
             }
         } catch (Throwable $e) {
             echo $e;
@@ -641,6 +738,7 @@ EOF;
 
     /**
      * 创建控制器
+     *
      * @param $controller_class
      * @param $namespace
      * @param $file
@@ -648,6 +746,7 @@ EOF;
      * @param $model_namespace
      * @param $name
      * @param $template_path
+     *
      * @return void
      */
     protected function createController($controller_class, $namespace, $file, $model_class, $model_namespace, $name, $template_path)
@@ -734,15 +833,17 @@ EOF;
 
     /**
      * 创建控制器
+     *
      * @param $template_file_path
      * @param $table
      * @param $template_path
      * @param $url_path_base
      * @param $primary_key
      * @param $controller_class_with_namespace
+     *
      * @return void
      */
-    protected function createTemplate($template_file_path, $table, $url_path_base, $primary_key, $controller_class_with_namespace)
+    protected function createTemplate($template_file_path, $table, $template_path, $url_path_base, $primary_key, $controller_class_with_namespace)
     {
 
         $this->mkdir($template_file_path . '/index.html');
@@ -815,7 +916,7 @@ EOF
             <button class="pear-btn pear-btn-xs tool-btn" lay-event="remove" permission="$code_base.delete">删除</button>
         </script>
 
-        <script src="/app/admin/component/layui/layui.js?v=2.11.5"></script>
+        <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
         <script src="/app/admin/component/pear/pear.js"></script>
         <script src="/app/admin/admin/js/permission.js"></script>
         <script src="/app/admin/admin/js/common.js"></script>
@@ -1027,7 +1128,7 @@ EOF;
             
         </form>
 
-        <script src="/app/admin/component/layui/layui.js?v=2.11.5"></script>
+        <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
         <script src="/app/admin/component/pear/pear.js"></script>
         <script src="/app/admin/component/jsoneditor/jsoneditor.js"></script>
         <script src="/app/admin/admin/js/permission.js"></script>
@@ -1116,7 +1217,7 @@ EOF;
             
         </form>
 
-        <script src="/app/admin/component/layui/layui.js?v=2.11.5"></script>
+        <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
         <script src="/app/admin/component/pear/pear.js"></script>
         <script src="/app/admin/component/jsoneditor/jsoneditor.js"></script>
         <script src="/app/admin/admin/js/permission.js"></script>
@@ -1220,7 +1321,9 @@ EOF;
 
     /**
      * 创建目录
+     *
      * @param $file
+     *
      * @return void
      */
     protected function mkdir($file)
@@ -1234,7 +1337,9 @@ EOF;
 
     /**
      * 查询记录
+     *
      * @param Request $request
+     *
      * @return Response
      * @throws BusinessException
      */
@@ -1247,7 +1352,7 @@ EOF;
         $format = $request->get('format', 'normal');
         $limit = $request->get('limit', $format === 'tree' ? 5000 : 10);
 
-        $allow_column = Util::db()->select("desc `$table`");
+        $allow_column = Util::db()->select("SELECT column_name AS Field, data_type AS Type, is_nullable AS Null, column_default AS Default FROM information_schema.columns WHERE table_name = '$table' AND table_schema = 'public'");
         if (!$allow_column) {
             return $this->json(2, '表不存在');
         }
@@ -1304,7 +1409,9 @@ EOF;
 
     /**
      * 插入记录
+     *
      * @param Request $request
+     *
      * @return Response
      * @throws BusinessException|Throwable
      */
@@ -1320,7 +1427,7 @@ EOF;
         }
         $table = Util::filterAlphaNum($request->input('table', ''));
         $data = $request->post();
-        $allow_column = Util::db()->select("desc `$table`");
+        $allow_column = Util::db()->select("SELECT column_name AS Field, data_type AS Type, is_nullable AS Null, column_default AS Default FROM information_schema.columns WHERE table_name = '$table' AND table_schema = 'public'");
         if (!$allow_column) {
             throw new BusinessException('表不存在', 2);
         }
@@ -1355,7 +1462,9 @@ EOF;
 
     /**
      * 更新记录
+     *
      * @param Request $request
+     *
      * @return Response
      * @throws BusinessException|Throwable
      */
@@ -1386,7 +1495,7 @@ EOF;
         $primary_key = $primary_keys[0];
         $value = $request->post($primary_key);
         $data = $request->post();
-        $allow_column = Util::db()->select("desc `$table`");
+        $allow_column = Util::db()->select("SELECT column_name AS Field, data_type AS Type, is_nullable AS Null, column_default AS Default FROM information_schema.columns WHERE table_name = '$table' AND table_schema = 'public'");
         if (!$allow_column) {
             throw new BusinessException('表不存在', 2);
         }
@@ -1422,7 +1531,9 @@ EOF;
 
     /**
      * 删除记录
+     *
      * @param Request $request
+     *
      * @return Response
      * @throws BusinessException
      */
@@ -1446,7 +1557,9 @@ EOF;
 
     /**
      * 删除表
+     *
      * @param Request $request
+     *
      * @return Response
      */
     public function drop(Request $request): Response
@@ -1470,7 +1583,9 @@ EOF;
 
     /**
      * 表摘要
+     *
      * @param Request $request
+     *
      * @return Response
      */
     public function schema(Request $request): Response
@@ -1488,8 +1603,10 @@ EOF;
 
     /**
      * 创建字段
-     * @param $column
+     *
+     * @param           $column
      * @param Blueprint $table
+     *
      * @return mixed
      */
     protected function createColumn($column, Blueprint $table)
@@ -1543,8 +1660,10 @@ EOF;
 
     /**
      * 更改字段
+     *
      * @param $column
      * @param $table
+     *
      * @return mixed
      * @throws BusinessException
      */
@@ -1555,7 +1674,11 @@ EOF;
         $field = Util::filterAlphaNum($column['field']);
         $old_field = Util::filterAlphaNum($column['old_field'] ?? null);
         $nullable = $column['nullable'];
-        $default = $column['default'] !== null ? Util::pdoQuote($column['default']) : null;
+        // 特殊处理SQL函数类型的默认值，如CURRENT_TIMESTAMP不应该加引号
+        $sql_functions = ['CURRENT_TIMESTAMP', 'NOW()', 'LOCALTIMESTAMP'];
+        $default = $column['default'] !== null ? 
+            (in_array(strtoupper(trim($column['default'])), $sql_functions) ? $column['default'] : Util::pdoQuote($column['default'])) : 
+            null;
         $comment = Util::pdoQuote($column['comment']);
         $auto_increment = $column['auto_increment'];
         $length = (int)$column['length'];
@@ -1564,79 +1687,190 @@ EOF;
             $default = null;
         }
 
+        // 获取当前数据库驱动类型
+        $driver = config('database.default');
+        
         if ($old_field && $old_field !== $field) {
-            $sql = "ALTER TABLE `$table` CHANGE COLUMN `$old_field` `$field` ";
-        } else {
-            $sql = "ALTER TABLE `$table` MODIFY `$field` ";
-        }
-
-        if (stripos($method, 'integer') !== false) {
-            $type = str_ireplace('integer', 'int', $method);
-            if (stripos($method, 'unsigned') !== false) {
-                $type = str_ireplace('unsigned', '', $type);
-                $sql .= "$type ";
-                $sql .= 'unsigned ';
+            if ($driver === 'pgsql') {
+                $sql = "ALTER TABLE \"$table\" RENAME COLUMN \"$old_field\" TO \"$field\"";
+                echo "$sql\n";
+                Util::db()->statement($sql);
+                $old_field = $field;
             } else {
-                $sql .= "$type ";
+                $sql = "ALTER TABLE `$table` CHANGE COLUMN `$old_field` `$field` ";
             }
-            if ($auto_increment) {
-                $column['nullable'] = false;
-                $column['default'] = null;
-                $sql .= 'AUTO_INCREMENT ';
+        }
+
+        // PostgreSQL不支持在同一个ALTER TABLE语句中修改多个属性，需要分步执行
+        if ($driver === 'pgsql') {
+            // 修改类型
+            $type_sql = "ALTER TABLE \"$table\" ALTER COLUMN \"$field\" TYPE ";
+            $type_args = '';
+            
+            if (stripos($method, 'integer') !== false) {
+                $type = str_ireplace('integer', 'int', $method);
+                if (stripos($method, 'unsigned') !== false) {
+                    $type = str_ireplace('unsigned', '', $type);
+                    $type_args = $type;
+                } else {
+                    $type_args = $type;
+                }
+                if ($auto_increment) {
+                    $type_args = 'SERIAL';
+                }
+            } else {
+                switch ($method) {
+                    case 'string':
+                        $length = $length ?: 255;
+                        $type_args = "varchar($length)";
+                        break;
+                    case 'char':
+                    case 'time':
+                        $type_args = $length ? "$method($length)" : "$method";
+                        break;
+                    case 'enum':
+                        // PostgreSQL不直接支持ENUM，使用check约束代替
+                        $enum_values = array_map('trim', explode(',', (string)$column['length']));
+                        $enum_constraint = "\"{$table}_{$field}_check\"";
+                        // 先删除可能存在的约束
+                        Util::db()->statement("ALTER TABLE \"$table\" DROP CONSTRAINT IF EXISTS $enum_constraint");
+                        $type_args = "varchar";
+                        // 添加check约束
+                        $enum_values_quoted = implode(', ', array_map(function($v) {
+                            return Util::pdoQuote(trim($v, "'\""));
+                        }, $enum_values));
+                        $check_sql = "ALTER TABLE \"$table\" ADD CONSTRAINT $enum_constraint CHECK (\"$field\" IN ($enum_values_quoted))";
+                        echo "$check_sql\n";
+                        Util::db()->statement($check_sql);
+                        break;
+                    case 'double':
+                    case 'float':
+                    case 'decimal':
+                        if (trim($column['length'])) {
+                            $args = array_map('intval', explode(',', $column['length']));
+                            $args[1] = $args[1] ?? $args[0];
+                            $type_args = "$method($args[0], $args[1])";
+                        } else {
+                            $type_args = "$method";
+                        }
+                        break;
+                    default:
+                        $type_args = "$method";
+                }
+            }
+            
+            if ($type_args) {
+                $type_sql .= $type_args;
+                echo "$type_sql\n";
+                Util::db()->statement($type_sql);
+            }
+
+            // 修改默认值
+            if ($method != 'text' && $default !== null) {
+                $default_sql = "ALTER TABLE \"$table\" ALTER COLUMN \"$field\" SET DEFAULT $default";
+                echo "$default_sql\n";
+                Util::db()->statement($default_sql);
+            } else if ($default === null) {
+                $drop_default_sql = "ALTER TABLE \"$table\" ALTER COLUMN \"$field\" DROP DEFAULT";
+                echo "$drop_default_sql\n";
+                Util::db()->statement($drop_default_sql);
+            }
+
+            // 修改可空性
+            if (!$nullable) {
+                $notnull_sql = "ALTER TABLE \"$table\" ALTER COLUMN \"$field\" SET NOT NULL";
+                echo "$notnull_sql\n";
+                Util::db()->statement($notnull_sql);
+            } else {
+                $null_sql = "ALTER TABLE \"$table\" ALTER COLUMN \"$field\" DROP NOT NULL";
+                echo "$null_sql\n";
+                Util::db()->statement($null_sql);
+            }
+
+            // 修改注释
+            if ($comment !== null) {
+                $comment_sql = "COMMENT ON COLUMN \"$table\".\"$field\" IS $comment";
+                echo "$comment_sql\n";
+                Util::db()->statement($comment_sql);
             }
         } else {
-            switch ($method) {
-                case 'string':
-                    $length = $length ?: 255;
-                    $sql .= "varchar($length) ";
-                    break;
-                case 'char':
-                case 'time':
-                    $sql .= $length ? "$method($length) " : "$method ";
-                    break;
-                case 'enum':
-                    $args = array_map('trim', explode(',', (string)$column['length']));
-                    foreach ($args as $key => $value) {
-                        $args[$key] = Util::pdoQuote($value);
-                    }
-                    $sql .= 'enum(' . implode(',', $args) . ') ';
-                    break;
-                case 'double':
-                case 'float':
-                case 'decimal':
-                    if (trim($column['length'])) {
-                        $args = array_map('intval', explode(',', $column['length']));
-                        $args[1] = $args[1] ?? $args[0];
-                        $sql .= "$method($args[0], $args[1]) ";
-                        break;
-                    }
-                    $sql .= "$method ";
-                    break;
-                default :
-                    $sql .= "$method ";
-
+            // MySQL处理逻辑
+            if ($old_field && $old_field === $field) {
+                $sql = "ALTER TABLE `$table` MODIFY `$field` ";
+            } else {
+                $sql = "ALTER TABLE `$table` MODIFY `$field` ";
             }
-        }
 
-        if (!$nullable) {
-            $sql .= 'NOT NULL ';
-        }
+            if (stripos($method, 'integer') !== false) {
+                $type = str_ireplace('integer', 'int', $method);
+                if (stripos($method, 'unsigned') !== false) {
+                    $type = str_ireplace('unsigned', '', $type);
+                    $sql .= "$type ";
+                    $sql .= 'unsigned ';
+                } else {
+                    $sql .= "$type ";
+                }
+                if ($auto_increment) {
+                    $column['nullable'] = false;
+                    $column['default'] = null;
+                    $sql .= 'AUTO_INCREMENT ';
+                }
+            } else {
+                switch ($method) {
+                    case 'string':
+                        $length = $length ?: 255;
+                        $sql .= "varchar($length) ";
+                        break;
+                    case 'char':
+                    case 'time':
+                        $sql .= $length ? "$method($length) " : "$method ";
+                        break;
+                    case 'enum':
+                        $args = array_map('trim', explode(',', (string)$column['length']));
+                        foreach ($args as $key => $value) {
+                            $args[$key] = Util::pdoQuote($value);
+                        }
+                        $sql .= 'enum(' . implode(',', $args) . ') ';
+                        break;
+                    case 'double':
+                    case 'float':
+                    case 'decimal':
+                        if (trim($column['length'])) {
+                            $args = array_map('intval', explode(',', $column['length']));
+                            $args[1] = $args[1] ?? $args[0];
+                            $sql .= "$method($args[0], $args[1]) ";
+                            break;
+                        }
+                        $sql .= "$method ";
+                        break;
+                    default :
+                        $sql .= "$method ";
 
-        if ($method != 'text' && $default !== null) {
-            $sql .= "DEFAULT $default ";
-        }
+                }
+            }
 
-        if ($comment !== null) {
-            $sql .= "COMMENT $comment ";
-        }
+            if (!$nullable) {
+                $sql .= 'NOT NULL ';
+            }
 
-        echo "$sql\n";
-        Util::db()->statement($sql);
+            if ($method != 'text' && $default !== null) {
+                $sql .= "DEFAULT $default ";
+            }
+
+            if ($comment !== null) {
+                $sql .= "COMMENT $comment ";
+            }
+
+            echo "$sql\n";
+            Util::db()->statement($sql);
+        }
     }
 
     /**
      * 字段类型列表
+     *
      * @param Request $request
+     *
      * @return Response
      */
     public function types(Request $request): Response
@@ -1648,8 +1882,10 @@ EOF;
 
     /**
      * 更新表的form schema信息
+     *
      * @param $table_name
      * @param $data
+     *
      * @return string
      */
     protected function updateSchemaOption($table_name, $data): string
@@ -1666,7 +1902,9 @@ EOF;
 
     /**
      * 字段类型到php类型映射
+     *
      * @param string $type
+     *
      * @return string
      */
     protected function getType(string $type): string

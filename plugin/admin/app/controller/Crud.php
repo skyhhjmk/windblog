@@ -89,9 +89,21 @@ class Crud extends Base
         $where = $request->get();
         $page = (int)$request->get('page');
         $page = $page > 0 ? $page : 1;
-        $table = config('database.connections.mysql.prefix') . $this->model->getTable();
+        $table = config('database.connections.pgsql.prefix') . $this->model->getTable();
 
-        $allow_column = Util::db()->select("desc `$table`");
+        // 检测数据库类型并使用对应的表结构查询语句
+        $connection = Util::db();
+        $driver = $connection->getConfig('driver');
+        
+        if ($driver === 'pgsql') {
+            // PostgreSQL查询表结构
+            $allow_column = $connection->select("SELECT column_name AS Field, data_type AS Type 
+                FROM information_schema.columns 
+                WHERE table_name = ? AND table_schema = 'public'", [$table]);
+        } else {
+            // MySQL查询表结构
+            $allow_column = $connection->select("desc `$table`");
+        }
         if (!$allow_column) {
             throw new BusinessException('表不存在');
         }
@@ -311,8 +323,21 @@ class Crud extends Base
      */
     protected function inputFilter(array $data): array
     {
-        $table = config('database.connections.mysql.prefix') . $this->model->getTable();
-        $allow_column = $this->model->getConnection()->select("desc `$table`");
+        $table = config('database.connections.pgsql.prefix') . $this->model->getTable();
+        
+        // 检测数据库类型并使用对应的表结构查询语句
+        $connection = $this->model->getConnection();
+        $driver = $connection->getConfig('driver');
+        
+        if ($driver === 'pgsql') {
+            // PostgreSQL查询表结构
+            $allow_column = $connection->select("SELECT column_name AS Field, data_type AS Type 
+                FROM information_schema.columns 
+                WHERE table_name = ? AND table_schema = 'public'", [$table]);
+        } else {
+            // MySQL查询表结构
+            $allow_column = $connection->select("desc `$table`");
+        }
         if (!$allow_column) {
             throw new BusinessException('表不存在', 2);
         }

@@ -3,7 +3,7 @@
     <head>
         <meta charset="UTF-8">
         <title>新增页面</title>
-        <link rel="stylesheet" href="/app/admin/component/layui/css/layui.css?v=2.11.5" />
+        <link rel="stylesheet" href="/app/admin/component/layui/css/layui.css?v=2.8.12" />
         <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css" />
         <link rel="stylesheet" href="/app/admin/admin/css/reset.css" />
     </head>
@@ -98,7 +98,7 @@
 
                                 <script type="text/html" id="col-type">
                                     <select name="columns[{{ d.LAY_NUM-1 }}][type]" lay-verify="">
-                                        {{# layui.each(["integer","string","text","date","enum","float","tinyInteger","smallInteger","mediumInteger","bigInteger","unsignedInteger","unsignedTinyInteger","unsignedSmallInteger","unsignedMediumInteger","unsignedBigInteger","decimal","double","mediumText","longText","dateTime","time","timestamp","char","binary","json"], function (index, item) { }}
+                                        {{# layui.each(["integer","string","text","date","enum","float","tinyInteger","smallInteger","mediumInteger","bigInteger","unsignedInteger","unsignedTinyInteger","unsignedSmallInteger","unsignedMediumInteger","unsignedBigInteger","decimal","double","mediumText","longText","dateTime","time","timestamp","timestamptz","timetz","char","varchar","binary","varbinary","json","jsonb","uuid","inet","cidr","macaddr","macaddr8","citext","point","line","lseg","box","path","polygon","circle","serial","bigserial","smallserial","numeric","boolean","bool"], function (index, item) { }}
                                             <option value="{{ item }}" {{ d.type==item?'selected':''}}>{{ item }}</option>
                                         {{#  }); }}
                                     </select>
@@ -217,7 +217,7 @@
             </div>
         </form>
 
-        <script src="/app/admin/component/layui/layui.js?v=2.11.5"></script>
+        <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
         <script src="/app/admin/component/pear/pear.js"></script>
         <script src="/app/admin/admin/js/permission.js"></script>
         <script>
@@ -246,11 +246,106 @@
                         let formsData = res.data.forms;
                         let keysData = res.data.keys;
 
+                        // 类型映射函数，用于将数据库原生类型映射到前端表单中的类型选项
+                        function mapDbTypeToFrontendType(dbType) {
+                            // 转为小写以便于比较
+                            const type = dbType.toLowerCase();
+                            
+                            // PostgreSQL 和 MySQL 类型映射
+                            const typeMap = {
+                                // 整数类型
+                                'int': 'integer',
+                                'integer': 'integer',
+                                'smallint': 'smallInteger',
+                                'mediumint': 'mediumInteger',
+                                'bigint': 'bigInteger',
+                                'tinyint': 'tinyInteger',
+                                'serial': 'serial',
+                                'smallserial': 'smallserial',
+                                'bigserial': 'bigserial',
+                                
+                                // 无符号整数
+                                'int unsigned': 'unsignedInteger',
+                                'integer unsigned': 'unsignedInteger',
+                                'smallint unsigned': 'unsignedSmallInteger',
+                                'mediumint unsigned': 'unsignedMediumInteger',
+                                'bigint unsigned': 'unsignedBigInteger',
+                                'tinyint unsigned': 'unsignedTinyInteger',
+                                
+                                // 浮点类型
+                                'float': 'float',
+                                'double': 'double',
+                                'double precision': 'double',
+                                'decimal': 'decimal',
+                                'numeric': 'numeric',
+                                
+                                // 文本类型
+                                'char': 'char',
+                                'varchar': 'varchar',
+                                'character varying': 'varchar',
+                                'text': 'text',
+                                'mediumtext': 'mediumText',
+                                'longtext': 'longText',
+                                'citext': 'citext',
+                                
+                                // 日期时间类型
+                                'date': 'date',
+                                'time': 'time',
+                                'datetime': 'dateTime',
+                                'timestamp': 'timestamp',
+                                'timestamp with time zone': 'timestamptz',
+                                'timestamptz': 'timestamptz',
+                                'timetz': 'timetz',
+                                
+                                // 二进制类型
+                                'binary': 'binary',
+                                'varbinary': 'varbinary',
+                                
+                                // 布尔类型
+                                'boolean': 'boolean',
+                                'bool': 'boolean',
+                                 
+                                // 其他类型
+                                'json': 'json',
+                                'jsonb': 'jsonb',
+                                'uuid': 'uuid',
+                                'inet': 'inet',
+                                'cidr': 'cidr',
+                                'macaddr': 'macaddr',
+                                'macaddr8': 'macaddr8',
+                                'enum': 'enum',
+                                'point': 'point',
+                                'line': 'line',
+                                'lseg': 'lseg',
+                                'box': 'box',
+                                'path': 'path',
+                                'polygon': 'polygon',
+                                'circle': 'circle'
+                            };
+                            
+                            // 检查精确匹配
+                            if (typeMap[type]) {
+                                return typeMap[type];
+                            }
+                            
+                            // 检查包含关系（处理带长度的类型，如 varchar(255)）
+                            for (const [dbTypeKey, frontendType] of Object.entries(typeMap)) {
+                                if (type.startsWith(dbTypeKey + '(')) {
+                                    return frontendType;
+                                }
+                            }
+                            
+                            // 默认返回原类型
+                            return dbType;
+                        }
+                        
                         window._field_id = 0;
                         layui.each(columnsData, function (index, item) {
                             columnsData[index]._field_id = _field_id;
                             columnsData[index].old_field = item.field;
                             columnsData[index].default = item.default === "" ? "''" :  item.default;
+                            // 映射数据库类型到前端表单类型
+                            columnsData[index].type = mapDbTypeToFrontendType(item.type);
                             formsData[index]._field_id = _field_id;
                             _field_id++;
                         });
@@ -622,11 +717,19 @@
                                     if (!item.field) return;
                                     let _field_id = item._field_id;
                                     if (!formTableOldDataMap[_field_id]) {
+                                        // 根据字段类型自动选择合适的控件类型
+                                        let controlType = "input";
+                                        if (item.type.toLocaleString().indexOf("int") !== -1) {
+                                            controlType = "inputNumber";
+                                        } else if (item.type === "boolean" || item.type === "bool") {
+                                            controlType = "switch";
+                                        }
+                                        
                                         formTableData.push({
                                             _field_id: _field_id,
                                             field : item.field, // column
                                             comment: item.comment, // column
-                                            control: item.type.toLocaleString().indexOf("int") !== -1 ? "inputNumber" : "input",
+                                            control: controlType,
                                             control_args: "",
                                             form_show: true,
                                             list_show: true,

@@ -50,7 +50,7 @@
             <button class="pear-btn pear-btn-xs tool-btn" lay-event="remove" permission="app.admin.table.delete">删除</button>
         </script>
 
-        <script src="/app/admin/component/layui/layui.js?v=2.11.5"></script>
+        <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
         <script src="/app/admin/component/pear/pear.js"></script>
         <script src="/app/admin/admin/js/permission.js"></script>
         <script src="/app/admin/admin/js/common.js"></script>
@@ -250,7 +250,13 @@
                     url: [/(^$)|(^#)|(^http(s*):\/\/[^\s]+\.[^\s]+)/, "链接格式不正确"],
                     number: [/(^$)|^\d+$/,'只能填写数字'],
                     date: [/(^$)|^(\d{4})[-\/](\d{1}|0\d{1}|1[0-2])([-\/](\d{1}|0\d{1}|[1-2][0-9]|3[0-1]))*$/, "日期格式不正确"],
-                    identity: [/(^$)|(^\d{15}$)|(^\d{17}(x|X|\d)$)/, "请输入正确的身份证号"]
+                    identity: [/(^$)|(^\d{15}$)|(^\d{17}(x|X|\d)$)/, "请输入正确的身份证号"],
+                    // PostgreSQL特有类型验证
+                    uuid: [/(^$)|^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, "UUID格式不正确"],
+                    inet: [/(^$)|^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(\d|[1-2]\d|3[0-2]))?$/, "IP地址格式不正确"],
+                    cidr: [/(^$)|^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\/(\d|[1-2]\d|3[0-2])$/, "CIDR格式不正确"],
+                    macaddr: [/(^$)|^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/, "MAC地址格式不正确"],
+                    json: [/(^$)|^[{\[]/i, "JSON格式不正确"]
                 });
 
                 form.on("submit(table-query)", function(data) {

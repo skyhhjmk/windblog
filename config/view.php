@@ -18,6 +18,7 @@
 //use support\view\ThinkPHP;
 use app\view\extension\CsrfExtension;
 use app\view\extension\PathExtension;
+use app\view\extension\TranslateExtension;
 use Twig\Extra\Markdown\MarkdownExtension;
 use Twig\Extra\Markdown\DefaultMarkdown;
 use Twig\Extra\Markdown\MarkdownRuntime;
@@ -46,6 +47,8 @@ return [
         $twig->addExtension(new PathExtension());
         // 添加自定义csrf_token函数扩展
         $twig->addExtension(new CsrfExtension());
+        // 添加自定义trans函数扩展
+//        $twig->addExtension(new TranslateExtension());
         // 添加markdown扩展
         $twig->addExtension(new MarkdownExtension());
         // 添加缓存扩展

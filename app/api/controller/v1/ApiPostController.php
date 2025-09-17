@@ -39,7 +39,7 @@ class ApiPostController
         if (!$post) {
             return json([
                 'code' => 404,
-                'message' => '文章不存在'
+                'message' => trans('Post not found')
             ]);
         }
         

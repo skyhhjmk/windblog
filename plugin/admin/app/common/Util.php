@@ -319,8 +319,12 @@ class Util
 
             'time' => ['DateTimePicker'],
             'timestamp' => ['DateTimePicker'],
+            'timestamptz' => ['DateTimePicker'],
 
             'char' => ['Input'],
+            'varchar' => ['Input'],
+            'boolean' => ['Switch'],
+            'bool' => ['Switch'],
 
             'binary' => ['Input'],
 
@@ -382,57 +386,153 @@ class Util
     public static function getSchema($table, $section = null)
     {
         Util::checkTableName($table);
-        $database = config('database.connections')['mysql']['database'];
-        $schema_raw = $section !== 'table' ? Util::db()->select("select * from information_schema.COLUMNS where TABLE_SCHEMA = '$database' and table_name = '$table' order by ORDINAL_POSITION") : [];
+        $database = config('database.connections')[config('database.default')]['database'] ?? config('database.connections')['pgsql']['database'];
+        $driver = config('database.default');
+        
         $forms = [];
         $columns = [];
-        foreach ($schema_raw as $item) {
-            $field = $item->COLUMN_NAME;
-            $columns[$field] = [
-                'field' => $field,
-                'type' => Util::typeToMethod($item->DATA_TYPE, (bool)strpos($item->COLUMN_TYPE, 'unsigned')),
-                'comment' => $item->COLUMN_COMMENT,
-                'default' => $item->COLUMN_DEFAULT,
-                'length' => static::getLengthValue($item),
-                'nullable' => $item->IS_NULLABLE !== 'NO',
-                'primary_key' => $item->COLUMN_KEY === 'PRI',
-                'auto_increment' => strpos($item->EXTRA, 'auto_increment') !== false
-            ];
+        
+        if ($driver === 'pgsql') {
+            // PostgreSQL查询
+            $schema_raw = $section !== 'table' ? Util::db()->select("SELECT * FROM information_schema.columns WHERE table_schema = 'public' AND table_name = ? ORDER BY ordinal_position", [$table]) : [];
+            
+            foreach ($schema_raw as $item) {
+                $field = $item->column_name;
+                $columns[$field] = [
+                    'field' => $field,
+                    'type' => Util::typeToMethod($item->data_type),
+                    'comment' => $field, // PostgreSQL中列注释需要特殊查询
+                    'default' => $item->column_default,
+                    'length' => static::getLengthValuePgsql($item),
+                    'nullable' => $item->is_nullable !== 'NO',
+                    'primary_key' => false, // PostgreSQL主键需要特殊查询
+                    'auto_increment' => false // PostgreSQL自增需要特殊处理
+                ];
 
-            $forms[$field] = [
-                'field' => $field,
-                'comment' => $item->COLUMN_COMMENT,
-                'control' => static::typeToControl($item->DATA_TYPE),
-                'form_show' => $item->COLUMN_KEY !== 'PRI',
-                'list_show' => true,
-                'enable_sort' => false,
-                'searchable' => false,
-                'search_type' => 'normal',
-                'control_args' => '',
-            ];
-        }
-        $table_schema = $section == 'table' || !$section ? Util::db()->select("SELECT TABLE_COMMENT FROM  information_schema.`TABLES` WHERE  TABLE_SCHEMA='$database' and TABLE_NAME='$table'") : [];
-        $indexes = !$section || in_array($section, ['keys', 'table']) ? Util::db()->select("SHOW INDEX FROM `$table`") : [];
-        $keys = [];
-        $primary_key = [];
-        foreach ($indexes as $index) {
-            $key_name = $index->Key_name;
-            if ($key_name == 'PRIMARY') {
-                $primary_key[] = $index->Column_name;
-                continue;
-            }
-            if (!isset($keys[$key_name])) {
-                $keys[$key_name] = [
-                    'name' => $key_name,
-                    'columns' => [],
-                    'type' => $index->Non_unique == 0 ? 'unique' : 'normal'
+                $forms[$field] = [
+                    'field' => $field,
+                    'comment' => $field,
+                    'control' => static::typeToControl($item->data_type),
+                    'form_show' => true,
+                    'list_show' => true,
+                    'enable_sort' => false,
+                    'searchable' => false,
+                    'search_type' => 'normal',
+                    'control_args' => '',
                 ];
             }
-            $keys[$key_name]['columns'][] = $index->Column_name;
+            
+            // 查询主键信息
+            if ($section !== 'table' && $columns) {
+                $primary_keys_result = Util::db()->select(
+                    "SELECT a.attname FROM pg_index i " .
+                    "JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey) " .
+                    "WHERE i.indrelid = ?::regclass AND i.indisprimary",
+                    [$table]
+                );
+                
+                foreach ($primary_keys_result as $pk) {
+                    $pk_name = $pk->attname;
+                    if (isset($columns[$pk_name])) {
+                        $columns[$pk_name]['primary_key'] = true;
+                        $forms[$pk_name]['form_show'] = false;
+                    }
+                }
+            }
+            
+            // 查询表注释
+            $table_schema = $section == 'table' || !$section ? Util::db()->select(
+                "SELECT description AS table_comment FROM pg_description " .
+                "WHERE objoid = (SELECT oid FROM pg_class WHERE relname = ?) AND objsubid = 0", 
+                [$table]
+            ) : [];
+            
+            // 查询索引信息
+            $keys = [];
+            $primary_key = [];
+            if (!$section || in_array($section, ['keys', 'table'])) {
+                $indexes = Util::db()->select(
+                    "SELECT " .
+                    "ic.relname AS index_name, " .
+                    "a.attname AS column_name, " .
+                    "i.indisunique AS is_unique " .
+                    "FROM pg_class bc " .
+                    "JOIN pg_index i ON bc.oid = i.indrelid " .
+                    "JOIN pg_class ic ON ic.oid = i.indexrelid " .
+                    "JOIN pg_attribute a ON a.attrelid = bc.oid AND a.attnum = ANY(i.indkey) " .
+                    "WHERE bc.relname = ?",
+                    [$table]
+                );
+                
+                foreach ($indexes as $index) {
+                    $key_name = $index->index_name;
+                    if (strpos($key_name, '_pkey') !== false) {
+                        $primary_key[] = $index->column_name;
+                        continue;
+                    }
+                    if (!isset($keys[$key_name])) {
+                        $keys[$key_name] = [
+                            'name' => $key_name,
+                            'columns' => [],
+                            'type' => $index->is_unique ? 'unique' : 'normal'
+                        ];
+                    }
+                    $keys[$key_name]['columns'][] = $index->column_name;
+                }
+            }
+        } else {
+            // MySQL查询（保留原始逻辑）
+            $schema_raw = $section !== 'table' ? Util::db()->select("select * from information_schema.COLUMNS where TABLE_SCHEMA = '$database' and table_name = '$table' order by ORDINAL_POSITION") : [];
+            
+            foreach ($schema_raw as $item) {
+                $field = $item->COLUMN_NAME;
+                $columns[$field] = [
+                    'field' => $field,
+                    'type' => Util::typeToMethod($item->DATA_TYPE, (bool)strpos($item->COLUMN_TYPE, 'unsigned')),
+                    'comment' => $item->COLUMN_COMMENT,
+                    'default' => $item->COLUMN_DEFAULT,
+                    'length' => static::getLengthValue($item),
+                    'nullable' => $item->IS_NULLABLE !== 'NO',
+                    'primary_key' => $item->COLUMN_KEY === 'PRI',
+                    'auto_increment' => strpos($item->EXTRA, 'auto_increment') !== false
+                ];
+
+                $forms[$field] = [
+                    'field' => $field,
+                    'comment' => $item->COLUMN_COMMENT,
+                    'control' => static::typeToControl($item->DATA_TYPE),
+                    'form_show' => $item->COLUMN_KEY !== 'PRI',
+                    'list_show' => true,
+                    'enable_sort' => false,
+                    'searchable' => false,
+                    'search_type' => 'normal',
+                    'control_args' => '',
+                ];
+            }
+            
+            $table_schema = $section == 'table' || !$section ? Util::db()->select("SELECT TABLE_COMMENT FROM information_schema.`TABLES` WHERE TABLE_SCHEMA='$database' and TABLE_NAME='$table'") : [];
+            $indexes = !$section || in_array($section, ['keys', 'table']) ? Util::db()->select("SHOW INDEX FROM `$table`") : [];
+            $keys = [];
+            $primary_key = [];
+            foreach ($indexes as $index) {
+                $key_name = $index->Key_name;
+                if ($key_name == 'PRIMARY') {
+                    $primary_key[] = $index->Column_name;
+                    continue;
+                }
+                if (!isset($keys[$key_name])) {
+                    $keys[$key_name] = [
+                        'name' => $key_name,
+                        'columns' => [],
+                        'type' => $index->Non_unique == 0 ? 'unique' : 'normal'
+                    ];
+                }
+                $keys[$key_name]['columns'][] = $index->Column_name;
+            }
         }
 
         $data = [
-            'table' => ['name' => $table, 'comment' => $table_schema[0]->TABLE_COMMENT ?? '', 'primary_key' => $primary_key],
+            'table' => ['name' => $table, 'comment' => $table_schema[0]->table_comment ?? ($table_schema[0]->TABLE_COMMENT ?? ''), 'primary_key' => $primary_key],
             'columns' => $columns,
             'forms' => $forms,
             'keys' => array_reverse($keys, true)
@@ -471,6 +571,30 @@ class Util
         }
         if (in_array($type, ['time', 'datetime', 'timestamp'])) {
             return $schema->CHARACTER_MAXIMUM_LENGTH;
+        }
+        return '';
+    }
+
+    /**
+     * 获取字段长度或默认值 (PostgreSQL版本)
+     * @param $schema
+     * @return mixed|string
+     */
+    public static function getLengthValuePgsql($schema)
+    {
+        $type = $schema->data_type;
+        if (in_array($type, ['numeric', 'decimal'])) {
+            // PostgreSQL中使用numeric_precision和numeric_scale
+            return "{$schema->numeric_precision},{$schema->numeric_scale}";
+        }
+        if ($type === 'character varying' || $type === 'varchar') {
+            return $schema->character_maximum_length;
+        }
+        if (in_array($type, ['character', 'char'])) {
+            return $schema->character_maximum_length;
+        }
+        if (in_array($type, ['time', 'timestamp', 'timestamptz'])) {
+            return '';
         }
         return '';
     }
