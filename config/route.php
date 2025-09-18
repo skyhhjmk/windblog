@@ -85,5 +85,5 @@ Route::group('/api/v1', function () {
 
 
 Route::fallback(function () {
-    return view('index/404');
+    return view('error/404');
 });

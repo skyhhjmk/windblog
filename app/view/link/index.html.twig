@@ -3,15 +3,22 @@
 {% block title %}{{ page_title|default('风屿雨博客') }}{% endblock %}
 
 {% block content %}
-    <div class="max-w-6xl mx-auto px-4">
+    <div class="max-w-full mx-auto px-4">
         <!-- 页面标题区域 -->
         <div class="text-center mb-12 mt-6 animate-fade-in-down">
             <h1 class="text-4xl md:text-5xl font-bold text-gray-800 mb-4">{{ page_title|default('风屿雨博客') }}</h1>
             <p class="text-gray-600 text-lg md:text-xl">欢迎来到链接广场，这里汇聚了优质的网站资源</p>
+            <div class="mt-4">
+                <a href="/link/request" 
+                   class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200">
+                    <i class="fas fa-link mr-2"></i>
+                    申请友链
+                </a>
+            </div>
         </div>
 
         <!-- 链接列表 -->
-        {% if links %}
+        {% if links|length > 0 %}
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {% for link in links %}
                     <div class="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 group">
@@ -105,6 +112,10 @@
             }
         }
         
+        .animate-fade-in-down {
+            animation: fade-in-down 0.6s ease-out forwards;
+        }
+        
         @keyframes fade-in {
             0% {
                 opacity: 0;
@@ -114,12 +125,8 @@
             }
         }
         
-        .animate-fade-in-down {
-            animation: fade-in-down 0.5s ease-out forwards;
-        }
-        
         .animate-fade-in {
-            animation: fade-in 0.5s ease-out forwards;
+            animation: fade-in 0.6s ease-out forwards;
         }
         
         .line-clamp-3 {

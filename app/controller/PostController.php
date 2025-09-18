@@ -23,7 +23,7 @@ class PostController
                 // id模式
                 $post = Post::where('id', $keyword)->first();
                 if (!$post || $post['status'] != 'published') {
-                    return view('index/404');
+                    return view('error/404');
                 }
                 break;
             case 'mix':
@@ -36,15 +36,15 @@ class PostController
                 } elseif (is_string($keyword)) {
                     $post = Post::where('slug', $keyword)->first();
                 } else {
-                    return view('index/404');
+                    return view('error/404');
                 }
 
                 if (!$post || $post['status'] !== 'published') {
-                    return view('index/404');
+                    return view('error/404');
                 }
                 break;
             default:
-                return view('index/404');
+                return view('error/404');
                 break;
         }
         return view('index/post', [

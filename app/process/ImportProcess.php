@@ -79,7 +79,7 @@ class ImportProcess
                 \support\Log::warning("发现卡住的导入任务，重置状态为pending: ID=" . $job->id . ", 文件=" . $job->name);
                 $job->update([
                     'status' => 'pending',
-                    'message' => '任务被重置，之前可能已卡住'
+                    'message' => '长时间处于processing状态，任务被重置'
                 ]);
             }
         } catch (\Exception $e) {
@@ -149,13 +149,6 @@ class ImportProcess
                 // 清除当前任务
                 $this->currentJob = null;
                 \support\Log::info("导入任务处理结束: " . $job->name);
-            } else {
-                // 只在需要时记录，避免日志过多
-                static $lastLogged = 0;
-                if (time() - $lastLogged > 300) { // 每300秒最多记录一次
-                    \support\Log::debug("暂无待处理的导入任务");
-                    $lastLogged = time();
-                }
             }
         } catch (\Exception $e) {
             \support\Log::error('检查导入任务时出错: ' . $e->getMessage(), ['exception' => $e]);

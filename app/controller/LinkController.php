@@ -19,11 +19,11 @@ class LinkController
     /**
      * 不需要登录的方法
      */
-    protected array $noNeedLogin = ['index', 'goto', 'info'];
+    protected array $noNeedLogin = ['index', 'goto', 'info', 'request'];
 
     public function index(Request $request, int $page = 1)
     {
-        $count = Link::count('*');
+        $count = Link::where('status', 'true')->count('*');
 
         $links_per_page = blog_config('links_per_page', 15, true);
 
@@ -42,11 +42,11 @@ class LinkController
             if ($cached) {
                 return $cached;
             } else {
-                $links = Link::orderByDesc('id')->forPage($page, $links_per_page)->get();
+                $links = Link::where('status', 'true')->orderByDesc('id')->forPage($page, $links_per_page)->get();
                 cache('blog_links_page_' . $page . '_per_' . $links_per_page, $links, true);
             }
         } else {
-            $links = Link::orderByDesc('id')->forPage($page, $links_per_page)->get();
+            $links = Link::where('status', 'true')->orderByDesc('id')->forPage($page, $links_per_page)->get();
         }
 
         return view('link/index', [
@@ -135,6 +135,75 @@ class LinkController
         return view('link/info', [
             'link' => $link,
             'page_title' => $link->name . ' - 链接详情'
+        ]);
+    }
+
+    /**
+     * 申请友链页面
+     *
+     * @param Request $request
+     *
+     * @return Response
+     * @throws Throwable
+     */
+    public function request(Request $request): Response
+    {
+        // 如果是POST请求，处理表单提交
+        if ($request->method() === 'POST') {
+            // 获取表单数据
+            $name = $request->post('name', '');
+            $url = $request->post('url', '');
+            $description = $request->post('description', '');
+            $contact = $request->post('contact', '');
+            $supportsWindConnect = $request->post('supports_wind_connect', false);
+            $allowsCrawling = $request->post('allows_crawling', false);
+            $captcha = $request->post('captcha', '');
+
+            // 简单验证
+            if (empty($name) || empty($url) || empty($description)) {
+                return json(['code' => 1, 'msg' => '请填写必填字段']);
+            }
+
+            if (!filter_var($url, FILTER_VALIDATE_URL)) {
+                return json(['code' => 1, 'msg' => '请输入有效的网址']);
+            }
+
+            // 检查是否已存在相同的链接
+            $existingLink = Link::where('url', $url)->first();
+            if ($existingLink) {
+                return json(['code' => 1, 'msg' => '该链接已存在']);
+            }
+
+            // 创建待审核的链接
+            $link = new Link();
+            $link->name = $name;
+            $link->url = $url;
+            $link->description = $description;
+            $link->status = false; // 默认为未审核状态
+            $link->sort_order = 999; // 默认排序
+            $link->target = '_blank';
+            $link->redirect_type = 'goto';
+            $link->show_url = true;
+            
+            // 构建内容信息
+            $contentInfo = [];
+            $contentInfo[] = "联系信息: " . $contact;
+            if ($supportsWindConnect) {
+                $contentInfo[] = "支持风屿互联协议";
+            }
+            if ($allowsCrawling) {
+                $contentInfo[] = "允许资源爬虫访问";
+            }
+            
+            $link->content = implode("\n", $contentInfo);
+            $link->save();
+
+            return json(['code' => 0, 'msg' => '申请成功，等待管理员审核']);
+        }
+
+        // 显示申请页面
+        return view('link/request', [
+            'page_title' => blog_config('title', 'WindBlog', true) . ' - 申请友链'
         ]);
     }
 }
