@@ -17,7 +17,7 @@ class IndexController
     /**
      * 不需要登录的方法
      */
-    protected array $noNeedLogin = ['index', 'getSession'];
+    protected array $noNeedLogin = ['index'];
 
     /**
      * 博客首页

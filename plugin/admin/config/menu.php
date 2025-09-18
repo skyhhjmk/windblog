@@ -64,6 +64,38 @@ return [
         ]
     ],
     [
+        'title' => '文章管理',
+        'key' => 'post',
+        'icon' => 'layui-icon-edit',
+        'weight' => 950,
+        'type' => 0,
+        'children' => [
+            [
+                'title' => '全部文章',
+                'key' => 'plugin\\admin\\app\\controller\\PostsController',
+                'href' => '/app/admin/posts/index',
+                'type' => 1,
+                'weight' => 940,
+            ]
+        ]
+    ],
+    [
+        'title' => '媒体管理',
+        'key' => 'media',
+        'icon' => 'layui-icon-picture',
+        'weight' => 1000,
+        'type' => 0,
+        'children' => [
+            [
+                'title' => '媒体库',
+                'key' => 'plugin\\admin\\app\\controller\\MediaController',
+                'href' => '/app/admin/media/index',
+                'type' => 1,
+                'weight' => 0,
+            ]
+        ]
+    ],
+    [
         'title' => '通用设置',
         'key' => 'common',
         'icon' => 'layui-icon-set',
@@ -93,10 +125,24 @@ return [
             ],
             [
                 'title' => '系统设置',
-                'key' => 'plugin\\admin\\app\\controller\\ResCdnController',
+                'key' => 'plugin\\admin\\app\\controller\\ConfigController',
                 'href' => '/app/admin/config/index',
                 'type' => 1,
                 'weight' => 500,
+            ],
+            [
+                'title' => '资源CDN设置',
+                'key' => 'plugin\\admin\\app\\controller\\ResController',
+                'href' => '/app/admin/res/index',
+                'type' => 1,
+                'weight' => 490,
+            ],
+            [
+                'title' => '短信设置',
+                'key' => 'plugin\\sms\\app\\admin\\controller\\SettingController',
+                'href' => '/app/sms/admin/setting',
+                'type' => 1,
+                'weight' => 0,
             ],
         ]
     ],
@@ -115,6 +161,29 @@ return [
                 'type' => 1,
             ]
         ]
+    ],
+    [
+        'title' => '工具',
+        'key' => 'tools',
+        'icon' => 'layui-icon-more',
+        'weight' => 750,
+        'type' => 0,
+        'children' => [
+            [
+                'title' => '从 WP 导入',
+                'key' => 'plugin\\admin\\app\\controller\\WpImportController',
+                'href' => '/app/admin/tools/wp-import',
+                'type' => 1,
+                'weight' => 0,
+            ]
+        ]
+    ],
+    [
+        'title' => '系统日志',
+        'key' => 'plugin\\webmanlogs\\app\\controller\\IndexController',
+        'href' => '/app/webmanlogs/index/index',
+        'type' => 1,
+        'weight' => 0,
     ],
     [
         'title' => '开发辅助',
