@@ -69,6 +69,11 @@ class TwigTemplateService implements View
         } else {
             $viewPath = $app === '' ? "$baseViewPath/view/" : "$baseViewPath/$app/view/";
         }
+        try {
+            $viewPath = $viewPath . blog_config('theme', 'default', true) . '/';
+        } catch (\Throwable $e) {
+
+        }
         if (!isset($views[$viewPath])) {
             $views[$viewPath] = new Environment(new FilesystemLoader($viewPath), config("{$configPrefix}view.options", []));
             $extension = config("{$configPrefix}view.extension");

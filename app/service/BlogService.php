@@ -26,14 +26,15 @@ class BlogService
     /**
      * 获取博客配置
      *
-     * @param string $key 配置键名
-     * @param mixed $default 默认值
+     * @param string $key     配置键名
+     * @param mixed  $default 默认值
+     *
      * @return mixed 配置值
      * @throws Throwable
      */
     public static function getConfig(string $key, mixed $default = null): mixed
     {
-        return blog_config($key, $default);
+        return blog_config($key, $default, true);
     }
 
     /**
@@ -61,7 +62,7 @@ class BlogService
     /**
      * 获取博客文章列表
      *
-     * @param int $page 当前页码
+     * @param int   $page    当前页码
      * @param array $filters 筛选条件
      *
      * @return array 包含文章列表和分页信息的数组
@@ -126,7 +127,7 @@ class BlogService
         try {
             self::processPostExcerpts($posts);
         } catch (CommonMarkException $e) {
-            Log::error(trans('Failed to process post excerpts'),$e->getMessage());
+            Log::error(trans('Failed to process post excerpts'), $e->getMessage());
             throw $e;
         }
 
@@ -161,6 +162,7 @@ class BlogService
      * 处理文章摘要
      *
      * @param Collection $posts 文章集合
+     *
      * @throws CommonMarkException
      */
     protected static function processPostExcerpts(Collection $posts): void
@@ -207,6 +209,7 @@ class BlogService
      * 从缓存获取数据
      *
      * @param string $key 缓存键名
+     *
      * @return array|bool 缓存数据或false
      */
     protected static function getFromCache(string $key): array|bool
@@ -227,8 +230,8 @@ class BlogService
     /**
      * 缓存结果数据
      *
-     * @param string $key 缓存键名
-     * @param mixed $data 要缓存的数据
+     * @param string $key  缓存键名
+     * @param mixed  $data 要缓存的数据
      */
     protected static function cacheResult(string $key, mixed $data): void
     {
