@@ -236,7 +236,7 @@ EOF;
 
         $options_string = '';
         if (!isset($props['images_upload_url'])) {
-            $props['images_upload_url'] = '/app/admin/upload/image';
+            $props['images_upload_url'] = '/app/admin/media/upload';
         }
         $props = $this->prepareProps($props);
         $options_string .= "\n" . $this->preparePropsToJsObject($props, 1, true);
@@ -302,7 +302,7 @@ EOF;
         [$label, $field, $value, $props, $verify_string, $required_string, $class] = $this->options($options);
 
         $props['accept'] = $props['accept'] ?? 'file';
-        $props['url'] = $props['url'] ?? '/app/admin/upload/file';
+        $props['url'] = $props['url'] ?? '/app/admin/media/upload';
         $id = $this->createId($field);
 
         $props['field'] = $props['field'] ?? '__file__';
@@ -319,11 +319,11 @@ EOF;
         <span>$value</span>
         <input type="text" style="display:none" name="$field" value="$value" />
         <button type="button" class="pear-btn pear-btn-primary pear-btn-sm" id="$id" permission="app.admin.upload.file">
-            <i class="layui-icon layui-icon-upload"></i>上传文件
-        </button>
-        <button type="button" class="pear-btn pear-btn-primary pear-btn-sm" id="attachment-choose-$id" permission="app.admin.upload.attachment">
-            <i class="layui-icon layui-icon-align-left"></i>选择文件
-        </button>
+                <i class="layui-icon layui-icon-upload"></i>上传媒体
+            </button>
+            <button type="button" class="pear-btn pear-btn-primary pear-btn-sm" id="attachment-choose-$id" permission="app.admin.upload.attachment">
+                <i class="layui-icon layui-icon-align-left"></i>选择媒体
+            </button>
     </div>
 </div>
 
@@ -337,8 +337,8 @@ layui.use(["upload", "layer", "popup", "util"], function() {
     layui.$("#attachment-choose-$id").on("click", function() {
         parent.layer.open({
             type: 2,
-            title: "选择附件",
-            content: "/app/admin/upload/attachment",
+            title: "选择媒体",
+            content: "/app/admin/media/selector",
             area: ["95%", "90%"],
             success: function (layero, index) {
                 parent.layui.$("#layui-layer" + index).data("callback", function (data) {
@@ -368,7 +368,7 @@ EOF;
     {
         [$label, $field, $value, $props, $verify_string, $required_string, $class] = $this->options($options);
         $props['acceptMime'] = $props['acceptMime'] ?? 'image/gif,image/jpeg,image/jpg,image/png';
-        $props['url'] = $props['url'] ?? '/app/admin/upload/image';
+        $props['url'] = $props['url'] ?? '/app/admin/media/upload';
         $props['multiple'] = $props['multiple'] ?? 0;
 
         $id = $this->createId($field);
@@ -388,11 +388,11 @@ EOF;
         <img class="img-3" src=""/>
         <input type="text" style="display:none" name="$field" value="$value" />
         <button type="button" class="pear-btn pear-btn-primary pear-btn-sm" id="$id"  permission="app.admin.upload.image">
-            <i class="layui-icon layui-icon-upload"></i>上传图片
-        </button>
-        <button type="button" class="pear-btn pear-btn-primary pear-btn-sm" id="attachment-choose-$id"  permission="app.admin.upload.attachment">
-            <i class="layui-icon layui-icon-align-left"></i>选择图片
-        </button>
+                <i class="layui-icon layui-icon-upload"></i>上传媒体图片
+            </button>
+            <button type="button" class="pear-btn pear-btn-primary pear-btn-sm" id="attachment-choose-$id"  permission="app.admin.upload.attachment">
+                <i class="layui-icon layui-icon-align-left"></i>选择媒体图片
+            </button>
     </div>
 </div>
 
@@ -406,8 +406,8 @@ layui.use(["upload", "layer"], function() {
     layui.$("#attachment-choose-$id").on("click", function() {
         parent.layer.open({
             type: 2,
-            title: "选择附件",
-            content: "/app/admin/upload/attachment?ext=jpg,jpeg,png,gif,bmp",
+            title: "选择媒体",
+            content: "/app/admin/media/selector",
             area: ["95%", "90%"],
             success: function (layero, index) {
                 parent.layui.$("#layui-layer" + index).data("callback", function (data) {
@@ -465,8 +465,8 @@ layui.use(["upload", "layer"], function() {
     $("#attachment-choose-$id").on("click", function() {
         parent.layer.open({
             type: 2,
-            title: "选择附件",
-            content: "/app/admin/upload/attachment?ext=jpg,jpeg,png,gif,bmp",
+            title: "选择媒体",
+            content: "/app/admin/media/selector",
             area: ["95%", "90%"],
             success: function (layero, index) {
                 parent.layui.$("#layui-layer" + index).data("callback", function (data) {

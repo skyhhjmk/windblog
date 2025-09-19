@@ -85,24 +85,14 @@ class LinkController
         }
 
         // 根据跳转类型处理
-        switch ($link->redirect_type) {
-            case 'direct':
-                // 直接跳转
-                return redirect($link->url, $link->target === '_blank' ? 302 : 301);
-
-            case 'iframe':
-                // 内嵌页面打开（这个需要在前端实现）
-                return redirect($link->url);
-
-            case 'goto':
-            case 'info':
-            default:
-                // 使用中转页跳转
-                return view('link/goto', [
-                    'link' => $link,
-                    'page_title' => blog_config('title', 'WindBlog', true) . ' - 外链跳转确认'
-                ]);
-        }
+        return match ($link->redirect_type) {
+            'direct' => redirect($link->url, $link->target === '_blank' ? 302 : 301),
+            'iframe' => redirect($link->url),
+            default => view('link/goto', [
+                'link' => $link,
+                'page_title' => blog_config('title', 'WindBlog', true) . ' - 外链跳转确认'
+            ]),
+        };
     }
 
     /**
@@ -153,6 +143,7 @@ class LinkController
             // 获取表单数据
             $name = $request->post('name', '');
             $url = $request->post('url', '');
+            $icon = $request->post('icon', '');
             $description = $request->post('description', '');
             $contact = $request->post('contact', '');
             $supportsWindConnect = $request->post('supports_wind_connect', false);
@@ -168,6 +159,11 @@ class LinkController
                 return json(['code' => 1, 'msg' => '请输入有效的网址']);
             }
 
+            // 验证图标URL（如果提供了）
+            if (!empty($icon) && !filter_var($icon, FILTER_VALIDATE_URL)) {
+                return json(['code' => 1, 'msg' => '请输入有效的网站图标地址']);
+            }
+
             // 检查是否已存在相同的链接
             $existingLink = Link::where('url', $url)->first();
             if ($existingLink) {
@@ -178,6 +174,7 @@ class LinkController
             $link = new Link();
             $link->name = $name;
             $link->url = $url;
+            $link->icon = $icon;
             $link->description = $description;
             $link->status = false; // 默认为未审核状态
             $link->sort_order = 999; // 默认排序
@@ -187,12 +184,12 @@ class LinkController
             
             // 构建内容信息
             $contentInfo = [];
-            $contentInfo[] = "联系信息: " . $contact;
+            $contentInfo[] = '联系信息: ' . $contact;
             if ($supportsWindConnect) {
-                $contentInfo[] = "支持风屿互联协议";
+                $contentInfo[] = '支持风屿互联协议';
             }
             if ($allowsCrawling) {
-                $contentInfo[] = "允许资源爬虫访问";
+                $contentInfo[] = '允许资源爬虫访问';
             }
             
             $link->content = implode("\n", $contentInfo);

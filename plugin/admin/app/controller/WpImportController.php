@@ -86,7 +86,7 @@ class WpImportController extends Base
             return raw_view('tools/wp-import/create', []);
         }
         try {
-            // 检查是否有上传文件
+            // 检查是否有上传媒体
             $file = $request->file('import_file');
             if (!$file) {
                 return json(['code' => 400, 'msg' => trans('Please select a file to import')]);
@@ -168,7 +168,7 @@ class WpImportController extends Base
         $force = (bool)$request->post('force', false);
 
         try {
-            // 检查是否有上传文件
+            // 检查是否有上传媒体
             $file = $request->file('import_file');
             if (!$file) {
                 return json(['code' => 400, 'msg' => '请选择要导入的文件']);
@@ -258,10 +258,10 @@ class WpImportController extends Base
     public function submit(Request $request)
     {
         try {
-            // 检查是否有上传文件
+            // 检查是否有上传媒体
             $file = $request->file('import_file');
             if (!$file) {
-                return json(['code' => 400, 'msg' => '请先上传文件']);
+                return json(['code' => 400, 'msg' => '请先上传媒体']);
             }
 
             // 验证文件类型，仅支持XML

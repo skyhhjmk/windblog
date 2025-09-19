@@ -289,8 +289,8 @@
         layui.$("#attachment-choose-image").on("click", function() {
             parent.layer.open({
                 type: 2,
-                title: "选择附件",
-                content: "/app/admin/upload/attachment?ext=jpg,jpeg,png,gif,bmp",
+                title: "选择媒体",
+                content: "/app/admin/media/selector",
                 area: ["95%", "90%"],
                 success: function (layero, index) {
                     parent.layui.$("#layui-layer" + index).data("callback", function (data) {
@@ -301,7 +301,7 @@
         });
         layui.upload.render({
             elem: "#image",
-            url: "/app/admin/upload/avatar",
+            url: "/app/admin/media/upload",
             acceptMime: "image/gif,image/jpeg,image/jpg,image/png",
             done: function (res) {
                 if (res.code) {

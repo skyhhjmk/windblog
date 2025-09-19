@@ -16,6 +16,7 @@ use Throwable;
  * @property string $url 链接地址
  * @property string|null $description 链接描述
  * @property string|null $image 链接配图URL
+ * @property string|null $icon 网站图标URL
  * @property int $sort_order 排序权重，数字越小越靠前
  * @property bool $status 状态 (true: 显示, false: 隐藏)
  * @property string $target 打开方式 (_blank, _self等)
@@ -48,6 +49,7 @@ class Link extends Model
         'url',
         'description',
         'image',
+        'icon',
         'sort_order',
         'status',
         'target',
@@ -66,6 +68,7 @@ class Link extends Model
         'name' => 'string',
         'url' => 'string',
         'image' => 'string',
+        'icon' => 'string',
         'description' => 'string',
         'sort_order' => 'integer',
         'status' => 'boolean',

@@ -166,7 +166,8 @@ CREATE TABLE IF NOT EXISTS links
     name          VARCHAR(255) NOT NULL,
     url           VARCHAR(255) NOT NULL,
     description   TEXT                     DEFAULT NULL,
-    "image"       VARCHAR(255)             DEFAULT NULL,
+    icon          VARCHAR(255)             DEFAULT NULL,
+    image         VARCHAR(255)             DEFAULT NULL,
     sort_order    INTEGER                  DEFAULT 0,
     status        BOOLEAN      NOT NULL    DEFAULT true,
     "target"      VARCHAR(20)              DEFAULT '_blank',
@@ -182,10 +183,11 @@ COMMENT ON TABLE links IS '友链表';
 COMMENT ON COLUMN links.name IS '友链名称';
 COMMENT ON COLUMN links.url IS '友链URL';
 COMMENT ON COLUMN links.description IS '友链描述';
-COMMENT ON COLUMN links."image" IS '友链图片';
+COMMENT ON COLUMN links.icon IS '友链图标';
+COMMENT ON COLUMN links.image IS '友链图片';
 COMMENT ON COLUMN links.sort_order IS '排序顺序';
 COMMENT ON COLUMN links.status IS '状态：1显示，0隐藏';
-COMMENT ON COLUMN links."target" IS '打开方式 (_blank, _self等)';
+COMMENT ON COLUMN links.target IS '打开方式 (_blank, _self等)';
 COMMENT ON COLUMN links.redirect_type IS '跳转方式: direct=直接跳转, goto=中转页跳转, iframe=内嵌页面, info=详情页';
 COMMENT ON COLUMN links.show_url IS '是否在中转页显示原始URL';
 COMMENT ON COLUMN links.content IS '链接详细介绍(Markdown格式)';
@@ -200,7 +202,7 @@ CREATE TABLE IF NOT EXISTS pages
     title      VARCHAR(255)             NOT NULL,
     slug       VARCHAR(255)             NOT NULL,
     content    TEXT                     NOT NULL,
-    "status"   VARCHAR(15)              NOT NULL DEFAULT 'draft',
+    status     VARCHAR(15)              NOT NULL DEFAULT 'draft',
     template   VARCHAR(50)                       DEFAULT NULL,
     sort_order INTEGER                           DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE          DEFAULT CURRENT_TIMESTAMP,
@@ -213,7 +215,7 @@ COMMENT ON TABLE pages IS '页面表';
 COMMENT ON COLUMN pages.title IS '页面标题';
 COMMENT ON COLUMN pages.slug IS '页面别名';
 COMMENT ON COLUMN pages.content IS '页面内容';
-COMMENT ON COLUMN pages."status" IS '页面状态';
+COMMENT ON COLUMN pages.status IS '页面状态';
 COMMENT ON COLUMN pages.template IS '页面模板';
 COMMENT ON COLUMN pages.sort_order IS '排序顺序';
 COMMENT ON COLUMN pages.created_at IS '创建时间';

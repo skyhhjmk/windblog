@@ -119,7 +119,7 @@ class EditorController
                 return json(['success' => 0, 'message' => '请上传有效的图片文件']);
             }
             
-            // 使用媒体库服务上传文件
+            // 使用媒体库服务上传媒体
             $mediaService = new MediaLibraryService();
             $result = $mediaService->upload($file);
             

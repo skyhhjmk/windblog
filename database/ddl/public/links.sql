@@ -6,6 +6,7 @@ create table links
     url           varchar(255)                                               not null,
     description   text,
     image         varchar(255)             default NULL::character varying,
+    icon          varchar(255)             default NULL::character varying,
     sort_order    integer                  default 0,
     status        boolean                  default true                      not null,
     target        varchar(20)              default '_blank'::character varying,
@@ -24,6 +25,8 @@ comment on column links.url is '友链URL';
 comment on column links.description is '友链描述';
 
 comment on column links.image is '友链图片';
+
+comment on column links.icon is '网站图标';
 
 comment on column links.sort_order is '排序顺序';
 

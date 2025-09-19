@@ -127,7 +127,7 @@ class UploadController extends Crud
     }
 
     /**
-     * 上传文件
+     * 上传媒体
      * @param Request $request
      * @return Response
      * @throws Exception
@@ -290,7 +290,7 @@ class UploadController extends Crud
         $relative_dir = ltrim($relative_dir, '\\/');
         $file = current($request->file());
         if (!$file || !$file->isValid()) {
-            throw new BusinessException('未找到上传文件', 400);
+            throw new BusinessException('未找到上传媒体', 400);
         }
 
         $admin_public_path = rtrim(config('plugin.admin.app.public_path', ''), '\\/');

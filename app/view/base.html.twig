@@ -196,6 +196,7 @@
         </div>
         <!-- 侧边栏 - 占1/4宽度 -->
         <div class="w-full md:w-1/4">
+            {% block sidebar %}
             <div class="bg-white rounded-lg shadow-sm p-6 mb-6 animate-fade-in-up">
                 <h3 class="text-lg font-semibold text-gray-800 mb-4">关于博主</h3>
                 <p class="text-gray-600">欢迎访问我的博客，这里记录了我的技术分享和生活感悟。</p>
@@ -208,6 +209,7 @@
                     <li><a href="#" class="text-blue-600 hover:underline hover-animate">前端开发技巧分享</a></li>
                 </ul>
             </div>
+            {% endblock %}
         </div>
     </div>
 </main>

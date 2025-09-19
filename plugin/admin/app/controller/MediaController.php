@@ -72,11 +72,11 @@ class MediaController extends Base
     public function upload(Request $request): Response
     {
         try {
-            // 检查是否有上传文件
-            $file = $request->file('file');
-            if (!$file) {
-                return json(['code' => 400, 'msg' => '没有上传文件']);
-            }
+            // 检查是否有上传媒体
+        $file = $request->file('file');
+        if (!$file) {
+            return json(['code' => 400, 'msg' => '没有上传媒体']);
+        }
             
             $data = [
                 'alt_text' => $request->post('alt_text', ''),

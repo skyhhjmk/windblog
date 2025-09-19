@@ -51,7 +51,7 @@
         <div class="layui-btn-group mb-4">
             <button class="pear-btn pear-btn-primary pear-btn-md mr-2.5" id="upload-btn">
                 <i class="layui-icon layui-icon-upload"></i>
-                上传文件
+                上传媒体
             </button>
             <button class="pear-btn pear-btn-danger pear-btn-md mr-2.5" id="batch-remove-btn">
                 <i class="layui-icon layui-icon-delete"></i>
@@ -103,14 +103,14 @@
     </form>
 </div>
 
-<!-- 上传文件弹窗 -->
+<!-- 上传媒体弹窗 -->
 <div id="upload-modal" style="display: none;">
     <form class="layui-form" id="upload-form">
         <div class="layui-form-item">
-            <label class="layui-form-label">选择文件</label>
+            <label class="layui-form-label">选择媒体</label>
             <div class="layui-input-block">
                 <button type="button" class="layui-btn" id="select-file-btn">
-                    <i class="layui-icon">&#xe67c;</i>选择文件
+                    <i class="layui-icon">&#xe67c;</i>选择媒体
                 </button>
                 <input type="file" name="file" id="file-input" style="display: none;">
                 <div id="file-name" class="mt-2.5"></div>
@@ -484,7 +484,7 @@
                     <i class="layui-icon layui-icon-picture text-5xl block text-gray-300 mb-4"></i>
                     <p>暂无媒体文件</p>
                     <button class="pear-btn pear-btn-primary pear-btn-sm mt-4" onclick="window.upload()">
-                        <i class="layui-icon layui-icon-upload"></i>上传文件
+                        <i class="layui-icon layui-icon-upload"></i>上传媒体
                     </button>
                 </div>
                 `;
@@ -849,7 +849,7 @@
                 area: ['400px', '200px'],
                 content: `
                     <div class="p-7.5">
-                        <div class="mb-5">正在上传文件...</div>
+                        <div class="mb-5">正在上传媒体...</div>
                         <div class="layui-progress layui-progress-big" lay-filter="upload-progress">
                             <div class="layui-progress-bar layui-bg-blue" lay-percent="0%"></div>
                         </div>
@@ -990,7 +990,7 @@
 
             layer.open({
                 type: 1,
-                title: '上传文件',
+                title: '上传媒体',
                 area: ['600px', '400px'],
                 content: $('#upload-modal'),
                 success: function (layero, index) {

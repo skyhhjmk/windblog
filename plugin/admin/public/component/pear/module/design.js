@@ -138,8 +138,8 @@ layui.define(['layer', 'form'], function(exports) {
 					layui.$("#attachment-choose-" + key).on('click', function() {
 						parent.layer.open({
 							type: 2,
-							title: "选择附件",
-							content: "/app/admin/upload/attachment",
+							title: "选择媒体",
+							content: "/app/admin/media/selector",
 							area: ["95%", "90%"],
 							success: function (layero, index) {
 								parent.layui.$("#layui-layer" + index).data("callback", function (data) {
@@ -150,7 +150,7 @@ layui.define(['layer', 'form'], function(exports) {
 					});
 					layui.upload.render({
 						elem: "#" + key,
-						url: "/app/admin/upload/file",
+						url: "/app/admin/media/upload",
 						accept: "file",
 						field: "__file__",
 						done: function (res) {
@@ -160,15 +160,15 @@ layui.define(['layer', 'form'], function(exports) {
 				});
 				if (module.indexOf('upload') === -1) module.push('upload');
 				if (module.indexOf('util') === -1) module.push('util');
-				allJS += '    // 上传文件\n' +
+				allJS += '    // 上传媒体\n' +
 					'    layui.use([\'upload\'], function() {\n' +
 					'      let input = layui.$("#'+key+'").prev();\n' +
 					'      input.prev().html(layui.util.escape(input.val()));\n' +
 					'      layui.$("#attachment-choose-'+key+'").on("click", function() {\n' +
 					'        parent.layer.open({\n' +
 					'          type: 2,\n' +
-					'          title: "选择附件",\n' +
-					'          content: "/app/admin/upload/attachment",\n' +
+					'          title: "选择媒体",\n' +
+					'          content: "/app/admin/media/selector",\n' +
 					'          area: ["95%", "90%"],\n' +
 					'          success: function (layero, index) {\n' +
 					'            parent.layui.$("#layui-layer" + index).data("callback", function (data) {\n' +
@@ -180,7 +180,7 @@ layui.define(['layer', 'form'], function(exports) {
 					'    });\n' +
 					'    layui.upload.render({\n' +
 					'       elem: "#' + key + '",\n' +
-					'       url: "/app/admin/upload/file",\n' +
+					'       url: "/app/admin/media/upload",\n' +
 					'       accept: "file",\n' +
 					'       field: "__file__",\n' +
 					'       done: function (res) {\n' +
@@ -200,8 +200,8 @@ layui.define(['layer', 'form'], function(exports) {
 					layui.$('#attachment-choose-' + key).on('click', function() {
 						parent.layer.open({
 							type: 2,
-							title: '选择附件',
-							content: '/app/admin/upload/attachment?ext=jpg,jpeg,png,gif,bmp',
+							title: '选择媒体',
+							content: '/app/admin/media/selector',
 							area: ["95%", "90%"],
 							success: function (layero, index) {
 								parent.layui.$("#layui-layer" + index).data("callback", function (data) {
@@ -212,7 +212,7 @@ layui.define(['layer', 'form'], function(exports) {
 					});
 					layui.upload.render({
 						elem: "#" + key,
-						url: "/app/admin/upload/image",
+						url: "/app/admin/media/upload",
 						acceptMime: "image/gif,image/jpeg,image/jpg,image/png",
 						field: "__file__",
 						done: function (res) {
@@ -228,8 +228,8 @@ layui.define(['layer', 'form'], function(exports) {
 					'      layui.$("#attachment-choose-'+key+'").on("click", function() {\n' +
 					'        parent.layer.open({\n' +
 					'          type: 2,\n' +
-					'          title: "选择附件",\n' +
-					'          content: "/app/admin/upload/attachment?ext=jpg,jpeg,png,gif,bmp",\n' +
+					'          title: "选择媒体",\n' +
+					'          content: "/app/admin/media/selector",\n' +
 					'          area: ["95%", "90%"],\n' +
 					'          success: function (layero, index) {\n' +
 					'            parent.layui.$("#layui-layer" + index).data("callback", function (data) {\n' +
@@ -240,7 +240,7 @@ layui.define(['layer', 'form'], function(exports) {
 					'      });\n' +
 					'      layui.upload.render({\n' +
 					'        elem: "#' + key + '",\n' +
-					'        url: "/app/admin/upload/image",\n' +
+					'        url: "/app/admin/media/upload",\n' +
 					'        acceptMime: "image/gif,image/jpeg,image/jpg,image/png",\n' +
 					'        field: "__file__",\n' +
 					'        done: function (res) {\n' +
@@ -322,10 +322,10 @@ layui.define(['layer', 'form'], function(exports) {
 	}
 
 	function upload(size) {
-		let uploadWords = size === "block" ? "上传文件" : "上传";
-		let selectWords = size === "block" ? "选择文件" : "选择";
+		let uploadWords = size === "block" ? "上传媒体" : "上传";
+		let selectWords = size === "block" ? "选择媒体" : "选择";
 		var html = '  <div class="layui-form-item">\n' +
-			'    <label class="layui-form-label">上传文件</label>\n' +
+			'    <label class="layui-form-label">上传媒体</label>\n' +
 			'    <div class="layui-input-' + size + '">\n' +
 			'      <span></span>\n' +
 			'      <input type="text" style="display:none" name="'+key+'" value="" />\n' +
@@ -341,10 +341,10 @@ layui.define(['layer', 'form'], function(exports) {
 	}
 
 	function uploadImg(size) {
-		let uploadWords = size === "block" ? "上传文件" : "上传";
-		let selectWords = size === "block" ? "选择图片" : "选择";
+		let uploadWords = size === "block" ? "上传媒体图片" : "上传";
+		let selectWords = size === "block" ? "选择媒体图片" : "选择";
 		var html = '  <div class="layui-form-item">\n' +
-			'    <label class="layui-form-label">上传图片</label>\n' +
+			'    <label class="layui-form-label">上传媒体图片</label>\n' +
 			'    <div class="layui-input-' + size + '">\n' +
 			'      <img class="img-3" src=""/>\n' +
 			'      <input type="text" style="display:none" name="'+key+'" value="" />\n' +
