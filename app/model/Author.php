@@ -32,6 +32,7 @@ use Throwable;
  * @property string|null $deleted_at 软删除时间
  * @property integer $role 角色
  * @property integer $status 禁用
+ * @property-read \Illuminate\Database\Eloquent\Collection|\app\model\Comment[] $comments 关联的评论
  */
 class Author extends Model
 {
@@ -194,17 +195,23 @@ class Author extends Model
     // ========================================================================
 
     /**
-     * 获取该作者撰写的所有文章。
-     * 这是一个一对多关系，通过中间表 'post_author' 来定义。
+     * 获取作者的所有文章。
+     * 通过 post_author 中间表建立多对多关系。
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     */
+    public function posts()
+    {
+        return $this->belongsToMany(Post::class, 'post_author', 'author_id', 'post_id');
+    }
+
+    /**
+     * 获取作者的所有评论
      *
      * @return HasMany
      */
-    public function posts(): HasMany
+    public function comments(): HasMany
     {
-        // 参数说明：
-        // 1. Post::class: 关联的模型类
-        // 2. 'post_author.postid': 中间表中指向 Post 模型的外键
-        // 3. 'wa_users.id': 当前模型（Author）的主键
-        return $this->hasMany(Post::class, 'post_author.postid', 'wa_users.id');
+        return $this->hasMany(Comment::class, 'user_id', 'id');
     }
 }

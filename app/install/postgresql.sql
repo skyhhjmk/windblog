@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS wa_users
     mobile     VARCHAR(16)              DEFAULT NULL,
     level      INTEGER        NOT NULL  DEFAULT 0,
     birthday   DATE                     DEFAULT NULL,
-    money      DECIMAL(10, 2) NOT NULL  DEFAULT 0.00, -- 移除引号
+    money      DECIMAL(10, 2) NOT NULL  DEFAULT 0.00,
     score      INTEGER        NOT NULL  DEFAULT 0,
     last_time  TIMESTAMP WITH TIME ZONE DEFAULT NULL,
     last_ip    VARCHAR(50)              DEFAULT NULL,
@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS posts
     content_type  VARCHAR(10)              NOT NULL DEFAULT 'markdown',
     content       TEXT                     NOT NULL,
     excerpt       TEXT                              DEFAULT NULL,
-    "status"      VARCHAR(15)              NOT NULL DEFAULT 'draft',
+    status        VARCHAR(15)              NOT NULL DEFAULT 'draft',
     featured      BOOLEAN                  NOT NULL DEFAULT false,
     view_count    INTEGER                  NOT NULL DEFAULT 0,
     comment_count INTEGER                  NOT NULL DEFAULT 0,
@@ -100,7 +100,7 @@ CREATE TABLE IF NOT EXISTS posts
     deleted_at    TIMESTAMP WITH TIME ZONE NULL     DEFAULT NULL,
     UNIQUE (slug),
     CONSTRAINT chk_posts_content_type CHECK (content_type IN ('markdown', 'html', 'text', 'visual')),
-    CONSTRAINT chk_posts_status CHECK ("status" IN ('draft', 'published', 'archived'))
+    CONSTRAINT chk_posts_status CHECK (status IN ('draft', 'published', 'archived'))
 );
 
 COMMENT ON TABLE posts IS '文章表';
@@ -109,7 +109,7 @@ COMMENT ON COLUMN posts.slug IS '文章别名';
 COMMENT ON COLUMN posts.content_type IS '内容类型';
 COMMENT ON COLUMN posts.content IS '文章内容';
 COMMENT ON COLUMN posts.excerpt IS '文章摘要';
-COMMENT ON COLUMN posts."status" IS '文章状态';
+COMMENT ON COLUMN posts.status IS '文章状态';
 COMMENT ON COLUMN posts.featured IS '是否精选';
 COMMENT ON COLUMN posts.view_count IS '浏览次数';
 COMMENT ON COLUMN posts.comment_count IS '评论数量';
@@ -226,19 +226,19 @@ COMMENT ON COLUMN pages.deleted_at IS '删除时间';
 CREATE TABLE IF NOT EXISTS settings
 (
     id         BIGSERIAL PRIMARY KEY,
-    "key"      VARCHAR(255) NOT NULL,
+    key      VARCHAR(255) NOT NULL,
     value      JSONB                    DEFAULT NULL,
-    "type"     VARCHAR(50)              DEFAULT 'string',
+    type     VARCHAR(50)              DEFAULT 'string',
     "group"    VARCHAR(50)              DEFAULT 'general',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE ("key")
+    UNIQUE (key)
 );
 
 COMMENT ON TABLE settings IS '网站设置表';
-COMMENT ON COLUMN settings."key" IS '设置键名';
+COMMENT ON COLUMN settings.key IS '设置键名';
 COMMENT ON COLUMN settings.value IS '设置值';
-COMMENT ON COLUMN settings."type" IS '值类型';
+COMMENT ON COLUMN settings.type IS '值类型';
 COMMENT ON COLUMN settings."group" IS '设置分组';
 COMMENT ON COLUMN settings.created_at IS '创建时间';
 COMMENT ON COLUMN settings.updated_at IS '更新时间';
@@ -284,9 +284,9 @@ CREATE TABLE IF NOT EXISTS import_jobs
 (
     id           BIGSERIAL PRIMARY KEY,
     name         VARCHAR(255)             NOT NULL,
-    "type"       VARCHAR(50)              NOT NULL,
+    type       VARCHAR(50)              NOT NULL,
     file_path    VARCHAR(512)             NOT NULL,
-    "status"     VARCHAR(15)              NOT NULL DEFAULT 'pending',
+    status       VARCHAR(15)              NOT NULL DEFAULT 'pending',
     options      TEXT                              DEFAULT NULL,
     progress     INTEGER                  NOT NULL DEFAULT 0,
     message      TEXT                              DEFAULT NULL,
@@ -294,15 +294,15 @@ CREATE TABLE IF NOT EXISTS import_jobs
     created_at   TIMESTAMP WITH TIME ZONE          DEFAULT CURRENT_TIMESTAMP,
     updated_at   TIMESTAMP WITH TIME ZONE          DEFAULT CURRENT_TIMESTAMP,
     completed_at TIMESTAMP WITH TIME ZONE NULL     DEFAULT NULL,
-    CONSTRAINT chk_import_jobs_status CHECK ("status" IN ('pending', 'processing', 'completed', 'failed')),
+    CONSTRAINT chk_import_jobs_status CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
     CONSTRAINT import_jobs_author_id_foreign FOREIGN KEY (author_id) REFERENCES wa_users (id) ON DELETE SET NULL
 );
 
 COMMENT ON TABLE import_jobs IS '导入任务表';
 COMMENT ON COLUMN import_jobs.name IS '任务名称';
-COMMENT ON COLUMN import_jobs."type" IS '任务类型';
+COMMENT ON COLUMN import_jobs.type IS '任务类型';
 COMMENT ON COLUMN import_jobs.file_path IS '文件路径';
-COMMENT ON COLUMN import_jobs."status" IS '任务状态';
+COMMENT ON COLUMN import_jobs.status IS '任务状态';
 COMMENT ON COLUMN import_jobs.options IS '导入选项';
 COMMENT ON COLUMN import_jobs.progress IS '导入进度 0-100';
 COMMENT ON COLUMN import_jobs.message IS '状态消息';
@@ -321,13 +321,13 @@ CREATE TABLE IF NOT EXISTS comments
     guest_name  VARCHAR(255)                      DEFAULT NULL,
     guest_email VARCHAR(255)                      DEFAULT NULL,
     content     TEXT                     NOT NULL,
-    "status"    VARCHAR(10)              NOT NULL DEFAULT 'pending',
+    status      VARCHAR(10)              NOT NULL DEFAULT 'pending',
     ip_address  VARCHAR(45)                       DEFAULT NULL,
     user_agent  VARCHAR(255)                      DEFAULT NULL,
     created_at  TIMESTAMP WITH TIME ZONE          DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMP WITH TIME ZONE          DEFAULT CURRENT_TIMESTAMP,
     deleted_at  TIMESTAMP WITH TIME ZONE NULL     DEFAULT NULL,
-    CONSTRAINT chk_comments_status CHECK ("status" IN ('pending', 'approved', 'spam', 'trash')),
+    CONSTRAINT chk_comments_status CHECK (status IN ('pending', 'approved', 'spam', 'trash')),
     CONSTRAINT comments_post_id_foreign FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE,
     CONSTRAINT comments_user_id_foreign FOREIGN KEY (user_id) REFERENCES wa_users (id) ON DELETE SET NULL,
     CONSTRAINT comments_parent_id_foreign FOREIGN KEY (parent_id) REFERENCES comments (id) ON DELETE SET NULL
@@ -340,7 +340,7 @@ COMMENT ON COLUMN comments.parent_id IS '父评论ID';
 COMMENT ON COLUMN comments.guest_name IS '访客姓名';
 COMMENT ON COLUMN comments.guest_email IS '访客邮箱';
 COMMENT ON COLUMN comments.content IS '评论内容';
-COMMENT ON COLUMN comments."status" IS '评论状态';
+COMMENT ON COLUMN comments.status IS '评论状态';
 COMMENT ON COLUMN comments.ip_address IS 'IP地址';
 COMMENT ON COLUMN comments.user_agent IS '用户代理';
 COMMENT ON COLUMN comments.created_at IS '创建时间';
@@ -466,24 +466,24 @@ CREATE TABLE IF NOT EXISTS wa_rules
     id         SERIAL PRIMARY KEY,
     title      VARCHAR(255)             NOT NULL,
     "icon"     VARCHAR(255)                      DEFAULT NULL,
-    "key"      VARCHAR(255)             NOT NULL,
+    key      VARCHAR(255)             NOT NULL,
     pid        INTEGER                  NOT NULL DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     href       VARCHAR(255)                      DEFAULT NULL,
-    "type"     INTEGER                  NOT NULL DEFAULT 1,
+    type     INTEGER                  NOT NULL DEFAULT 1,
     weight     INTEGER                           DEFAULT 0
 );
 
 COMMENT ON TABLE wa_rules IS '权限规则表';
 COMMENT ON COLUMN wa_rules.title IS '标题';
 COMMENT ON COLUMN wa_rules."icon" IS '图标';
-COMMENT ON COLUMN wa_rules."key" IS '标识';
+COMMENT ON COLUMN wa_rules.key IS '标识';
 COMMENT ON COLUMN wa_rules.pid IS '上级菜单';
 COMMENT ON COLUMN wa_rules.created_at IS '创建时间';
 COMMENT ON COLUMN wa_rules.updated_at IS '更新时间';
 COMMENT ON COLUMN wa_rules.href IS 'url';
-COMMENT ON COLUMN wa_rules."type" IS '类型';
+COMMENT ON COLUMN wa_rules.type IS '类型';
 COMMENT ON COLUMN wa_rules.weight IS '排序';
 
 -- 创建附件表
@@ -497,7 +497,7 @@ CREATE TABLE IF NOT EXISTS wa_uploads
     mime_type    VARCHAR(255) NOT NULL,
     image_width  INTEGER                  DEFAULT NULL,
     image_height INTEGER                  DEFAULT NULL,
-    "ext"        VARCHAR(128) NOT NULL,
+    ext          VARCHAR(128) NOT NULL,
     storage      VARCHAR(255) NOT NULL    DEFAULT 'local',
     category     VARCHAR(128)             DEFAULT NULL,
     created_at   TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -512,22 +512,26 @@ COMMENT ON COLUMN wa_uploads.file_size IS '文件大小';
 COMMENT ON COLUMN wa_uploads.mime_type IS 'mime类型';
 COMMENT ON COLUMN wa_uploads.image_width IS '图片宽度';
 COMMENT ON COLUMN wa_uploads.image_height IS '图片高度';
-COMMENT ON COLUMN wa_uploads."ext" IS '扩展名';
+COMMENT ON COLUMN wa_uploads.ext IS '扩展名';
 COMMENT ON COLUMN wa_uploads.storage IS '存储位置';
 COMMENT ON COLUMN wa_uploads.created_at IS '上传时间';
 COMMENT ON COLUMN wa_uploads.category IS '类别';
 COMMENT ON COLUMN wa_uploads.updated_at IS '更新时间';
 
 -- 创建posts_ext表
-CREATE TABLE IF NOT EXISTS posts_ext
+CREATE TABLE IF NOT EXISTS post_ext
 (
     id      BIGSERIAL PRIMARY KEY,
-    post_id BIGINT NOT NULL,
+    post_id BIGINT       NOT NULL,
+    key     varchar(255) NOT NULL,
+    value   jsonb        NOT NULL,
     CONSTRAINT posts_ext_post_id_foreign FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE
 );
 
-COMMENT ON TABLE posts_ext IS '文章扩展表';
-COMMENT ON COLUMN posts_ext.post_id IS '文章ID';
+COMMENT ON TABLE post_ext IS '文章扩展表';
+COMMENT ON COLUMN post_ext.post_id IS '文章ID';
+COMMENT ON COLUMN post_ext.key IS '键';
+COMMENT ON COLUMN post_ext.value IS '值';
 
 -- 添加索引
 CREATE INDEX idx_wa_users_join_time ON wa_users USING btree (join_time);
@@ -538,7 +542,7 @@ CREATE INDEX idx_categories_parent_id ON categories USING btree (parent_id);
 CREATE INDEX idx_categories_status ON categories USING btree (status);
 CREATE INDEX idx_categories_deleted_at ON categories USING btree (deleted_at);
 
-CREATE INDEX idx_posts_status ON posts USING btree ("status");
+CREATE INDEX idx_posts_status ON posts USING btree (status);
 CREATE INDEX idx_posts_featured ON posts USING btree (featured);
 CREATE INDEX idx_posts_published_at ON posts USING btree (published_at);
 CREATE INDEX idx_posts_deleted_at ON posts USING btree (deleted_at);
@@ -563,13 +567,13 @@ CREATE INDEX idx_media_filename ON media USING btree (filename);
 CREATE INDEX idx_media_mime_type ON media USING btree (mime_type);
 CREATE INDEX idx_media_deleted_at ON media USING btree (deleted_at);
 
-CREATE INDEX idx_import_jobs_status ON import_jobs USING btree ("status");
+CREATE INDEX idx_import_jobs_status ON import_jobs USING btree (status);
 CREATE INDEX idx_import_jobs_author_id ON import_jobs USING btree (author_id);
 
 CREATE INDEX idx_comments_post_id ON comments USING btree (post_id);
 CREATE INDEX idx_comments_user_id ON comments USING btree (user_id);
 CREATE INDEX idx_comments_parent_id ON comments USING btree (parent_id);
-CREATE INDEX idx_comments_status ON comments USING btree ("status");
+CREATE INDEX idx_comments_status ON comments USING btree (status);
 CREATE INDEX idx_comments_deleted_at ON comments USING btree (deleted_at);
 
 CREATE INDEX idx_tags_deleted_at ON tags USING btree (deleted_at);
@@ -580,8 +584,10 @@ CREATE INDEX idx_post_tag_tag_id ON post_tag USING btree (tag_id);
 CREATE INDEX idx_wa_uploads_category ON wa_uploads USING btree (category);
 CREATE INDEX idx_wa_uploads_admin_id ON wa_uploads USING btree (admin_id);
 CREATE INDEX idx_wa_uploads_name ON wa_uploads USING btree (name);
-CREATE INDEX idx_wa_uploads_ext ON wa_uploads USING btree ("ext");
+CREATE INDEX idx_wa_uploads_ext ON wa_uploads USING btree (ext);
 
+CREATE INDEX idx_post_ext_id ON post_ext USING btree (id);
+CREATE INDEX idx_post_ext_key ON post_ext USING btree (key);
 -- 插入预定义表数据
 
 -- Data for Name: wa_options; Type: TABLE DATA; Schema: public; Owner: postgres
@@ -722,7 +728,7 @@ VALUES ('system_config', '{
            "_field_id": "5",
            "comment": "头像",
            "control": "uploadImage",
-           "control_args": "url:\\/app\\/admin\\/upload\\/avatar",
+           "control_args": "url:/app/admin/upload/avatar",
            "form_show": true,
            "list_show": true,
            "search_type": "normal",
@@ -940,7 +946,7 @@ VALUES ('system_config', '{
            "_field_id": "2",
            "comment": "权限",
            "control": "treeSelectMulti",
-           "control_args": "url:\\/app\\/admin\\/rule\\/get?type=0,1,2",
+           "control_args": "url:/app/admin/rule/get?type=0,1,2",
            "form_show": true,
            "list_show": true,
            "search_type": "normal",
@@ -976,7 +982,7 @@ VALUES ('system_config', '{
            "_field_id": "5",
            "comment": "父级",
            "control": "select",
-           "control_args": "url:\\/app\\/admin\\/role\\/select?format=tree",
+           "control_args": "url:/app/admin/role/select?format=tree",
            "form_show": true,
            "list_show": true,
            "search_type": "normal",
@@ -1038,7 +1044,7 @@ VALUES ('system_config', '{
            "_field_id": "4",
            "comment": "上级菜单",
            "control": "treeSelect",
-           "control_args": "\\/app\\/admin\\/rule\\/select?format=tree&type=0,1",
+           "control_args": "/app/admin/rule/select?format=tree&type=0,1",
            "form_show": true,
            "list_show": true,
            "search_type": "normal",
@@ -1160,7 +1166,7 @@ VALUES ('system_config', '{
            "_field_id": "4",
            "comment": "头像",
            "control": "uploadImage",
-           "control_args": "url:\\/app\\/admin\\/upload\\/avatar",
+           "control_args": "url:/app/admin/upload/avatar",
            "form_show": true,
            "list_show": true,
            "search_type": "normal",
@@ -1332,7 +1338,7 @@ VALUES ('system_config', '{
            "_field_id": "2",
            "comment": "文件",
            "control": "upload",
-           "control_args": "url:\\/app\\/admin\\/upload\\/file",
+           "control_args": "url:/app/admin/upload/file",
            "form_show": true,
            "list_show": true,
            "search_type": "normal",
@@ -1344,7 +1350,7 @@ VALUES ('system_config', '{
            "_field_id": "3",
            "comment": "管理员",
            "control": "select",
-           "control_args": "url:\\/app\\/admin\\/admin\\/select?format=select",
+           "control_args": "url:/app/admin/admin/select?format=select",
            "search_type": "normal",
            "form_show": false,
            "list_show": false,
@@ -1440,7 +1446,7 @@ VALUES ('system_config', '{
            "_field_id": "11",
            "comment": "类别",
            "control": "select",
-           "control_args": "url:\\/app\\/admin\\/dict\\/get\\/upload",
+           "control_args": "url:/app/admin/dict/get/upload",
            "form_show": true,
            "list_show": true,
            "searchable": true,

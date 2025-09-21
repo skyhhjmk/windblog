@@ -19,15 +19,18 @@ use support\Db;
  * @property string $content 文章内容
  * @property string $excerpt 文章摘要
  * @property string $status 文章状态 (e.g., 'published', 'draft', 'archived')
- * @property int $category_id 分类ID
- * @property int $author_id 作者ID
  * @property int $view_count 浏览次数
  * @property \Illuminate\Support\Carbon|null $created_at 创建时间
  * @property \Illuminate\Support\Carbon|null $updated_at 更新时间
  * @property \Illuminate\Support\Carbon|null $deleted_at 软删除时间
- * @property-read \app\model\Author $author 文章作者
- * @property-read \app\model\Category|null $category 文章分类
- * @property-read \app\model\PostAuthor[] $postAuthors 文章-作者关联记录 (用于多作者场景)
+ * @property-read \app\model\PostAuthor[] $postAuthors 文章-作者关联记录
+ * @property-read \app\model\Author[] $authors 通过中间表关联的所有作者
+ * @property-read \app\model\Author $primaryAuthor 文章的主要作者
+ * @property-read \app\model\PostCategory[] $postCategories 文章-分类关联记录
+ * @property-read \app\model\Category[] $categories 通过中间表关联的所有分类
+ * @property-read \app\model\PostTag[] $postTags 文章-标签关联记录
+ * @property-read \app\model\Tag[] $tags 通过中间表关联的所有标签
+ * @property-read \app\model\Comment[] $comments 文章的评论
  *
  * @method static Builder|Post published() 只查询已发布的文章
  * @method static Builder|Post draft() 只查询草稿箱的文章
@@ -58,8 +61,6 @@ class Post extends Model
         'content',
         'excerpt',
         'status',
-        'category_id',
-        'author_id',
         'view_count',
     ];
 
@@ -71,8 +72,6 @@ class Post extends Model
      */
     protected $casts = [
         'id' => 'integer',
-        'category_id' => 'integer',
-        'author_id' => 'integer',
         'view_count' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
@@ -117,44 +116,96 @@ class Post extends Model
      */
     public $timestamps = true;
 
-    // -----------------------------------------------------
-    // 模型关系定义
-    // -----------------------------------------------------
+    // -----------------------------------------------------    
+    // 模型关系定义    
+    // -----------------------------------------------------    
 
     /**
-     * 获取文章的作者（主要作者）。
-     * 定义一个"属于"关系，Post 模型属于 Author 模型。
-     * Eloquent 会自动使用 `author_id` 作为外键去 `authors` 表查找。
-     *
-     * @return BelongsTo
-     */
-    public function author(): BelongsTo
-    {
-        return $this->belongsTo(Author::class);
-    }
-
-    /**
-     * 获取文章所属的分类。
-     * 定义一个"属于"关系，Post 模型属于 Category 模型。
-     * Eloquent 会自动使用 `category_id` 作为外键去 `categories` 表查找。
-     *
-     * @return BelongsTo
-     */
-    public function category(): BelongsTo
-    {
-        return $this->belongsTo(Category::class);
-    }
-
-    /**
-     * 获取文章的所有作者（用于多作者场景）。
+     * 获取文章的所有作者关联记录。
      * 定义一个"一对多"关系，一篇文章可以有多条 post_author 关联记录。
-     * 通过这个关系，可以方便地管理一篇文章的多个作者。
      *
      * @return HasMany
      */
     public function postAuthors(): HasMany
     {
-        return $this->hasMany(PostAuthor::class, 'postid');
+        return $this->hasMany(PostAuthor::class, 'post_id');
+    }
+
+    /**
+     * 获取文章的所有分类关联记录。
+     * 定义一个"一对多"关系，一篇文章可以属于多个分类。
+     *
+     * @return HasMany
+     */
+    public function postCategories(): HasMany
+    {
+        return $this->hasMany(PostCategory::class, 'post_id');
+    }
+
+    /**
+     * 获取文章的所有标签关联记录。
+     * 定义一个"一对多"关系，一篇文章可以有多个标签。
+     *
+     * @return HasMany
+     */
+    public function postTags(): HasMany
+    {
+        return $this->hasMany(\app\model\PostTag::class, 'post_id');
+    }
+    
+    /**
+     * 获取文章关联的所有作者。
+     * 通过 post_author 中间表建立多对多关系。
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     */
+    public function authors()
+    {
+        return $this->belongsToMany(Author::class, 'post_author', 'post_id', 'author_id');
+    }
+    
+    /**
+     * 获取文章的主要作者。
+     * 通过 post_author 中间表，筛选出 is_primary = true 的作者。
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     */
+    public function primaryAuthor()
+    {
+        return $this->belongsToMany(Author::class, 'post_author', 'post_id', 'author_id')
+            ->wherePivot('is_primary', true);
+    }
+    
+    /**
+     * 获取文章关联的所有分类。
+     * 通过 post_category 中间表建立多对多关系。
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     */
+    public function categories()
+    {
+        return $this->belongsToMany(Category::class, 'post_category', 'post_id', 'category_id');
+    }
+    
+    /**
+     * 获取文章关联的所有标签。
+     * 通过 post_tag 中间表建立多对多关系。
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     */
+    public function tags()
+    {
+        return $this->belongsToMany(Tag::class, 'post_tag', 'post_id', 'tag_id');
+    }
+
+    /**
+     * 获取文章的所有评论
+     *
+     * @return HasMany
+     */
+    public function comments(): HasMany
+    {
+        return $this->hasMany(Comment::class, 'post_id', 'id');
     }
 
     // -----------------------------------------------------    
@@ -185,6 +236,7 @@ class Post extends Model
 
     /**
      * 查询作用域：查询指定作者的文章。
+     * 通过中间表 post_author 进行查询。
      *
      * @param Builder $query
      * @param int $authorId 作者ID
@@ -192,7 +244,9 @@ class Post extends Model
      */
     public function scopeByAuthor(Builder $query, int $authorId): Builder
     {
-        return $query->where('author_id', $authorId);
+        return $query->whereHas('authors', function($q) use ($authorId) {
+            $q->where('id', $authorId);
+        });
     }
     
     /**
@@ -228,14 +282,14 @@ class Post extends Model
     {
         // 判断是否启用软删除，除非强制硬删除
         $useSoftDelete = blog_config('soft_delete', true);
-        \support\Log::debug("Soft delete config value: " . var_export($useSoftDelete, true));
-        \support\Log::debug("Force delete flag: " . var_export($forceDelete, true));
+        \support\Log::debug('Soft delete config value: ' . var_export($useSoftDelete, true));
+        \support\Log::debug('Force delete flag: ' . var_export($forceDelete, true));
         
         // 修复逻辑：当$forceDelete为true时，无论配置如何都应该执行硬删除
         if ($forceDelete || ($useSoftDelete && !$forceDelete)) {
             if ($forceDelete) {
                 // 硬删除：直接从数据库中删除记录
-                \support\Log::debug("Executing hard delete for post ID: " . $this->id);
+                \support\Log::debug('Executing hard delete for post ID: ' . $this->id);
                 try {
                     return $this->delete();
                 } catch (\Exception $e) {
@@ -245,12 +299,12 @@ class Post extends Model
             } else {
                 // 软删除：设置 deleted_at 字段
                 try {
-                    \support\Log::debug("Executing soft delete for post ID: " . $this->id);
+                    \support\Log::debug('Executing soft delete for post ID: ' . $this->id);
                     // 使用save方法而不是update方法，确保模型状态同步
                     $this->deleted_at = date('Y-m-d H:i:s');
                     $result = $this->save();
-                    \support\Log::debug("Soft delete result: " . var_export($result, true));
-                    \support\Log::debug("Post deleted_at value after save: " . var_export($this->deleted_at, true));
+                    \support\Log::debug('Soft delete result: ' . var_export($result, true));
+                    \support\Log::debug('Post deleted_at value after save: ' . var_export($this->deleted_at, true));
                     return $result !== false; // 确保返回布尔值
                 } catch (\Exception $e) {
                     \support\Log::error('Soft delete failed for post ID ' . $this->id . ': ' . $e->getMessage());
@@ -259,7 +313,7 @@ class Post extends Model
             }
         } else {
             // 硬删除：直接从数据库中删除记录
-            \support\Log::debug("Executing hard delete for post ID: " . $this->id);
+            \support\Log::debug('Executing hard delete for post ID: ' . $this->id);
             try {
                 return $this->delete();
             } catch (\Exception $e) {

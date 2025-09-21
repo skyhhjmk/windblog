@@ -2,6 +2,7 @@
 
 namespace app\model;
 
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use support\Model;
 use Illuminate\Database\Eloquent\Builder;
 use Throwable;
@@ -21,6 +22,8 @@ use Throwable;
  * @property string $created_at 创建时间
  * @property string $updated_at 更新时间
  * @property string $deleted_at 删除时间
+ * @property-read \app\model\Post $post 关联的文章
+ * @property-read \app\model\Author $author 关联的作者
  */
 class Comment extends Model
 {
@@ -174,5 +177,25 @@ class Comment extends Model
             \support\Log::error('Restore failed for comment ID ' . $this->id . ': ' . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * 获取关联的文章
+     *
+     * @return BelongsTo
+     */
+    public function post(): BelongsTo
+    {
+        return $this->belongsTo(Post::class, 'post_id', 'id');
+    }
+
+    /**
+     * 获取关联的作者
+     *
+     * @return BelongsTo
+     */
+    public function author(): BelongsTo
+    {
+        return $this->belongsTo(Author::class, 'user_id', 'id');
     }
 }

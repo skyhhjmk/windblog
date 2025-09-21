@@ -47,9 +47,14 @@ class PostController
                 return view('error/404');
                 break;
         }
+        
+        // 获取侧边栏内容，页面类型为'post'
+        $sidebar = \app\service\SidebarService::getSidebarContent($request, 'post');
+        
         return view('index/post', [
             'page_title' => blog_config('title', 'WindBlog', true) . ' - ' . $post['title'],
             'post' => $post,
+            'sidebar' => $sidebar
         ]);
     }
 }

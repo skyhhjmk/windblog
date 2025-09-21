@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="utf-8">
+    <title>侧边栏管理</title>
+    <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css" />
+    <link rel="stylesheet" href="/app/admin/admin/css/reset.css" />
+    <link rel="stylesheet" href="/app/admin/component/layui/css/layui.css" />
+    <style>
+        /* 侧边栏管理样式 */
+        .sidebar-container {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .widget-area {
+            flex: 1;
+            min-height: 500px;
+            border: 1px dashed #dcdcdc;
+            border-radius: 4px;
+            padding: 10px;
+            background-color: #f8f8f8;
+        }
+        .available-widgets {
+            width: 280px;
+            border: 1px solid #dcdcdc;
+            border-radius: 4px;
+            background-color: #ffffff;
+        }
+        .widget {
+            margin-bottom: 15px;
+            border: 1px solid #e6e6e6;
+            border-radius: 4px;
+            background-color: #ffffff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .widget-header {
+            padding: 10px 15px;
+            background-color: #f2f2f2;
+            border-bottom: 1px solid #e6e6e6;
+            cursor: move;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .widget-content {
+            padding: 15px;
+        }
+        .available-widget-item {
+            padding: 10px 15px;
+            border-bottom: 1px solid #f2f2f2;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .available-widget-item:hover {
+            background-color: #f2f2f2;
+        }
+        .available-widget-item:last-child {
+            border-bottom: none;
+        }
+        .widget-tools {
+            display: flex;
+            gap: 5px;
+        }
+        .widget-tool-btn {
+            color: #999;
+            cursor: pointer;
+        }
+        .widget-tool-btn:hover {
+            color: #666;
+        }
+        .page-selector {
+            margin-bottom: 20px;
+        }
+        .widget-edit-form {
+            display: none;
+            margin-top: 10px;
+            padding-top: 15px;
+            border-top: 1px solid #f2f2f2;
+        }
+        .save-section {
+            margin-top: 20px;
+            text-align: right;
+        }
+        .widget-active {
+            border-left: 3px solid #1aa094;
+        }
+        .widget-disabled {
+            opacity: 0.6;
+        }
+        .widget-title-input {
+            width: 100%;
+            padding: 5px 10px;
+            border: 1px solid #dcdcdc;
+            border-radius: 4px;
+        }
+        .available-widgets-header {
+            padding: 10px 15px;
+            background-color: #f2f2f2;
+            border-bottom: 1px solid #e6e6e6;
+            font-weight: bold;
+        }
+        .available-widgets-content {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .sortable-placeholder {
+            background-color: #f0f9ff;
+            border: 2px dashed #409eff;
+            height: 80px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="pear-container">
+    <div class="layui-card">
+        <div class="layui-card-header">
+            <h3>侧边栏管理</h3>
+        </div>
+        <div class="layui-card-body">
+            <!-- 页面选择器 -->
+            <div class="page-selector">
+                <div class="layui-form">
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">选择页面：</label>
+                        <div class="layui-input-block">
+                            <select id="page-select" lay-filter="page-select" class="layui-select">
+                                <!-- 页面列表将通过JavaScript动态加载 -->
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 侧边栏容器 -->
+            <div class="sidebar-container">
+                <!-- 侧边栏小工具区域 -->
+                <div class="widget-area" id="sidebar-widgets">
+                    <!-- 小工具将通过JavaScript动态加载 -->
+                </div>
+
+                <!-- 可用小工具区域 -->
+                <div class="available-widgets">
+                    <div class="available-widgets-header">
+                        可用小工具
+                    </div>
+                    <div class="available-widgets-content" id="available-widgets">
+                        <!-- 可用小工具将通过JavaScript动态加载 -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 保存按钮 -->
+            <div class="save-section">
+                <button class="pear-btn pear-btn-primary" id="save-sidebar">保存配置</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+    <script src="/app/admin/component/pear/pear.js"></script>
+    <script src="/app/admin/admin/js/permission.js"></script>
+    <script src="/app/admin/admin/js/common.js"></script>
+
+    <script>
+        // 相关常量
+        const SELECT_API = "/app/admin/sidebar/getSidebar";
+        const SAVE_API = "/app/admin/sidebar/saveSidebar";
+        const GET_PAGES_API = "/app/admin/sidebar/getPages";
+        const GET_WIDGETS_API = "/app/admin/sidebar/getAvailableWidgets";
+        const ADD_WIDGET_API = "/app/admin/sidebar/addWidget";
+        const REMOVE_WIDGET_API = "/app/admin/sidebar/removeWidget";
+        const UPDATE_WIDGET_API = "/app/admin/sidebar/updateWidget";
+
+        // 当前选中的页面
+        let currentPageKey = "default";
+        
+        // 初始化页面
+        layui.use(["form", "jquery", "layer", "common"], function() {
+            let form = layui.form;
+            let $ = layui.$;
+            let layer = layui.layer;
+            let common = layui.common;
+
+            // 初始化状态管理
+            let dragInitialized = false;
+            const initDragOnce = () => {
+              if (dragInitialized) return;
+              initDragSort();
+              dragInitialized = true;
+            };
+            // 存储事件处理器引用，方便后续解绑
+            let eventHandlers = {};
+
+            // 加载页面列表
+            function loadPages() {
+                $.ajax({
+                    url: GET_PAGES_API,
+                    type: "GET",
+                    dataType: "json",
+                    success: function(res) {
+                        if (res.code === 0) {
+                            let pages = res.data;
+                            let pageSelect = $("#page-select");
+                            pageSelect.empty();
+                            
+                            // 添加所有页面选项
+                            if (pages && pages.length > 0) {
+                                pages.forEach(function(page) {
+                                    pageSelect.append(`<option value="${page.key}">${page.name}</option>`);
+                                });
+                            }
+                            
+                            // 设置当前选中页面
+                            pageSelect.val(currentPageKey);
+                            form.render("select");
+                            
+                            // 加载当前页面的侧边栏配置
+                            loadSidebar(currentPageKey);
+                            initDragOnce();
+                        } else {
+                            layer.msg(res.msg || "加载页面列表失败", {icon: 2});
+                        }
+                    },
+                    error: function() {
+                        layer.msg("加载页面列表失败", {icon: 2});
+                    }
+                });
+            }
+
+            // 加载侧边栏配置
+            function loadSidebar(pageKey) {
+                // 先清理之前的事件绑定，防止重复绑定
+                cleanupEventHandlers();
+                
+                $.ajax({
+                    url: SELECT_API,
+                    type: "GET",
+                    data: {page_key: pageKey},
+                    dataType: "json",
+                    success: function(res) {
+                        if (res.code === 0) {
+                            let sidebarConfig = res.data || {widgets: []};
+                            renderSidebarWidgets(sidebarConfig.widgets || []);
+                        } else {
+                            layer.msg(res.msg || "加载侧边栏配置失败", {icon: 2});
+                        }
+                    },
+                    error: function() {
+                        layer.msg("加载侧边栏配置失败", {icon: 2});
+                    }
+                });
+            }
+
+            // 清理事件处理器
+            function cleanupEventHandlers() {
+                try {
+                    // 解绑之前绑定的事件
+                    for (let key in eventHandlers) {
+                        if (eventHandlers.hasOwnProperty(key)) {
+                            try {
+                                let [element, event, handler] = eventHandlers[key];
+                                $(element).off(event, handler);
+                            } catch (err) {
+                                console.warn('清理事件处理器时出错:', err);
+                            }
+                        }
+                    }
+                    // 清空事件处理器存储
+                    eventHandlers = {};
+                } catch (err) {
+                    console.error('清理事件时发生错误:', err);
+                }
+            }
+
+            // 安全地绑定事件，避免重复绑定
+            function safeBindEvent(element, event, handler) {
+                try {
+                    const key = `${event}-${Math.random().toString(36).substr(2, 9)}`;
+                    $(element).off(event, handler).on(event, handler);
+                    eventHandlers[key] = [element, event, handler];
+                } catch (err) {
+                    console.error('绑定事件时出错:', err);
+                }
+            }
+
+            // 渲染侧边栏小工具
+            function renderSidebarWidgets(widgets) {
+                let sidebarWidgets = $("#sidebar-widgets");
+                sidebarWidgets.empty();
+                
+                if (widgets && widgets.length > 0) {
+                    widgets.forEach(function(widget) {
+                        sidebarWidgets.append(createWidgetElement(widget));
+                    });
+                } else {
+                    sidebarWidgets.append('<div class="text-center" style="color: #999; margin-top: 50px;">暂无小工具，从右侧拖拽或点击添加</div>');
+                }
+                
+                // 初始化拖拽排序
+                // 拖拽管理器
+                const dragManager = {
+                  currentDragging: null,
+                  placeholder: null,
+                  createPlaceholder: function() {
+                    const ph = document.createElement('div');
+                    ph.className = 'sortable-placeholder';
+                    ph.innerHTML = '释放位置';
+                    return ph;
+                  },
+                  handleDragStart: function(e, isNewWidget = false) {
+                    this.currentDragging = e.target.closest('.widget, .available-widget-item');
+                    if (!this.currentDragging) return;
+                    
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', 
+                      isNewWidget 
+                        ? 'new:' + this.currentDragging.dataset.widgetType 
+                        : 'exist:' + this.currentDragging.dataset.id
+                    );
+                    
+                    this.placeholder = this.createPlaceholder();
+                    setTimeout(() => this.currentDragging.style.opacity = '0.4', 0);
+                  },
+                  handleDragOver: function(e) {
+                    e.preventDefault();
+                    if (!this.placeholder || !this.currentDragging) return;
+                    
+                    const container = document.getElementById('sidebar-widgets');
+                    const afterElement = this.getDragAfterElement(container, e.clientY);
+                    
+                    if (afterElement) {
+                      container.insertBefore(this.placeholder, afterElement);
+                    } else {
+                      container.appendChild(this.placeholder);
+                    }
+                  },
+                  getDragAfterElement: function(container, y) {
+                    return [...container.querySelectorAll('.widget:not(.dragging)')]
+                      .reduce((closest, child) => {
+                        const box = child.getBoundingClientRect();
+                        const offset = y - box.top - box.height/2;
+                        return offset < 0 && offset > closest.offset 
+                          ? { offset: offset, element: child } 
+                          : closest;
+                      }, { offset: Number.NEGATIVE_INFINITY }).element;
+                  },
+                  handleDrop: function(e) {
+                    e.preventDefault();
+                    if (!this.placeholder || !this.currentDragging) return;
+
+                    const [type, value] = e.dataTransfer.getData('text/plain').split(':');
+                    const newIndex = [...this.placeholder.parentNode.children]
+                      .indexOf(this.placeholder);
+
+                    if (type === 'new') {
+                      this.addNewWidget(value, newIndex);
+                    } else {
+                      this.reorderWidget(value, newIndex);
+                    }
+
+                    this.cleanup();
+                  },
+                  addNewWidget: function(widgetType, index) {
+                    const newWidget = {
+                      id: 'widget-' + Date.now(),
+                      type: widgetType,
+                      title: '新小工具',
+                      config: {}
+                    };
+                    
+                    const element = createWidgetElement(newWidget);
+                    const container = document.getElementById('sidebar-widgets');
+                    
+                    if (index >= container.children.length) {
+                      container.appendChild(element);
+                    } else {
+                      container.insertBefore(element, container.children[index]);
+                    }
+                    
+                    this.bindWidgetEvents(element);
+                  },
+                  reorderWidget: function(widgetId, newIndex) {
+                    const container = document.getElementById('sidebar-widgets');
+                    const widget = container.querySelector(`[data-id="${widgetId}"]`);
+                    const currentIndex = [...container.children].indexOf(widget);
+                    
+                    if (newIndex > currentIndex) {
+                      container.insertBefore(widget, container.children[newIndex + 1]);
+                    } else {
+                      container.insertBefore(widget, container.children[newIndex]);
+                    }
+                  },
+                  cleanup: function() {
+                    if (this.placeholder && this.placeholder.parentNode) {
+                      this.placeholder.parentNode.removeChild(this.placeholder);
+                    }
+                    if (this.currentDragging) {
+                      this.currentDragging.style.opacity = '1';
+                    }
+                    this.currentDragging = null;
+                    this.placeholder = null;
+                  },
+                  bindWidgetEvents: function(element) {
+                    // 绑定编辑/删除等事件
+                  }
+                };
+
+                // 初始化拖拽事件
+                function initDragSort() {
+                  const sidebar = document.getElementById('sidebar-widgets');
+                  const available = document.getElementById('available-widgets');
+
+                  // 绑定侧边栏事件
+                  sidebar.addEventListener('dragover', e => dragManager.handleDragOver(e));
+                  sidebar.addEventListener('drop', e => dragManager.handleDrop(e));
+
+                  // 绑定可用小工具拖拽
+                  available.querySelectorAll('.available-widget-item').forEach(item => {
+                    item.draggable = true;
+                    item.addEventListener('dragstart', e => dragManager.handleDragStart(e, true));
+                  });
+
+                  // 绑定现有小工具拖拽
+                  sidebar.querySelectorAll('.widget').forEach(widget => {
+                    widget.draggable = true;
+                    widget.addEventListener('dragstart', e => dragManager.handleDragStart(e));
+                  });
+                }
+                    // 使用原生拖拽API实现排序
+                    try {
+                        let sidebar = document.getElementById('sidebar-widgets');
+                        if (!sidebar) return;
+                        
+                        // 创建唯一的占位符
+                        let placeholder = document.createElement('div');
+                        placeholder.className = 'sortable-placeholder';
+                        placeholder.setAttribute('id', 'widget-placeholder-' + Date.now());
+                        
+                        // 存储当前拖拽的元素引用
+                        let currentDraggingElement = null;
+                        
+                        // 为所有小工具添加拖拽功能
+                        let widgets = document.querySelectorAll('.widget');
+                        widgets.forEach(widget => {
+                            try {
+                                // 安全地设置draggable属性
+                                if (widget.setAttribute) {
+                                    widget.setAttribute('draggable', 'true');
+                                }
+                                
+                                // 拖拽开始
+                                safeBindEvent(widget, 'dragstart', function(e) {
+                                    if (!e || !e.dataTransfer) return;
+                                    
+                                    try {
+                                        currentDraggingElement = this;
+                                        this.classList.add('dragging');
+                                        setTimeout(() => {
+                                            try {
+                                                if (this.style) {
+                                                    this.style.opacity = '0.5';
+                                                }
+                                            } catch (err) {
+                                                console.warn('设置拖拽元素透明度失败:', err);
+                                            }
+                                        }, 0);
+                                        
+                                        // 尝试设置拖拽效果
+                                        try {
+                                            e.dataTransfer.effectAllowed = 'move';
+                                        } catch (err) {
+                                            console.warn('设置拖拽效果失败:', err);
+                                        }
+                                        
+                                        // 设置拖拽数据
+                                        try {
+                                            const widgetId = this.getAttribute('data-id');
+                                            if (widgetId) {
+                                                e.dataTransfer.setData('text/plain', widgetId);
+                                            }
+                                        } catch (err) {
+                                            console.warn('设置拖拽数据失败:', err);
+                                        }
+                                    } catch (err) {
+                                        console.error('拖拽开始时出错:', err);
+                                    }
+                                });
+                                
+                                // 拖拽结束
+                                safeBindEvent(widget, 'dragend', function() {
+                                    try {
+                                        this.classList.remove('dragging');
+                                        if (this.style) {
+                                            this.style.opacity = '1';
+                                        }
+                                        currentDraggingElement = null;
+                                        
+                                        // 移除占位符
+                                        if (sidebar && sidebar.contains && sidebar.contains(placeholder)) {
+                                            try {
+                                                sidebar.removeChild(placeholder);
+                                            } catch (err) {
+                                                console.warn('移除占位符失败:', err);
+                                            }
+                                        }
+                                        
+                                        // 恢复所有widget的样式
+                                        document.querySelectorAll('.widget').forEach(w => {
+                                            try {
+                                                if (w.style) {
+                                                    w.style.border = '1px solid #e6e6e6';
+                                                }
+                                            } catch (err) {
+                                                console.warn('恢复样式失败:', err);
+                                            }
+                                        });
+                                    } catch (err) {
+                                        console.error('拖拽结束时出错:', err);
+                                    }
+                                });
+                                
+                                // 拖拽进入
+                                safeBindEvent(widget, 'dragenter', function(e) {
+                                    if (!e) return;
+                                    e.preventDefault();
+                                    if (this.classList.contains('dragging')) return;
+                                    
+                                    // 添加视觉反馈
+                                    try {
+                                        if (this.style) {
+                                            this.style.border = '1px dashed #409eff';
+                                        }
+                                    } catch (err) {
+                                        console.warn('设置边框样式失败:', err);
+                                    }
+                                });
+                                
+                                // 拖拽离开
+                                safeBindEvent(widget, 'dragleave', function() {
+                                    // 恢复样式
+                                    try {
+                                        if (this.style) {
+                                            this.style.border = '1px solid #e6e6e6';
+                                        }
+                                    } catch (err) {
+                                        console.warn('恢复边框样式失败:', err);
+                                    }
+                                });
+                                
+                                // 拖拽经过
+                                safeBindEvent(widget, 'dragover', function(e) {
+                                    if (!e || !e.dataTransfer) return;
+                                    e.preventDefault();
+                                    
+                                    // 尝试设置鼠标指针样式
+                                    try {
+                                        e.dataTransfer.dropEffect = 'move';
+                                    } catch (err) {
+                                        console.warn('设置拖拽效果失败:', err);
+                                    }
+                                    
+                                    if (this.classList.contains('dragging')) return;
+                                    
+                                    // 计算是在上方还是下方插入
+                                    try {
+                                        let rect = this.getBoundingClientRect();
+                                        let y = e.clientY - rect.top;
+                                        
+                                        if (sidebar && sidebar.contains && sidebar.contains(placeholder)) {
+                                            try {
+                                                sidebar.removeChild(placeholder);
+                                            } catch (err) {
+                                                console.warn('移除占位符失败:', err);
+                                            }
+                                        }
+                                        
+                                        if (y < rect.height / 2) {
+                                            this.parentNode.insertBefore(placeholder, this);
+                                        } else {
+                                            this.parentNode.insertBefore(placeholder, this.nextSibling);
+                                        }
+                                    } catch (err) {
+                                        console.error('拖拽经过时出错:', err);
+                                    }
+                                });
+                            } catch (err) {
+                                console.error('绑定拖拽事件时出错:', err);
+                            }
+                        });
+                        
+                        // 侧边栏拖拽经过
+                        safeBindEvent(sidebar, 'dragover', function(e) {
+                            if (!e || !e.dataTransfer) return;
+                            e.preventDefault();
+                            
+                            // 尝试设置鼠标指针样式
+                            try {
+                                e.dataTransfer.dropEffect = 'move';
+                            } catch (err) {
+                                console.warn('设置拖拽效果失败:', err);
+                            }
+                            
+                            if (e.target === this && sidebar.contains && !sidebar.contains(placeholder)) {
+                                try {
+                                    this.appendChild(placeholder);
+                                } catch (err) {
+                                    console.warn('添加占位符失败:', err);
+                                }
+                            }
+                        });
+                        
+                        // 侧边栏拖拽进入
+                        safeBindEvent(sidebar, 'dragenter', function(e) {
+                            if (!e) return;
+                            e.preventDefault();
+                        });
+                        
+                        // 拖拽放置
+                        safeBindEvent(sidebar, 'drop', function(e) {
+                            try {
+                                if (!e || !e.dataTransfer) return;
+                                e.preventDefault();
+                                
+                                // 恢复所有widget的样式
+                                document.querySelectorAll('.widget').forEach(w => {
+                                    try {
+                                        if (w.style) {
+                                            w.style.border = '1px solid #e6e6e6';
+                                        }
+                                    } catch (err) {
+                                        console.warn('恢复样式失败:', err);
+                                    }
+                                });
+                                
+                                let draggedData = '';
+                                try {
+                                    draggedData = e.dataTransfer.getData('text/plain');
+                                } catch (err) {
+                                    console.warn('获取拖拽数据失败:', err);
+                                }
+                                
+                                // 检查是否是从右侧可用小工具列表拖拽过来的
+                                if (draggedData && typeof draggedData === 'string' && draggedData.trim() !== '' && isNaN(draggedData)) {
+                                    // 是新的小工具，添加到侧边栏
+                                    setTimeout(() => {
+                                        try {
+                                            addWidget(currentPageKey, draggedData);
+                                        } catch (err) {
+                                            console.error('添加小工具失败:', err);
+                                        }
+                                    }, 100); // 增加一点延迟确保DOM操作完成
+                                } else if (currentDraggingElement && sidebar.contains && this.contains(placeholder)) {
+                                    // 是已有的小工具，进行排序
+                                    try {
+                                        // 先移除再添加，确保DOM更新
+                                        if (currentDraggingElement.parentNode) {
+                                            currentDraggingElement.parentNode.removeChild(currentDraggingElement);
+                                        }
+                                        this.insertBefore(currentDraggingElement, placeholder);
+                                    } catch (err) {
+                                        console.error('拖拽排序时出错:', err);
+                                    }
+                                }
+                                
+                                // 确保占位符被移除
+                                setTimeout(() => {
+                                    try {
+                                        if (sidebar && sidebar.contains && sidebar.contains(placeholder)) {
+                                            sidebar.removeChild(placeholder);
+                                        }
+                                    } catch (err) {
+                                        console.warn('最终移除占位符失败:', err);
+                                    }
+                                }, 0);
+                            } catch (err) {
+                                console.error('拖拽放置时出错:', err);
+                            }
+                        });
+                    } catch (err) {
+                        console.error('初始化拖拽排序时出错:', err);
+                    }
+                }
+                
+                // 绑定小工具事件
+                bindWidgetEvents();
+            }
+
+            // 创建小工具元素
+            function createWidgetElement(widget) {
+                let widgetClass = widget.enabled ? 'widget widget-active' : 'widget widget-disabled';
+                
+                // 根据小工具类型创建内容
+                let widgetContent = createWidgetContent(widget);
+                
+                let widgetHtml = `
+                <div class="${widgetClass}" data-id="${widget.id}" data-type="${widget.type}">
+                    <div class="widget-header">
+                        <span class="widget-title">${widget.title || '未命名小工具'}</span>
+                        <div class="widget-tools">
+                            <i class="layui-icon layui-icon-edit widget-tool-btn edit-widget"></i>
+                            <i class="layui-icon layui-icon-delete widget-tool-btn remove-widget"></i>
+                            <i class="layui-icon layui-icon-more-vertical widget-tool-btn" style="cursor: move;"></i>
+                        </div>
+                    </div>
+                    <div class="widget-content">
+                        ${widgetContent}
+                        <div class="widget-edit-form">
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">标题</label>
+                                <div class="layui-input-block">
+                                    <input type="text" class="layui-input widget-title-input" value="${widget.title || ''}" placeholder="输入小工具标题">
+                                </div>
+                            </div>
+                            ${createWidgetSettingsForm(widget)}
+                            <div class="layui-form-item">
+                                <div class="layui-input-block">
+                                    <input type="checkbox" name="enabled" lay-skin="switch" lay-text="开启|关闭" ${widget.enabled ? 'checked' : ''}>
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <div class="layui-input-block">
+                                    <button class="pear-btn pear-btn-primary save-widget-btn">保存</button>
+                                    <button class="pear-btn cancel-edit-btn">取消</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+                
+                return $(widgetHtml);
+            }
+
+            // 创建小工具内容
+            function createWidgetContent(widget) {
+                switch(widget.type) {
+                    case 'about':
+                        return `<p>${widget.content || '关于博主'}</p>`;
+                    case 'recent_posts':
+                        return `<p>显示最新 ${widget.limit || 5} 篇文章</p>`;
+                    case 'categories':
+                        return `<p>显示文章分类列表</p>`;
+                    case 'tags':
+                        return `<p>显示标签云</p>`;
+                    case 'archives':
+                        return `<p>显示文章归档</p>`;
+                    case 'html':
+                        return `<p>自定义HTML内容</p>`;
+                    default:
+                        return `<p>小工具类型: ${widget.type}</p>`;
+                }
+            }
+
+            // 创建小工具设置表单
+            function createWidgetSettingsForm(widget) {
+                let formHtml = '';
+                
+                // 根据小工具类型创建不同的设置表单
+                switch(widget.type) {
+                    case 'about':
+                        formHtml += `
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">内容</label>
+                            <div class="layui-input-block">
+                                <textarea class="layui-textarea widget-content-input" placeholder="输入关于博主内容">${widget.content || ''}</textarea>
+                            </div>
+                        </div>`;
+                        break;
+                    case 'recent_posts':
+                        formHtml += `
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">显示数量</label>
+                            <div class="layui-input-block">
+                                <input type="number" class="layui-input widget-limit-input" value="${widget.limit || 5}" min="1" max="20" placeholder="显示文章数量">
+                            </div>
+                        </div>`;
+                        break;
+                    case 'html':
+                        formHtml += `
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">HTML内容</label>
+                            <div class="layui-input-block">
+                                <textarea class="layui-textarea widget-html-input" placeholder="输入HTML内容">${widget.content || ''}</textarea>
+                            </div>
+                        </div>`;
+                        break;
+                }
+                
+                return formHtml;
+            }
+
+            // 绑定小工具事件
+            function bindWidgetEvents() {
+                // 编辑小工具
+                $(document).off('click', '.edit-widget').on('click', '.edit-widget', function() {
+                    let widget = $(this).closest('.widget');
+                    let editForm = widget.find('.widget-edit-form');
+                    editForm.toggle();
+                });
+                
+                // 取消编辑
+                $(document).off('click', '.cancel-edit-btn').on('click', '.cancel-edit-btn', function() {
+                    let widget = $(this).closest('.widget');
+                    let editForm = widget.find('.widget-edit-form');
+                    editForm.hide();
+                });
+                
+                // 保存小工具
+                $(document).off('click', '.save-widget-btn').on('click', '.save-widget-btn', function() {
+                    let widget = $(this).closest('.widget');
+                    let widgetId = widget.attr('data-id');
+                    let widgetType = widget.attr('data-type');
+                    let title = widget.find('.widget-title-input').val();
+                    let enabled = widget.find('input[name="enabled"]').is(':checked');
+                    
+                    // 构建配置对象
+                    let widgetConfig = {
+                        title: title,
+                        enabled: enabled
+                    };
+                    
+                    // 根据小工具类型添加特定配置
+                    switch(widgetType) {
+                        case 'about':
+                            widgetConfig.content = widget.find('.widget-content-input').val();
+                            break;
+                        case 'recent_posts':
+                            widgetConfig.limit = parseInt(widget.find('.widget-limit-input').val()) || 5;
+                            break;
+                        case 'html':
+                            widgetConfig.content = widget.find('.widget-html-input').val();
+                            break;
+                    }
+                    
+                    // 更新小工具配置
+                    updateWidget(currentPageKey, widgetId, widgetConfig);
+                });
+                
+                // 删除小工具
+                $(document).off('click', '.remove-widget').on('click', '.remove-widget', function() {
+                    let widget = $(this).closest('.widget');
+                    let widgetId = widget.attr('data-id');
+                    
+                    layer.confirm('确定要删除这个小工具吗？', {
+                        btn: ['确定', '取消']
+                    }, function() {
+                        removeWidget(currentPageKey, widgetId);
+                    });
+                });
+            }
+
+            // 更新小工具配置
+            function updateWidget(pageKey, widgetId, widgetConfig) {
+                $.ajax({
+                    url: UPDATE_WIDGET_API,
+                    type: "POST",
+                    data: {
+                        page_key: pageKey,
+                        widget_id: widgetId,
+                        widget_config: JSON.stringify(widgetConfig)
+                    },
+                    dataType: "json",
+                    success: function(res) {
+                        if (res.code === 0) {
+                            layer.msg("更新小工具成功", {icon: 1});
+                            // 重新加载侧边栏
+                            loadSidebar(pageKey);
+                        } else {
+                            layer.msg(res.msg || "更新小工具失败", {icon: 2});
+                        }
+                    },
+                    error: function() {
+                        layer.msg("更新小工具失败", {icon: 2});
+                    }
+                });
+            }
+
+            // 删除小工具
+            function removeWidget(pageKey, widgetId) {
+                $.ajax({
+                    url: REMOVE_WIDGET_API,
+                    type: "POST",
+                    data: {
+                        page_key: pageKey,
+                        widget_id: widgetId
+                    },
+                    dataType: "json",
+                    success: function(res) {
+                        if (res.code === 0) {
+                            layer.msg("删除小工具成功", {icon: 1});
+                            // 重新加载侧边栏
+                            loadSidebar(pageKey);
+                        } else {
+                            layer.msg(res.msg || "删除小工具失败", {icon: 2});
+                        }
+                    },
+                    error: function() {
+                        layer.msg("删除小工具失败", {icon: 2});
+                    }
+                });
+            }
+
+            // 加载可用小工具
+            function loadAvailableWidgets() {
+                $.ajax({
+                    url: GET_WIDGETS_API,
+                    type: "GET",
+                    dataType: "json",
+                    success: function(res) {
+                        if (res.code === 0) {
+                            let widgets = res.data;
+                            let availableWidgets = $("#available-widgets");
+                            availableWidgets.empty();
+                             
+                            if (widgets && widgets.length > 0) {
+                                widgets.forEach(function(widget) {
+                                    let widgetItem = $(`<div class="available-widget-item" draggable="true" data-type="${widget.type}">${widget.name}</div>`);
+                                     
+                                    // 绑定点击事件
+                                    widgetItem.click(function() {
+                                        addWidget(currentPageKey, widget.type);
+                                    });
+                                     
+                                    // 添加拖拽事件
+                                    safeBindEvent(widgetItem, 'dragstart', function(e) {
+                                        if (!e || !e.dataTransfer) return;
+                                        try {
+                                            e.dataTransfer.effectAllowed = 'copy';
+                                            e.dataTransfer.setData('text/plain', widget.type);
+                                            $(this).addClass('dragging');
+                                        } catch (err) {
+                                            console.warn('右侧小工具拖拽开始时出错:', err);
+                                        }
+                                    });
+                                        
+                                    safeBindEvent(widgetItem, 'dragend', function() {
+                                        try {
+                                            $(this).removeClass('dragging');
+                                        } catch (err) {
+                                            console.warn('右侧小工具拖拽结束时出错:', err);
+                                        }
+                                    });
+                                     
+                                    availableWidgets.append(widgetItem);
+                                });
+                            }
+                        } else {
+                            layer.msg(res.msg || "加载可用小工具失败", {icon: 2});
+                        }
+                    },
+                    error: function() {
+                        layer.msg("加载可用小工具失败", {icon: 2});
+                    }
+                });
+            }
+
+            // 添加小工具
+            function addWidget(pageKey, widgetType) {
+                $.ajax({
+                    url: ADD_WIDGET_API,
+                    type: "POST",
+                    data: {
+                        page_key: pageKey,
+                        widget_type: widgetType
+                    },
+                    dataType: "json",
+                    success: function(res) {
+                        if (res.code === 0) {
+                            layer.msg("添加小工具成功", {icon: 1});
+                            // 重新加载侧边栏
+                            loadSidebar(pageKey);
+                        } else {
+                            layer.msg(res.msg || "添加小工具失败", {icon: 2});
+                        }
+                    },
+                    error: function() {
+                        layer.msg("添加小工具失败", {icon: 2});
+                    }
+                });
+            }
+
+            // 保存侧边栏配置
+            function saveSidebarConfig() {
+                // 构建侧边栏配置
+                let sidebarConfig = {
+                    widgets: []
+                };
+                
+                // 获取所有小工具
+                let widgets = $("#sidebar-widgets .widget");
+                
+                widgets.each(function() {
+                    let widget = $(this);
+                    let widgetId = widget.attr('data-id');
+                    let widgetType = widget.attr('data-type');
+                    let widgetTitle = widget.find('.widget-title').text();
+                    let enabled = !widget.hasClass('widget-disabled');
+                    
+                    // 创建小工具配置对象
+                    let widgetConfig = {
+                        id: widgetId,
+                        type: widgetType,
+                        title: widgetTitle,
+                        enabled: enabled
+                    };
+                    
+                    // 添加到配置数组
+                    sidebarConfig.widgets.push(widgetConfig);
+                });
+                
+                // 保存配置
+                $.ajax({
+                    url: SAVE_API,
+                    type: "POST",
+                    data: {
+                        page_key: currentPageKey,
+                        sidebar_config: JSON.stringify(sidebarConfig)
+                    },
+                    dataType: "json",
+                    success: function(res) {
+                        if (res.code === 0) {
+                            layer.msg("保存侧边栏配置成功", {icon: 1});
+                        } else {
+                            layer.msg(res.msg || "保存侧边栏配置失败", {icon: 2});
+                        }
+                    },
+                    error: function() {
+                        layer.msg("保存侧边栏配置失败", {icon: 2});
+                    }
+                });
+            }
+
+            // 页面切换事件
+            form.on("select(page-select)", function(data) {
+                currentPageKey = data.value;
+                loadSidebar(currentPageKey);
+            });
+
+            // 保存按钮点击事件
+            $("#save-sidebar").click(function() {
+                saveSidebarConfig();
+            });
+
+            // 初始化
+            loadPages();
+            loadAvailableWidgets();
+        });
+    </script>
+</body>
+</html>

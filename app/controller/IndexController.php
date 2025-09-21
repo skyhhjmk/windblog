@@ -41,10 +41,14 @@ class IndexController
         // 获取博客标题
         $blog_title = BlogService::getBlogTitle();
         
+        // 获取侧边栏内容
+        $sidebar = \app\service\SidebarService::getSidebarContent($request, 'home');
+        
         return view('index/index', [
             'page_title' => $blog_title . ' - count is -' . $result['totalCount'],
             'posts' => $result['posts'],
             'pagination' => $result['pagination'],
+            'sidebar' => $sidebar
         ]);
     }
 

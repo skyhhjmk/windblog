@@ -34,7 +34,7 @@ class RuleController extends Crud
      */
     public function __construct()
     {
-        $this->model = new Rule;
+        $this->model = new Rule();
     }
 
     /**
@@ -222,14 +222,31 @@ class RuleController extends Crud
         if ($request->method() === 'GET') {
             return raw_view('rule/insert');
         }
+        
+        // 获取原始POST数据用于调试
+        $rawPostData = $request->post();
+        
+        // 检查原始数据中的title字段
+        if (!isset($rawPostData['title']) || $rawPostData['title'] === '') {
+            return $this->json(1, '提交的数据中标题不能为空，原始数据: ' . json_encode($rawPostData, JSON_UNESCAPED_UNICODE));
+        }
+        
         $data = $this->insertInput($request);
-        if (empty($data['type'])) {
+        
+        // 检查处理后的数据中title字段是否存在
+        if (!isset($data['title']) || $data['title'] === '') {
+            return $this->json(1, '标题字段在数据处理过程中丢失，原始数据: ' . json_encode($rawPostData, JSON_UNESCAPED_UNICODE) . '，处理后数据: ' . json_encode($data, JSON_UNESCAPED_UNICODE));
+        }
+        
+        if (empty($data['type']) && isset($data['key'])) {
             $data['type'] = strpos($data['key'], '\\') ? 1 : 0;
         }
-        $data['key'] = str_replace('\\\\', '\\', $data['key']);
-        $key = $data['key'] ?? '';
-        if ($this->model->where('key', $key)->first()) {
-            return $this->json(1, "菜单标识 $key 已经存在");
+        if (isset($data['key'])) {
+            $data['key'] = str_replace('\\\\', '\\', $data['key']);
+            $key = $data['key'] ?? '';
+            if ($this->model->where('key', $key)->first()) {
+                return $this->json(1, "菜单标识 $key 已经存在");
+            }
         }
         $data['pid'] = empty($data['pid']) ? 0 : $data['pid'];
         $this->doInsert($data);

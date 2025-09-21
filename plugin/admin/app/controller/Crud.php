@@ -22,7 +22,9 @@ class Crud extends Base
 
     /**
      * 查询
+     *
      * @param Request $request
+     *
      * @return Response
      * @throws BusinessException
      */
@@ -35,7 +37,9 @@ class Crud extends Base
 
     /**
      * 添加
+     *
      * @param Request $request
+     *
      * @return Response
      * @throws BusinessException
      */
@@ -48,7 +52,9 @@ class Crud extends Base
 
     /**
      * 更新
+     *
      * @param Request $request
+     *
      * @return Response
      * @throws BusinessException
      */
@@ -61,7 +67,9 @@ class Crud extends Base
 
     /**
      * 删除
+     *
      * @param Request $request
+     *
      * @return Response
      * @throws BusinessException
      */
@@ -74,7 +82,9 @@ class Crud extends Base
 
     /**
      * 查询前置
+     *
      * @param Request $request
+     *
      * @return array
      * @throws BusinessException
      */
@@ -94,7 +104,7 @@ class Crud extends Base
         // 检测数据库类型并使用对应的表结构查询语句
         $connection = Util::db();
         $driver = $connection->getConfig('driver');
-        
+
         if ($driver === 'pgsql') {
             // PostgreSQL查询表结构
             $allow_column = $connection->select("SELECT column_name AS Field, data_type AS Type 
@@ -135,12 +145,14 @@ class Crud extends Base
 
     /**
      * 指定查询where条件,并没有真正的查询数据库操作
-     * @param array $where
+     *
+     * @param array       $where
      * @param string|null $field
-     * @param string $order
+     * @param string      $order
+     *
      * @return EloquentBuilder|QueryBuilder|Model
      */
-    protected function doSelect(array $where, ?string $field = null, string $order= 'desc')
+    protected function doSelect(array $where, ?string $field = null, string $order = 'desc')
     {
         $model = $this->model;
         foreach ($where as $column => $value) {
@@ -161,7 +173,7 @@ class Crud extends Base
                         $valArr = explode(",", trim($value[1]));
                     }
                     $model = $model->whereNotIn($column, $valArr);
-                }elseif ($value[0] == 'null') {
+                } elseif ($value[0] == 'null') {
                     $model = $model->whereNull($column);
                 } elseif ($value[0] == 'not null') {
                     $model = $model->whereNotNull($column);
@@ -180,9 +192,11 @@ class Crud extends Base
 
     /**
      * 执行真正查询，并返回格式化数据
+     *
      * @param $query
      * @param $format
      * @param $limit
+     *
      * @return Response
      */
     protected function doFormat($query, $format, $limit): Response
@@ -205,7 +219,9 @@ class Crud extends Base
 
     /**
      * 插入前置方法
+     *
      * @param Request $request
+     *
      * @return array
      * @throws BusinessException
      */
@@ -238,7 +254,9 @@ class Crud extends Base
 
     /**
      * 执行插入
+     *
      * @param array $data
+     *
      * @return mixed|null
      */
     protected function doInsert(array $data)
@@ -255,7 +273,9 @@ class Crud extends Base
 
     /**
      * 更新前置方法
+     *
      * @param Request $request
+     *
      * @return array
      * @throws BusinessException
      */
@@ -302,8 +322,10 @@ class Crud extends Base
 
     /**
      * 执行更新
+     *
      * @param $id
      * @param $data
+     *
      * @return void
      */
     protected function doUpdate($id, $data)
@@ -317,38 +339,32 @@ class Crud extends Base
 
     /**
      * 对用户输入表单过滤
+     *
      * @param array $data
+     *
      * @return array
      * @throws BusinessException
      */
     protected function inputFilter(array $data): array
     {
         $table = config('database.connections.pgsql.prefix') . $this->model->getTable();
-        
-        // 检测数据库类型并使用对应的表结构查询语句
-        $connection = $this->model->getConnection();
-        $driver = $connection->getConfig('driver');
-        
-        if ($driver === 'pgsql') {
-            // PostgreSQL查询表结构
-            $allow_column = $connection->select("SELECT column_name AS Field, data_type AS Type 
+        $connection = Util::db();
+        // PostgreSQL查询表结构
+        $allow_column = $connection->select("SELECT column_name AS field, data_type AS type 
                 FROM information_schema.columns 
                 WHERE table_name = ? AND table_schema = 'public'", [$table]);
-        } else {
-            // MySQL查询表结构
-            $allow_column = $connection->select("desc `$table`");
-        }
+
         if (!$allow_column) {
             throw new BusinessException('表不存在', 2);
         }
-        $columns = array_column($allow_column, 'Type', 'Field');
+        $columns = array_column($allow_column, 'type', 'field');
         foreach ($data as $col => $item) {
             if (!isset($columns[$col])) {
                 unset($data[$col]);
                 continue;
             }
             // 非字符串类型传空则为null
-            if ($item === '' && strpos(strtolower($columns[$col]), 'varchar') === false && strpos(strtolower($columns[$col]), 'text') === false) {
+            if ($item === '' && !str_contains(strtolower($columns[$col]), 'varchar') && !str_contains(strtolower($columns[$col]), 'text')) {
                 $data[$col] = null;
             }
             if (is_array($item)) {
@@ -366,7 +382,9 @@ class Crud extends Base
 
     /**
      * 删除前置方法
+     *
      * @param Request $request
+     *
      * @return array
      * @throws BusinessException
      */
@@ -377,7 +395,7 @@ class Crud extends Base
             throw new BusinessException('该表无主键，不支持删除');
         }
         $ids = (array)$request->post($primary_key, []);
-        if (!Auth::isSuperAdmin()){
+        if (!Auth::isSuperAdmin()) {
             $admin_ids = [];
             if ($this->dataLimit) {
                 $admin_ids = $this->model->where($primary_key, $ids)->pluck($this->dataLimitField)->toArray();
@@ -397,7 +415,9 @@ class Crud extends Base
 
     /**
      * 执行删除
+     *
      * @param array $ids
+     *
      * @return void
      */
     protected function doDelete(array $ids)
@@ -413,7 +433,9 @@ class Crud extends Base
 
     /**
      * 格式化树
+     *
      * @param $items
+     *
      * @return Response
      */
     protected function formatTree($items): Response
@@ -434,7 +456,9 @@ class Crud extends Base
 
     /**
      * 格式化表格树
+     *
      * @param $items
+     *
      * @return Response
      */
     protected function formatTableTree($items): Response
@@ -445,7 +469,9 @@ class Crud extends Base
 
     /**
      * 格式化下拉列表
+     *
      * @param $items
+     *
      * @return Response
      */
     protected function formatSelect($items): Response
@@ -458,13 +484,15 @@ class Crud extends Base
                 'value' => $item->$primary_key
             ];
         }
-        return  $this->json(0, 'ok', $formatted_items);
+        return $this->json(0, 'ok', $formatted_items);
     }
 
     /**
      * 通用格式化
+     *
      * @param $items
      * @param $total
+     *
      * @return Response
      */
     protected function formatNormal($items, $total): Response
@@ -474,7 +502,9 @@ class Crud extends Base
 
     /**
      * 查询数据库后置方法，可用于修改数据
+     *
      * @param mixed $items 原数据
+     *
      * @return mixed 修改后数据
      */
     protected function afterQuery($items)
@@ -484,7 +514,9 @@ class Crud extends Base
 
     /**
      * 猜测记录名称
+     *
      * @param $item
+     *
      * @return mixed
      */
     protected function guessName($item)

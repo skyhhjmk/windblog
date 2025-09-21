@@ -2,6 +2,7 @@
 
 namespace app\model;
 
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use support\Model;
 
 /**
@@ -9,6 +10,8 @@ use support\Model;
  * @property integer $post_id 文章ID(主键)
  * @property integer $tag_id 标签ID(主键)
  * @property string $created_at 创建时间
+ * @property-read \app\model\Post $post 关联的文章
+ * @property-read \app\model\Tag $tag 关联的标签
  */
 class PostTag extends Model
 {
@@ -39,6 +42,35 @@ class PostTag extends Model
      * @var bool
      */
     public $timestamps = false;
-    
-    
+
+    /**
+     * 属性类型转换
+     *
+     * @var array
+     */
+    protected $casts = [
+        'post_id' => 'integer',
+        'tag_id' => 'integer',
+        'created_at' => 'datetime',
+    ];
+
+    /**
+     * 获取关联的文章
+     *
+     * @return BelongsTo
+     */
+    public function post(): BelongsTo
+    {
+        return $this->belongsTo(Post::class, 'post_id', 'id');
+    }
+
+    /**
+     * 获取关联的标签
+     *
+     * @return BelongsTo
+     */
+    public function tag(): BelongsTo
+    {
+        return $this->belongsTo(Tag::class, 'tag_id', 'id');
+    }
 }

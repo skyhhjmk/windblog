@@ -23,9 +23,11 @@ Route::any('/push/{id}', function ($id) {
 // 文章阅读页路由
 Route::any('/post/{keyword}', [app\controller\PostController::class, 'index']);
 
-// 首页&分页路由
+// 页面路由
+Route::any('/page/{keyword}', [app\controller\PageController::class, 'index']);
+
+// 首页路由
 Route::any('/', [app\controller\IndexController::class, 'index'])->name('index.index');
-Route::any('/page/{page}', [app\controller\IndexController::class, 'index'])->name('index.page');
 
 // 链接页&分页路由
 Route::any('/link', [app\controller\LinkController::class, 'index'])->name('link.index');
