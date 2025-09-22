@@ -19,6 +19,7 @@ use plugin\admin\app\controller\EditorController;
 use plugin\admin\app\controller\MediaController;
 use plugin\admin\app\controller\PostsController;
 use plugin\admin\app\controller\WpImportController;
+use plugin\admin\app\controller\SidebarController;
 use Webman\Route;
 use support\Request;
 
@@ -74,6 +75,20 @@ Route::group('/app/admin', function () {
             Route::post('/upload', [WpImportController::class, 'upload'])->name('admin.tools.wp-import.upload');
             Route::post('/submit', [WpImportController::class, 'submit'])->name('admin.tools.wp-import.submit');
         });
+    });
+
+    // 侧边栏管理路由
+    Route::group('/sidebar', function () {
+        Route::get('', [SidebarController::class, 'index'])->name('admin.sidebar.index');
+        Route::get('/', [SidebarController::class, 'index']);
+        Route::get('/index', [SidebarController::class, 'index']);
+        Route::get('/getPages', [SidebarController::class, 'getPages'])->name('admin.sidebar.getPages');
+        Route::get('/getAvailableWidgets', [SidebarController::class, 'getAvailableWidgets'])->name('admin.sidebar.getAvailableWidgets');
+        Route::get('/getSidebar', [SidebarController::class, 'getSidebar'])->name('admin.sidebar.getSidebar');
+        Route::post('/addWidget', [SidebarController::class, 'addWidget'])->name('admin.sidebar.addWidget');
+        Route::post('/removeWidget', [SidebarController::class, 'removeWidget'])->name('admin.sidebar.removeWidget');
+        Route::post('/updateWidget', [SidebarController::class, 'updateWidget'])->name('admin.sidebar.updateWidget');
+        Route::post('/saveSidebar', [SidebarController::class, 'saveSidebar'])->name('admin.sidebar.saveSidebar');
     });
 
 });

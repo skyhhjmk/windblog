@@ -226,9 +226,9 @@ COMMENT ON COLUMN pages.deleted_at IS '删除时间';
 CREATE TABLE IF NOT EXISTS settings
 (
     id         BIGSERIAL PRIMARY KEY,
-    key      VARCHAR(255) NOT NULL,
+    key        VARCHAR(255) NOT NULL,
     value      JSONB                    DEFAULT NULL,
-    type     VARCHAR(50)              DEFAULT 'string',
+    type       VARCHAR(50)              DEFAULT 'string',
     "group"    VARCHAR(50)              DEFAULT 'general',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -284,7 +284,7 @@ CREATE TABLE IF NOT EXISTS import_jobs
 (
     id           BIGSERIAL PRIMARY KEY,
     name         VARCHAR(255)             NOT NULL,
-    type       VARCHAR(50)              NOT NULL,
+    type         VARCHAR(50)              NOT NULL,
     file_path    VARCHAR(512)             NOT NULL,
     status       VARCHAR(15)              NOT NULL DEFAULT 'pending',
     options      TEXT                              DEFAULT NULL,
@@ -466,12 +466,12 @@ CREATE TABLE IF NOT EXISTS wa_rules
     id         SERIAL PRIMARY KEY,
     title      VARCHAR(255)             NOT NULL,
     "icon"     VARCHAR(255)                      DEFAULT NULL,
-    key      VARCHAR(255)             NOT NULL,
+    key        VARCHAR(255)             NOT NULL,
     pid        INTEGER                  NOT NULL DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     href       VARCHAR(255)                      DEFAULT NULL,
-    type     INTEGER                  NOT NULL DEFAULT 1,
+    type       INTEGER                  NOT NULL DEFAULT 1,
     weight     INTEGER                           DEFAULT 0
 );
 

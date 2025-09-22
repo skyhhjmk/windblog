@@ -3,7 +3,7 @@
         'name' => 'skyhhjmk/wind-cms',
         'pretty_version' => 'dev-master',
         'version' => 'dev-master',
-        'reference' => '1bbe90735a69d70f50e18dc0ccc3354588023361',
+        'reference' => '4205ee1c1cab524fda2e0b25ac6b022fa449cb57',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -934,7 +934,7 @@
         'skyhhjmk/wind-cms' => array(
             'pretty_version' => 'dev-master',
             'version' => 'dev-master',
-            'reference' => '1bbe90735a69d70f50e18dc0ccc3354588023361',
+            'reference' => '4205ee1c1cab524fda2e0b25ac6b022fa449cb57',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

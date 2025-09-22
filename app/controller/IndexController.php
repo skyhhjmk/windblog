@@ -19,6 +19,7 @@ class IndexController
      */
     protected array $noNeedLogin = ['index'];
 
+
     /**
      * 博客首页
      *
@@ -43,7 +44,6 @@ class IndexController
         
         // 获取侧边栏内容
         $sidebar = \app\service\SidebarService::getSidebarContent($request, 'home');
-        
         return view('index/index', [
             'page_title' => $blog_title . ' - count is -' . $result['totalCount'],
             'posts' => $result['posts'],

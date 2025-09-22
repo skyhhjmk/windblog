@@ -45,7 +45,7 @@ function cache(?string $key = null, mixed $value = null, bool $set = false, ?int
  * 获取博客配置，获取所有配置项不需要传参，并且不使用缓存
  * 输入原始值，输出原始值。内部序列化存储，外部反序列化返回
  *
- * @param string     $cache_key key in database
+ * @param string     $key       key in database
  * @param mixed|null $default   default value
  * @param bool       $set       set default value to database
  * @param bool       $use_cache use cache
@@ -54,23 +54,23 @@ function cache(?string $key = null, mixed $value = null, bool $set = false, ?int
  * @return mixed
  * @throws Throwable
  */
-function blog_config(string $cache_key, mixed $default = null, bool $init = false, bool $use_cache = true, bool $set = false): mixed
+function blog_config(string $key, mixed $default = null, bool $init = false, bool $use_cache = true, bool $set = false): mixed
 {
-    $cache_key = trim($cache_key);
-    $fullCacheKey = 'blog_config_' . $cache_key;
+    $key = trim($key);
+    $fullCacheKey = 'blog_config_' . $key;
 
     // 空key返回全量配置（建议后续优化为分页或缓存）
-    if ($cache_key === '') {
+    if ($key === '') {
         return app\model\Setting::all();
     }
 
     // 优先处理写操作
     if ($set) {
-        return blog_config_write($cache_key, $fullCacheKey, $default, $use_cache);
+        return blog_config_write($key, $fullCacheKey, $default, $use_cache);
     }
 
     // 读操作主流程
-    return blog_config_read($cache_key, $fullCacheKey, $default, $init, $use_cache);
+    return blog_config_read($key, $fullCacheKey, $default, $init, $use_cache);
 }
 
 /**
