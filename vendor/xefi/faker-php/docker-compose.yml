@@ -1,8 +1,0 @@
-services:
-  php:
-    build: .
-    image: php:latest
-    volumes:
-      - ./:/var/www/html
-    working_dir: /var/www/html
-    tty: true

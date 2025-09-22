@@ -1,7 +1,6 @@
 #!/usr/bin/env php
 <?php
 
-use Phinx\Console\PhinxApplication;
 use Webman\Config;
 use Webman\Console\Command;
 use Webman\Console\Util;
@@ -67,14 +66,6 @@ foreach (config('plugin', []) as $firm => $projects) {
         $project['command'] ??= [];
         array_walk($project['command'], [$cli, 'createCommandInstance']);
     }
-}
-
-$phinxApp = new PhinxApplication();
-$prefix = "phinx:";
-foreach ($phinxApp->all() as $command) {
-    $command->setName($prefix . $command->getName());
-    // 将 Phinx 的每个命令添加到 Symfony Console 应用程序中
-    $cli->add($command);
 }
 
 $cli->run();
