@@ -13,6 +13,7 @@ create table links
     redirect_type varchar(10)              default 'info'::character varying not null,
     show_url      boolean                  default true                      not null,
     content       text,
+    callback_url  varchar(255)             default NULL::character varying,
     created_at    timestamp with time zone default CURRENT_TIMESTAMP,
     updated_at    timestamp with time zone default CURRENT_TIMESTAMP,
     deleted_at    timestamp with time zone
@@ -39,6 +40,8 @@ comment on column links.redirect_type is '跳转方式: direct=直接跳转, got
 comment on column links.show_url is '是否在中转页显示原始URL';
 
 comment on column links.content is '链接详细介绍(Markdown格式)';
+
+comment on column links.callback_url is '回调地址，用户访问链接时异步通知';
 
 comment on column links.created_at is '创建时间';
 

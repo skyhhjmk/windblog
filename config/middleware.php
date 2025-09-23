@@ -18,5 +18,7 @@ return [
         app\middleware\AuthCheck::class,
         app\middleware\Lang::class,
         app\middleware\DebugToolkit::class,
+        app\middleware\IpChecker::class,
+        app\middleware\CSRFMiddleware::class,
     ],
 ];

@@ -5,11 +5,16 @@
 
 namespace app\controller;
 
+use app\annotation\CSRFVerify;
+use app\service\CSRFHelper;
+use app\service\WidgetService;
+use app\service\MQService;
 use support\Request;
 use app\model\Link;
 use app\service\PaginationService;
 use support\Response;
 use Throwable;
+use Webman\RateLimiter\Annotation\RateLimiter;
 
 /**
  * 链接广场控制器
@@ -84,6 +89,11 @@ class LinkController
             ]);
         }
 
+        // 异步发送回调请求（如果设置了callback_url）
+        if (!empty($link->callback_url)) {
+            $this->sendCallbackAsync($link);
+        }
+
         // 根据跳转类型处理
         return match ($link->redirect_type) {
             'direct' => redirect($link->url, $link->target === '_blank' ? 302 : 301),
@@ -136,6 +146,16 @@ class LinkController
      * @return Response
      * @throws Throwable
      */
+    #[RateLimiter(limit: 3, ttl: 3600, message: '短时间内提交次数过多')]
+    #[RateLimiter(limit: 3, ttl: 3600, key: RateLimiter::SID, message: '短时间内提交次数过多')]
+    #[CSRFVerify(
+        '_link_request_token',
+        'CSRF token验证失败',
+        ['POST'],
+        3600,
+        true, // 一次性
+
+    )]
     public function request(Request $request): Response
     {
         // 如果是POST请求，处理表单提交
@@ -146,61 +166,182 @@ class LinkController
             $icon = $request->post('icon', '');
             $description = $request->post('description', '');
             $contact = $request->post('contact', '');
-            $supportsWindConnect = $request->post('supports_wind_connect', false);
-            $allowsCrawling = $request->post('allows_crawling', false);
-            $captcha = $request->post('captcha', '');
+            $supports_wind_connect = $request->post('supports_wind_connect') === 'on';
+            $allows_crawling = $request->post('allows_crawling') === 'on';
+            $hide_url = $request->post('hide_url') === 'on';
+            $callback_url = $request->post('callback_url', '');
+            $email = $request->post('email', '');
+            $full_description = $request->post('full_description', '');
+            $honeypot = $request->post('fullname', '');
 
-            // 简单验证
+
+            $ipAddress = $request->getRealIp();
+            $show_url = !(bool)$hide_url; // 取反值，即将是否隐藏 url 转为是否显示 url
+
+            // 增强验证
             if (empty($name) || empty($url) || empty($description)) {
                 return json(['code' => 1, 'msg' => '请填写必填字段']);
             }
 
-            if (!filter_var($url, FILTER_VALIDATE_URL)) {
+            // 更严格的URL验证
+            if (!filter_var($url, FILTER_VALIDATE_URL) ||
+                !preg_match('/^https?:\/\/[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+(:[0-9]{1,5})?(\/[-a-zA-Z0-9()@:%_+.~#?&\/=]*)?$/', $url)) {
                 return json(['code' => 1, 'msg' => '请输入有效的网址']);
             }
 
             // 验证图标URL（如果提供了）
-            if (!empty($icon) && !filter_var($icon, FILTER_VALIDATE_URL)) {
-                return json(['code' => 1, 'msg' => '请输入有效的网站图标地址']);
+            if (!empty($icon)) {
+                if (!filter_var($icon, FILTER_VALIDATE_URL) ||
+                    !preg_match('/^https?:\/\/[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+(:[0-9]{1,5})?(\/[-a-zA-Z0-9()@:%_+.~#?&\/=]*)?$/', $icon)) {
+                    return json(['code' => 1, 'msg' => '请输入有效的网站图标地址']);
+                }
+            }
+
+            // 验证回调URL（如果提供了）
+            if (!empty($callback_url)) {
+                if (!filter_var($callback_url, FILTER_VALIDATE_URL) ||
+                    !preg_match('/^https?:\/\/[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+(:[0-9]{1,5})?(\/[-a-zA-Z0-9()@:%_+.~#?&\/=]*)?$/', $callback_url)) {
+                    return json(['code' => 1, 'msg' => '请输入有效的回调地址']);
+                }
+            }
+
+            // 验证邮箱地址（如果提供了）
+            if (!empty($email)) {
+                // 使用 PHP 内置过滤器进行基础验证
+                // 并通过正则表达式进行更严格的格式检查
+                if (!filter_var($email, FILTER_VALIDATE_EMAIL) ||
+                    !preg_match('/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/', $email)) {
+                    return json(['code' => 1, 'msg' => '请输入有效的邮箱地址']);
+                }
             }
 
             // 检查是否已存在相同的链接
-            $existingLink = Link::where('url', $url)->first();
+            $existingLink = Link::where('url', 'like', "%{$url}%")->first();
             if ($existingLink) {
-                return json(['code' => 1, 'msg' => '该链接已存在']);
+                return json(['code' => 1, 'msg' => '该链接已存在或正在审核中']);
             }
 
-            // 创建待审核的链接
-            $link = new Link();
-            $link->name = $name;
-            $link->url = $url;
-            $link->icon = $icon;
-            $link->description = $description;
-            $link->status = false; // 默认为未审核状态
-            $link->sort_order = 999; // 默认排序
-            $link->target = '_blank';
-            $link->redirect_type = 'goto';
-            $link->show_url = true;
-            
-            // 构建内容信息
-            $contentInfo = [];
-            $contentInfo[] = '联系信息: ' . $contact;
-            if ($supportsWindConnect) {
-                $contentInfo[] = '支持风屿互联协议';
-            }
-            if ($allowsCrawling) {
-                $contentInfo[] = '允许资源爬虫访问';
-            }
-            
-            $link->content = implode("\n", $contentInfo);
-            $link->save();
+            try {
+                // 创建待审核的链接
+                $link = new Link();
+                $link->name = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
+                $link->url = $url;
+                $link->icon = $icon;
+                $link->description = htmlspecialchars($description, ENT_QUOTES, 'UTF-8');
+                $link->status = false; // 默认为未审核状态
+                $link->sort_order = 999; // 默认排序
+                $link->target = '_blank';
+                $link->redirect_type = 'goto';
+                $link->show_url = $show_url;
+                $link->content = $full_description;
+                $link->email = $email;
+                $link->callback_url = $callback_url;
 
-            return json(['code' => 0, 'msg' => '申请成功，等待管理员审核']);
+                // 构建内容信息 - 使用更结构化的格式
+                $note = [
+                    '## 申请信息',
+                    '',
+                    '**联系方式**: ' . htmlspecialchars($contact, ENT_QUOTES, 'UTF-8'),
+                    '',
+                    '**邮箱**: ' . htmlspecialchars($email, ENT_QUOTES, 'UTF-8'),
+                    '',
+                    '**申请时间**: ' . date('Y-m-d H:i:s'),
+                    '',
+                    '**申请IP**: ' . $ipAddress,
+                    '',
+                    '### 附加选项',
+                    '',
+                    '- 支持风屿互联协议: ' . ($supports_wind_connect ? '是' : '否'),
+                    '- 允许资源爬虫访问: ' . ($allows_crawling ? '是' : '否'),
+                    '- 回调地址: ' . (!empty($callback_url) ? $callback_url : '未设置'),
+                    '',
+                    '### 审核记录',
+                    '',
+                    '> 待审核'
+                ];
+
+                $link->note = implode("\n", $note);
+                $link->save();
+
+                // 预留通知函数
+                $this->notifyLinkRequest($link);
+
+                return json(['code' => 0, 'msg' => '申请成功，等待管理员审核']);
+            } catch (\Exception $e) {
+                \support\Log::error('友链申请失败: ' . $e->getMessage());
+                return json(['code' => 1, 'msg' => '系统错误，请稍后再试']);
+            }
         }
 
         // 显示申请页面
         return view('link/request', [
-            'page_title' => blog_config('title', 'WindBlog', true) . ' - 申请友链'
+            'page_title' => blog_config('title', 'WindBlog', true) . ' - 申请友链',
+            'site_info_json_config' => $this->getSiteInfoConfig(),
+            'csrf' => CSRFHelper::oneTimeToken($request, '_link_request_token')
         ]);
+    }
+
+    /**
+     * 获取站点信息配置（用于友链申请页面）
+     *
+     * @return string JSON格式的站点信息
+     * @throws Throwable
+     */
+    private function getSiteInfoConfig(): string
+    {
+        $config = [
+            'name' => blog_config('title', 'WindBlog', true),
+            'url' => blog_config('site_url', '', true),
+            'description' => blog_config('description', '', true),
+            'icon' => blog_config('favicon', '', true),
+            'protocol' => 'CAT3E',
+            'version' => '1.0'
+        ];
+
+        return json_encode($config, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+    }
+
+    /**
+     * 通知新的友链申请（预留函数）
+     *
+     * @param Link $link 友链对象
+     *
+     * @return void
+     */
+    private function notifyLinkRequest(Link $link): void
+    {
+        // 预留函数，由用户自行实现通知逻辑
+    }
+
+    /**
+     * 异步发送回调请求
+     *
+     * @param Link $link 友链对象
+     *
+     * @return void
+     * @throws Throwable
+     */
+    private function sendCallbackAsync(Link $link): void
+    {
+        try {
+            \support\Log::debug('Sending callback to MQ because: ' . $link->url . ' .Requesting: ' . $link->callback_url);
+            
+            // 准备回调数据
+            $callbackData = [
+                'link_id' => $link->id,
+                'link_name' => $link->name,
+                'link_url' => $link->url,
+                'callback_url' => $link->callback_url,
+                'access_time' => date('Y-m-d H:i:s'),
+                'access_ip' => request()->getRealIp(),
+                'user_agent' => request()->header('User-Agent', '')
+            ];
+
+            // 使用MQ服务发送到http_callback队列
+            MQService::sendToHttpCallback($callbackData);
+
+        } catch (\Exception $e) {
+            \support\Log::error('Callback error: ' . $e->getMessage());
+        }
     }
 }

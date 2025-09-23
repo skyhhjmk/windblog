@@ -16,6 +16,7 @@
         <!-- 切换选项卡 -->
         <div class="flex border-b border-gray-200 mb-5" id="linkTab">
             <div class="tab-item px-4 py-2 cursor-pointer text-blue-500 border-b-2 border-blue-500 font-medium" data-type="normal">链接列表</div>
+            <div class="tab-item px-4 py-2 cursor-pointer text-gray-500 hover:text-gray-700 font-medium" data-type="pending">待审核 <span id="pendingCount" class="ml-1 px-2 py-0.5 text-xs rounded-full bg-red-500 text-white hidden">0</span></div>
             <div class="tab-item px-4 py-2 cursor-pointer text-gray-500 hover:text-gray-700 font-medium" data-type="trash">垃圾箱</div>
         </div>
 
@@ -56,8 +57,9 @@
             </div>
         </form>
 
-        <!-- 隐藏的输入字段，用于传递是否显示垃圾箱的状态 -->
+        <!-- 隐藏的输入字段，用于传递状态 -->
         <input type="hidden" id="isTrashed" name="isTrashed" value="false">
+        <input type="hidden" id="isPending" name="isPending" value="false">
     </div>
 
     <!-- 搜索表单的脚本 -->
@@ -92,6 +94,18 @@
         </button>
     </div>
 
+    <!-- 待审核工具栏 -->
+    <div id="pendingToolbar" class="hidden">
+        <button class="pear-btn pear-btn-success pear-btn-md" lay-event="batchApprove">
+            <i class="layui-icon layui-icon-ok"></i>
+            批量通过
+        </button>
+        <button class="pear-btn pear-btn-danger pear-btn-md" lay-event="batchReject">
+            <i class="layui-icon layui-icon-close"></i>
+            批量拒绝
+        </button>
+    </div>
+
     <!-- 垃圾箱工具栏 -->
     <div id="trashToolbar" class="hidden">
         <button class="pear-btn pear-btn-success pear-btn-md" lay-event="batchRestore">
@@ -113,13 +127,17 @@
         <button class="pear-btn pear-btn-danger pear-btn-sm" lay-event="remove"><i
                 class="layui-icon layui-icon-delete"></i></button>
     </div>
+</script>
 
-    <!-- 垃圾箱链接操作按钮 -->
-    <div class="trash-actions flex space-x-1 hidden">
-        <button class="pear-btn pear-btn-success pear-btn-sm" lay-event="restore"><i
-                class="layui-icon layui-icon-refresh-1"></i></button>
-        <button class="pear-btn pear-btn-danger pear-btn-sm" lay-event="forceDelete"><i
-                class="layui-icon layui-icon-delete"></i></button>
+<script type="text/html" id="pending-link-bar">
+    <!-- 待审核链接操作按钮 -->
+    <div class="pending-actions flex space-x-1">
+        <button class="pear-btn pear-btn-primary pear-btn-sm" lay-event="view" title="查看详情"><i
+                class="layui-icon layui-icon-read"></i></button>
+        <button class="pear-btn pear-btn-success pear-btn-sm" lay-event="approve" title="通过"><i
+                class="layui-icon layui-icon-ok"></i></button>
+        <button class="pear-btn pear-btn-danger pear-btn-sm" lay-event="reject" title="拒绝"><i
+                class="layui-icon layui-icon-close"></i></button>
     </div>
 </script>
 
@@ -134,11 +152,34 @@
 </script>
 
 <script type="text/html" id="link-status">
-    {{#if (d.status) { }}
-    <span class="px-2 py-1 text-xs rounded bg-green-100 text-green-800">已启用</span>
-    {{# } else { }}
-    <span class="px-2 py-1 text-xs rounded bg-red-100 text-red-800">已禁用</span>
-    {{# } }}
+    <span class="px-2 py-1 text-xs rounded status-badge" data-id="{{d.id}}"></span>
+</script>
+
+<script>
+    // 动态加载状态信息
+    function loadStatusInfo(rowId) {
+        $.ajax({
+            url: MODULE_PATH + "getStatus/" + rowId,
+            type: 'get',
+            success: function(data) {
+                if(data.code === 0) {
+                    let status = data.data.status;
+                    let badge = $('.status-badge[data-id="' + rowId + '"]');
+                    
+                    if(status === 1) {
+                        badge.text('已启用').removeClass('bg-yellow-100 text-yellow-800 bg-red-100 text-red-800')
+                            .addClass('bg-green-100 text-green-800');
+                    } else if(data.data.is_pending) {
+                        badge.text('待审核').removeClass('bg-green-100 text-green-800 bg-red-100 text-red-800')
+                            .addClass('bg-yellow-100 text-yellow-800');
+                    } else {
+                        badge.text('已禁用').removeClass('bg-green-100 text-green-800 bg-yellow-100 text-yellow-800')
+                            .addClass('bg-red-100 text-red-800');
+                    }
+                }
+            }
+        });
+    }
 </script>
 
 <script type="text/html" id="link-target">
@@ -160,13 +201,42 @@
     <span class="text-gray-600">{{layui.util.toDateString(d.created_at, 'yyyy-MM-dd HH:mm:ss')}}</span>
 </script>
 
+<!-- 申请信息模板 -->
+<script type="text/html" id="link-applyInfo">
+    <div class="text-xs apply-info-container">
+        <div class="mb-1 contact-info"><span class="text-gray-500">联系方式:</span> <span class="contact-value"></span></div>
+        <div class="mb-1 apply-time"><span class="text-gray-500">申请时间:</span> <span class="time-value"></span></div>
+        <div class="apply-ip"><span class="text-gray-500">IP:</span> <span class="ip-value"></span></div>
+    </div>
+</script>
+
 <script>
-    layui.use(['table', 'form', 'jquery', 'drawer', 'dropdown'], function () {
+    // 动态加载申请信息
+    function loadApplyInfo(rowId) {
+        $.ajax({
+            url: MODULE_PATH + "getApplyInfo/" + rowId,
+            type: 'get',
+            success: function(data) {
+                if(data.code === 0) {
+                    let info = data.data;
+                    let container = $('.apply-info-container[data-id="' + rowId + '"]');
+                    if(info.contact) container.find('.contact-value').text(info.contact);
+                    if(info.apply_time) container.find('.time-value').text(info.apply_time);
+                    if(info.apply_ip) container.find('.ip-value').text(info.apply_ip);
+                }
+            }
+        });
+    }
+</script>
+
+<script>
+    layui.use(['table', 'form', 'jquery', 'drawer', 'dropdown', 'layer'], function () {
         let table = layui.table;
         let form = layui.form;
         let $ = layui.jquery;
         let drawer = layui.drawer;
         let dropdown = layui.dropdown;
+        let layer = layui.layer;
 
         let MODULE_PATH = "/app/admin/link/";
 
@@ -325,6 +395,49 @@
             ]
         ];
 
+        // 待审核模式下的列配置
+        let pendingCols = [
+            [{
+                type: 'checkbox'
+            },
+                {
+                    title: 'ID',
+                    field: 'id',
+                    align: 'center',
+                    width: 80
+                },
+                {
+                    title: '链接名称',
+                    field: 'name',
+                    align: 'center'
+                },
+                {
+                    title: '链接地址',
+                    field: 'url',
+                    align: 'center'
+                },
+                {
+                    title: '申请信息',
+                    align: 'center',
+                    templet: '#link-applyInfo'
+                },
+                {
+                    title: '申请时间',
+                    field: 'created_at',
+                    align: 'center',
+                    width: 160,
+                    templet: '#link-createTime'
+                },
+                {
+                    title: '操作',
+                    toolbar: '#pending-link-bar',
+                    align: 'left',
+                    width: 180,
+                    fixed: 'right'
+                }
+            ]
+        ];
+
         // 获取当前是否显示垃圾箱
         let currentMode = 'normal';
         let currentTable = null;
@@ -333,33 +446,46 @@
         function renderTable(mode) {
             currentMode = mode;
             let isTrashed = mode === 'trash';
+            let isPending = mode === 'pending';
 
             // 更新隐藏字段
             $('#isTrashed').val(isTrashed ? 'true' : 'false');
+            $('#isPending').val(isPending ? 'true' : 'false');
 
             // 更新选项卡样式
+            $('.tab-item').removeClass('text-blue-500 border-b-2 border-blue-500').addClass('text-gray-500');
             if (isTrashed) {
-                $('.tab-item').eq(0).removeClass('text-blue-500 border-b-2 border-blue-500').addClass('text-gray-500');
+                $('.tab-item').eq(2).removeClass('text-gray-500').addClass('text-blue-500 border-b-2 border-blue-500');
+            } else if (isPending) {
                 $('.tab-item').eq(1).removeClass('text-gray-500').addClass('text-blue-500 border-b-2 border-blue-500');
             } else {
-                $('.tab-item').eq(1).removeClass('text-blue-500 border-b-2 border-blue-500').addClass('text-gray-500');
                 $('.tab-item').eq(0).removeClass('text-gray-500').addClass('text-blue-500 border-b-2 border-blue-500');
             }
 
             // 显示或隐藏状态筛选器
-            $('#statusFilter').toggle(!isTrashed);
+            $('#statusFilter').toggle(!isTrashed && !isPending);
 
             // 显示或隐藏相应的工具栏
-            $('#normalToolbar').toggle(!isTrashed);
+            $('#normalToolbar').toggle(!isTrashed && !isPending);
+            $('#pendingToolbar').toggle(isPending);
             $('#trashToolbar').toggle(isTrashed);
 
             // 获取当前搜索条件
             let searchData = form.val('linkForm');
             searchData.isTrashed = isTrashed ? 'true' : 'false';
+            searchData.isPending = isPending ? 'true' : 'false';
 
             // 明确添加状态字段
             if (!searchData.status) {
                 searchData.status = $('select[name="status"]').val() || '';
+            }
+
+            // 选择列配置
+            let cols = normalCols;
+            if (isTrashed) {
+                cols = trashCols;
+            } else if (isPending) {
+                cols = pendingCols;
             }
 
             // 重新渲染表格
@@ -367,9 +493,16 @@
                 currentTable.reload({
                     url: 'list',
                     where: searchData,
-                    cols: isTrashed ? trashCols : normalCols,
-                    toolbar: isTrashed ? '#trash-link-toolbar' : '#link-toolbar',
-                    page: { curr: 1 }
+                    cols: cols,
+                    page: { curr: 1 },
+                    done: function(res, curr, count) {
+                        res.data.forEach(function(item) {
+                            loadStatusInfo(item.id);
+                            if (currentMode === 'pending') {
+                                loadApplyInfo(item.id);
+                            }
+                        });
+                    }
                 });
             } else {
                 currentTable = table.render({
@@ -377,16 +510,46 @@
                     url: 'list',
                     where: searchData,
                     page: true,
-                    cols: isTrashed ? trashCols : normalCols,
+                    cols: cols,
                     skin: 'line',
-                    toolbar: isTrashed ? '#trash-link-toolbar' : '#link-toolbar',
+                    toolbar: '#link-toolbar',
                     defaultToolbar: [{
                         layEvent: 'refresh',
                         icon: 'layui-icon-refresh',
-                    }, 'filter', 'print', 'exports']
+                    }, 'filter', 'print', 'exports'],
+                    done: function(res, curr, count) {
+                        if (currentMode === 'pending') {
+                            res.data.forEach(function(item) {
+                                loadApplyInfo(item.id);
+                            });
+                        }
+                    }
                 });
             }
         }
+
+        // 获取待审核数量
+        function getPendingCount() {
+            $.ajax({
+                url: MODULE_PATH + "list",
+                type: 'get',
+                data: {
+                    isPending: 'true',
+                    limit: 1,
+                    page: 1
+                },
+                success: function(res) {
+                    if (res.code === 0 && res.count > 0) {
+                        $('#pendingCount').text(res.count).removeClass('hidden');
+                    } else {
+                        $('#pendingCount').addClass('hidden');
+                    }
+                }
+            });
+        }
+
+        // 页面加载时获取待审核数量
+        getPendingCount();
 
         // 初始渲染表格
         renderTable('normal');
@@ -406,6 +569,12 @@
                 window.restore(obj);
             } else if (obj.event === 'forceDelete') {
                 window.forceDelete(obj);
+            } else if (obj.event === 'view') {
+                window.view(obj);
+            } else if (obj.event === 'approve') {
+                window.approve(obj);
+            } else if (obj.event === 'reject') {
+                window.reject(obj);
             }
         });
 
@@ -420,6 +589,10 @@
                 window.batchRestore(obj);
             } else if (obj.event === 'batchForceDelete') {
                 window.batchForceDelete(obj);
+            } else if (obj.event === 'batchApprove') {
+                window.batchApprove(obj);
+            } else if (obj.event === 'batchReject') {
+                window.batchReject(obj);
             }
         });
 
@@ -445,6 +618,78 @@
             if (obj && obj.data && typeof obj.data.id === 'number') {
                 parent.layui.admin.addTab('link-edit-' + obj.data.id, '编辑链接：' + obj.data.name, `/app/admin/link/edit/${obj.data.id}`);
             }
+        }
+
+        window.view = function (obj) {
+            if (obj && obj.data && typeof obj.data.id === 'number') {
+                parent.layui.admin.addTab('link-view-' + obj.data.id, '查看链接：' + obj.data.name, `/app/admin/link/view/${obj.data.id}`);
+            }
+        }
+
+        window.approve = function (obj) {
+            layer.confirm('确定要通过该友链申请吗？', {
+                icon: 3,
+                title: '提示'
+            }, function (index) {
+                layer.close(index);
+                let loading = layer.load();
+                $.ajax({
+                    url: MODULE_PATH + "batchApprove/" + obj.data['id'],
+                    dataType: 'json',
+                    type: 'post',
+                    success: function (result) {
+                        layer.close(loading);
+                        if (result.code === 0) {
+                            layer.msg(result.msg, {
+                                icon: 1,
+                                time: 1000
+                            }, function () {
+                                obj.del();
+                                getPendingCount();
+                            });
+                        } else {
+                            layer.msg(result.msg, {
+                                icon: 2,
+                                time: 1000
+                            });
+                        }
+                    }
+                })
+            });
+        }
+
+        window.reject = function (obj) {
+            layer.prompt({
+                formType: 2,
+                title: '请输入拒绝原因',
+                area: ['400px', '200px']
+            }, function(value, index, elem){
+                layer.close(index);
+                let loading = layer.load();
+                $.ajax({
+                    url: MODULE_PATH + "batchReject/" + obj.data['id'],
+                    dataType: 'json',
+                    type: 'post',
+                    data: {reason: value},
+                    success: function (result) {
+                        layer.close(loading);
+                        if (result.code === 0) {
+                            layer.msg(result.msg, {
+                                icon: 1,
+                                time: 1000
+                            }, function () {
+                                obj.del();
+                                getPendingCount();
+                            });
+                        } else {
+                            layer.msg(result.msg, {
+                                icon: 2,
+                                time: 1000
+                            });
+                        }
+                    }
+                });
+            });
         }
 
         window.remove = function (obj) {
@@ -644,8 +889,82 @@
             });
         }
 
+        window.batchApprove = function (obj) {
+            let data = table.checkStatus(obj.config.id).data;
+            if (data.length === 0) {
+                layer.msg("未选中数据", {icon: 3, time: 1000});
+                return false;
+            }
+            let ids = data.map(item => item.id).join(',');
+            layer.confirm('确定要批量通过这些友链申请吗？', {
+                icon: 3,
+                title: '提示'
+            }, function (index) {
+                layer.close(index);
+                let loading = layer.load();
+                $.ajax({
+                    url: MODULE_PATH + "batchApprove/" + ids,
+                    dataType: 'json',
+                    type: 'post',
+                    success: function (result) {
+                        layer.close(loading);
+                        if (result.code === 0) {
+                            layer.msg(result.msg, {
+                                icon: 1,
+                                time: 1000
+                            }, function () {
+                                table.reload('link-table');
+                                getPendingCount();
+                            });
+                        } else {
+                            layer.msg(result.msg, {icon: 2, time: 1000});
+                        }
+                    }
+                })
+            });
+        }
+
+        window.batchReject = function (obj) {
+            let data = table.checkStatus(obj.config.id).data;
+            if (data.length === 0) {
+                layer.msg("未选中数据", {icon: 3, time: 1000});
+                return false;
+            }
+            let ids = data.map(item => item.id).join(',');
+            
+            layer.prompt({
+                formType: 2,
+                title: '请输入拒绝原因',
+                area: ['400px', '200px']
+            }, function(value, index, elem){
+                layer.close(index);
+                let loading = layer.load();
+                $.ajax({
+                    url: MODULE_PATH + "batchReject/" + ids,
+                    dataType: 'json',
+                    type: 'post',
+                    data: {reason: value},
+                    success: function (result) {
+                        layer.close(loading);
+                        if (result.code === 0) {
+                            layer.msg(result.msg, {
+                                icon: 1,
+                                time: 1000
+                            }, function () {
+                                table.reload('link-table');
+                                getPendingCount();
+                            });
+                        } else {
+                            layer.msg(result.msg, {icon: 2, time: 1000});
+                        }
+                    }
+                });
+            });
+        }
+
         window.refresh = function (param) {
             renderTable(currentMode);
+            getPendingCount();
         }
     })
 </script>

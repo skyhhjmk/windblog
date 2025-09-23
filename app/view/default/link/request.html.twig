@@ -121,6 +121,7 @@
                 </div>
 
                 <form id="linkRequestForm" class="space-y-6">
+                    <input type="hidden" name="_link_request_token" value="{{ csrf }}">
                     <div>
                         <label for="name" class="block text-sm font-medium text-gray-700 mb-1">网站名称 <span
                                     class="text-red-500">*</span></label>
@@ -144,7 +145,7 @@
                     </div>
 
                     <div>
-                        <label for="icon" class="block text-sm font-medium text-gray-700 mb-1">网站图标地址</label>
+                        <label for="icon" class="block text-sm font-medium text-gray-700 mb-1">网站图标地址（不填则尝试自动获取）</label>
                         <input type="url"
                                id="icon"
                                name="icon"
@@ -153,7 +154,7 @@
                     </div>
 
                     <div>
-                        <label for="description" class="block text-sm font-medium text-gray-700 mb-1">网站描述 <span
+                        <label for="description" class="block text-sm font-medium text-gray-700 mb-1">网站描述<span
                                     class="text-red-500">*</span></label>
                         <textarea id="description"
                                   name="description"
@@ -164,12 +165,39 @@
                     </div>
 
                     <div>
+                        <label for="email" class="block text-sm font-medium text-gray-700 mb-1">邮箱</label>
+                        <input type="text"
+                               id="email"
+                               name="email"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                               placeholder="邮箱联系方式（可选，用于审核结果通知）">
+                    </div>
+
+                    <div>
+                        <label for="full_description" class="block text-sm font-medium text-gray-700 mb-1">网站详细介绍（支持 Markdown 语法）</label>
+                        <textarea id="full_description"
+                                  name="full_description"
+                                  rows="3"
+                                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                                  placeholder="当使用 info 方式跳转时，内容会被渲染在页面上"></textarea>
+                    </div>
+
+                    <div>
                         <label for="contact" class="block text-sm font-medium text-gray-700 mb-1">联系方式</label>
                         <input type="text"
                                id="contact"
                                name="contact"
                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                               placeholder="邮箱/微信/QQ等联系方式（可选）">
+                               placeholder="微信/QQ等联系方式（可选）">
+                    </div>
+
+                    <div style="position:absolute; left:-9999px; top:-9999px;">
+                        <label for="fullname" class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                        <input type="text"
+                               id="fullname"
+                               name="fullname"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                               placeholder="Please input your fullname">
                     </div>
 
                     <div class="border border-gray-200 rounded-lg p-4">
@@ -199,6 +227,30 @@
                                     <label for="allows_crawling" class="font-medium text-gray-700">允许资源爬虫访问</label>
                                     <p class="text-gray-500 mt-1">是否允许我们的爬虫定期访问您的网站以获取内容摘要用于展示</p>
                                 </div>
+                            </div>
+
+                            <div class="flex items-start">
+                                <div class="flex items-center h-5">
+                                    <input id="hide_url"
+                                           name="hide_url"
+                                           type="checkbox"
+                                           class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
+                                </div>
+                                <div class="ml-3 text-sm">
+                                    <label for="hide_url" class="font-medium text-gray-700">隐藏链接</label>
+                                    <p class="text-gray-500 mt-1">选中后将在前端友链页面中隐藏您的网站链接，使用 goto/301 重定向方式跳转</p>
+                                </div>
+                            </div>
+
+                            <div class="pt-4 border-t border-gray-200">
+                                <label for="callback_url" class="block text-sm font-medium text-gray-700 mb-2">回调地址（可选）</label>
+                                <input type="url"
+                                       id="callback_url"
+                                       name="callback_url"
+                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                                       placeholder="https://example.com/callback"
+                                       pattern="https?://.+">
+                                <p class="text-gray-500 text-sm mt-2">每当用户访问您的链接时，该地址会被 GET 请求访问一次，可用于统计访问量等（使用消息队列异步处理，可能遗漏，不会多调）</p>
                             </div>
                         </div>
                     </div>

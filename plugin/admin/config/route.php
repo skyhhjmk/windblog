@@ -46,6 +46,7 @@ Route::group('/app/admin', function () {
         Route::delete('/batchRemove/{ids}', [LinkController::class, 'batchRemove']);
         Route::post('/batchRestore/{ids}', [LinkController::class, 'batchRestore']);
         Route::delete('/batchForceDelete/{ids}', [LinkController::class, 'batchForceDelete']);
+        Route::get('/get/{id}', [LinkController::class, 'get']);
     });
 
     // Post 路由

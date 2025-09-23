@@ -11,21 +11,24 @@ use Throwable;
  * 链接模型
  * 用于存储友情链接或其他网址信息。
  *
- * @property int $id 链接ID
- * @property string $name 链接名称
- * @property string $url 链接地址
- * @property string|null $description 链接描述
- * @property string|null $image 链接配图URL
- * @property string|null $icon 网站图标URL
- * @property int $sort_order 排序权重，数字越小越靠前
- * @property bool $status 状态 (true: 显示, false: 隐藏)
- * @property string $target 打开方式 (_blank, _self等)
- * @property string $redirect_type 跳转方式: direct=直接跳转, goto=中转页跳转, iframe=内嵌页面, info=详情页
- * @property bool $show_url 是否在中转页显示原始URL
- * @property string|null $content 链接详细介绍(Markdown格式)
- * @property Carbon|null $created_at 创建时间
- * @property Carbon|null $updated_at 更新时间
- * @property Carbon|null $deleted_at 软删除时间
+ * @property int         $id              链接ID
+ * @property string      $name            链接名称
+ * @property string      $url             链接地址
+ * @property string|null $description     链接描述
+ * @property string|null $image           链接配图URL
+ * @property string|null $icon            网站图标URL
+ * @property int         $sort_order      排序权重，数字越小越靠前
+ * @property bool        $status          状态 (true: 显示, false: 隐藏)
+ * @property string      $target          打开方式 (_blank, _self等)
+ * @property string      $redirect_type   跳转方式: direct=直接跳转, goto=中转页跳转, iframe=内嵌页面,info=详情页
+ * @property bool        $show_url        是否在中转页显示原始URL
+ * @property string|null $content         链接详细介绍(Markdown格式)
+ * @property string|null $email           所有者电子邮件
+ * @property string|null $callback_url    回调地址
+ * @property string|null $note            管理员备注内容
+ * @property Carbon|null $created_at      创建时间
+ * @property Carbon|null $updated_at      更新时间
+ * @property Carbon|null $deleted_at      软删除时间
  *
  * @method static Builder|Link active() 只查询显示状态的链接
  * @method static Builder|Link ordered() 按排序权重升序查询
@@ -55,7 +58,9 @@ class Link extends Model
         'target',
         'redirect_type',
         'show_url',
-        'content'
+        'content',
+        'note',
+        'callback_url'
     ];
 
     /**
@@ -74,6 +79,8 @@ class Link extends Model
         'status' => 'boolean',
         'show_url' => 'boolean',
         'content' => 'string',
+        'note' => 'string',
+        'callback_url' => 'string',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',
@@ -105,6 +112,7 @@ class Link extends Model
      * 查询作用域：只查询显示状态的链接。
      *
      * @param Builder $query
+     *
      * @return Builder
      */
     public function scopeActive(Builder $query): Builder
@@ -116,6 +124,7 @@ class Link extends Model
      * 查询作用域：按排序权重升序查询。
      *
      * @param Builder $query
+     *
      * @return Builder
      */
     public function scopeOrdered(Builder $query): Builder
@@ -127,6 +136,7 @@ class Link extends Model
      * 查询作用域：包含软删除的记录。
      *
      * @param Builder $query
+     *
      * @return Builder
      */
     public function scopeWithTrashed(Builder $query): Builder
@@ -138,6 +148,7 @@ class Link extends Model
      * 查询作用域：只查询软删除的记录。
      *
      * @param Builder $query
+     *
      * @return Builder
      */
     public function scopeOnlyTrashed(Builder $query): Builder
@@ -149,6 +160,7 @@ class Link extends Model
      * 软删除方法，根据配置决定是软删除还是硬删除
      *
      * @param bool $forceDelete 是否强制删除（绕过软删除配置）
+     *
      * @return bool|null
      * @throws Throwable
      */
@@ -158,7 +170,7 @@ class Link extends Model
         $useSoftDelete = blog_config('soft_delete', true);
         \support\Log::debug("Soft delete config value: " . var_export($useSoftDelete, true));
         \support\Log::debug("Force delete flag: " . var_export($forceDelete, true));
-        
+
         if (!$forceDelete && $useSoftDelete) {
             // 软删除：设置 deleted_at 字段
             try {

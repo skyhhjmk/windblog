@@ -13,40 +13,40 @@
 <div class="layui-card">
     <div class="layui-card-body">
         <form class="layui-form" action="">
-            <input type="hidden" name="id" value="{{$link.id}}">
+            <input type="hidden" name="id" id="link-id">
             
             <div class="layui-form-item">
                 <label class="layui-form-label">链接名称</label>
                 <div class="layui-input-block">
-                    <input type="text" name="name" value="{{$link.name}}" placeholder="请输入链接名称" class="layui-input" lay-verify="required">
+                    <input type="text" name="name" placeholder="请输入链接名称" class="layui-input" lay-verify="required">
                 </div>
             </div>
 
             <div class="layui-form-item">
                 <label class="layui-form-label">链接地址</label>
                 <div class="layui-input-block">
-                    <input type="text" name="url" value="{{$link.url}}" placeholder="请输入链接URL" class="layui-input" lay-verify="required|url">
+                    <input type="text" name="url" placeholder="请输入链接URL" class="layui-input" lay-verify="required|url">
                 </div>
             </div>
 
             <div class="layui-form-item">
                 <label class="layui-form-label">链接描述</label>
                 <div class="layui-input-block">
-                    <textarea name="description" placeholder="请输入链接描述" class="layui-textarea">{{$link.description}}</textarea>
+                    <textarea name="description" placeholder="请输入链接描述" class="layui-textarea"></textarea>
                 </div>
             </div>
 
             <div class="layui-form-item">
                 <label class="layui-form-label">网站图标</label>
                 <div class="layui-input-block">
-                    <input type="text" name="icon" value="{{$link.icon}}" placeholder="请输入网站图标URL" class="layui-input" lay-verify="url">
+                    <input type="text" name="icon" placeholder="请输入网站图标URL" class="layui-input" lay-verify="url">
                 </div>
             </div>
 
             <div class="layui-form-item">
                 <label class="layui-form-label">排序权重</label>
                 <div class="layui-input-block">
-                    <input type="number" name="sort_order" value="{{$link.sort_order}}" class="layui-input">
+                    <input type="number" name="sort_order" class="layui-input">
                     <div class="layui-form-mid layui-word-aux">数字越小越靠前</div>
                 </div>
             </div>
@@ -55,8 +55,8 @@
                 <label class="layui-form-label">打开方式</label>
                 <div class="layui-input-block">
                     <select name="target" class="layui-input">
-                        <option value="_blank" {{$link.target == '_blank' ? 'selected' : ''}}>新窗口打开</option>
-                        <option value="_self" {{$link.target == '_self' ? 'selected' : ''}}>当前窗口打开</option>
+                        <option value="_blank">新窗口打开</option>
+                        <option value="_self">当前窗口打开</option>
                     </select>
                 </div>
             </div>
@@ -65,10 +65,10 @@
                 <label class="layui-form-label">跳转方式</label>
                 <div class="layui-input-block">
                     <select name="redirect_type" class="layui-input">
-                        <option value="direct" {{$link.redirect_type == 'direct' ? 'selected' : ''}}>直接跳转</option>
-                        <option value="goto" {{$link.redirect_type == 'goto' ? 'selected' : ''}}>中转页跳转</option>
-                        <option value="iframe" {{$link.redirect_type == 'iframe' ? 'selected' : ''}}>内嵌页面</option>
-                        <option value="info" {{$link.redirect_type == 'info' ? 'selected' : ''}}>详情页</option>
+                        <option value="direct">直接跳转</option>
+                        <option value="goto">中转页跳转</option>
+                        <option value="iframe">内嵌页面</option>
+                        <option value="info">详情页</option>
                     </select>
                 </div>
             </div>
@@ -76,21 +76,28 @@
             <div class="layui-form-item">
                 <label class="layui-form-label">显示URL</label>
                 <div class="layui-input-block">
-                    <input type="checkbox" name="show_url" lay-skin="switch" lay-text="是|否" {{$link.show_url ? 'checked' : ''}}>
+                    <input type="checkbox" name="show_url" lay-skin="switch" lay-text="是|否">
                 </div>
             </div>
 
             <div class="layui-form-item">
                 <label class="layui-form-label">启用状态</label>
                 <div class="layui-input-block">
-                    <input type="checkbox" name="status" lay-skin="switch" lay-text="启用|禁用" {{$link.status ? 'checked' : ''}}>
+                    <input type="checkbox" name="status" lay-skin="switch" lay-text="启用|禁用">
                 </div>
             </div>
 
             <div class="layui-form-item">
                 <label class="layui-form-label">详细介绍</label>
                 <div class="layui-input-block">
-                    <textarea name="content" placeholder="请输入链接的详细介绍内容" class="layui-textarea">{{$link.content}}</textarea>
+                    <textarea name="content" placeholder="请输入链接的详细介绍内容" class="layui-textarea"></textarea>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">管理员笔记</label>
+                <div class="layui-input-block">
+                    <textarea name="note" placeholder="请输入管理员笔记，对外不可见" class="layui-textarea"></textarea>
                 </div>
             </div>
 
@@ -105,9 +112,60 @@
 </div>
 
 <script>
-    layui.use(['form', 'jquery'], function () {
+    layui.use(['form', 'jquery', 'layer'], function () {
         var form = layui.form;
         var $ = layui.jquery;
+        var layer = layui.layer;
+
+        // 从URL获取链接ID
+        function getLinkIdFromUrl() {
+            var path = window.location.pathname.split('/');
+            return path[path.length - 1];
+        }
+
+        // 加载链接数据
+        function loadLinkData() {
+            var linkId = getLinkIdFromUrl();
+            $('#link-id').val(linkId);
+            
+            $.ajax({
+                url: '/app/admin/link/get/' + linkId,
+                type: 'GET',
+                dataType: 'json',
+                success: function(result){
+                    if(result.code === 0){
+                        var link = result.data;
+                        // 填充表单数据
+                        $('input[name="name"]').val(link.name);
+                        $('input[name="url"]').val(link.url);
+                        $('textarea[name="description"]').val(link.description);
+                        $('input[name="icon"]').val(link.icon);
+                        $('input[name="sort_order"]').val(link.sort_order);
+                        $('textarea[name="content"]').val(link.content);
+                        $('textarea[name="note"]').val(link.note);
+                        
+                        // 设置下拉选项
+                        $('select[name="target"]').val(link.target);
+                        $('select[name="redirect_type"]').val(link.redirect_type);
+                        
+                        // 设置开关状态
+                        if(link.show_url) $('input[name="show_url"]').prop('checked', true);
+                        if(link.status) $('input[name="status"]').prop('checked', true);
+                        
+                        // 重新渲染表单
+                        form.render();
+                    }else{
+                        layer.msg(result.msg, {icon: 2});
+                    }
+                },
+                error: function(){
+                    layer.msg('加载链接数据失败', {icon: 2});
+                }
+            });
+        }
+
+        // 页面加载完成后获取数据
+        loadLinkData();
 
         // 自定义验证规则
         form.verify({

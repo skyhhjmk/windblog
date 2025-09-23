@@ -174,6 +174,9 @@ CREATE TABLE IF NOT EXISTS links
     redirect_type VARCHAR(10)  NOT NULL    DEFAULT 'info',
     show_url      BOOLEAN      NOT NULL    DEFAULT true,
     content       TEXT                     DEFAULT NULL,
+    email         VARCHAR(255)             DEFAULT NULL,
+    callback_url  VARCHAR(255)             DEFAULT NULL,
+    note          TEXT                     DEFAULT NULL,
     created_at    TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at    TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     deleted_at    TIMESTAMP WITH TIME ZONE DEFAULT NULL
@@ -191,6 +194,9 @@ COMMENT ON COLUMN links.target IS '打开方式 (_blank, _self等)';
 COMMENT ON COLUMN links.redirect_type IS '跳转方式: direct=直接跳转, goto=中转页跳转, iframe=内嵌页面, info=详情页';
 COMMENT ON COLUMN links.show_url IS '是否在中转页显示原始URL';
 COMMENT ON COLUMN links.content IS '链接详细介绍(Markdown格式)';
+COMMENT ON COLUMN links.email IS '所有者电子邮件';
+comment on column links.callback_url is '回调地址，用户访问链接时异步通知';
+COMMENT ON column links.note IS '管理员备注';
 COMMENT ON COLUMN links.created_at IS '创建时间';
 COMMENT ON COLUMN links.updated_at IS '更新时间';
 COMMENT ON COLUMN links.deleted_at IS '删除时间';
@@ -560,6 +566,7 @@ CREATE INDEX idx_links_deleted_at ON links USING btree (deleted_at);
 CREATE INDEX idx_pages_deleted_at ON pages USING btree (deleted_at);
 
 CREATE INDEX idx_settings_group ON settings USING btree ("group");
+CREATE INDEX idx_settings_value ON settings USING GIN (value);
 
 CREATE INDEX idx_media_author_id ON media USING btree (author_id);
 CREATE INDEX idx_media_author_type ON media USING btree (author_type);
