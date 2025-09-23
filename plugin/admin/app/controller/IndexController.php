@@ -4,13 +4,12 @@ namespace plugin\admin\app\controller;
 
 use app\model\Media;
 use app\model\Post;
+use app\model\Setting;
 use plugin\admin\app\common\Util;
-use plugin\admin\app\model\Option;
 use plugin\admin\app\model\User;
 use support\exception\BusinessException;
 use support\Request;
 use support\Response;
-use think\db\Where;
 use Throwable;
 use Workerman\Worker;
 
@@ -19,19 +18,23 @@ class IndexController
 
     /**
      * 无需登录的方法
+     *
      * @var string[]
      */
     protected $noNeedLogin = ['index'];
 
     /**
      * 不需要鉴权的方法
+     *
      * @var string[]
      */
     protected $noNeedAuth = ['dashboard'];
 
     /**
      * 后台主页
+     *
      * @param Request $request
+     *
      * @return Response
      * @throws BusinessException|Throwable
      */
@@ -44,18 +47,20 @@ class IndexController
         $admin = admin();
         if (!$admin) {
             $name = 'system_config';
-            $config = Option::where('name', $name)->value('value');
+            $config = Setting::where('key', $name)->value('value');
             $config = json_decode($config, true);
             $title = $config['logo']['title'] ?? 'webman admin';
             $logo = $config['logo']['image'] ?? '/app/admin/admin/images/logo.png';
-            return raw_view('account/login',['logo'=>$logo,'title'=>$title]);
+            return raw_view('account/login', ['logo' => $logo, 'title' => $title]);
         }
         return raw_view('index/index');
     }
 
     /**
      * 仪表板
+     *
      * @param Request $request
+     *
      * @return Response
      * @throws Throwable
      */
@@ -96,7 +101,7 @@ class IndexController
             'draft_count' => $draft_count,
             'media_count' => $media_count,
             'php_version' => PHP_VERSION,
-            'workerman_version' =>  Worker::VERSION,
+            'workerman_version' => Worker::VERSION,
             'webman_version' => Util::getPackageVersion('workerman/webman-framework'),
             'admin_version' => Util::getPackageVersion('webman/admin'),
             'mysql_version' => $mysql_version,

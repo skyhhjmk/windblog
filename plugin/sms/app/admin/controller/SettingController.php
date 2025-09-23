@@ -5,7 +5,7 @@ namespace plugin\sms\app\admin\controller;
 use Overtrue\EasySms\Exceptions\InvalidArgumentException;
 use Overtrue\EasySms\Exceptions\NoGatewayAvailableException;
 use Overtrue\EasySms\Strategies\OrderStrategy;
-use plugin\admin\app\model\Option;
+use app\model\Setting;
 use plugin\sms\api\Sms;
 use plugin\sms\app\admin\model\Tag;
 use support\exception\BusinessException;
@@ -22,6 +22,7 @@ class SettingController
 
     /**
      * 短信设置页
+     *
      * @return Response
      */
     public function index()
@@ -34,6 +35,7 @@ class SettingController
 
     /**
      * 获取设置
+     *
      * @return Response
      */
     public function get(): Response
@@ -51,7 +53,9 @@ class SettingController
 
     /**
      * 更改设置
+     *
      * @param Request $request
+     *
      * @return Response
      */
     public function save(Request $request): Response
@@ -77,12 +81,12 @@ class SettingController
 
         $name = Sms::OPTION_NAME;
         $value = json_encode($config);
-        $option = Option::where('name', $name)->first();
+        $option = Setting::where('key', $name)->first();
         if ($option) {
-            Option::where('name', $name)->update(['value' => $value]);
+            Setting::where('key', $name)->update(['value' => $value]);
         } else {
-            $option = new Option();
-            $option->name = $name;
+            $option = new Setting();
+            $option->key = $name;
             $option->value = $value;
             $option->save();
         }
@@ -91,7 +95,9 @@ class SettingController
 
     /**
      * 短信标签测试
+     *
      * @param Request $request
+     *
      * @return Response
      * @throws BusinessException
      * @throws InvalidArgumentException
@@ -111,7 +117,7 @@ class SettingController
         $data = $data ? json_decode($data, true) : [];
         try {
             Sms::sendByTag($to, $tagName, $data, [$gateway]);
-        }  catch (Throwable $e) {
+        } catch (Throwable $e) {
             if (method_exists($e, 'getExceptions')) {
                 throw new BusinessException(current($e->getExceptions())->getMessage());
             }
@@ -122,7 +128,9 @@ class SettingController
 
     /**
      * 插入
+     *
      * @param Request $request
+     *
      * @return Response
      */
     public function insertTag(Request $request): Response
@@ -142,7 +150,9 @@ class SettingController
 
     /**
      * 更新
+     *
      * @param Request $request
+     *
      * @return Response
      */
     public function updateTag(Request $request): Response
@@ -167,7 +177,9 @@ class SettingController
 
     /**
      * 删除
+     *
      * @param Request $request
+     *
      * @return Response
      */
     public function deleteTag(Request $request): Response
@@ -180,7 +192,9 @@ class SettingController
 
     /**
      * 获取标签
+     *
      * @param Request $request
+     *
      * @return Response
      */
     public function getTag(Request $request): Response

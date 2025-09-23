@@ -16,6 +16,7 @@
 use plugin\admin\app\controller\AccountController;
 use plugin\admin\app\controller\DictController;
 use plugin\admin\app\controller\EditorController;
+use plugin\admin\app\controller\LinkController;
 use plugin\admin\app\controller\MediaController;
 use plugin\admin\app\controller\PostsController;
 use plugin\admin\app\controller\WpImportController;
@@ -27,6 +28,25 @@ Route::group('/app/admin', function () {
     Route::any('/account/captcha/{type}', [AccountController::class, 'captcha']);
 
     Route::any('/dict/get/{name}', [DictController::class, 'get']);
+
+    // Link 路由
+    Route::group('/link', function () {
+        Route::get('', [LinkController::class, 'index']);
+        Route::get('/', [LinkController::class, 'index']);
+        Route::get('/index', [LinkController::class, 'index']);
+        Route::get('/list', [LinkController::class, 'list']);
+        Route::get('/add', [LinkController::class, 'add']);
+        Route::post('/add', [LinkController::class, 'add']);
+        Route::get('/edit/{id}', [LinkController::class, 'edit']);
+        Route::post('/edit/{id}', [LinkController::class, 'edit']);
+        Route::get('/view/{id}', [LinkController::class, 'view']);
+        Route::delete('/remove/{id}', [LinkController::class, 'remove']);
+        Route::post('/restore/{id}', [LinkController::class, 'restore']);
+        Route::delete('/forceDelete/{id}', [LinkController::class, 'forceDelete']);
+        Route::delete('/batchRemove/{ids}', [LinkController::class, 'batchRemove']);
+        Route::post('/batchRestore/{ids}', [LinkController::class, 'batchRestore']);
+        Route::delete('/batchForceDelete/{ids}', [LinkController::class, 'batchForceDelete']);
+    });
 
     // Post 路由
     Route::group('/posts', function () {
@@ -41,7 +61,7 @@ Route::group('/app/admin', function () {
         Route::post('/batchRestore/{ids}', [PostsController::class, 'batchRestore']);
         Route::delete('/batchForceDelete/{ids}', [PostsController::class, 'batchForceDelete']);
     });
-    
+
     // Editor 路由
     Route::group('/editor', function () {
         Route::get('/vditor', [EditorController::class, 'vditor']);
@@ -49,7 +69,7 @@ Route::group('/app/admin', function () {
         Route::post('/save', [EditorController::class, 'save']);
         Route::post('/upload-image', [EditorController::class, 'uploadImage']);
     });
-    
+
     // Media 路由
     Route::group('/media', function () {
         Route::get('', [MediaController::class, 'index']);

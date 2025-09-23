@@ -5,7 +5,7 @@ namespace plugin\sms\api;
 use Overtrue\EasySms\Exceptions\InvalidArgumentException;
 use Overtrue\EasySms\Exceptions\NoGatewayAvailableException;
 use Overtrue\EasySms\Strategies\OrderStrategy;
-use plugin\admin\app\model\Option;
+use app\model\Setting;
 use Overtrue\EasySms\EasySms;
 use RuntimeException;
 use support\exception\BusinessException;
@@ -23,9 +23,11 @@ class Sms
 
     /**
      * 发送短信
+     *
      * @param string|array $to
-     * @param array $message
-     * @param array $gateways
+     * @param array        $message
+     * @param array        $gateways
+     *
      * @return array
      * @throws BusinessException
      * @throws InvalidArgumentException
@@ -39,10 +41,12 @@ class Sms
 
     /**
      * 按照标签发送
-     * @param $tagName
-     * @param $to
+     *
+     * @param       $tagName
+     * @param       $to
      * @param array $data
      * @param array $gateways
+     *
      * @return array
      * @throws InvalidArgumentException
      * @throws NoGatewayAvailableException
@@ -79,15 +83,17 @@ class Sms
                 $gatewayName = $gateway->getName();
                 return $templates[$gatewayName]['template_id'];
             },
-            'data' => function($gateway) use ($data) {
+            'data' => function ($gateway) use ($data) {
                 return $data;
             },
-        ] , $gateways);
+        ], $gateways);
     }
 
     /**
      * Get Sms
+     *
      * @param array $config
+     *
      * @return EasySms
      * @throws BusinessException
      */
@@ -105,12 +111,13 @@ class Sms
 
     /**
      * 获取配置
+     *
      * @return array
      */
     public static function getConfig(): array
     {
         $optionName = static::OPTION_NAME;
-        $option = Option::where('name', $optionName)->value('value');
+        $option = Setting::where('key', $optionName)->value('value');
         $config = $option ? json_decode($option, true) : [];
         if (!$config) {
             $config = [
@@ -121,8 +128,8 @@ class Sms
                 ],
                 'gateways' => [],
             ];
-            $option = $option ?: new Option();
-            $option->name = $optionName;
+            $option = $option ?: new Setting();
+            $option->key = $optionName;
             $option->value = json_encode($config, JSON_UNESCAPED_UNICODE);
         }
         return $config;

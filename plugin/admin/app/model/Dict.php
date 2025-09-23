@@ -12,19 +12,23 @@ class Dict
 {
     /**
      * 获取字典
+     *
      * @param $name
+     *
      * @return mixed|null
      */
     public static function get($name)
     {
-        $value = Option::where('name', static::dictNameToOptionName($name))->value('value');
+        $value = Setting::where('key', static::dictNameToOptionName($name))->value('value');
         return $value ? json_decode($value, true) : null;
     }
 
     /**
      * 保存字典
+     *
      * @param $name
      * @param $values
+     *
      * @return void
      * @throws BusinessException
      */
@@ -34,18 +38,20 @@ class Dict
             throw new BusinessException('字典名只能包含字母');
         }
         $option_name = static::dictNameToOptionName($name);
-        if (!$option = Option::where('name', $option_name)->first()) {
-            $option = new Option;
+        if (!$option = Setting::where('key', $option_name)->first()) {
+            $option = new Setting();
         }
         $format_values = static::filterValue($values);
-        $option->name = $option_name;
+        $option->key = $option_name;
         $option->value = json_encode($format_values, JSON_UNESCAPED_UNICODE);
         $option->save();
     }
 
     /**
      * 删除字典
+     *
      * @param array $names
+     *
      * @return void
      */
     public static function delete(array $names)
@@ -58,7 +64,9 @@ class Dict
 
     /**
      * 字典名到option名转换
+     *
      * @param string $name
+     *
      * @return string
      */
     public static function dictNameToOptionName(string $name): string
@@ -68,7 +76,9 @@ class Dict
 
     /**
      * option名到字典名转换
+     *
      * @param string $name
+     *
      * @return string
      */
     public static function optionNameToDictName(string $name): string
@@ -78,7 +88,9 @@ class Dict
 
     /**
      * 过滤值
+     *
      * @param array $values
+     *
      * @return array
      * @throws BusinessException
      */
@@ -89,7 +101,7 @@ class Dict
             if (!isset($item['value']) || !isset($item['name'])) {
                 throw new BusinessException('字典格式错误', 1);
             }
-            $format_values[] =  ['value' => $item['value'], 'name' => $item['name']];
+            $format_values[] = ['value' => $item['value'], 'name' => $item['name']];
         }
         return $format_values;
     }

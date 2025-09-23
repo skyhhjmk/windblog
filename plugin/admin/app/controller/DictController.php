@@ -3,7 +3,7 @@
 namespace plugin\admin\app\controller;
 
 use plugin\admin\app\model\Dict;
-use plugin\admin\app\model\Option;
+use app\model\Setting;
 use support\exception\BusinessException;
 use support\Request;
 use support\Response;
@@ -21,6 +21,7 @@ class DictController extends Base
 
     /**
      * 浏览
+     *
      * @return Response
      * @throws Throwable
      */
@@ -31,7 +32,9 @@ class DictController extends Base
 
     /**
      * 查询
+     *
      * @param Request $request
+     *
      * @return Response
      */
     public function select(Request $request): Response
@@ -39,13 +42,13 @@ class DictController extends Base
         $name = $request->get('name', '');
         $page = $request->get('page', 1);
         $limit = $request->get('limit', 10);
-        $offset = ($page-1)*$limit;
+        $offset = ($page - 1) * $limit;
         if ($name && is_string($name)) {
-            $items = Option::where('name', 'like', "dict_$name%")->limit($limit)->offset($offset)->get()->toArray();
+            $items = Setting::where('key', 'like', "dict_$name%")->limit($limit)->offset($offset)->get()->toArray();
         } else {
-            $items = Option::where('name', 'like', 'dict_%')->limit($limit)->offset($offset)->get()->toArray();
+            $items = Setting::where('key', 'like', 'dict_%')->limit($limit)->offset($offset)->get()->toArray();
         }
-        $get_items = Option::where('name', 'like', "dict_$name%")->get()->toArray();
+        $get_items = Setting::where('key', 'like', "dict_$name%")->get()->toArray();
         $count = count($get_items);
         foreach ($items as &$item) {
             $item['name'] = Dict::optionNameTodictName($item['name']);
@@ -55,7 +58,9 @@ class DictController extends Base
 
     /**
      * 插入
+     *
      * @param Request $request
+     *
      * @return Response
      * @throws BusinessException|Throwable
      */
@@ -77,7 +82,9 @@ class DictController extends Base
 
     /**
      * 更新
+     *
      * @param Request $request
+     *
      * @return Response
      * @throws BusinessException|Throwable
      */
@@ -98,7 +105,9 @@ class DictController extends Base
 
     /**
      * 删除
+     *
      * @param Request $request
+     *
      * @return Response
      */
     public function delete(Request $request): Response
@@ -110,8 +119,10 @@ class DictController extends Base
 
     /**
      * 获取
+     *
      * @param Request $request
-     * @param $name
+     * @param         $name
+     *
      * @return Response
      */
     public function get(Request $request, $name): Response

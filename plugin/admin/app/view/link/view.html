@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>链接详情</title>
+    <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css"/>
+    <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+    <script src="/app/admin/component/pear/pear.js"></script>
+</head>
+
+<body class="pear-container">
+<div class="layui-card">
+    <div class="layui-card-header">
+        <h3>链接详情</h3>
+    </div>
+    <div class="layui-card-body">
+        <form class="layui-form" action="">
+            <div class="layui-form-item">
+                <label class="layui-form-label">链接名称</label>
+                <div class="layui-input-block">
+                    <input type="text" name="name" value="{{$link.name}}" class="layui-input" readonly>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">链接地址</label>
+                <div class="layui-input-block">
+                    <input type="text" name="url" value="{{$link.url}}" class="layui-input" readonly>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">链接描述</label>
+                <div class="layui-input-block">
+                    <textarea name="description" class="layui-textarea" readonly>{{$link.description}}</textarea>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">网站图标</label>
+                <div class="layui-input-block">
+                    {{if $link.icon}}
+                    <img src="{{$link.icon}}" style="max-width: 32px; max-height: 32px; margin-right: 10px;">
+                    <input type="text" name="icon" value="{{$link.icon}}" class="layui-input" style="width: calc(100% - 50px); display: inline-block;" readonly>
+                    {{else}}
+                    <input type="text" name="icon" value="无" class="layui-input" readonly>
+                    {{/if}}
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">排序权重</label>
+                <div class="layui-input-block">
+                    <input type="number" name="sort_order" value="{{$link.sort_order}}" class="layui-input" readonly>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">状态</label>
+                <div class="layui-input-block">
+                    {{if $link.status}}
+                    <input type="text" value="已启用" class="layui-input" style="color: #52c41a;" readonly>
+                    {{else}}
+                    <input type="text" value="已禁用" class="layui-input" style="color: #f5222d;" readonly>
+                    {{/if}}
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">打开方式</label>
+                <div class="layui-input-block">
+                    {{if $link.target == '_blank'}}
+                    <input type="text" value="新窗口打开" class="layui-input" readonly>
+                    {{else}}
+                    <input type="text" value="当前窗口打开" class="layui-input" readonly>
+                    {{/if}}
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">跳转方式</label>
+                <div class="layui-input-block">
+                    {{if $link.redirect_type == 'direct'}}
+                    <input type="text" value="直接跳转" class="layui-input" readonly>
+                    {{else if $link.redirect_type == 'goto'}}
+                    <input type="text" value="中转页跳转" class="layui-input" readonly>
+                    {{else if $link.redirect_type == 'iframe'}}
+                    <input type="text" value="内嵌页面" class="layui-input" readonly>
+                    {{else if $link.redirect_type == 'info'}}
+                    <input type="text" value="详情页" class="layui-input" readonly>
+                    {{/if}}
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">显示URL</label>
+                <div class="layui-input-block">
+                    {{if $link.show_url}}
+                    <input type="text" value="是" class="layui-input" style="color: #52c41a;" readonly>
+                    {{else}}
+                    <input type="text" value="否" class="layui-input" style="color: #f5222d;" readonly>
+                    {{/if}}
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">创建时间</label>
+                <div class="layui-input-block">
+                    <input type="text" name="created_at" value="{{$link.created_at}}" class="layui-input" readonly>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">更新时间</label>
+                <div class="layui-input-block">
+                    <input type="text" name="updated_at" value="{{$link.updated_at}}" class="layui-input" readonly>
+                </div>
+            </div>
+
+            {{if $link.content}}
+            <div class="layui-form-item">
+                <label class="layui-form-label">详细介绍</label>
+                <div class="layui-input-block">
+                    <div class="layui-text" style="padding: 10px; border: 1px solid #e6e6e6; border-radius: 2px; background: #f8f8f8;">
+                        {{$link.content}}
+                    </div>
+                </div>
+            </div>
+            {{/if}}
+
+            <div class="layui-form-item">
+                <div class="layui-input-block">
+                    <button type="button" class="pear-btn pear-btn-primary" onclick="window.history.back()">返回</button>
+                    <button type="button" class="pear-btn" onclick="window.location.href='/app/admin/link/edit/{{$link.id}}'">编辑</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    layui.use(['form'], function() {
+        var form = layui.form;
+        // 页面加载完成后执行
+        form.render();
+    });
+</script>
+</body>
+
+</html>

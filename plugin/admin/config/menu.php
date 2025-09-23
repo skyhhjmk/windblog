@@ -156,6 +156,29 @@ return [
         ]
     ],
     [
+        'title' => '链接',
+        'key' => 'link',
+        'icon' => 'layui-icon-link',
+        'weight' => 760,
+        'type' => 0,
+        'children' => [
+            [
+                'title' => '链接管理',
+                'key' => 'plugin\\admin\\app\\controller\\LinkController',
+                'href' => '/app/admin/link/index',
+                'type' => 1,
+                'weight' => 800,
+            ],
+            [
+                'title' => '互联协议',
+                'key' => 'plugin\\windconnect\\app\\controller\\LinkController',
+                'href' => '/app/admin/link/protocol',
+                'type' => 1,
+                'weight' => 700,
+            ]
+        ]
+    ],
+    [
         'title' => '工具',
         'key' => 'tools',
         'icon' => 'layui-icon-more',
@@ -489,6 +512,22 @@ return [
                         'href' => '/app/admin/demos/system/space.html'
                     ]
                 ]
+            ]
+        ]
+    ],
+    [
+        'title' => '栏位管理',
+        'key' => 'sidebar',
+        'icon' => '',
+        'weight' => 890,
+        'type' => 0,
+        'children' => [
+            [
+                'title' => '侧边栏',
+                'key' => 'plugin\\admin\\app\\controller\\SidebarController',
+                'href' => '/app/admin/sidebar/index',
+                'type' => 1,
+                'weight' => 889,
             ]
         ]
     ]

@@ -3,7 +3,7 @@
 namespace plugin\admin\app\controller;
 
 use plugin\admin\app\common\Util;
-use plugin\admin\app\model\Option;
+use app\model\Setting;
 use support\exception\BusinessException;
 use support\Request;
 use support\Response;
@@ -16,12 +16,14 @@ class ConfigController extends Base
 {
     /**
      * 不需要验证权限的方法
+     *
      * @var string[]
      */
     protected $noNeedAuth = ['get'];
 
     /**
      * 账户设置
+     *
      * @return Response
      * @throws Throwable
      */
@@ -32,6 +34,7 @@ class ConfigController extends Base
 
     /**
      * 获取配置
+     *
      * @return Response
      */
     public function get(): Response
@@ -41,17 +44,89 @@ class ConfigController extends Base
 
     /**
      * 基于配置文件获取默认权限
+     *
      * @return mixed
      */
     protected function getByDefault()
     {
         $name = 'system_config';
-        $config = Option::where('name', $name)->value('value');
+        $config = Setting::where('key', $name)->value('value');
         if (empty($config)) {
-            $config = file_get_contents(base_path('plugin/admin/public/config/pear.config.json'));
+            $config = <<<EOF
+{
+	"logo": {
+		"title": "风屿岛管理页",
+		"image": "/app/admin/admin/images/logo.png"
+	},
+	"menu": {
+		"data": "/app/admin/rule/get",
+		"method": "GET",
+		"accordion": true,
+		"collapse": false,
+		"control": false,
+		"controlWidth": 2000,
+		"select": "0",
+		"async": true
+	},
+	"tab": {
+		"enable": true,
+		"keepState": true,
+		"session": true,
+		"preload": false,
+		"max": "30",
+		"index": {
+			"id": "0",
+			"href": "/app/admin/index/dashboard",
+			"title": "仪表盘"
+		}
+	},
+	"theme": {
+		"defaultColor": "2",
+		"defaultMenu": "light-theme",
+		"defaultHeader": "light-theme",
+		"allowCustom": true,
+		"banner": false
+	},
+	"colors": [
+		{
+			"id": "1",
+			"color": "#36b368",
+			"second": "#f0f9eb"
+		},
+		{
+			"id": "2",
+			"color": "#2d8cf0",
+			"second": "#ecf5ff"
+		},
+		{
+			"id": "3",
+			"color": "#f6ad55",
+			"second": "#fdf6ec"
+		},
+		{
+			"id": "4",
+			"color": "#f56c6c",
+			"second": "#fef0f0"
+		},
+		{
+			"id": "5",
+			"color": "#3963bc",
+			"second": "#ecf5ff"
+		}
+	],
+	"other": {
+		"keepLoad": "500",
+		"autoHead": false,
+		"footer": false
+	},
+	"header": {
+		"message": false
+	}
+}
+EOF;;
             if ($config) {
-                $option = new Option();
-                $option->name = $name;
+                $option = new Setting();
+                $option->key = $name;
                 $option->value = $config;
                 $option->save();
             }
@@ -61,7 +136,9 @@ class ConfigController extends Base
 
     /**
      * 更改
+     *
      * @param Request $request
+     *
      * @return Response
      * @throws BusinessException
      */
@@ -103,8 +180,8 @@ class ConfigController extends Base
                     break;
                 case 'theme':
                     $data[$section]['defaultColor'] = Util::filterNum($items['defaultColor'] ?? '2');
-                    $data[$section]['defaultMenu'] = $items['defaultMenu'] ?? '' == 'dark-theme' ?  'dark-theme' : 'light-theme';
-                    $data[$section]['defaultHeader'] = $items['defaultHeader'] ?? '' == 'dark-theme' ?  'dark-theme' : 'light-theme';
+                    $data[$section]['defaultMenu'] = $items['defaultMenu'] ?? '' == 'dark-theme' ? 'dark-theme' : 'light-theme';
+                    $data[$section]['defaultHeader'] = $items['defaultHeader'] ?? '' == 'dark-theme' ? 'dark-theme' : 'light-theme';
                     $data[$section]['allowCustom'] = !empty($items['allowCustom']);
                     $data[$section]['banner'] = !empty($items['banner']);
                     break;
@@ -125,7 +202,7 @@ class ConfigController extends Base
         }
         $config = array_merge($config, $data);
         $name = 'system_config';
-        Option::where('name', $name)->update([
+        Setting::where('key', $name)->update([
             'value' => json_encode($config)
         ]);
         return $this->json(0);
@@ -133,7 +210,9 @@ class ConfigController extends Base
 
     /**
      * 颜色检查
+     *
      * @param string $color
+     *
      * @return string
      * @throws BusinessException
      */

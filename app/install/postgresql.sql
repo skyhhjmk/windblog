@@ -590,8 +590,8 @@ CREATE INDEX idx_post_ext_id ON post_ext USING btree (id);
 CREATE INDEX idx_post_ext_key ON post_ext USING btree (key);
 -- 插入预定义表数据
 
--- Data for Name: wa_options; Type: TABLE DATA; Schema: public; Owner: postgres
-INSERT INTO public.wa_options (name, value, created_at, updated_at)
+-- Data for Name: settings; Type: TABLE DATA; Schema: public; Owner: postgres
+INSERT INTO public.settings (key, value, created_at, updated_at)
 VALUES ('system_config', '{
   "logo": {
     "title": "风屿岛管理页",

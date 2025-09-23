@@ -8,7 +8,7 @@ use plugin\admin\app\common\Layui;
 use plugin\admin\app\common\Util;
 use plugin\admin\app\model\Role;
 use plugin\admin\app\model\Rule;
-use plugin\admin\app\model\Option;
+use app\model\Setting;
 use support\exception\BusinessException;
 use support\Request;
 use support\Response;
@@ -349,8 +349,8 @@ class TableController extends Base
         $table = Util::getSchema($table_name, 'table');
         if ($table_comment !== $table['comment']) {
             $table_comment = Util::pdoQuote($table_comment);
-        // PostgreSQL 使用 COMMENT ON TABLE 语法设置表注释
-        Util::db()->statement("COMMENT ON TABLE \"$table_name\" IS $table_comment");
+            // PostgreSQL 使用 COMMENT ON TABLE 语法设置表注释
+            Util::db()->statement("COMMENT ON TABLE \"$table_name\" IS $table_comment");
         }
 
         $old_columns = Util::getSchema($table_name, 'columns');
@@ -1676,8 +1676,8 @@ EOF;
         $nullable = $column['nullable'];
         // 特殊处理SQL函数类型的默认值，如CURRENT_TIMESTAMP不应该加引号
         $sql_functions = ['CURRENT_TIMESTAMP', 'NOW()', 'LOCALTIMESTAMP'];
-        $default = $column['default'] !== null ? 
-            (in_array(strtoupper(trim($column['default'])), $sql_functions) ? $column['default'] : Util::pdoQuote($column['default'])) : 
+        $default = $column['default'] !== null ?
+            (in_array(strtoupper(trim($column['default'])), $sql_functions) ? $column['default'] : Util::pdoQuote($column['default'])) :
             null;
         $comment = Util::pdoQuote($column['comment']);
         $auto_increment = $column['auto_increment'];
@@ -1689,7 +1689,7 @@ EOF;
 
         // 获取当前数据库驱动类型
         $driver = config('database.default');
-        
+
         if ($old_field && $old_field !== $field) {
             if ($driver === 'pgsql') {
                 $sql = "ALTER TABLE \"$table\" RENAME COLUMN \"$old_field\" TO \"$field\"";
@@ -1706,7 +1706,7 @@ EOF;
             // 修改类型
             $type_sql = "ALTER TABLE \"$table\" ALTER COLUMN \"$field\" TYPE ";
             $type_args = '';
-            
+
             if (stripos($method, 'integer') !== false) {
                 $type = str_ireplace('integer', 'int', $method);
                 if (stripos($method, 'unsigned') !== false) {
@@ -1736,7 +1736,7 @@ EOF;
                         Util::db()->statement("ALTER TABLE \"$table\" DROP CONSTRAINT IF EXISTS $enum_constraint");
                         $type_args = "varchar";
                         // 添加check约束
-                        $enum_values_quoted = implode(', ', array_map(function($v) {
+                        $enum_values_quoted = implode(', ', array_map(function ($v) {
                             return Util::pdoQuote(trim($v, "'\""));
                         }, $enum_values));
                         $check_sql = "ALTER TABLE \"$table\" ADD CONSTRAINT $enum_constraint CHECK (\"$field\" IN ($enum_values_quoted))";
@@ -1758,7 +1758,7 @@ EOF;
                         $type_args = "$method";
                 }
             }
-            
+
             if ($type_args) {
                 $type_sql .= $type_args;
                 echo "$type_sql\n";
@@ -1891,9 +1891,9 @@ EOF;
     protected function updateSchemaOption($table_name, $data): string
     {
         $option_name = "table_form_schema_$table_name";
-        $option = Option::where('name', $option_name)->first();
+        $option = Setting::where('key', $option_name)->first();
         if ($option) {
-            Option::where('name', $option_name)->update(['value' => $data]);
+            Setting::where('key', $option_name)->update(['value' => $data]);
         } else {
             Option::insert(['name' => $option_name, 'value' => $data]);
         }

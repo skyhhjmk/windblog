@@ -6,7 +6,7 @@ use app\process\Monitor;
 use Throwable;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Schema\Builder;
-use plugin\admin\app\model\Option;
+use app\model\Setting;
 use support\exception\BusinessException;
 use support\Db;
 use Workerman\Timer;
@@ -16,8 +16,10 @@ class Util
 {
     /**
      * 密码哈希
-     * @param $password
+     *
+     * @param        $password
      * @param string $algo
+     *
      * @return false|string|null
      */
     public static function passwordHash($password, string $algo = PASSWORD_DEFAULT)
@@ -27,8 +29,10 @@ class Util
 
     /**
      * 验证密码哈希
+     *
      * @param string $password
      * @param string $hash
+     *
      * @return bool
      */
     public static function passwordVerify(string $password, string $hash): bool
@@ -38,6 +42,7 @@ class Util
 
     /**
      * 获取webman-admin数据库连接
+     *
      * @return Connection
      */
     public static function db(): Connection
@@ -47,6 +52,7 @@ class Util
 
     /**
      * 获取SchemaBuilder
+     *
      * @return Builder
      */
     public static function schema(): Builder
@@ -56,7 +62,9 @@ class Util
 
     /**
      * 获取语义化时间
+     *
      * @param $time
+     *
      * @return false|string
      */
     public static function humanDate($time)
@@ -89,22 +97,26 @@ class Util
 
     /**
      * 格式化文件大小
+     *
      * @param $file_size
+     *
      * @return string
      */
     public static function formatBytes($file_size): string
     {
         $size = sprintf("%u", $file_size);
-        if($size == 0) {
-            return("0 Bytes");
+        if ($size == 0) {
+            return ("0 Bytes");
         }
         $size_name = array(" Bytes", " KB", " MB", " GB", " TB", " PB", " EB", " ZB", " YB");
-        return round($size/pow(1024, ($i = floor(log($size, 1024)))), 2) . $size_name[$i];
+        return round($size / pow(1024, ($i = floor(log($size, 1024)))), 2) . $size_name[$i];
     }
 
     /**
      * 数据库字符串转义
+     *
      * @param $var
+     *
      * @return false|string
      */
     public static function pdoQuote($var)
@@ -114,7 +126,9 @@ class Util
 
     /**
      * 检查表名是否合法
+     *
      * @param string $table
+     *
      * @return string
      * @throws BusinessException
      */
@@ -128,7 +142,9 @@ class Util
 
     /**
      * 变量或数组中的元素只能是字母数字下划线组合
+     *
      * @param $var
+     *
      * @return mixed
      * @throws BusinessException
      */
@@ -145,7 +161,9 @@ class Util
 
     /**
      * 变量或数组中的元素只能是字母数字
+     *
      * @param $var
+     *
      * @return mixed
      * @throws BusinessException
      */
@@ -162,7 +180,9 @@ class Util
 
     /**
      * @desc 检测是否是合法URL Path
+     *
      * @param $var
+     *
      * @return string
      * @throws BusinessException
      */
@@ -184,7 +204,9 @@ class Util
 
     /**
      * 检测是否是合法Path
+     *
      * @param $var
+     *
      * @return string
      * @throws BusinessException
      */
@@ -198,7 +220,9 @@ class Util
 
     /**
      * 类转换为url path
+     *
      * @param $controller_class
+     *
      * @return false|string
      */
     static function controllerToUrlPath($controller_class)
@@ -206,7 +230,7 @@ class Util
         $key = strtolower($controller_class);
         $action = '';
         if (strpos($key, '@')) {
-            [$key, $action] = explode( '@', $key, 2);
+            [$key, $action] = explode('@', $key, 2);
         }
         $prefix = 'plugin';
         $paths = explode('\\', $key);
@@ -238,7 +262,9 @@ class Util
 
     /**
      * 转换为驼峰
+     *
      * @param string $value
+     *
      * @return string
      */
     public static function camel(string $value): string
@@ -257,7 +283,9 @@ class Util
 
     /**
      * 转换为小驼峰
+     *
      * @param $value
+     *
      * @return string
      */
     public static function smCamel($value): string
@@ -267,7 +295,9 @@ class Util
 
     /**
      * 获取注释中第一行
+     *
      * @param $comment
+     *
      * @return false|mixed|string
      */
     public static function getCommentFirstLine($comment)
@@ -285,11 +315,12 @@ class Util
 
     /**
      * 表单类型到插件的映射
+     *
      * @return \string[][]
      */
     public static function methodControlMap(): array
     {
-        return  [
+        return [
             //method=>[控件]
             'integer' => ['InputNumber'],
             'string' => ['Input'],
@@ -334,7 +365,9 @@ class Util
 
     /**
      * 数据库类型到插件的转换
+     *
      * @param $type
+     *
      * @return string
      */
     public static function typeToControl($type): string
@@ -356,8 +389,10 @@ class Util
 
     /**
      * 数据库类型到表单类型的转换
+     *
      * @param $type
      * @param $unsigned
+     *
      * @return string
      */
     public static function typeToMethod($type, $unsigned = false)
@@ -378,8 +413,10 @@ class Util
 
     /**
      * 按表获取摘要
-     * @param $table
+     *
+     * @param      $table
      * @param null $section
+     *
      * @return array|mixed
      * @throws BusinessException
      */
@@ -388,14 +425,14 @@ class Util
         Util::checkTableName($table);
         $database = config('database.connections')[config('database.default')]['database'] ?? config('database.connections')['pgsql']['database'];
         $driver = config('database.default');
-        
+
         $forms = [];
         $columns = [];
-        
+
         if ($driver === 'pgsql') {
             // PostgreSQL查询
             $schema_raw = $section !== 'table' ? Util::db()->select("SELECT * FROM information_schema.columns WHERE table_schema = 'public' AND table_name = ? ORDER BY ordinal_position", [$table]) : [];
-            
+
             foreach ($schema_raw as $item) {
                 $field = $item->column_name;
                 $columns[$field] = [
@@ -421,7 +458,7 @@ class Util
                     'control_args' => '',
                 ];
             }
-            
+
             // 查询主键信息
             if ($section !== 'table' && $columns) {
                 $primary_keys_result = Util::db()->select(
@@ -430,7 +467,7 @@ class Util
                     "WHERE i.indrelid = ?::regclass AND i.indisprimary",
                     [$table]
                 );
-                
+
                 foreach ($primary_keys_result as $pk) {
                     $pk_name = $pk->attname;
                     if (isset($columns[$pk_name])) {
@@ -439,14 +476,14 @@ class Util
                     }
                 }
             }
-            
+
             // 查询表注释
             $table_schema = $section == 'table' || !$section ? Util::db()->select(
                 "SELECT description AS table_comment FROM pg_description " .
-                "WHERE objoid = (SELECT oid FROM pg_class WHERE relname = ?) AND objsubid = 0", 
+                "WHERE objoid = (SELECT oid FROM pg_class WHERE relname = ?) AND objsubid = 0",
                 [$table]
             ) : [];
-            
+
             // 查询索引信息
             $keys = [];
             $primary_key = [];
@@ -463,7 +500,7 @@ class Util
                     "WHERE bc.relname = ?",
                     [$table]
                 );
-                
+
                 foreach ($indexes as $index) {
                     $key_name = $index->index_name;
                     if (strpos($key_name, '_pkey') !== false) {
@@ -483,7 +520,7 @@ class Util
         } else {
             // MySQL查询（保留原始逻辑）
             $schema_raw = $section !== 'table' ? Util::db()->select("select * from information_schema.COLUMNS where TABLE_SCHEMA = '$database' and table_name = '$table' order by ORDINAL_POSITION") : [];
-            
+
             foreach ($schema_raw as $item) {
                 $field = $item->COLUMN_NAME;
                 $columns[$field] = [
@@ -509,7 +546,7 @@ class Util
                     'control_args' => '',
                 ];
             }
-            
+
             $table_schema = $section == 'table' || !$section ? Util::db()->select("SELECT TABLE_COMMENT FROM information_schema.`TABLES` WHERE TABLE_SCHEMA='$database' and TABLE_NAME='$table'") : [];
             $indexes = !$section || in_array($section, ['keys', 'table']) ? Util::db()->select("SHOW INDEX FROM `$table`") : [];
             $keys = [];
@@ -538,7 +575,7 @@ class Util
             'keys' => array_reverse($keys, true)
         ];
 
-        $schema = Option::where('name', "table_form_schema_$table")->value('value');
+        $schema = Setting::where('key', "table_form_schema_$table")->value('value');
         $form_schema_map = $schema ? json_decode($schema, true) : [];
 
         foreach ($data['forms'] as $field => $item) {
@@ -552,7 +589,9 @@ class Util
 
     /**
      * 获取字段长度或默认值
+     *
      * @param $schema
+     *
      * @return mixed|string
      */
     public static function getLengthValue($schema)
@@ -562,7 +601,7 @@ class Util
             return "{$schema->NUMERIC_PRECISION},{$schema->NUMERIC_SCALE}";
         }
         if ($type === 'enum') {
-            return implode(',', array_map(function($item){
+            return implode(',', array_map(function ($item) {
                 return trim($item, "'");
             }, explode(',', substr($schema->COLUMN_TYPE, 5, -1))));
         }
@@ -577,7 +616,9 @@ class Util
 
     /**
      * 获取字段长度或默认值 (PostgreSQL版本)
+     *
      * @param $schema
+     *
      * @return mixed|string
      */
     public static function getLengthValuePgsql($schema)
@@ -601,8 +642,10 @@ class Util
 
     /**
      * 获取控件参数
+     *
      * @param $control
      * @param $control_args
+     *
      * @return array
      */
     public static function getControlProps($control, $control_args): array
@@ -642,7 +685,9 @@ class Util
 
     /**
      * 获取某个composer包的版本
+     *
      * @param string $package
+     *
      * @return mixed|string
      */
     public static function getPackageVersion(string $package)
@@ -657,6 +702,7 @@ class Util
 
     /**
      * Reload webman
+     *
      * @return bool
      */
     public static function reloadWebman()
@@ -665,7 +711,8 @@ class Util
             try {
                 posix_kill(posix_getppid(), SIGUSR1);
                 return true;
-            } catch (Throwable $e) {}
+            } catch (Throwable $e) {
+            }
         } else {
             Timer::add(1, function () {
                 Worker::stopAll();
@@ -676,6 +723,7 @@ class Util
 
     /**
      * Pause file monitor
+     *
      * @return void
      */
     public static function pauseFileMonitor()
@@ -687,6 +735,7 @@ class Util
 
     /**
      * Resume file monitor
+     *
      * @return void
      */
     public static function resumeFileMonitor()

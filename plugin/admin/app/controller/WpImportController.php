@@ -7,10 +7,11 @@ use app\model\ImportJob;
 use app\model\Post;
 use Illuminate\Database\Schema\Blueprint;
 use plugin\admin\app\common\Util;
-use plugin\admin\app\model\Option;
+use app\model\Setting;
 use support\exception\BusinessException;
 use support\Request;
 use support\Response;
+use Throwable;
 use Webman\Http\UploadFile;
 
 class WpImportController extends Base
@@ -19,6 +20,7 @@ class WpImportController extends Base
      * 显示导入页面
      *
      * @param Request $request
+     *
      * @return Response
      */
     public function index(Request $request)
@@ -30,6 +32,7 @@ class WpImportController extends Base
      * 获取导入任务列表
      *
      * @param Request $request
+     *
      * @return Response
      */
     public function list(Request $request): Response
@@ -37,7 +40,7 @@ class WpImportController extends Base
         // 后台不使用缓存
         // 获取请求参数
         $name = $request->get('name', '');
-        $username = $request->get('username', '');
+//        $username = $request->get('username', '');
         $status = $request->get('status', '');
         $page = (int)$request->get('page', 1);
         $limit = (int)$request->get('limit', 15);
@@ -76,7 +79,9 @@ class WpImportController extends Base
 
     /**
      * 创建表
+     *
      * @param Request $request
+     *
      * @return Response
      * @throws BusinessException|Throwable
      */
@@ -160,6 +165,7 @@ class WpImportController extends Base
      * 上传并创建导入任务
      *
      * @param Request $request
+     *
      * @return Response
      */
     public function upload(Request $request)
@@ -253,6 +259,7 @@ class WpImportController extends Base
      * 统一提交导入任务（包含文件和表单数据）
      *
      * @param Request $request
+     *
      * @return Response
      */
     public function submit(Request $request)
@@ -348,7 +355,8 @@ class WpImportController extends Base
      * 获取导入任务状态
      *
      * @param Request $request
-     * @param int $id
+     * @param int     $id
+     *
      * @return Response
      */
     public function status(Request $request, int $id)
@@ -377,7 +385,8 @@ class WpImportController extends Base
      * 重置导入任务
      *
      * @param Request $request
-     * @param int $id
+     * @param int     $id
+     *
      * @return Response
      */
     public function reset(Request $request, int $id)
@@ -410,7 +419,8 @@ class WpImportController extends Base
      * 删除导入任务
      *
      * @param Request $request
-     * @param int $id
+     * @param int     $id
+     *
      * @return Response
      */
     public function delete(Request $request, int $id)

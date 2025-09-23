@@ -2,7 +2,7 @@
 
 namespace plugin\sms\app\admin\model;
 
-use plugin\admin\app\model\Option;
+use app\model\Setting;
 use plugin\sms\api\Sms;
 
 /**
@@ -12,8 +12,10 @@ class Tag
 {
     /**
      * 获取标签
+     *
      * @param $gateway
      * @param $name
+     *
      * @return mixed|null
      */
     public static function get($gateway, $name)
@@ -24,9 +26,11 @@ class Tag
 
     /**
      * 保存标签
+     *
      * @param $gateway
      * @param $name
      * @param $value
+     *
      * @return void
      */
     public static function save($gateway, $name, $value)
@@ -34,18 +38,20 @@ class Tag
         $config = Sms::getConfig();
         $config['gateways'][$gateway]['tags'][$name] = $value;
         $optionName = Sms::OPTION_NAME;
-        if (!$option = Option::where('name', $optionName)->first()) {
-            $option = new Option;
+        if (!$option = Setting::where('key', $optionName)->first()) {
+            $option = new Setting();
         }
-        $option->name = $optionName;
+        $option->key = $optionName;
         $option->value = json_encode($config, JSON_UNESCAPED_UNICODE);
         $option->save();
     }
 
     /**
      * 删除标签
-     * @param $gateway
+     *
+     * @param       $gateway
      * @param array $names
+     *
      * @return void
      */
     public static function delete($gateway, array $names)
@@ -55,12 +61,12 @@ class Tag
             unset($config['gateways'][$gateway]['tags'][$name]);
         }
         $optionName = Sms::OPTION_NAME;
-        if (!$option = Option::where('name', $optionName)->first()) {
-            $option = new Option;
+        if (!$option = Setting::where('key', $optionName)->first()) {
+            $option = new Setting();
         }
-        $option->name = $optionName;
+        $option->key = $optionName;
         $option->value = json_encode($config, JSON_UNESCAPED_UNICODE);
         $option->save();
     }
-    
+
 }

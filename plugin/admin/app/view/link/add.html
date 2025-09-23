@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>新增链接</title>
+    <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css"/>
+    <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+    <script src="/app/admin/component/pear/pear.js"></script>
+</head>
+
+<body class="pear-container">
+<div class="layui-card">
+    <div class="layui-card-body">
+        <form class="layui-form" action="">
+            <div class="layui-form-item">
+                <label class="layui-form-label">链接名称</label>
+                <div class="layui-input-block">
+                    <input type="text" name="name" placeholder="请输入链接名称" class="layui-input" lay-verify="required">
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">链接地址</label>
+                <div class="layui-input-block">
+                    <input type="text" name="url" placeholder="请输入链接URL" class="layui-input" lay-verify="required|url">
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">链接描述</label>
+                <div class="layui-input-block">
+                    <textarea name="description" placeholder="请输入链接描述" class="layui-textarea"></textarea>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">网站图标</label>
+                <div class="layui-input-block">
+                    <input type="text" name="icon" placeholder="请输入网站图标URL" class="layui-input" lay-verify="url">
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">排序权重</label>
+                <div class="layui-input-block">
+                    <input type="number" name="sort_order" value="999" class="layui-input">
+                    <div class="layui-form-mid layui-word-aux">数字越小越靠前</div>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">打开方式</label>
+                <div class="layui-input-block">
+                    <select name="target" class="layui-input">
+                        <option value="_blank">新窗口打开</option>
+                        <option value="_self">当前窗口打开</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">跳转方式</label>
+                <div class="layui-input-block">
+                    <select name="redirect_type" class="layui-input">
+                        <option value="direct">直接跳转</option>
+                        <option value="goto" selected>中转页跳转</option>
+                        <option value="iframe">内嵌页面</option>
+                        <option value="info">详情页</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">显示URL</label>
+                <div class="layui-input-block">
+                    <input type="checkbox" name="show_url" lay-skin="switch" lay-text="是|否" checked>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">启用状态</label>
+                <div class="layui-input-block">
+                    <input type="checkbox" name="status" lay-skin="switch" lay-text="启用|禁用">
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">详细介绍</label>
+                <div class="layui-input-block">
+                    <textarea name="content" placeholder="请输入链接的详细介绍内容" class="layui-textarea"></textarea>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <div class="layui-input-block">
+                    <button class="pear-btn pear-btn-primary" lay-submit lay-filter="link-submit">提交</button>
+                    <button type="reset" class="pear-btn">重置</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    layui.use(['form', 'jquery'], function () {
+        var form = layui.form;
+        var $ = layui.jquery;
+
+        // 自定义验证规则
+        form.verify({
+            url: function(value){
+                if(value && !/^https?:\/\/.+/i.test(value)){
+                    return '请输入有效的URL地址';
+                }
+            }
+        });
+
+        // 监听提交
+        form.on('submit(link-submit)', function(data){
+            var loading = layer.load();
+            
+            // 处理布尔值字段
+            data.field.status = data.field.status === 'on';
+            data.field.show_url = data.field.show_url === 'on';
+            
+            $.ajax({
+                url: '/app/admin/link/add',
+                type: 'POST',
+                data: data.field,
+                dataType: 'json',
+                success: function(result){
+                    layer.close(loading);
+                    if(result.code === 0){
+                        layer.msg(result.msg, {icon: 1, time: 1000}, function(){
+                            parent.layui.admin.closeThisTab();
+                        });
+                    }else{
+                        layer.msg(result.msg, {icon: 2});
+                    }
+                },
+                error: function(){
+                    layer.close(loading);
+                    layer.msg('网络错误，请重试', {icon: 2});
+                }
+            });
+            return false;
+        });
+    });
+</script>
+</body>
+
+</html>
