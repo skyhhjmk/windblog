@@ -195,13 +195,6 @@ return [
         ]
     ],
     [
-        'title' => '系统日志',
-        'key' => 'plugin\\webmanlogs\\app\\controller\\IndexController',
-        'href' => '/app/webmanlogs/index/index',
-        'type' => 1,
-        'weight' => 0,
-    ],
-    [
         'title' => '开发辅助',
         'key' => 'dev',
         'icon' => 'layui-icon-fonts-code',
