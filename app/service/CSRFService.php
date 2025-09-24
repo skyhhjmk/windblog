@@ -159,6 +159,12 @@ class CSRFService
             return $token;
         }
         
+        // 从cookie获取
+        $token = $request->cookie($tokenName);
+        if ($token) {
+            return $token;
+        }
+        
         return null;
     }
 
