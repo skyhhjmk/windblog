@@ -52,6 +52,15 @@
                 <option value="published">已发布</option>
                 <option value="archived">已归档</option>
             </select>
+            <div class="relative">
+                <input type="text" id="authors-select" class="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-64" placeholder="选择作者" readonly>
+                <div id="authors-dropdown" class="absolute z-50 hidden w-64 mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                    <div class="p-2 border-b border-gray-200">
+                        <input type="text" id="authors-search" class="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="搜索作者">
+                    </div>
+                    <div id="authors-list" class="p-2"></div>
+                </div>
+            </div>
             <button id="media-selector-btn"
                     class="px-4 py-2 bg-purple-500 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50">
                 选择媒体
@@ -575,6 +584,206 @@ function example() {
                 }
             }
         });
+        
+        // 多作者选择功能
+        let selectedAuthors = [];
+        let allAuthors = [];
+        
+        // 初始化作者选择器
+        function initAuthorsSelector() {
+            const authorsSelect = document.getElementById('authors-select');
+            const authorsDropdown = document.getElementById('authors-dropdown');
+            const authorsSearch = document.getElementById('authors-search');
+            const authorsList = document.getElementById('authors-list');
+            
+            if (!authorsSelect || !authorsDropdown) return;
+            
+            // 点击输入框显示/隐藏下拉框
+            authorsSelect.addEventListener('click', function(e) {
+                e.stopPropagation();
+                authorsDropdown.classList.toggle('hidden');
+                if (!authorsDropdown.classList.contains('hidden')) {
+                    authorsSearch.focus();
+                    loadAuthorsList();
+                }
+            });
+            
+            // 搜索功能
+            authorsSearch.addEventListener('input', function() {
+                loadAuthorsList(this.value);
+            });
+            
+            // 点击其他地方关闭下拉框
+            document.addEventListener('click', function() {
+                authorsDropdown.classList.add('hidden');
+            });
+            
+            // 阻止下拉框内部点击事件冒泡
+            authorsDropdown.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+            
+            // 加载文章时设置已选作者
+            if (postId > 0) {
+                loadPostAuthors();
+            }
+        }
+        
+        // 加载作者列表
+        function loadAuthorsList(search = '') {
+            const authorsList = document.getElementById('authors-list');
+            if (!authorsList) return;
+            
+            authorsList.innerHTML = '<div class="p-2 text-gray-500 text-center">加载中...</div>';
+            
+            fetch(`/app/admin/editor/authors?search=${encodeURIComponent(search)}&limit=20`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 0) {
+                        allAuthors = data.data.list;
+                        renderAuthorsList(allAuthors);
+                    } else {
+                        authorsList.innerHTML = '<div class="p-2 text-red-500 text-center">加载失败</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('加载作者列表失败:', error);
+                    authorsList.innerHTML = '<div class="p-2 text-red-500 text-center">加载失败</div>';
+                });
+        }
+        
+        // 渲染作者列表
+        function renderAuthorsList(authors) {
+            const authorsList = document.getElementById('authors-list');
+            if (!authorsList) return;
+            
+            if (authors.length === 0) {
+                authorsList.innerHTML = '<div class="p-2 text-gray-500 text-center">暂无作者</div>';
+                return;
+            }
+            
+            authorsList.innerHTML = '';
+            authors.forEach(author => {
+                const isSelected = selectedAuthors.some(a => a.id === author.id);
+                const authorItem = document.createElement('div');
+                authorItem.className = `p-2 cursor-pointer hover:bg-gray-100 rounded ${isSelected ? 'bg-blue-50 text-blue-600' : ''}`;
+                authorItem.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <span class="font-medium">${author.nickname || author.username}</span>
+                            <span class="text-gray-500 text-sm ml-2">${author.email}</span>
+                        </div>
+                        ${isSelected ? '<span class="text-blue-600">✓</span>' : ''}
+                    </div>
+                `;
+                authorItem.addEventListener('click', function() {
+                    toggleAuthorSelection(author);
+                });
+                authorsList.appendChild(authorItem);
+            });
+        }
+        
+        // 切换作者选择状态
+        function toggleAuthorSelection(author) {
+            const index = selectedAuthors.findIndex(a => a.id === author.id);
+            if (index > -1) {
+                selectedAuthors.splice(index, 1);
+            } else {
+                selectedAuthors.push(author);
+            }
+            updateAuthorsDisplay();
+            renderAuthorsList(allAuthors);
+        }
+        
+        // 更新作者显示
+        function updateAuthorsDisplay() {
+            const authorsSelect = document.getElementById('authors-select');
+            if (!authorsSelect) return;
+            
+            if (selectedAuthors.length === 0) {
+                authorsSelect.value = '';
+                authorsSelect.placeholder = '选择作者';
+            } else {
+                const names = selectedAuthors.map(a => a.nickname || a.username).join(', ');
+                authorsSelect.value = names;
+            }
+        }
+        
+        // 加载文章的作者信息
+        function loadPostAuthors() {
+            if (!postId) return;
+            
+            fetch(`/api/v1/post/${postId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 200 && data.data && data.data.authors) {
+                        selectedAuthors = data.data.authors.map(author => ({
+                            id: author.id,
+                            username: author.username,
+                            nickname: author.nickname,
+                            email: author.email
+                        }));
+                        updateAuthorsDisplay();
+                    }
+                })
+                .catch(error => {
+                    console.error('加载文章作者信息失败:', error);
+                });
+        }
+        
+        // 修改保存按钮事件，添加作者数据
+        document.getElementById('save-btn').addEventListener('click', function () {
+            if (vditor) {
+                // 验证数据
+                if (!postTitle.value.trim()) {
+                    alert('请输入文章标题');
+                    postTitle.focus();
+                    return;
+                }
+                
+                if (!vditor.getValue().trim()) {
+                    alert('请输入文章内容');
+                    return;
+                }
+                
+                // 准备作者数据
+                const authorIds = selectedAuthors.map(a => a.id);
+                
+                // 发送到服务器保存
+                fetch('/app/admin/editor/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                    },
+                    body: JSON.stringify({
+                        post_id: postId,
+                        title: postTitle.value.trim(),
+                        content: vditor.getValue(),
+                        status: postStatus.value,
+                        authors: authorIds
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 0) {
+                        alert('保存成功');
+                        if (!postId) {
+                            postId = data.data.id;
+                            pageTitle.textContent = `编辑文章: ${postTitle.value}`;
+                        }
+                    } else {
+                        alert('保存失败: ' + (data.msg || '未知错误'));
+                    }
+                })
+                .catch(error => {
+                    alert('保存失败: ' + error.message);
+                });
+            }
+        });
+        
+        // 初始化作者选择器
+        initAuthorsSelector();
         
         // 清除localStorage中与当前编辑器相关的缓存
         function clearLocalCache() {

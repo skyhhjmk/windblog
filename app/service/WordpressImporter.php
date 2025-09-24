@@ -459,6 +459,7 @@ class WordpressImporter
                             [
                                 'post_id' => $existingPost->id,
                                 'author_id' => $authorId,
+                                'admin_id' => admin_id(),
                                 'is_primary' => 1,
                                 'created_at' => date('Y-m-d H:i:s'),
                                 'updated_at' => date('Y-m-d H:i:s')
@@ -510,6 +511,7 @@ class WordpressImporter
             Db::table('post_author')->insert([
                 'post_id' => $post->id,
                 'author_id' => $authorId,
+                'admin_id' => admin_id(),
                 'is_primary' => 1,
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s')

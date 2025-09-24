@@ -27,15 +27,22 @@
             <!-- 文章头部 -->
             <div class="p-6 border-b border-gray-100">
                 <h1 class="text-3xl font-bold text-gray-800 mb-4">{{ post.title }}</h1>
-                <div class="flex items-center text-gray-500 text-sm">
-                <span class="mr-4 flex items-center">
-                    <i class="far fa-calendar-alt mr-1"></i>
-                    {{ post.created_at|date('Y-m-d H:i') }}
-                </span>
+                <div class="flex items-center text-gray-500 text-sm space-x-4">
                     <span class="flex items-center">
-                    <i class="far fa-user mr-1"></i>
-                    {{ author }}
-                </span>
+                        <i class="far fa-calendar-alt mr-1"></i>
+                        {{ post.created_at|date('Y-m-d H:i') }}
+                    </span>
+                    <span class="flex items-center">
+                        <i class="far fa-user mr-1"></i>
+                        <span class="font-medium text-blue-600 hover:text-blue-800 transition-colors cursor-pointer" title="查看作者详情">
+                            {{ author }}
+                        </span>
+                    </span>
+                    {% if post.primaryAuthor.first().avatar %}
+                    <span class="flex items-center">
+                        <img src="{{ post.primaryAuthor.first().avatar }}" alt="{{ author }}" class="w-6 h-6 rounded-full mr-1 object-cover">
+                    </span>
+                    {% endif %}
                 </div>
             </div>
 

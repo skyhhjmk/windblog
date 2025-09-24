@@ -7,6 +7,7 @@ use support\Request;
 use support\Response;
 use app\model\Post;
 use support\view\Raw;
+use support\Db;
 
 /**
  * 编辑器控制器
@@ -47,6 +48,7 @@ class EditorController
         $title = $request->post('title', '');
         $content = $request->post('content', '');
         $status = $request->post('status', 'draft');
+        $authors = $request->post('authors', []);
         
         // 验证输入
         if (empty($title)) {
@@ -80,12 +82,84 @@ class EditorController
                     return json(['code' => 1, 'msg' => '文章不存在']);
                 }
                 $post->update($data);
+                
+                // 删除现有的作者关联
+                Db::table('post_author')->where('post_id', $post_id)->delete();
             } else {
                 // 创建新文章，并设置 author_id
                 $data['created_at'] = date('Y-m-d H:i:s');
                 $data['author_id'] = $adminId;
                 $post = Post::create($data);
                 $post_id = $post->id;
+            }
+            
+            // 处理多作者
+            if (!empty($authors) && is_array($authors)) {
+                $authorRecords = [];
+                $hasPrimary = false;
+                
+                foreach ($authors as $index => $authorId) {
+                    if (!is_numeric($authorId)) continue;
+                    
+                    $authorId = (int)$authorId;
+                    $isPrimary = ($index === 0 && !$hasPrimary); // 第一个作者设为主要作者
+                    
+                    // 检查作者是否存在于wa_users表中
+                    $authorExists = Db::table('wa_users')->where('id', $authorId)->exists();
+                    
+                    if ($authorExists) {
+                        $authorRecords[] = [
+                            'post_id' => $post_id,
+                            'author_id' => $authorId,
+                            'admin_id' => $adminId,
+                            'is_primary' => $isPrimary ? 1 : 0,
+                            'created_at' => date('Y-m-d H:i:s'),
+                            'updated_at' => date('Y-m-d H:i:s')
+                        ];
+                        
+                        if ($isPrimary) {
+                            $hasPrimary = true;
+                        }
+                    }
+                }
+                
+                // 如果没有设置主要作者，将第一个有效作者设为主要作者
+                if (!$hasPrimary && !empty($authorRecords)) {
+                    $authorRecords[0]['is_primary'] = 1;
+                }
+                
+                if (!empty($authorRecords)) {
+                    Db::table('post_author')->insert($authorRecords);
+                }
+            } else {
+                // 如果没有选择作者，检查当前管理员ID是否存在于wa_users表中
+                $adminUserExists = Db::table('wa_users')->where('id', $adminId)->exists();
+                
+                if ($adminUserExists) {
+                    // 如果管理员在wa_users表中存在，将其作为作者
+                    Db::table('post_author')->insert([
+                        'post_id' => $post_id,
+                        'author_id' => $adminId,
+                        'admin_id' => $adminId,
+                        'is_primary' => 1,
+                        'created_at' => date('Y-m-d H:i:s'),
+                        'updated_at' => date('Y-m-d H:i:s')
+                    ]);
+                } else {
+                    // 如果管理员在wa_users表中不存在，查找或创建一个默认用户
+                    $defaultAuthorId = $this->getOrCreateDefaultAuthor($adminId);
+                    
+                    if ($defaultAuthorId) {
+                        Db::table('post_author')->insert([
+                            'post_id' => $post_id,
+                            'author_id' => $defaultAuthorId,
+                            'admin_id' => $adminId,
+                            'is_primary' => 1,
+                            'created_at' => date('Y-m-d H:i:s'),
+                            'updated_at' => date('Y-m-d H:i:s')
+                        ]);
+                    }
+                }
             }
             
             // 返回成功响应
@@ -97,6 +171,74 @@ class EditorController
         } catch (\Exception $e) {
             // 捕获异常并返回错误信息
             return json(['code' => 1, 'msg' => '保存失败：' . $e->getMessage()]);
+        }
+    }
+    
+    /**
+     * 获取作者列表
+     * @param Request $request
+     * @return Response
+     */
+    public function getAuthors(Request $request): Response
+    {
+        // 获取当前管理员信息
+        $adminInfo = $request->session()->get('admin', []);
+        $adminId = $adminInfo['id'] ?? 0;
+        $role = $adminInfo['role'] ?? '';
+        
+        if ($adminId <= 0) {
+            return json(['code' => 1, 'msg' => '未登录或权限不足']);
+        }
+        
+        try {
+            $search = $request->get('search', '');
+            $page = $request->get('page', 1);
+            $limit = $request->get('limit', 10);
+            
+            $query = \app\model\Author::query();
+            
+            // 如果是普通用户，只能查看自己
+            if ($role !== 'administrator') {
+                $query->where('id', $adminId);
+            }
+            
+            // 搜索条件 - 支持同时搜索管理员和普通用户
+            if (!empty($search)) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('username', 'like', "%{$search}%")
+                      ->orWhere('nickname', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%");
+                });
+            }
+            
+            // 获取分页结果
+            $authors = $query->orderBy('id', 'desc')
+                ->paginate($limit, ['*'], 'page', $page);
+            
+            $authorList = [];
+            foreach ($authors->items() as $author) {
+                $authorList[] = [
+                    'id' => $author->id,
+                    'username' => $author->username,
+                    'nickname' => $author->nickname,
+                    'email' => $author->email,
+                    'avatar' => $author->avatar
+                ];
+            }
+            
+            return json([
+                'code' => 0,
+                'msg' => '获取成功',
+                'data' => [
+                    'list' => $authorList,
+                    'total' => $authors->total(),
+                    'current_page' => $authors->currentPage(),
+                    'per_page' => $authors->perPage()
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            return json(['code' => 1, 'msg' => '获取失败：' . $e->getMessage()]);
         }
     }
     
@@ -209,6 +351,51 @@ class EditorController
             ]);
         } catch (\Exception $e) {
             return json(['code' => 1, 'msg' => '获取失败：' . $e->getMessage()]);
+        }
+    }
+    
+    /**
+     * 获取或创建默认作者
+     * @param int $adminId 管理员ID
+     * @return int|null 返回用户ID，如果创建失败返回null
+     */
+    private function getOrCreateDefaultAuthor(int $adminId): ?int
+    {
+        try {
+            // 首先尝试获取管理员信息
+            $admin = Db::table('wa_admins')->where('id', $adminId)->first();
+            
+            if (!$admin) {
+                return null;
+            }
+            
+            // 尝试查找是否已有对应的用户记录
+            $existingUser = Db::table('wa_users')
+                ->where('username', $admin->username)
+                ->orWhere('email', $admin->email)
+                ->first();
+            
+            if ($existingUser) {
+                return $existingUser->id;
+            }
+            
+            // 创建新的用户记录
+            $userId = Db::table('wa_users')->insertGetId([
+                'username' => $admin->username,
+                'nickname' => $admin->nickname,
+                'password' => password_hash('default_password_' . time(), PASSWORD_DEFAULT),
+                'email' => $admin->email ?? '',
+                'avatar' => $admin->avatar ?? '',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+                'join_time' => date('Y-m-d H:i:s'),
+                'status' => 0 // 启用状态
+            ]);
+            
+            return $userId;
+        } catch (\Exception $e) {
+            \support\Log::error('创建默认作者失败: ' . $e->getMessage());
+            return null;
         }
     }
 }

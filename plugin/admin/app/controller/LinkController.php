@@ -581,13 +581,8 @@ class LinkController extends Base
     private function clearLinkCache(): void
     {
         try {
-            // 获取所有以 blog_links_page_ 开头的缓存键
-            $cacheKeys = cache()->getKeys('blog_links_page_*');
-            if (!empty($cacheKeys)) {
-                foreach ($cacheKeys as $key) {
-                    cache()->delete($key);
-                }
-            }
+            // 清除所有以 blog_links_page_ 开头的缓存键
+            clear_cache('blog_links_page_*');
         } catch (\Exception $e) {
             \support\Log::error('清除链接缓存失败: ' . $e->getMessage());
         }

@@ -146,6 +146,24 @@
             <i class="fas fa-blog text-blue-600 mr-2"></i>
             <span>{{ page_title|default('风屿雨博客') }}</span>
         </a>
+        <!-- 搜索表单 -->
+        <div class="relative hidden md:block mr-6">
+            <form action="/search" method="get" class="search-form" id="searchForm">
+                <div class="relative">
+                    <input type="text" name="q" id="searchInput" 
+                           placeholder="搜索文章..." 
+                           class="pl-10 pr-4 py-2 border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-64"
+                           autocomplete="off">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fas fa-search text-gray-400"></i>
+                    </div>
+                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none hidden" id="searchLoading">
+                        <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                    </div>
+                    <div id="searchResults" class="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg hidden max-h-60 overflow-y-auto"></div>
+                </div>
+            </form>
+        </div>
         <nav class="hidden md:block">
             <ul class="flex space-x-6">
                 <li>
@@ -178,6 +196,7 @@
                 </li>#}
             </ul>
         </nav>
+        
         <button class="md:hidden text-gray-600 hover-animate">
             <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -233,9 +252,185 @@
     </div>
 </footer>
 
-<script async="" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
         integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 {% block extra_js %}{% endblock %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let searchTimeout;
+    const searchInput = document.getElementById('searchInput');
+    const searchResults = document.getElementById('searchResults');
+    const searchForm = document.getElementById('searchForm');
+
+    if (!searchInput || !searchResults || !searchForm) return;
+
+    // 实时搜索功能
+    searchInput.addEventListener('input', function() {
+        const keyword = this.value.trim();
+        
+        clearTimeout(searchTimeout);
+        
+        // 立即显示加载动画
+        if (keyword.length > 0) {
+            document.getElementById('searchLoading').classList.remove('hidden');
+        } else {
+            document.getElementById('searchLoading').classList.add('hidden');
+        }
+        
+        if (keyword.length < 1) {
+            searchResults.style.display = 'none';
+            document.getElementById('searchLoading').classList.add('hidden');
+            return;
+        }
+
+        searchTimeout = setTimeout(function() {
+            fetch('/search/ajax?q=' + encodeURIComponent(keyword))
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('searchLoading').classList.add('hidden');
+                    if (data.success) {
+                        displaySearchResults(data.results, data.total);
+                        // 保存搜索历史
+                        saveSearchHistory(keyword);
+                    } else {
+                        searchResults.style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    console.error('Search error:', error);
+                    document.getElementById('searchLoading').classList.add('hidden');
+                    searchResults.style.display = 'none';
+                });
+        }, 300);
+    });
+
+    // 保存搜索历史
+    function saveSearchHistory(keyword) {
+        let history = JSON.parse(localStorage.getItem('searchHistory') || '[]');
+        // 去重并限制数量
+        history = history.filter(item => item !== keyword);
+        history.unshift(keyword);
+        history = history.slice(0, 10);
+        localStorage.setItem('searchHistory', JSON.stringify(history));
+    }
+
+    // 显示搜索历史
+    function showSearchHistory() {
+        const history = JSON.parse(localStorage.getItem('searchHistory') || '[]');
+        if (history.length === 0) {
+            searchResults.innerHTML = '<div class="p-4 text-center text-gray-500">暂无搜索历史</div>';
+        } else {
+            let html = '<div class="p-2 border-b border-gray-100 text-sm text-gray-600">最近搜索</div>';
+            history.forEach(item => {
+                html += `
+                    <div class="p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 cursor-pointer flex justify-between items-center" onclick="this.querySelector('a').click()">
+                        <a href="/search?q=${encodeURIComponent(item)}" class="flex-1 text-gray-800">
+                            <i class="fas fa-history text-gray-400 mr-2"></i>
+                            ${item}
+                        </a>
+                        <button class="text-gray-400 hover:text-red-500 ml-2" onclick="event.stopPropagation(); removeSearchHistory('${item.replace(/'/g, "\\'")}')">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `;
+            });
+            html += '<div class="p-2 border-t border-gray-100 text-center"><button class="text-xs text-gray-500 hover:text-gray-700" onclick="clearSearchHistory()">清空历史</button></div>';
+            searchResults.innerHTML = html;
+        }
+        searchResults.style.display = 'block';
+    }
+
+    // 删除单条搜索历史
+    function removeSearchHistory(keyword) {
+        let history = JSON.parse(localStorage.getItem('searchHistory') || '[]');
+        history = history.filter(item => item !== keyword);
+        localStorage.setItem('searchHistory', JSON.stringify(history));
+        showSearchHistory();
+    }
+
+    // 清空搜索历史
+    function clearSearchHistory() {
+        localStorage.removeItem('searchHistory');
+        showSearchHistory();
+    }
+
+    // 全局暴露函数以便HTML调用
+    window.removeSearchHistory = removeSearchHistory;
+    window.clearSearchHistory = clearSearchHistory;
+
+    // 显示搜索结果
+    function displaySearchResults(results, total) {
+        if (results.length === 0) {
+            searchResults.innerHTML = '<div class="p-4 text-center text-gray-500">没有找到相关文章</div>';
+            searchResults.style.display = 'block';
+            return;
+        }
+
+        let html = '<div class="p-2 border-b border-gray-100 text-sm text-gray-600">找到 ' + total + ' 条结果</div>';
+        
+        results.forEach(function(result) {
+            html += `
+                <a href="${result.url}" class="block p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0">
+                    <div class="font-medium text-gray-800">${result.title}</div>
+                    <div class="text-sm text-gray-600 mt-1">${result.excerpt}</div>
+                    <div class="text-xs text-gray-400 mt-2">
+                        ${result.author} · ${new Date(result.created_at).toLocaleDateString('zh-CN')}
+                    </div>
+                </a>
+            `;
+        });
+
+        if (total > results.length) {
+            html += `<div class="p-3 text-center bg-gray-50">
+                <a href="/search?q=${encodeURIComponent(searchInput.value)}" class="text-blue-600 hover:text-blue-800 text-sm">
+                    查看全部 ${total} 条结果 →
+                </a>
+            </div>`;
+        }
+
+        searchResults.innerHTML = html;
+        searchResults.style.display = 'block';
+    }
+
+    // 点击其他地方隐藏搜索结果
+    document.addEventListener('click', function(e) {
+        if (!searchForm.contains(e.target)) {
+            searchResults.style.display = 'none';
+        }
+    });
+
+    // 聚焦时显示搜索历史
+    searchInput.addEventListener('focus', function() {
+        if (this.value.trim() === '') {
+            showSearchHistory();
+        }
+    });
+
+    // 键盘导航
+    searchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            searchResults.style.display = 'none';
+            searchInput.blur();
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            const keyword = searchInput.value.trim();
+            if (keyword.length > 0) {
+                window.location.href = '/search?q=' + encodeURIComponent(keyword);
+            }
+        }
+    });
+
+    // 防止表单提交时页面跳转（用于AJAX搜索）
+    searchForm.addEventListener('submit', function(e) {
+        const keyword = searchInput.value.trim();
+        if (keyword.length > 0) {
+            window.location.href = '/search?q=' + encodeURIComponent(keyword);
+        }
+        e.preventDefault();
+    });
+});
+</script>
 </body>
 </html>

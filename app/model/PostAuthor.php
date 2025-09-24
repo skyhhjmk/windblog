@@ -1,4 +1,5 @@
 <?php
+
 namespace app\model;
 
 use Illuminate\Database\Eloquent\Builder;
@@ -13,16 +14,17 @@ use Illuminate\Support\Carbon;
  * 此模型用于管理文章的作者信息，包括谁是主要作者以及他们的具体贡献。
  * 它通过 BelongsTo 关系链接到 Post 和 Author 模型。
  *
- * @property int $id 记录ID (主键)
- * @property int $post_id 文章ID (外键)
- * @property int $author_id 作者ID (外键)
- * @property bool $is_primary 是否为主要作者
- * @property string|null $contribution 贡献描述，例如 "主笔"、"校对" 等
- * @property Carbon|null $created_at 创建时间
- * @property Carbon|null $updated_at 更新时间
+ * @property int         $id                     记录ID (主键)
+ * @property int         $post_id                文章ID (外键)
+ * @property int         $author_id              作者ID (外键)
+ * @property int         $admin_id               管理员作者ID (外键)
+ * @property bool        $is_primary             是否为主要作者
+ * @property string|null $contribution           贡献描述，例如 "主笔"、"校对" 等
+ * @property Carbon|null $created_at             创建时间
+ * @property Carbon|null $updated_at             更新时间
  * @property-read string $formatted_contribution 格式化后的贡献信息 (访问器)
- * @property-read \app\model\Post $post 所属的文章 (关联关系)
- * @property-read \app\model\Author $author 所属的作者 (关联关系)
+ * @property-read Post   $post                   所属的文章 (关联关系)
+ * @property-read Author $author                 所属的作者 (关联关系)
  */
 class PostAuthor extends Model
 {
@@ -49,6 +51,7 @@ class PostAuthor extends Model
     protected $fillable = [
         'post_id',
         'author_id',
+        'admin_id',
         'is_primary',
         'contribution',
     ];
@@ -62,6 +65,7 @@ class PostAuthor extends Model
     protected $casts = [
         'is_primary' => 'boolean',
         'post_id' => 'integer',
+        'admin_id' => 'integer',
         'author_id' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
@@ -75,28 +79,28 @@ class PostAuthor extends Model
      * 定义与文章模型的 "属于" 关系。
      * 一条作者关联记录属于一篇文章。
      *
+     * @return BelongsTo
      * @example $post = PostAuthor::find(1)->post;
-     * @return BelongsTo|\app\model\Post
      */
     public function post(): BelongsTo
     {
         // 参数1: 关联模型的完全限定类名 (FQCN)
         // 参数2: 当前模型 (post_author) 的外键字段名
         // 参数3: 关联模型 (posts) 的主键字段名 (默认为 'id'，通常可省略)
-        return $this->belongsTo(\app\model\Post::class, 'post_id', 'id');
+        return $this->belongsTo(Post::class, 'post_id', 'id');
     }
 
     /**
      * 定义与作者模型的 "属于" 关系。
      * 一条作者关联记录属于一个作者。
      *
+     * @return BelongsTo
      * @example $author = PostAuthor::find(1)->author;
-     * @return BelongsTo|\app\model\Author
      */
     public function author(): BelongsTo
     {
         // 假设你的作者模型是 \app\model\Author
-        return $this->belongsTo(\app\model\Author::class, 'author_id', 'id');
+        return $this->belongsTo(Author::class, 'author_id', 'id');
     }
 
     // ==================================================================
@@ -124,6 +128,7 @@ class PostAuthor extends Model
      * 允许使用链式调用，如 `PostAuthor::primary()->get()`。
      *
      * @param Builder $query 当前的查询构建器实例
+     *
      * @return Builder 修改后的查询构建器实例
      */
     public function scopePrimary(Builder $query): Builder
@@ -136,6 +141,7 @@ class PostAuthor extends Model
      * 允许使用链式调用，如 `PostAuthor::secondary()->get()`。
      *
      * @param Builder $query 当前的查询构建器实例
+     *
      * @return Builder 修改后的查询构建器实例
      */
     public function scopeSecondary(Builder $query): Builder

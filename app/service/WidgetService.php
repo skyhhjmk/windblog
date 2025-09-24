@@ -10,7 +10,7 @@ use support\Log;
 use Throwable;
 
 /**
- * 小工具服务 - 精简优化版
+ * 小工具服务
  * 统一管理所有小工具的注册、渲染和配置
  */
 class WidgetService
@@ -26,6 +26,12 @@ class WidgetService
      * @var array
      */
     protected static $widgetRenderers = [];
+
+    /**
+     * 小工具HTML渲染器映射
+     * @var array
+     */
+    protected static $widgetHtmlRenderers = [];
 
     /**
      * 小工具类型默认标题映射
@@ -44,8 +50,15 @@ class WidgetService
 
     /**
      * 注册小工具类型
+     * 
+     * @param string $type 小工具类型
+     * @param string $name 小工具名称
+     * @param string $description 小工具描述
+     * @param callable|null $renderer 数据渲染器
+     * @param callable|null $htmlRenderer HTML渲染器
+     * @return bool 是否注册成功
      */
-    public static function registerWidget(string $type, string $name, string $description = '', ?callable $renderer = null): bool
+    public static function registerWidget(string $type, string $name, string $description = '', ?callable $renderer = null, ?callable $htmlRenderer = null): bool
     {
         try {
             if (isset(self::$registeredWidgets[$type])) {
@@ -63,6 +76,11 @@ class WidgetService
                 self::$widgetRenderers[$type] = $renderer;
             }
 
+            // 注册自定义HTML渲染器
+            if ($htmlRenderer && is_callable($htmlRenderer)) {
+                self::$widgetHtmlRenderers[$type] = $htmlRenderer;
+            }
+
             Log::debug("[WidgetService] 小工具类型 '{$type}' 注册成功");
             return true;
         } catch (Throwable $e) {
@@ -73,6 +91,8 @@ class WidgetService
 
     /**
      * 获取所有已注册的小工具类型
+     * 
+     * @return array 小工具类型列表
      */
     public static function getRegisteredWidgets(): array
     {
@@ -80,7 +100,11 @@ class WidgetService
     }
 
     /**
-     * 渲染小工具
+     * 渲染小工具数据
+     * 
+     * @param array $widget 小工具配置
+     * @param string $pageType 页面类型
+     * @return array 渲染后的小工具数据
      */
     public static function renderWidget(array $widget, string $pageType = 'default'): array
     {
@@ -99,7 +123,25 @@ class WidgetService
             }
 
             $widget = array_merge($widget, $config);
-            return self::renderSingleWidget($widget, $pageType);
+            
+            // 优先使用自定义渲染器
+            if (isset(self::$widgetRenderers[$widgetType]) && is_callable(self::$widgetRenderers[$widgetType])) {
+                try {
+                    return call_user_func(self::$widgetRenderers[$widgetType], $widget, $pageType);
+                } catch (Throwable $e) {
+                    Log::error("[WidgetService] 自定义渲染器执行失败: {$widgetType} - " . $e->getMessage());
+                }
+            }
+            
+            // 使用内置渲染器
+            $renderMethod = 'render' . str_replace('_', '', ucwords($widgetType, '_'));
+            
+            if (method_exists(__CLASS__, $renderMethod)) {
+                return self::$renderMethod($widget);
+            }
+            
+            Log::warning("[WidgetService] 未知小工具类型: {$widgetType}");
+            return array_merge($widget, ['enabled' => false]);
         } catch (Throwable $e) {
             Log::error("[WidgetService] 渲染小工具失败: {$widgetType} - " . $e->getMessage());
             return array_merge($widget, ['enabled' => false, 'error' => $e->getMessage()]);
@@ -107,34 +149,11 @@ class WidgetService
     }
 
     /**
-     * 渲染单个小工具
-     */
-    protected static function renderSingleWidget(array $widget, string $pageType): array
-    {
-        $widgetType = $widget['type'] ?? '';
-        
-        // 优先使用自定义渲染器
-        if (isset(self::$widgetRenderers[$widgetType]) && is_callable(self::$widgetRenderers[$widgetType])) {
-            try {
-                return call_user_func(self::$widgetRenderers[$widgetType], $widget, $pageType);
-            } catch (Throwable $e) {
-                Log::error("[WidgetService] 自定义渲染器执行失败: {$widgetType} - " . $e->getMessage());
-            }
-        }
-        
-        // 使用内置渲染器
-        $renderMethod = 'render' . str_replace('_', '', ucwords($widgetType, '_')) . 'Widget';
-        
-        if (method_exists(__CLASS__, $renderMethod)) {
-            return self::$renderMethod($widget);
-        }
-        
-        Log::warning("[WidgetService] 未知小工具类型: {$widgetType}");
-        return array_merge($widget, ['enabled' => false]);
-    }
-
-    /**
      * 获取小工具配置
+     * 
+     * @param string $widgetType 小工具类型
+     * @param string $pageType 页面类型
+     * @return array 小工具配置
      */
     public static function getWidgetConfig(string $widgetType, string $pageType = 'default'): array
     {
@@ -164,172 +183,71 @@ class WidgetService
     }
 
     /**
-     * 渲染关于博主小工具
+     * 渲染小工具为HTML
+     * 
+     * @param array $widget 小工具数据
+     * @return string 渲染后的HTML
      */
-    protected static function renderAboutWidget(array $widget): array
-    {
-        if (!isset($widget['content']) || empty($widget['content'])) {
-            $widget['content'] = '欢迎访问我的博客，这里记录了我的技术分享和生活感悟。';
-        }
-        return $widget;
-    }
-
-    /**
-     * 渲染分类小工具
-     */
-    protected static function renderCategoriesWidget(array $widget): array
+    public static function renderToHtml(array $widget): string
     {
         try {
-            $count = $widget['params']['count'] ?? 5;
-            $query = Category::withCount('posts')->orderBy('posts_count', 'desc');
-            
-            if ($count > 0) {
-                $query->take($count);
+            if (isset($widget['enabled']) && !$widget['enabled']) {
+                return '';
             }
             
-            $widget['categories'] = $query->get(['id', 'name', 'slug', 'posts_count']);
-        } catch (Throwable $e) {
-            Log::error('[WidgetService] 渲染分类小工具失败: ' . $e->getMessage());
-            $widget['categories'] = [];
-        }
-        
-        return $widget;
-    }
-
-    /**
-     * 渲染标签云小工具
-     */
-    protected static function renderTagsWidget(array $widget): array
-    {
-        try {
-            $count = $widget['params']['count'] ?? 5;
-            $query = Tag::withCount('posts')->orderBy('posts_count', 'desc');
+            $widgetType = $widget['type'] ?? '';
+            $title = $widget['title'] ?? '';
             
-            if ($count > 0) {
-                $query->take($count);
-            }
+            // 获取渲染后的小工具数据
+            $widgetData = self::renderWidget($widget);
             
-            $widget['tags'] = $query->get(['id', 'name', 'slug', 'posts_count']);
-        } catch (Throwable $e) {
-            Log::error('[WidgetService] 渲染标签云小工具失败: ' . $e->getMessage());
-            $widget['tags'] = [];
-        }
-        
-        return $widget;
-    }
-
-    /**
-     * 渲染文章归档小工具
-     */
-    protected static function renderArchiveWidget(array $widget): array
-    {
-        try {
-            $count = $widget['params']['count'] ?? 5;
-            $query = Post::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as year_month, COUNT(*) as count')
-                ->where('status', 'published')
-                ->groupBy('year_month')
-                ->orderBy('year_month', 'desc');
-            
-            if ($count > 0) {
-                $query->take($count);
-            }
-            
-            $widget['archive'] = $query->get();
-        } catch (Throwable $e) {
-            Log::error('[WidgetService] 渲染文章归档小工具失败: ' . $e->getMessage());
-            $widget['archive'] = [];
-        }
-        
-        return $widget;
-    }
-
-    /**
-     * 渲染最新文章小工具
-     */
-    protected static function renderRecentPostsWidget(array $widget): array
-    {
-        try {
-            $limit = $widget['params']['count'] ?? 5;
-            $widget['recent_posts'] = Post::where('status', 'published')
-                ->orderBy('created_at', 'desc')
-                ->take($limit)
-                ->get(['id', 'title', 'slug', 'created_at']);
-        } catch (Throwable $e) {
-            Log::error('[WidgetService] 渲染最新文章小工具失败: ' . $e->getMessage());
-            $widget['recent_posts'] = [];
-        }
-        
-        return $widget;
-    }
-
-    /**
-     * 渲染HTML小工具
-     */
-    protected static function renderHtmlWidget(array $widget): array
-    {
-        $widgetId = $widget['widget_id'] ?? 'default';
-        
-        if (empty($widget['content'])) {
-            try {
-                $settingKey = "custom_widget_html_{$widgetId}";
-                $setting = Setting::where('key', $settingKey)->first();
-                
-                if ($setting) {
-                    $widget['content'] = $setting->value;
-                } else {
-                    $widget['content'] = '<div class="widget-content p-4 bg-gray-50 rounded">
-                       <p class="text-center text-gray-500">这是一个自定义HTML小工具。</p>
-                     </div>';
+            // 优先使用自定义HTML渲染器
+            if (isset(self::$widgetHtmlRenderers[$widgetType]) && is_callable(self::$widgetHtmlRenderers[$widgetType])) {
+                try {
+                    $content = call_user_func(self::$widgetHtmlRenderers[$widgetType], $widgetData);
+                    return self::wrapWidgetHtml($title, $content);
+                } catch (Throwable $e) {
+                    Log::error("[WidgetService] 自定义HTML渲染器执行失败: {$widgetType} - " . $e->getMessage());
                 }
-            } catch (Throwable $e) {
-                Log::error('[WidgetService] 获取自定义HTML内容失败: ' . $e->getMessage());
-                $widget['content'] = '<div class="text-red-500">内容加载失败</div>';
             }
-        }
-        
-        return $widget;
-    }
-
-    /**
-     * 渲染热门文章小工具
-     */
-    protected static function renderPopularPostsWidget(array $widget): array
-    {
-        try {
-            $limit = $widget['params']['count'] ?? 5;
-            $widget['popular_posts'] = Post::where('status', 'published')
-                ->orderBy('views', 'desc')
-                ->take($limit)
-                ->get(['id', 'title', 'slug', 'created_at', 'views']);
+            
+            // 使用内置HTML渲染器
+            $htmlMethod = 'render' . str_replace('_', '', ucwords($widgetType, '_')) . 'Html';
+            
+            if (method_exists(__CLASS__, $htmlMethod)) {
+                $content = self::$htmlMethod($widgetData);
+                return self::wrapWidgetHtml($title, $content);
+            }
+            
+            return '<div class="text-gray-500 text-sm italic">未知的小工具类型</div>';
+                
         } catch (Throwable $e) {
-            Log::error('[WidgetService] 渲染热门文章小工具失败: ' . $e->getMessage());
-            $widget['popular_posts'] = [];
+            Log::error('[WidgetService] 渲染小工具HTML失败: ' . $e->getMessage());
+            return '<div class="bg-white rounded-lg shadow-md p-6 mb-6 text-red-500">小工具渲染失败</div>';
         }
-        
-        return $widget;
     }
-
+    
     /**
-     * 渲染随机文章小工具
+     * 包装小工具HTML内容
+     * 
+     * @param string $title 小工具标题
+     * @param string $content 小工具内容
+     * @return string 包装后的HTML
      */
-    protected static function renderRandomPostsWidget(array $widget): array
+    protected static function wrapWidgetHtml(string $title, string $content): string
     {
-        try {
-            $limit = $widget['params']['count'] ?? 5;
-            $widget['random_posts'] = Post::where('status', 'published')
-                ->inRandomOrder()
-                ->take($limit)
-                ->get(['id', 'title', 'slug', 'created_at']);
-        } catch (Throwable $e) {
-            Log::error('[WidgetService] 渲染随机文章小工具失败: ' . $e->getMessage());
-            $widget['random_posts'] = [];
-        }
-        
-        return $widget;
+        return '<div class="bg-white rounded-lg shadow-md p-6 mb-6">'
+            . (!empty($title) ? '<h3 class="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">' . htmlspecialchars($title) . '</h3>' : '')
+            . $content
+            . '</div>';
     }
 
     /**
      * 批量渲染小工具
+     * 
+     * @param array $widgets 小工具配置列表
+     * @param string $pageType 页面类型
+     * @return array 渲染后的小工具数据列表
      */
     public static function renderBatchWidgets(array $widgets, string $pageType = 'default'): array
     {
@@ -346,48 +264,27 @@ class WidgetService
     public static function registerDefaultWidgets(): void
     {
         $widgets = [
-            'about' => ['关于博主', '显示关于博主的信息', [__CLASS__, 'renderAboutWidget']],
-            'categories' => ['文章分类', '显示博客文章分类列表', [__CLASS__, 'renderCategoriesWidget']],
-            'tags' => ['标签云', '显示博客文章标签云', [__CLASS__, 'renderTagsWidget']],
-            'archive' => ['文章归档', '按月份显示文章归档列表', [__CLASS__, 'renderArchiveWidget']],
-            'recent_posts' => ['最新文章', '显示最新发布的文章列表', [__CLASS__, 'renderRecentPostsWidget']],
-            'html' => ['自定义HTML', '自定义HTML内容', [__CLASS__, 'renderHtmlWidget']],
-            'popular_posts' => ['热门文章', '显示最受欢迎的文章列表', [__CLASS__, 'renderPopularPostsWidget']],
-            'random_posts' => ['随机文章', '随机显示博客中的文章', [__CLASS__, 'renderRandomPostsWidget']]
+            'about' => ['关于博主', '显示关于博主的信息', null, [__CLASS__, 'renderAboutHtml']],
+            'categories' => ['文章分类', '显示博客文章分类列表', null, [__CLASS__, 'renderCategoriesHtml']],
+            'tags' => ['标签云', '显示博客文章标签云', null, [__CLASS__, 'renderTagsHtml']],
+            'archive' => ['文章归档', '按月份显示文章归档列表', null, [__CLASS__, 'renderArchiveHtml']],
+            'recent_posts' => ['最新文章', '显示最新发布的文章列表', null, [__CLASS__, 'renderRecentPostsHtml']],
+            'html' => ['自定义HTML', '自定义HTML内容', null, [__CLASS__, 'renderHtmlHtml']],
+            'popular_posts' => ['热门文章', '显示最受欢迎的文章列表', null, [__CLASS__, 'renderPopularPostsHtml']],
+            'random_posts' => ['随机文章', '随机显示博客中的文章', null, [__CLASS__, 'renderRandomPostsHtml']]
         ];
         
         foreach ($widgets as $type => $info) {
-            self::registerWidget($type, $info[0], $info[1], $info[2]);
+            self::registerWidget($type, $info[0], $info[1], $info[2], $info[3]);
         }
         
         Log::info('[WidgetService] 默认小工具注册完成');
     }
     
     /**
-     * 获取小工具渲染器
-     */
-    public static function getWidgetRenderer(string $widgetType): ?callable
-    {
-        return self::$widgetRenderers[$widgetType] ?? null;
-    }
-    
-    /**
-     * 设置小工具渲染器
-     */
-    public static function setWidgetRenderer(string $widgetType, callable $renderer): bool
-    {
-        if (!isset(self::$registeredWidgets[$widgetType])) {
-            Log::warning("[WidgetService] 无法为未注册的小工具类型 '{$widgetType}' 设置渲染器");
-            return false;
-        }
-        
-        self::$widgetRenderers[$widgetType] = $renderer;
-        Log::debug("[WidgetService] 小工具类型 '{$widgetType}' 渲染器设置成功");
-        return true;
-    }
-    
-    /**
      * 批量注册小工具（插件使用）
+     * 
+     * @param array $widgets 小工具配置列表
      */
     public static function registerBatchWidgets(array $widgets): void
     {
@@ -395,59 +292,211 @@ class WidgetService
             $name = $config['name'] ?? ucfirst($widgetType);
             $description = $config['description'] ?? '';
             $renderer = $config['renderer'] ?? null;
+            $htmlRenderer = $config['html_renderer'] ?? null;
             
-            self::registerWidget($widgetType, $name, $description, $renderer);
+            self::registerWidget($widgetType, $name, $description, $renderer, $htmlRenderer);
         }
     }
 
     /**
-     * 生成小工具HTML
+     * 渲染小工具为HTML并缓存
+     *
+     * @param array $widget 小工具配置
+     * @param int|null $cacheMinutes 缓存分钟数，null表示使用默认缓存
+     * @param string $pageType 页面类型
+     * @return string 渲染后的HTML
      */
-    public static function renderToHtml(array $widget): string
+    public static function renderWidgetToHtmlWithCache(array $widget, ?int $cacheMinutes = null, string $pageType = 'default'): string
     {
         try {
-            if (isset($widget['enabled']) && !$widget['enabled']) {
-                return '';
-            }
-            
             $widgetType = $widget['type'] ?? '';
-            $title = $widget['title'] ?? '';
+            $widgetId = $widget['id'] ?? md5(serialize($widget));
             
-            // 优先使用自定义HTML渲染器
-            if (isset(self::$widgetRenderers[$widgetType]) && is_callable(self::$widgetRenderers[$widgetType])) {
-                try {
-                    $content = call_user_func(self::$widgetRenderers[$widgetType], $widget);
-                    return self::wrapWidgetHtml($title, $content);
-                } catch (Throwable $e) {
-                    Log::error("[WidgetService] 自定义HTML渲染器执行失败: {$widgetType} - " . $e->getMessage());
-                }
+            // 生成缓存键
+            $cacheKey = "widget_{$widgetType}_{$widgetId}_{$pageType}";
+            
+            // 如果禁用缓存，直接渲染
+            if ($cacheMinutes === 0) {
+                return self::renderToHtml($widget);
             }
             
-            // 使用内置HTML渲染器
-            $htmlMethod = 'render' . str_replace('_', '', ucwords($widgetType, '_')) . 'Html';
+            // 使用默认缓存时间（60分钟）
+            $cacheMinutes = $cacheMinutes ?? 60;
             
-            if (method_exists(__CLASS__, $htmlMethod)) {
-                $content = self::$htmlMethod($widget);
-                return self::wrapWidgetHtml($title, $content);
+            // 尝试从缓存获取
+            $cachedHtml = cache($cacheKey);
+            if ($cachedHtml !== false) {
+                return $cachedHtml;
             }
             
-            return '<div class="text-gray-500 text-sm italic">未知的小工具类型</div>';
-                
+            // 渲染HTML
+            $html = self::renderToHtml($widget);
+            
+            // 缓存结果
+            cache($cacheKey, $html, true, $cacheMinutes * 60);
+            
+            return $html;
+            
         } catch (Throwable $e) {
-            Log::error('[WidgetService] 渲染小工具HTML失败: ' . $e->getMessage());
+            Log::error('[WidgetService] 渲染小工具HTML缓存失败: ' . $e->getMessage());
             return '<div class="bg-white rounded-lg shadow-md p-6 mb-6 text-red-500">小工具渲染失败</div>';
         }
     }
+
+    /**
+     * 渲染数据方法 - 已合并到主渲染逻辑中
+     */
     
     /**
-     * 包装小工具HTML内容
+     * 渲染关于博主小工具
      */
-    protected static function wrapWidgetHtml(string $title, string $content): string
+    protected static function renderAbout(array $widget): array
     {
-        return '<div class="bg-white rounded-lg shadow-md p-6 mb-6">'
-            . (!empty($title) ? '<h3 class="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">' . htmlspecialchars($title) . '</h3>' : '')
-            . $content
-            . '</div>';
+        if (!isset($widget['content']) || empty($widget['content'])) {
+            $widget['content'] = '欢迎访问我的博客，这里记录了我的技术分享和生活感悟。';
+        }
+        return $widget;
+    }
+
+    /**
+     * 渲染分类小工具
+     */
+    protected static function renderCategories(array $widget): array
+    {
+        return self::getDataWrapper(function() use ($widget) {
+            $count = $widget['params']['count'] ?? 5;
+            $query = Category::withCount('posts')->orderBy('posts_count', 'desc');
+            
+            if ($count > 0) {
+                $query->take($count);
+            }
+            
+            $widget['categories'] = $query->get(['id', 'name', 'slug', 'posts_count']);
+            return $widget;
+        }, $widget, 'categories', []);
+    }
+
+    /**
+     * 渲染标签云小工具
+     */
+    protected static function renderTags(array $widget): array
+    {
+        return self::getDataWrapper(function() use ($widget) {
+            $count = $widget['params']['count'] ?? 5;
+            $query = Tag::withCount('posts')->orderBy('posts_count', 'desc');
+            
+            if ($count > 0) {
+                $query->take($count);
+            }
+            
+            $widget['tags'] = $query->get(['id', 'name', 'slug', 'posts_count']);
+            return $widget;
+        }, $widget, 'tags', []);
+    }
+
+    /**
+     * 渲染文章归档小工具
+     */
+    protected static function renderArchive(array $widget): array
+    {
+        return self::getDataWrapper(function() use ($widget) {
+            $count = $widget['params']['count'] ?? 5;
+            $query = Post::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as year_month, COUNT(*) as count')
+                ->where('status', 'published')
+                ->groupBy('year_month')
+                ->orderBy('year_month', 'desc');
+            
+            if ($count > 0) {
+                $query->take($count);
+            }
+            
+            $widget['archive'] = $query->get();
+            return $widget;
+        }, $widget, 'archive', []);
+    }
+
+    /**
+     * 渲染最新文章小工具
+     */
+    protected static function renderRecentPosts(array $widget): array
+    {
+        return self::getDataWrapper(function() use ($widget) {
+            $limit = $widget['params']['count'] ?? 5;
+            $widget['recent_posts'] = Post::where('status', 'published')
+                ->orderBy('created_at', 'desc')
+                ->take($limit)
+                ->get(['id', 'title', 'slug', 'created_at']);
+            return $widget;
+        }, $widget, 'recent_posts', []);
+    }
+
+    /**
+     * 渲染HTML小工具
+     */
+    protected static function renderHtml(array $widget): array
+    {
+        try {
+            $widgetId = $widget['widget_id'] ?? 'default';
+            
+            if (empty($widget['content'])) {
+                try {
+                    $settingKey = "custom_widget_html_{$widgetId}";
+                    $setting = Setting::where('key', $settingKey)->first();
+                    
+                    if ($setting) {
+                        $widget['content'] = $setting->value;
+                    } else {
+                        $widget['content'] = '<div class="widget-content p-4 bg-gray-50 rounded">
+                           <p class="text-center text-gray-500">这是一个自定义HTML小工具。</p>
+                         </div>';
+                    }
+                } catch (Throwable $e) {
+                    Log::error('[WidgetService] 获取自定义HTML内容失败: ' . $e->getMessage());
+                    $widget['content'] = '<div class="text-red-500">内容加载失败</div>';
+                }
+            }
+        } catch (Throwable $e) {
+            Log::error('[WidgetService] 渲染HTML小工具失败: ' . $e->getMessage());
+        }
+        
+        return $widget;
+    }
+
+    /**
+     * 渲染热门文章小工具
+     */
+    protected static function renderPopularPosts(array $widget): array
+    {
+        return self::getDataWrapper(function() use ($widget) {
+            $limit = $widget['params']['count'] ?? 5;
+            $widget['popular_posts'] = Post::where('status', 'published')
+                ->orderBy('views', 'desc')
+                ->take($limit)
+                ->get(['id', 'title', 'slug', 'created_at', 'views']);
+            return $widget;
+        }, $widget, 'popular_posts', []);
+    }
+
+    /**
+     * 渲染随机文章小工具
+     */
+    protected static function renderRandomPosts(array $widget): array
+    {
+        return self::getDataWrapper(function() use ($widget) {
+            $limit = $widget['params']['count'] ?? 5;
+            // 只获取已发布的文章
+            $widget['random_posts'] = Post::where('status', 'published')
+                ->inRandomOrder()
+                ->take($limit)
+                ->get(['id', 'title', 'slug', 'created_at']);
+            
+            // 调试信息
+            if ($widget['random_posts']->isEmpty()) {
+                Log::info('[WidgetService] 随机文章小工具：数据库中没有已发布的文章');
+            }
+            
+            return $widget;
+        }, $widget, 'random_posts', []);
     }
 
     /**
@@ -577,52 +626,27 @@ class WidgetService
             $html .= '</div>';
             $html .= '</a>';
         }
-        $html .= '</div>';
+        $html = '</div>';
         return $html;
     }
 
     /**
-     * 渲染小工具为HTML并缓存
-     *
+     * 数据获取包装器 - 统一错误处理和数据设置
+     * 
+     * @param callable $callback 数据获取回调函数
      * @param array $widget 小工具配置
-     * @param int|null $cacheMinutes 缓存分钟数，null表示使用默认缓存
-     * @param string $pageType 页面类型
-     * @return string 渲染后的HTML
+     * @param string $dataKey 数据键名
+     * @param mixed $defaultValue 默认值
+     * @return array 处理后的小工具数据
      */
-    public static function renderWidgetToHtmlWithCache(array $widget, ?int $cacheMinutes = null, string $pageType = 'default'): string
+    protected static function getDataWrapper(callable $callback, array $widget, string $dataKey, $defaultValue): array
     {
         try {
-            $widgetType = $widget['type'] ?? '';
-            $widgetId = $widget['id'] ?? md5(serialize($widget));
-            
-            // 生成缓存键
-            $cacheKey = "widget_{$widgetType}_{$widgetId}_{$pageType}";
-            
-            // 如果禁用缓存，直接渲染
-            if ($cacheMinutes === 0) {
-                return self::renderToHtml($widget);
-            }
-            
-            // 使用默认缓存时间（60分钟）
-            $cacheMinutes = $cacheMinutes ?? 60;
-            
-            // 尝试从缓存获取
-            $cachedHtml = cache()->get($cacheKey);
-            if ($cachedHtml !== null) {
-                return $cachedHtml;
-            }
-            
-            // 渲染HTML
-            $html = self::renderToHtml($widget);
-            
-            // 缓存结果
-            cache()->set($cacheKey, $html, $cacheMinutes * 60);
-            
-            return $html;
-            
+            return $callback();
         } catch (Throwable $e) {
-            Log::error('[WidgetService] 渲染小工具HTML缓存失败: ' . $e->getMessage());
-            return '<div class="bg-white rounded-lg shadow-md p-6 mb-6 text-red-500">小工具渲染失败</div>';
+            Log::error("[WidgetService] 渲染小工具失败 ({$dataKey}): " . $e->getMessage());
+            $widget[$dataKey] = $defaultValue;
+            return $widget;
         }
     }
 }

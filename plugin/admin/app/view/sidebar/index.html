@@ -91,12 +91,6 @@
         .widget-disabled {
             opacity: 0.6;
         }
-        .widget-title-input {
-            width: 100%;
-            padding: 5px 10px;
-            border: 1px solid #dcdcdc;
-            border-radius: 4px;
-        }
         .available-widgets-header {
             padding: 10px 15px;
             background-color: #f2f2f2;
@@ -130,6 +124,7 @@
                         <div class="layui-input-block">
                             <select id="page-select" lay-filter="page-select" class="layui-select">
                                 <!-- 页面列表将通过JavaScript动态加载 -->
+                                <option value="">加载中...</option>
                             </select>
                         </div>
                     </div>
@@ -141,6 +136,10 @@
                 <!-- 侧边栏小工具区域 -->
                 <div class="widget-area" id="sidebar-widgets">
                     <!-- 小工具将通过JavaScript动态加载 -->
+                    <div class="text-center text-muted" style="padding: 40px;">
+                        <i class="layui-icon layui-icon-loading layui-icon layui-anim layui-anim-rotate layui-anim-loop" style="font-size: 48px;"></i>
+                        <p>加载中...</p>
+                    </div>
                 </div>
 
                 <!-- 可用小工具区域 -->
@@ -150,6 +149,10 @@
                     </div>
                     <div class="available-widgets-content" id="available-widgets">
                         <!-- 可用小工具将通过JavaScript动态加载 -->
+                        <div class="text-center text-muted" style="padding: 20px;">
+                            <i class="layui-icon layui-icon-loading layui-icon layui-anim layui-anim-rotate layui-anim-loop"></i>
+                            <p>加载中...</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -227,13 +230,10 @@ layui.use(['jquery', 'layer', 'form'], function() {
         });
         
         // 表单提交事件
-        $(document).on('submit', '.widget-edit-form', function(e) {
+        $(document).on('submit', '.widget-edit-form form', function(e) {
             e.preventDefault();
             saveWidgetConfig();
         });
-        
-        // 初始化拖拽功能
-        initDragAndDrop();
     }
     
     // 加载页面列表
@@ -241,8 +241,9 @@ layui.use(['jquery', 'layer', 'form'], function() {
         $.ajax({
             url: '/app/admin/sidebar/getPages',
             type: 'GET',
+            dataType: 'json',
             success: function(res) {
-                if (res.code === 0) {
+                if (res.code === 0 && res.data && res.data.length > 0) {
                     var selectHtml = '';
                     $.each(res.data, function(index, page) {
                         selectHtml += '<option value="' + page.key + '">' + page.name + '</option>';
@@ -251,11 +252,16 @@ layui.use(['jquery', 'layer', 'form'], function() {
                     form.render('select');
                     
                     // 默认加载第一个页面的配置
-                    if (res.data.length > 0) {
-                        currentPageKey = res.data[0].key;
-                        loadSidebarConfig(currentPageKey);
-                    }
+                    currentPageKey = res.data[0].key;
+                    loadSidebarConfig(currentPageKey);
+                } else {
+                    $('#page-select').html('<option value="default">默认页面</option>');
+                    form.render('select');
+                    loadSidebarConfig('default');
                 }
+            },
+            error: function(xhr, status, error) {
+                layer.msg('加载页面列表失败，请刷新重试', {icon: 5});
             }
         });
     }
@@ -265,17 +271,28 @@ layui.use(['jquery', 'layer', 'form'], function() {
         $.ajax({
             url: '/app/admin/sidebar/getAvailableWidgets',
             type: 'GET',
+            dataType: 'json',
             success: function(res) {
-                if (res.code === 0) {
+                if (res.code === 0 && res.data) {
                     availableWidgets = res.data;
                     renderAvailableWidgets();
+                } else {
+                    $('#available-widgets').html('<div class="text-center text-danger" style="padding: 20px;">加载小工具失败</div>');
                 }
+            },
+            error: function(xhr, status, error) {
+                $('#available-widgets').html('<div class="text-center text-danger" style="padding: 20px;">网络错误，请刷新重试</div>');
             }
         });
     }
     
     // 渲染可用小工具列表
     function renderAvailableWidgets() {
+        if (!availableWidgets || availableWidgets.length === 0) {
+            $('#available-widgets').html('<div class="text-center text-muted" style="padding: 20px;">暂无可用小工具</div>');
+            return;
+        }
+        
         var html = '';
         $.each(availableWidgets, function(index, widget) {
             html += '<div class="available-widget-item" data-type="' + widget.type + '">';
@@ -284,19 +301,31 @@ layui.use(['jquery', 'layer', 'form'], function() {
             html += '</div>';
         });
         $('#available-widgets').html(html);
+        
+        // 初始化可用小工具的拖拽
+        initDragAndDrop();
     }
     
     // 加载侧边栏配置
     function loadSidebarConfig(pageKey) {
+        // 显示加载状态
+        $('#sidebar-widgets').html('<div class="text-center text-muted" style="padding: 40px;"><i class="layui-icon layui-icon-loading layui-icon layui-anim layui-anim-rotate layui-anim-loop" style="font-size: 48px;"></i><p>加载中...</p></div>');
+        
         $.ajax({
             url: '/app/admin/sidebar/getSidebar',
             type: 'GET',
             data: { page_key: pageKey },
+            dataType: 'json',
             success: function(res) {
                 if (res.code === 0) {
-                    currentSidebarConfig = res.data;
+                    currentSidebarConfig = res.data || { widgets: [] };
                     renderSidebarWidgets();
+                } else {
+                    layer.msg(res.msg || '加载配置失败', {icon: 5});
                 }
+            },
+            error: function(xhr, status, error) {
+                $('#sidebar-widgets').html('<div class="text-center text-danger" style="padding: 40px;"><i class="layui-icon layui-icon-error" style="font-size: 48px;"></i><p>加载失败，请刷新重试</p></div>');
             }
         });
     }
@@ -317,7 +346,7 @@ layui.use(['jquery', 'layer', 'form'], function() {
         $('#sidebar-widgets').html(html);
         
         // 重新初始化拖拽
-        initDragAndDrop();
+        initSortable();
     }
     
     // 渲染单个小工具HTML
@@ -326,6 +355,8 @@ layui.use(['jquery', 'layer', 'form'], function() {
         var widgetClass = 'widget';
         if (!isEnabled) widgetClass += ' widget-disabled';
         if (currentEditWidgetId === widget.id) widgetClass += ' widget-active';
+        
+        var widgetInfo = availableWidgets.find(w => w.type === widget.type);
         
         var html = '<div class="' + widgetClass + '" data-id="' + widget.id + '">';
         html += '<div class="widget-header">';
@@ -343,7 +374,7 @@ layui.use(['jquery', 'layer', 'form'], function() {
         html += '</div>';
         html += '</div>';
         html += '<div class="widget-content">';
-        html += '<p class="text-muted">类型: ' + (availableWidgets.find(w => w.type === widget.type)?.name || widget.type) + '</p>';
+        html += '<p class="text-muted">类型: ' + (widgetInfo?.name || widget.type) + '</p>';
         if (widget.content) {
             html += '<div class="widget-preview">' + (widget.content.length > 100 ? widget.content.substring(0, 100) + '...' : widget.content) + '</div>';
         }
@@ -362,6 +393,7 @@ layui.use(['jquery', 'layer', 'form'], function() {
     // 渲染小工具编辑表单
     function renderWidgetEditForm(widget) {
         var html = '<form class="layui-form">';
+        // 基本设置
         html += '<div class="layui-form-item">';
         html += '<label class="layui-form-label">标题</label>';
         html += '<div class="layui-input-block">';
@@ -376,8 +408,11 @@ layui.use(['jquery', 'layer', 'form'], function() {
         html += '</div>';
         html += '</div>';
         
-        // 根据小工具类型显示不同的配置项
-        if (widget.type === 'about' || widget.type === 'html') {
+        // 小工具类型特定设置
+        var contentTypes = ['about', 'html'];
+        var listTypes = ['recent_posts', 'popular_posts', 'random_posts', 'categories', 'tags_cloud', 'archives'];
+        
+        if (contentTypes.indexOf(widget.type) !== -1) {
             html += '<div class="layui-form-item">';
             html += '<label class="layui-form-label">内容</label>';
             html += '<div class="layui-input-block">';
@@ -386,7 +421,7 @@ layui.use(['jquery', 'layer', 'form'], function() {
             html += '</div>';
         }
         
-        if (widget.type === 'recent_posts' || widget.type === 'popular_posts' || widget.type === 'random_posts') {
+        if (listTypes.indexOf(widget.type) !== -1) {
             html += '<div class="layui-form-item">';
             html += '<label class="layui-form-label">显示数量</label>';
             html += '<div class="layui-input-block">';
@@ -395,23 +430,7 @@ layui.use(['jquery', 'layer', 'form'], function() {
             html += '</div>';
         }
         
-        // 高级设置 - 自定义样式
-        html += '<div class="layui-form-item">';
-        html += '<label class="layui-form-label">自定义样式</label>';
-        html += '<div class="layui-input-block">';
-        html += '<textarea name="custom_style" class="layui-textarea" placeholder="请输入自定义CSS样式" rows="3">' + (widget.custom_style || '') + '</textarea>';
-        html += '</div>';
-        html += '</div>';
-        
-        // 高级设置 - 自定义Class
-        html += '<div class="layui-form-item">';
-        html += '<label class="layui-form-label">自定义Class</label>';
-        html += '<div class="layui-input-block">';
-        html += '<input type="text" name="custom_class" value="' + (widget.custom_class || '') + '" class="layui-input" placeholder="请输入自定义CSS类名，多个用空格分隔">';
-        html += '</div>';
-        html += '</div>';
-        
-        // 高级设置 - 显示条件
+        // 高级设置
         html += '<div class="layui-form-item">';
         html += '<label class="layui-form-label">显示条件</label>';
         html += '<div class="layui-input-block">';
@@ -423,6 +442,22 @@ layui.use(['jquery', 'layer', 'form'], function() {
         html += '</div>';
         html += '</div>';
         
+        // 样式设置
+        html += '<div class="layui-form-item">';
+        html += '<label class="layui-form-label">自定义Class</label>';
+        html += '<div class="layui-input-block">';
+        html += '<input type="text" name="custom_class" value="' + (widget.custom_class || '') + '" class="layui-input" placeholder="请输入自定义CSS类名，多个用空格分隔">';
+        html += '</div>';
+        html += '</div>';
+        
+        html += '<div class="layui-form-item">';
+        html += '<label class="layui-form-label">自定义样式</label>';
+        html += '<div class="layui-input-block">';
+        html += '<textarea name="custom_style" class="layui-textarea" placeholder="请输入自定义CSS样式" rows="3">' + (widget.custom_style || '') + '</textarea>';
+        html += '</div>';
+        html += '</div>';
+        
+        // 操作按钮
         html += '<div class="layui-form-item">';
         html += '<div class="layui-input-block">';
         html += '<button class="layui-btn layui-btn-primary" type="button" onclick="hideEditForm(\'' + widget.id + '\')">取消</button>';
@@ -436,21 +471,6 @@ layui.use(['jquery', 'layer', 'form'], function() {
     
     // 初始化拖拽功能
     function initDragAndDrop() {
-        // 使用jQuery UI的sortable实现拖拽排序
-        if ($.fn.sortable) {
-            $('#sidebar-widgets').sortable({
-                handle: '.widget-header',
-                placeholder: 'sortable-placeholder',
-                tolerance: 'pointer',
-                opacity: 0.7,
-                revert: 150,
-                update: function(event, ui) {
-                    // 拖拽完成后更新小工具顺序
-                    updateWidgetsOrder();
-                }
-            }).disableSelection();
-        }
-        
         // 初始化可用小工具的拖拽
         $('.available-widget-item').draggable({
             connectToSortable: '#sidebar-widgets',
@@ -471,6 +491,24 @@ layui.use(['jquery', 'layer', 'form'], function() {
         });
     }
     
+    // 初始化排序功能
+    function initSortable() {
+        // 使用jQuery UI的sortable实现拖拽排序
+        if ($.fn.sortable && $('#sidebar-widgets').length > 0) {
+            $('#sidebar-widgets').sortable({
+                handle: '.widget-header',
+                placeholder: 'sortable-placeholder',
+                tolerance: 'pointer',
+                opacity: 0.7,
+                revert: 150,
+                update: function(event, ui) {
+                    // 拖拽完成后更新小工具顺序
+                    updateWidgetsOrder();
+                }
+            }).disableSelection();
+        }
+    }
+    
     // 更新小工具顺序
     function updateWidgetsOrder() {
         var newOrder = [];
@@ -487,6 +525,9 @@ layui.use(['jquery', 'layer', 'form'], function() {
     
     // 添加小工具到侧边栏
     function addWidgetToSidebar(widgetType) {
+        // 显示加载状态
+        var loading = layer.load(2);
+        
         $.ajax({
             url: '/app/admin/sidebar/addWidget',
             type: 'POST',
@@ -494,15 +535,21 @@ layui.use(['jquery', 'layer', 'form'], function() {
                 page_key: currentPageKey,
                 widget_type: widgetType
             },
+            dataType: 'json',
             success: function(res) {
-                if (res.code === 0) {
+                layer.close(loading);
+                if (res.code === 0 && res.data) {
                     // 将新小工具添加到配置中
                     currentSidebarConfig.widgets.push(res.data);
                     renderSidebarWidgets();
-                    layer.msg('添加成功');
+                    layer.msg('添加成功', {icon: 1});
                 } else {
-                    layer.msg(res.msg || '添加失败');
+                    layer.msg(res.msg || '添加失败', {icon: 5});
                 }
+            },
+            error: function(xhr, status, error) {
+                layer.close(loading);
+                layer.msg('网络错误，请重试', {icon: 5});
             }
         });
     }
@@ -545,6 +592,9 @@ layui.use(['jquery', 'layer', 'form'], function() {
             }
         });
         
+        // 显示加载状态
+        var loading = layer.load(2);
+        
         $.ajax({
             url: '/app/admin/sidebar/updateWidget',
             type: 'POST',
@@ -553,7 +603,9 @@ layui.use(['jquery', 'layer', 'form'], function() {
                 widget_id: currentEditWidgetId,
                 widget_config: config
             },
+            dataType: 'json',
             success: function(res) {
+                layer.close(loading);
                 if (res.code === 0) {
                     // 更新本地配置
                     var widgetIndex = currentSidebarConfig.widgets.findIndex(w => w.id === currentEditWidgetId);
@@ -566,17 +618,29 @@ layui.use(['jquery', 'layer', 'form'], function() {
                     
                     hideEditForm(currentEditWidgetId);
                     renderSidebarWidgets();
-                    layer.msg('保存成功');
+                    layer.msg('保存成功', {icon: 1});
                 } else {
-                    layer.msg(res.msg || '保存失败');
+                    layer.msg(res.msg || '保存失败', {icon: 5});
                 }
+            },
+            error: function(xhr, status, error) {
+                layer.close(loading);
+                layer.msg('网络错误，请重试', {icon: 5});
             }
         });
     }
     
     // 删除小工具
     function deleteWidget(widgetId) {
-        layer.confirm('确定要删除这个小工具吗？', function(index) {
+        layer.confirm('确定要删除这个小工具吗？', {
+            icon: 3,
+            title: '确认删除'
+        }, function(index) {
+            layer.close(index);
+            
+            // 显示加载状态
+            var loading = layer.load(2);
+            
             $.ajax({
                 url: '/app/admin/sidebar/removeWidget',
                 type: 'POST',
@@ -584,52 +648,69 @@ layui.use(['jquery', 'layer', 'form'], function() {
                     page_key: currentPageKey,
                     widget_id: widgetId
                 },
+                dataType: 'json',
                 success: function(res) {
+                    layer.close(loading);
                     if (res.code === 0) {
                         // 从本地配置中移除
                         currentSidebarConfig.widgets = currentSidebarConfig.widgets.filter(w => w.id !== widgetId);
                         renderSidebarWidgets();
-                        layer.msg('删除成功');
+                        layer.msg('删除成功', {icon: 1});
                     } else {
-                        layer.msg(res.msg || '删除失败');
+                        layer.msg(res.msg || '删除失败', {icon: 5});
                     }
+                },
+                error: function(xhr, status, error) {
+                    layer.close(loading);
+                    layer.msg('网络错误，请重试', {icon: 5});
                 }
             });
-            layer.close(index);
         });
     }
     
     // 切换小工具启用状态
     function toggleWidget(widgetId) {
         var widget = currentSidebarConfig.widgets.find(w => w.id === widgetId);
-        if (widget) {
-            var newEnabled = !(widget.enabled !== false);
-            
-            $.ajax({
-                url: '/app/admin/sidebar/updateWidget',
-                type: 'POST',
-                data: {
-                    page_key: currentPageKey,
-                    widget_id: widgetId,
-                    widget_config: { enabled: newEnabled }
-                },
-                success: function(res) {
-                    if (res.code === 0) {
-                        widget.enabled = newEnabled;
-                        renderSidebarWidgets();
-                        layer.msg(newEnabled ? '已启用' : '已禁用');
-                    } else {
-                        layer.msg(res.msg || '操作失败');
-                    }
+        if (!widget) return;
+        
+        var newEnabled = !(widget.enabled !== false);
+        
+        // 显示加载状态
+        var loading = layer.load(2);
+        
+        $.ajax({
+            url: '/app/admin/sidebar/updateWidget',
+            type: 'POST',
+            data: {
+                page_key: currentPageKey,
+                widget_id: widgetId,
+                widget_config: { enabled: newEnabled }
+            },
+            dataType: 'json',
+            success: function(res) {
+                layer.close(loading);
+                if (res.code === 0) {
+                    widget.enabled = newEnabled;
+                    renderSidebarWidgets();
+                    layer.msg(newEnabled ? '已启用' : '已禁用', {icon: 1});
+                } else {
+                    layer.msg(res.msg || '操作失败', {icon: 5});
                 }
-            });
-        }
+            },
+            error: function(xhr, status, error) {
+                layer.close(loading);
+                layer.msg('网络错误，请重试', {icon: 5});
+            }
+        });
     }
     
     // 保存侧边栏配置
     function saveSidebarConfig() {
         // 确保顺序是最新的
         updateWidgetsOrder();
+        
+        // 显示加载状态
+        var loading = layer.load(2);
         
         $.ajax({
             url: '/app/admin/sidebar/saveSidebar',
@@ -638,12 +719,18 @@ layui.use(['jquery', 'layer', 'form'], function() {
                 page_key: currentPageKey,
                 sidebar_config: JSON.stringify(currentSidebarConfig)
             },
+            dataType: 'json',
             success: function(res) {
+                layer.close(loading);
                 if (res.code === 0) {
-                    layer.msg('保存成功');
+                    layer.msg('保存成功', {icon: 1});
                 } else {
-                    layer.msg(res.msg || '保存失败');
+                    layer.msg(res.msg || '保存失败', {icon: 5});
                 }
+            },
+            error: function(xhr, status, error) {
+                layer.close(loading);
+                layer.msg('网络错误，请重试', {icon: 5});
             }
         });
     }

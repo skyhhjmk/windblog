@@ -161,7 +161,9 @@ class Post extends Model
      */
     public function authors()
     {
-        return $this->belongsToMany(Author::class, 'post_author', 'post_id', 'author_id');
+        return $this->belongsToMany(Author::class, 'post_author', 'post_id', 'author_id')
+            ->orderByRaw('CASE WHEN post_author.admin_id IS NOT NULL THEN 0 ELSE 1 END')
+            ->orderBy('post_author.is_primary', 'desc');
     }
     
     /**
@@ -173,7 +175,8 @@ class Post extends Model
     public function primaryAuthor()
     {
         return $this->belongsToMany(Author::class, 'post_author', 'post_id', 'author_id')
-            ->wherePivot('is_primary', true);
+            ->wherePivot('is_primary', true)
+            ->orderByRaw('CASE WHEN post_author.admin_id IS NOT NULL THEN 0 ELSE 1 END');
     }
     
     /**

@@ -71,7 +71,10 @@ class BlogService
     public static function getBlogPosts(int $page = 1, array $filters = []): array
     {
         $posts_per_page = self::getPostsPerPage();
-        $cache_key = 'blog_posts_page_' . $page . '_per_' . $posts_per_page;
+        
+        // 生成缓存键，包含筛选条件
+        $filter_key = empty($filters) ? '' : '_' . md5(serialize($filters));
+        $cache_key = 'blog_posts_page_' . $page . '_per_' . $posts_per_page . $filter_key;
 
         // 当没有筛选条件时尝试从缓存获取
         if (empty($filters)) {
@@ -114,13 +117,52 @@ class BlogService
             }
         }
 
-        // 统计总文章数
-        $total_count = Post::where('status', 'published')->count();
+        // 构建查询
+        $query = Post::where('status', 'published');
 
-        // 获取文章列表
-        $posts = Post::where('status', 'published')
-            ->orderByDesc('id')
+        // 处理搜索筛选条件
+        if (!empty($filters)) {
+            foreach ($filters as $key => $value) {
+                switch ($key) {
+                    case 'search':
+                        if (!empty($value)) {
+                            $query->where(function($q) use ($value) {
+                                $q->where('title', 'like', "%{$value}%")
+                                  ->orWhere('content', 'like', "%{$value}%")
+                                  ->orWhere('excerpt', 'like', "%{$value}%");
+                            });
+                        }
+                        break;
+                    case 'category':
+                        if (!empty($value)) {
+                            $query->where('category_id', $value);
+                        }
+                        break;
+                    case 'tag':
+                        if (!empty($value)) {
+                            $query->whereHas('tags', function($q) use ($value) {
+                                $q->where('name', $value);
+                            });
+                        }
+                        break;
+                    case 'author':
+                        if (!empty($value)) {
+                            $query->whereHas('author', function($q) use ($value) {
+                                $q->where('name', $value);
+                            });
+                        }
+                        break;
+                }
+            }
+        }
+
+        // 统计总文章数
+        $total_count = $query->count();
+
+        // 获取文章列表并预加载作者信息
+        $posts = $query->orderByDesc('id')
             ->forPage($page, $posts_per_page)
+            ->with(['authors', 'primaryAuthor'])
             ->get();
 
         // 处理文章摘要

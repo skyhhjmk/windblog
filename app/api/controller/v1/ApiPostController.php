@@ -33,8 +33,10 @@ class ApiPostController
             ]);
         }
         
-        // 查询文章
-        $post = Post::find($id);
+        // 查询文章及作者信息
+        $post = Post::with(['authors' => function($query) {
+            $query->select('wa_users.id', 'username', 'nickname', 'email', 'avatar');
+        }])->find($id);
         
         if (!$post) {
             return json([
@@ -56,7 +58,8 @@ class ApiPostController
                 'summary' => $post->summary,
                 'status' => $post->status,
                 'created_at' => $post->created_at,
-                'updated_at' => $post->updated_at
+                'updated_at' => $post->updated_at,
+                'authors' => $post->authors ? $post->authors->toArray() : []
             ]
         ]);
     }

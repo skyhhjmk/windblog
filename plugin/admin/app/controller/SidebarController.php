@@ -31,7 +31,6 @@ class SidebarController extends Base
     {
         try {
             // 只返回HTML内容，不传递数据
-            // 前端将通过AJAX请求获取页面列表和配置
             return raw_view('sidebar/index');
         } catch (Throwable $e) {
             return $this->fail('加载侧边栏管理页面失败: ' . $e->getMessage());
@@ -68,42 +67,29 @@ class SidebarController extends Base
     {
         try {
             $pageKey = $request->post('page_key', 'default');
+            $sidebarConfig = $request->post('sidebar_config', []);
             
-            // 尝试获取sidebar_config参数（可能是JSON字符串或数组）
-            $sidebarConfigParam = $request->post('sidebar_config', '');
-            
-            // 初始化侧边栏配置
-            $sidebarConfig = [];
-            
-            // 处理sidebar_config参数
-            if (!empty($sidebarConfigParam)) {
-                // 如果是字符串，尝试解析为JSON
-                if (is_string($sidebarConfigParam)) {
-                    $sidebarConfig = json_decode($sidebarConfigParam, true);
-                    // 验证JSON解析结果
-                    if (!is_array($sidebarConfig)) {
-                        $sidebarConfig = [];
-                    }
-                } elseif (is_array($sidebarConfigParam)) {
-                    // 如果已经是数组，直接使用
-                    $sidebarConfig = $sidebarConfigParam;
+            // 确保是数组格式
+            if (!is_array($sidebarConfig)) {
+                // 尝试解析JSON字符串
+                $parsed = json_decode($sidebarConfig, true);
+                if (!is_array($parsed)) {
+                    return $this->fail('侧边栏配置数据格式错误');
                 }
+                $sidebarConfig = $parsed;
             }
             
-            // 如果sidebar_config为空或不是数组，检查是否直接发送了widgets数组
-            if (empty($sidebarConfig)) {
+            // 检查是否直接发送了widgets数组
+            if (empty($sidebarConfig) || !isset($sidebarConfig['widgets'])) {
                 $widgets = $request->post('widgets', []);
                 if (is_array($widgets)) {
-                    // 如果直接发送了widgets数组，构建正确的配置结构
-                    $sidebarConfig = [
-                        'widgets' => $widgets
-                    ];
+                    $sidebarConfig = ['widgets' => $widgets];
                 } else {
                     return $this->fail('侧边栏配置数据格式错误');
                 }
             }
             
-            // 确保widgets数组存在
+            // 确保widgets数组存在且有效
             if (!isset($sidebarConfig['widgets']) || !is_array($sidebarConfig['widgets'])) {
                 $sidebarConfig['widgets'] = [];
             }
@@ -111,11 +97,7 @@ class SidebarController extends Base
             // 保存配置
             $result = SidebarService::saveSidebarConfig($pageKey, $sidebarConfig);
             
-            if ($result) {
-                return $this->success('保存侧边栏配置成功');
-            } else {
-                return $this->fail('保存侧边栏配置失败');
-            }
+            return $result ? $this->success('保存侧边栏配置成功') : $this->fail('保存侧边栏配置失败');
         } catch (Throwable $e) {
             return $this->fail('保存侧边栏配置失败: ' . $e->getMessage());
         }
@@ -194,15 +176,14 @@ class SidebarController extends Base
             // 生成唯一ID
             $widgetId = $widgetType . '_' . uniqid();
             
-            // 创建新小工具
+            // 创建新小工具，设置合理的默认值
             $newWidget = [
                 'id' => $widgetId,
                 'title' => $widgetInfo['name'],
                 'type' => $widgetType,
                 'enabled' => true,
-                // 根据小工具类型设置默认属性
                 'content' => $widgetType === 'about' ? '欢迎访问我的博客' : '',
-                'limit' => $widgetType === 'recent_posts' ? 5 : 10
+                'limit' => in_array($widgetType, ['recent_posts', 'popular_posts', 'random_posts']) ? 5 : null
             ];
             
             // 添加到widgets数组
@@ -301,9 +282,12 @@ class SidebarController extends Base
                     // 合并配置，保留原始ID和类型
                     $widget = array_merge($widget, $widgetConfig);
                     $widget['id'] = $widgetId; // 确保ID不变
+                    
+                    // 如果配置了类型，允许更改类型
                     if (isset($widgetConfig['type'])) {
-                        $widget['type'] = $widgetConfig['type']; // 允许更改类型
+                        $widget['type'] = $widgetConfig['type'];
                     }
+                    
                     $found = true;
                     break;
                 }

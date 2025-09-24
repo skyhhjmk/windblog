@@ -10,29 +10,29 @@ use Illuminate\Database\Eloquent\Collection;
 use Throwable;
 
 /**
- * @property integer $id 主键(主键)
- * @property string $username 用户名
- * @property string $nickname 昵称
- * @property string $password 密码
- * @property string $sex 性别
- * @property string $avatar 头像
- * @property string $email 邮箱
- * @property string $mobile 手机
- * @property integer $level 等级
- * @property string $birthday 生日
- * @property integer $money 余额
- * @property integer $score 积分
- * @property string $last_time 登录时间
- * @property string $last_ip 登录ip
- * @property string $join_time 注册时间
- * @property string $join_ip 注册ip
- * @property string $token token
- * @property string $created_at 创建时间
- * @property string $updated_at 更新时间
- * @property string|null $deleted_at 软删除时间
- * @property integer $role 角色
- * @property integer $status 禁用
- * @property-read \Illuminate\Database\Eloquent\Collection|\app\model\Comment[] $comments 关联的评论
+ * @property int                       $id         主键(主键)
+ * @property string                    $username   用户名
+ * @property string                    $nickname   昵称
+ * @property string                    $password   密码
+ * @property string                    $sex        性别
+ * @property string                    $avatar     头像
+ * @property string                    $email      邮箱
+ * @property string                    $mobile     手机
+ * @property int                       $level      等级
+ * @property string                    $birthday   生日
+ * @property int                       $money      余额
+ * @property int                       $score      积分
+ * @property string                    $last_time  登录时间
+ * @property string                    $last_ip    登录ip
+ * @property string                    $join_time  注册时间
+ * @property string                    $join_ip    注册ip
+ * @property string                    $token      token
+ * @property string                    $created_at 创建时间
+ * @property string                    $updated_at 更新时间
+ * @property string|null               $deleted_at 软删除时间
+ * @property int                       $role       角色
+ * @property int                       $status     禁用
+ * @property-read Collection|Comment[] $comments   关联的评论
  */
 class Author extends Model
 {
@@ -105,7 +105,7 @@ class Author extends Model
             $builder->whereNull('deleted_at');
         });
     }
-    
+
     // ========================================================================    
     // 查询作用域    
     // ========================================================================
@@ -114,6 +114,7 @@ class Author extends Model
      * 查询作用域：包含软删除的记录。
      *
      * @param Builder $query
+     *
      * @return Builder
      */
     public function scopeWithTrashed(Builder $query): Builder
@@ -125,6 +126,7 @@ class Author extends Model
      * 查询作用域：只查询软删除的记录。
      *
      * @param Builder $query
+     *
      * @return Builder
      */
     public function scopeOnlyTrashed(Builder $query): Builder
@@ -136,6 +138,7 @@ class Author extends Model
      * 软删除方法，根据配置决定是软删除还是硬删除
      *
      * @param bool $forceDelete 是否强制删除（绕过软删除配置）
+     *
      * @return bool|null
      * @throws Throwable
      */
@@ -145,7 +148,7 @@ class Author extends Model
         $useSoftDelete = blog_config('soft_delete', true);
         \support\Log::debug("Soft delete config value: " . var_export($useSoftDelete, true));
         \support\Log::debug("Force delete flag: " . var_export($forceDelete, true));
-        
+
         if (!$forceDelete && $useSoftDelete) {
             // 软删除：设置 deleted_at 字段
             try {

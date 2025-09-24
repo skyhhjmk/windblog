@@ -51,9 +51,15 @@ class PostController
         // 获取侧边栏内容，页面类型为'post'
         $sidebar = \app\service\SidebarService::getSidebarContent($request, 'post');
         
+        // 加载作者信息
+        $post->load(['authors', 'primaryAuthor']);
+        $primaryAuthor = $post->primaryAuthor->first();
+        $authorName = $primaryAuthor ? $primaryAuthor->nickname : ($post->authors->first() ? $post->authors->first()->nickname : '未知作者');
+        
         return view('index/post', [
             'page_title' => blog_config('title', 'WindBlog', true) . ' - ' . $post['title'],
             'post' => $post,
+            'author' => $authorName,
             'sidebar' => $sidebar
         ]);
     }

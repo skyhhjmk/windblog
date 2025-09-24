@@ -29,6 +29,10 @@ Route::any('/page/{keyword}', [app\controller\PageController::class, 'index']);
 // 首页路由
 Route::any('/', [app\controller\IndexController::class, 'index'])->name('index.index');
 
+// 搜索路由
+Route::any('/search', [app\controller\SearchController::class, 'index'])->name('search.index');
+Route::any('/search/ajax', [app\controller\SearchController::class, 'ajax'])->name('search.ajax');
+
 // 链接页&分页路由
 Route::any('/link', [app\controller\LinkController::class, 'index'])->name('link.index');
 Route::any('/link/goto/{id}', [app\controller\LinkController::class, 'goto'])->name('link.goto');

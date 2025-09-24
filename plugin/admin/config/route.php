@@ -69,6 +69,7 @@ Route::group('/app/admin', function () {
         Route::get('/vditor/{id}', [EditorController::class, 'vditor']);
         Route::post('/save', [EditorController::class, 'save']);
         Route::post('/upload-image', [EditorController::class, 'uploadImage']);
+        Route::get('/authors', [EditorController::class, 'getAuthors']);
     });
 
     // Media 路由
