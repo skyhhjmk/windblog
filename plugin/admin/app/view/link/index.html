@@ -88,6 +88,10 @@
             <i class="layui-icon layui-icon-add-1"></i>
             新增
         </button>
+        <button class="pear-btn pear-btn-warning pear-btn-md" lay-event="batchEdit">
+            <i class="layui-icon layui-icon-edit"></i>
+            批量编辑
+        </button>
         <button class="pear-btn pear-btn-danger pear-btn-md" lay-event="batchRemove">
             <i class="layui-icon layui-icon-delete"></i>
             删除
@@ -583,6 +587,8 @@
                 window.add();
             } else if (obj.event === 'refresh') {
                 window.refresh();
+            } else if (obj.event === 'batchEdit') {
+                window.batchEdit(obj);
             } else if (obj.event === 'batchRemove') {
                 window.batchRemove(obj);
             } else if (obj.event === 'batchRestore') {
@@ -784,6 +790,18 @@
                     }
                 })
             });
+        }
+
+        window.batchEdit = function (obj) {
+            let data = table.checkStatus(obj.config.id).data;
+            if (data.length === 0) {
+                layer.msg("请先选择要编辑的链接", {icon: 3, time: 1000});
+                return false;
+            }
+            let ids = data.map(item => item.id).join(',');
+            
+            // 打开批量编辑页面
+            parent.layui.admin.addTab('link-batch-edit', '批量编辑链接', '/app/admin/link/batch?ids=' + ids);
         }
 
         window.batchRemove = function (obj) {

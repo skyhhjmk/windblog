@@ -63,7 +63,7 @@ class WidgetService
                 self::$widgetRenderers[$type] = $renderer;
             }
 
-            Log::info("[WidgetService] 小工具类型 '{$type}' 注册成功");
+            Log::debug("[WidgetService] 小工具类型 '{$type}' 注册成功");
             return true;
         } catch (Throwable $e) {
             Log::error('[WidgetService] 注册小工具失败: ' . $e->getMessage());
@@ -360,7 +360,7 @@ class WidgetService
             self::registerWidget($type, $info[0], $info[1], $info[2]);
         }
         
-        Log::info("[WidgetService] 默认小工具注册完成");
+        Log::info('[WidgetService] 默认小工具注册完成');
     }
     
     /**
@@ -382,7 +382,7 @@ class WidgetService
         }
         
         self::$widgetRenderers[$widgetType] = $renderer;
-        Log::info("[WidgetService] 小工具类型 '{$widgetType}' 渲染器设置成功");
+        Log::debug("[WidgetService] 小工具类型 '{$widgetType}' 渲染器设置成功");
         return true;
     }
     

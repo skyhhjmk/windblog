@@ -100,7 +100,13 @@ class MQService
                 'x-dead-letter-routing-key' => ['S', $dlxQueue]
             ];
             
-            $channel->queue_declare($queueName, false, true, false, false, false, $args);
+            try {
+                $channel->queue_declare($queueName, false, true, false, false, false, $args);
+            } catch (\Exception $e) {
+                // 如果队列已存在但参数不匹配，尝试重新声明队列（不带参数）
+                Log::warning('队列声明失败，尝试重新声明队列: ' . $e->getMessage());
+                $channel->queue_declare($queueName, false, true, false, false, false);
+            }
             $channel->queue_bind($queueName, $exchange, $routingKey);
 
             self::$initialized = true;

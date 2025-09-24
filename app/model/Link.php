@@ -26,6 +26,10 @@ use Throwable;
  * @property string|null $email           所有者电子邮件
  * @property string|null $callback_url    回调地址
  * @property string|null $note            管理员备注内容
+ * @property string|null $seo_title       SEO标题
+ * @property string|null $seo_keywords    SEO关键词
+ * @property string|null $seo_description SEO描述
+ * @property array|null  $custom_fields   自定义字段(JSON格式)
  * @property Carbon|null $created_at      创建时间
  * @property Carbon|null $updated_at      更新时间
  * @property Carbon|null $deleted_at      软删除时间
@@ -60,7 +64,11 @@ class Link extends Model
         'show_url',
         'content',
         'note',
-        'callback_url'
+        'callback_url',
+        'seo_title',
+        'seo_keywords',
+        'seo_description',
+        'custom_fields'
     ];
 
     /**
@@ -81,6 +89,10 @@ class Link extends Model
         'content' => 'string',
         'note' => 'string',
         'callback_url' => 'string',
+        'seo_title' => 'string',
+        'seo_keywords' => 'string',
+        'seo_description' => 'string',
+        'custom_fields' => 'array',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',

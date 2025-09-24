@@ -162,24 +162,28 @@ COMMENT ON COLUMN post_author.updated_at IS '更新时间';
 -- 创建友链表
 CREATE TABLE IF NOT EXISTS links
 (
-    id            BIGSERIAL PRIMARY KEY,
-    name          VARCHAR(255) NOT NULL,
-    url           VARCHAR(255) NOT NULL,
-    description   TEXT                     DEFAULT NULL,
-    icon          VARCHAR(255)             DEFAULT NULL,
-    image         VARCHAR(255)             DEFAULT NULL,
-    sort_order    INTEGER                  DEFAULT 0,
-    status        BOOLEAN      NOT NULL    DEFAULT true,
-    "target"      VARCHAR(20)              DEFAULT '_blank',
-    redirect_type VARCHAR(10)  NOT NULL    DEFAULT 'info',
-    show_url      BOOLEAN      NOT NULL    DEFAULT true,
-    content       TEXT                     DEFAULT NULL,
-    email         VARCHAR(255)             DEFAULT NULL,
-    callback_url  VARCHAR(255)             DEFAULT NULL,
-    note          TEXT                     DEFAULT NULL,
-    created_at    TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at    TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    deleted_at    TIMESTAMP WITH TIME ZONE DEFAULT NULL
+    id              BIGSERIAL PRIMARY KEY,
+    name            VARCHAR(255) NOT NULL,
+    url             VARCHAR(255) NOT NULL,
+    description     TEXT                     DEFAULT NULL,
+    icon            VARCHAR(255)             DEFAULT NULL,
+    image           VARCHAR(255)             DEFAULT NULL,
+    sort_order      INTEGER                  DEFAULT 0,
+    status          BOOLEAN      NOT NULL    DEFAULT true,
+    "target"        VARCHAR(20)              DEFAULT '_blank',
+    redirect_type   VARCHAR(10)  NOT NULL    DEFAULT 'info',
+    show_url        BOOLEAN      NOT NULL    DEFAULT true,
+    content         TEXT                     DEFAULT NULL,
+    email           VARCHAR(255)             DEFAULT NULL,
+    callback_url    VARCHAR(255)             DEFAULT NULL,
+    note            TEXT                     DEFAULT NULL,
+    seo_title       VARCHAR(255)             DEFAULT NULL,
+    seo_keywords    VARCHAR(255)             DEFAULT NULL,
+    seo_description VARCHAR(255)             DEFAULT NULL,
+    custom_fields   jsonb                    DEFAULT NULL,
+    created_at      TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    deleted_at      TIMESTAMP WITH TIME ZONE DEFAULT NULL
 );
 
 COMMENT ON TABLE links IS '友链表';
@@ -197,6 +201,10 @@ COMMENT ON COLUMN links.content IS '链接详细介绍(Markdown格式)';
 COMMENT ON COLUMN links.email IS '所有者电子邮件';
 comment on column links.callback_url is '回调地址，用户访问链接时异步通知';
 COMMENT ON column links.note IS '管理员备注';
+COMMENT ON column links.seo_title IS 'SEO 标题';
+COMMENT ON column links.seo_keywords IS 'SEO 关键词';
+COMMENT ON column links.seo_description IS 'SEO 描述';
+COMMENT ON column links.custom_fields IS '自定义字段';
 COMMENT ON COLUMN links.created_at IS '创建时间';
 COMMENT ON COLUMN links.updated_at IS '更新时间';
 COMMENT ON COLUMN links.deleted_at IS '删除时间';

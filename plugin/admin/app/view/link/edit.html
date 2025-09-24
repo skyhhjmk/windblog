@@ -101,6 +101,38 @@
                 </div>
             </div>
 
+            <!-- SEO字段 -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">SEO标题</label>
+                <div class="layui-input-block">
+                    <input type="text" name="seo_title" placeholder="请输入SEO标题" class="layui-input">
+                    <div class="layui-form-mid layui-word-aux">留空则使用链接名称</div>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">SEO关键词</label>
+                <div class="layui-input-block">
+                    <input type="text" name="seo_keywords" placeholder="请输入SEO关键词，用逗号分隔" class="layui-input">
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">SEO描述</label>
+                <div class="layui-input-block">
+                    <textarea name="seo_description" placeholder="请输入SEO描述" class="layui-textarea"></textarea>
+                </div>
+            </div>
+
+            <!-- 自定义字段 -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">自定义字段</label>
+                <div class="layui-input-block">
+                    <textarea name="custom_fields" placeholder='请输入自定义字段，JSON格式如：{"field1": "value1", "field2": "value2"}' class="layui-textarea"></textarea>
+                    <div class="layui-form-mid layui-word-aux">JSON格式的自定义数据</div>
+                </div>
+            </div>
+
             <div class="layui-form-item">
                 <div class="layui-input-block">
                     <button class="pear-btn pear-btn-primary" lay-submit lay-filter="link-submit">提交</button>
@@ -136,13 +168,25 @@
                     if(result.code === 0){
                         var link = result.data;
                         // 填充表单数据
-                        $('input[name="name"]').val(link.name);
-                        $('input[name="url"]').val(link.url);
+                        $('input[name="name"]').val(link.name).attr('maxlength', 255);
+                        $('input[name="url"]').val(link.url).attr('maxlength', 255);
                         $('textarea[name="description"]').val(link.description);
-                        $('input[name="icon"]').val(link.icon);
+                        $('input[name="icon"]').val(link.icon).attr('maxlength', 255);
                         $('input[name="sort_order"]').val(link.sort_order);
                         $('textarea[name="content"]').val(link.content);
                         $('textarea[name="note"]').val(link.note);
+                        $('input[name="seo_title"]').val(link.seo_title || '').attr('maxlength', 255);
+                        $('input[name="seo_keywords"]').val(link.seo_keywords || '');
+                        $('textarea[name="seo_description"]').val(link.seo_description || '');
+                        
+                        // 处理自定义字段
+                        if(link.custom_fields && typeof link.custom_fields === 'object'){
+                            $('textarea[name="custom_fields"]').val(JSON.stringify(link.custom_fields, null, 2));
+                        } else if(link.custom_fields) {
+                            $('textarea[name="custom_fields"]').val(link.custom_fields);
+                        } else {
+                            $('textarea[name="custom_fields"]').val('');
+                        }
                         
                         // 设置下拉选项
                         $('select[name="target"]').val(link.target);
@@ -154,6 +198,12 @@
                         
                         // 重新渲染表单
                         form.render();
+                        
+                        // 添加实时字符计数
+                        addCharCounters();
+                        
+                        // 添加表单提示
+                        addFormTips();
                     }else{
                         layer.msg(result.msg, {icon: 2});
                     }
@@ -173,8 +223,66 @@
                 if(value && !/^https?:\/\/.+/i.test(value)){
                     return '请输入有效的URL地址';
                 }
+            },
+            json: function(value){
+                if(value && value.trim() !== ''){
+                    try {
+                        JSON.parse(value);
+                    } catch (e) {
+                        return '请输入有效的JSON格式';
+                    }
+                }
+            },
+            maxLength: function(value, item){
+                var maxLength = $(item).attr('maxlength');
+                if(maxLength && value.length > maxLength){
+                    return '内容长度不能超过' + maxLength + '个字符';
+                }
             }
         });
+
+        // 添加字符计数功能
+        function addCharCounters() {
+            $('input[maxlength], textarea[maxlength]').each(function() {
+                var $input = $(this);
+                var maxLength = $input.attr('maxlength');
+                if(maxLength) {
+                    var $counter = $('<div class="layui-form-mid layui-word-aux char-counter">0/' + maxLength + '</div>');
+                    $input.after($counter);
+                    
+                    $input.on('input', function() {
+                        var length = $(this).val().length;
+                        $counter.text(length + '/' + maxLength);
+                        if(length > maxLength * 0.8) {
+                            $counter.css('color', '#ff5722');
+                        } else {
+                            $counter.css('color', '');
+                        }
+                    }).trigger('input');
+                }
+            });
+        }
+
+        // 添加表单提示功能
+        function addFormTips() {
+            // 为关键字段添加提示
+            $('input[name="seo_title"]').attr('title', '用于搜索引擎显示的标题，留空则使用链接名称');
+            $('input[name="seo_keywords"]').attr('title', '用逗号分隔的关键词，用于SEO优化');
+            $('textarea[name="custom_fields"]').attr('title', 'JSON格式的自定义数据，可用于扩展功能');
+            
+            // 添加悬停提示
+            $('[title]').hover(function(e) {
+                var tip = $(this).attr('title');
+                if(tip) {
+                    layer.tips(tip, this, {
+                        tips: [1, '#1E9FFF'],
+                        time: 3000
+                    });
+                }
+            }, function() {
+                layer.closeAll('tips');
+            });
+        }
 
         // 监听提交
         form.on('submit(link-submit)', function(data){
@@ -183,6 +291,17 @@
             // 处理布尔值字段
             data.field.status = data.field.status === 'on';
             data.field.show_url = data.field.show_url === 'on';
+            
+            // 验证自定义字段JSON格式
+            if(data.field.custom_fields && data.field.custom_fields.trim() !== '') {
+                try {
+                    JSON.parse(data.field.custom_fields);
+                } catch (e) {
+                    layer.close(loading);
+                    layer.msg('自定义字段格式错误：请输入有效的JSON格式', {icon: 2});
+                    return false;
+                }
+            }
             
             $.ajax({
                 url: '/app/admin/link/edit/' + data.field.id,

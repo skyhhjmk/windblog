@@ -150,11 +150,17 @@ class LinkController
     #[RateLimiter(limit: 3, ttl: 3600, key: RateLimiter::SID, message: '短时间内提交次数过多')]
     #[CSRFVerify(
         '_link_request_token',
-        'CSRF token验证失败',
+        [
+            'response_type' => 'json',
+            'response_code' => 403,
+            'response_body' => [
+                'code' => 1,
+                'msg' =>'CSRF 过期，请刷新页面重试'
+            ]
+        ],
         ['POST'],
         3600,
         true, // 一次性
-
     )]
     public function request(Request $request): Response
     {

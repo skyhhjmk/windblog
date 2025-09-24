@@ -3,7 +3,7 @@
 namespace app\service;
 
 use Exception;
-use support\Request;
+use Webman\Http\Request;
 use Webman\Http\Response;
 
 /**
@@ -87,7 +87,7 @@ class CSRFService
      * @return bool
      * @throws Exception
      */
-    public function validateToken(Request $request, string $tokenName = null, array $options = []): bool
+    public function validateToken(Request $request, ?string $tokenName = null, array $options = []): bool
     {
         $tokenName = $tokenName ?: $this->defaultTokenName;
         
@@ -125,6 +125,8 @@ class CSRFService
         // 如果是一次性token，验证后删除
         if ($tokenData['one_time'] ?? false) {
             $request->session()->delete($tokenName);
+            // 手动保存session以确保一次性token立即失效
+            $request->session()->save();
         }
         
         return true;
@@ -221,7 +223,7 @@ class CSRFService
      * @return array|null
      * @throws Exception
      */
-    public function getTokenInfo(Request $request, string $tokenName = null): ?array
+    public function getTokenInfo(Request $request, ?string $tokenName = null): ?array
     {
         $tokenName = $tokenName ?: $this->defaultTokenName;
         return $request->session()->get($tokenName);

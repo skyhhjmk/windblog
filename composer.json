@@ -60,7 +60,8 @@
     "vlucas/phpdotenv": "^5.6",
     "elasticsearch/elasticsearch": "^9.1",
     "guzzlehttp/guzzle": "^7.10",
-    "php-amqplib/php-amqplib": "^3.7"
+    "php-amqplib/php-amqplib": "^3.7",
+    "ext-curl": "*"
   },
   "suggest": {
     "ext-event": "For better performance. "

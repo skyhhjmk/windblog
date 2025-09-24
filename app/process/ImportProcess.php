@@ -4,6 +4,7 @@ namespace app\process;
 
 use app\model\ImportJob;
 use app\service\WordpressImporter;
+use support\Log;
 use Workerman\Timer;
 use Workerman\Worker;
 
@@ -153,5 +154,24 @@ class ImportProcess
         } catch (\Exception $e) {
             \support\Log::error('检查导入任务时出错: ' . $e->getMessage(), ['exception' => $e]);
         }
+    }
+
+    /**
+     * 进程停止时执行
+     *
+     * @param Worker $worker
+     * @return void
+     */
+    public function onWorkerStop(Worker $worker): void
+    {
+        // 清除定时器
+        if (isset($this->timerId)) {
+            Timer::del($this->timerId);
+        }
+
+        // 记录最终内存使用情况
+        $memoryUsage = memory_get_usage(true) / 1024 / 1024;
+        $memoryPeak = memory_get_peak_usage(true) / 1024 / 1024;
+        Log::info("WP 导入进程已停止 - 最终内存使用: {$memoryUsage}MB, 峰值内存: {$memoryPeak}MB");
     }
 }

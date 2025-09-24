@@ -1,22 +1,26 @@
 create table links
 (
-    id            bigserial
+    id               bigserial
         primary key,
-    name          varchar(255)                                               not null,
-    url           varchar(255)                                               not null,
-    description   text,
-    image         varchar(255)             default NULL::character varying,
-    icon          varchar(255)             default NULL::character varying,
-    sort_order    integer                  default 0,
-    status        boolean                  default true                      not null,
-    target        varchar(20)              default '_blank'::character varying,
-    redirect_type varchar(10)              default 'info'::character varying not null,
-    show_url      boolean                  default true                      not null,
-    content       text,
-    callback_url  varchar(255)             default NULL::character varying,
-    created_at    timestamp with time zone default CURRENT_TIMESTAMP,
-    updated_at    timestamp with time zone default CURRENT_TIMESTAMP,
-    deleted_at    timestamp with time zone
+    name             varchar(255)                                               not null,
+    url              varchar(255)                                               not null,
+    description      text,
+    image            varchar(255)             default NULL::character varying,
+    icon             varchar(255)             default NULL::character varying,
+    sort_order       integer                  default 0,
+    status           boolean                  default true                      not null,
+    target           varchar(20)              default '_blank'::character varying,
+    redirect_type    varchar(10)              default 'info'::character varying not null,
+    show_url         boolean                  default true                      not null,
+    content          text,
+    callback_url     varchar(255)             default NULL::character varying,
+    seo_title        varchar(255)             default NULL::character varying,
+    seo_keywords     text,
+    seo_description  text,
+    custom_fields    jsonb,
+    created_at       timestamp with time zone default CURRENT_TIMESTAMP,
+    updated_at       timestamp with time zone default CURRENT_TIMESTAMP,
+    deleted_at       timestamp with time zone
 );
 
 comment on column links.name is '友链名称';
@@ -42,6 +46,14 @@ comment on column links.show_url is '是否在中转页显示原始URL';
 comment on column links.content is '链接详细介绍(Markdown格式)';
 
 comment on column links.callback_url is '回调地址，用户访问链接时异步通知';
+
+comment on column links.seo_title is 'SEO标题';
+
+comment on column links.seo_keywords is 'SEO关键词';
+
+comment on column links.seo_description is 'SEO描述';
+
+comment on column links.custom_fields is '自定义字段(JSON格式)';
 
 comment on column links.created_at is '创建时间';
 

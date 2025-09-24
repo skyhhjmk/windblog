@@ -69,5 +69,15 @@ return [
         'handler' => app\process\ImportProcess::class,
         'reloadable' => false,
         'constructor' => []
+    ],
+    // HTTP回调处理进程
+    'http_callback' => [
+        'handler' => app\process\HttpCallback::class,
+        'reloadable' => false,
+        'constructor' => [
+            // SSL证书验证配置
+            'verify_ssl' => false, // 是否验证SSL证书，设置为false可跳过SSL验证
+            'ca_cert_path' => null // CA证书路径，如果为空则尝试使用系统默认证书
+        ]
     ]
 ];

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>批量编辑链接</title>
+    <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css"/>
+    <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+    <script src="/app/admin/component/pear/pear.js"></script>
+</head>
+
+<body class="pear-container">
+<div class="layui-card">
+    <div class="layui-card-header">
+        <h3>批量编辑链接</h3>
+        <p class="text-gray-500">已选择 <span id="selectedCount" class="text-blue-500 font-bold">0</span> 个链接进行批量编辑</p>
+    </div>
+    <div class="layui-card-body">
+        <form class="layui-form" action="">
+            <input type="hidden" name="ids" id="link-ids">
+            
+            <div class="layui-form-item">
+                <label class="layui-form-label">状态</label>
+                <div class="layui-input-block">
+                    <select name="status" class="layui-input">
+                        <option value="">-- 不修改 --</option>
+                        <option value="1">启用</option>
+                        <option value="0">禁用</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">打开方式</label>
+                <div class="layui-input-block">
+                    <select name="target" class="layui-input">
+                        <option value="">-- 不修改 --</option>
+                        <option value="_blank">新窗口打开</option>
+                        <option value="_self">当前窗口打开</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">跳转方式</label>
+                <div class="layui-input-block">
+                    <select name="redirect_type" class="layui-input">
+                        <option value="">-- 不修改 --</option>
+                        <option value="direct">直接跳转</option>
+                        <option value="goto">中转页跳转</option>
+                        <option value="iframe">内嵌页面</option>
+                        <option value="info">详情页</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">排序权重</label>
+                <div class="layui-input-block">
+                    <input type="number" name="sort_order" placeholder="请输入排序权重" class="layui-input">
+                    <div class="layui-form-mid layui-word-aux">留空则不修改，数字越小越靠前</div>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">显示URL</label>
+                <div class="layui-input-block">
+                    <select name="show_url" class="layui-input">
+                        <option value="">-- 不修改 --</option>
+                        <option value="1">显示</option>
+                        <option value="0">隐藏</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">SEO标题</label>
+                <div class="layui-input-block">
+                    <input type="text" name="seo_title" placeholder="请输入SEO标题" class="layui-input">
+                    <div class="layui-form-mid layui-word-aux">留空则不修改</div>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <div class="layui-input-block">
+                    <button class="pear-btn pear-btn-primary" lay-submit lay-filter="batch-submit">提交批量修改</button>
+                    <button type="button" class="pear-btn" onclick="parent.layui.admin.closeThisTab()">取消</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    layui.use(['form', 'jquery', 'layer'], function () {
+        var form = layui.form;
+        var $ = layui.jquery;
+        var layer = layui.layer;
+
+        // 从URL参数获取选中的链接ID
+        function getSelectedIds() {
+            var urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('ids') || '';
+        }
+
+        // 初始化页面
+        function initPage() {
+            var ids = getSelectedIds();
+            if(!ids) {
+                layer.msg('未选择任何链接', {icon: 2}, function(){
+                    parent.layui.admin.closeThisTab();
+                });
+                return;
+            }
+
+            $('#link-ids').val(ids);
+            $('#selectedCount').text(ids.split(',').length);
+        }
+
+        // 监听提交
+        form.on('submit(batch-submit)', function(data){
+            var loading = layer.load();
+            
+            // 过滤空值字段
+            var submitData = {};
+            for(var key in data.field) {
+                if(data.field[key] !== '' && data.field[key] !== null && data.field[key] !== undefined) {
+                    submitData[key] = data.field[key];
+                }
+            }
+
+            if(Object.keys(submitData).length === 0) {
+                layer.close(loading);
+                layer.msg('请至少修改一个字段', {icon: 2});
+                return false;
+            }
+
+            $.ajax({
+                url: '/app/admin/link/batchEdit',
+                type: 'POST',
+                data: submitData,
+                dataType: 'json',
+                success: function(result){
+                    layer.close(loading);
+                    if(result.code === 0){
+                        layer.msg(result.msg, {icon: 1, time: 1000}, function(){
+                            parent.layui.admin.closeThisTab();
+                            // 刷新父页面表格
+                            parent.layui.table.reload('link-table');
+                        });
+                    }else{
+                        layer.msg(result.msg, {icon: 2});
+                    }
+                },
+                error: function(){
+                    layer.close(loading);
+                    layer.msg('网络错误，请重试', {icon: 2});
+                }
+            });
+            return false;
+        });
+
+        // 页面加载完成后初始化
+        initPage();
+    });
+</script>
+</body>
+
+</html>
