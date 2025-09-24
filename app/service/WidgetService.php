@@ -401,7 +401,8 @@ class WidgetService
     {
         return self::getDataWrapper(function() use ($widget) {
             $count = $widget['params']['count'] ?? 5;
-            $query = Post::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as year_month, COUNT(*) as count')
+            // 使用PostgreSQL兼容的日期格式化函数
+            $query = Post::selectRaw("TO_CHAR(created_at, 'YYYY-MM') as year_month, COUNT(*) as count")
                 ->where('status', 'published')
                 ->groupBy('year_month')
                 ->orderBy('year_month', 'desc');
@@ -484,9 +485,9 @@ class WidgetService
     {
         return self::getDataWrapper(function() use ($widget) {
             $limit = $widget['params']['count'] ?? 5;
-            // 只获取已发布的文章
+            // 只获取已发布的文章，使用PostgreSQL兼容的随机排序
             $widget['random_posts'] = Post::where('status', 'published')
-                ->inRandomOrder()
+                ->orderByRaw('RANDOM()')
                 ->take($limit)
                 ->get(['id', 'title', 'slug', 'created_at']);
             
