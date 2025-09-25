@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>友链审核工作台</title>
+    <link rel="stylesheet" href="/plugin/admin/public/assets/css/layui.css">
+    <link rel="stylesheet" href="/plugin/admin/public/assets/css/admin.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 工具栏按钮样式 */
+        .toolbar-btn {
+            display: block;
+            width: 40px;
+            height: 40px;
+            margin: 5px 0;
+            border: none;
+            border-radius: 6px;
+            background: #f8f9fa;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 16px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .toolbar-btn:hover {
+            background: #007bff;
+            color: #fff;
+            transform: scale(1.1);
+        }
+        
+        .toolbar-btn svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+        
+        .tooltip {
+            position: absolute;
+            right: 50px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+            pointer-events: none;
+            z-index: 3000;
+        }
+        
+        .tooltip::after {
+            content: '';
+            position: absolute;
+            left: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+            border: 5px solid transparent;
+            border-left-color: rgba(0, 0, 0, 0.8);
+        }
+        
+        .toolbar-btn:hover .tooltip {
+            opacity: 1;
+            visibility: visible;
+        }
+    </style>
+</head>
+<body class="m-0 p-0 overflow-hidden box-border">
+    <div class="h-screen flex flex-col bg-gray-100 overflow-hidden">
+        <!-- 头部信息 -->
+        <div class="bg-white px-5 py-4 border-b border-gray-200 shadow-sm z-50">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h2 class="m-0 text-gray-800 text-xl font-semibold">友链审核工作台</h2>
+                    <p class="mt-1 mb-0 text-gray-600 text-sm">
+                        正在审核：<strong id="link-name" class="text-gray-800">加载中...</strong> - <a href="#" id="link-url" target="_blank" class="text-blue-600 hover:text-blue-800">加载中...</a>
+                    </p>
+                </div>
+                <div class="flex gap-3">
+                    <button class="inline-flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md shadow-sm transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2" onclick="detectSite()">
+                        重新检测
+                    </button>
+                    <button class="inline-flex items-center justify-center px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-md border border-gray-300 shadow-sm transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2" onclick="goBack()">
+                        返回列表
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 主要内容区域 -->
+        <div class="flex-1 flex overflow-hidden">
+            <!-- 信息面板 -->
+            <div class="w-96 bg-white border-r border-gray-200 overflow-y-auto p-5">
+                <!-- 基本信息 -->
+                <div class="mb-5 border border-gray-200 rounded-md overflow-hidden">
+                    <div class="bg-gray-50 px-4 py-3 border-b border-gray-200 font-semibold text-gray-800">
+                        <i class="layui-icon layui-icon-website"></i> 申请信息
+                    </div>
+                    <div class="p-4">
+                        <div class="mb-3 flex items-start">
+                            <div class="min-w-20 text-gray-600 text-xs mr-3">网站名称</div>
+                            <div class="flex-1 text-gray-800 text-sm break-all" id="basic-name">加载中...</div>
+                        </div>
+                        <div class="mb-3 flex items-start">
+                            <div class="min-w-20 text-gray-600 text-xs mr-3">网站地址</div>
+                            <div class="flex-1 text-gray-800 text-sm break-all">
+                                <a href="#" id="basic-url" target="_blank" class="text-blue-600 hover:text-blue-800">加载中...</a>
+                            </div>
+                        </div>
+                        <div class="mb-3 flex items-start">
+                            <div class="min-w-20 text-gray-600 text-xs mr-3">网站描述</div>
+                            <div class="flex-1 text-gray-800 text-sm break-all" id="basic-description">加载中...</div>
+                        </div>
+                        <div class="mb-3 flex items-start">
+                            <div class="min-w-20 text-gray-600 text-xs mr-3">申请时间</div>
+                            <div class="flex-1 text-gray-800 text-sm break-all" id="basic-created">加载中...</div>
+                        </div>
+                        <div class="mb-3 flex items-start">
+                            <div class="min-w-20 text-gray-600 text-xs mr-3">状态</div>
+                            <div class="flex-1 text-gray-800 text-sm break-all">
+                                <span class="inline-block px-2 py-1 rounded-full text-xs font-bold" id="link-status">加载中...</span>
+                            </div>
+                        </div>
+                        <div class="mb-3 flex items-start" id="application-info-section" style="display: none;">
+                            <div class="min-w-20 text-gray-600 text-xs mr-3">申请说明</div>
+                            <div class="flex-1 text-gray-800 text-sm break-all" id="application-info"></div>
+                        </div>
+                        <div class="mb-3 flex items-start" id="application-note-section" style="display: none;">
+                            <div class="min-w-20 text-gray-600 text-xs mr-3">备注</div>
+                            <div class="flex-1 text-gray-800 text-sm break-all" id="application-note"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 检测结果 -->
+                <div class="mb-5 border border-gray-200 rounded-md overflow-hidden">
+                    <div class="bg-gray-50 px-4 py-3 border-b border-gray-200 font-semibold text-gray-800">
+                        <i class="layui-icon layui-icon-search"></i> 检测结果
+                    </div>
+                    <div class="p-4" id="detection-results">
+                        <div class="text-center py-5 text-gray-600">
+                            <i class="layui-icon layui-icon-loading layui-anim layui-anim-rotate layui-anim-loop"></i>
+                            <p>等待加载链接信息...</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 审核操作 -->
+                <div class="flex gap-3 mt-5">
+                    <button class="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-md border-none cursor-pointer transition-all duration-300" onclick="approveLink()">
+                        <i class="layui-icon layui-icon-ok"></i> 通过
+                    </button>
+                    <button class="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-md border-none cursor-pointer transition-all duration-300" onclick="rejectLink()">
+                        <i class="layui-icon layui-icon-close"></i> 拒绝
+                    </button>
+                    <button class="flex-1 px-4 py-3 bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-semibold rounded-md border-none cursor-pointer transition-all duration-300" onclick="editLink()">
+                        <i class="layui-icon layui-icon-edit"></i> 编辑
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 预览面板 -->
+            <div class="flex-1 relative bg-white">
+                <iframe id="site-preview" class="w-full h-full border-none bg-white" src="about:blank"></iframe>
+                <div id="iframe-loading" class="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center z-50">
+                    <div class="text-center">
+                        <i class="layui-icon layui-icon-loading layui-anim layui-anim-rotate layui-anim-loop text-3xl text-blue-600"></i>
+                        <p class="mt-3 text-gray-600">正在加载网站预览...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 悬浮工具栏 -->
+        <div class="fixed top-1/2 right-5 transform -translate-y-1/2 bg-white rounded-lg shadow-lg p-3 z-50 min-w-16 cursor-move select-none" id="floating-toolbar">
+            <button class="toolbar-btn" onclick="refreshIframe()">
+                <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                <div class="tooltip">刷新预览</div>
+            </button>
+            <button class="toolbar-btn" onclick="openInNewWindow()">
+                <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
+                <div class="tooltip">在新窗口打开</div>
+            </button>
+            <button class="toolbar-btn" onclick="toggleMobileView()">
+                <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M16 1H8C6.34 1 5 2.34 5 4v16c0 1.66 1.34 3 3 3h8c1.66 0 3-1.34 3-3V4c0-1.66-1.34-3-3-3zm-2 20h-4v-1h4v1zm3.25-3H6.75V4h10.5v14z"/></svg>
+                <div class="tooltip">移动端视口</div>
+            </button>
+            <button class="toolbar-btn" onclick="toggleMobileUA()">
+                <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M17 1H7c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-2-2-2zM7 4V3h10v1H7zm0 14V6h10v12H7zm0 3v-1h10v1H7z"/><circle cx="12" cy="15" r="1.5"/></svg>
+                <div class="tooltip">移动端UA刷新</div>
+            </button>
+            <button class="toolbar-btn" onclick="takeScreenshot()">
+                <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M12 15c1.66 0 2.99-1.34 2.99-3L15 6c0-1.66-1.34-3-3-3S9 4.34 9 6v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 15 6.7 12H5c0 3.41 2.72 6.23 6 6.72V21h2v-2.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg>
+                <div class="tooltip">截图</div>
+            </button>
+            <button class="toolbar-btn" onclick="viewSource()">
+                <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>
+                <div class="tooltip">检查源码</div>
+            </button>
+            <button class="toolbar-btn" onclick="speedTest()">
+                <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                <div class="tooltip">网站测速</div>
+            </button>
+        </div>
+    </div>
+
+    <script src="/app/admin/component/layui/layui.js"></script>
+    <script>
+        // 从URL获取链接ID
+        const linkId = window.location.pathname.split('/').pop();
+        let linkData = null;
+        let isMobileView = false;
+        
+        // 页面初始化
+        layui.use(['layer', 'form', 'element'], function() {
+            const layer = layui.layer;
+            const form = layui.form;
+            const element = layui.element;
+
+            // 加载链接信息
+            loadLinkInfo().then(() => {
+                // 链接信息加载完成后，自动检测网站信息
+                detectSite();
+            });
+        });
+        
+        // 加载链接信息
+        function loadLinkInfo() {
+            return fetch(`/app/admin/link/get/${linkId}`)
+                .then(response => response.json())
+                .then(result => {
+                    if (result.code === 0) {
+                        linkData = result.data;
+                        
+                        // 更新页面信息
+                        document.getElementById('link-name').textContent = linkData.name;
+                        document.getElementById('link-url').textContent = linkData.url;
+                        document.getElementById('link-url').href = linkData.url;
+                        document.getElementById('link-status').textContent = linkData.status ? '已通过' : '待审核';
+                        document.getElementById('link-status').className = 'status-badge ' + (linkData.status ? 'status-approved' : 'status-pending');
+                        
+                        // 基本信息
+                        document.getElementById('basic-name').textContent = linkData.name;
+                        document.getElementById('basic-url').textContent = linkData.url;
+                        document.getElementById('basic-url').href = linkData.url;
+                        document.getElementById('basic-description').textContent = linkData.description || '暂无描述';
+                        
+                        // 格式化时间为本地时间
+                        const createdDate = new Date(linkData.created_at);
+                        const formattedDate = createdDate.toLocaleString('zh-CN', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit'
+                        });
+                        document.getElementById('basic-created').textContent = formattedDate;
+                        
+                        // 显示申请信息
+                        if (linkData.content) {
+                            document.getElementById('application-info').innerHTML = linkData.content.replace(/\n/g, '<br>');
+                            document.getElementById('application-info-section').style.display = 'flex';
+                        }
+                        
+                        if (linkData.note) {
+                            document.getElementById('application-note').innerHTML = linkData.note.replace(/\n/g, '<br>');
+                            document.getElementById('application-note-section').style.display = 'flex';
+                        }
+                        
+                        // 设置iframe
+                        loadIframe();
+                        
+                        return linkData;
+                    } else {
+                        layui.layer.msg('获取链接信息失败：' + result.msg);
+                        throw new Error(result.msg);
+                    }
+                })
+                .catch(error => {
+                    console.error('加载链接信息失败:', error);
+                    layui.layer.msg('加载链接信息失败');
+                    throw error;
+                });
+        }
+        
+        // 检测网站信息
+        function detectSite() {
+            if (!linkData) {
+                layui.layer.msg('请先加载链接信息');
+                return;
+            }
+            
+            const resultsContainer = document.getElementById('detection-results');
+            resultsContainer.innerHTML = `
+                <div class="text-center py-5 text-gray-600">
+                    <i class="layui-icon layui-icon-loading layui-anim layui-anim-rotate layui-anim-loop"></i>
+                    <p>正在检测网站信息...</p>
+                </div>
+            `;
+            
+            fetch('/app/admin/link/detectSite', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `url=${encodeURIComponent(linkData.url)}&my_domain=${encodeURIComponent(window.location.origin)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 0) {
+                    displayDetectionResults(data.data);
+                } else {
+                    displayDetectionError('检测失败', data.msg || '未知错误', true);
+                }
+            })
+            .catch(error => {
+                console.error('检测失败:', error);
+                displayDetectionError('网络连接失败', '请检查网络连接后重试', true);
+            });
+        }
+        
+        // 显示检测结果
+        function displayDetectionResults(data) {
+            const resultsContainer = document.getElementById('detection-results');
+            let html = '';
+            
+            // 网站基本信息
+            if (data.site_info) {
+                html += `
+                    <div style="margin-bottom: 15px;">
+                        <h4 style="margin: 0 0 10px 0; color: #333; font-size: 14px;">
+                            <i class="layui-icon layui-icon-website"></i> 网站信息
+                        </h4>
+                        <div class="mb-3 flex items-start">
+                            <div class="min-w-20 text-gray-600 text-xs mr-3">标题</div>
+                            <div class="flex-1 text-gray-800 text-sm break-all">${data.site_info.title || '未获取到'}</div>
+                        </div>
+                        <div class="mb-3 flex items-start">
+                            <div class="min-w-20 text-gray-600 text-xs mr-3">描述</div>
+                            <div class="flex-1 text-gray-800 text-sm break-all">${data.site_info.description || '未获取到'}</div>
+                        </div>
+                        <div class="mb-3 flex items-start">
+                            <div class="min-w-20 text-gray-600 text-xs mr-3">语言</div>
+                            <div class="flex-1 text-gray-800 text-sm break-all">${data.site_info.language || '未知'}</div>
+                        </div>
+                        <div class="mb-3 flex items-start">
+                            <div class="min-w-20 text-gray-600 text-xs mr-3">字符集</div>
+                            <div class="flex-1 text-gray-800 text-sm break-all">${data.site_info.charset || '未知'}</div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // 反向链接检查
+            if (data.backlink_check) {
+                const backlink = data.backlink_check;
+                const status = backlink.found ? 'success' : (backlink.domain_mentioned ? 'warning' : 'danger');
+                const statusText = backlink.found ? '已找到反链' : (backlink.domain_mentioned ? '提到域名但无链接' : '未找到反链');
+                
+                html += `
+                    <div style="margin-bottom: 15px;">
+                        <h4 style="margin: 0 0 10px 0; color: #333; font-size: 14px;">
+                            <i class="layui-icon layui-icon-link"></i> 反向链接检查
+                        </h4>
+                        <div class="mb-3 flex items-start">
+                            <div class="min-w-20 text-gray-600 text-xs mr-3">状态</div>
+                            <div class="flex-1 text-gray-800 text-sm break-all">
+                                <span class="inline-block px-2 py-1 rounded-full text-xs font-bold ${status === 'success' ? 'bg-green-100 text-green-800' : status === 'warning' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}">${statusText}</span>
+                            </div>
+                        </div>
+                        <div class="mb-3 flex items-start">
+                            <div class="min-w-20 text-gray-600 text-xs mr-3">链接数量</div>
+                            <div class="flex-1 text-gray-800 text-sm break-all">${backlink.link_count}</div>
+                        </div>
+                `;
+                
+                if (backlink.links && backlink.links.length > 0) {
+                    html += `
+                        <div class="mb-3 flex items-start">
+                            <div class="min-w-20 text-gray-600 text-xs mr-3">找到的链接</div>
+                            <div class="flex-1 text-gray-800 text-sm break-all">
+                    `;
+                    backlink.links.forEach(link => {
+                        html += `
+                            <div class="bg-gray-50 p-2 my-1 rounded border-l-4 border-green-500">
+                                <div class="max-w-full break-all bg-gray-100 px-2 py-1 rounded font-mono text-xs">${link.url}</div>
+                                <div class="mt-1 text-xs text-gray-600">
+                                    锚文本: ${link.text || '(无文本)'}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += `
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                html += '</div>';
+            }
+            
+            // 性能信息
+            if (data.performance) {
+                html += `
+                    <div style="margin-bottom: 15px;">
+                        <h4 style="margin: 0 0 10px 0; color: #333; font-size: 14px;">
+                            <i class="layui-icon layui-icon-time"></i> 性能信息
+                        </h4>
+                        <div class="mb-3 flex items-start">
+                            <div class="min-w-20 text-gray-600 text-xs mr-3">加载时间</div>
+                            <div class="flex-1 text-gray-800 text-sm break-all">${data.performance.load_time}</div>
+                        </div>
+                        <div class="mb-3 flex items-start">
+                            <div class="min-w-20 text-gray-600 text-xs mr-3">内容大小</div>
+                            <div class="flex-1 text-gray-800 text-sm break-all">${data.performance.content_size}</div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // SEO信息
+            if (data.seo) {
+                html += `
+                    <div style="margin-bottom: 15px;">
+                        <h4 style="margin: 0 0 10px 0; color: #333; font-size: 14px;">
+                            <i class="layui-icon layui-icon-chart"></i> SEO信息
+                        </h4>
+                        <div class="mb-3 flex items-start">
+                            <div class="min-w-20 text-gray-600 text-xs mr-3">H1标签</div>
+                            <div class="flex-1 text-gray-800 text-sm break-all">${data.seo.h1_count} 个</div>
+                        </div>
+                        <div class="mb-3 flex items-start">
+                            <div class="min-w-20 text-gray-600 text-xs mr-3">图片总数</div>
+                            <div class="flex-1 text-gray-800 text-sm break-all">${data.seo.img_total} 个</div>
+                        </div>
+                        <div class="mb-3 flex items-start">
+                            <div class="min-w-20 text-gray-600 text-xs mr-3">缺少Alt</div>
+                            <div class="flex-1 text-gray-800 text-sm break-all">${data.seo.img_without_alt} 个</div>
+                        </div>
+                        <div class="mb-3 flex items-start">
+                            <div class="min-w-20 text-gray-600 text-xs mr-3">外部链接</div>
+                            <div class="flex-1 text-gray-800 text-sm break-all">${data.seo.external_links} 个</div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // 安全信息
+            if (data.security) {
+                html += `
+                    <div style="margin-bottom: 15px;">
+                        <h4 style="margin: 0 0 10px 0; color: #333; font-size: 14px;">
+                            <i class="layui-icon layui-icon-vercode"></i> 安全检查
+                        </h4>
+                        <div class="mb-3 flex items-start">
+                            <div class="min-w-20 text-gray-600 text-xs mr-3">HTTPS</div>
+                            <div class="flex-1 text-gray-800 text-sm break-all">
+                                <span class="inline-block px-2 py-1 rounded-full text-xs font-bold ${data.security.https ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                    ${data.security.https ? '已启用' : '未启用'}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="mb-3 flex items-start">
+                            <div class="min-w-20 text-gray-600 text-xs mr-3">CSP头</div>
+                            <div class="flex-1 text-gray-800 text-sm break-all">
+                                <span class="inline-block px-2 py-1 rounded-full text-xs font-bold ${data.security.csp ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
+                                    ${data.security.csp ? '已设置' : '未设置'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            resultsContainer.innerHTML = html;
+        }
+        
+        // 加载iframe
+        function loadIframe() {
+            const iframe = document.getElementById('site-preview');
+            const loading = document.getElementById('iframe-loading');
+            
+            iframe.onload = function() {
+                loading.style.display = 'none';
+            };
+            
+            iframe.onerror = function() {
+                loading.innerHTML = `
+                    <div style="text-align: center;">
+                        <i class="layui-icon layui-icon-close" style="font-size: 30px; color: #dc3545;"></i>
+                        <p style="margin-top: 10px; color: #dc3545;">无法加载网站预览</p>
+                        <p style="color: #666; font-size: 12px;">可能是目标网站禁止了iframe嵌入</p>
+                    </div>
+                `;
+            };
+            
+            iframe.src = linkData.url;
+        }
+        
+        // 工具栏功能
+        function refreshIframe() {
+            const iframe = document.getElementById('site-preview');
+            const loading = document.getElementById('iframe-loading');
+            loading.style.display = 'flex';
+            iframe.src = iframe.src;
+        }
+        
+        function openInNewWindow() {
+            if (linkData) {
+                window.open(linkData.url, '_blank');
+            }
+        }
+        
+        function toggleMobileView() {
+            const iframe = document.getElementById('site-preview');
+            isMobileView = !isMobileView;
+            
+            if (isMobileView) {
+                iframe.style.width = '375px';
+                iframe.style.margin = '0 auto';
+                iframe.style.border = '1px solid #ccc';
+                iframe.style.borderRadius = '10px';
+                iframe.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+            } else {
+                iframe.style.width = '100%';
+                iframe.style.margin = '0';
+                iframe.style.border = 'none';
+                iframe.style.borderRadius = '0';
+                iframe.style.boxShadow = 'none';
+            }
+        }
+        
+        function toggleMobileUA() {
+            if (!linkData) {
+                layui.layer.msg('请先加载链接信息');
+                return;
+            }
+            
+            const iframe = document.getElementById('site-preview');
+            const loading = document.getElementById('iframe-loading');
+            
+            // 显示加载状态
+            loading.style.display = 'flex';
+            loading.innerHTML = `
+                <div style="text-align: center;">
+                    <i class="layui-icon layui-icon-loading layui-anim layui-anim-rotate layui-anim-loop" style="font-size: 30px; color: #007bff;"></i>
+                    <p style="margin-top: 10px; color: #666;">正在以移动端模式加载...</p>
+                </div>
+            `;
+            
+            // 创建一个新的iframe来模拟移动端UA
+            const newIframe = document.createElement('iframe');
+            newIframe.className = 'site-iframe';
+            newIframe.style.width = '375px';
+            newIframe.style.margin = '0 auto';
+            newIframe.style.border = '1px solid #ccc';
+            newIframe.style.borderRadius = '10px';
+            newIframe.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+            
+            // 设置移动端User-Agent（通过代理或服务端实现）
+            // 这里我们通过添加移动端视口和样式来模拟
+            newIframe.onload = function() {
+                loading.style.display = 'none';
+                try {
+                    // 尝试注入移动端视口meta标签
+                    const iframeDoc = newIframe.contentDocument || newIframe.contentWindow.document;
+                    if (iframeDoc) {
+                        const viewport = iframeDoc.createElement('meta');
+                        viewport.name = 'viewport';
+                        viewport.content = 'width=device-width, initial-scale=1.0';
+                        iframeDoc.head.appendChild(viewport);
+                    }
+                } catch (e) {
+                    // 跨域限制，无法操作iframe内容
+                    console.log('无法操作iframe内容（跨域限制）');
+                }
+            };
+            
+            newIframe.onerror = function() {
+                loading.innerHTML = `
+                    <div style="text-align: center;">
+                        <i class="layui-icon layui-icon-close" style="font-size: 30px; color: #dc3545;"></i>
+                        <p style="margin-top: 10px; color: #dc3545;">无法加载移动端预览</p>
+                        <p style="color: #666; font-size: 12px;">可能是目标网站禁止了iframe嵌入</p>
+                    </div>
+                `;
+            };
+            
+            // 替换当前iframe
+            const previewPanel = document.querySelector('.preview-panel');
+            const oldIframe = document.getElementById('site-preview');
+            newIframe.id = 'site-preview';
+            previewPanel.replaceChild(newIframe, oldIframe);
+            
+            // 设置URL，添加移动端标识参数
+            const url = new URL(linkData.url);
+            url.searchParams.set('mobile', '1');
+            newIframe.src = url.toString();
+            
+            isMobileView = true;
+            layui.layer.msg('已切换到移动端UA模式', {icon: 1});
+        }
+        
+        function takeScreenshot() {
+            layui.layer.msg('截图功能需要浏览器扩展支持', {icon: 0});
+        }
+        
+        function viewSource() {
+            if (linkData) {
+                window.open(`view-source:${linkData.url}`, '_blank');
+            }
+        }
+        
+        function speedTest() {
+            layui.layer.msg('正在测试网站速度...', {icon: 16, time: 2000});
+            // 这里可以集成第三方测速API
+        }
+        
+        // 审核操作
+        function approveLink() {
+            if (!linkData) {
+                layui.layer.msg('链接信息未加载');
+                return;
+            }
+            
+            layui.layer.confirm('确定要通过这个友链申请吗？', {
+                btn: ['确定', '取消']
+            }, function(index) {
+                // 发送审核通过请求
+                fetch(`/app/admin/link/edit/${linkData.id}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `name=${encodeURIComponent(linkData.name)}&url=${encodeURIComponent(linkData.url)}&status=1`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 0) {
+                        layui.layer.msg('审核通过成功', {icon: 1});
+                        setTimeout(() => {
+                            goBack();
+                        }, 1500);
+                    } else {
+                        layui.layer.msg('操作失败：' + data.msg, {icon: 2});
+                    }
+                })
+                .catch(error => {
+                    layui.layer.msg('网络错误', {icon: 2});
+                });
+                
+                layui.layer.close(index);
+            });
+        }
+        
+        function rejectLink() {
+            if (!linkData) {
+                layui.layer.msg('链接信息未加载');
+                return;
+            }
+            
+            layui.layer.prompt({
+                title: '请输入拒绝原因',
+                formType: 2,
+                value: '不符合友链申请条件',
+                area: ['300px', '150px']
+            }, function(value, index) {
+                // 发送拒绝请求
+                fetch(`/app/admin/link/batchReject/${linkData.id}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `reason=${encodeURIComponent(value)}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 0) {
+                        layui.layer.msg('已拒绝申请', {icon: 1});
+                        setTimeout(() => {
+                            goBack();
+                        }, 1500);
+                    } else {
+                        layui.layer.msg('操作失败：' + data.msg, {icon: 2});
+                    }
+                })
+                .catch(error => {
+                    layui.layer.msg('网络错误', {icon: 2});
+                });
+                
+                layui.layer.close(index);
+            });
+        }
+        
+        function editLink() {
+            if (linkData) {
+                window.open(`/app/admin/link/edit/${linkData.id}`, '_blank');
+            }
+        }
+        
+        // 显示检测错误
+        function displayDetectionError(title, message, showRetry = false) {
+            const resultsContainer = document.getElementById('detection-results');
+            let html = `
+                <div class="text-center py-8 px-5 text-gray-600 bg-gray-50 rounded-lg my-3">
+                    <div class="text-5xl text-red-600 mb-4">⚠️</div>
+                    <div class="text-base font-bold text-gray-800 mb-2">${title}</div>
+                    <div class="text-sm text-gray-600 leading-relaxed">${message}</div>
+            `;
+            
+            if (showRetry) {
+                html += `<button class="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white border-none rounded cursor-pointer text-sm transition-colors duration-300" onclick="detectSite()">重新检测</button>`;
+            }
+            
+            html += '</div>';
+            resultsContainer.innerHTML = html;
+        }
+        
+        // 工具栏拖拽功能
+        let isDragging = false;
+        let dragOffset = { x: 0, y: 0 };
+        
+        function initToolbarDrag() {
+            const toolbar = document.getElementById('floating-toolbar');
+            
+            toolbar.addEventListener('mousedown', function(e) {
+                isDragging = true;
+                const rect = toolbar.getBoundingClientRect();
+                dragOffset.x = e.clientX - rect.left;
+                dragOffset.y = e.clientY - rect.top;
+                toolbar.style.cursor = 'grabbing';
+                e.preventDefault();
+            });
+            
+            document.addEventListener('mousemove', function(e) {
+                if (!isDragging) return;
+                
+                const toolbar = document.getElementById('floating-toolbar');
+                const x = e.clientX - dragOffset.x;
+                const y = e.clientY - dragOffset.y;
+                
+                // 限制在窗口范围内
+                const maxX = window.innerWidth - toolbar.offsetWidth;
+                const maxY = window.innerHeight - toolbar.offsetHeight;
+                
+                const constrainedX = Math.max(0, Math.min(x, maxX));
+                const constrainedY = Math.max(0, Math.min(y, maxY));
+                
+                toolbar.style.left = constrainedX + 'px';
+                toolbar.style.top = constrainedY + 'px';
+                toolbar.style.right = 'auto';
+                toolbar.style.transform = 'none';
+            });
+            
+            document.addEventListener('mouseup', function() {
+                if (isDragging) {
+                    isDragging = false;
+                    const toolbar = document.getElementById('floating-toolbar');
+                    toolbar.style.cursor = 'move';
+                }
+            });
+        }
+        
+        function goBack() {
+            window.history.back();
+        }
+        
+        // 页面加载完成后初始化拖拽功能
+        document.addEventListener('DOMContentLoaded', function() {
+            initToolbarDrag();
+        });
+    </script>
+</body>
+</html>

@@ -1,1045 +1,314 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="zh-CN">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>媒体库</title>
-    <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css"/>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/app/admin/admin/css/media-library.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    // 移除所有动画配置
+                }
+            }
+        }
+    </script>
+    <style>
+        .media-item {
+            /* 移除所有transition */
+        }
+        .media-item:hover {
+            /* 移除悬停动画 */
+        }
+        .media-item.selected {
+            /* 移除选中动画 */
+        }
+        .upload-area {
+            /* 移除transition */
+        }
+        .upload-area.dragover {
+            background-color: rgb(239 246 255);
+            border-color: rgb(59 130 246);
+            /* 移除transform scale */
+        }
+        .loading-spinner {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .toast {
+            /* 移除动画 */
+        }
+    </style>
 </head>
-
-<body class="bg-gray-100 pear-container">
-<div class="layui-card rounded-lg shadow-sm">
-    <div class="layui-card-body">
-        <form id="mediaForm" class="layui-form" action="">
-            <div class="layui-form-item">
-                <div class="layui-inline">
-                    <label class="layui-form-label font-medium">文件名称</label>
-                    <div class="layui-input-inline">
-                        <input type="text" name="search" placeholder="请输入文件名称" class="layui-input">
-                    </div>
+<body class="bg-gray-50 min-h-screen">
+    <!-- 顶部导航栏 -->
+    <div class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <h1 class="text-2xl font-bold text-gray-900 flex items-center">
+                        <svg class="w-8 h-8 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        媒体库
+                    </h1>
                 </div>
-                <div class="layui-inline">
-                    <label class="layui-form-label font-medium">文件类型</label>
-                    <div class="layui-input-inline">
-                        <select name="mime_type" class="layui-input">
-                            <option value="">全部类型</option>
-                            <option value="image">图片</option>
-                            <option value="video">视频</option>
-                            <option value="audio">音频</option>
-                            <option value="document">文档</option>
-                        </select>
+                <div class="flex items-center space-x-4">
+                    <div class="text-sm text-gray-500">
+                        共 <span id="total-count" class="font-medium text-gray-900">0</span> 个文件
                     </div>
-                </div>
-                <div class="layui-inline ml-[50px]">
-                    <button class="pear-btn pear-btn-md pear-btn-primary" lay-submit lay-filter="media-query">
-                        <i class="layui-icon layui-icon-search"></i>
-                        查询
+                    <button id="view-toggle" class="p-2 text-gray-400 hover:text-gray-600">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+                        </svg>
                     </button>
-                    <button type="reset" class="pear-btn pear-btn-md">
-                        <i class="layui-icon layui-icon-refresh"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主内容区域 -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- 搜索和筛选栏 -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+            <form id="search-form" class="space-y-4 lg:space-y-0 lg:flex lg:items-end lg:space-x-4">
+                <div class="flex-1">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">搜索文件</label>
+                    <div class="relative">
+                        <input type="text" id="search-input" placeholder="输入文件名搜索..." 
+                               class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <svg class="absolute left-3 top-3.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </div>
+                </div>
+                <div class="lg:w-48">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">文件类型</label>
+                    <select id="type-filter" class="w-full py-3 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="">全部类型</option>
+                        <option value="image">图片</option>
+                        <option value="video">视频</option>
+                        <option value="audio">音频</option>
+                        <option value="application">文档</option>
+                    </select>
+                </div>
+                <div class="flex space-x-3">
+                    <button type="submit" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                        搜索
+                    </button>
+                    <button type="button" id="reset-btn" class="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
                         重置
                     </button>
                 </div>
-            </div>
-        </form>
-    </div>
-</div>
-<div class="layui-card rounded-lg shadow-sm">
-    <div class="layui-card-body">
-        <div class="layui-btn-group mb-4">
-            <button class="pear-btn pear-btn-primary pear-btn-md mr-2.5" id="upload-btn">
-                <i class="layui-icon layui-icon-upload"></i>
-                上传媒体
-            </button>
-            <button class="pear-btn pear-btn-danger pear-btn-md mr-2.5" id="batch-remove-btn">
-                <i class="layui-icon layui-icon-delete"></i>
-                批量删除
-            </button>
-            <button class="pear-btn pear-btn-md" id="refresh-btn">
-                <i class="layui-icon layui-icon-refresh"></i>
-                刷新
-            </button>
+            </form>
         </div>
 
-        <!-- 媒体网格视图 -->
-        <div id="media-grid" class="layui-row"></div>
-
-        <!-- 分页控件 -->
-        <div id="media-pagination" class="layui-box layui-laypage layui-laypage-default mt-4"></div>
-    </div>
-</div>
-
-<!-- 编辑媒体弹窗 -->
-<div id="edit-media-modal" style="display: none;">
-    <form class="layui-form" id="edit-media-form">
-        <input type="hidden" name="id" id="media-id">
-        <div class="layui-form-item">
-            <label class="layui-form-label">替代文本</label>
-            <div class="layui-input-block">
-                <input type="text" name="alt_text" id="alt_text" placeholder="请输入替代文本" class="layui-input no-animation">
-            </div>
-        </div>
-        <div class="layui-form-item">
-            <label class="layui-form-label">说明文字</label>
-            <div class="layui-input-block">
-                <input type="text" name="caption" id="caption" placeholder="请输入说明文字" class="layui-input">
-            </div>
-        </div>
-        <div class="layui-form-item">
-            <label class="layui-form-label">描述</label>
-            <div class="layui-input-block">
-                <textarea name="description" id="description" placeholder="请输入描述"
-                          class="layui-textarea"></textarea>
-            </div>
-        </div>
-        <div class="layui-form-item">
-            <div class="layui-input-block">
-                <button class="layui-btn layui-btn-primary" type="button" id="cancel-edit">取消</button>
-                <button class="layui-btn layui-btn-normal" lay-submit lay-filter="save-media">保存</button>
-            </div>
-        </div>
-    </form>
-</div>
-
-<!-- 上传媒体弹窗 -->
-<div id="upload-modal" style="display: none;">
-    <form class="layui-form" id="upload-form">
-        <div class="layui-form-item">
-            <label class="layui-form-label">选择媒体</label>
-            <div class="layui-input-block">
-                <button type="button" class="layui-btn" id="select-file-btn">
-                    <i class="layui-icon">&#xe67c;</i>选择媒体
+        <!-- 操作栏 -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
+            <div class="flex flex-wrap items-center space-x-3">
+                <button id="upload-btn" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                    </svg>
+                    上传文件
                 </button>
-                <input type="file" name="file" id="file-input" style="display: none;">
-                <div id="file-name" class="mt-2.5"></div>
+                <button id="batch-delete-btn" class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 opacity-50 cursor-not-allowed" disabled>
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                    批量删除
+                </button>
+                <button id="select-all-btn" class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    全选
+                </button>
+            </div>
+            <div class="flex items-center space-x-3">
+                <span id="selected-count" class="text-sm text-gray-500">已选择 0 个文件</span>
+                <button id="refresh-btn" class="p-2 text-gray-400 hover:text-gray-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                </button>
             </div>
         </div>
-        <div class="layui-form-item">
-            <label class="layui-form-label">替代文本</label>
-            <div class="layui-input-block">
-                <input type="text" name="alt_text" placeholder="请输入替代文本" class="layui-input">
-            </div>
+
+        <!-- 媒体网格 -->
+        <div id="media-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 mb-8">
+            <!-- 媒体项将在这里动态生成 -->
         </div>
-        <div class="layui-form-item">
-            <label class="layui-form-label">说明文字</label>
-            <div class="layui-input-block">
-                <input type="text" name="caption" placeholder="请输入说明文字" class="layui-input">
-            </div>
+
+        <!-- 分页 -->
+        <div id="pagination" class="flex justify-center items-center space-x-2">
+            <!-- 分页控件将在这里动态生成 -->
         </div>
-        <div class="layui-form-item">
-            <label class="layui-form-label">描述</label>
-            <div class="layui-input-block">
-                <textarea name="description" placeholder="请输入描述" class="layui-textarea"></textarea>
-            </div>
-        </div>
-        <div class="layui-form-item">
-            <div class="layui-input-block">
-                <button class="layui-btn layui-btn-primary" type="button" id="cancel-upload">取消</button>
-                <button class="layui-btn layui-btn-normal" type="button" id="submit-upload">上传</button>
-            </div>
-        </div>
-    </form>
-</div>
+    </div>
 
-<script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
-<script src="/app/admin/component/pear/pear.js"></script>
-<script>
-    layui.use(['table', 'form', 'jquery', 'layer', 'upload'], function () {
-        let table = layui.table;
-        let form = layui.form;
-        let $ = layui.jquery;
-        let layer = layui.layer;
-        let upload = layui.upload;
-
-        // 重新生成缩略图
-        function regenerateThumbnail(id) {
-            layer.confirm('确定要重新生成缩略图吗？', {
-                icon: 3,
-                title: '提示'
-            }, function (index) {
-                layer.close(index);
-
-                const loading = layer.load();
-
-                $.ajax({
-                    url: MODULE_PATH + 'regenerateThumbnail/' + id,
-                    dataType: 'json',
-                    type: 'post',
-                    success: function (result) {
-                        layer.close(loading);
-                        if (result.code === 0) {
-                            layer.msg('缩略图生成成功', {icon: 1});
-                            // 重新加载媒体列表
-                            loadMediaList();
-                            // 关闭当前弹窗
-                            layer.closeAll('page');
-                        } else {
-                            layer.msg(result.msg, {icon: 2});
-                        }
-                    },
-                    error: function () {
-                        layer.close(loading);
-                        layer.msg('操作失败', {icon: 2});
-                    }
-                });
-            });
-        }
-
-        // 复制到剪贴板
-        function copyToClipboard(text) {
-            const textarea = document.createElement('textarea');
-            textarea.value = text;
-            document.body.appendChild(textarea);
-            textarea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textarea);
-
-            layer.msg('已复制到剪贴板', {icon: 1});
-        }
-
-        // 获取缩略图大小
-        function getThumbSize(thumbPath, itemId) {
-            // 创建一个临时的图片对象来获取尺寸
-            const img = new Image();
-            img.onload = function () {
-                const sizeElement = document.getElementById(`thumb-size-${itemId}`);
-                if (sizeElement) {
-                    sizeElement.innerHTML = `${this.width} × ${this.height} 像素`;
-                }
-            };
-            img.src = thumbPath;
-        }
-
-        // 定义 preview 函数
-        window.preview = function (item) {
-            // 获取文件路径
-            let filePath = '/uploads/' + item.file_path;
-            let thumbPath = item.thumb_path ? '/uploads/' + item.thumb_path : null;
-
-            // 创建弹窗内容，包含文件详细信息
-            let content = `
-                <div class="flex flex-col h-full">
-                    <div class="p-5 bg-gray-100 border-b border-gray-300">
-                        <h4 class="m-0 text-gray-800">${item.original_name}</h4>
-                        <div class="mt-2.5 text-gray-600 text-sm">
-                            <p>文件类型: ${item.mime_type}</p>
-                            <p>文件大小: ${formatFileSize(item.file_size)}</p>
-                            <p>上传时间: ${formatDate(item.created_at)}</p>
-                            <p>作者: ${item.author ? item.author.nickname : '未知'}</p>
-                        </div>
-                    </div>
-                    <div class="flex-1 flex flex-row overflow-hidden">
-                        <div class="flex-1 p-5 overflow-auto">
-                            <div class="flex justify-center items-center h-full min-h-[300px]">
-                                ${item.mime_type && item.mime_type.startsWith('image/') ?
-                `<div class="max-w-full max-h-full flex justify-center items-center">
-                                    <img src="${filePath}" alt="${item.original_name}" class="max-w-full max-h-[400px] object-contain">
-                                </div>` : ''}
-                                ${item.mime_type && item.mime_type.startsWith('video/') ?
-                `<div class="w-full h-full flex justify-center items-center">
-                                    <video src="${filePath}" controls class="max-w-full max-h-full"></video>
-                                </div>` : ''}
-                                ${item.mime_type && item.mime_type.startsWith('audio/') ?
-                `<div class="w-full flex justify-center items-center flex-1">
-                                    <audio src="${filePath}" controls class="w-full"></audio>
-                                </div>` : ''}
-                                ${item.mime_type && item.mime_type.includes('pdf') ?
-                `<div class="w-full h-full">
-                                    <embed src="${filePath}" type="application/pdf" width="100%" height="100%">
-                                </div>` : ''}
-                            </div>
-                            
-                            <!-- 操作按钮 -->
-                            <div class="mt-5 text-center">
-                                ${item.mime_type && item.mime_type.startsWith('image/') ?
-                `<a href="${filePath}" target="_blank" class="pear-btn pear-btn-primary pear-btn-sm mx-1">
-                                    <i class="layui-icon layui-icon-release"></i>新窗口预览
-                                </a>` : ''}
-                                <a href="${filePath}" download="${item.original_name}" class="pear-btn pear-btn-success pear-btn-sm mx-1">
-                                    <i class="layui-icon layui-icon-download-circle"></i>下载文件
-                                </a>
-                                <button class="pear-btn pear-btn-warming pear-btn-sm mx-1" id="copy-link-btn">
-                                    <i class="layui-icon layui-icon-link"></i>复制链接
-                                </button>
-                                ${item.mime_type && item.mime_type.startsWith('image/') ?
-                `<button class="pear-btn pear-btn-normal pear-btn-sm mx-1" id="copy-md-btn">
-                                    <i class="layui-icon layui-icon-code-circle"></i>Markdown
-                                </button>` : ''}
-                            </div>
-                        </div>
-                        
-                        <div class="w-[300px] border-l border-gray-300 p-5 overflow-auto bg-gray-100">
-                            <h4 class="mt-0 text-gray-800">文件详细信息</h4>
-                            <table class="layui-table">
-                                <tbody>
-                                    <tr>
-                                        <td class="w-[100px]">ID</td>
-                                        <td>${item.id}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>文件名</td>
-                                        <td>${item.filename}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>原始文件名</td>
-                                        <td>${item.original_name}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>作者</td>
-                                        <td>${item.author ? item.author.nickname : '未知'}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>文件路径</td>
-                                        <td>${item.file_path}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>文件大小</td>
-                                        <td>${formatFileSize(item.file_size)}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>MIME类型</td>
-                                        <td>${item.mime_type}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>替代文本</td>
-                                        <td>${item.alt_text || '无'}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>说明文字</td>
-                                        <td>${item.caption || '无'}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>描述</td>
-                                        <td>${item.description || '无'}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>文件上传时间</td>
-                                        <td>${formatDate(item.created_at)}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>元数据更新时间</td>
-                                        <td>${formatDate(item.updated_at)}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                            
-                            ${item.mime_type && item.mime_type.startsWith('image/') ?
-                `<h4 class="text-gray-800">缩略图信息</h4>
-                            ${thumbPath ?
-                    `<div class="text-center mb-4">
-                                <img src="${thumbPath}" alt="缩略图" class="max-w-full h-auto border border-gray-300 rounded">
-                            </div>
-                            <table class="layui-table">
-                                <tbody>
-                                    <tr>
-                                        <td class="w-[100px]">缩略图路径</td>
-                                        <td>${item.thumb_path}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>缩略图大小</td>
-                                        <td id="thumb-size-${item.id}">计算中...</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                            <button class="pear-btn pear-btn-danger pear-btn-sm" id="regenerate-thumb-btn">
-                                <i class="layui-icon layui-icon-refresh"></i>重新生成缩略图
-                            </button>` :
-                    `<p>该图片尚未生成缩略图</p>
-                            <button class="pear-btn pear-btn-danger pear-btn-sm" id="regenerate-thumb-btn">
-                                <i class="layui-icon layui-icon-refresh"></i>生成缩略图
-                            </button>`}` : ''}
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            // 显示弹窗
-            layer.open({
-                type: 1,
-                title: item.original_name,
-                area: ['90%', '90%'],
-                content: content,
-                maxmin: true,
-                btn: ['关闭'],
-                yes: function (index, layero) {
-                    layer.close(index);
-                },
-                success: function (layero, index) {
-                    layer.full(index); // 最大化
-                    // 获取缩略图大小
-                    if (thumbPath) {
-                        getThumbSize(thumbPath, item.id);
-                    }
-
-                    // 绑定事件
-                    const container = layero.find('.layui-layer-content');
-                    container.find('#regenerate-thumb-btn').on('click', function () {
-                        regenerateThumbnail(item.id);
-                    });
-
-                    container.find('#copy-link-btn').on('click', function () {
-                        copyToClipboard(window.location.origin + filePath);
-                    });
-
-                    container.find('#copy-md-btn').on('click', function () {
-                        copyToClipboard(`![](${window.location.origin + filePath})`);
-                    });
-                }
-            });
-        };
-
-        // 添加格式化日期的函数
-        function formatDate(dateString) {
-            if (!dateString) return '未知';
-            const date = new Date(dateString);
-            return date.toLocaleString();
-        }
-
-        // 添加格式化文件大小的函数
-        function formatFileSize(bytes) {
-            if (bytes === 0) return '0 Bytes';
-
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-        }
-
-        let MODULE_PATH = "/app/admin/media/";
-        let currentPage = 1;
-        let totalCount = 0;
-        let pageSize = 16;
-        let selectedItems = [];
-
-        // 展开/折叠表单
-        formToggle({
-            elem: "#mediaForm",
-        });
-
-        function formToggle(options) {
-            var defaultsOpt = {
-                isExpand: false,
-                prefixIcon: "layui-icon",
-                toggleIcon: ['layui-icon-down', 'layui-icon-up'],
-                toggleText: ['展开', '折叠'],
-            }
-            var opt = $.extend({}, defaultsOpt, options);
-            var elem = opt.elem; // 绑定的表单元素,必填
-            var min = opt.min; // 最小显示数,默认显示一行
-            var isExpand = opt.isExpand; // 初始展开
-            var prefixIcon = opt.prefixIcon + " "; // 图标前缀
-            var toggleIcon = opt.toggleIcon; // 折叠和展开时的图标类[unExpandIcon, ExpandIcon]
-            var toggleText = opt.toggleText; // 折叠和展开时的文本
-
-            var eleDOM = $(elem + " .layui-inline");
-            var firstElTop = eleDOM.first().offset().top;
-            var targetEl = eleDOM.filter(function (index) {
-                var isGtMin = (index + 1) > min;
-                var isGtFirstElTop = $(this).offset().top > firstElTop;
-                var isNeqLast = (index + 1) != eleDOM.length;
-                return min ? isGtMin && isNeqLast : isGtFirstElTop && isNeqLast;
-            });
-
-            var unExpandIcon = prefixIcon + toggleIcon[0];
-            var expandIcon = prefixIcon + toggleIcon[1];
-            var unExpandText = toggleText[0];
-            var expandText = toggleText[1];
-            var btnSelector = elem + " .expand";
-            $(btnSelector).append("<i></i>")
-            if (targetEl.length > 0) {
-                if (isExpand) {
-                    $(btnSelector).prepend("<span>" + expandText + "</span>");
-                    $(btnSelector + ">i").addClass(expandIcon);
-                } else {
-                    $(btnSelector).prepend("<span>" + unExpandText + "</span>")
-                    $(btnSelector + ">i").addClass(unExpandIcon)
-                    targetEl.addClass("layui-hide");
-                }
-                $(btnSelector).click(function () {
-                    isExpand = !isExpand;
-                    if (isExpand) {
-                        $(btnSelector + ">span").html(expandText);
-                        $(btnSelector + ">i").removeClass(unExpandIcon).addClass(expandIcon);
-                        targetEl.removeClass("layui-hide")
-                    } else {
-                        $(btnSelector + ">span").html(unExpandText);
-                        $(btnSelector + ">i").removeClass(expandIcon).addClass(unExpandIcon);
-                        targetEl.addClass("layui-hide")
-                    }
-                })
-            }
-        }
-
-        // 渲染媒体网格
-        function renderMediaGrid(data) {
-            let html = '';
-
-            // 显示空状态
-            if (!data || data.length === 0) {
-                html = `
-                <div class="text-center py-15 text-gray-500">
-                    <i class="layui-icon layui-icon-picture text-5xl block text-gray-300 mb-4"></i>
-                    <p>暂无媒体文件</p>
-                    <button class="pear-btn pear-btn-primary pear-btn-sm mt-4" onclick="window.upload()">
-                        <i class="layui-icon layui-icon-upload"></i>上传媒体
+    <!-- 上传模态框 -->
+    <div id="upload-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-scale-in">
+            <div class="p-6 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-semibold text-gray-900">上传文件</h3>
+                    <button id="close-upload-modal" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
                     </button>
                 </div>
-                `;
-                $('#media-grid').html(html);
-                return;
-            }
+            </div>
+            <div class="p-6">
+                <form id="upload-form">
+                    <!-- 拖拽上传区域 -->
+                    <div id="upload-area" class="upload-area border-2 border-dashed border-gray-300 rounded-lg p-8 text-center mb-6 cursor-pointer hover:border-blue-400 hover:bg-blue-50">
+                        <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                        </svg>
+                        <p class="text-lg font-medium text-gray-900 mb-2">拖拽文件到这里或点击选择</p>
+                        <p class="text-sm text-gray-500">支持 JPG、PNG、GIF、WebP、MP4、PDF 等格式，最大 10MB</p>
+                        <input type="file" id="file-input" class="hidden" multiple accept="image/*,video/*,audio/*,.pdf,.txt">
+                    </div>
 
-            // 渲染媒体项
-            data.forEach(function (item, index) {
-                let isChecked = selectedItems.indexOf(item.id) > -1 ? 'checked' : '';
-                let isSelectedClass = selectedItems.indexOf(item.id) > -1 ? 'border-blue-500 bg-blue-50' : 'border-gray-300';
-                let thumbnailHtml = '';
+                    <!-- 文件列表 -->
+                    <div id="file-list" class="space-y-3 mb-6 hidden">
+                        <!-- 选中的文件将在这里显示 -->
+                    </div>
 
-                // 根据文件类型显示不同的缩略图和样式
-                if (item.mime_type && item.mime_type.startsWith('image/')) {
-                    thumbnailHtml = `<img src="/uploads/${item.file_path}" alt="${item.original_name}" class="max-w-full max-h-full">`;
-                } else if (item.mime_type && item.mime_type.startsWith('video/')) {
-                    thumbnailHtml = `
-                        <i class="layui-icon layui-icon-video text-orange-500 text-4xl"></i>
-                        <div class="absolute bottom-2.5 left-2.5 bg-black bg-opacity-50 text-white px-1.5 py-0.5 rounded text-xs">
-                            视频
+                    <!-- 文件信息 -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">替代文本</label>
+                            <input type="text" id="alt-text" placeholder="图片的替代文本" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                         </div>
-                    `;
-                } else if (item.mime_type && item.mime_type.startsWith('audio/')) {
-                    thumbnailHtml = `
-                        <i class="layui-icon layui-icon-music text-teal-500 text-4xl"></i>
-                        <div class="absolute bottom-2.5 left-2.5 bg-black bg-opacity-50 text-white px-1.5 py-0.5 rounded text-xs">
-                            音频
-                        </div>
-                    `;
-                } else if (item.mime_type && item.mime_type.includes('pdf')) {
-                    thumbnailHtml = `
-                        <i class="layui-icon layui-icon-file-pdf text-red-500 text-4xl"></i>
-                        <div class="absolute bottom-2.5 left-2.5 bg-black bg-opacity-50 text-white px-1.5 py-0.5 rounded text-xs">
-                            PDF
-                        </div>
-                    `;
-                } else {
-                    thumbnailHtml = `<i class="layui-icon layui-icon-file text-gray-500 text-4xl"></i>`;
-                }
-
-                // 添加延迟动画效果
-                let animationDelay = (index % 8) * 0.05 + 's';
-
-                html += `
-                <div class="layui-col-xs6 layui-col-sm4 layui-col-md3 layui-col-lg2">
-                    <div class="group border ${isSelectedClass} rounded-lg p-2 mb-4 relative cursor-pointer bg-white shadow-sm hover:border-blue-500 hover:shadow-md overflow-hidden transition-all duration-300" style="animation-delay: ${animationDelay}">
-                        <div class="absolute top-2 left-2 z-10">
-                            <input type="checkbox" name="media-item" lay-skin="primary" value="${item.id}" ${isChecked}>
-                        </div>
-                        <div class="w-full h-[150px] flex items-center justify-center bg-gray-100 rounded overflow-hidden relative">
-                            ${thumbnailHtml}
-                        </div>
-                        <div class="mt-2 text-xs text-gray-600">
-                            <div class="whitespace-nowrap overflow-hidden text-ellipsis mb-1 font-medium" title="${item.original_name}">${item.original_name}</div>
-                            <div class="text-gray-400">${formatFileSize(item.file_size)} · ${formatDateShort(item.created_at)}</div>
-                        </div>
-                        <div class="absolute bottom-2 right-2 flex gap-1 opacity-0 transform translate-y-2.5 transition-all duration-300 group-hover:opacity-100 group-hover:translate-y-0">
-                            <button class="pear-btn pear-btn-primary pear-btn-sm flex items-center justify-center w-7.5 h-7.5 rounded" onclick="window.preview(${JSON.stringify(item).replace(/"/g, '&quot;')})" title="预览">
-                                <i class="layui-icon layui-icon-eye text-sm"></i>
-                            </button>
-                            <button class="pear-btn pear-btn-sm flex items-center justify-center w-7.5 h-7.5 rounded" onclick="window.edit(${JSON.stringify(item).replace(/"/g, '&quot;')})" title="编辑">
-                                <i class="layui-icon layui-icon-edit text-sm"></i>
-                            </button>
-                            <button class="pear-btn pear-btn-danger pear-btn-sm flex items-center justify-center w-7.5 h-7.5 rounded" onclick="window.remove(${JSON.stringify(item).replace(/"/g, '&quot;')})" title="删除">
-                                <i class="layui-icon layui-icon-delete text-sm"></i>
-                            </button>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">说明文字</label>
+                            <input type="text" id="caption" placeholder="文件说明" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                         </div>
                     </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">描述</label>
+                        <textarea id="description" rows="3" placeholder="详细描述" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3 rounded-b-xl">
+                <button id="cancel-upload" class="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
+                    取消
+                </button>
+                <button id="confirm-upload" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                    开始上传
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 编辑模态框 -->
+    <div id="edit-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full animate-scale-in">
+            <div class="p-6 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-semibold text-gray-900">编辑文件信息</h3>
+                    <button id="close-edit-modal" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
                 </div>
-                `;
-            });
+            </div>
+            <div class="p-6">
+                <form id="edit-form">
+                    <input type="hidden" id="edit-id">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">替代文本</label>
+                            <input type="text" id="edit-alt-text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">说明文字</label>
+                            <input type="text" id="edit-caption" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">描述</label>
+                            <textarea id="edit-description" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3 rounded-b-xl">
+                <button id="cancel-edit" class="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
+                    取消
+                </button>
+                <button id="confirm-edit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                    保存
+                </button>
+            </div>
+        </div>
+    </div>
 
-            $('#media-grid').html(html);
-            form.render('checkbox');
-            
-
-            // 绑定复选框事件
-            $('input[name="media-item"]').on('change', function () {
-                updateSelectedItems();
-            });
-
-            // 点击媒体项选中复选框
-            $('.border').on('click', function (e) {
-                // 避免点击操作按钮时触发复选框切换
-                if (!$(e.target).closest('.absolute.bottom-2.right-2, .absolute.top-2.left-2').length) {
-                    const checkbox = $(this).find('input[name="media-item"]');
-                    checkbox.prop('checked', !checkbox.prop('checked'));
-                    form.render('checkbox');
-                    updateSelectedItems();
-
-                    // 选中状态会由updateSelectedItems函数处理
-                    // 这里不需要额外的动画类管理
-                }
-            });
-        }
-
-        // 简短日期格式
-        function formatDateShort(dateString) {
-            if (!dateString) return '未知';
-            const date = new Date(dateString);
-            const now = new Date();
-            const diffTime = Math.abs(now - date);
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-            if (diffDays <= 1) {
-                return '今天';
-            } else if (diffDays <= 7) {
-                return diffDays + '天前';
-            } else {
-                return date.getFullYear() + '-' +
-                    String(date.getMonth() + 1).padStart(2, '0') + '-' +
-                    String(date.getDate()).padStart(2, '0');
-            }
-        }
-
-        // 渲染分页控件
-        function renderPagination(total, current, limit) {
-            layui.laypage.render({
-                elem: 'media-pagination',
-                count: total,
-                limit: limit,
-                curr: current,
-                layout: ['count', 'prev', 'page', 'next', 'skip'],
-                jump: function (obj, first) {
-                    if (!first) {
-                        currentPage = obj.curr;
-                        loadMediaList();
-                    }
-                }
-            });
-        }
-
-        // 加载媒体列表
-        function loadMediaList() {
-            // 显示加载状态
-            $('#media-grid').html(`
-                <div class="flex justify-center items-center py-15 text-gray-500">
-                    <div class="text-center">
-                        <i class="layui-icon layui-icon-loading layui-icon layui-anim layui-anim-spin text-3xl"></i>
-                        <p class="mt-2.5">加载中...</p>
+    <!-- 预览模态框 -->
+    <div id="preview-modal" class="fixed inset-0 bg-black bg-opacity-90 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden animate-scale-in">
+            <div class="p-4 border-b border-gray-200 flex items-center justify-between">
+                <h3 id="preview-title" class="text-lg font-semibold text-gray-900 truncate"></h3>
+                <button id="close-preview-modal" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="flex h-[calc(90vh-120px)]">
+                <div class="flex-1 p-6 flex items-center justify-center bg-gray-50">
+                    <div id="preview-content" class="max-w-full max-h-full">
+                        <!-- 预览内容将在这里显示 -->
                     </div>
                 </div>
-            `);
-
-            // 获取文件类型筛选条件
-            let mimeTypeFilter = $('#mediaForm select[name="mime_type"]').val();
-            let mimeType = '';
-
-            // 根据选择的文件类型设置对应的MIME类型前缀
-            switch (mimeTypeFilter) {
-                case 'image':
-                    mimeType = 'image';
-                    break;
-                case 'video':
-                    mimeType = 'video';
-                    break;
-                case 'audio':
-                    mimeType = 'audio';
-                    break;
-                case 'document':
-                    mimeType = 'application';
-                    break;
-                default:
-                    mimeType = '';
-            }
-
-            $.ajax({
-                url: MODULE_PATH + 'list',
-                dataType: 'json',
-                type: 'get',
-                data: {
-                    page: currentPage,
-                    limit: pageSize,
-                    search: $('#mediaForm input[name="search"]').val(),
-                    mime_type: mimeType
-                },
-                success: function (result) {
-                    if (result.code === 0) {
-                        totalCount = result.total;
-                        renderMediaGrid(result.data);
-                        renderPagination(totalCount, currentPage, pageSize);
-                    } else {
-                        // 显示错误状态
-                        $('#media-grid').html(`
-                            <div class="text-center py-15 text-gray-500">
-                                <i class="layui-icon layui-icon-error-circle text-5xl block text-gray-300 mb-4"></i>
-                                <p>${result.msg || '加载失败'}</p>
-                                <button class="pear-btn pear-btn-primary pear-btn-sm mt-4" onclick="window.refresh()">
-                                    <i class="layui-icon layui-icon-refresh"></i>重试
-                                </button>
-                            </div>
-                        `);
-                        layer.msg(result.msg, {icon: 2});
-                    }
-                },
-                error: function () {
-                    // 显示网络错误状态
-                    $('#media-grid').html(`
-                        <div class="text-center py-15 text-gray-500">
-                            <i class="layui-icon layui-icon-disconnect text-5xl block text-gray-300 mb-4"></i>
-                            <p>网络连接失败</p>
-                            <button class="pear-btn pear-btn-primary pear-btn-sm mt-4" onclick="window.refresh()">
-                                <i class="layui-icon layui-icon-refresh"></i>重试
-                            </button>
-                        </div>
-                    `);
-                }
-            });
-        }
-
-        // 更新选中的项目
-        function updateSelectedItems() {
-            selectedItems = [];
-            $('.border').each(function () {
-                const checkbox = $(this).find('input[name="media-item"]');
-                if (checkbox.prop('checked')) {
-                    selectedItems.push(parseInt(checkbox.val()));
-                    $(this).addClass('border-blue-500 bg-blue-50').removeClass('border-gray-300');
-                } else {
-                    $(this).removeClass('border-blue-500 bg-blue-50').addClass('border-gray-300');
-                }
-            });
-
-            // 更新批量删除按钮状态
-            if (selectedItems.length > 0) {
-                $('#batch-remove-btn').removeClass('layui-btn-disabled opacity-50').prop('disabled', false);
-            } else {
-                $('#batch-remove-btn').addClass('layui-btn-disabled opacity-50').prop('disabled', true);
-            }
-        }
-
-        // 查询表单提交
-        form.on('submit(media-query)', function (data) {
-            currentPage = 1;
-            loadMediaList();
-            return false;
-        });
-
-        // 保存媒体信息
-        form.on('submit(save-media)', function (data) {
-            let loading = layer.load();
-
-            $.ajax({
-                url: MODULE_PATH + 'update/' + $('#media-id').val(),
-                dataType: 'json',
-                type: 'post',
-                data: data.field,
-                success: function (result) {
-                    layer.close(loading);
-                    if (result.code === 0) {
-                        layer.closeAll('iframe');
-                        layer.msg(result.msg, {icon: 1, time: 1000}, function () {
-                            loadMediaList();
-                        });
-                    } else {
-                        layer.msg(result.msg, {icon: 2});
-                    }
-                },
-                error: function () {
-                    layer.close(loading);
-                    layer.msg('保存失败', {icon: 2});
-                }
-            });
-
-            return false;
-        });
-
-        // 绑定按钮事件
-        $('#upload-btn').click(function () {
-            window.upload();
-        });
-
-        $('#batch-remove-btn').click(function () {
-            if (selectedItems.length === 0) {
-                layer.msg('请选择要删除的文件', {icon: 3});
-                return;
-            }
-            window.batchRemove();
-        });
-
-        $('#refresh-btn').click(function () {
-            $(this).addClass('layui-btn-warm');
-            loadMediaList();
-        });
-
-        // 初始化批量删除按钮状态
-        $('#batch-remove-btn').addClass('layui-btn-disabled opacity-50').prop('disabled', true);
-
-        // 选择文件按钮
-        $('#select-file-btn').click(function () {
-            $('#file-input').click();
-        });
-
-        // 文件选择变化
-        $('#file-input').change(function () {
-            if (this.files && this.files[0]) {
-                const file = this.files[0];
-                let fileType = file.type.split('/')[0];
-                let iconClass = 'layui-icon-file';
-
-                // 根据文件类型显示不同的图标
-                if (file.type.startsWith('image/')) {
-                    iconClass = 'layui-icon-picture';
-                } else if (file.type.startsWith('video/')) {
-                    iconClass = 'layui-icon-video';
-                } else if (file.type.startsWith('audio/')) {
-                    iconClass = 'layui-icon-music';
-                } else if (file.type.includes('pdf')) {
-                    iconClass = 'layui-icon-file-pdf';
-                }
-
-                $('#file-name').html(`
-                    <div class="flex items-center p-2 bg-gray-100 rounded">
-                        <i class="layui-icon ${iconClass} mr-2 text-lg"></i>
-                        <div class="flex-1">
-                            <div class="whitespace-nowrap overflow-hidden text-ellipsis">${file.name}</div>
-                            <div class="text-xs text-gray-500">${formatFileSize(file.size)}</div>
-                        </div>
-                        <button type="button" class="layui-btn layui-btn-danger layui-btn-xs" id="remove-selected-file">
-                            <i class="layui-icon layui-icon-close"></i>
+                <div class="w-80 p-6 bg-white border-l border-gray-200 overflow-y-auto">
+                    <h4 class="font-semibold text-gray-900 mb-4">文件信息</h4>
+                    <div id="preview-info" class="space-y-3 text-sm">
+                        <!-- 文件信息将在这里显示 -->
+                    </div>
+                    <div class="mt-6 space-y-2">
+                        <button id="download-btn" class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            下载文件
+                        </button>
+                        <button id="copy-url-btn" class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+                            复制链接
+                        </button>
+                        <button id="regenerate-thumb-btn" class="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all hidden">
+                            重新生成缩略图
                         </button>
                     </div>
-                `);
+                </div>
+            </div>
+        </div>
+    </div>
 
-                // 绑定移除文件事件
-                $('#remove-selected-file').on('click', function () {
-                    $('#file-input').val('');
-                    $('#file-name').empty();
-                });
-            }
-        });
+    <!-- Toast 通知 -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2">
+        <!-- Toast 消息将在这里显示 -->
+    </div>
 
-        // 取消编辑
-        $('#cancel-edit').click(function () {
-            layer.closeAll('iframe');
-        });
+    <!-- 加载指示器 -->
+    <div id="loading-overlay" class="fixed inset-0 bg-white bg-opacity-75 hidden z-40 flex items-center justify-center">
+        <div class="text-center">
+            <div class="loading-spinner w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p class="text-gray-600">加载中...</p>
+        </div>
+    </div>
 
-        // 取消上传
-        $('#cancel-upload').click(function () {
-            layer.closeAll('iframe');
-        });
-
-        // 提交上传
-        $('#submit-upload').click(function () {
-            let fileInput = $('#file-input')[0];
-            if (!fileInput.files || !fileInput.files[0]) {
-                layer.msg('请选择文件', {icon: 2});
-                return;
-            }
-
-            let formData = new FormData();
-            formData.append('file', fileInput.files[0]);
-            formData.append('alt_text', $('#upload-form input[name="alt_text"]').val());
-            formData.append('caption', $('#upload-form input[name="caption"]').val());
-            formData.append('description', $('#upload-form textarea[name="description"]').val());
-
-            // 创建上传进度弹窗
-            let uploadLayer = layer.open({
-                type: 1,
-                title: '上传中',
-                area: ['400px', '200px'],
-                content: `
-                    <div class="p-7.5">
-                        <div class="mb-5">正在上传媒体...</div>
-                        <div class="layui-progress layui-progress-big" lay-filter="upload-progress">
-                            <div class="layui-progress-bar layui-bg-blue" lay-percent="0%"></div>
-                        </div>
-                        <div class="text-right mt-2.5 text-xs text-gray-600">
-                            <span id="upload-percent">0%</span>
-                        </div>
-                    </div>
-                `,
-                closeBtn: 0,
-                shadeClose: false
-            });
-
-            form.render('progress');
-
-            // 上传请求
-            $.ajax({
-                url: MODULE_PATH + 'upload',
-                dataType: 'json',
-                type: 'post',
-                data: formData,
-                processData: false,
-                contentType: false,
-                xhr: function () {
-                    const xhr = $.ajaxSettings.xhr();
-                    if (xhr.upload) {
-                        xhr.upload.addEventListener('progress', function (evt) {
-                            if (evt.lengthComputable) {
-                                const percent = Math.round((evt.loaded / evt.total) * 100);
-                                $('#upload-percent').text(percent + '%');
-                                $('.layui-progress-bar').css('width', percent + '%');
-                            }
-                        }, false);
-                    }
-                    return xhr;
-                },
-                success: function (result) {
-                    layer.close(uploadLayer);
-                    if (result.code === 0) {
-                        layer.closeAll('iframe');
-                        layer.msg(result.msg, {icon: 1, time: 1500}, function () {
-                            loadMediaList();
-                        });
-                    } else {
-                        layer.msg(result.msg, {icon: 2});
-                    }
-                },
-                error: function () {
-                    layer.close(uploadLayer);
-                    layer.msg('上传失败，请检查网络连接', {icon: 2});
-                }
-            });
-        })
-
-        // 全局函数
-        window.edit = function (item) {
-            $('#media-id').val(item.id);
-            $('#alt_text').val(item.alt_text || '');
-            $('#caption').val(item.caption || '');
-            $('#description').val(item.description || '');
-
-            layer.open({
-                type: 1,
-                title: '编辑媒体信息',
-                area: ['600px', '400px'],
-                content: $('#edit-media-modal'),
-                success: function (layero, index) {
-                    form.render();
-                }
-            });
-        }
-
-        window.remove = function (item) {
-            layer.confirm('确定要删除该文件吗？', {
-                icon: 3,
-                title: '提示'
-            }, function (index) {
-                layer.close(index);
-                let loading = layer.load();
-
-                $.ajax({
-                    url: MODULE_PATH + 'remove/' + item.id,
-                    dataType: 'json',
-                    type: 'delete',
-                    success: function (result) {
-                        layer.close(loading);
-                        if (result.code === 0) {
-                            layer.msg(result.msg, {icon: 1, time: 1000}, function () {
-                                loadMediaList();
-                            });
-                        } else {
-                            layer.msg(result.msg, {icon: 2});
-                        }
-                    },
-                    error: function () {
-                        layer.close(loading);
-                        layer.msg('删除失败', {icon: 2});
-                    }
-                });
-            });
-        }
-
-        window.batchRemove = function () {
-            layer.confirm('确定要删除选中的' + selectedItems.length + '个文件吗？', {
-                icon: 3,
-                title: '提示'
-            }, function (index) {
-                layer.close(index);
-                let loading = layer.load();
-
-                $.ajax({
-                    url: MODULE_PATH + 'batchRemove/' + selectedItems.join(','),
-                    dataType: 'json',
-                    type: 'delete',
-                    success: function (result) {
-                        layer.close(loading);
-                        if (result.code === 0) {
-                            layer.msg(result.msg, {icon: 1, time: 1000}, function () {
-                                selectedItems = [];
-                                loadMediaList();
-                            });
-                        } else {
-                            layer.msg(result.msg, {icon: 2});
-                        }
-                    },
-                    error: function () {
-                        layer.close(loading);
-                        layer.msg('删除失败', {icon: 2});
-                    }
-                });
-            });
-        }
-
-        window.upload = function () {
-            // 重置上传表单
-            $('#upload-form')[0].reset();
-            $('#file-name').text('');
-
-
-            layer.open({
-                type: 1,
-                title: '上传媒体',
-                area: ['600px', '400px'],
-                content: $('#upload-modal'),
-                success: function (layero, index) {
-                    form.render();
-                },
-                end: function () {
-                    
-                }
-            });
-        }
-
-        // 为编辑弹窗添加动画效果
-        window.edit = function (item) {
-            // 先移除可能存在的动画类
-            $('#edit-media-modal').removeClass('animate__scaleInCenter');
-
-            // 设置媒体信息
-            $('#media-id').val(item.id);
-            $('#alt_text').val(item.alt_text || '');
-            $('#caption').val(item.caption || '');
-            $('#description').val(item.description || '');
-
-            // 添加动画类
-            setTimeout(function () {
-                $('#edit-media-modal').addClass('animate__animated animate__scaleInCenter');
-            }, 10);
-
-            layer.open({
-                type: 1,
-                title: '编辑媒体',
-                area: ['600px', '400px'],
-                content: $('#edit-media-modal'),
-                success: function (layero, index) {
-                    form.render();
-                },
-                end: function () {
-                    
-                }
-            });
-        }
-
-        window.refresh = function () {
-            loadMediaList();
-        }
-
-        // 初始加载媒体列表
-        loadMediaList();
-    });
-</script>
+    <script src="/app/admin/admin/js/media-library.js"></script>
 </body>
-
 </html>

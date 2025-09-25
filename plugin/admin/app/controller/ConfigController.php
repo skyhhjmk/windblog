@@ -19,7 +19,7 @@ class ConfigController extends Base
      *
      * @var string[]
      */
-    protected $noNeedAuth = ['get'];
+    protected $noNeedAuth = ['get', 'get_url_mode'];
 
     /**
      * 账户设置
@@ -135,7 +135,7 @@ EOF;;
     }
 
     /**
-     * 更改
+     * 更改配置设置
      *
      * @param Request $request
      *
@@ -151,6 +151,7 @@ EOF;;
             if (!isset($config[$section])) {
                 continue;
             }
+
             switch ($section) {
                 case 'logo':
                     $data[$section]['title'] = htmlspecialchars($items['title'] ?? '');
@@ -159,15 +160,17 @@ EOF;;
                     $data[$section]['beian'] = htmlspecialchars($items['beian'] ?? '');
                     $data[$section]['footer_txt'] = htmlspecialchars($items['footer_txt'] ?? '');
                     break;
+
                 case 'menu':
                     $data[$section]['data'] = Util::filterUrlPath($items['data'] ?? '');
                     $data[$section]['accordion'] = !empty($items['accordion']);
                     $data[$section]['collapse'] = !empty($items['collapse']);
                     $data[$section]['control'] = !empty($items['control']);
                     $data[$section]['controlWidth'] = (int)($items['controlWidth'] ?? 2000);
-                    $data[$section]['select'] = (int)$items['select'] ?? 0;
+                    $data[$section]['select'] = (int)($items['select'] ?? 0);
                     $data[$section]['async'] = true;
                     break;
+
                 case 'tab':
                     $data[$section]['enable'] = true;
                     $data[$section]['keepState'] = !empty($items['keepState']);
@@ -178,13 +181,16 @@ EOF;;
                     $data[$section]['index']['href'] = Util::filterUrlPath($items['index']['href'] ?? '');
                     $data[$section]['index']['title'] = htmlspecialchars($items['index']['title'] ?? '首页');
                     break;
+
                 case 'theme':
                     $data[$section]['defaultColor'] = Util::filterNum($items['defaultColor'] ?? '2');
-                    $data[$section]['defaultMenu'] = $items['defaultMenu'] ?? '' == 'dark-theme' ? 'dark-theme' : 'light-theme';
-                    $data[$section]['defaultHeader'] = $items['defaultHeader'] ?? '' == 'dark-theme' ? 'dark-theme' : 'light-theme';
+                    // 修复运算符优先级问题
+                    $data[$section]['defaultMenu'] = ($items['defaultMenu'] ?? '') == 'dark-theme' ? 'dark-theme' : 'light-theme';
+                    $data[$section]['defaultHeader'] = ($items['defaultHeader'] ?? '') == 'dark-theme' ? 'dark-theme' : 'light-theme';
                     $data[$section]['allowCustom'] = !empty($items['allowCustom']);
                     $data[$section]['banner'] = !empty($items['banner']);
                     break;
+
                 case 'colors':
                     foreach ($config['colors'] as $index => $item) {
                         if (!isset($items[$index])) {
@@ -197,29 +203,75 @@ EOF;;
                         $data[$section][$index]['second'] = $this->filterColor($data_item['second'] ?? '');
                     }
                     break;
-
             }
         }
+
         $config = array_merge($config, $data);
         $name = 'system_config';
+
+        // 保存到数据库
         Setting::where('key', $name)->update([
-            'value' => json_encode($config)
+            'value' => json_encode($config, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)
         ]);
+
         return $this->json(0);
     }
 
     /**
-     * 颜色检查
+     * 获取URL模式配置
      *
-     * @param string $color
+     * @return Response
+     */
+    public function get_url_mode(): Response
+    {
+        try {
+            // 调用全局函数blog_config获取URL模式配置
+            $urlMode = blog_config('url_mode', 'slug', false);
+            return json($urlMode);
+        } catch (Throwable $e) {
+            // 如果出错，返回默认值
+            return json('slug');
+        }
+    }
+
+    /**
+     * 设置URL模式配置
      *
-     * @return string
-     * @throws BusinessException
+     * @param Request $request
+     *
+     * @return Response
+     */
+    public function set_url_mode(Request $request): Response
+    {
+        try {
+            $urlMode = $request->post('url_mode', 'slug');
+
+            // 验证URL模式值是否有效
+            if (!in_array($urlMode, ['slug', 'id', 'mix'])) {
+                throw new BusinessException('无效的URL模式值');
+            }
+
+            // 调用全局函数blog_config保存URL模式配置
+            blog_config('url_mode', $urlMode, true, true, true);
+            return $this->json(0);
+        } catch (Throwable $e) {
+            return $this->json(1, $e->getMessage());
+        }
+    }
+
+    /**
+     * 颜色格式验证
+     *
+     * @param string $color 颜色值
+     *
+     * @return string 验证后的颜色值
+     * @throws BusinessException 当颜色格式不正确时抛出
      */
     protected function filterColor(string $color): string
     {
-        if (!preg_match('/\#[a-zA-Z]6/', $color)) {
-            throw new BusinessException('参数错误');
+        // 改进正则表达式，正确验证16进制颜色值格式
+        if (!preg_match('/^#[0-9a-fA-F]{6}$/', $color)) {
+            throw new BusinessException('颜色格式错误，请使用标准的16进制颜色值（如 #FFFFFF）');
         }
         return $color;
     }

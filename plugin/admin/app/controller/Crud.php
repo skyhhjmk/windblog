@@ -227,6 +227,7 @@ class Crud extends Base
      */
     protected function insertInput(Request $request): array
     {
+        $primary_key = $this->model->getKeyName();
         $data = $this->inputFilter($request->post());
         $password_filed = 'password';
         if (isset($data[$password_filed])) {
@@ -248,6 +249,10 @@ class Crud extends Base
             }
         } elseif ($this->dataLimit && empty($data[$this->dataLimitField])) {
             $data[$this->dataLimitField] = admin_id();
+        }
+        // 移除主键字段，让数据库自动生成（特别是PostgreSQL的SERIAL类型）
+        if ($primary_key && isset($data[$primary_key])) {
+            unset($data[$primary_key]);
         }
         return $data;
     }

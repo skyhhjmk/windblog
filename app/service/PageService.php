@@ -36,6 +36,29 @@ class PageService
     }
 
     /**
+     * 根据ID获取页面内容
+     *
+     * @param int $id 页面ID
+     * @return array|null 页面数据或null（如果页面不存在）
+     * @throws Throwable
+     */
+    public static function getPageById(int $id): ?array
+    {
+        $page = Page::where('id', $id)
+            ->where('status', 'published')
+            ->first();
+
+        if (!$page) {
+            return null;
+        }
+
+        // 处理页面内容
+        $pageData = self::processPageContent($page);
+
+        return $pageData;
+    }
+
+    /**
      * 处理页面内容
      *
      * @param Page $page 页面模型实例
@@ -100,6 +123,24 @@ class PageService
     public static function getAndRenderPage(string $keyword): ?string
     {
         $pageData = self::getPageByKeyword($keyword);
+        
+        if (!$pageData) {
+            return null;
+        }
+
+        return self::renderPage($pageData);
+    }
+
+    /**
+     * 根据ID获取并渲染页面
+     *
+     * @param int $id 页面ID
+     * @return string|null 渲染后的页面内容或null（如果页面不存在）
+     * @throws Throwable
+     */
+    public static function getAndRenderPageById(int $id): ?string
+    {
+        $pageData = self::getPageById($id);
         
         if (!$pageData) {
             return null;

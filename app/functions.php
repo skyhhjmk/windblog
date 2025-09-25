@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Here is your custom functions.
  */
@@ -139,6 +140,11 @@ function blog_config_get_from_db(string $cache_key): mixed
  */
 function blog_config_handle_init(string $cache_key, string $fullCacheKey, mixed $default, bool $init, bool $use_cache): mixed
 {
+    // 为URL模式设置默认值
+    if ($cache_key === 'url_mode' && $default === null) {
+        $default = 'slug'; // 默认使用slug模式
+    }
+    
     if (!$init) {
         return $default; // 不初始化，直接返回默认值
     }
@@ -202,70 +208,81 @@ function blog_config_convert_from_storage(mixed $value): mixed
  *
  * @return string
  */
-function translate_message(string $id, array $parameters = [], ?string $domain = null, ?string $locale = null): string
+function __($id, array $parameters = [], ?string $domain = null, ?string $locale = null): string
 {
-    static $translators = [];
-    
-    // 使用默认语言域
-    if ($domain === null) {
-        $domain = 'messages';
-    }
-    
-    // 使用默认语言
-    if ($locale === null) {
-        $locale = session('lang', 'zh_CN');
-    }
-    
-    // 缓存键
-    $cacheKey = "translator_$locale";
-    
-    // 获取或创建翻译器实例
-    if (!isset($translators[$cacheKey])) {
-        // 创建翻译器
-        $translator = new Translator($locale);
+    static $translator = null;
+    if ($translator === null) {
+        $translator = new Translator('en');
         $translator->addLoader('array', new ArrayLoader());
-        
-        // 加载翻译文件
-        $translationDir = base_path() . '/resource/translations';
-        $languageFiles = [
-            $translationDir . "/$locale/messages.php",
-            $translationDir . "/$locale/validation.php"
-        ];
-        
-        foreach ($languageFiles as $file) {
-            if (file_exists($file)) {
-                $translations = require $file;
-                $translator->addResource('array', $translations, $locale, $domain);
-            }
-        }
-        
-        // 添加回退语言
-        $fallbackLocales = config('translation.fallback_locales', ['zh_CN', 'en']);
-        foreach ($fallbackLocales as $fallbackLocale) {
-            if ($fallbackLocale !== $locale) {
-                $fallbackFile = $translationDir . "/$fallbackLocale/messages.php";
-                if (file_exists($fallbackFile)) {
-                    $fallbackTranslations = require $fallbackFile;
-                    $translator->addResource('array', $fallbackTranslations, $fallbackLocale, $domain);
-                }
-            }
-        }
-        
-        $translators[$cacheKey] = $translator;
+        $translator->addResource('array', [], 'en');
     }
-    
-    return $translators[$cacheKey]->trans($id, $parameters, $domain, $locale);
+    return $translator->trans($id, $parameters, $domain, $locale);
 }
 
 /**
- * 快速清除缓存
- * 根据缓存键或模式清除缓存内容
+ * 格式化日期时间
  *
- * @param string $pattern 缓存键或模式，支持通配符*
- * @return bool 是否成功清除
- * @throws Exception
+ * @param string $time 时间字符串
+ * @param string $format 格式化模板
+ *
+ * @return string
  */
-function clear_cache(string $pattern = '*'): bool
+function format_time(string $time, string $format = 'Y-m-d H:i:s'): string
 {
-    return CacheService::clearCache($pattern);
+    return date($format, strtotime($time));
+}
+
+/**
+ * 格式化文件大小
+ *
+ * @param int $bytes 文件大小（字节）
+ *
+ * @return string
+ */
+function format_bytes(int $bytes): string
+{
+    if ($bytes < 1024) {
+        return $bytes . ' B';
+    } elseif ($bytes < 1048576) {
+        return round($bytes / 1024, 2) . ' KB';
+    } elseif ($bytes < 1073741824) {
+        return round($bytes / 1048576, 2) . ' MB';
+    } else {
+        return round($bytes / 1073741824, 2) . ' GB';
+    }
+}
+
+/**
+ * 生成随机字符串
+ *
+ * @param int $length 字符串长度
+ * @param string $type 字符串类型：'number', 'letter', 'mix'
+ *
+ * @return string
+ */
+function random_string(int $length = 10, string $type = 'mix'): string
+{
+    $numberChars = '0123456789';
+    $letterChars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    $mixChars = $numberChars . $letterChars;
+    
+    switch ($type) {
+        case 'number':
+            $chars = $numberChars;
+            break;
+        case 'letter':
+            $chars = $letterChars;
+            break;
+        case 'mix':
+        default:
+            $chars = $mixChars;
+            break;
+    }
+    
+    $result = '';
+    $charsLength = strlen($chars);
+    for ($i = 0; $i < $length; $i++) {
+        $result .= $chars[rand(0, $charsLength - 1)];
+    }
+    return $result;
 }

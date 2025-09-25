@@ -307,8 +307,8 @@ class CacheService
         try {
             $cache_handler = self::getHandler();
             
-            if (strpos($pattern, '*') !== false) {
-                $cache_driver = env('CACHE_DRIVER', 'redis');
+            if (str_contains($pattern, '*')) {
+                $cache_driver = getenv('CACHE_DRIVER') ?? 'redis';
                 
                 switch ($cache_driver) {
                     case 'redis':

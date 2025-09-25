@@ -93,6 +93,45 @@
             </div>
 
             <div class="layui-form-item">
+                <label class="layui-form-label">管理员笔记</label>
+                <div class="layui-input-block">
+                    <textarea name="note" placeholder="请输入管理员笔记，对外不可见" class="layui-textarea"></textarea>
+                </div>
+            </div>
+
+            <!-- SEO字段 -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">SEO标题</label>
+                <div class="layui-input-block">
+                    <input type="text" name="seo_title" placeholder="请输入SEO标题" class="layui-input">
+                    <div class="layui-form-mid layui-word-aux">留空则使用链接名称</div>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">SEO关键词</label>
+                <div class="layui-input-block">
+                    <input type="text" name="seo_keywords" placeholder="请输入SEO关键词，用逗号分隔" class="layui-input">
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">SEO描述</label>
+                <div class="layui-input-block">
+                    <textarea name="seo_description" placeholder="请输入SEO描述" class="layui-textarea"></textarea>
+                </div>
+            </div>
+
+            <!-- 自定义字段 -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">自定义字段</label>
+                <div class="layui-input-block">
+                    <textarea name="custom_fields" placeholder='请输入自定义字段，JSON格式如：{"field1": "value1", "field2": "value2"}' class="layui-textarea"></textarea>
+                    <div class="layui-form-mid layui-word-aux">JSON格式的自定义数据</div>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
                 <div class="layui-input-block">
                     <button class="pear-btn pear-btn-primary" lay-submit lay-filter="link-submit">提交</button>
                     <button type="reset" class="pear-btn">重置</button>
@@ -113,6 +152,15 @@
                 if(value && !/^https?:\/\/.+/i.test(value)){
                     return '请输入有效的URL地址';
                 }
+            },
+            json: function(value){
+                if(value && value.trim() !== ''){
+                    try {
+                        JSON.parse(value);
+                    } catch (e) {
+                        return '请输入有效的JSON格式';
+                    }
+                }
             }
         });
 
@@ -123,6 +171,17 @@
             // 处理布尔值字段
             data.field.status = data.field.status === 'on';
             data.field.show_url = data.field.show_url === 'on';
+            
+            // 验证自定义字段JSON格式
+            if(data.field.custom_fields && data.field.custom_fields.trim() !== '') {
+                try {
+                    JSON.parse(data.field.custom_fields);
+                } catch (e) {
+                    layer.close(loading);
+                    layer.msg('自定义字段格式错误：请输入有效的JSON格式', {icon: 2});
+                    return false;
+                }
+            }
             
             $.ajax({
                 url: '/app/admin/link/add',

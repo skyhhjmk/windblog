@@ -8,6 +8,7 @@ use app\model\Tag;
 use app\model\Setting;
 use support\Log;
 use Throwable;
+use app\service\URLHelper;
 
 /**
  * 小工具服务
@@ -518,7 +519,7 @@ class WidgetService
         
         $html = '<div class="space-y-2">';
         foreach ($categories as $category) {
-            $html .= '<a href="/category/' . htmlspecialchars($category['slug']) . '" class="flex justify-between items-center text-gray-700 hover:text-blue-600 transition-colors">';
+            $html .= '<a href="' . URLHelper::generateCategoryUrl($category['slug']) . '" class="flex justify-between items-center text-gray-700 hover:text-blue-600 transition-colors">';
             $html .= '<span>' . htmlspecialchars($category['name']) . '</span>';
             $html .= '<span class="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">' . htmlspecialchars($category['posts_count']) . '</span>';
             $html .= '</a>';
@@ -536,7 +537,7 @@ class WidgetService
         
         $html = '<div class="flex flex-wrap gap-2">';
         foreach ($tags as $tag) {
-            $html .= '<a href="/tag/' . htmlspecialchars($tag['slug']) . '" class="text-sm bg-gray-100 text-gray-700 px-3 py-1 rounded-full hover:bg-blue-100 hover:text-blue-600 transition-colors">';
+            $html .= '<a href="' . URLHelper::generateTagUrl($tag['slug']) . '" class="text-sm bg-gray-100 text-gray-700 px-3 py-1 rounded-full hover:bg-blue-100 hover:text-blue-600 transition-colors">';
             $html .= htmlspecialchars($tag['name']) . ' (' . htmlspecialchars($tag['posts_count']) . ')';
             $html .= '</a>';
         }
@@ -571,7 +572,7 @@ class WidgetService
         
         $html = '<div class="space-y-3">';
         foreach ($recentPosts as $post) {
-            $html .= '<a href="/post/' . htmlspecialchars($post['slug']) . '" class="block group">';
+            $html .= '<a href="' . URLHelper::generatePostUrl($post['slug']) . '" class="block group">';
             $html .= '<div class="text-sm font-medium text-gray-800 group-hover:text-blue-600 transition-colors mb-1">';
             $html .= htmlspecialchars($post['title']);
             $html .= '</div>';
@@ -599,7 +600,7 @@ class WidgetService
         
         $html = '<div class="space-y-3">';
         foreach ($popularPosts as $post) {
-            $html .= '<a href="/post/' . htmlspecialchars($post['slug']) . '" class="block group">';
+            $html .= '<a href="' . URLHelper::generatePostUrl($post['slug']) . '" class="block group">';
             $html .= '<div class="text-sm font-medium text-gray-800 group-hover:text-blue-600 transition-colors mb-1">';
             $html .= htmlspecialchars($post['title']);
             $html .= '</div>';
@@ -621,7 +622,7 @@ class WidgetService
         
         $html = '<div class="space-y-3">';
         foreach ($randomPosts as $post) {
-            $html .= '<a href="/post/' . htmlspecialchars($post['slug']) . '" class="block group">';
+            $html .= '<a href="' . URLHelper::generatePostUrl($post['slug']) . '" class="block group">';
             $html .= '<div class="text-sm font-medium text-gray-800 group-hover:text-blue-600 transition-colors">';
             $html .= htmlspecialchars($post['title']);
             $html .= '</div>';

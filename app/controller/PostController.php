@@ -14,6 +14,11 @@ class PostController
     #[RateLimiter(limit: 3,ttl: 3)]
     public function index(Request $request, mixed $keyword = null): Response
     {
+        // 移除URL参数中的 .html 后缀
+        if (is_string($keyword) && str_ends_with($keyword, '.html')) {
+            $keyword = substr($keyword, 0, -5);
+        }
+        
         switch (blog_config('url_mode', 'mix', true)) {
             case 'slug':
                 // slug模式

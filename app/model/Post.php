@@ -1,9 +1,11 @@
 <?php
+
 namespace app\model;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use support\Model;
 use Throwable;
@@ -12,25 +14,25 @@ use support\Db;
 /**
  * 文章模型
  *
- * @property int $id 文章ID
- * @property string $title 文章标题
- * @property string $slug 文章URL别名
- * @property string $content_type 内容类型 (e.g., 'markdown', 'html')
- * @property string $content 文章内容
- * @property string $excerpt 文章摘要
- * @property string $status 文章状态 (e.g., 'published', 'draft', 'archived')
- * @property int $view_count 浏览次数
- * @property \Illuminate\Support\Carbon|null $created_at 创建时间
- * @property \Illuminate\Support\Carbon|null $updated_at 更新时间
- * @property \Illuminate\Support\Carbon|null $deleted_at 软删除时间
- * @property-read \app\model\PostAuthor[] $postAuthors 文章-作者关联记录
- * @property-read \app\model\Author[] $authors 通过中间表关联的所有作者
- * @property-read \app\model\Author $primaryAuthor 文章的主要作者
- * @property-read \app\model\PostCategory[] $postCategories 文章-分类关联记录
- * @property-read \app\model\Category[] $categories 通过中间表关联的所有分类
- * @property-read \app\model\PostTag[] $postTags 文章-标签关联记录
- * @property-read \app\model\Tag[] $tags 通过中间表关联的所有标签
- * @property-read \app\model\Comment[] $comments 文章的评论
+ * @property int                 $id             文章ID
+ * @property string              $title          文章标题
+ * @property string              $slug           文章URL别名
+ * @property string              $content_type   内容类型 (e.g., 'markdown', 'html')
+ * @property string              $content        文章内容
+ * @property string              $excerpt        文章摘要
+ * @property string              $status         文章状态 (e.g., 'published', 'draft', 'archived')
+ * @property int                 $view_count     浏览次数
+ * @property Carbon|null         $created_at     创建时间
+ * @property Carbon|null         $updated_at     更新时间
+ * @property Carbon|null         $deleted_at     软删除时间
+ * @property-read PostAuthor[]   $postAuthors    文章-作者关联记录
+ * @property-read Author[]       $authors        通过中间表关联的所有作者
+ * @property-read Author         $primaryAuthor  文章的主要作者
+ * @property-read PostCategory[] $postCategories 文章-分类关联记录
+ * @property-read Category[]     $categories     通过中间表关联的所有分类
+ * @property-read PostTag[]      $postTags       文章-标签关联记录
+ * @property-read Tag[]          $tags           通过中间表关联的所有标签
+ * @property-read Comment[]      $comments       文章的评论
  *
  * @method static Builder|Post published() 只查询已发布的文章
  * @method static Builder|Post draft() 只查询草稿箱的文章
@@ -88,7 +90,7 @@ class Post extends Model
         static::addGlobalScope('notDeleted', function (Builder $builder) {
             $builder->whereNull('deleted_at');
         });
-        
+
         // 当文章正在创建时
         static::creating(function (Post $post) {
             // 如果没有提供 slug，则根据标题自动生成
@@ -109,6 +111,7 @@ class Post extends Model
             }
         });
     }
+
     /**
      * 指示是否自动维护时间戳
      *
@@ -150,9 +153,9 @@ class Post extends Model
      */
     public function postTags(): HasMany
     {
-        return $this->hasMany(\app\model\PostTag::class, 'post_id');
+        return $this->hasMany(PostTag::class, 'post_id');
     }
-    
+
     /**
      * 获取文章关联的所有作者。
      * 通过 post_author 中间表建立多对多关系。
@@ -165,7 +168,7 @@ class Post extends Model
             ->orderByRaw('CASE WHEN post_author.admin_id IS NOT NULL THEN 0 ELSE 1 END')
             ->orderBy('post_author.is_primary', 'desc');
     }
-    
+
     /**
      * 获取文章的主要作者。
      * 通过 post_author 中间表，筛选出 is_primary = true 的作者。
@@ -178,7 +181,7 @@ class Post extends Model
             ->wherePivot('is_primary', true)
             ->orderByRaw('CASE WHEN post_author.admin_id IS NOT NULL THEN 0 ELSE 1 END');
     }
-    
+
     /**
      * 获取文章关联的所有分类。
      * 通过 post_category 中间表建立多对多关系。
@@ -189,7 +192,7 @@ class Post extends Model
     {
         return $this->belongsToMany(Category::class, 'post_category', 'post_id', 'category_id');
     }
-    
+
     /**
      * 获取文章关联的所有标签。
      * 通过 post_tag 中间表建立多对多关系。
@@ -219,6 +222,7 @@ class Post extends Model
      * 查询作用域：只查询已发布的文章。
      *
      * @param Builder $query
+     *
      * @return Builder
      */
     public function scopePublished(Builder $query): Builder
@@ -230,6 +234,7 @@ class Post extends Model
      * 查询作用域：只查询草稿箱的文章。
      *
      * @param Builder $query
+     *
      * @return Builder
      */
     public function scopeDraft(Builder $query): Builder
@@ -242,20 +247,22 @@ class Post extends Model
      * 通过中间表 post_author 进行查询。
      *
      * @param Builder $query
-     * @param int $authorId 作者ID
+     * @param int     $authorId 作者ID
+     *
      * @return Builder
      */
     public function scopeByAuthor(Builder $query, int $authorId): Builder
     {
-        return $query->whereHas('authors', function($q) use ($authorId) {
+        return $query->whereHas('authors', function ($q) use ($authorId) {
             $q->where('id', $authorId);
         });
     }
-    
+
     /**
      * 查询作用域：包含软删除的记录。
      *
      * @param Builder $query
+     *
      * @return Builder
      */
     public function scopeWithTrashed(Builder $query): Builder
@@ -267,6 +274,7 @@ class Post extends Model
      * 查询作用域：只查询软删除的记录。
      *
      * @param Builder $query
+     *
      * @return Builder
      */
     public function scopeOnlyTrashed(Builder $query): Builder
@@ -278,6 +286,7 @@ class Post extends Model
      * 软删除方法，根据配置决定是软删除还是硬删除
      *
      * @param bool $forceDelete 是否强制删除（绕过软删除配置）
+     *
      * @return bool|null
      * @throws Throwable
      */
@@ -287,7 +296,7 @@ class Post extends Model
         $useSoftDelete = blog_config('soft_delete', true);
         \support\Log::debug('Soft delete config value: ' . var_export($useSoftDelete, true));
         \support\Log::debug('Force delete flag: ' . var_export($forceDelete, true));
-        
+
         // 修复逻辑：当$forceDelete为true时，无论配置如何都应该执行硬删除
         if ($forceDelete || ($useSoftDelete && !$forceDelete)) {
             if ($forceDelete) {

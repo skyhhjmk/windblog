@@ -22,6 +22,7 @@
                     <li class="layui-this">基本信息</li>
                     <li>菜单配置</li>
                     <li>页面配置</li>
+                    <li>扩展设置</li>
                 </ul>
                 <div class="layui-tab-content">
 
@@ -179,6 +180,37 @@
 
                     </div>
 
+                    <!-- 扩展设置 -->
+                    <div class="layui-tab-item">
+
+                        <form class="layui-form" lay-filter="extInfo">
+                            <!-- URL模式设置 -->
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">URL模式</label>
+                                <div class="layui-input-block">
+                                    <select name="url_mode" lay-verify="required" class="layui-select">
+                                        <option value="slug">伪静态模式 (slug)</option>
+                                        <option value="id">ID模式</option>
+                                        <option value="mix">混合模式</option>
+                                    </select>
+                                    <div class="layui-form-mid layui-word-aux">
+                                        <p>slug模式：通过文章/页面的slug生成友好的URL</p>
+                                        <p>ID模式：通过文章/页面的ID生成URL</p>
+                                        <p>混合模式：同时支持slug和ID访问</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <div class="layui-input-block">
+                                    <button type="submit" class="pear-btn pear-btn-primary pear-btn-md" lay-submit="" lay-filter="saveExtInfo">
+                                        提交
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+
+                    </div>
+
                 </div>
             </div>
 
@@ -295,29 +327,125 @@
                 });
             });
 
+            // 扩展设置表单提交
+            layui.use(["form", "layer", "popup"], function() {
+                let $ = layui.$;
+                let form = layui.form;
+                
+                form.on("submit(saveExtInfo)", function(data){
+                    let formData = data.field;
+                    let urlMode = formData.url_mode;
+                    delete formData.url_mode;
+                    
+                    // 构建主题设置数据结构
+                    let themeData = {
+                        theme: {
+                            defaultColor: formData['theme.defaultColor'] || '2',
+                            defaultMenu: formData['theme.defaultMenu'] || 'light-theme',
+                            defaultHeader: formData['theme.defaultHeader'] || 'light-theme',
+                            allowCustom: !!formData['theme.allowCustom'],
+                            banner: !!formData['theme.banner']
+                        }
+                    };
+                    
+                    // 保存主题设置
+                    $.ajax({
+                        url: "/app/admin/config/update",
+                        dataType: "json",
+                        type: "POST",
+                        data: themeData,
+                        success: function (res) {
+                            if (res.code) {
+                                return layui.popup.failure(res.msg);
+                            }
+                            
+                            // 保存URL模式设置
+                            $.ajax({
+                                url: "/app/admin/config/set_url_mode",
+                                type: "POST",
+                                data: {url_mode: urlMode},
+                                dataType: "json",
+                                success: function() {
+                                    layui.popup.success("操作成功");
+                                },
+                                error: function() {
+                                    layui.popup.failure("URL模式设置保存失败");
+                                }
+                            });
+                        },
+                        error: function() {
+                            layui.popup.failure("设置保存失败");
+                        }
+                    });
+                    return false;
+                });
+            });
+
             layui.use(["form"], function () {
                 let form = layui.form;
                 let $ = layui.$;
-                $.ajax({
-                    url: "/app/admin/config/get",
-                    dataType: "json",
-                    success: function (res) {
-                        if (res.code) {
-                            return layui.popup.failure(res.msg);
+                
+                // 获取配置数据
+                function loadConfig() {
+                    $.ajax({
+                        url: "/app/admin/config/get",
+                        dataType: "json",
+                        success: function (res) {
+                            if (res.code) {
+                                return layui.popup.failure(res.msg);
+                            }
+                            
+                            // 填充基本信息表单
+                            form.val("baseInfo", res.logo);
+                            $("#image").prev().val(res.logo.image).prev().attr("src", res.logo.image);
+                            
+                            // 填充菜单设置表单
+                            form.val("menuInfo", res.menu);
+                            
+                            // 填充标签设置表单
+                            let tab = res.tab;
+                            let index = tab.index;
+                            delete tab.index;
+                            tab.id = index.id;
+                            tab.title = index.title;
+                            tab.href= index.href;
+                            form.val("tabInfo", res.tab);
+                            
+                            // 填充扩展设置表单
+                            if (res.theme) {
+                                // 为主题设置单独赋值，确保正确处理
+                                $("[name='theme.defaultColor']").val(res.theme.defaultColor || '2');
+                                $("[name='theme.defaultMenu']").val(res.theme.defaultMenu || 'light-theme');
+                                $("[name='theme.defaultHeader']").val(res.theme.defaultHeader || 'light-theme');
+                                
+                                // 处理开关状态
+                                if (res.theme.allowCustom) {
+                                    $("[name='theme.allowCustom']").prop('checked', true);
+                                }
+                                if (res.theme.banner) {
+                                    $("[name='theme.banner']").prop('checked', true);
+                                }
+                            }
+                            
+                            // 获取URL模式配置
+                            $.ajax({
+                                url: "/app/admin/config/get_url_mode",
+                                type: "GET",
+                                dataType: "json",
+                                success: function(urlMode) {
+                                    if (urlMode) {
+                                        $("[name='url_mode']").val(urlMode);
+                                    }
+                                    // 最后渲染表单，确保所有设置都生效
+                                    form.render();
+                                }
+                            });
                         }
-                        form.val("baseInfo", res.logo);
-                        $("#image").prev().val(res.logo.image).prev().attr("src", res.logo.image);
-                        form.val("menuInfo", res.menu);
-                        let tab = res.tab;
-                        let index = tab.index;
-                        delete tab.index;
-                        tab.id = index.id;
-                        tab.title = index.title;
-                        tab.href= index.href;
-                        form.val("tabInfo", res.tab);
-                    }
-                });
-
+                    });
+                }
+                
+                // 初始化加载配置
+                loadConfig();
             });
 
         </script>

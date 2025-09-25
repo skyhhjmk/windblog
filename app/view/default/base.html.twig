@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <title>{% block title %}{{ page_title|default('风屿雨博客') }}{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css"
@@ -135,6 +135,65 @@
             background-color: transparent;
             padding: 0;
         }
+        
+        /* 移动端触摸反馈 */
+        .tap-highlight {
+            -webkit-tap-highlight-color: rgba(59, 130, 246, 0.2);
+        }
+        
+        /* 移动端导航菜单动画 */
+        @keyframes slide-in {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slide-out {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+        
+        .mobile-menu {
+            animation: slide-in 0.3s ease-out forwards;
+        }
+        
+        .mobile-menu.closing {
+            animation: slide-out 0.3s ease-out forwards;
+        }
+        
+        /* 移动端搜索结果样式优化 */
+        @media (max-width: 640px) {
+            #searchResults {
+                max-height: 50vh;
+                width: calc(100vw - 2rem);
+                left: 1rem;
+                right: 1rem;
+            }
+            
+            /* 优化移动端内容间距 */
+            .blog-container {
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+            
+            /* 优化移动端表格显示 */
+            table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -142,7 +201,7 @@
 <!-- 顶部导航 -->
 <header class="bg-white shadow-sm sticky top-0 z-10 animate-fade-in-down">
     <div class="container mx-auto px-4 py-4 flex justify-between items-center">
-        <a href="/" class="text-2xl font-bold text-gray-800 flex items-center hover-animate">
+        <a href="/" class="text-2xl font-bold text-gray-800 flex items-center hover-animate tap-highlight">
             <i class="fas fa-blog text-blue-600 mr-2"></i>
             <span>{{ page_title|default('风屿雨博客') }}</span>
         </a>
@@ -164,32 +223,36 @@
                 </div>
             </form>
         </div>
+        <!-- 移动端搜索按钮 -->
+        <button class="md:hidden text-gray-600 hover-animate tap-highlight mr-4" id="mobileSearchBtn">
+            <i class="fas fa-search text-lg"></i>
+        </button>
         <nav class="hidden md:block">
             <ul class="flex space-x-6">
                 <li>
-                    <a href="/"
-                       class="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center hover-animate">
+                    <a href="/" 
+                       class="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center hover-animate tap-highlight">
                         <i class="fas fa-home mr-1"></i>
                         首页
                     </a>
                 </li>
                 {#<li>
                     <a href="#"
-                       class="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center hover-animate">
+                       class="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center hover-animate tap-highlight">
                         <i class="fas fa-tags mr-1"></i>
                         分类
                     </a>
                 </li>#}
                 <li>
                     <a href="/link"
-                       class="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center hover-animate">
+                       class="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center hover-animate tap-highlight">
                         <i class="fas fa-link mr-1"></i>
                         友情链接
                     </a>
                 </li>
                 {#<li>
                     <a href="/admin"
-                       class="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center hover-animate">
+                       class="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center hover-animate tap-highlight">
                         <i class="fas fa-cog mr-1"></i>
                         管理后台
                     </a>
@@ -197,24 +260,87 @@
             </ul>
         </nav>
         
-        <button class="md:hidden text-gray-600 hover-animate">
+        <!-- 移动端菜单按钮 -->
+        <button class="md:hidden text-gray-600 hover-animate tap-highlight" id="mobileMenuBtn">
             <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M4 6h16M4 12h16M4 18h16"></path>
             </svg>
         </button>
     </div>
+    
+    <!-- 移动端搜索栏 -->
+    <div class="md:hidden px-4 pb-4 hidden" id="mobileSearchBar">
+        <form action="/search" method="get" class="search-form">
+            <div class="relative">
+                <input type="text" name="q" 
+                       placeholder="搜索文章..." 
+                       class="pl-10 pr-4 py-2 border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
+                       autocomplete="off">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i class="fas fa-search text-gray-400"></i>
+                </div>
+            </div>
+        </form>
+    </div>
 </header>
 
+<!-- 移动端导航菜单 -->
+<div class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden" id="mobileMenuOverlay">
+    <div class="absolute top-0 right-0 h-full w-64 bg-white shadow-lg p-4 mobile-menu" id="mobileMenu">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-lg font-bold text-gray-800">菜单</h3>
+            <button class="text-gray-500 hover:text-gray-800" id="closeMobileMenuBtn">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        <nav>
+            <ul class="space-y-4">
+                <li>
+                    <a href="/" 
+                       class="block text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center py-2 tap-highlight">
+                        <i class="fas fa-home mr-3 w-5 text-center"></i>
+                        首页
+                    </a>
+                </li>
+                {#<li>
+                    <a href="#"
+                       class="block text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center py-2 tap-highlight">
+                        <i class="fas fa-tags mr-3 w-5 text-center"></i>
+                        分类
+                    </a>
+                </li>#}
+                <li>
+                    <a href="/link"
+                       class="block text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center py-2 tap-highlight">
+                        <i class="fas fa-link mr-3 w-5 text-center"></i>
+                        友情链接
+                    </a>
+                </li>
+                {#<li>
+                    <a href="/admin"
+                       class="block text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center py-2 tap-highlight">
+                        <i class="fas fa-cog mr-3 w-5 text-center"></i>
+                        管理后台
+                    </a>
+                </li>#}
+            </ul>
+        </nav>
+    </div>
+</div>
+
 <!-- 主要内容区 -->
-<main class="flex-grow container mx-auto px-4 py-8 blog-container">
-    <div class="flex flex-col md:flex-row gap-8">
+<main class="flex-grow container mx-auto px-4 py-6 md:py-8 blog-container">
+    <div class="flex flex-col md:flex-row gap-6 md:gap-8">
         <!-- 主内容区域 - 占3/4宽度 -->
         <div class="w-full md:w-3/4">
             {% block content %}{% endblock %}
         </div>
-        <!-- 侧边栏 - 占1/4宽度 -->
-        <div class="w-full md:w-1/4">
+        <!-- 侧边栏 - 占1/4宽度，移动端隐藏 -->
+        <div class="hidden md:block w-full md:w-1/4">
             {% block sidebar %}
                 {% if sidebar is defined and sidebar.widgets is defined %}
                     {% for widget in sidebar.widgets %}
@@ -229,22 +355,22 @@
 </main>
 
 <!-- 页脚 -->
-<footer class="bg-white border-t mt-12 py-8 animate-fade-in">
+<footer class="bg-white border-t mt-8 md:mt-12 py-6 md:py-8 animate-fade-in">
     <div class="container mx-auto px-4">
         <div class="flex flex-col md:flex-row justify-between items-center">
-            <div class="mb-4 md:mb-0">
+            <div class="mb-4 md:mb-0 text-center md:text-left">
                 <p class="text-gray-600">
                     &copy; {{ 'now'|date('Y') }} {{ page_title|default('风屿雨博客') }} - 基于 Webman 框架构建
                 </p>
             </div>
             <div class="flex space-x-4">
-                <a href="#" class="text-gray-500 hover:text-blue-600 hover-animate">
+                <a href="#" class="text-gray-500 hover:text-blue-600 hover-animate tap-highlight">
                     <i class="fab fa-github fa-lg"></i>
                 </a>
-                <a href="#" class="text-gray-500 hover:text-blue-600 hover-animate">
+                <a href="#" class="text-gray-500 hover:text-blue-600 hover-animate tap-highlight">
                     <i class="fab fa-twitter fa-lg"></i>
                 </a>
-                <a href="#" class="text-gray-500 hover:text-blue-600 hover-animate">
+                <a href="#" class="text-gray-500 hover:text-blue-600 hover-animate tap-highlight">
                     <i class="fab fa-weibo fa-lg"></i>
                 </a>
             </div>
@@ -258,7 +384,63 @@
 {% block extra_js %}{% endblock %}
 
 <script>
+// 移动端菜单功能
+(function() {
+    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    const closeMobileMenuBtn = document.getElementById('closeMobileMenuBtn');
+    const mobileMenuOverlay = document.getElementById('mobileMenuOverlay');
+    const mobileMenu = document.getElementById('mobileMenu');
+    
+    if (mobileMenuBtn && closeMobileMenuBtn && mobileMenuOverlay && mobileMenu) {
+        mobileMenuBtn.addEventListener('click', function() {
+            mobileMenuOverlay.classList.remove('hidden');
+            mobileMenu.classList.remove('closing');
+        });
+        
+        function closeMenu() {
+            mobileMenu.classList.add('closing');
+            setTimeout(() => {
+                mobileMenuOverlay.classList.add('hidden');
+            }, 300);
+        }
+        
+        closeMobileMenuBtn.addEventListener('click', closeMenu);
+        mobileMenuOverlay.addEventListener('click', function(e) {
+            if (e.target === mobileMenuOverlay) {
+                closeMenu();
+            }
+        });
+        
+        // 点击菜单项后关闭菜单
+        const mobileMenuLinks = mobileMenu.querySelectorAll('a');
+        mobileMenuLinks.forEach(link => {
+            link.addEventListener('click', closeMenu);
+        });
+    }
+})();
+
+// 移动端搜索栏切换
+(function() {
+    const mobileSearchBtn = document.getElementById('mobileSearchBtn');
+    const mobileSearchBar = document.getElementById('mobileSearchBar');
+    
+    if (mobileSearchBtn && mobileSearchBar) {
+        mobileSearchBtn.addEventListener('click', function() {
+            mobileSearchBar.classList.toggle('hidden');
+            if (!mobileSearchBar.classList.contains('hidden')) {
+                setTimeout(() => {
+                    const searchInput = mobileSearchBar.querySelector('input');
+                    if (searchInput) {
+                        searchInput.focus();
+                    }
+                }, 100);
+            }
+        });
+    }
+})();
+
 document.addEventListener('DOMContentLoaded', function() {
+    // 搜索功能
     let searchTimeout;
     const searchInput = document.getElementById('searchInput');
     const searchResults = document.getElementById('searchResults');
@@ -422,7 +604,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // 防止表单提交时页面跳转（用于AJAX搜索）
+    // 防止表单提交时页面跳转
     searchForm.addEventListener('submit', function(e) {
         const keyword = searchInput.value.trim();
         if (keyword.length > 0) {
@@ -430,6 +612,20 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         e.preventDefault();
     });
+
+    // 适配触摸设备的交互优化
+    if ('ontouchstart' in document.documentElement) {
+        // 为触摸设备优化悬停效果
+        document.querySelectorAll('.hover-animate').forEach(element => {
+            element.addEventListener('touchstart', function() {
+                this.style.transform = 'translateY(-2px)';
+            }, {passive: true});
+            
+            element.addEventListener('touchend', function() {
+                this.style.transform = 'translateY(0)';
+            }, {passive: true});
+        });
+    }
 });
 </script>
 </body>

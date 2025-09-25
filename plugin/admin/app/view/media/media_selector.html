@@ -1,450 +1,437 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="zh-CN">
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>媒体选择器</title>
-    <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css"/>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/public/app/admin/media/css/media-library.css">
     <style>
-        .media-selector-container {
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-        }
-        
-        .media-selector-header {
-            padding: 10px;
-            border-bottom: 1px solid #e6e6e6;
-        }
-        
-        .media-selector-body {
-            flex: 1;
-            overflow-y: auto;
-            padding: 10px;
-        }
-        
-        .media-selector-footer {
-            padding: 10px;
-            border-top: 1px solid #e6e6e6;
-            text-align: right;
-        }
-        
         .media-item {
-            border: 1px solid #e6e6e6;
-            border-radius: 4px;
-            padding: 8px;
-            margin-bottom: 16px;
-            position: relative;
-            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        
         .media-item:hover {
-            border-color: #1E9FFF;
+            transform: translateY(-2px);
         }
-        
         .media-item.selected {
-            border-color: #1E9FFF;
-            background-color: #f0f7ff;
+            transform: translateY(-2px) scale(1.02);
         }
-        
-        .media-thumbnail {
-            width: 100%;
-            height: 120px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background-color: #f5f5f5;
-            border-radius: 4px;
-            overflow: hidden;
+        .loading-spinner {
+            animation: spin 1s linear infinite;
         }
-        
-        .media-thumbnail img {
-            max-width: 100%;
-            max-height: 100%;
-        }
-        
-        .media-thumbnail i {
-            font-size: 36px;
-            color: #999;
-        }
-        
-        .media-info {
-            margin-top: 8px;
-            font-size: 12px;
-            color: #666;
-        }
-        
-        .media-name {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            margin-bottom: 4px;
-        }
-        
-        .media-size {
-            color: #999;
-        }
-        
-        .selected-indicator {
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            display: none;
-        }
-        
-        .media-item.selected .selected-indicator {
-            display: block;
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
     </style>
 </head>
+<body class="bg-gray-50 h-screen flex flex-col">
+    <!-- 头部 -->
+    <div class="bg-white border-b border-gray-200 px-6 py-4">
+        <div class="flex items-center justify-between">
+            <h2 class="text-xl font-semibold text-gray-900 flex items-center">
+                <svg class="w-6 h-6 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+                选择媒体文件
+            </h2>
+            <div class="text-sm text-gray-500">
+                <span id="selection-info">请选择文件</span>
+            </div>
+        </div>
+    </div>
 
-<body>
-<div class="media-selector-container">
-    <!-- 头部搜索区域 -->
-    <div class="media-selector-header">
-        <form id="mediaSearchForm" class="layui-form" action="">
-            <div class="layui-form-item">
-                <div class="layui-inline">
-                    <input type="text" name="search" placeholder="请输入文件名称" class="layui-input" style="width: 200px;">
+    <!-- 搜索栏 -->
+    <div class="bg-white border-b border-gray-200 px-6 py-4">
+        <form id="search-form" class="flex items-end space-x-4">
+            <div class="flex-1">
+                <label class="block text-sm font-medium text-gray-700 mb-1">搜索文件</label>
+                <div class="relative">
+                    <input type="text" id="search-input" placeholder="输入文件名搜索..." 
+                           class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <svg class="absolute left-3 top-2.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
                 </div>
-                <div class="layui-inline">
-                    <select name="file_type" class="layui-input" style="width: 120px;">
-                        <option value="">全部类型</option>
-                        <option value="image">图片</option>
-                        <option value="video">视频</option>
-                        <option value="audio">音频</option>
-                        <option value="document">文档</option>
-                    </select>
-                </div>
-                <button class="pear-btn pear-btn-md pear-btn-primary" lay-submit lay-filter="media-search">
-                    <i class="layui-icon layui-icon-search"></i>
-                    查询
+            </div>
+            <div class="w-40">
+                <label class="block text-sm font-medium text-gray-700 mb-1">文件类型</label>
+                <select id="type-filter" class="w-full py-2 px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="">全部类型</option>
+                    <option value="image">图片</option>
+                    <option value="video">视频</option>
+                    <option value="audio">音频</option>
+                    <option value="application">文档</option>
+                </select>
+            </div>
+            <div class="flex space-x-2">
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all">
+                    搜索
                 </button>
-                <button type="reset" class="pear-btn pear-btn-md">
-                    <i class="layui-icon layui-icon-refresh"></i>
+                <button type="button" id="reset-btn" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all">
                     重置
                 </button>
             </div>
         </form>
     </div>
-    
-    <!-- 媒体列表区域 -->
-    <div class="media-selector-body">
-        <div id="media-grid" class="layui-row"></div>
-        
-        <!-- 分页控件 -->
-        <div id="media-pagination" class="layui-box layui-laypage layui-laypage-default" style="margin-top: 16px;"></div>
-    </div>
-    
-    <!-- 底部按钮区域 -->
-    <div class="media-selector-footer">
-        <button class="pear-btn pear-btn-primary pear-btn-md" id="confirm-selection">
-            确定
-        </button>
-        <button class="pear-btn pear-btn-md" id="cancel-selection">
-            取消
-        </button>
-    </div>
-</div>
 
-<script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
-<script src="/app/admin/component/pear/pear.js"></script>
+    <!-- 媒体网格 -->
+    <div class="flex-1 overflow-y-auto p-6">
+        <div id="media-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            <!-- 媒体项将在这里动态生成 -->
+        </div>
+
+        <!-- 分页 -->
+        <div id="pagination" class="flex justify-center items-center space-x-2 mt-8">
+            <!-- 分页控件将在这里动态生成 -->
+        </div>
+    </div>
+
+    <!-- 底部操作栏 -->
+    <div class="bg-white border-t border-gray-200 px-6 py-4">
+        <div class="flex items-center justify-between">
+            <div class="text-sm text-gray-500">
+                已选择 <span id="selected-count" class="font-medium text-gray-900">0</span> 个文件
+            </div>
+            <div class="flex space-x-3">
+                <button id="cancel-btn" class="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all">
+                    取消
+                </button>
+                <button id="confirm-btn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all opacity-50 cursor-not-allowed" disabled>
+                    确定选择
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加载指示器 -->
+    <div id="loading-overlay" class="fixed inset-0 bg-white bg-opacity-75 hidden z-40 flex items-center justify-center">
+        <div class="text-center">
+            <div class="loading-spinner w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p class="text-gray-600">加载中...</p>
+        </div>
+    </div>
+
     <script>
-        // 从控制器传递过来的配置变量
-        let mediaSelectorConfig = {
-            target: '<?php echo isset($target) ? $target : "iframe"; ?>',
-            origin: '<?php echo isset($origin) ? $origin : ""; ?>',
-            multiple: <?php echo isset($multiple) && $multiple === 'true' ? 'true' : 'false'; ?>
-        };
-        
-        layui.use(['form', 'jquery', 'layer'], function () {
-            let form = layui.form;
-            let $ = layui.jquery;
-            let layer = layui.layer;
-
-            let MODULE_PATH = "/app/admin/media/";
-            let currentPage = 1;
-            let totalCount = 0;
-            let pageSize = 12;
-            let selectedMedia = null;
-            let multiple = mediaSelectorConfig.multiple;
-            let selectedMedias = [];
-            
-            // 从URL参数中获取配置
-            function getUrlParams() {
-                let params = {};
-                let url = window.location.search;
-                let reg = /[?&][^?&]+=[^?&]+/g;
-                let arr = url.match(reg);
+        class MediaSelector {
+            constructor() {
+                this.currentPage = 1;
+                this.pageSize = 24;
+                this.totalCount = 0;
+                this.selectedItems = [];
+                this.mediaList = [];
+                this.multiple = this.getUrlParam('multiple') === 'true';
+                this.targetType = this.getUrlParam('target') || 'iframe';
                 
-                if (arr) {
-                    arr.forEach(function (item) {
-                        let temp = item.substring(1).split('=');
-                        params[temp[0]] = decodeURIComponent(temp[1]);
+                this.init();
+            }
+
+            init() {
+                this.bindEvents();
+                this.loadMediaList();
+                this.updateSelectionInfo();
+            }
+
+            getUrlParam(name) {
+                const urlParams = new URLSearchParams(window.location.search);
+                return urlParams.get(name);
+            }
+
+            bindEvents() {
+                // 搜索表单
+                document.getElementById('search-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.currentPage = 1;
+                    this.loadMediaList();
+                });
+
+                // 重置按钮
+                document.getElementById('reset-btn').addEventListener('click', () => {
+                    document.getElementById('search-input').value = '';
+                    document.getElementById('type-filter').value = '';
+                    this.currentPage = 1;
+                    this.loadMediaList();
+                });
+
+                // 确定按钮
+                document.getElementById('confirm-btn').addEventListener('click', () => {
+                    this.confirmSelection();
+                });
+
+                // 取消按钮
+                document.getElementById('cancel-btn').addEventListener('click', () => {
+                    this.cancelSelection();
+                });
+            }
+
+            async loadMediaList() {
+                this.showLoading(true);
+                
+                try {
+                    const searchValue = document.getElementById('search-input').value;
+                    const typeFilter = document.getElementById('type-filter').value;
+                    
+                    const params = new URLSearchParams({
+                        page: this.currentPage,
+                        limit: this.pageSize,
+                        search: searchValue,
+                        mime_type: typeFilter
                     });
-                }
-                
-                return params;
-            }
-            
-            // 初始化配置
-            function initConfig() {
-                // 优先使用控制器传递的配置，如果没有则使用URL参数
-                let urlParams = getUrlParams();
-                
-                // 合并配置，URL参数优先级高于控制器传递的参数
-                if (urlParams.target) {
-                    window.targetType = urlParams.target;
-                } else {
-                    window.targetType = mediaSelectorConfig.target;
-                }
-                
-                if (urlParams.origin) {
-                    window.origin = urlParams.origin;
-                } else if (mediaSelectorConfig.origin) {
-                    window.origin = mediaSelectorConfig.origin;
-                } else {
-                    window.origin = window.location.origin;
-                }
-                
-                if (urlParams.multiple !== undefined) {
-                    multiple = urlParams.multiple === 'true';
-                } else {
-                    multiple = mediaSelectorConfig.multiple;
-                }
-            }
-        
-        // 渲染媒体网格
-        function renderMediaGrid(data) {
-            let html = '';
-            data.forEach(function (item) {
-                let isSelected = multiple ? 
-                    selectedMedias.some(media => media.id === item.id) : 
-                    selectedMedia && selectedMedia.id === item.id;
-                
-                let selectedClass = isSelected ? 'selected' : '';
-                let thumbnailHtml = '';
-                
-                // 根据文件类型显示不同的缩略图
-                if (item.mime_type && item.mime_type.startsWith('image/')) {
-                    thumbnailHtml = `<img src="/uploads/${item.file_path}" alt="${item.original_name}">`;
-                } else if (item.mime_type && item.mime_type.startsWith('video/')) {
-                    thumbnailHtml = `<i class="layui-icon layui-icon-video"></i>`;
-                } else if (item.mime_type && item.mime_type.startsWith('audio/')) {
-                    thumbnailHtml = `<i class="layui-icon layui-icon-music"></i>`;
-                } else if (item.mime_type && item.mime_type.includes('pdf')) {
-                    thumbnailHtml = `<i class="layui-icon layui-icon-file-pdf"></i>`;
-                } else {
-                    thumbnailHtml = `<i class="layui-icon layui-icon-file"></i>`;
-                }
-                
-                html += `
-                <div class="layui-col-xs6 layui-col-sm4 layui-col-md3">
-                    <div class="media-item ${selectedClass}" data-id="${item.id}">
-                        <div class="selected-indicator">
-                            <i class="layui-icon layui-icon-ok-circle" style="font-size: 20px; color: #1E9FFF;"></i>
-                        </div>
-                        <div class="media-thumbnail">
-                            ${thumbnailHtml}
-                        </div>
-                        <div class="media-info">
-                            <div class="media-name">${item.original_name}</div>
-                            <div class="media-size">${formatFileSize(item.file_size)}</div>
-                        </div>
-                    </div>
-                </div>
-                `;
-            });
-            
-            $('#media-grid').html(html);
-            
-            // 绑定点击事件
-            $('.media-item').on('click', function () {
-                let itemId = $(this).data('id');
-                let clickedItem = null;
-                
-                // 找到对应的媒体项
-                for (let i = 0; i < mediaList.length; i++) {
-                    if (mediaList[i].id === itemId) {
-                        clickedItem = mediaList[i];
-                        break;
-                    }
-                }
-                
-                if (!clickedItem) return;
-                
-                if (multiple) {
-                    // 多选模式
-                    let index = selectedMedias.findIndex(media => media.id === itemId);
-                    if (index > -1) {
-                        // 取消选择
-                        selectedMedias.splice(index, 1);
-                        $(this).removeClass('selected');
-                    } else {
-                        // 添加选择
-                        selectedMedias.push(clickedItem);
-                        $(this).addClass('selected');
-                    }
-                } else {
-                    // 单选模式
-                    if (selectedMedia && selectedMedia.id === itemId) {
-                        // 取消选择
-                        selectedMedia = null;
-                        $(this).removeClass('selected');
-                    } else {
-                        // 选择新项
-                        if (selectedMedia) {
-                            $(`.media-item[data-id="${selectedMedia.id}"]`).removeClass('selected');
-                        }
-                        selectedMedia = clickedItem;
-                        $(this).addClass('selected');
-                    }
-                }
-            });
-        }
-        
-        // 渲染分页控件
-        function renderPagination(total, current, limit) {
-            layui.laypage.render({
-                elem: 'media-pagination',
-                count: total,
-                limit: limit,
-                curr: current,
-                layout: ['count', 'prev', 'page', 'next', 'skip'],
-                jump: function (obj, first) {
-                    if (!first) {
-                        currentPage = obj.curr;
-                        loadMediaList();
-                    }
-                }
-            });
-        }
-        
-        // 加载媒体列表
-        let mediaList = [];
-        function loadMediaList() {
-            let loading = layer.load();
-            
-            $.ajax({
-                url: MODULE_PATH + 'list',
-                dataType: 'json',
-                type: 'get',
-                data: {
-                    page: currentPage,
-                    limit: pageSize,
-                    search: $('#mediaSearchForm input[name="search"]').val(),
-                    file_type: $('#mediaSearchForm select[name="file_type"]').val()
-                },
-                success: function (result) {
-                    layer.close(loading);
-                    if (result.code === 0) {
-                        totalCount = result.total;
-                        mediaList = result.data;
-                        renderMediaGrid(result.data);
-                        renderPagination(totalCount, currentPage, pageSize);
-                    } else {
-                        layer.msg(result.msg, {icon: 2});
-                    }
-                },
-                error: function () {
-                    layer.close(loading);
-                    layer.msg('加载失败', {icon: 2});
-                }
-            });
-        }
-        
-        // 格式化文件大小
-        function formatFileSize(bytes) {
-            if (bytes === 0) return '0 Bytes';
-            
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-        }
-        
-        // 查询表单提交
-        form.on('submit(media-search)', function (data) {
-            currentPage = 1;
-            loadMediaList();
-            return false;
-        });
-        
-        // 确认选择
-        $('#confirm-selection').on('click', function () {
-            if (multiple) {
-                if (selectedMedias.length === 0) {
-                    layer.msg('请至少选择一个文件', {icon: 2});
-                    return;
-                }
-                // 根据不同的目标类型选择不同的通信方式
-                if (window.targetType === 'window') {
-                    // 如果是独立窗口，尝试使用window.opener通信
-                    if (window.opener && typeof window.opener.selectMedia === 'function') {
-                        window.opener.selectMedia(selectedMedias);
-                        window.close();
-                    } else {
-                        console.error('无法找到父窗口的selectMedia函数');
-                        layer.msg('无法完成选择，请重试', {icon: 2});
-                    }
-                } else {
-                    // 否则使用iframe方式通信
-                    if (window.parent && typeof window.parent.selectMedia === 'function') {
-                        window.parent.selectMedia(selectedMedias);
-                    } else {
-                        console.error('无法找到父窗口的selectMedia函数');
-                        layer.msg('无法完成选择，请重试', {icon: 2});
-                    }
-                }
-            } else {
-                if (!selectedMedia) {
-                    layer.msg('请选择一个文件', {icon: 2});
-                    return;
-                }
-                // 根据不同的目标类型选择不同的通信方式
-                if (window.targetType === 'window') {
-                    // 如果是独立窗口，尝试使用window.opener通信
-                    if (window.opener && typeof window.opener.selectMedia === 'function') {
-                        window.opener.selectMedia(selectedMedia);
-                        window.close();
-                    } else {
-                        console.error('无法找到父窗口的selectMedia函数');
-                        layer.msg('无法完成选择，请重试', {icon: 2});
-                    }
-                } else {
-                    // 否则使用iframe方式通信
-                    if (window.parent && typeof window.parent.selectMedia === 'function') {
-                        window.parent.selectMedia(selectedMedia);
-                    } else {
-                        console.error('无法找到父窗口的selectMedia函数');
-                        layer.msg('无法完成选择，请重试', {icon: 2});
-                    }
-                }
-            }
-        });
-        
-        // 取消选择
-        $('#cancel-selection').on('click', function () {
-            if (window.targetType === 'window') {
-                // 如果是独立窗口，直接关闭
-                window.close();
-            } else {
-                // 否则调用父窗口的关闭函数
-                if (window.parent && typeof window.parent.closeMediaSelector === 'function') {
-                    window.parent.closeMediaSelector();
-                } else {
-                    console.error('无法找到父窗口的closeMediaSelector函数');
-                    layer.msg('无法关闭选择器，请重试', {icon: 2});
-                }
-            }
-        });
-        
-        // 初始化
-        initConfig();
-        loadMediaList();
-    });
-</script>
-</body>
 
+                    const response = await fetch(`/app/admin/media/list?${params}`);
+                    const result = await response.json();
+
+                    if (result.code === 0) {
+                        this.mediaList = result.data;
+                        this.totalCount = result.total;
+                        this.renderMediaGrid();
+                        this.renderPagination();
+                    } else {
+                        this.showError(result.msg || '加载失败');
+                    }
+                } catch (error) {
+                    this.showError('网络错误，请重试');
+                } finally {
+                    this.showLoading(false);
+                }
+            }
+
+            renderMediaGrid() {
+                const grid = document.getElementById('media-grid');
+                
+                if (!this.mediaList || this.mediaList.length === 0) {
+                    grid.innerHTML = `
+                        <div class="col-span-full text-center py-12 text-gray-500">
+                            <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                            <p>暂无媒体文件</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const html = this.mediaList.map(item => {
+                    const isSelected = this.selectedItems.some(selected => selected.id === item.id);
+                    const selectedClass = isSelected ? 'selected ring-2 ring-blue-500 bg-blue-50' : '';
+                    
+                    let thumbnailHtml = '';
+                    if (item.mime_type && item.mime_type.startsWith('image/')) {
+                        thumbnailHtml = `<img src="/uploads/${item.file_path}" alt="${item.original_name}" class="w-full h-full object-cover">`;
+                    } else if (item.mime_type && item.mime_type.startsWith('video/')) {
+                        thumbnailHtml = `
+                            <div class="w-full h-full flex items-center justify-center bg-gray-100">
+                                <svg class="w-8 h-8 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                </svg>
+                            </div>
+                        `;
+                    } else if (item.mime_type && item.mime_type.startsWith('audio/')) {
+                        thumbnailHtml = `
+                            <div class="w-full h-full flex items-center justify-center bg-gray-100">
+                                <svg class="w-8 h-8 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path>
+                                </svg>
+                            </div>
+                        `;
+                    } else {
+                        thumbnailHtml = `
+                            <div class="w-full h-full flex items-center justify-center bg-gray-100">
+                                <svg class="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                            </div>
+                        `;
+                    }
+
+                    return `
+                        <div class="media-item bg-white rounded-lg border border-gray-200 overflow-hidden cursor-pointer hover:shadow-md ${selectedClass}" data-id="${item.id}">
+                            <div class="aspect-square relative">
+                                ${thumbnailHtml}
+                                ${isSelected ? `
+                                    <div class="absolute top-2 right-2">
+                                        <div class="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
+                                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                            </svg>
+                                        </div>
+                                    </div>
+                                ` : ''}
+                            </div>
+                            <div class="p-3">
+                                <p class="text-sm font-medium text-gray-900 truncate" title="${item.original_name}">${item.original_name}</p>
+                                <p class="text-xs text-gray-500 mt-1">${this.formatFileSize(item.file_size)}</p>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                grid.innerHTML = html;
+
+                // 绑定点击事件
+                grid.querySelectorAll('.media-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        const id = parseInt(item.dataset.id);
+                        this.toggleSelection(id);
+                    });
+                });
+            }
+
+            toggleSelection(id) {
+                const item = this.mediaList.find(media => media.id === id);
+                if (!item) return;
+
+                if (this.multiple) {
+                    const index = this.selectedItems.findIndex(selected => selected.id === id);
+                    if (index > -1) {
+                        this.selectedItems.splice(index, 1);
+                    } else {
+                        this.selectedItems.push(item);
+                    }
+                } else {
+                    if (this.selectedItems.length > 0 && this.selectedItems[0].id === id) {
+                        this.selectedItems = [];
+                    } else {
+                        this.selectedItems = [item];
+                    }
+                }
+
+                this.renderMediaGrid();
+                this.updateSelectionInfo();
+            }
+
+            updateSelectionInfo() {
+                const count = this.selectedItems.length;
+                const countElement = document.getElementById('selected-count');
+                const confirmBtn = document.getElementById('confirm-btn');
+                const selectionInfo = document.getElementById('selection-info');
+
+                countElement.textContent = count;
+                
+                if (count > 0) {
+                    confirmBtn.disabled = false;
+                    confirmBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    selectionInfo.textContent = this.multiple ? `已选择 ${count} 个文件` : `已选择 1 个文件`;
+                } else {
+                    confirmBtn.disabled = true;
+                    confirmBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    selectionInfo.textContent = '请选择文件';
+                }
+            }
+
+            renderPagination() {
+                const pagination = document.getElementById('pagination');
+                const totalPages = Math.ceil(this.totalCount / this.pageSize);
+
+                if (totalPages <= 1) {
+                    pagination.innerHTML = '';
+                    return;
+                }
+
+                let html = '';
+
+                // 上一页
+                if (this.currentPage > 1) {
+                    html += `<button class="px-3 py-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all" onclick="mediaSelector.goToPage(${this.currentPage - 1})">上一页</button>`;
+                }
+
+                // 页码
+                const startPage = Math.max(1, this.currentPage - 2);
+                const endPage = Math.min(totalPages, this.currentPage + 2);
+
+                if (startPage > 1) {
+                    html += `<button class="px-3 py-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all" onclick="mediaSelector.goToPage(1)">1</button>`;
+                    if (startPage > 2) {
+                        html += `<span class="px-3 py-2 text-gray-400">...</span>`;
+                    }
+                }
+
+                for (let i = startPage; i <= endPage; i++) {
+                    const activeClass = i === this.currentPage ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100';
+                    html += `<button class="px-3 py-2 ${activeClass} rounded-lg transition-all" onclick="mediaSelector.goToPage(${i})">${i}</button>`;
+                }
+
+                if (endPage < totalPages) {
+                    if (endPage < totalPages - 1) {
+                        html += `<span class="px-3 py-2 text-gray-400">...</span>`;
+                    }
+                    html += `<button class="px-3 py-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all" onclick="mediaSelector.goToPage(${totalPages})">${totalPages}</button>`;
+                }
+
+                // 下一页
+                if (this.currentPage < totalPages) {
+                    html += `<button class="px-3 py-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all" onclick="mediaSelector.goToPage(${this.currentPage + 1})">下一页</button>`;
+                }
+
+                pagination.innerHTML = html;
+            }
+
+            goToPage(page) {
+                this.currentPage = page;
+                this.loadMediaList();
+            }
+
+            confirmSelection() {
+                if (this.selectedItems.length === 0) {
+                    this.showError('请选择文件');
+                    return;
+                }
+
+                const result = this.multiple ? this.selectedItems : this.selectedItems[0];
+
+                if (this.targetType === 'window') {
+                    if (window.opener && typeof window.opener.selectMedia === 'function') {
+                        window.opener.selectMedia(result);
+                        window.close();
+                    } else {
+                        this.showError('无法完成选择，请重试');
+                    }
+                } else {
+                    if (window.parent && typeof window.parent.selectMedia === 'function') {
+                        window.parent.selectMedia(result);
+                    } else {
+                        this.showError('无法完成选择，请重试');
+                    }
+                }
+            }
+
+            cancelSelection() {
+                if (this.targetType === 'window') {
+                    window.close();
+                } else {
+                    if (window.parent && typeof window.parent.closeMediaSelector === 'function') {
+                        window.parent.closeMediaSelector();
+                    } else {
+                        this.showError('无法关闭选择器，请重试');
+                    }
+                }
+            }
+
+            formatFileSize(bytes) {
+                if (bytes === 0) return '0 B';
+                const k = 1024;
+                const sizes = ['B', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+
+            showLoading(show) {
+                const overlay = document.getElementById('loading-overlay');
+                if (show) {
+                    overlay.classList.remove('hidden');
+                } else {
+                    overlay.classList.add('hidden');
+                }
+            }
+
+            showError(message) {
+                // 简单的错误提示，可以根据需要扩展
+                alert(message);
+            }
+        }
+
+        // 初始化媒体选择器
+        const mediaSelector = new MediaSelector();
+    </script>
+</body>
 </html>

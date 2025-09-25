@@ -13,6 +13,8 @@ use League\CommonMark\Exception\CommonMarkException;
  */
 class SearchController
 {
+    protected array $noNeedLogin = ['index', 'ajax'];
+
     /**
      * 搜索页面
      *
@@ -26,7 +28,7 @@ class SearchController
     public function index(Request $request, int $page = 1): Response
     {
         $keyword = $request->get('q', '');
-        
+
         // 构建筛选条件
         $filters = [];
         if (!empty($keyword)) {
@@ -61,7 +63,7 @@ class SearchController
     public function ajax(Request $request): Response
     {
         $keyword = $request->get('q', '');
-        
+
         if (empty($keyword)) {
             return response(json_encode(['success' => false, 'message' => '请输入搜索关键词']), 200)
                 ->withHeader('Content-Type', 'application/json');
@@ -73,21 +75,21 @@ class SearchController
         try {
             // 获取第一页搜索结果
             $result = BlogService::getBlogPosts(1, $filters);
-            
+
             // 将Collection转换为数组进行处理
             $postsArray = $result['posts']->toArray();
-            
+
             $response = [
                 'success' => true,
                 'keyword' => $keyword,
-                'results' => array_map(function($post) {
+                'results' => array_map(function ($post) {
                     return [
                         'id' => $post['id'],
                         'title' => $post['title'],
                         'excerpt' => $post['excerpt'],
                         'created_at' => $post['created_at'],
-                        'author' => isset($post['primary_author']) && !empty($post['primary_author']) ? 
-                            (is_array($post['primary_author']) ? ($post['primary_author'][0]['nickname'] ?? '未知作者') : ($post['primary_author']['nickname'] ?? '未知作者')) : 
+                        'author' => isset($post['primary_author']) && !empty($post['primary_author']) ?
+                            (is_array($post['primary_author']) ? ($post['primary_author'][0]['nickname'] ?? '未知作者') : ($post['primary_author']['nickname'] ?? '未知作者')) :
                             (isset($post['authors']) && !empty($post['authors']) ? ($post['authors'][0]['nickname'] ?? '未知作者') : '未知作者'),
                         'url' => '/post/' . $post['id']
                     ];

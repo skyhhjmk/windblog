@@ -40,6 +40,10 @@ Route::group('/app/admin', function () {
         Route::get('/edit/{id}', [LinkController::class, 'edit']);
         Route::post('/edit/{id}', [LinkController::class, 'edit']);
         Route::get('/view/{id}', [LinkController::class, 'view']);
+        Route::get('/audit/{id}', [LinkController::class, 'audit']);
+        Route::post('/detectSite', [LinkController::class, 'detectSite']);
+        Route::post('/batchApprove/{ids}', [LinkController::class, 'batchApprove']);
+        Route::post('/batchReject/{ids}', [LinkController::class, 'batchReject']);
         Route::delete('/remove/{id}', [LinkController::class, 'remove']);
         Route::post('/restore/{id}', [LinkController::class, 'restore']);
         Route::delete('/forceDelete/{id}', [LinkController::class, 'forceDelete']);

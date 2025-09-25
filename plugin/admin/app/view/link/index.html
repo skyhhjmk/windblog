@@ -136,6 +136,8 @@
 <script type="text/html" id="pending-link-bar">
     <!-- 待审核链接操作按钮 -->
     <div class="pending-actions flex space-x-1">
+        <button class="pear-btn pear-btn-primary pear-btn-sm" lay-event="audit" title="审核工作台"><i
+                class="layui-icon layui-icon-search"></i></button>
         <button class="pear-btn pear-btn-primary pear-btn-sm" lay-event="view" title="查看详情"><i
                 class="layui-icon layui-icon-read"></i></button>
         <button class="pear-btn pear-btn-success pear-btn-sm" lay-event="approve" title="通过"><i
@@ -156,34 +158,15 @@
 </script>
 
 <script type="text/html" id="link-status">
-    <span class="px-2 py-1 text-xs rounded status-badge" data-id="{{d.id}}"></span>
-</script>
-
-<script>
-    // 动态加载状态信息
-    function loadStatusInfo(rowId) {
-        $.ajax({
-            url: MODULE_PATH + "getStatus/" + rowId,
-            type: 'get',
-            success: function(data) {
-                if(data.code === 0) {
-                    let status = data.data.status;
-                    let badge = $('.status-badge[data-id="' + rowId + '"]');
-                    
-                    if(status === 1) {
-                        badge.text('已启用').removeClass('bg-yellow-100 text-yellow-800 bg-red-100 text-red-800')
-                            .addClass('bg-green-100 text-green-800');
-                    } else if(data.data.is_pending) {
-                        badge.text('待审核').removeClass('bg-green-100 text-green-800 bg-red-100 text-red-800')
-                            .addClass('bg-yellow-100 text-yellow-800');
-                    } else {
-                        badge.text('已禁用').removeClass('bg-green-100 text-green-800 bg-yellow-100 text-yellow-800')
-                            .addClass('bg-red-100 text-red-800');
-                    }
-                }
-            }
-        });
-    }
+    {{# if(d.deleted_at) { }}
+        <span class="px-2 py-1 text-xs rounded bg-gray-100 text-gray-800">已删除</span>
+    {{# } else if(d.status === 0 && !d.is_pending) { }}
+        <span class="px-2 py-1 text-xs rounded bg-red-100 text-red-800">已禁用</span>
+    {{# } else if(d.is_pending) { }}
+        <span class="px-2 py-1 text-xs rounded bg-yellow-100 text-yellow-800">待审核</span>
+    {{# } else { }}
+        <span class="px-2 py-1 text-xs rounded bg-green-100 text-green-800">已启用</span>
+    {{# } }}
 </script>
 
 <script type="text/html" id="link-target">
@@ -207,30 +190,14 @@
 
 <!-- 申请信息模板 -->
 <script type="text/html" id="link-applyInfo">
-    <div class="text-xs apply-info-container">
-        <div class="mb-1 contact-info"><span class="text-gray-500">联系方式:</span> <span class="contact-value"></span></div>
-        <div class="mb-1 apply-time"><span class="text-gray-500">申请时间:</span> <span class="time-value"></span></div>
-        <div class="apply-ip"><span class="text-gray-500">IP:</span> <span class="ip-value"></span></div>
+    <div class="text-xs">
+        {{# if(d.contact) { }}
+        <div class="mb-1"><span class="text-gray-500">联系方式:</span> {{d.contact}}</div>
+        {{# } }}
+        {{# if(d.apply_ip) { }}
+        <div><span class="text-gray-500">IP:</span> {{d.apply_ip}}</div>
+        {{# } }}
     </div>
-</script>
-
-<script>
-    // 动态加载申请信息
-    function loadApplyInfo(rowId) {
-        $.ajax({
-            url: MODULE_PATH + "getApplyInfo/" + rowId,
-            type: 'get',
-            success: function(data) {
-                if(data.code === 0) {
-                    let info = data.data;
-                    let container = $('.apply-info-container[data-id="' + rowId + '"]');
-                    if(info.contact) container.find('.contact-value').text(info.contact);
-                    if(info.apply_time) container.find('.time-value').text(info.apply_time);
-                    if(info.apply_ip) container.find('.ip-value').text(info.apply_ip);
-                }
-            }
-        });
-    }
 </script>
 
 <script>
@@ -436,7 +403,7 @@
                     title: '操作',
                     toolbar: '#pending-link-bar',
                     align: 'left',
-                    width: 180,
+                    width: 220,
                     fixed: 'right'
                 }
             ]
@@ -498,15 +465,7 @@
                     url: 'list',
                     where: searchData,
                     cols: cols,
-                    page: { curr: 1 },
-                    done: function(res, curr, count) {
-                        res.data.forEach(function(item) {
-                            loadStatusInfo(item.id);
-                            if (currentMode === 'pending') {
-                                loadApplyInfo(item.id);
-                            }
-                        });
-                    }
+                    page: { curr: 1 }
                 });
             } else {
                 currentTable = table.render({
@@ -520,14 +479,7 @@
                     defaultToolbar: [{
                         layEvent: 'refresh',
                         icon: 'layui-icon-refresh',
-                    }, 'filter', 'print', 'exports'],
-                    done: function(res, curr, count) {
-                        if (currentMode === 'pending') {
-                            res.data.forEach(function(item) {
-                                loadApplyInfo(item.id);
-                            });
-                        }
-                    }
+                    }, 'filter', 'print', 'exports']
                 });
             }
         }
@@ -575,6 +527,8 @@
                 window.forceDelete(obj);
             } else if (obj.event === 'view') {
                 window.view(obj);
+            } else if (obj.event === 'audit') {
+                window.audit(obj);
             } else if (obj.event === 'approve') {
                 window.approve(obj);
             } else if (obj.event === 'reject') {
@@ -606,6 +560,7 @@
             let formData = form.val('linkForm');
             formData.status = $('select[name="status"]').val() || '';
             formData.isTrashed = $('#isTrashed').val() || 'false';
+            formData.isPending = $('#isPending').val() || 'false';
 
             if (currentTable) {
                 currentTable.reload({
@@ -629,6 +584,12 @@
         window.view = function (obj) {
             if (obj && obj.data && typeof obj.data.id === 'number') {
                 parent.layui.admin.addTab('link-view-' + obj.data.id, '查看链接：' + obj.data.name, `/app/admin/link/view/${obj.data.id}`);
+            }
+        }
+
+        window.audit = function (obj) {
+            if (obj && obj.data && typeof obj.data.id === 'number') {
+                parent.layui.admin.addTab('link-audit-' + obj.data.id, '审核工作台：' + obj.data.name, `/app/admin/link/audit/${obj.data.id}`);
             }
         }
 

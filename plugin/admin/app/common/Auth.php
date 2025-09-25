@@ -1,4 +1,5 @@
 <?php
+
 namespace plugin\admin\app\common;
 
 

@@ -47,20 +47,48 @@ class MediaController extends Base
      */
     public function list(Request $request): Response
     {
-        // 获取请求参数
-        $params = [
-            'search' => $request->get('search', ''),
-            'page' => (int)$request->get('page', 1),
-            'limit' => (int)$request->get('limit', 15),
-            'order' => $request->get('order', 'id'),
-            'sort' => $request->get('sort', 'desc'),
-            'mime_type' => $request->get('mime_type', '')
-        ];
-        
-        $result = $this->mediaService->getList($params);
-        
-        // 返回JSON数据
-        return $this->success('Success', $result['list'], $result['total']);
+        try {
+            // 获取请求参数
+            $params = [
+                'search' => $request->get('search', ''),
+                'page' => (int)$request->get('page', 1),
+                'limit' => min((int)$request->get('limit', 20), 100), // 限制最大数量
+                'order' => $request->get('order', 'id'),
+                'sort' => $request->get('sort', 'desc'),
+                'mime_type' => $request->get('mime_type', '')
+            ];
+            
+            $result = $this->mediaService->getList($params);
+            
+            // 格式化返回数据，确保包含所有必要字段
+            $formattedData = array_map(function($item) {
+                return [
+                    'id' => $item['id'],
+                    'filename' => $item['filename'],
+                    'original_name' => $item['original_name'],
+                    'file_path' => $item['file_path'],
+                    'thumb_path' => $item['thumb_path'] ?? null,
+                    'file_size' => $item['file_size'],
+                    'mime_type' => $item['mime_type'],
+                    'alt_text' => $item['alt_text'] ?? '',
+                    'caption' => $item['caption'] ?? '',
+                    'description' => $item['description'] ?? '',
+                    'created_at' => $item['created_at'],
+                    'updated_at' => $item['updated_at']
+                ];
+            }, $result['list']);
+            
+            return json([
+                'code' => 0, 
+                'msg' => 'success', 
+                'data' => $formattedData, 
+                'total' => $result['total'],
+                'page' => $params['page'],
+                'limit' => $params['limit']
+            ]);
+        } catch (\Exception $e) {
+            return json(['code' => 1, 'msg' => $e->getMessage()]);
+        }
     }
     
     /**
@@ -72,11 +100,22 @@ class MediaController extends Base
     public function upload(Request $request): Response
     {
         try {
-            // 检查是否有上传媒体
-        $file = $request->file('file');
-        if (!$file) {
-            return json(['code' => 400, 'msg' => '没有上传媒体']);
-        }
+            // 检查是否有上传文件
+            $file = $request->file('file');
+            if (!$file) {
+                return json(['code' => 1, 'msg' => '请选择文件']);
+            }
+
+            // 验证文件
+            if (!$file->isValid()) {
+                return json(['code' => 1, 'msg' => '文件上传失败']);
+            }
+
+            // 检查文件大小（默认最大50MB）
+            $maxSize = config('app.max_upload_size', 50 * 1024 * 1024);
+            if ($file->getSize() > $maxSize) {
+                return json(['code' => 1, 'msg' => '文件大小超过限制']);
+            }
             
             $data = [
                 'alt_text' => $request->post('alt_text', ''),
@@ -85,7 +124,28 @@ class MediaController extends Base
             ];
             
             $result = $this->mediaService->upload($file, $data);
-            return json($result);
+            
+            if ($result['code'] === 0) {
+                // 格式化返回数据
+                $formattedResult = [
+                    'id' => $result['data']['id'],
+                    'filename' => $result['data']['filename'],
+                    'original_name' => $result['data']['original_name'],
+                    'file_path' => $result['data']['file_path'],
+                    'thumb_path' => $result['data']['thumb_path'] ?? null,
+                    'file_size' => $result['data']['file_size'],
+                    'mime_type' => $result['data']['mime_type'],
+                    'alt_text' => $result['data']['alt_text'] ?? '',
+                    'caption' => $result['data']['caption'] ?? '',
+                    'description' => $result['data']['description'] ?? '',
+                    'created_at' => $result['data']['created_at'],
+                    'updated_at' => $result['data']['updated_at']
+                ];
+                
+                return json(['code' => 0, 'msg' => '上传成功', 'data' => $formattedResult]);
+            } else {
+                return json(['code' => 1, 'msg' => $result['msg']]);
+            }
         } catch (\Exception $e) {
             return json(['code' => 1, 'msg' => '上传失败: ' . $e->getMessage()]);
         }
@@ -100,19 +160,49 @@ class MediaController extends Base
      */
     public function update(Request $request, int $id): Response
     {
-        $data = [
-            'alt_text' => $request->post('alt_text', ''),
-            'caption' => $request->post('caption', ''),
-            'description' => $request->post('description', '')
-        ];
-        
-        $result = $this->mediaService->update($id, $data);
-        
-        if ($result['code'] === 0) {
-            return $this->success($result['msg']);
-        } else {
-            return $this->fail($result['msg']);
+        try {
+            if (!$id) {
+                return json(['code' => 1, 'msg' => '参数错误']);
+            }
+
+            // 支持JSON和表单数据
+            $input = $request->getContent();
+            if ($input && $this->isJson($input)) {
+                $data = json_decode($input, true);
+                $updateData = [
+                    'alt_text' => $data['alt_text'] ?? '',
+                    'caption' => $data['caption'] ?? '',
+                    'description' => $data['description'] ?? ''
+                ];
+            } else {
+                $updateData = [
+                    'alt_text' => $request->post('alt_text', ''),
+                    'caption' => $request->post('caption', ''),
+                    'description' => $request->post('description', '')
+                ];
+            }
+            
+            $result = $this->mediaService->update($id, $updateData);
+            
+            if ($result['code'] === 0) {
+                return json(['code' => 0, 'msg' => '更新成功', 'data' => $result['data'] ?? null]);
+            } else {
+                return json(['code' => 1, 'msg' => $result['msg']]);
+            }
+        } catch (\Exception $e) {
+            return json(['code' => 1, 'msg' => $e->getMessage()]);
         }
+    }
+
+    /**
+     * 检查字符串是否为JSON格式
+     * @param string $string
+     * @return bool
+     */
+    private function isJson(string $string): bool
+    {
+        json_decode($string);
+        return json_last_error() === JSON_ERROR_NONE;
     }
     
     /**
@@ -124,12 +214,20 @@ class MediaController extends Base
      */
     public function remove(Request $request, int $id): Response
     {
-        $result = $this->mediaService->delete($id);
-        
-        if ($result['code'] === 0) {
-            return $this->success($result['msg']);
-        } else {
-            return $this->fail($result['msg']);
+        try {
+            if (!$id) {
+                return json(['code' => 1, 'msg' => '参数错误']);
+            }
+
+            $result = $this->mediaService->delete($id);
+            
+            if ($result['code'] === 0) {
+                return json(['code' => 0, 'msg' => '删除成功']);
+            } else {
+                return json(['code' => 1, 'msg' => $result['msg']]);
+            }
+        } catch (\Exception $e) {
+            return json(['code' => 1, 'msg' => $e->getMessage()]);
         }
     }
     
@@ -142,14 +240,46 @@ class MediaController extends Base
      */
     public function batchRemove(Request $request, string $ids): Response
     {
-        if (empty($ids)) {
-            return $this->fail('参数错误');
+        try {
+            if (empty($ids)) {
+                return json(['code' => 1, 'msg' => '参数错误']);
+            }
+            
+            // 支持逗号分隔的ID字符串
+            $idArray = array_filter(array_map('intval', explode(',', $ids)));
+            
+            if (empty($idArray)) {
+                return json(['code' => 1, 'msg' => '没有有效的ID']);
+            }
+
+            $successCount = 0;
+            $errors = [];
+
+            foreach ($idArray as $id) {
+                try {
+                    $result = $this->mediaService->delete($id);
+                    if ($result['code'] === 0) {
+                        $successCount++;
+                    } else {
+                        $errors[] = "ID {$id}: " . $result['msg'];
+                    }
+                } catch (\Exception $e) {
+                    $errors[] = "ID {$id}: " . $e->getMessage();
+                }
+            }
+
+            if ($successCount > 0) {
+                $message = "成功删除 {$successCount} 个文件";
+                if (!empty($errors)) {
+                    $message .= "，" . count($errors) . " 个失败";
+                }
+                return json(['code' => 0, 'msg' => $message, 'errors' => $errors]);
+            } else {
+                return json(['code' => 1, 'msg' => '批量删除失败', 'errors' => $errors]);
+            }
+        } catch (\Exception $e) {
+            return json(['code' => 1, 'msg' => $e->getMessage()]);
         }
-        
-        $idArray = explode(',', $ids);
-        $result = $this->mediaService->batchDelete($idArray);
-        
-        return $this->success($result['msg']);
     }
     
     /**
@@ -162,15 +292,19 @@ class MediaController extends Base
     public function regenerateThumbnail(Request $request, int $id): Response
     {
         try {
+            if (!$id) {
+                return json(['code' => 1, 'msg' => '参数错误']);
+            }
+
             $result = $this->mediaService->regenerateThumbnail($id);
             
             if ($result['code'] === 0) {
-                return $this->success($result['msg']);
+                return json(['code' => 0, 'msg' => '缩略图重新生成成功', 'data' => $result['data'] ?? null]);
             } else {
-                return $this->fail($result['msg']);
+                return json(['code' => 1, 'msg' => $result['msg']]);
             }
         } catch (\Exception $e) {
-            return $this->fail('操作失败: ' . $e->getMessage());
+            return json(['code' => 1, 'msg' => '操作失败: ' . $e->getMessage()]);
         }
     }
 }

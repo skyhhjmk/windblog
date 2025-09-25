@@ -25,7 +25,7 @@ use Throwable;
  * @property string|null $content         链接详细介绍(Markdown格式)
  * @property string|null $email           所有者电子邮件
  * @property string|null $callback_url    回调地址
- * @property string|null $note            管理员备注内容
+ * @property string|null $note            管理员备注
  * @property string|null $seo_title       SEO标题
  * @property string|null $seo_keywords    SEO关键词
  * @property string|null $seo_description SEO描述
@@ -34,8 +34,11 @@ use Throwable;
  * @property Carbon|null $updated_at      更新时间
  * @property Carbon|null $deleted_at      软删除时间
  *
+ * @method static Builder|Link where(string|array|\Closure $column, mixed $operator = null, mixed $value = null, string $boolean = 'and') 添加where条件查询
  * @method static Builder|Link active() 只查询显示状态的链接
  * @method static Builder|Link ordered() 按排序权重升序查询
+ * @method static Builder|Link withTrashed() 包含软删除的记录
+ * @method static Builder|Link onlyTrashed() 只查询软删除的记录
  */
 class Link extends Model
 {
@@ -63,8 +66,9 @@ class Link extends Model
         'redirect_type',
         'show_url',
         'content',
-        'note',
+        'email',
         'callback_url',
+        'note',
         'seo_title',
         'seo_keywords',
         'seo_description',
@@ -87,8 +91,9 @@ class Link extends Model
         'status' => 'boolean',
         'show_url' => 'boolean',
         'content' => 'string',
-        'note' => 'string',
+        'email' => 'string',
         'callback_url' => 'string',
+        'note' => 'string',
         'seo_title' => 'string',
         'seo_keywords' => 'string',
         'seo_description' => 'string',
@@ -169,6 +174,30 @@ class Link extends Model
     }
 
     /**
+     * 查询作用域：只查询待审核的记录。
+     *
+     * @param Builder $query
+     *
+     * @return Builder
+     */
+    public function scopePending(Builder $query): Builder
+    {
+        return $query->where('status', false);
+    }
+
+    /**
+     * 查询作用域：只查询已审核的记录。
+     *
+     * @param Builder $query
+     *
+     * @return Builder
+     */
+    public function scopeApproved(Builder $query): Builder
+    {
+        return $query->where('status', true);
+    }
+
+    /**
      * 软删除方法，根据配置决定是软删除还是硬删除
      *
      * @param bool $forceDelete 是否强制删除（绕过软删除配置）
@@ -225,5 +254,85 @@ class Link extends Model
             \support\Log::error('Restore failed for link ID ' . $this->id . ': ' . $e->getMessage());
             return false;
         }
+    }
+
+    // -----------------------------------------------------
+    // 自定义字段访问器
+    // -----------------------------------------------------
+
+    /**
+     * 获取管理员笔记
+     *
+     * @return string|null
+     */
+    public function getAdminNoteAttribute(): ?string
+    {
+        return $this->custom_fields['admin_note'] ?? null;
+    }
+
+    /**
+     * 设置管理员笔记
+     *
+     * @param string|null $value
+     * @return void
+     */
+    public function setAdminNoteAttribute(?string $value): void
+    {
+        $customFields = $this->custom_fields ?: [];
+        if ($value === null || $value === '') {
+            unset($customFields['admin_note']);
+        } else {
+            $customFields['admin_note'] = $value;
+        }
+        $this->custom_fields = $customFields;
+    }
+
+    /**
+     * 获取自定义字段值
+     *
+     * @param string $key
+     * @param mixed $default
+     * @return mixed
+     */
+    public function getCustomField(string $key, $default = null)
+    {
+        return $this->custom_fields[$key] ?? $default;
+    }
+
+    /**
+     * 设置自定义字段值
+     *
+     * @param string $key
+     * @param mixed $value
+     * @return void
+     */
+    public function setCustomField(string $key, $value): void
+    {
+        $customFields = $this->custom_fields ?: [];
+        if ($value === null) {
+            unset($customFields[$key]);
+        } else {
+            $customFields[$key] = $value;
+        }
+        $this->custom_fields = $customFields;
+    }
+
+    /**
+     * 批量设置自定义字段
+     *
+     * @param array $fields
+     * @return void
+     */
+    public function setCustomFields(array $fields): void
+    {
+        $customFields = $this->custom_fields ?: [];
+        foreach ($fields as $key => $value) {
+            if ($value === null) {
+                unset($customFields[$key]);
+            } else {
+                $customFields[$key] = $value;
+            }
+        }
+        $this->custom_fields = $customFields;
     }
 }

@@ -3,6 +3,8 @@
 namespace plugin\admin\app\controller;
 
 use app\model\Link;
+use app\service\CacheService;
+use Exception;
 use support\Request;
 use support\Response;
 use Throwable;
@@ -86,7 +88,13 @@ class LinkController extends Base
         }
 
 
-        return $this->success(trans('Success'), $list, $total);
+        // 返回列表数据（无缓存）
+        return $this->success(trans('Success'), $list, $total)
+            ->withHeaders([
+                'Cache-Control' => 'no-cache, no-store, must-revalidate',
+                'Pragma' => 'no-cache',
+                'Expires' => '0'
+            ]);
     }
 
     /**
@@ -145,14 +153,14 @@ class LinkController extends Base
 
         // 增强URL验证
         if (!filter_var($data['url'], FILTER_VALIDATE_URL) ||
-            !preg_match('/^https?:\/\/[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+(:[0-9]{1,5})?(\/[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)?$/', $data['url'])) {
+            !preg_match('/^https?:\/\/[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+(:[0-9]{1,5})?(\/[-a-zA-Z0-9()@:%_\+.~#\?&\/=]*)?$/', $data['url'])) {
             return $this->fail('请输入有效的URL地址');
         }
 
         // 图标URL验证（如果提供）
         if (!empty($data['icon'])) {
             if (!filter_var($data['icon'], FILTER_VALIDATE_URL) ||
-                !preg_match('/^https?:\/\/[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+(:[0-9]{1,5})?(\/[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)?$/', $data['icon'])) {
+                !preg_match('/^https?:\/\/[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+(:[0-9]{1,5})?(\/[-a-zA-Z0-9()@:%_\+.~#\?&\/=]*)?$/', $data['icon'])) {
                 return $this->fail('请输入有效的图标URL地址');
             }
         }
@@ -166,7 +174,7 @@ class LinkController extends Base
                 }
 
                 // 检查URL是否重复（排除当前链接）
-                $existing = Link::where('url', 'like', "%{$data['url']}%")
+                $existing = Link::where('url', $data['url'])
                     ->where('id', '!=', $id)
                     ->first();
                 if ($existing) {
@@ -181,10 +189,34 @@ class LinkController extends Base
                 $isApproval = false;
 
                 // 检查URL是否重复
-                $existing = Link::where('url', 'like', "%{$data['url']}%")->first();
+                $existing = Link::where('url', $data['url'])->first();
                 if ($existing) {
                     return $this->fail('该URL已存在');
                 }
+            }
+
+            // 处理status字段 - PostgreSQL兼容的布尔值转换
+            $status = $this->parseBooleanForPostgres($data['status'] ?? false);
+
+            // 处理自定义字段
+            $customFields = [];
+            if (!empty($data['custom_fields'])) {
+                if (is_string($data['custom_fields'])) {
+                    try {
+                        $customFields = json_decode($data['custom_fields'], true) ?: [];
+                    } catch (Exception $e) {
+                        return $this->fail('自定义字段格式错误：' . $e->getMessage());
+                    }
+                } elseif (is_array($data['custom_fields'])) {
+                    $customFields = $data['custom_fields'];
+                }
+            }
+
+            // 处理管理员笔记（存储到自定义字段中）
+            if (isset($data['note'])) {
+                $customFields['admin_note'] = $data['note'];
+            } elseif (isset($data['admin_note'])) {
+                $customFields['admin_note'] = $data['admin_note'];
             }
 
             // 填充数据
@@ -195,12 +227,24 @@ class LinkController extends Base
                 'icon' => $data['icon'] ?? '',
                 'image' => $data['image'] ?? '',
                 'sort_order' => (int)($data['sort_order'] ?? 999),
-                'status' => (bool)($data['status'] ?? false),
-                'target' => $data['target'] ?? 'unknow',
-                'redirect_type' => $data['redirect_type'] ?? 'unknow',
+                'status' => $status,
+                'target' => $data['target'] ?? '_blank',
+                'redirect_type' => $data['redirect_type'] ?? 'direct',
                 'show_url' => (bool)($data['show_url'] ?? true),
                 'content' => $data['content'] ?? '',
-                'note' => $data['note'] ?? '',
+                'seo_title' => $data['seo_title'] ?? '',
+                'seo_keywords' => $data['seo_keywords'] ?? '',
+                'seo_description' => $data['seo_description'] ?? '',
+                'custom_fields' => $customFields,
+            ]);
+
+            // 调试信息
+            \support\Log::info('Link save data: ', [
+                'id' => $link->id ?? 'new',
+                'name' => $link->name,
+                'status' => $link->status,
+                'status_type' => gettype($link->status),
+                'original_status' => $data['status'] ?? 'not_set'
             ]);
 
             // 如果是审核通过操作，添加审核记录
@@ -216,18 +260,43 @@ class LinkController extends Base
                 );
             }
 
-            if ($link->save()) {
-                // 如果是审核通过操作，清除相关缓存
-                if ($isApproval) {
-                    // 清除前台链接列表缓存
-                    $this->clearLinkCache();
-                }
+            // 保存数据
+            $saved = $link->save();
+            
+            // 调试保存结果
+            \support\Log::info('Link save result: ', [
+                'saved' => $saved,
+                'id' => $link->id,
+                'status_after_save' => $link->status,
+                'dirty' => $link->getDirty(),
+                'changes' => $link->getChanges()
+            ]);
+            
+            if ($saved) {
+                // 清除相关缓存
+                $this->clearLinkCache();
 
-                return $this->success($id ? '链接更新成功' : '链接添加成功');
+                // 返回更新后的数据
+                $responseData = [
+                    'id' => $link->id,
+                    'name' => $link->name,
+                    'url' => $link->url,
+                    'status' => $link->status,
+                    'is_pending' => !$link->status,
+                    'updated_at' => $link->updated_at->format('Y-m-d H:i:s')
+                ];
+
+                // 返回成功响应（无缓存）
+                return $this->success($id ? '链接更新成功' : '链接添加成功', $responseData)
+                    ->withHeaders([
+                        'Cache-Control' => 'no-cache, no-store, must-revalidate',
+                        'Pragma' => 'no-cache',
+                        'Expires' => '0'
+                    ]);
             }
 
             return $this->fail($id ? '链接更新失败' : '链接添加失败');
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             \support\Log::error('链接保存失败: ' . $e->getMessage());
             return $this->fail('系统错误，请稍后再试');
         }
@@ -255,7 +324,7 @@ class LinkController extends Base
                 $this->clearLinkCache();
                 return $this->success('链接已移至垃圾箱');
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             \support\Log::error('链接删除失败: ' . $e->getMessage());
             return $this->fail('系统错误，请稍后再试');
         }
@@ -284,7 +353,7 @@ class LinkController extends Base
                 $this->clearLinkCache();
                 return $this->success('链接已恢复');
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             \support\Log::error('链接恢复失败: ' . $e->getMessage());
             return $this->fail('系统错误，请稍后再试');
         }
@@ -314,7 +383,7 @@ class LinkController extends Base
                 $this->clearLinkCache();
                 return $this->success('链接已永久删除');
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             \support\Log::error('链接永久删除失败: ' . $e->getMessage());
             return $this->fail('系统错误，请稍后再试');
         }
@@ -351,7 +420,7 @@ class LinkController extends Base
                 // 清除前台链接列表缓存
                 $this->clearLinkCache();
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             \support\Log::error('批量恢复链接失败: ' . $e->getMessage());
             return $this->fail('系统错误，请稍后再试');
         }
@@ -389,7 +458,7 @@ class LinkController extends Base
                 // 清除前台链接列表缓存
                 $this->clearLinkCache();
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             \support\Log::error('批量永久删除链接失败: ' . $e->getMessage());
             return $this->fail('系统错误，请稍后再试');
         }
@@ -427,7 +496,7 @@ class LinkController extends Base
                 // 清除前台链接列表缓存
                 $this->clearLinkCache();
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             \support\Log::error('批量删除链接失败: ' . $e->getMessage());
             return $this->fail('系统错误，请稍后再试');
         }
@@ -472,7 +541,13 @@ class LinkController extends Base
         $linkData = $link->toArray();
         $linkData['is_pending'] = !$link->status;
 
-        return $this->success('Success', $linkData);
+        // 返回链接数据（无缓存）
+        return $this->success('Success', $linkData)
+            ->withHeaders([
+                'Cache-Control' => 'no-cache, no-store, must-revalidate',
+                'Pragma' => 'no-cache',
+                'Expires' => '0'
+            ]);
     }
 
     /**
@@ -482,6 +557,7 @@ class LinkController extends Base
      * @param string  $ids
      *
      * @return Response
+     * @throws Exception
      */
     public function batchApprove(Request $request, string $ids): Response
     {
@@ -499,15 +575,15 @@ class LinkController extends Base
                 $link = Link::find($id);
                 if ($link && !$link->status) {
                     // 更新审核记录
-                    if (strpos($link->content, '## 申请信息') !== false) {
-                        $link->content = str_replace(
+                    if (str_contains($link->note, '## 申请信息')) {
+                        $link->note = str_replace(
                             '### 审核记录',
                             "### 审核记录\n\n> 已审核通过 - {$adminName} - " . date('Y-m-d H:i:s'),
-                            $link->content
+                            $link->note
                         );
                     }
 
-                    $link->status = true;
+                    $link->status = $this->parseBooleanForPostgres(true);
                     if ($link->save()) {
                         $count++;
                     }
@@ -518,7 +594,7 @@ class LinkController extends Base
                 // 清除前台链接列表缓存
                 $this->clearLinkCache();
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             \support\Log::error('批量审核链接失败: ' . $e->getMessage());
             return $this->fail('系统错误，请稍后再试');
         }
@@ -552,11 +628,11 @@ class LinkController extends Base
                 $link = Link::find($id);
                 if ($link && !$link->status) {
                     // 更新审核记录
-                    if (strpos($link->content, '## 申请信息') !== false) {
-                        $link->content = str_replace(
+                    if (str_contains($link->note, '## 申请信息')) {
+                        $link->note = str_replace(
                             '### 审核记录',
                             "### 审核记录\n\n> 已拒绝 - {$adminName} - " . date('Y-m-d H:i:s') . "\n> 原因：{$reason}",
-                            $link->content
+                            $link->note
                         );
                         $link->save();
                     }
@@ -567,7 +643,7 @@ class LinkController extends Base
                     }
                 }
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             \support\Log::error('批量拒绝链接失败: ' . $e->getMessage());
             return $this->fail('系统错误，请稍后再试');
         }
@@ -576,15 +652,487 @@ class LinkController extends Base
     }
 
     /**
+     * 友链审核工作台
+     *
+     * @param Request $request
+     * @param int     $id
+     *
+     * @return Response
+     */
+    public function audit(Request $request, int $id): Response
+    {
+        $link = Link::find($id);
+        if (!$link) {
+            return $this->fail('链接不存在');
+        }
+
+        return view('link/audit', ['link' => $link]);
+    }
+
+    /**
+     * 检测目标网站信息
+     *
+     * @param Request $request
+     *
+     * @return Response
+     */
+    public function detectSite(Request $request): Response
+    {
+        $url = $request->post('url');
+        $myDomain = $request->post('my_domain', ''); // 本站域名，用于反向链接检查
+
+        if (empty($url)) {
+            return $this->fail('URL不能为空');
+        }
+
+        // 初始化结果数组
+        $result = [
+            'url' => $url,
+            'status' => 'success',
+            'site_info' => [],
+            'backlink_check' => [],
+            'performance' => [],
+            'security' => [],
+            'seo' => [],
+            'errors' => []
+        ];
+
+        // 获取网页内容
+        $fetchResult = $this->fetchWebContent($url);
+        if (!$fetchResult['success']) {
+            $result['status'] = 'error';
+            $result['errors'][] = $fetchResult['error'];
+            return $this->success('检测完成', $result)
+                ->withHeaders([
+                    'Cache-Control' => 'no-cache, no-store, must-revalidate',
+                    'Pragma' => 'no-cache',
+                    'Expires' => '0'
+                ]);
+        }
+
+        $html = $fetchResult['html'];
+        $loadTime = $fetchResult['load_time'];
+
+        // 解析HTML
+        $parseResult = $this->parseHtmlContent($html);
+        if (!$parseResult['success']) {
+            $result['errors'][] = $parseResult['error'];
+        }
+
+        $dom = $parseResult['dom'] ?? null;
+        $xpath = $parseResult['xpath'] ?? null;
+
+        // 各个检测器独立运行，互不影响
+        $result['site_info'] = $this->runSiteInfoDetector($dom, $xpath, $url);
+        $result['performance'] = $this->runPerformanceDetector($url, $html, $loadTime);
+        $result['seo'] = $this->runSeoDetector($dom, $xpath);
+        $result['security'] = $this->runSecurityDetector($url, $html);
+        
+        if (!empty($myDomain)) {
+            $result['backlink_check'] = $this->runBacklinkDetector($html, $myDomain, $url);
+        }
+
+        return $this->success('检测完成', $result)
+            ->withHeaders([
+                'Cache-Control' => 'no-cache, no-store, must-revalidate',
+                'Pragma' => 'no-cache',
+                'Expires' => '0'
+            ]);
+    }
+
+    /**
+     * 获取网页内容
+     */
+    private function fetchWebContent(string $url): array
+    {
+        try {
+            // 设置HTTP上下文选项
+            $context = stream_context_create([
+                'http' => [
+                    'method' => 'GET',
+                    'timeout' => 30,
+                    'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                    'follow_location' => true,
+                    'max_redirects' => 5,
+                    'ignore_errors' => true
+                ],
+                'ssl' => [
+                    'verify_peer' => false,
+                    'verify_peer_name' => false
+                ]
+            ]);
+
+            $startTime = microtime(true);
+            $html = @file_get_contents($url, false, $context);
+            $loadTime = round((microtime(true) - $startTime) * 1000, 2);
+
+            if ($html === false) {
+                return [
+                    'success' => false,
+                    'error' => '无法访问目标网站'
+                ];
+            }
+
+            return [
+                'success' => true,
+                'html' => $html,
+                'load_time' => $loadTime
+            ];
+        } catch (Exception $e) {
+            \support\Log::error('获取网页内容失败: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'error' => '网络请求失败: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * 解析HTML内容
+     */
+    private function parseHtmlContent(string $html): array
+    {
+        try {
+            $dom = new \DOMDocument();
+            @$dom->loadHTML($html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+            $xpath = new \DOMXPath($dom);
+
+            return [
+                'success' => true,
+                'dom' => $dom,
+                'xpath' => $xpath
+            ];
+        } catch (Exception $e) {
+            \support\Log::error('HTML解析失败: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'error' => 'HTML解析失败: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * 网站信息检测器
+     */
+    private function runSiteInfoDetector($dom, $xpath, string $url): array
+    {
+        try {
+            if (!$dom || !$xpath) {
+                return ['error' => 'HTML解析失败，无法获取网站信息'];
+            }
+            return $this->extractSiteInfo($dom, $xpath, $url);
+        } catch (Exception $e) {
+            \support\Log::error('网站信息检测失败: ' . $e->getMessage());
+            return ['error' => '网站信息检测失败: ' . $e->getMessage()];
+        }
+    }
+
+    /**
+     * 性能检测器
+     */
+    private function runPerformanceDetector(string $url, string $html, float $loadTime): array
+    {
+        try {
+            return [
+                'load_time' => $loadTime . 'ms',
+                'content_size' => strlen($html) . ' bytes',
+                'response_headers' => $this->getResponseHeaders($url)
+            ];
+        } catch (Exception $e) {
+            \support\Log::error('性能检测失败: ' . $e->getMessage());
+            return ['error' => '性能检测失败: ' . $e->getMessage()];
+        }
+    }
+
+    /**
+     * SEO检测器
+     */
+    private function runSeoDetector($dom, $xpath): array
+    {
+        try {
+            if (!$dom || !$xpath) {
+                return ['error' => 'HTML解析失败，无法进行SEO检测'];
+            }
+            return $this->extractSeoInfo($dom, $xpath);
+        } catch (Exception $e) {
+            \support\Log::error('SEO检测失败: ' . $e->getMessage());
+            return ['error' => 'SEO检测失败: ' . $e->getMessage()];
+        }
+    }
+
+    /**
+     * 安全检测器
+     */
+    private function runSecurityDetector(string $url, string $html): array
+    {
+        try {
+            return $this->checkSecurity($url, $html);
+        } catch (Exception $e) {
+            \support\Log::error('安全检测失败: ' . $e->getMessage());
+            return ['error' => '安全检测失败: ' . $e->getMessage()];
+        }
+    }
+
+    /**
+     * 反向链接检测器
+     */
+    private function runBacklinkDetector(string $html, string $myDomain, string $url): array
+    {
+        try {
+            return $this->checkBacklink($html, $myDomain, $url);
+        } catch (Exception $e) {
+            \support\Log::error('反向链接检测失败: ' . $e->getMessage());
+            return ['error' => '反向链接检测失败: ' . $e->getMessage()];
+        }
+    }
+
+    /**
+     * 提取网站基本信息
+     */
+    private function extractSiteInfo(\DOMDocument $dom, \DOMXPath $xpath, string $url): array
+    {
+        $info = [];
+
+        // 标题
+        $titleNodes = $xpath->query('//title');
+        $info['title'] = $titleNodes->length > 0 ? trim($titleNodes->item(0)->textContent) : '';
+
+        // 描述
+        $descNodes = $xpath->query('//meta[@name="description"]/@content');
+        $info['description'] = $descNodes->length > 0 ? $descNodes->item(0)->value : '';
+
+        // 关键词
+        $keywordNodes = $xpath->query('//meta[@name="keywords"]/@content');
+        $info['keywords'] = $keywordNodes->length > 0 ? $keywordNodes->item(0)->value : '';
+
+        // 图标
+        $iconNodes = $xpath->query('//link[@rel="icon" or @rel="shortcut icon"]/@href');
+        if ($iconNodes->length > 0) {
+            $iconUrl = $iconNodes->item(0)->value;
+            $info['favicon'] = $this->resolveUrl($iconUrl, $url);
+        } else {
+            $info['favicon'] = $this->resolveUrl('/favicon.ico', $url);
+        }
+
+        // 语言
+        $langNodes = $xpath->query('//html/@lang');
+        $info['language'] = $langNodes->length > 0 ? $langNodes->item(0)->value : '';
+
+        // 字符集
+        $charsetNodes = $xpath->query('//meta[@charset]/@charset');
+        if ($charsetNodes->length === 0) {
+            $charsetNodes = $xpath->query('//meta[@http-equiv="Content-Type"]/@content');
+            if ($charsetNodes->length > 0) {
+                preg_match('/charset=([^;]+)/i', $charsetNodes->item(0)->value, $matches);
+                $info['charset'] = $matches[1] ?? '';
+            }
+        } else {
+            $info['charset'] = $charsetNodes->item(0)->value;
+        }
+
+        return $info;
+    }
+
+    /**
+     * 提取SEO信息
+     */
+    private function extractSeoInfo(\DOMDocument $dom, \DOMXPath $xpath): array
+    {
+        $seo = [];
+
+        // H1标签
+        $h1Nodes = $xpath->query('//h1');
+        $seo['h1_count'] = $h1Nodes->length;
+        $seo['h1_texts'] = [];
+        for ($i = 0; $i < min(3, $h1Nodes->length); $i++) {
+            $seo['h1_texts'][] = trim($h1Nodes->item($i)->textContent);
+        }
+
+        // 图片alt属性
+        $imgNodes = $xpath->query('//img');
+        $seo['img_total'] = $imgNodes->length;
+        $seo['img_without_alt'] = $xpath->query('//img[not(@alt) or @alt=""]')->length;
+
+        // 链接
+        $linkNodes = $xpath->query('//a[@href]');
+        $seo['link_total'] = $linkNodes->length;
+        $seo['external_links'] = 0;
+        $seo['internal_links'] = 0;
+
+        for ($i = 0; $i < $linkNodes->length; $i++) {
+            $href = $linkNodes->item($i)->getAttribute('href');
+            if (preg_match('/^https?:\/\//', $href)) {
+                $seo['external_links']++;
+            } else {
+                $seo['internal_links']++;
+            }
+        }
+
+        return $seo;
+    }
+
+    /**
+     * 检查反向链接
+     */
+    private function checkBacklink(string $html, string $myDomain, string $targetUrl): array
+    {
+        $result = [
+            'found' => false,
+            'links' => [],
+            'domain_mentioned' => false,
+            'link_count' => 0
+        ];
+
+        // 清理域名（移除协议和www）
+        $cleanDomain = preg_replace('/^(https?:\/\/)?(www\.)?/', '', $myDomain);
+        $cleanDomain = rtrim($cleanDomain, '/');
+
+        // 检查是否提到了域名
+        if (stripos($html, $cleanDomain) !== false) {
+            $result['domain_mentioned'] = true;
+        }
+
+        // 使用正则表达式查找链接
+        preg_match_all('/<a[^>]+href=["\']([^"\']+)["\'][^>]*>([^<]*)<\/a>/i', $html, $matches, PREG_SET_ORDER);
+
+        foreach ($matches as $match) {
+            $href = $match[1];
+            $text = trim($match[2]);
+
+            // 检查链接是否指向我们的域名
+            if (stripos($href, $cleanDomain) !== false) {
+                $result['found'] = true;
+                $result['links'][] = [
+                    'url' => $href,
+                    'text' => $text,
+                    'full_tag' => $match[0]
+                ];
+                $result['link_count']++;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * 安全检查
+     */
+    private function checkSecurity(string $url, string $html): array
+    {
+        $security = [];
+
+        // 检查HTTPS
+        $security['https'] = strpos($url, 'https://') === 0;
+
+        // 检查CSP头
+        $headers = $this->getResponseHeaders($url);
+        $security['csp'] = isset($headers['content-security-policy']);
+
+        // 检查X-Frame-Options
+        $security['x_frame_options'] = isset($headers['x-frame-options']);
+
+        // 检查可疑内容
+        $suspiciousPatterns = [
+            'eval\s*\(',
+            'document\.write\s*\(',
+            'innerHTML\s*=',
+            '<script[^>]*src=["\'][^"\']*[^a-zA-Z0-9\-\._~:/\?#\[\]@!$&\'()*+,;=]["\']'
+        ];
+
+        $security['suspicious_content'] = [];
+        foreach ($suspiciousPatterns as $pattern) {
+            if (preg_match('/' . $pattern . '/i', $html)) {
+                $security['suspicious_content'][] = $pattern;
+            }
+        }
+
+        return $security;
+    }
+
+    /**
+     * 获取响应头
+     */
+    private function getResponseHeaders(string $url): array
+    {
+        $headers = [];
+        try {
+            $context = stream_context_create([
+                'http' => [
+                    'method' => 'HEAD',
+                    'timeout' => 10,
+                    'user_agent' => 'Mozilla/5.0 (compatible; LinkChecker/1.0)'
+                ]
+            ]);
+
+            $result = @get_headers($url, 1, $context);
+            if ($result) {
+                foreach ($result as $key => $value) {
+                    if (is_string($key)) {
+                        $headers[strtolower($key)] = $value;
+                    }
+                }
+            }
+        } catch (Exception $e) {
+            // 忽略错误
+        }
+
+        return $headers;
+    }
+
+    /**
+     * 解析相对URL为绝对URL
+     */
+    private function resolveUrl(string $relativeUrl, string $baseUrl): string
+    {
+        if (preg_match('/^https?:\/\//', $relativeUrl)) {
+            return $relativeUrl;
+        }
+
+        $parsedBase = parse_url($baseUrl);
+        $scheme = $parsedBase['scheme'] ?? 'http';
+        $host = $parsedBase['host'] ?? '';
+
+        if (strpos($relativeUrl, '/') === 0) {
+            return $scheme . '://' . $host . $relativeUrl;
+        }
+
+        $path = dirname($parsedBase['path'] ?? '/');
+        return $scheme . '://' . $host . rtrim($path, '/') . '/' . $relativeUrl;
+    }
+
+    /**
      * 清除前台链接列表缓存
      */
     private function clearLinkCache(): void
     {
         try {
-            // 清除所有以 blog_links_page_ 开头的缓存键
-            clear_cache('blog_links_page_*');
-        } catch (\Exception $e) {
-            \support\Log::error('清除链接缓存失败: ' . $e->getMessage());
+            // 针对不同缓存驱动的兼容处理
+            if (method_exists(CacheService::class, 'clearCache')) {
+                CacheService::clearCache('blog_links_page_*');
+            }
+        } catch (Exception $e) {
+            \support\Log::warning('清除链接缓存失败: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * PostgreSQL布尔值处理
+     */
+    private function parseBooleanForPostgres($value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+        
+        if (is_string($value)) {
+            $value = strtolower(trim($value));
+            return in_array($value, ['1', 'true', 'on', 'yes', 't']);
+        }
+        
+        if (is_numeric($value)) {
+            return (int)$value === 1;
+        }
+        
+        return false;
     }
 }
