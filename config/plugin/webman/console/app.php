@@ -4,15 +4,15 @@ return [
 
     'build_dir'  => BASE_PATH . DIRECTORY_SEPARATOR . 'build',
 
-    'phar_filename' => 'webman.phar',
+    'phar_filename' => 'windblog.phar',
 
-    'bin_filename' => 'webman.bin',
+    'bin_filename' => 'windblog.bin',
 
     'signature_algorithm'=> Phar::SHA256, //set the signature algorithm for a phar and apply it. The signature algorithm must be one of Phar::MD5, Phar::SHA1, Phar::SHA256, Phar::SHA512, or Phar::OPENSSL.
 
     'private_key_file'  => '', // The file path for certificate or OpenSSL private key file.
 
-    'exclude_pattern'   => '#^(?!.*(composer.json|/.github/|/.idea/|/.git/|/.setting/|/runtime/|/vendor-bin/|/build/|/vendor/webman/admin/))(.*)$#',
+    'exclude_pattern'   => '#^(?!.*(composer.json|/.github/|/.phpunit.cache/|/.idea/|/.git/|/.setting/|/runtime/|/vendor-bin/|/build/|/vendor/webman/admin/))(.*)$#',
 
     'exclude_files'     => [
         '.env', 'LICENSE', 'composer.json', 'composer.lock', 'start.php', 'webman.phar', 'webman.bin'
@@ -21,4 +21,6 @@ return [
     'custom_ini' => '
 memory_limit = 256M
     ',
+
+    'public_path' => base_path(false) . DIRECTORY_SEPARATOR . 'public',
 ];

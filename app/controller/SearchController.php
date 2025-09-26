@@ -2,6 +2,7 @@
 
 namespace app\controller;
 
+use app\service\SidebarService;
 use support\Request;
 use support\Response;
 use app\service\BlogService;
@@ -42,7 +43,7 @@ class SearchController
         $blog_title = BlogService::getBlogTitle();
 
         // 获取侧边栏内容
-        $sidebar = \app\service\SidebarService::getSidebarContent($request, 'search');
+        $sidebar = SidebarService::getSidebarContent($request, 'search');
 
         return view('search/index', [
             'page_title' => "搜索: {$keyword} - {$blog_title}",
@@ -59,6 +60,8 @@ class SearchController
      * @param Request $request 请求对象
      *
      * @return Response
+     * @throws CommonMarkException
+     * @throws Throwable
      */
     public function ajax(Request $request): Response
     {
@@ -88,9 +91,9 @@ class SearchController
                         'title' => $post['title'],
                         'excerpt' => $post['excerpt'],
                         'created_at' => $post['created_at'],
-                        'author' => isset($post['primary_author']) && !empty($post['primary_author']) ?
+                        'author' => !empty($post['primary_author']) ?
                             (is_array($post['primary_author']) ? ($post['primary_author'][0]['nickname'] ?? '未知作者') : ($post['primary_author']['nickname'] ?? '未知作者')) :
-                            (isset($post['authors']) && !empty($post['authors']) ? ($post['authors'][0]['nickname'] ?? '未知作者') : '未知作者'),
+                            (!empty($post['authors']) ? ($post['authors'][0]['nickname'] ?? '未知作者') : '未知作者'),
                         'url' => '/post/' . $post['id']
                     ];
                 }, $postsArray),

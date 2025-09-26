@@ -149,23 +149,29 @@ class LinkController
     #[RateLimiter(limit: 3, ttl: 3600, message: '短时间内提交次数过多')]
     #[RateLimiter(limit: 3, ttl: 3600, key: RateLimiter::SID, message: '短时间内提交次数过多')]
     #[CSRFVerify(
-        '_link_request_token',
-        [
+        tokenName: '_link_request_token',
+        if_failed_config: [
             'response_type' => 'json',
             'response_code' => 403,
             'response_body' => [
                 'code' => 1,
-                'msg' =>'CSRF 过期，请刷新页面重试'
+                'msg' => 'CSRF 过期，请刷新页面重试'
             ]
         ],
-        ['POST'],
-        3600,
-        true, // 一次性
+        methods: ['POST'],
+        expire: 3600,
+        oneTime: true, // 一次性
     )]
     public function request(Request $request): Response
     {
         // 如果是POST请求，处理表单提交
         if ($request->method() === 'POST') {
+            // 验证蜜罐
+            $honeypot = $request->post('fullname', '');
+            if (!empty($honeypot)) {
+                return json(['code' => 1, 'msg' => '人机验证不通过']);
+            }
+
             // 获取表单数据
             $name = $request->post('name', '');
             $url = $request->post('url', '');
@@ -178,7 +184,6 @@ class LinkController
             $callback_url = $request->post('callback_url', '');
             $email = $request->post('email', '');
             $full_description = $request->post('full_description', '');
-            $honeypot = $request->post('fullname', '');
 
 
             $ipAddress = $request->getRealIp();
@@ -331,7 +336,7 @@ class LinkController
     {
         try {
             \support\Log::debug('Sending callback to MQ because: ' . $link->url . ' .Requesting: ' . $link->callback_url);
-            
+
             // 准备回调数据
             $callbackData = [
                 'link_id' => $link->id,

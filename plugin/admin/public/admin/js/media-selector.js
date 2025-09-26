@@ -430,16 +430,85 @@ class MediaSelector {
             return;
         }
 
-        if (this.options.onSelect && typeof this.options.onSelect === 'function') {
-            this.options.onSelect(this.options.multiple ? this.selectedItems : this.selectedItems[0]);
-        }
+        const result = this.options.multiple ? this.selectedItems : this.selectedItems[0];
+        let selectionSuccess = false;
+        
+        // 调试信息
+        console.log('MediaSelector (JS): 尝试完成选择', {result: result});
+        console.log('MediaSelector (JS): 窗口关系检查', {
+            hasParent: window.parent && window.parent !== window,
+            hasOpener: window.opener && window.opener !== window
+        });
 
-        // 如果是在iframe中，向父窗口发送消息
-        if (window.parent !== window) {
-            window.parent.postMessage({
-                type: 'mediaSelected',
-                data: this.options.multiple ? this.selectedItems : this.selectedItems[0]
-            }, '*');
+        try {
+            // 1. 尝试使用options.onSelect回调（最高优先级）
+            if (this.options.onSelect && typeof this.options.onSelect === 'function') {
+                console.log('MediaSelector (JS): 使用options.onSelect回调');
+                this.options.onSelect(result);
+                selectionSuccess = true;
+                return;
+            }
+
+            // 2. 检查父窗口是否有selectMedia函数
+            if (window.parent && window.parent !== window && typeof window.parent.selectMedia === 'function') {
+                console.log('MediaSelector (JS): 调用window.parent.selectMedia');
+                window.parent.selectMedia(result);
+                selectionSuccess = true;
+                return;
+            }
+
+            // 3. 检查opener窗口是否有selectMedia函数
+            if (window.opener && window.opener !== window && typeof window.opener.selectMedia === 'function') {
+                console.log('MediaSelector (JS): 调用window.opener.selectMedia');
+                window.opener.selectMedia(result);
+                selectionSuccess = true;
+                // 延迟关闭，确保回调执行完成
+                if (this.options.autoClose !== false) {
+                    setTimeout(() => {
+                        if (window.opener && !window.opener.closed) {
+                            window.close();
+                        }
+                    }, 100);
+                }
+                return;
+            }
+
+            // 4. 向父窗口发送postMessage
+            if (window.parent && window.parent !== window) {
+                console.log('MediaSelector (JS): 向window.parent发送postMessage');
+                window.parent.postMessage({
+                    type: 'mediaSelected',
+                    data: result
+                }, '*');
+                selectionSuccess = true;
+            }
+            
+            // 5. 向opener窗口发送postMessage
+            else if (window.opener && window.opener !== window) {
+                console.log('MediaSelector (JS): 向window.opener发送postMessage');
+                window.opener.postMessage({
+                    type: 'mediaSelected',
+                    data: result
+                }, '*');
+                selectionSuccess = true;
+                // 延迟关闭，确保消息发送完成
+                if (this.options.autoClose !== false) {
+                    setTimeout(() => {
+                        if (window.opener && !window.opener.closed) {
+                            window.close();
+                        }
+                    }, 100);
+                }
+            }
+            
+            // 如果所有方法都失败，显示错误
+            if (!selectionSuccess) {
+                console.error('MediaSelector (JS): 所有选择完成方法均失败');
+                this.showToast('无法完成选择，请重试。错误信息已记录在控制台。', 'error');
+            }
+        } catch (error) {
+            console.error('MediaSelector (JS): 选择过程发生错误', error);
+            this.showToast('选择过程发生错误: ' + error.message, 'error');
         }
     }
 

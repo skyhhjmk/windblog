@@ -1579,3 +1579,23 @@ VALUES ('system_config', '{
 
 INSERT INTO wa_roles
 VALUES (1, '超级管理员', '*', '2022-08-13 16:15:01', '2022-12-23 12:05:07', NULL);
+INSERT INTO links
+VALUES (null, '雨云',
+        'https://www.rainyun.com/github_?s=blog-sys-ads',
+        '超高性价比云服务商，使用优惠码github注册并绑定微信即可获得5折优惠',
+        'https://www.rainyun.com/favicon.ico',
+        null,
+        '1',
+        true,
+        '_blank',
+        'direct',
+        false,
+        '# 超高性价比云服务商，使用优惠码github注册并绑定微信即可获得5折优惠',
+        'admin@biliwind.com',
+        '',
+        null,
+        '雨云',
+        '雨云,云服务器,服务器,性价比',
+        '超高性价比云服务商，使用优惠码github注册并绑定微信即可获得5折优惠',
+        null, '2025-9-26 11:00:00+08', '2022-12-23 12:05:07',
+        null);

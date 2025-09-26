@@ -222,6 +222,24 @@
         <script src="/app/admin/component/pear/pear.js"></script>
         <script src="/app/admin/admin/js/permission.js"></script>
         <script>
+            // 全局变量，用于存储当前正在操作的输入框
+            let currentMediaInput;
+            
+            // 为新的媒体选择器添加全局回调函数，定义在全局作用域
+            window.selectMedia = function(data) {
+                // 新的媒体选择器返回的数据结构是完整的媒体项目对象
+                // 从中提取url属性
+                let url = data.file_path ? "/uploads/" + data.file_path : data.url;
+                if (currentMediaInput) {
+                    currentMediaInput.val(url).prev().attr("src", url);
+                }
+                // 关闭弹窗
+                parent.layer.closeAll();
+            };
+            
+            window.closeMediaSelector = function() {
+                parent.layer.closeAll();
+            };
 
             // 基础设置
             layui.use(["upload", "layer", "popup"], function() {
@@ -232,16 +250,21 @@
                 let input = $("#image").prev();
                 input.prev().attr("src", input.val());
                 layui.$("#attachment-choose-image").on("click", function() {
+                    // 存储当前正在操作的输入框
+                    currentMediaInput = input;
+                    
                     parent.layer.open({
-                        type: 2,
-                        title: "选择媒体",
-                        content: "/app/admin/media/selector",
-                        area: ["95%", "90%"],
-                        success: function (layero, index) {
-                            parent.layui.$("#layui-layer" + index).data("callback", function (data) {
-                                input.val(data.url).prev().attr("src", data.url);
-                            });
-                        }
+                            type: 2,
+                            title: "选择媒体",
+                            content: "/app/admin/media/selector?multiple=false&targetType=iframe",
+                            area: ["95%", "90%"],
+                            success: function(layero, index) {
+                                // 旧的回调方式仍然保留以兼容
+                                parent.layui.$("#layui-layer" + index).data("callback", function(data) {
+                                    let url = data.file_path ? "/uploads/" + data.file_path : data.url;
+                                    input.val(url).prev().attr("src", url);
+                                });
+                            }
                     });
                 });
                 layui.upload.render({
