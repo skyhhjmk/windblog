@@ -394,58 +394,58 @@
 
                 try {
                     // 尝试获取最顶层的window对象
-                    let topWindow = null;
-                    try {
-                        topWindow = window.top; // 尝试获取最顶层窗口
-                    } catch (e) {
-                        console.log('MediaSelector: 无法直接访问window.top，使用备用方法');
-                    }
+                let topWindow = null;
+                try {
+                    topWindow = window.top; // 尝试获取最顶层窗口
+                } catch (e) {
+                    console.log('MediaSelector: 无法直接访问window.top，使用备用方法');
+                }
 
-                    // 1. 尝试使用window.top（最顶层窗口）
-                    if (topWindow && typeof topWindow.selectMedia === 'function') {
-                        console.log('MediaSelector: 调用window.top.selectMedia');
-                        topWindow.selectMedia(result);
-                        selectionSuccess = true;
-                    }
-                    // 2. 尝试使用window.parent.window（父窗口的顶层对象）
-                    else if (window.parent && window.parent.window && typeof window.parent.window.selectMedia === 'function') {
-                        console.log('MediaSelector: 调用window.parent.window.selectMedia');
-                        window.parent.window.selectMedia(result);
-                        selectionSuccess = true;
-                    }
-                    // 3. 尝试使用window.parent
-                    else if (window.parent && window.parent !== window && typeof window.parent.selectMedia === 'function') {
-                        console.log('MediaSelector: 调用window.parent.selectMedia');
-                        window.parent.selectMedia(result);
-                        selectionSuccess = true;
-                    }
-                    // 4. 检查layer弹窗的回调方式
-                    else if (window.parent && window.parent.layui && window.parent.layui.layer) {
-                        console.log('MediaSelector: 尝试通过layer弹窗回调方式');
-                        // 获取当前窗口的layer索引
-                        const getLayerIndex = () => {
-                            const iframeId = window.frameElement ? window.frameElement.id : '';
-                            const match = iframeId.match(/layui-layer-iframe(\d+)/);
-                            return match ? match[1] : null;
-                        };
-                        
-                        const layerIndex = getLayerIndex();
-                        if (layerIndex) {
-                            const layerElem = window.parent.layui.$(`#layui-layer${layerIndex}`);
-                            if (layerElem && layerElem.data('callback')) {
-                                console.log('MediaSelector: 调用layer弹窗存储的callback');
-                                layerElem.data('callback')(result);
-                                selectionSuccess = true;
-                            }
+                // 1. 尝试使用window.top（最顶层窗口）
+                if (topWindow && typeof topWindow.selectMedia === 'function') {
+                    console.log('MediaSelector: 调用window.top.selectMedia');
+                    topWindow.selectMedia(result);
+                    selectionSuccess = true;
+                }
+                // 2. 尝试使用window.parent.window（父窗口的顶层对象）
+                else if (window.parent && window.parent.window && typeof window.parent.window.selectMedia === 'function') {
+                    console.log('MediaSelector: 调用window.parent.window.selectMedia');
+                    window.parent.window.selectMedia(result);
+                    selectionSuccess = true;
+                }
+                // 3. 尝试使用window.parent
+                else if (window.parent && window.parent !== window && typeof window.parent.selectMedia === 'function') {
+                    console.log('MediaSelector: 调用window.parent.selectMedia');
+                    window.parent.selectMedia(result);
+                    selectionSuccess = true;
+                }
+                // 4. 检查layer弹窗的回调方式
+                else if (window.parent && window.parent.layui && window.parent.layui.layer) {
+                    console.log('MediaSelector: 尝试通过layer弹窗回调方式');
+                    // 获取当前窗口的layer索引
+                    const getLayerIndex = () => {
+                        const iframeId = window.frameElement ? window.frameElement.id : '';
+                        const match = iframeId.match(/layui-layer-iframe(\d+)/);
+                        return match ? match[1] : null;
+                    };
+                    
+                    const layerIndex = getLayerIndex();
+                    if (layerIndex) {
+                        const layerElem = window.parent.layui.$(`#layui-layer${layerIndex}`);
+                        if (layerElem && layerElem.data('callback')) {
+                            console.log('MediaSelector: 调用layer弹窗存储的callback');
+                            layerElem.data('callback')(result);
+                            selectionSuccess = true;
                         }
                     }
-                    // 5. 窗口模式下，尝试调用opener的selectMedia
-                    else if (this.targetType === 'window' && window.opener && typeof window.opener.selectMedia === 'function') {
-                        console.log('MediaSelector: 调用window.opener.selectMedia');
-                        window.opener.selectMedia(result);
-                        selectionSuccess = true;
-                        setTimeout(() => window.close(), 100);
-                    }
+                }
+                // 5. 窗口模式下，尝试调用opener的selectMedia
+                else if (this.targetType === 'window' && window.opener && typeof window.opener.selectMedia === 'function') {
+                    console.log('MediaSelector: 调用window.opener.selectMedia');
+                    window.opener.selectMedia(result);
+                    selectionSuccess = true;
+                    setTimeout(() => window.close(), 100);
+                }
                     
                     // 6. 如果上述方法都失败，尝试使用postMessage，增加更多信息
                     if (!selectionSuccess) {
@@ -465,18 +465,21 @@
                             console.log('MediaSelector: 向window.parent发送postMessage');
                             window.parent.postMessage(messageData, '*');
                             selectionSuccess = true;
-                            
-                            // 尝试直接关闭选择器（如果postMessage后没有自动关闭）
-                            setTimeout(() => {
-                                try {
-                                    if (window.parent && window.parent.layui && window.parent.layui.layer) {
-                                        window.parent.layui.layer.closeAll();
-                                    }
-                                } catch (e) {
-                                    console.log('MediaSelector: 尝试关闭layer弹窗失败', e);
-                                }
-                            }, 500);
                         }
+                    }
+                    
+                    // 如果选择成功，在所有路径上都尝试关闭选择器
+                    if (selectionSuccess && this.targetType !== 'window') {
+                        setTimeout(() => {
+                            try {
+                                if (window.parent && window.parent.layui && window.parent.layui.layer) {
+                                    console.log('MediaSelector: 尝试关闭layer弹窗');
+                                    window.parent.layui.layer.closeAll();
+                                }
+                            } catch (e) {
+                                console.log('MediaSelector: 尝试关闭layer弹窗失败', e);
+                            }
+                        }, 100);
                     }
                     
                     // 如果所有方法都失败，显示详细错误
