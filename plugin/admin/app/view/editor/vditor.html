@@ -513,58 +513,6 @@ function example() {
         });
 
         // 保存按钮事件
-        document.getElementById('save-btn').addEventListener('click', function () {
-            if (vditor) {
-                // 验证数据
-                if (!postTitle.value.trim()) {
-                    alert('请输入文章标题');
-                    postTitle.focus();
-                    return;
-                }
-                
-                if (!vditor.getValue().trim()) {
-                    alert('请输入文章内容');
-                    return;
-                }
-                
-                // 发送到服务器保存
-                    fetch('/app/admin/editor/save', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
-                    },
-                    body: JSON.stringify({
-                        post_id: postId,
-                        title: postTitle.value.trim(),
-                        content: vditor.getValue(),
-                        status: postStatus.value
-                    })
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        // 根据后端返回的code来判断保存是否成功
-                        // code=0表示成功，code=1表示失败
-                        if (data.code === 0) {
-                            alert('保存成功');
-                            // 如果是新建文章，获取返回的ID
-                            if (!postId) {
-                                postId = data.data.id;
-                                pageTitle.textContent = `编辑文章: ${postTitle.value}`;
-                                // 可以选择跳转到编辑页面或继续编辑
-                                // window.location.href = `/app/admin/posts/editor/${postId}`;
-                            }
-                        } else {
-                            // 显示错误信息
-                            alert('保存失败: ' + (data.msg || '未知错误'));
-                        }
-                    })
-                    .catch(error => {
-                        alert('保存失败: ' + error.message);
-                    });
-            }
-        });
-
         // 清除缓存按钮事件
         document.getElementById('clear-btn').addEventListener('click', function () {
             if (confirm('确定要清除自动保存的内容吗？')) {

@@ -245,7 +245,6 @@ CREATE TABLE IF NOT EXISTS settings
     id         BIGSERIAL PRIMARY KEY,
     key        VARCHAR(255) NOT NULL,
     value      JSONB                    DEFAULT NULL,
-    type       VARCHAR(50)              DEFAULT 'string',
     "group"    VARCHAR(50)              DEFAULT 'general',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -255,7 +254,6 @@ CREATE TABLE IF NOT EXISTS settings
 COMMENT ON TABLE settings IS '网站设置表';
 COMMENT ON COLUMN settings.key IS '设置键名';
 COMMENT ON COLUMN settings.value IS '设置值';
-COMMENT ON COLUMN settings.type IS '值类型';
 COMMENT ON COLUMN settings."group" IS '设置分组';
 COMMENT ON COLUMN settings.created_at IS '创建时间';
 COMMENT ON COLUMN settings.updated_at IS '更新时间';
