@@ -21,7 +21,6 @@ use support\Db;
  * @property string              $content        文章内容
  * @property string              $excerpt        文章摘要
  * @property string              $status         文章状态 (e.g., 'published', 'draft', 'archived')
- * @property int                 $view_count     浏览次数
  * @property Carbon|null         $created_at     创建时间
  * @property Carbon|null         $updated_at     更新时间
  * @property Carbon|null         $deleted_at     软删除时间
@@ -63,7 +62,6 @@ class Post extends Model
         'content',
         'excerpt',
         'status',
-        'view_count',
     ];
 
     /**
@@ -74,7 +72,6 @@ class Post extends Model
      */
     protected $casts = [
         'id' => 'integer',
-        'view_count' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',

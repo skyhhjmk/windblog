@@ -92,7 +92,6 @@ CREATE TABLE IF NOT EXISTS posts
     excerpt       TEXT                              DEFAULT NULL,
     status        VARCHAR(15)              NOT NULL DEFAULT 'draft',
     featured      BOOLEAN                  NOT NULL DEFAULT false,
-    view_count    INTEGER                  NOT NULL DEFAULT 0,
     comment_count INTEGER                  NOT NULL DEFAULT 0,
     published_at  TIMESTAMP WITH TIME ZONE NULL     DEFAULT NULL,
     created_at    TIMESTAMP WITH TIME ZONE          DEFAULT CURRENT_TIMESTAMP,
@@ -111,7 +110,6 @@ COMMENT ON COLUMN posts.content IS '文章内容';
 COMMENT ON COLUMN posts.excerpt IS '文章摘要';
 COMMENT ON COLUMN posts.status IS '文章状态';
 COMMENT ON COLUMN posts.featured IS '是否精选';
-COMMENT ON COLUMN posts.view_count IS '浏览次数';
 COMMENT ON COLUMN posts.comment_count IS '评论数量';
 COMMENT ON COLUMN posts.published_at IS '发布时间';
 COMMENT ON COLUMN posts.created_at IS '创建时间';
