@@ -85,8 +85,8 @@ function blog_config_write(string $cache_key, string $fullCacheKey, mixed $value
         $setting->value = blog_config_convert_to_storage($value);
         $setting->save();
 
-        // 更新缓存
-        if ($use_cache) {
+        // 更新缓存（不缓存 null，避免后续读到 null）
+        if ($use_cache && $value !== null) {
             cache($fullCacheKey, $value, true);
         }
         return $value;
@@ -104,9 +104,24 @@ function blog_config_read(string $cache_key, string $fullCacheKey, mixed $defaul
     // 1. 尝试从缓存读取
     if ($use_cache) {
         $cachedValue = cache($fullCacheKey);
+        // 将 null 和空字符串视为未命中，避免把 json:null 或 "" 当作有效值返回
         if ($cachedValue !== false) {
-            return $cachedValue;
+            if ($cachedValue === null || (is_string($cachedValue) && trim($cachedValue) === '')) {
+                // 命中到空值则清理该键，避免后续误命中
+                try {
+                    $handler = get_cache_handler();
+                    if ($handler) {
+                        $handler->del(\app\service\CacheService::prefixKey($fullCacheKey));
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning("[blog_config] cleanup empty cache warn: {$fullCacheKey} - " . $e->getMessage());
+                }
+            } else {
+                Log::debug("[blog_config] cache hit: {$fullCacheKey}");
+                return $cachedValue;
+            }
         }
+        Log::debug("[blog_config] cache miss: {$fullCacheKey}");
     }
 
     // 2. 从数据库读取
@@ -116,10 +131,12 @@ function blog_config_read(string $cache_key, string $fullCacheKey, mixed $defaul
         if ($use_cache) {
             cache($fullCacheKey, $dbValue, true);
         }
+        Log::debug("[blog_config] db hit: {$cache_key}=" . var_export($dbValue, true));
         return $dbValue;
     }
 
     // 3. 数据库无记录，处理初始化
+    Log::debug("[blog_config] db miss: {$cache_key}, init=" . ($init ? 'true' : 'false') . ", default=" . var_export($default, true));
     return blog_config_handle_init($cache_key, $fullCacheKey, $default, $init, $use_cache);
 }
 
@@ -132,7 +149,29 @@ function blog_config_get_from_db(string $cache_key): mixed
     if (!$setting) {
         return null;
     }
-    return blog_config_convert_from_storage($setting->value);
+    $val = blog_config_convert_from_storage($setting->value);
+
+    // 全局：存储为 json:null 或空字符串，都视为未配置
+    if ($val === null) {
+        return null;
+    }
+    if (is_string($val) && trim($val) === '') {
+        return null;
+    }
+
+    // RabbitMQ 端口必须为正整数（其余键使用全局规则）
+    if ($cache_key === 'rabbitmq_port') {
+        if (!is_numeric($val)) {
+            return null;
+        }
+        $port = (int)$val;
+        if ($port <= 0) {
+            return null;
+        }
+        return $port;
+    }
+
+    return $val;
 }
 
 /**
@@ -146,18 +185,19 @@ function blog_config_handle_init(string $cache_key, string $fullCacheKey, mixed 
     }
     
     if (!$init) {
-        return $default; // 不初始化，直接返回默认值
+        return blog_config_normalize_default($default); // 不初始化，直接返回默认值
     }
 
+    $default = blog_config_normalize_default($default);
+
     try {
-        // 写入默认值到数据库
-        $setting = new app\model\Setting();
-        $setting->key = $cache_key;
+        // 写入默认值到数据库（幂等：若已存在则更新）
+        $setting = app\model\Setting::firstOrNew(['key' => $cache_key]);
         $setting->value = blog_config_convert_to_storage($default);
         $setting->save();
 
-        // 写入缓存
-        if ($use_cache) {
+        // 写入缓存（不缓存 null）
+        if ($use_cache && $default !== null) {
             cache($fullCacheKey, $default, true);
         }
         return $default;
@@ -196,6 +236,15 @@ function blog_config_convert_from_storage(mixed $value): mixed
         }
     }
     return $value;
+}
+
+/**
+ * 归一化默认值：全局不返回 null
+ * 当前策略：当 default 为 null 时回退为空字符串 ''
+ */
+function blog_config_normalize_default(mixed $value): mixed
+{
+    return $value === null ? '' : $value;
 }
 
 /**

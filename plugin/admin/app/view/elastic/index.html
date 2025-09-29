@@ -1,248 +1,768 @@
 <!DOCTYPE html>
 <html lang="zh-cn">
-  <head>
-    <meta charset="UTF-8" />
+<head>
+    <meta charset="UTF-8"/>
     <title>搜索设置(ES)</title>
-    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-    <link rel="stylesheet" href="/app/admin/component/layui/css/layui.css?v=2.8.12" />
-    <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css" />
-    <link rel="stylesheet" href="/app/admin/admin/css/reset.css" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+    <link rel="stylesheet" href="/app/admin/component/layui/css/layui.css?v=2.8.12"/>
+    <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css"/>
+    <link rel="stylesheet" href="/app/admin/admin/css/reset.css"/>
+    <!-- Tailwind CDN（禁用preflight，避免影响Layui全局样式） -->
+    <script>window.tailwind = window.tailwind || {};
+    tailwind.config = {corePlugins: {preflight: false}};</script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-      .layui-input-block input, .layui-input-block select { width: 320px; }
-      .layui-card-body fieldset .layui-field-box { min-height: 180px; }
-      pre { white-space: pre-wrap; word-break: break-word; }
+        .layui-input-block input, .layui-input-block select {
+            width: 320px;
+        }
+
+        .layui-card-body fieldset .layui-field-box {
+            min-height: 180px;
+        }
+
+        pre {
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
     </style>
-  </head>
-  <body class="pear-container">
-    <div class="layui-card">
-      <div class="layui-card-header">搜索设置（Elasticsearch）</div>
-      <div class="layui-card-body">
-        <form class="layui-form" id="es-form">
-          <div class="layui-form-item">
-            <label class="layui-form-label">启用ES</label>
-            <div class="layui-input-block">
-              <input type="checkbox" name="enabled" lay-skin="switch" lay-text="ON|OFF" />
-            </div>
-          </div>
-
-          <div class="layui-form-item">
-            <label class="layui-form-label">Host</label>
-            <div class="layui-input-block">
-              <input type="text" name="host" placeholder="http://127.0.0.1:9200" class="layui-input" />
-            </div>
-          </div>
-
-          <div class="layui-form-item">
-            <label class="layui-form-label">Index</label>
-            <div class="layui-input-block">
-              <input type="text" name="index" placeholder="windblog-posts" class="layui-input" />
-            </div>
-          </div>
-
-          <div class="layui-form-item">
-            <label class="layui-form-label">Timeout</label>
-            <div class="layui-input-block">
-              <input type="number" name="timeout" min="1" max="30" class="layui-input" />
-            </div>
-          </div>
-
-          <div class="layui-form-item">
-            <label class="layui-form-label">Basic用户</label>
-            <div class="layui-input-block">
-              <input type="text" name="basic_user" class="layui-input" />
-            </div>
-          </div>
-
-          <div class="layui-form-item">
-            <label class="layui-form-label">Basic密码</label>
-            <div class="layui-input-block">
-              <input type="password" name="basic_pass" class="layui-input" />
-            </div>
-          </div>
-
-          <div class="layui-form-item">
-            <label class="layui-form-label">CA证书内容</label>
-            <div class="layui-input-block">
-              <textarea name="ssl_ca_content" placeholder="粘贴CA证书内容（PEM）" class="layui-textarea" rows="6"></textarea>
-            </div>
-          </div>
-
-          <div class="layui-form-item">
-            <label class="layui-form-label">客户端证书内容</label>
-            <div class="layui-input-block">
-              <textarea name="ssl_client_cert_content" placeholder="粘贴客户端证书内容（PEM）" class="layui-textarea" rows="6"></textarea>
-            </div>
-          </div>
-
-          <div class="layui-form-item">
-            <label class="layui-form-label">客户端私钥内容</label>
-            <div class="layui-input-block">
-              <textarea name="ssl_client_key_content" placeholder="粘贴客户端私钥内容（PEM）" class="layui-textarea" rows="6"></textarea>
-            </div>
-          </div>
-
-          <div class="layui-form-item">
-            <label class="layui-form-label">忽略SSL错误</label>
-            <div class="layui-input-block">
-              <input type="checkbox" name="ssl_ignore" lay-skin="switch" lay-text="忽略|校验" />
-            </div>
-          </div>
-
-          <div class="layui-form-item">
-            <label class="layui-form-label">分析器</label>
-            <div class="layui-input-inline">
-              <select name="analyzer" lay-verify="required" lay-search>
-                <option value=""></option>
-                <option value="standard">standard</option>
-                <option value="ik_max_word">ik_max_word</option>
-                <option value="ik_smart">ik_smart</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="layui-form-item">
-            <div class="layui-input-block">
-              <button type="button" class="layui-btn" id="btn-save">保存</button>
-              <button type="button" class="layui-btn layui-btn-normal" id="btn-create">创建索引</button>
-              <button type="button" class="layui-btn layui-btn-danger" id="btn-rebuild">重建索引</button>
-              <button type="button" class="layui-btn layui-btn-primary" id="btn-test">测试连接</button>
-              <button type="button" class="layui-btn layui-btn-warm" id="btn-logs">查看日志</button>
-              <button type="button" class="layui-btn layui-btn-danger" id="btn-clear-logs">清空日志</button>
-            </div>
-          </div>
-        </form>
-
-        <div class="layui-row" style="margin-top:16px">
-          <div class="layui-col-md6">
-            <fieldset class="layui-elem-field">
-              <legend>连接测试结果</legend>
-              <div class="layui-field-box"><pre id="test-result"></pre></div>
-            </fieldset>
-          </div>
-          <div class="layui-col-md6">
-            <fieldset class="layui-elem-field">
-              <legend>同步日志</legend>
-              <div class="layui-field-box"><pre id="sync-logs"></pre></div>
-            </fieldset>
-          </div>
+</head>
+<body class="pear-container">
+<div class="layui-card">
+    <div class="layui-card-header">搜索设置（Elasticsearch）</div>
+    <div class="layui-card-body">
+        <div class="layui-tab layui-tab-brief" lay-filter="es-tab">
+            <ul class="layui-tab-title">
+                <li class="layui-this" id="tab-base">基础设置</li>
+                <li id="tab-syn">同义词</li>
+            </ul>
         </div>
-      </div>
+        <div id="base-section">
+            <form class="layui-form" id="es-form">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">启用ES</label>
+                    <div class="layui-input-block">
+                        <input type="checkbox" name="enabled" lay-skin="switch" lay-text="ON|OFF"/>
+                    </div>
+                </div>
+
+                <div class="layui-form-item">
+                    <label class="layui-form-label">Host</label>
+                    <div class="layui-input-block">
+                        <input type="text" name="host" placeholder="http://127.0.0.1:9200" class="layui-input"/>
+                    </div>
+                </div>
+
+                <div class="layui-form-item">
+                    <label class="layui-form-label">Index</label>
+                    <div class="layui-input-block">
+                        <input type="text" name="index" placeholder="windblog-posts" class="layui-input"/>
+                    </div>
+                </div>
+
+                <div class="layui-form-item">
+                    <label class="layui-form-label">Timeout</label>
+                    <div class="layui-input-block">
+                        <input type="number" name="timeout" min="1" max="30" class="layui-input"/>
+                    </div>
+                </div>
+
+                <div class="layui-form-item">
+                    <label class="layui-form-label">Basic用户</label>
+                    <div class="layui-input-block">
+                        <input type="text" name="basic_user" class="layui-input"/>
+                    </div>
+                </div>
+
+                <div class="layui-form-item">
+                    <label class="layui-form-label">Basic密码</label>
+                    <div class="layui-input-block">
+                        <input type="password" name="basic_pass" class="layui-input"/>
+                    </div>
+                </div>
+
+                <div class="layui-form-item">
+                    <label class="layui-form-label">CA证书内容</label>
+                    <div class="layui-input-block">
+                        <textarea name="ssl_ca_content" placeholder="粘贴CA证书内容（PEM）" class="layui-textarea"
+                                  rows="6"></textarea>
+                    </div>
+                </div>
+
+                <div class="layui-form-item">
+                    <label class="layui-form-label">客户端证书内容</label>
+                    <div class="layui-input-block">
+                        <textarea name="ssl_client_cert_content" placeholder="粘贴客户端证书内容（PEM）"
+                                  class="layui-textarea" rows="6"></textarea>
+                    </div>
+                </div>
+
+                <div class="layui-form-item">
+                    <label class="layui-form-label">客户端私钥内容</label>
+                    <div class="layui-input-block">
+                        <textarea name="ssl_client_key_content" placeholder="粘贴客户端私钥内容（PEM）"
+                                  class="layui-textarea" rows="6"></textarea>
+                    </div>
+                </div>
+
+                <div class="layui-form-item">
+                    <label class="layui-form-label">忽略SSL错误</label>
+                    <div class="layui-input-block">
+                        <input type="checkbox" name="ssl_ignore" lay-skin="switch" lay-text="忽略|校验"/>
+                    </div>
+                </div>
+
+                <div class="layui-form-item">
+                    <label class="layui-form-label">分析器</label>
+                    <div class="layui-input-inline">
+                        <select name="analyzer" lay-verify="required" lay-search>
+                            <option value=""></option>
+                            <option value="standard">standard</option>
+                            <option value="ik_max_word">ik_max_word</option>
+                            <option value="ik_smart">ik_smart</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="layui-form-item">
+                    <div class="layui-input-block">
+                        <button type="button" class="layui-btn" id="btn-save">保存</button>
+                        <button type="button" class="layui-btn layui-btn-normal" id="btn-create">创建索引</button>
+                        <button type="button" class="layui-btn layui-btn-danger" id="btn-rebuild">重建索引</button>
+                        <button type="button" class="layui-btn layui-btn-primary" id="btn-test">测试连接</button>
+                        <button type="button" class="layui-btn layui-btn-warm" id="btn-logs">查看日志</button>
+                        <button type="button" class="layui-btn layui-btn-danger" id="btn-clear-logs">清空日志</button>
+                    </div>
+                </div>
+            </form>
+
+            <div class="layui-row" style="margin-top:16px">
+                <div class="layui-col-md6">
+                    <fieldset class="layui-elem-field">
+                        <legend>连接测试结果</legend>
+                        <div class="layui-field-box">
+                            <pre id="test-result"></pre>
+                        </div>
+                    </fieldset>
+                </div>
+                <div class="layui-col-md6">
+                    <fieldset class="layui-elem-field">
+                        <legend>同步日志</legend>
+                        <div class="layui-field-box">
+                            <pre id="sync-logs"></pre>
+                        </div>
+                    </fieldset>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
-    <script src="/app/admin/component/pear/pear.js"></script>
-    <script src="/app/admin/admin/js/permission.js"></script>
-    <script>
-      layui.use(["layer", "form"], function() {
+</div> <!-- end base-section -->
+<div id="syn-section" style="display:none">
+    <div class="mt-4">
+        <div class="flex items-center justify-between mb-3">
+            <h3 class="text-lg font-semibold text-gray-800">同义词设置（卡片式）</h3>
+            <div class="flex gap-2">
+                <button type="button" class="layui-btn" id="btn-syn-load">加载</button>
+                <button type="button" class="layui-btn layui-btn-primary" id="btn-syn-save">保存</button>
+                <button type="button" class="layui-btn layui-btn-normal" id="btn-syn-apply">应用到索引</button>
+                <button type="button" class="layui-btn layui-btn-warm" id="btn-syn-preview">预览分词</button>
+                <button type="button" class="layui-btn layui-btn-danger" id="btn-syn-restore">恢复默认</button>
+            </div>
+        </div>
+
+        <!-- 卡片列表容器：仅在同义词Tab内使用Tailwind类 -->
+        <div id="syn-card-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- 动态渲染 -->
+        </div>
+
+        <div class="mt-3">
+            <button type="button" class="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+                    id="btn-add-card">新增规则卡片
+            </button>
+        </div>
+
+        <pre id="synonyms-preview" class="mt-3 bg-gray-50 border border-gray-200 rounded p-3 text-sm"></pre>
+    </div>
+</div>
+
+</div> <!-- end syn-section -->
+<script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+<script src="/app/admin/component/pear/pear.js"></script>
+<script src="/app/admin/admin/js/permission.js"></script>
+<script>
+    layui.use(["layer", "form"], function () {
         var layer = layui.layer;
         var form = layui.form;
 
-        // 加载配置并填充表单
-        fetch("/app/admin/elastic/get")
-          .then(function(r){ return r.json(); })
-          .then(function(cfg){
-            var f = document.getElementById("es-form");
-            if (!f) return;
-            f.enabled.checked = !!cfg.enabled;
-            f.host.value = cfg.host || "http://127.0.0.1:9200";
-            f.index.value = cfg.index || "windblog-posts";
-            f.timeout.value = cfg.timeout || 3;
-            f.basic_user.value = cfg.basic_user || "";
-            f.basic_pass.value = cfg.basic_pass || "";
-            f.ssl_ca_content.value = cfg.ssl_ca_content || "";
-            f.ssl_client_cert_content.value = cfg.ssl_client_cert_content || "";
-            f.ssl_client_key_content.value = cfg.ssl_client_key_content || "";
-            f.ssl_ignore.checked = !!cfg.ssl_ignore;
-            f.analyzer.value = cfg.analyzer || "standard";
-            form.render(); // 渲染开关与选择
-          });
+        // Tab 切换逻辑：基础设置 / 同义词
+        var baseSection = document.getElementById("base-section");
+        var synSection = document.getElementById("syn-section");
 
-        function post(url, data){
-          return fetch(url, {
-            method: "POST",
-            headers: {"Content-Type": "application/x-www-form-urlencoded"},
-            body: new URLSearchParams(data || {}).toString()
-          }).then(function(r){ return r.json(); });
+        function showBase() {
+            if (baseSection) baseSection.style.display = "";
+            if (synSection) synSection.style.display = "none";
         }
 
-        document.getElementById("btn-save").onclick = function(){
-          var f = document.getElementById("es-form");
-          var data = {
-            enabled: f.enabled.checked ? 1 : 0,
-            host: f.host.value,
-            index: f.index.value,
-            timeout: f.timeout.value,
-            basic_user: f.basic_user.value,
-            basic_pass: f.basic_pass.value,
-            analyzer: f.analyzer.value,
-            ssl_ca_content: f.ssl_ca_content.value,
-            ssl_client_cert_content: f.ssl_client_cert_content.value,
-            ssl_client_key_content: f.ssl_client_key_content.value,
-            ssl_ignore: f.ssl_ignore.checked ? 1 : 0
-          };
-          // 基础校验
-          if (!data.host || !/^https?:\/\/.+/.test(data.host)) {
-            layer.msg("请填写有效的Host（http/https）");
-            return;
-          }
-          if (!data.index) {
-            layer.msg("请填写索引名称");
-            return;
-          }
-          var t = parseInt(data.timeout, 10);
-          if (isNaN(t) || t < 1 || t > 60) {
-            layer.msg("超时需为1-60之间的整数");
-            return;
-          }
-          post("/app/admin/elastic/save", data).then(function(res){
-            layer.msg(res.success ? "已保存" : "保存失败");
-          });
-        };
+        function showSyn() {
+            if (baseSection) baseSection.style.display = "none";
+            if (synSection) synSection.style.display = "";
+        }
 
-        document.getElementById("btn-create").onclick = function(){
-          post("/app/admin/elastic/createIndex", {}).then(function(res){
-            layer.msg(res.success ? "索引创建成功" : "索引创建失败");
-          });
+        var tabBase = document.getElementById("tab-base");
+        var tabSyn = document.getElementById("tab-syn");
+        if (tabBase) tabBase.onclick = function () {
+            showBase();
         };
+        if (tabSyn) tabSyn.onclick = function () {
+            showSyn();
+        };
+        // 初始显示基础设置，自动加载同义词
+        showBase();
 
-        document.getElementById("btn-rebuild").onclick = function(){
-          layer.prompt({title:"重建索引分页大小", formType:0, value:"200"}, function(val, idx){
-            layer.close(idx);
-            post("/app/admin/elastic/rebuild", {page_size: val}).then(function(res){
-              layer.msg(res.success ? "已触发重建" : "重建失败");
+        // 加载配置并填充表单
+        fetch("/app/admin/elastic/get")
+            .then(function (r) {
+                return r.json();
+            })
+            .then(function (cfg) {
+                var f = document.getElementById("es-form");
+                if (!f) return;
+                f.enabled.checked = !!cfg.enabled;
+                f.host.value = cfg.host || "http://127.0.0.1:9200";
+                f.index.value = cfg.index || "windblog-posts";
+                f.timeout.value = cfg.timeout || 3;
+                f.basic_user.value = cfg.basic_user || "";
+                f.basic_pass.value = cfg.basic_pass || "";
+                f.ssl_ca_content.value = cfg.ssl_ca_content || "";
+                f.ssl_client_cert_content.value = cfg.ssl_client_cert_content || "";
+                f.ssl_client_key_content.value = cfg.ssl_client_key_content || "";
+                f.ssl_ignore.checked = !!cfg.ssl_ignore;
+                f.analyzer.value = cfg.analyzer || "standard";
+                form.render(); // 渲染开关与选择
             });
-          });
-        };
 
-        document.getElementById("btn-test").onclick = function(){
-          fetch("/app/admin/elastic/test")
-            .then(function(r){ return r.json(); })
-            .then(function(res){
-              document.getElementById("test-result").textContent = JSON.stringify(res, null, 2);
-              layer.msg(res.success ? "连接正常" : "连接失败");
+        function post(url, data) {
+            return fetch(url, {
+                method: "POST",
+                headers: {"Content-Type": "application/x-www-form-urlencoded"},
+                body: new URLSearchParams(data || {}).toString()
+            }).then(function (r) {
+                return r.json();
             });
-        };
+        }
 
-        document.getElementById("btn-logs").onclick = function(){
-          fetch("/app/admin/elastic/logs?limit=50&offset=0")
-            .then(function(r){ return r.json(); })
-            .then(function(res){
-              document.getElementById("sync-logs").textContent = (res.logs || []).join("\n");
-              layer.msg("已加载日志");
-            });
-        };
-
-        document.getElementById("btn-clear-logs").onclick = function(){
-          post("/app/admin/elastic/clearLogs", {}).then(function(res){
-            if (res.success) {
-              document.getElementById("sync-logs").textContent = "";
-              layer.msg("已清空日志");
-            } else {
-              layer.msg("清空失败");
+        document.getElementById("btn-save").onclick = function () {
+            var f = document.getElementById("es-form");
+            var data = {
+                enabled: f.enabled.checked ? 1 : 0,
+                host: f.host.value,
+                index: f.index.value,
+                timeout: f.timeout.value,
+                basic_user: f.basic_user.value,
+                basic_pass: f.basic_pass.value,
+                analyzer: f.analyzer.value,
+                ssl_ca_content: f.ssl_ca_content.value,
+                ssl_client_cert_content: f.ssl_client_cert_content.value,
+                ssl_client_key_content: f.ssl_client_key_content.value,
+                ssl_ignore: f.ssl_ignore.checked ? 1 : 0
+            };
+            // 基础校验
+            if (!data.host || !/^https?:\/\/.+/.test(data.host)) {
+                layer.msg("请填写有效的Host（http/https）");
+                return;
             }
-          });
+            if (!data.index) {
+                layer.msg("请填写索引名称");
+                return;
+            }
+            var t = parseInt(data.timeout, 10);
+            if (isNaN(t) || t < 1 || t > 60) {
+                layer.msg("超时需为1-60之间的整数");
+                return;
+            }
+            post("/app/admin/elastic/save", data).then(function (res) {
+                layer.msg(res.success ? "已保存" : "保存失败");
+            });
         };
-      });
-    </script>
-  </body>
+
+        document.getElementById("btn-create").onclick = function () {
+            post("/app/admin/elastic/createIndex", {}).then(function (res) {
+                layer.msg(res.success ? "索引创建成功" : "索引创建失败");
+            });
+        };
+
+        document.getElementById("btn-rebuild").onclick = function () {
+            layer.prompt({title: "重建索引分页大小", formType: 0, value: "200"}, function (val, idx) {
+                layer.close(idx);
+                post("/app/admin/elastic/rebuild", {page_size: val}).then(function (res) {
+                    layer.msg(res.success ? "已触发重建" : "重建失败");
+                });
+            });
+        };
+
+        document.getElementById("btn-test").onclick = function () {
+            fetch("/app/admin/elastic/test")
+                .then(function (r) {
+                    return r.json();
+                })
+                .then(function (res) {
+                    document.getElementById("test-result").textContent = JSON.stringify(res, null, 2);
+                    layer.msg(res.success ? "连接正常" : "连接失败");
+                });
+        };
+
+        document.getElementById("btn-logs").onclick = function () {
+            fetch("/app/admin/elastic/logs?limit=50&offset=0")
+                .then(function (r) {
+                    return r.json();
+                })
+                .then(function (res) {
+                    document.getElementById("sync-logs").textContent = (res.logs || []).join("\n");
+                    layer.msg("已加载日志");
+                });
+        };
+
+        document.getElementById("btn-clear-logs").onclick = function () {
+            post("/app/admin/elastic/clearLogs", {}).then(function (res) {
+                if (res.success) {
+                    document.getElementById("sync-logs").textContent = "";
+                    layer.msg("已清空日志");
+                } else {
+                    layer.msg("清空失败");
+                }
+            });
+        };
+        // === 同义词设置（卡片式） ===
+        var synCards = []; // [{id, terms: ['a','b'], target: ''}] target为空表示等价同义词组，非空表示映射到target
+
+        function parseSynonymsTextToCards(text) {
+            synCards = [];
+            (text || '').split(/\r?\n/).forEach(function (line) {
+                line = (line || '').trim();
+                if (!line) return;
+                var mapIdx = line.indexOf('=>');
+                if (mapIdx >= 0) {
+                    var left = line.substring(0, mapIdx).trim();
+                    var right = line.substring(mapIdx + 2).trim();
+                    var terms = left.split(',').map(function (s) {
+                        return s.trim();
+                    }).filter(Boolean);
+                    synCards.push({id: 'c' + Date.now() + Math.random(), terms: terms, target: right});
+                } else {
+                    var terms = line.split(',').map(function (s) {
+                        return s.trim();
+                    }).filter(Boolean);
+                    synCards.push({id: 'c' + Date.now() + Math.random(), terms: terms, target: ''});
+                }
+            });
+        }
+
+        function serializeCardsToText() {
+            return synCards.map(function (card) {
+                var left = (card.terms || []).join(',');
+                if (card.target && card.target.trim() !== '') {
+                    return left + ' => ' + card.target.trim();
+                }
+                return left;
+            }).join('\n');
+        }
+
+        function renderCards() {
+            var list = document.getElementById('syn-card-list');
+            if (!list) return;
+            list.innerHTML = '';
+            synCards.forEach(function (card, idx) {
+                var cardEl = document.createElement('div');
+                cardEl.className = 'bg-white rounded-xl border border-gray-200 shadow p-4';
+                cardEl.dataset.id = card.id;
+
+                // header
+                var header = document.createElement('div');
+                header.className = 'flex items-center justify-between mb-3';
+                header.innerHTML = '<div class="font-medium text-gray-800">规则卡片 ' + (idx + 1) + '</div>'
+                    + '<div class="flex gap-2">'
+                    + '<button class="px-2 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200" data-action="merge-prev">并入前一条</button>'
+                    + '<button class="px-2 py-1 text-xs text-red-600 hover:bg-red-50" data-action="delete">删除</button>'
+                    + '</div>';
+                cardEl.appendChild(header);
+                // 增强：整卡排序与模式开关（不改动原布局，DOM追加）
+                (function(){
+                    var controls = header.querySelector('.flex.gap-2');
+                    if (!controls) return;
+                    // 上移按钮
+                    var btnUp = document.createElement('button');
+                    btnUp.className = 'px-2 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200';
+                    btnUp.textContent = '上移';
+                    btnUp.addEventListener('click', function(){
+                        var myIdx = synCards.findIndex(function(c){ return c.id === card.id; });
+                        if (myIdx > 0) {
+                            var tmp = synCards[myIdx-1];
+                            synCards[myIdx-1] = synCards[myIdx];
+                            synCards[myIdx] = tmp;
+                            renderCards();
+                        } else {
+                            layer.msg('已是第一条');
+                        }
+                    });
+                    controls.insertBefore(btnUp, controls.firstChild);
+
+                    // 下移按钮
+                    var btnDown = document.createElement('button');
+                    btnDown.className = 'px-2 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200';
+                    btnDown.textContent = '下移';
+                    btnDown.addEventListener('click', function(){
+                        var myIdx = synCards.findIndex(function(c){ return c.id === card.id; });
+                        if (myIdx < synCards.length - 1) {
+                            var tmp = synCards[myIdx+1];
+                            synCards[myIdx+1] = synCards[myIdx];
+                            synCards[myIdx] = tmp;
+                            renderCards();
+                        } else {
+                            layer.msg('已是最后一条');
+                        }
+                    });
+                    controls.insertBefore(btnDown, controls.firstChild.nextSibling);
+
+                    // 模式显式开关（单向映射）
+                    var label = document.createElement('label');
+                    label.className = 'flex items-center gap-1 text-xs text-gray-600';
+                    var toggle = document.createElement('input');
+                    toggle.type = 'checkbox';
+                    toggle.checked = !!(card.target && card.target.trim() !== '');
+                    toggle.dataset.modeToggle = '1';
+                    label.appendChild(toggle);
+                    label.appendChild(document.createTextNode(' 单向映射'));
+                    controls.insertBefore(label, controls.firstChild.nextSibling);
+
+                    // 标题右侧模式徽章
+                    var titleEl = header.querySelector('.font-medium.text-gray-800');
+                    if (titleEl) {
+                        var badge = document.createElement('span');
+                        badge.dataset.modeBadge = '1';
+                        badge.className = 'ml-2 inline-block px-2 py-0.5 text-xs rounded bg-gray-100 text-gray-600';
+                        var updateBadge = function(){
+                            var isMap = !!(card.target && card.target.trim() !== '');
+                            badge.textContent = isMap ? '单向映射' : '等价组';
+                            badge.className = 'ml-2 inline-block px-2 py-0.5 text-xs rounded ' + (isMap ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700');
+                        };
+                        updateBadge();
+                        titleEl.appendChild(badge);
+                        // 联动开关更新徽章
+                        toggle && toggle.addEventListener('change', function(){
+                            updateBadge();
+                        });
+                    }
+                })();
+
+                // target input (映射模式)
+                var targetRow = document.createElement('div');
+                targetRow.className = 'mb-3 flex items-center gap-2';
+                targetRow.innerHTML = '<label class="text-sm text-gray-600">映射到(可选)：</label>'
+                    + '<input type="text" class="flex-1 px-2 py-1 border border-gray-300 rounded" placeholder="留空表示等价同义词组" value="' + (card.target || '') + '" />';
+                targetRow.querySelector('input').addEventListener('input', function (e) {
+                    card.target = e.target.value;
+                });
+                cardEl.appendChild(targetRow);
+                // 绑定模式开关与目标输入联动
+                (function(){
+                    var targetInput = targetRow.querySelector('input');
+                    var toggle = header.querySelector('input[type="checkbox"][data-mode-toggle="1"], input[data-mode-toggle="1"]');
+                    var isMapMode = !!(card.target && card.target.trim() !== '');
+                    if (targetInput) targetInput.disabled = !isMapMode;
+                    if (toggle) {
+                        toggle.addEventListener('change', function(e){
+                            if (e.target.checked) {
+                                isMapMode = true;
+                                if (targetInput) targetInput.disabled = false;
+                            } else {
+                                isMapMode = false;
+                                card.target = '';
+                                if (targetInput) {
+                                    targetInput.value = '';
+                                    targetInput.disabled = true;
+                                }
+                            }
+                            // 同步徽章
+                            var badge = header.querySelector('[data-mode-badge="1"]');
+                            if (badge) {
+                                var isMap = !!(card.target && card.target.trim() !== '');
+                                badge.textContent = isMap ? '单向映射' : '等价组';
+                                badge.className = 'ml-2 inline-block px-2 py-0.5 text-xs rounded ' + (isMap ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700');
+                            }
+                        });
+                    }
+                    // 监听 target 输入更新徽章与开关
+                    if (targetInput) {
+                        targetInput.addEventListener('input', function(e){
+                            card.target = e.target.value;
+                            var isMap = !!(card.target && card.target.trim() !== '');
+                            if (toggle) toggle.checked = isMap;
+                            var badge = header.querySelector('[data-mode-badge="1"]');
+                            if (badge) {
+                                badge.textContent = isMap ? '单向映射' : '等价组';
+                                badge.className = 'ml-2 inline-block px-2 py-0.5 text-xs rounded ' + (isMap ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700');
+                            }
+                        });
+                    }
+                })();
+
+                // terms chips
+                var termsWrap = document.createElement('div');
+                termsWrap.className = 'flex flex-wrap gap-2';
+                termsWrap.dataset.cardId = card.id;
+
+                card.terms.forEach(function (term, tIdx) {
+                    var chip = document.createElement('div');
+                    chip.className = 'draggable-term inline-flex items-center gap-2 px-2 py-1 bg-blue-50 text-blue-700 rounded border border-blue-200 cursor-move';
+                    chip.draggable = true;
+                    chip.dataset.index = tIdx;
+                    chip.innerHTML = '<span>' + term + '</span>'
+                        + '<button class="text-red-600 hover:text-red-800" data-action="remove-term" title="移除">×</button>';
+                    // drag events
+                    chip.addEventListener('dragstart', function (ev) {
+                        ev.dataTransfer.setData('text/plain', JSON.stringify({cardId: card.id, index: tIdx}));
+                    });
+                    chip.addEventListener('dragover', function (ev) {
+                        ev.preventDefault();
+                    });
+                    chip.addEventListener('drop', function (ev) {
+                        ev.preventDefault();
+                        var data = {};
+                        try {
+                            data = JSON.parse(ev.dataTransfer.getData('text/plain'));
+                        } catch (e) {
+                        }
+                        if (!data.cardId) return;
+                        var fromCard = synCards.find(function (c) {
+                            return c.id === data.cardId;
+                        });
+                        if (!fromCard) return;
+                        var fromTerm = fromCard.terms[data.index];
+                        // remove from source
+                        fromCard.terms.splice(data.index, 1);
+                        // insert into current card before this chip
+                        var toIdx = Array.prototype.indexOf.call(termsWrap.children, chip);
+                        card.terms.splice(toIdx, 0, fromTerm);
+                        renderCards();
+                    });
+                    chip.querySelector('button[data-action="remove-term"]').addEventListener('click', function () {
+                        card.terms.splice(tIdx, 1);
+                        renderCards();
+                    });
+                    termsWrap.appendChild(chip);
+                });
+
+                // add term input
+                var addRow = document.createElement('div');
+                addRow.className = 'mt-2 flex items-center gap-2';
+                addRow.innerHTML = '<input type="text" class="flex-1 px-2 py-1 border border-gray-300 rounded" placeholder="输入词条后回车添加" />'
+                    + '<button class="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">添加</button>';
+                var addInput = addRow.querySelector('input');
+                var addBtn = addRow.querySelector('button');
+                var doAdd = function () {
+                    var v = (addInput.value || '').trim();
+                    if (!v) return;
+                    card.terms.push(v);
+                    addInput.value = '';
+                    renderCards();
+                };
+                addInput.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        doAdd();
+                    }
+                });
+                addBtn.addEventListener('click', function () {
+                    doAdd();
+                });
+
+                // drop area for termsWrap
+                termsWrap.addEventListener('dragover', function (ev) {
+                    ev.preventDefault();
+                });
+                termsWrap.addEventListener('drop', function (ev) {
+                    ev.preventDefault();
+                    var data = {};
+                    try {
+                        data = JSON.parse(ev.dataTransfer.getData('text/plain'));
+                    } catch (e) {
+                    }
+                    if (!data.cardId) return;
+                    var fromCard = synCards.find(function (c) {
+                        return c.id === data.cardId;
+                    });
+                    if (!fromCard) return;
+                    var fromTerm = fromCard.terms[data.index];
+                    fromCard.terms.splice(data.index, 1);
+                    card.terms.push(fromTerm);
+                    renderCards();
+                });
+
+                cardEl.appendChild(termsWrap);
+                cardEl.appendChild(addRow);
+                // 整卡拖拽用于跨卡合并
+                (function(){
+                    cardEl.draggable = true;
+                    cardEl.addEventListener('dragstart', function(ev){
+                        try { ev.dataTransfer.setData('text/plain', JSON.stringify({type:'card', cardId: card.id})); } catch(e){}
+                    });
+                    cardEl.addEventListener('dragover', function(ev){ ev.preventDefault(); });
+                    cardEl.addEventListener('drop', function(ev){
+                        ev.preventDefault();
+                        var data = {};
+                        try { data = JSON.parse(ev.dataTransfer.getData('text/plain')); } catch(e){}
+                        if (!data || data.type !== 'card' || data.cardId === card.id) return;
+                        var fromIdx = synCards.findIndex(function(c){ return c.id === data.cardId; });
+                        if (fromIdx === -1) return;
+                        var fromCard = synCards[fromIdx];
+                        // 合并：terms 去重；若当前无 target 而来源有，则迁移来源 target
+                        var mergedTerms = (card.terms || []).concat(fromCard.terms || []);
+                        card.terms = mergedTerms.filter(function(x, i, arr){ return arr.indexOf(x) === i; });
+                        if ((!card.target || !card.target.trim()) && (fromCard.target && fromCard.target.trim())) {
+                            card.target = fromCard.target;
+                        }
+                        synCards.splice(fromIdx, 1);
+                        renderCards();
+                        layer.msg('已合并到当前卡片');
+                    });
+                })();
+
+                // actions
+                header.querySelector('[data-action="delete"]').addEventListener('click', function () {
+                    synCards = synCards.filter(function (c) {
+                        return c.id !== card.id;
+                    });
+                    renderCards();
+                });
+                header.querySelector('[data-action="merge-prev"]').addEventListener('click', function () {
+                    var myIdx = synCards.findIndex(function (c) {
+                        return c.id === card.id;
+                    });
+                    if (myIdx > 0) {
+                        var prev = synCards[myIdx - 1];
+                        // 合并到前一条：追加terms，若当前有target且前一条无target，则保留前一条target优先
+                        prev.terms = prev.terms.concat(card.terms).filter(function (x, i, arr) {
+                            return arr.indexOf(x) === i;
+                        });
+                        // 若前一条无target且当前有target，迁移target
+                        if (!prev.target && card.target) prev.target = card.target;
+                        synCards.splice(myIdx, 1);
+                        renderCards();
+                    } else {
+                        layer.msg('没有可并入的前一条');
+                    }
+                });
+
+                list.appendChild(cardEl);
+            });
+        }
+
+        function ensureOneCard() {
+            if (synCards.length === 0) {
+                synCards.push({id: 'c' + Date.now(), terms: [], target: ''});
+            }
+        }
+
+        function loadSynonyms() {
+            fetch("/app/admin/elastic/getSynonyms")
+                .then(function (r) {
+                    return r.json();
+                })
+                .then(function (res) {
+                    parseSynonymsTextToCards(res.text || '');
+                    ensureOneCard();
+                    renderCards();
+                    layer.msg("已加载同义词");
+                });
+        }
+
+        var btnLoad = document.getElementById("btn-syn-load");
+        if (btnLoad) btnLoad.onclick = loadSynonyms;
+
+        var btnAddCard = document.getElementById("btn-add-card");
+        if (btnAddCard) btnAddCard.onclick = function () {
+            synCards.push({id: 'c' + Date.now(), terms: [], target: ''});
+            renderCards();
+        };
+
+        var btnSave = document.getElementById("btn-syn-save");
+        if (btnSave) btnSave.onclick = function () {
+            var text = serializeCardsToText();
+            var preview = document.getElementById("synonyms-preview");
+            function log(msg){ if (preview) { preview.textContent += (preview.textContent ? "\
+" : "") + msg; } }
+            preview && (preview.textContent = "");
+            log("步骤1：保存同义词…");
+            post("/app/admin/elastic/saveSynonyms", {synonyms: text}).then(function (res) {
+                if (!res.success) {
+                    layer.msg("保存失败：" + (res.error || ""));
+                    log("保存失败：" + (res.error || ""));
+                    return;
+                }
+                layer.msg("同义词已保存，开始应用到索引…");
+                log("步骤2：应用到索引（如不能动态更新，将自动重建并切换别名）…");
+                post("/app/admin/elastic/applySynonyms", {}).then(function (appRes) {
+                    if (appRes.success) {
+                        layer.msg("同义词已应用到索引");
+                        log("完成：应用成功" + (appRes.new_index ? ("，新索引：" + appRes.new_index) : ""));
+                    } else {
+                        var detail = "失败（step=" + (appRes.step || "unknown") + ", status=" + (appRes.status || "n/a") + "）";
+                        layer.msg("应用失败：" + detail);
+                        log("应用失败：" + detail + (appRes.error ? (", error=" + appRes.error) : ""));
+                    }
+                });
+            });
+        };
+
+        var btnApply = document.getElementById("btn-syn-apply");
+        if (btnApply) btnApply.onclick = function () {
+            var text = serializeCardsToText();
+            var preview = document.getElementById("synonyms-preview");
+            function log(msg){ if (preview) { preview.textContent += (preview.textContent ? "\
+" : "") + msg; } }
+            preview && (preview.textContent = "");
+            log("步骤1：同步保存同义词…");
+            post("/app/admin/elastic/saveSynonyms", {synonyms: text}).then(function (saveRes) {
+                if (!saveRes.success) {
+                    layer.msg("保存失败：" + (saveRes.error || ""));
+                    log("保存失败：" + (saveRes.error || ""));
+                    return;
+                }
+                log("步骤2：应用到索引（可能触发重建与别名切换）…");
+                post("/app/admin/elastic/applySynonyms", {}).then(function (res) {
+                    if (res.success) {
+                        layer.msg("同义词已应用到索引");
+                        log("完成：应用成功" + (res.new_index ? ("，新索引：" + res.new_index) : ""));
+                    } else {
+                        var detail = "失败（step=" + (res.step || "unknown") + ", status=" + (res.status || "n/a") + "）";
+                        layer.msg("应用失败：" + detail);
+                        log("应用失败：" + detail + (res.error ? (", error=" + res.error) : ""));
+                    }
+                });
+            });
+        };
+
+        var btnPreview = document.getElementById("btn-syn-preview");
+        if (btnPreview) btnPreview.onclick = function () {
+            layer.prompt({title: "输入测试文本", formType: 0, value: ""}, function (val, idx) {
+                layer.close(idx);
+                post("/app/admin/elastic/tokenizePreview", {text: val}).then(function (res) {
+                    document.getElementById("synonyms-preview").textContent = JSON.stringify(res.tokens || [], null, 2);
+                    layer.msg(res.success ? "已预览" : "预览失败");
+                });
+            });
+        };
+
+        var btnRestore = document.getElementById("btn-syn-restore");
+        if (btnRestore) btnRestore.onclick = function () {
+            post("/app/admin/elastic/restoreSynonyms", {}).then(function (res) {
+                layer.msg(res.success ? "已恢复默认分析器" : "恢复失败");
+            });
+        };
+
+        // 页面加载时自动加载
+        loadSynonyms();
+    });
+</script>
+</body>
 </html>

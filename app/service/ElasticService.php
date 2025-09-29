@@ -153,7 +153,8 @@ class ElasticService
                     'query' => $keyword,
                     'fields' => ['title^5', 'excerpt^3', 'content^1'],
                     'type' => 'best_fields',
-                    'operator' => 'and'
+                    'operator' => 'and',
+                    'analyzer' => 'wb_synonym_search'
                 ]
             ],
             'highlight' => [
@@ -202,7 +203,8 @@ class ElasticService
             'query' => [
                 'match_phrase_prefix' => [
                     $field => [
-                        'query' => $prefix
+                        'query' => $prefix,
+                        'analyzer' => 'wb_synonym_search'
                     ]
                 ]
             ],

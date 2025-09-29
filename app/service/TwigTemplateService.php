@@ -69,21 +69,32 @@ class TwigTemplateService implements View
         } else {
             $viewPath = $app === '' ? "$baseViewPath/view/" : "$baseViewPath/$app/view/";
         }
+        // 解析主题，失败或空值均回退 default
+        $theme = 'default';
         try {
-            $viewPath = $viewPath . blog_config('theme', 'default', true) . '/';
+            $t = blog_config('theme', 'default', true);
+            if (is_string($t) && $t !== '') {
+                $theme = $t;
+            }
         } catch (\Throwable $e) {
-
+            // ignore and fallback to default
         }
-        if (!isset($views[$viewPath])) {
-            $views[$viewPath] = new Environment(new FilesystemLoader($viewPath), config("{$configPrefix}view.options", []));
+        // 构建主题与回退路径
+        $viewPathBase = rtrim($viewPath, '/') . '/';
+        $viewPathTheme = $viewPathBase . $theme . '/';
+        $loaderPaths = [$viewPathTheme, $viewPathBase];
+        $viewsKey = implode('|', $loaderPaths);
+        if (!isset($views[$viewsKey])) {
+            $views[$viewsKey] = new Environment(new FilesystemLoader($loaderPaths), config("{$configPrefix}view.options", []));
             $extension = config("{$configPrefix}view.extension");
             if ($extension) {
-                $extension($views[$viewPath]);
+                $extension($views[$viewsKey]);
             }
         }
         if (isset($request->_view_vars)) {
             $vars = array_merge((array)$request->_view_vars, $vars);
         }
-        return $views[$viewPath]->render("$template.$viewSuffix", $vars);
+        // 使用多路径缓存键进行渲染
+        return $views[$viewsKey]->render("$template.$viewSuffix", $vars);
     }
 }

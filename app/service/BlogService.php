@@ -57,7 +57,12 @@ class BlogService
      */
     public static function getPostsPerPage(): int
     {
-        return self::getConfig('posts_per_page', 10);
+        $val = self::getConfig('posts_per_page', 10);
+        $per = is_numeric($val) ? (int)$val : 10;
+        if ($per <= 0) {
+            $per = 10;
+        }
+        return $per;
     }
 
     /**

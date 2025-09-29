@@ -137,4 +137,295 @@ class ElasticController extends Base
         \support\Redis::del('es:sync:logs');
         return json(['success' => true]);
     }
+
+    // 获取同义词规则（换行分隔）
+    public function getSynonyms(Request $request): Response
+    {
+        $text = (string)blog_config('es.synonyms', '', true);
+        // 规范化行尾，过滤空行
+        $lines = array_values(array_filter(array_map(function ($line) {
+            $line = trim(str_replace(["
+
+", "
+"], "
+", $line));
+            return $line === '' ? null : $line;
+        }, explode("
+", $text))));
+        return json([
+            'success' => true,
+            'text' => $text,
+            'lines' => $lines,
+            'count' => count($lines),
+            'filter_type' => 'synonym_graph',
+            'analyzer' => 'wb_synonym_search'
+        ]);
+    }
+
+    // 保存同义词规则
+    public function saveSynonyms(Request $request): Response
+    {
+        $text = (string)$request->post('synonyms', '');
+        // 限制最大长度以避免过大payload（可按需调整）
+        if (strlen($text) > 200_000) {
+            return json(['success' => false, 'error' => 'synonyms too large']);
+        }
+        // 写入 blog_config
+        blog_config('es.synonyms', $text, true, true, true);
+        return json(['success' => true]);
+    }
+
+    // 应用同义词到索引（关闭→更新analysis→打开）
+    public function applySynonyms(Request $request): Response
+    {
+        $cfg = ElasticService::getConfigProxy();
+        $host = rtrim((string)($cfg['host'] ?? 'http://127.0.0.1:9200'), '/');
+        $index = (string)($cfg['index'] ?? 'windblog-posts');
+        $timeout = (int)($cfg['timeout'] ?? 3);
+        $tokenizer = (string)blog_config('es.analyzer', 'standard', true) ?: 'standard';
+
+        $text = (string)blog_config('es.synonyms', '', true);
+        $lines = array_values(array_filter(array_map(function ($line) {
+            $line = trim(str_replace(["
+
+", "
+"], "
+", $line));
+            return $line === '' ? null : $line;
+        }, explode("
+", $text))));
+
+        // 如果没有规则也允许应用（移除过滤器），但这里简单返回错误
+        if (empty($lines)) {
+            return json(['success' => false, 'error' => 'no synonyms']);
+        }
+
+        // 1) 关闭索引
+        $closeUrl = $host . '/' . rawurlencode($index) . '/_close';
+        $closeResp = ElasticService::curlProxy('POST', $closeUrl, [], $timeout);
+        if (!$closeResp['ok']) {
+            return json(['success' => false, 'step' => 'close', 'status' => $closeResp['status'], 'error' => $closeResp['error'] ?? null]);
+        }
+
+        // 2) 更新分析设置（添加 synonym_graph 过滤器与搜索分析器）
+        $settingsUrl = $host . '/' . rawurlencode($index) . '/_settings';
+        $payload = [
+            'analysis' => [
+                'filter' => [
+                    'wb_synonyms' => [
+                        'type' => 'synonym_graph',
+                        'lenient' => true,
+                        'synonyms' => $lines
+                    ]
+                ],
+                'analyzer' => [
+                    'wb_synonym_search' => [
+                        'tokenizer' => $tokenizer,
+                        'filter' => ['lowercase', 'wb_synonyms']
+                    ]
+                ]
+            ]
+        ];
+        $settingsResp = ElasticService::curlProxy('PUT', $settingsUrl, $payload, $timeout);
+        if (!$settingsResp['ok']) {
+            // 尝试重新打开索引以避免卡住
+            $openUrl = $host . '/' . rawurlencode($index) . '/_open';
+            ElasticService::curlProxy('POST', $openUrl, [], $timeout);
+            // 自动回退到重建流程：创建新索引并应用同义词、迁移数据、切换别名/索引
+            return $this->applySynonymsRebuild($request);
+        }
+
+        // 3) 打开索引
+        $openUrl = $host . '/' . rawurlencode($index) . '/_open';
+        $openResp = ElasticService::curlProxy('POST', $openUrl, [], $timeout);
+        if (!$openResp['ok']) {
+            return json(['success' => false, 'step' => 'open', 'status' => $openResp['status'], 'error' => $openResp['error'] ?? null]);
+        }
+
+        return json(['success' => true]);
+    }
+
+    // 预览分词（_analyze 使用同义词搜索分析器）
+    public function tokenizePreview(Request $request): Response
+    {
+        $text = (string)$request->post('text', '');
+        if ($text === '') {
+            return json(['success' => false, 'error' => 'text required']);
+        }
+        $cfg = ElasticService::getConfigProxy();
+        $host = rtrim((string)($cfg['host'] ?? 'http://127.0.0.1:9200'), '/');
+        $index = (string)($cfg['index'] ?? 'windblog-posts');
+        $timeout = (int)($cfg['timeout'] ?? 3);
+        $tokenizer = (string)blog_config('es.analyzer', 'standard', true) ?: 'standard';
+
+        $url = $host . '/' . rawurlencode($index) . '/_analyze';
+        $payload = [
+            'text' => $text,
+            'analyzer' => 'wb_synonym_search'
+        ];
+        $resp = ElasticService::curlProxy('POST', $url, $payload, $timeout);
+        $body = is_array($resp['body']) ? $resp['body'] : [];
+        return json([
+            'success' => $resp['ok'],
+            'status' => $resp['status'],
+            'tokens' => $body['tokens'] ?? [],
+            'error' => $resp['error'] ?? null
+        ]);
+    }
+
+    // 恢复默认查询分析器为 standard（关闭→更新settings→打开）
+    public function restoreSynonyms(Request $request): Response
+    {
+        $cfg = ElasticService::getConfigProxy();
+        $host = rtrim((string)($cfg['host'] ?? 'http://127.0.0.1:9200'), '/');
+        $index = (string)($cfg['index'] ?? 'windblog-posts');
+        $timeout = (int)($cfg['timeout'] ?? 3);
+
+        // 1) 关闭索引
+        $closeUrl = $host . '/' . rawurlencode($index) . '/_close';
+        $closeResp = ElasticService::curlProxy('POST', $closeUrl, [], $timeout);
+        if (!$closeResp['ok']) {
+            return json(['success' => false, 'step' => 'close', 'status' => $closeResp['status'], 'error' => $closeResp['error'] ?? null]);
+        }
+
+        // 2) 更新 settings：恢复默认查询分析器为 standard
+        $settingsUrl = $host . '/' . rawurlencode($index) . '/_settings';
+        $payload = [
+            'index' => [
+                'search' => [
+                    'default_analyzer' => 'standard'
+                ]
+            ]
+        ];
+        $settingsResp = ElasticService::curlProxy('PUT', $settingsUrl, $payload, $timeout);
+        if (!$settingsResp['ok']) {
+            // 尝试重新打开索引以避免卡住
+            $openUrl = $host . '/' . rawurlencode($index) . '/_open';
+            ElasticService::curlProxy('POST', $openUrl, [], $timeout);
+            return json(['success' => false, 'step' => 'settings', 'status' => $settingsResp['status'], 'error' => $settingsResp['error'] ?? null]);
+        }
+
+        // 3) 打开索引
+        $openUrl = $host . '/' . rawurlencode($index) . '/_open';
+        $openResp = ElasticService::curlProxy('POST', $openUrl, [], $timeout);
+        if (!$openResp['ok']) {
+            return json(['success' => false, 'step' => 'open', 'status' => $openResp['status'], 'error' => $openResp['error'] ?? null]);
+        }
+
+        return json(['success' => true]);
+    }
+
+    // 安全重建索引并应用同义词（创建新索引→_reindex→别名切换/更新配置→删除旧索引）
+    public function applySynonymsRebuild(Request $request): Response
+    {
+        $cfg = ElasticService::getConfigProxy();
+        $host = rtrim((string)($cfg['host'] ?? 'http://127.0.0.1:9200'), '/');
+        $index = (string)($cfg['index'] ?? 'windblog-posts');
+        $timeout = (int)($cfg['timeout'] ?? 3);
+
+        $text = (string)blog_config('es.synonyms', '', true);
+        $lines = array_values(array_filter(array_map(function ($line) {
+            $line = trim(str_replace(["
+
+", "
+"], "
+", $line));
+            return $line === '' ? null : $line;
+        }, explode("
+", $text))));
+        if (empty($lines)) {
+            return json(['success' => false, 'error' => 'no synonyms']);
+        }
+
+        // 1) 读取旧索引 mapping
+        $mapUrl = $host . '/' . rawurlencode($index) . '/_mapping';
+        $mapResp = ElasticService::curlProxy('GET', $mapUrl, [], $timeout);
+        if (!$mapResp['ok'] || !is_array($mapResp['body'])) {
+            return json(['success' => false, 'step' => 'get_mapping', 'status' => $mapResp['status'] ?? 0, 'error' => $mapResp['error'] ?? 'mapping not available']);
+        }
+        $mapping = $mapResp['body'][$index]['mappings'] ?? ($mapResp['body']['mappings'] ?? []);
+
+        // 2) 新索引名
+        // 基于基础索引名进行 -A/-B 轮换，避免后缀累加
+        $base = preg_replace('/(-syn-\\d{14}|-[AB])$/', '', $index);
+        $nextSuffix = (preg_match('/-A$/', $index)) ? '-B' : '-A';
+        $newIndex = $base . $nextSuffix;
+
+        // 3) 创建新索引（包含同义词 analysis 与默认查询分析器）
+        $createUrl = $host . '/' . rawurlencode($newIndex);
+        $createPayload = [
+            'settings' => [
+                'analysis' => [
+                    'filter' => [
+                        'wb_synonyms' => [
+                            'type' => 'synonym_graph',
+                            'lenient' => true,
+                            'synonyms' => $lines
+                        ]
+                    ],
+                    'analyzer' => [
+                        'wb_synonym_search' => [
+                            'tokenizer' => $tokenizer,
+                            'filter' => ['lowercase', 'wb_synonyms']
+                        ]
+                    ]
+                ]
+            ],
+            'mappings' => $mapping
+        ];
+        $createResp = ElasticService::curlProxy('PUT', $createUrl, $createPayload, $timeout);
+        if (!$createResp['ok']) {
+            return json(['success' => false, 'step' => 'create_index', 'status' => $createResp['status'], 'error' => $createResp['error'] ?? null]);
+        }
+
+        // 4) 迁移数据 _reindex（等待完成）
+        $reindexUrl = $host . '/_reindex?wait_for_completion=true';
+        $reindexPayload = [
+            'source' => ['index' => $index],
+            'dest' => ['index' => $newIndex],
+            'conflicts' => 'proceed'
+        ];
+        $reindexResp = ElasticService::curlProxy('POST', $reindexUrl, $reindexPayload, max($timeout, 10));
+        if (!$reindexResp['ok']) {
+            return json(['success' => false, 'step' => 'reindex', 'status' => $reindexResp['status'], 'error' => $reindexResp['error'] ?? null]);
+        }
+
+        // 5) 别名策略：优先切换别名；若无别名则更新 es.index 指向新索引
+        $aliasUrl = $host . '/' . rawurlencode($index) . '/_alias';
+        $aliasResp = ElasticService::curlProxy('GET', $aliasUrl, [], $timeout);
+        $hasAlias = $aliasResp['ok'] && isset($aliasResp['body']) && is_array($aliasResp['body']) && !empty($aliasResp['body']);
+        if ($hasAlias) {
+            // 取第一个别名名
+            $aliases = array_keys($aliasResp['body'][$index]['aliases'] ?? []);
+            if (!empty($aliases)) {
+                $aliasName = $aliases[0];
+                $actionsUrl = $host . '/_aliases';
+                $actionsPayload = [
+                    'actions' => [
+                        ['remove' => ['index' => $index, 'alias' => $aliasName]],
+                        ['add' => ['index' => $newIndex, 'alias' => $aliasName]]
+                    ]
+                ];
+                $aliasActResp = ElasticService::curlProxy('POST', $actionsUrl, $actionsPayload, $timeout);
+                if (!$aliasActResp['ok']) {
+                    return json(['success' => false, 'step' => 'switch_alias', 'status' => $aliasActResp['status'], 'error' => $aliasActResp['error'] ?? null]);
+                }
+            } else {
+                // 没有别名条目，降级为更新配置
+                blog_config('es.index', $newIndex, true, true, true);
+            }
+        } else {
+            blog_config('es.index', $newIndex, true, true, true);
+        }
+
+        // 6) 删除旧索引
+        $delUrl = $host . '/' . rawurlencode($index);
+        $delResp = ElasticService::curlProxy('DELETE', $delUrl, [], $timeout);
+        if (!$delResp['ok']) {
+            // 不致命，返回部分成功并提示
+            return json(['success' => true, 'warning' => 'old index not deleted', 'status' => $delResp['status'], 'error' => $delResp['error'] ?? null, 'new_index' => $newIndex]);
+        }
+
+        return json(['success' => true, 'new_index' => $newIndex]);
+    }
 }
