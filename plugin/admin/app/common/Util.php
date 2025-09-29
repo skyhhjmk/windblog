@@ -517,55 +517,6 @@ class Util
                     $keys[$key_name]['columns'][] = $index->column_name;
                 }
             }
-        } else {
-            // MySQL查询（保留原始逻辑）
-            $schema_raw = $section !== 'table' ? Util::db()->select("select * from information_schema.COLUMNS where TABLE_SCHEMA = '$database' and table_name = '$table' order by ORDINAL_POSITION") : [];
-
-            foreach ($schema_raw as $item) {
-                $field = $item->COLUMN_NAME;
-                $columns[$field] = [
-                    'field' => $field,
-                    'type' => Util::typeToMethod($item->DATA_TYPE, (bool)strpos($item->COLUMN_TYPE, 'unsigned')),
-                    'comment' => $item->COLUMN_COMMENT,
-                    'default' => $item->COLUMN_DEFAULT,
-                    'length' => static::getLengthValue($item),
-                    'nullable' => $item->IS_NULLABLE !== 'NO',
-                    'primary_key' => $item->COLUMN_KEY === 'PRI',
-                    'auto_increment' => strpos($item->EXTRA, 'auto_increment') !== false
-                ];
-
-                $forms[$field] = [
-                    'field' => $field,
-                    'comment' => $item->COLUMN_COMMENT,
-                    'control' => static::typeToControl($item->DATA_TYPE),
-                    'form_show' => $item->COLUMN_KEY !== 'PRI',
-                    'list_show' => true,
-                    'enable_sort' => false,
-                    'searchable' => false,
-                    'search_type' => 'normal',
-                    'control_args' => '',
-                ];
-            }
-
-            $table_schema = $section == 'table' || !$section ? Util::db()->select("SELECT TABLE_COMMENT FROM information_schema.`TABLES` WHERE TABLE_SCHEMA='$database' and TABLE_NAME='$table'") : [];
-            $indexes = !$section || in_array($section, ['keys', 'table']) ? Util::db()->select("SHOW INDEX FROM `$table`") : [];
-            $keys = [];
-            $primary_key = [];
-            foreach ($indexes as $index) {
-                $key_name = $index->Key_name;
-                if ($key_name == 'PRIMARY') {
-                    $primary_key[] = $index->Column_name;
-                    continue;
-                }
-                if (!isset($keys[$key_name])) {
-                    $keys[$key_name] = [
-                        'name' => $key_name,
-                        'columns' => [],
-                        'type' => $index->Non_unique == 0 ? 'unique' : 'normal'
-                    ];
-                }
-                $keys[$key_name]['columns'][] = $index->Column_name;
-            }
         }
 
         $data = [

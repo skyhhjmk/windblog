@@ -4,20 +4,6 @@ return [
     'default' => getenv('DB_DEFAULT') ?: 'pgsql',
     // 各种数据库配置
     'connections' => [
-        'mysql' => [
-            'driver' => 'mysql',
-            'host' => getenv('DB_MYSQL_HOST') ?: 'localhost',
-            'port' => getenv('DB_MYSQL_PORT') ?: '3306',
-            'database' => getenv('DB_MYSQL_DATABASE') ?: 'windblog',
-            'username' => getenv('DB_MYSQL_USERNAME') ?: 'root',
-            'password' => getenv('DB_MYSQL_PASSWORD') ?: 'root',
-            'unix_socket' => '',
-            'charset' => 'utf8mb4',
-            'collation' => 'utf8mb4_unicode_ci',
-            'prefix' => '',
-            'strict' => true,
-            'engine' => null,
-        ],
         'pgsql' => [
             'driver' => 'pgsql',
             'host' => getenv('DB_PGSQL_HOST') ?: 'localhost',

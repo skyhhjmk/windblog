@@ -26,7 +26,24 @@ return [
 //        'count' => 1,
         'user' => '',
         'group' => '',
-        'reusePort' => false,
+        'reusePort' => true,
+        'eventLoop' => '',
+        'context' => [],
+        'constructor' => [
+            'requestClass' => Request::class,
+            'logger' => Log::channel('default'),
+            'appPath' => app_path(),
+            'publicPath' => public_path()
+        ]
+    ],
+    'webman2' => [
+        'handler' => Http::class,
+        'listen' => 'http://0.0.0.0:8788',
+        'count' => cpu_count() * 4,
+//        'count' => 1,
+        'user' => '',
+        'group' => '',
+        'reusePort' => true,
         'eventLoop' => '',
         'context' => [],
         'constructor' => [

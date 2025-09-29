@@ -14,9 +14,9 @@
 
 return [
     'default' => [
-        'password' => '',
-        'host' => '127.0.0.1',
-        'port' => 6379,
+        'password' => getenv('REDIS_PASSWORD'),
+        'host' => getenv('REDIS_HOST') ?? '127.0.0.1',
+        'port' => getenv('REDIS_PORT') ?? 6379,
         'database' => 0,
         'pool' => [
             'max_connections' => 5,
@@ -27,9 +27,9 @@ return [
         ],
     ],
     'cache' => [
-        'password' => '',
-        'host' => '127.0.0.1',
-        'port' => 6379,
+        'password' => getenv('REDIS_PASSWORD'),
+        'host' => getenv('REDIS_HOST') ?? '127.0.0.1',
+        'port' => getenv('REDIS_PORT') ?? 6379,
         'database' => 1,
         'pool' => [
             'max_connections' => 5,

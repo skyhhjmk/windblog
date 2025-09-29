@@ -6,6 +6,13 @@
     <link rel="stylesheet" href="/app/admin/component/layui/css/layui.css?v=2.8.12" />
     <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css" />
     <link rel="stylesheet" href="/app/admin/admin/css/reset.css" />
+    <style>
+        /* 状态行高亮 */
+        .row-status-pending { background-color: #fff7e6; }     /* 橙色浅底 */
+        .row-status-processing { background-color: #e6f7ff; }  /* 蓝色浅底 */
+        .row-status-completed { background-color: #f6ffed; }   /* 绿色浅底 */
+        .row-status-failed { background-color: #fff1f0; }      /* 红色浅底 */
+    </style>
 </head>
 <body class="pear-container">
 
@@ -15,9 +22,21 @@
         <form class="layui-form top-search-from">
 
             <div class="layui-form-item">
-                <label class="layui-form-label">表名</label>
+                <label class="layui-form-label">任务名</label>
                 <div class="layui-input-block">
-                    <input type="text" name="NAME" id="NAME" placeholder="请输入表名" class="layui-input">
+                    <input type="text" name="name" id="name" placeholder="请输入任务名" class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">状态</label>
+                <div class="layui-input-block">
+                    <select name="status" id="status">
+                        <option value="">全部</option>
+                        <option value="pending">等待中</option>
+                        <option value="processing">导入中</option>
+                        <option value="completed">已完成</option>
+                        <option value="failed">已失败</option>
+                    </select>
                 </div>
             </div>
 
@@ -54,16 +73,18 @@
     </button>
 </script>
 
-<script type="text/html" id="table-bar">
-    <button class="pear-btn pear-btn-xs tool-btn" lay-event="edit" permission="app.admin.table.modify">编辑</button>
-    <button class="pear-btn pear-btn-xs tool-btn" lay-event="remove" permission="app.admin.table.drop">删除</button>
-    <button class="pear-btn pear-btn-xs tool-btn" lay-event="crud" permission="app.admin.table.crud">一键菜单</button>
-</script>
+<!-- 移除无效的操作栏 -->
 
 <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
 <script src="/app/admin/component/pear/pear.js"></script>
 <script src="/app/admin/admin/js/permission.js"></script>
 <script src="/app/admin/admin/js/common.js"></script>
+
+<script type="text/html" id="progress-cell">
+    <div class="layui-progress" lay-showPercent="true" style="margin:8px 0;">
+        <div class="layui-progress-bar" lay-percent="{{ d.progress || 0 }}%"></div>
+    </div>
+</script>
 
 <script type="text/html" id="job-status">
     {{# if(d.status == 'pending'){ }}
@@ -83,11 +104,8 @@
 
     // 相关接口
     const LIST_API = "/app/admin/tools/wp-import/list";
-    const DELETE_API = "/app/admin/tools/wp-import/drop";
-    const VIEW_URL = "/app/admin/tools/wp-import/view";
     const CREATE_URL = "/app/admin/tools/wp-import/create";
-    const MODIFY_URL = "/app/admin/tools/wp-import/modify";
-    const CRUD_URL = "/app/admin/tools/wp-import/crud";
+    const DELETE_API = (id) => `/app/admin/tools/wp-import/delete/${id}`;
 
     layui.use(["table", "form", "common", "popup"], function() {
         let table = layui.table;
@@ -96,40 +114,18 @@
         let common = layui.common;
 
         let cols = [
-            {
-                type: "checkbox"
-            }, {
-                title: "任务名",
-                field: "NAME"
-            },
-            {
-                title: "备注",
-                field: "TABLE_COMMENT",
-            },
-            {
-                title: "状态",
-                field: "STATUS",
-                width: 100,
-                templet: "#job-status"
-            },
-            {
-                title: "引擎",
-                field: "ENGINE",
-                width: 100,
-            },
-            {
-                title: "字符集",
-                field: "TABLE_COLLATION",
-            },
-            {
-                title: "创建时间",
-                field: "CREATE_TIME",
-            },
+            { title: "ID", field: "id", width: 80 },
+            { title: "任务名", field: "name" },
+            { title: "状态", field: "status", width: 120, templet: "#job-status" },
+            { title: "进度", field: "progress", width: 160, templet: "#progress-cell" },
+            { title: "创建时间", field: "created_at", width: 180 },
             {
                 title: "操作",
-                toolbar: "#table-bar",
                 align: "center",
-                width: 200
+                width: 120,
+                templet: function(d){
+                    return '<button class="pear-btn pear-btn-xs tool-btn" lay-event="remove">删除</button>';
+                }
             }
         ];
 
@@ -145,7 +141,23 @@
                 title: "刷新",
                 layEvent: "refresh",
                 icon: "layui-icon-refresh",
-            }, "filter", "print", "exports"]
+            }, "filter", "print", "exports"],
+            done: function (res) {
+                var $ = layui.$;
+                var trs = $('div[lay-id="job-table"] .layui-table-body tbody tr');
+                trs.each(function (index) {
+                    var d = res.data[index];
+                    if (!d || !d.status) return;
+                    var cls = '';
+                    switch (d.status) {
+                        case 'pending': cls = 'row-status-pending'; break;
+                        case 'processing': cls = 'row-status-processing'; break;
+                        case 'completed': cls = 'row-status-completed'; break;
+                        case 'failed': cls = 'row-status-failed'; break;
+                    }
+                    if (cls) $(this).addClass(cls);
+                });
+            }
         });
 
         $(document).on("click", ".tab-link", function () {
@@ -158,10 +170,6 @@
         table.on("tool(job-table)", function(obj) {
             if (obj.event === "remove") {
                 remove(obj);
-            } else if (obj.event === "edit") {
-                edit(obj);
-            } else if (obj.event === "crud") {
-                crud(obj);
             }
         });
 
@@ -170,8 +178,6 @@
                 add();
             } else if (obj.event === "refresh") {
                 refreshTable();
-            } else if (obj.event === "batchRemove") {
-                batchRemove(obj);
             }
         });
 
@@ -182,6 +188,18 @@
                 },
                 where: data.field
             })
+            return false;
+        });
+
+        // 查询重置：清空 name/status 并刷新
+        form.on("submit(table-reset)", function() {
+            $('#name').val('');
+            $('#status').val('');
+            form.render('select');
+            table.reload("job-table", {
+                page: { curr: 1 },
+                where: { name: '', status: '' }
+            });
             return false;
         });
 
@@ -196,65 +214,40 @@
             });
         }
 
-        let edit = function(obj) {
-            let table = obj.data.NAME;
-            layer.open({
-                type: 2,
-                title: "修改导入任务",
-                shade: 0.1,
-                maxmin: true,
-                area: [common.isModile()?"100%":"98%", common.isModile()?"100%":"95%"],
-                content: MODIFY_URL + "?table=" + table
-            });
-        }
+        // 移除 edit 功能
 
-        let crud = function(obj) {
-            let table = obj.data.NAME;
-            layer.open({
-                type: 2,
-                title: "一键菜单",
-                shade: 0.1,
-                maxmin: true,
-                area: [common.isModile()?"100%":"500px", common.isModile()?"100%":"500px"],
-                content: CRUD_URL + "?table=" + table
-            });
-        }
+        // 移除 crud 功能
 
         let remove = function(obj) {
-            return doRemove([obj.data.NAME]);
-        }
-
-        let batchRemove = function(obj) {
-            var tables = common.checkField(obj, "NAME");
-            if (tables === "") {
-                layui.popup.warning("未选中数据");
-                return false;
-            }
-            doRemove(tables.split(","));
-        }
-
-        let doRemove = function (tables) {
-            layer.confirm("确定删除?", {
+            const id = obj.data.id;
+            layer.confirm("确定删除该任务?", {
                 icon: 3,
                 title: "提示"
             }, function(index) {
                 layer.close(index);
                 let loading = layer.load();
                 $.ajax({
-                    url: DELETE_API,
-                    data: {tables: tables},
-                    dataType: "json",
+                    url: DELETE_API(id),
                     type: "post",
+                    dataType: "json",
                     success: function (res) {
                         layer.close(loading);
-                        if (res.code) {
-                            return layui.popup.failure(res.msg);
+                        if (res.code && res.code !== 200 && res.code !== 0) {
+                            return layui.popup.failure(res.msg || '删除失败');
                         }
                         return layui.popup.success("操作成功", refreshTable);
+                    },
+                    error: function () {
+                        layer.close(loading);
+                        layui.popup.failure("请求失败");
                     }
-                })
+                });
             });
         }
+
+        // 移除批量删除功能
+
+        // 移除旧的删除实现
 
         window.refreshTable = function() {
             table.reloadData("job-table", {

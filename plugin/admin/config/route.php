@@ -97,9 +97,12 @@ Route::group('/app/admin', function () {
             Route::get('/', [WpImportController::class, 'index']);
             Route::get('/index', [WpImportController::class, 'index']);
             Route::get('/list', [WpImportController::class, 'list'])->name('admin.tools.wp-import.list');
-            Route::any('/create', [WpImportController::class, 'create'])->name('admin.tools.wp-import.create');
-            Route::post('/upload', [WpImportController::class, 'upload'])->name('admin.tools.wp-import.upload');
+            Route::get('/create', [WpImportController::class, 'create'])->name('admin.tools.wp-import.create');
+//            Route::post('/upload', [WpImportController::class, 'upload'])->name('admin.tools.wp-import.upload');
             Route::post('/submit', [WpImportController::class, 'submit'])->name('admin.tools.wp-import.submit');
+            Route::get('/status/{id}', [WpImportController::class, 'status'])->name('admin.tools.wp-import.status');
+            Route::post('/reset/{id}', [WpImportController::class, 'reset'])->name('admin.tools.wp-import.reset');
+            Route::post('/delete/{id}', [WpImportController::class, 'delete'])->name('admin.tools.wp-import.delete');
         });
     });
 

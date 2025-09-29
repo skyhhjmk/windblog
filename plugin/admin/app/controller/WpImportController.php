@@ -87,173 +87,19 @@ class WpImportController extends Base
      */
     public function create(Request $request): Response
     {
-        if ($request->method() === 'GET') {
-            return raw_view('tools/wp-import/create', []);
-        }
-        try {
-            // 检查是否有上传媒体
-            $file = $request->file('import_file');
-            if (!$file) {
-                return json(['code' => 400, 'msg' => trans('Please select a file to import')]);
-            }
-
-            // 验证文件类型，仅支持XML
-            if (strtolower($file->getUploadExtension()) !== 'xml') {
-                return json(['code' => 400, 'msg' => trans('Only XML files are supported')]);
-            }
-
-            // 创建上传目录
-            $uploadDir = runtime_path('imports');
-            if (!is_dir($uploadDir)) {
-                mkdir($uploadDir, 0755, true);
-            }
-
-            // 移动文件到指定目录
-            $filename = time() . '_' . uniqid() . '.' . $file->getUploadExtension();
-            $filePath = $uploadDir . '/' . $filename;
-            if (!$file->move($filePath)) {
-                return json(['code' => 500, 'msg' => trans('File upload failed')]);
-            }
-
-            // 获取默认作者ID，如果选择system则为null
-            $defaultAuthor = $request->post('default_author');
-            $defaultAuthorId = null;
-            if ($defaultAuthor !== 'system') {
-                $defaultAuthorId = (int)$defaultAuthor;
-            }
-
-            // 检查是否已存在相同文件名的任务
-            $existingJob = ImportJob::where('name', $file->getUploadName())
-//                ->whereNotIn('status', ['failed', 'completed'])
-                ->first();
-
-            if ($existingJob) {
-                return json([
-                    'code' => 409,
-                    'msg' => '检测到相同文件名的导入任务，请手动处理',
-                    'data' => [
-                        'job_id' => $existingJob->id,
-                        'status' => $existingJob->status
-                    ]
-                ]);
-            }
-
-            // 创建导入任务
-            $importJob = new ImportJob();
-            $importJob->name = $file->getUploadName();
-            $importJob->type = 'wordpress_xml';
-            $importJob->file_path = $filePath;
-            $importJob->author_id = $defaultAuthorId;
-            $importJob->options = json_encode([
-                'create_users' => (bool)$request->post('create_users', false),
-                'import_attachments' => (bool)$request->post('import_attachments', false),
-                'download_attachments' => (bool)$request->post('download_attachments', false),
-                'duplicate_mode' => $request->post('duplicate_mode', 'skip')
-            ]);
-            $importJob->save();
-
-            return json(['code' => 0, 'msg' => trans('Import job created')]);
-        } catch (\Exception $e) {
-            // 记录错误日志
-            \support\Log::error('导入上传错误: ' . $e->getMessage(), ['exception' => $e]);
-            return json(['code' => 500, 'msg' => trans('Server error :error', ['error' => $e->getMessage()])]);
-        }
-//        return $this->json(0, 'ok');
+        return raw_view('tools/wp-import/create', []);
     }
 
     /**
      * 上传并创建导入任务
      *
+     * 貌似并没有被使用，准备废弃
+     *
      * @param Request $request
      *
      * @return Response
      */
-    public function upload(Request $request)
-    {
-        // 获取是否强制上传的参数
-        $force = (bool)$request->post('force', false);
 
-        try {
-            // 检查是否有上传媒体
-            $file = $request->file('import_file');
-            if (!$file) {
-                return json(['code' => 400, 'msg' => '请选择要导入的文件']);
-            }
-
-            // 验证文件类型，仅支持XML
-            if (strtolower($file->getUploadExtension()) !== 'xml') {
-                return json(['code' => 400, 'msg' => '只支持XML格式的文件']);
-            }
-
-            // 创建上传目录
-            $uploadDir = runtime_path('imports');
-            if (!is_dir($uploadDir)) {
-                mkdir($uploadDir, 0755, true);
-            }
-
-            // 移动文件到指定目录
-            $filename = time() . '_' . uniqid() . '.' . $file->getUploadExtension();
-            $filePath = $uploadDir . '/' . $filename;
-            if (!$file->move($filePath)) {
-                return json(['code' => 500, 'msg' => '文件上传失败']);
-            }
-
-            // 获取默认作者ID，如果选择system则为null
-            $defaultAuthor = $request->post('default_author');
-            $defaultAuthorId = null;
-            if ($defaultAuthor !== 'system') {
-                $defaultAuthorId = (int)$defaultAuthor;
-            }
-
-            // 如果不是强制上传，则检查是否已存在相同文件名的任务
-            if (!$force) {
-                $existingJob = ImportJob::where('name', $file->getUploadName())
-                    ->first();
-
-                if ($existingJob) {
-                    return json([
-                        'code' => 409,
-                        'msg' => '检测到相同文件名的导入任务，请手动处理或选择强制上传',
-                        'data' => [
-                            'job_id' => $existingJob->id,
-                            'status' => $existingJob->status
-                        ]
-                    ]);
-                }
-            }
-
-            // 创建导入任务
-            $importJob = new ImportJob();
-            $importJob->name = $file->getUploadName();
-            $importJob->type = 'wordpress_xml';
-            $importJob->file_path = $filePath;
-            $importJob->author_id = $defaultAuthorId;
-            $importJob->options = json_encode([
-                'create_users' => (bool)$request->post('create_users', false),
-                'import_attachments' => (bool)$request->post('import_attachments', false),
-                'download_attachments' => (bool)$request->post('download_attachments', false),
-                'duplicate_mode' => $request->post('duplicate_mode', 'skip')
-            ]);
-            $importJob->save();
-
-            // 成功响应格式兼容layui
-            return json([
-                'code' => 0,
-                'msg' => '导入任务创建成功',
-                'data' => [
-                    'name' => $file->getUploadName()
-                ]
-            ]);
-        } catch (\Exception $e) {
-            // 记录错误日志
-            \support\Log::error('导入上传错误: ' . $e->getMessage(), ['exception' => $e]);
-            // 错误响应格式兼容layui
-            return json([
-                'code' => 500,
-                'msg' => '服务器内部错误: ' . $e->getMessage()
-            ]);
-        }
-    }
 
     /**
      * 统一提交导入任务（包含文件和表单数据）
@@ -329,7 +175,9 @@ class WpImportController extends Base
                 'create_users' => (bool)$request->post('create_users', 0),
                 'import_attachments' => (bool)$request->post('import_attachments', 0),
                 'download_attachments' => (bool)$request->post('download_attachments', 0),
-                'duplicate_mode' => $request->post('duplicate_mode', 'skip')
+                'duplicate_mode' => $request->post('duplicate_mode', 'skip'),
+                'admin_id' => admin_id(),
+                'author_action' => $request->post('author_action','map_to_system'),
             ];
 
             $importJob->options = json_encode($options);

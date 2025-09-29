@@ -662,29 +662,6 @@ EOF;
                     $properties .= " * @property $type \${$item->column_name}\n";
                     $columns[$item->column_name] = $item->column_name;
                 }
-            } else {
-                // MySQL查询
-                $database = config('database.connections')['mysql']['database'];
-                foreach (Util::db()->select("select COLUMN_NAME,DATA_TYPE,COLUMN_KEY,COLUMN_COMMENT from INFORMATION_SCHEMA.COLUMNS where table_name = '$table' and table_schema = '$database' order by ORDINAL_POSITION") as $item) {
-                    if ($item->COLUMN_KEY === 'PRI') {
-                        $pk = $item->COLUMN_NAME;
-                        $item->COLUMN_COMMENT .= '(主键)';
-                        if (strpos(strtolower($item->DATA_TYPE), 'int') === false) {
-                            $incrementing = <<<EOF
-/**
-     * Indicates if the model's ID is auto-incrementing.
-     *
-     * @var bool
-     */
-    public \$incrementing = false;
-
-EOF;
-                        }
-                    }
-                    $type = $this->getType($item->DATA_TYPE);
-                    $properties .= " * @property $type \${$item->COLUMN_NAME} {$item->COLUMN_COMMENT}\n";
-                    $columns[$item->COLUMN_NAME] = $item->COLUMN_NAME;
-                }
             }
         } catch (Throwable $e) {
             echo $e;

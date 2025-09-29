@@ -82,7 +82,7 @@ class WidgetService
                 self::$widgetHtmlRenderers[$type] = $htmlRenderer;
             }
 
-            Log::debug("[WidgetService] 小工具类型 '{$type}' 注册成功");
+//            Log::debug("[WidgetService] 小工具类型 '{$type}' 注册成功");
             return true;
         } catch (Throwable $e) {
             Log::error('[WidgetService] 注册小工具失败: ' . $e->getMessage());

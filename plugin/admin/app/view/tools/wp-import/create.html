@@ -44,7 +44,6 @@
                                         <label class="layui-form-label">作者处理:</label>
                                         <div class="layui-input-block">
                                             <select name="author_action" lay-verify="required">
-                                                <option value="create">创建新作者</option>
                                                 <option value="map_to_admin">映射到管理员</option>
                                                 <option value="map_to_system" selected>映射到system（即不归属任何用户）
                                                 </option>
@@ -183,12 +182,12 @@
             var uploadData = new FormData();
             uploadData.append('import_file', selectedFile);
             uploadData.append('author_action', data.field.author_action);
-            uploadData.append('import_images', (data.field.import_images === 'on' ? 1 : 0).toString());
-            uploadData.append('convert_to', data.field.convert_to || 'html');
+
+            uploadData.append('convert_to', data.field.convert_to || 'markdown');
             uploadData.append('force', (data.field.force === 'on' ? 1 : 0).toString());
             uploadData.append('create_users', (data.field.author_action === 'create' ? 1 : 0).toString());
-            uploadData.append('import_attachments', (data.field.import_images === 'on' ? 1 : 0).toString());
-            uploadData.append('download_attachments', (data.field.import_images === 'on' ? 1 : 0).toString());
+            uploadData.append('import_attachments', (data.field.import_attachments === 'on' ? 1 : 0).toString());
+            uploadData.append('download_attachments', (data.field.import_attachments === 'on' ? 1 : 0).toString());
             uploadData.append('duplicate_mode', 'skip');
             uploadData.append('default_author', 'system');
 

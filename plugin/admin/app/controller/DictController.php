@@ -2,9 +2,11 @@
 
 namespace plugin\admin\app\controller;
 
+use app\service\CacheService;
 use plugin\admin\app\model\Dict;
 use app\model\Setting;
 use support\exception\BusinessException;
+use support\Log;
 use support\Request;
 use support\Response;
 use Throwable;
@@ -43,15 +45,20 @@ class DictController extends Base
         $page = $request->get('page', 1);
         $limit = $request->get('limit', 10);
         $offset = ($page - 1) * $limit;
-        if ($name && is_string($name)) {
-            $items = Setting::where('key', 'like', "dict_$name%")->limit($limit)->offset($offset)->get()->toArray();
+        $query = Setting::query();
+        if (!empty($name) && is_string($name)) {
+            $keyPrefix = "dict_{$name}%";
+            $query->where('key', 'like', $keyPrefix);
         } else {
-            $items = Setting::where('key', 'like', 'dict_%')->limit($limit)->offset($offset)->get()->toArray();
+            $query->where('key', 'like', 'dict_%');
         }
-        $get_items = Setting::where('key', 'like', "dict_$name%")->get()->toArray();
-        $count = count($get_items);
+
+        $count = $query->count();
+
+        $items = $query->limit($limit)->offset($offset)->get()->toArray();
         foreach ($items as &$item) {
-            $item['name'] = Dict::optionNameTodictName($item['name']);
+            $itemName = $item['key'];
+            $item['name'] = Dict::optionNameToDictName($itemName);
         }
         return json(['code' => 0, 'msg' => 'ok', 'count' => $count, 'data' => $items]);
     }
@@ -114,6 +121,7 @@ class DictController extends Base
     {
         $names = (array)$request->post('name');
         Dict::delete($names);
+        CacheService::clearCache('blog_config_dict_*');
         return $this->json(0);
     }
 

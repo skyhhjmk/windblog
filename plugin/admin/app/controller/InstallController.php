@@ -81,7 +81,6 @@ class InstallController extends Base
         }
 
         $tables_to_install = [
-            'phinxlog',
             'wa_admins',
             'wa_admin_roles',
             'wa_roles',
@@ -197,13 +196,6 @@ EOF;
 DEPLOYMENT_TYPE=datacenter
 DB_DEFAULT=pgsql
 
-# 数据库配置 - MySQL
-#DB_MYSQL_HOST=$host
-#DB_MYSQL_PORT=$port
-#DB_MYSQL_DATABASE=$database
-#DB_MYSQL_USERNAME=$user
-#DB_MYSQL_PASSWORD=$password
-
 # 数据库配置 - PostgreSQL
 DB_PGSQL_HOST=$host
 DB_PGSQL_PORT=$port
@@ -270,6 +262,20 @@ EOF;
         $smt = $pdo->prepare("insert into wa_admin_roles (role_id, admin_id) values (:role_id, :admin_id)");
         $smt->bindValue('role_id', 1);
         $smt->bindValue('admin_id', $admin_id);
+        $smt->execute();
+
+        $smt = $pdo->prepare("insert into wa_users (username, password, nickname, created_at, updated_at) values (:username, :password, :nickname, :created_at, :updated_at)");
+        $time = date('Y-m-d H:i:s');
+        $data = [
+            'username' => $username,
+            'password' => Util::passwordHash($password),
+            'nickname' => '超级管理员',
+            'created_at' => $time,
+            'updated_at' => $time
+        ];
+        foreach ($data as $key => $value) {
+            $smt->bindValue($key, $value);
+        }
         $smt->execute();
 
         $request->session()->flush();

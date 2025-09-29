@@ -7,7 +7,6 @@ namespace app\controller;
 
 use app\annotation\CSRFVerify;
 use app\service\CSRFHelper;
-use app\service\WidgetService;
 use app\service\MQService;
 use support\Request;
 use app\model\Link;

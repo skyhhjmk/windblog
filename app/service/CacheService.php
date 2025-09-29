@@ -33,8 +33,8 @@ class CacheService
             }
         }
 
-        $cacheDriver = env('CACHE_DRIVER', 'redis');
-        $strictMode = env('CACHE_STRICT_MODE', false);
+        $cacheDriver = getenv('CACHE_DRIVER') ?? 'redis';
+        $strictMode = getenv('CACHE_STRICT_MODE') ?? false;
 
         try {
             self::$handler = self::createHandler($cacheDriver);

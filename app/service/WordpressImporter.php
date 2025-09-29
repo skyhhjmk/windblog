@@ -2,6 +2,8 @@
 
 namespace app\service;
 
+use app\model\Admin;
+use app\model\Author;
 use app\model\ImportJob;
 use app\model\Post;
 use app\model\Media;
@@ -18,7 +20,6 @@ use League\CommonMark\Extension\Strikethrough\StrikethroughExtension;
 use League\CommonMark\Extension\Footnote\FootnoteExtension;
 use League\CommonMark\Extension\TaskList\TaskListExtension;
 use League\CommonMark\MarkdownConverter;
-use support\Db;
 use support\Log;
 use Throwable;
 use XMLReader;
@@ -30,21 +31,21 @@ class WordpressImporter
      *
      * @var ImportJob
      */
-    protected $importJob;
+    protected ImportJob $importJob;
 
     /**
      * 导入选项
      *
      * @var array
      */
-    protected $options;
+    protected mixed $options;
 
     /**
      * 默认作者ID
      *
      * @var int
      */
-    protected $defaultAuthorId;
+    protected mixed $defaultAuthorId;
 
     /**
      * 构造函数
@@ -57,7 +58,7 @@ class WordpressImporter
         $this->options = json_decode($importJob->options ?? '{}', true);
         $this->defaultAuthorId = $importJob->author_id;
 
-        Log::info("初始化WordPress导入器，任务ID: " . $importJob->id);
+        Log::info('初始化WordPress导入器，任务ID: ' . $importJob->id);
     }
 
     /**
@@ -81,7 +82,7 @@ class WordpressImporter
 
             $xmlFile = $this->importJob->file_path;
 
-            Log::info("检查导入文件: " . $xmlFile);
+            Log::info('检查导入文件: ' . $xmlFile);
 
             if (!file_exists($xmlFile)) {
                 throw new \Exception('导入文件不存在: ' . $xmlFile);
@@ -191,6 +192,7 @@ class WordpressImporter
      * 修复XML中的命名空间问题
      *
      * @param string $xmlFile
+     *
      * @return string 修复后的文件路径
      */
     protected function fixXmlNamespaces($xmlFile)
@@ -255,6 +257,7 @@ class WordpressImporter
      * 计算XML中项目总数
      *
      * @param string $xmlFile
+     *
      * @return int
      */
     protected function countItems($xmlFile)
@@ -282,6 +285,7 @@ class WordpressImporter
      * 处理单个项目
      *
      * @param XMLReader $reader
+     *
      * @return void
      */
     protected function processItem(XMLReader $reader): void
@@ -326,8 +330,9 @@ class WordpressImporter
      * 处理文章或页面
      *
      * @param DOMXPath $xpath
-     * @param DOMNode $node
-     * @param string $postType
+     * @param DOMNode  $node
+     * @param string   $postType
+     *
      * @return void
      * @throws Throwable
      */
@@ -340,7 +345,7 @@ class WordpressImporter
         $status = $xpath->evaluate('string(wp:status)', $node);
         $slug = $xpath->evaluate('string(wp:post_name)', $node);
         $postDate = $xpath->evaluate('string(wp:post_date)', $node);
-        $postId = $xpath->evaluate('string(wp:post_id)', $node);
+        $wpPostId = $xpath->evaluate('string(wp:post_id)', $node);
 
         // 首先将内容转换为UTF-8编码
         $title = $this->convertToUtf8($title);
@@ -399,7 +404,7 @@ class WordpressImporter
 
                 if ($isUnnamed || mb_strlen($trimmedTitle) == 0) {
                     // 使用ID作为slug
-                    $slug = !empty($postId) ? $postId : uniqid();
+                    $slug = !empty($wpPostId) ? $wpPostId : uniqid();
                 } else {
                     // 尝试翻译标题
                     $translatedTitle = $this->translateTitle($title);
@@ -412,12 +417,12 @@ class WordpressImporter
 
                     // 如果仍然为空，则使用ID
                     if (empty($slug)) {
-                        $slug = !empty($postId) ? $postId : uniqid();
+                        $slug = !empty($wpPostId) ? $wpPostId : uniqid();
                     }
                 }
             } else {
                 // 标题为空，使用ID作为slug
-                $slug = !empty($postId) ? $postId : uniqid();
+                $slug = !empty($wpPostId) ? $wpPostId : uniqid();
             }
         }
 
@@ -454,30 +459,33 @@ class WordpressImporter
 
                     // 更新作者关联
                     if ($authorId) {
-                        Db::table('post_author')->updateOrInsert(
-                            ['post_id' => $existingPost->id],
-                            [
-                                'post_id' => $existingPost->id,
-                                'author_id' => $authorId,
+                        // 获取作者模型实例
+                        $author = \app\model\Author::find($authorId);
+                        if ($author) {
+                            // 使用attach方法更新文章作者关联
+                            // 先清除现有关联
+                            $existingPost->authors()->detach();
+                            // 再添加新的关联，并设置额外字段
+                            $existingPost->authors()->attach($author, [
                                 'admin_id' => admin_id(),
                                 'is_primary' => 1,
                                 'created_at' => date('Y-m-d H:i:s'),
                                 'updated_at' => date('Y-m-d H:i:s')
-                            ]
-                        );
+                            ]);
+                        }
                     }
 
                     // 更新分类关联
                     if ($categoryId) {
-                        Db::table('post_category')->updateOrInsert(
-                            ['post_id' => $existingPost->id],
-                            [
-                                'post_id' => $existingPost->id,
-                                'category_id' => $categoryId,
-                                'created_at' => date('Y-m-d H:i:s'),
-                                'updated_at' => date('Y-m-d H:i:s')
-                            ]
-                        );
+                        // 获取分类模型实例
+                        $category = \app\model\Category::find($categoryId);
+                        if ($category) {
+                            // 使用attach方法更新文章分类关联
+                            // 先清除现有关联
+                            $existingPost->categories()->detach();
+                            // 再添加新的关联
+                            $existingPost->categories()->attach($category);
+                        }
                     }
 
                     Log::debug("文章更新完成，ID: " . $existingPost->id);
@@ -508,26 +516,29 @@ class WordpressImporter
 
         // 保存文章作者关联
         if ($authorId) {
-            Db::table('post_author')->insert([
-                'post_id' => $post->id,
-                'author_id' => $authorId,
-                'admin_id' => admin_id(),
-                'is_primary' => 1,
-                'created_at' => date('Y-m-d H:i:s'),
-                'updated_at' => date('Y-m-d H:i:s')
-            ]);
-            Log::debug("文章作者关联已保存，文章ID: " . $post->id . "，作者ID: " . $authorId);
+            // 获取作者模型实例
+            $author = \app\model\Author::find($authorId);
+            if ($author) {
+                // 使用attach方法保存文章作者关联
+                $post->authors()->attach($author, [
+                    'admin_id' => admin_id(),
+                    'is_primary' => 1,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s')
+                ]);
+                Log::debug("文章作者关联已保存，文章ID: " . $post->id . "，作者ID: " . $authorId);
+            }
         }
 
         // 保存文章分类关联
         if ($categoryId) {
-            Db::table('post_category')->insert([
-                'post_id' => $post->id,
-                'category_id' => $categoryId,
-                'created_at' => date('Y-m-d H:i:s'),
-                'updated_at' => date('Y-m-d H:i:s')
-            ]);
-            Log::debug("文章分类关联已保存，文章ID: " . $post->id . "，分类ID: " . $categoryId);
+            // 获取分类模型实例
+            $category = \app\model\Category::find($categoryId);
+            if ($category) {
+                // 使用attach方法保存文章分类关联
+                $post->categories()->attach($category);
+                Log::debug("文章分类关联已保存，文章ID: " . $post->id . "，分类ID: " . $categoryId);
+            }
         }
 
         Log::debug("文章保存完成，ID: " . $post->id);
@@ -537,6 +548,7 @@ class WordpressImporter
      * 翻译标题（使用免费翻译API）
      *
      * @param string $title
+     *
      * @return string
      * @throws Throwable
      */
@@ -589,6 +601,7 @@ class WordpressImporter
      * 将标题格式化为slug形式（单词间用连字符连接）
      *
      * @param string $title
+     *
      * @return string
      */
     protected function formatTitleAsSlug(string $title): string
@@ -618,7 +631,8 @@ class WordpressImporter
      * 处理作者
      *
      * @param DOMXPath $xpath
-     * @param DOMNode $node
+     * @param DOMNode  $node
+     *
      * @return int|null
      */
     protected function processAuthor(DOMXPath $xpath, DOMNode $node): ?int
@@ -634,36 +648,31 @@ class WordpressImporter
 
         // 如果没有文章作者，使用默认作者
         if (empty($authorName)) {
-            Log::debug("使用默认作者ID: " . $this->defaultAuthorId);
+            Log::debug('使用默认作者ID: ' . $this->defaultAuthorId);
             return $this->defaultAuthorId;
         }
+        // 从导入配置中获取管理员ID
+        $admin_id = $this->options['admin_id'] ?? 1;
+        // 查找当前管理员用户名
+        $admin_data = Admin::find($admin_id)->first();
 
-        // 查找现有用户 (修改表名为wa_users)
-        $user = Db::table('wa_users')->where('username', $authorName)->first();
-
-        if ($user) {
-            Log::debug("找到现有用户: " . $user->username . " (ID: " . $user->id . ")");
-            return $user->id;
+        if ($admin_data) {
+            $admin_username = $admin_data->username;
+            Log::debug('管理员用户名: ' . $admin_username);
         }
 
-        // 根据选项决定是否创建新用户 (修改表名为wa_users)
-        if (!empty($this->options['create_users'])) {
-            $email = $authorName . '@example.com'; // 简化处理
-            Log::debug("创建新用户: " . $authorName . " (" . $email . ")");
-            $userId = Db::table('wa_users')->insertGetId([
-                'username' => $authorName,
-                'email' => $email,
-                'password' => '', // 空密码
-                'created_at' => date('Y-m-d H:i:s'),
-                'updated_at' => date('Y-m-d H:i:s')
-            ]);
+        if (!empty($admin_username)) {
+            // 根据管理员用户名查找对应的普通用户的用户名
+            $author = Author::where('username', $admin_username)->first();
+        }
 
-            Log::debug("新用户创建完成，ID: " . $userId);
-            return $userId;
+        if (!empty($author)) {
+            Log::debug('找到现有用户: ' . $author->username . ' (ID: ' . $author->id . ')');
+            return $author->id;
         }
 
         // 使用默认作者
-        Log::debug("使用默认作者ID: " . $this->defaultAuthorId);
+        Log::debug('使用默认作者ID: ' . $this->defaultAuthorId);
         return $this->defaultAuthorId;
     }
 
@@ -672,7 +681,8 @@ class WordpressImporter
      * 处理分类
      *
      * @param DOMXPath $xpath
-     * @param DOMNode $node
+     * @param DOMNode  $node
+     *
      * @return int|null
      */
     protected function processCategories(DOMXPath $xpath, DOMNode $node): ?int
@@ -684,7 +694,7 @@ class WordpressImporter
             Log::debug("处理分类: " . $categoryName);
 
             // 查找现有分类
-            $category = Db::table('categories')->where('name', $categoryName)->first();
+            $category = \app\model\Category::where('name', $categoryName)->first();
 
             if ($category) {
                 Log::debug("找到现有分类: " . $category->name . " (ID: " . $category->id . ")");
@@ -704,20 +714,28 @@ class WordpressImporter
             // 检查slug是否已存在，如果存在则添加唯一后缀
             $originalSlug = $slug;
             $suffix = 1;
-            while (Db::table('categories')->where('slug', $slug)->exists()) {
+            while (\app\model\Category::where('slug', $slug)->exists()) {
                 $slug = $originalSlug . '-' . $suffix;
                 $suffix++;
             }
 
-            $categoryId = Db::table('categories')->insertGetId([
-                'name' => $categoryName,
-                'slug' => $slug,
-                'created_at' => date('Y-m-d H:i:s'),
-                'updated_at' => date('Y-m-d H:i:s')
-            ]);
+            // 使用Category模型创建新分类
+            try {
+                $category = new \app\model\Category();
+                $category->name = $categoryName;
+                $category->slug = $slug;
+                $category->parent_id = 0; // 默认作为顶级分类
+                $category->sort_order = 0; // 默认排序
+                $category->created_at = date('Y-m-d H:i:s');
+                $category->updated_at = date('Y-m-d H:i:s');
+                $category->save();
 
-            Log::debug("新分类创建完成，ID: " . $categoryId);
-            return $categoryId;
+                Log::debug("新分类创建完成，ID: " . $category->id);
+                return $category->id;
+            } catch (\Exception $e) {
+                Log::error('创建分类时出错: ' . $e->getMessage());
+                return null;
+            }
         }
 
         Log::debug("无分类信息");
@@ -729,7 +747,8 @@ class WordpressImporter
      * 处理附件
      *
      * @param DOMXPath $xpath
-     * @param DOMNode $node
+     * @param DOMNode  $node
+     *
      * @return void
      */
     protected function processAttachment(DOMXPath $xpath, DOMNode $node): void
@@ -755,6 +774,7 @@ class WordpressImporter
      *
      * @param string $url
      * @param string $title
+     *
      * @return void
      */
     protected function downloadAttachment(string $url, string $title): void
@@ -812,6 +832,7 @@ class WordpressImporter
      * 将HTML转换为Markdown
      *
      * @param string $html
+     *
      * @return string
      */
     protected function convertHtmlToMarkdown(string $html, array $config = []): string
@@ -869,6 +890,7 @@ class WordpressImporter
      * 将字符串转换为UTF-8编码
      *
      * @param string $string
+     *
      * @return string
      */
     protected function convertToUtf8(string $string): string
@@ -879,7 +901,7 @@ class WordpressImporter
 
         // 检测当前编码
         $encoding = mb_detect_encoding($string, ['UTF-8', 'GBK', 'GB2312', 'ASCII', 'ISO-8859-1'], true);
-        
+
         // 如果不是UTF-8编码，则转换为UTF-8
         if ($encoding !== 'UTF-8') {
             $string = mb_convert_encoding($string, 'UTF-8', $encoding);
@@ -892,6 +914,7 @@ class WordpressImporter
      * 生成文章摘要：首先将内容转换为HTML，然后删除HTML标签
      *
      * @param string $content
+     *
      * @return string
      */
     protected function generateExcerpt(string $content): string
@@ -919,22 +942,24 @@ class WordpressImporter
                 'render_modifiers' => [],
             ]
         ];
-        
+
         $environment = new Environment($config);
         $environment->addExtension(new CommonMarkCoreExtension());
         $environment->addExtension(new AutolinkExtension());
         $environment->addExtension(new StrikethroughExtension());
         $environment->addExtension(new TableExtension());
         $environment->addExtension(new TaskListExtension());
-        
+
         $converter = new MarkdownConverter($environment);
 
         $html = $converter->convert($content);
-        
+
         // 删除HTML标签
         $excerpt = strip_tags((string)$html);
-        
+
         // 截取前200个字符作为摘要
         return mb_substr($excerpt, 0, 200, 'UTF-8');
     }
+
+
 }

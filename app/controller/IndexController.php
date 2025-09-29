@@ -42,6 +42,9 @@ class IndexController
     #[RateLimiter(limit: 3, ttl: 3)]
     public function index(Request $request, int $page = 1): Response
     {
+        if ($request->get('test')){
+            sleep(20);
+        }
         // 构建筛选条件，并进行输入过滤
         $filters = $this->filterInput($request->get() ?: []);
 

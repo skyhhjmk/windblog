@@ -82,39 +82,6 @@ class BlogService
             if ($cached) {
                 return $cached;
             }
-
-            // 尝试兼容旧的缓存格式
-            $old_ache_key = 'blog_posts_page_' . $page;
-            $old_cached = self::getFromCache($old_ache_key);
-            if ($old_cached) {
-                // 清理旧缓存并返回新格式
-                \support\Redis::connection('cache')->del($old_ache_key);
-
-                // 确保返回数组格式
-                if (!is_array($old_cached)) {
-                    // 统计总文章数
-                    $total_count = Post::where('status', 'published')->count();
-
-                    // 生成分页HTML
-                    $pagination_html = PaginationService::generatePagination(
-                        $page,
-                        $total_count,
-                        $posts_per_page,
-                        'index.page',
-                        [],
-                        10
-                    );
-
-                    return [
-                        'posts' => $old_cached,
-                        'pagination' => $pagination_html,
-                        'totalCount' => $total_count,
-                        'currentPage' => $page,
-                        'postsPerPage' => $posts_per_page
-                    ];
-                }
-                return $old_cached;
-            }
         }
 
         // 构建查询

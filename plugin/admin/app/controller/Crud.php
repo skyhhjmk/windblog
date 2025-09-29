@@ -110,9 +110,6 @@ class Crud extends Base
             $allow_column = $connection->select("SELECT column_name AS Field, data_type AS Type 
                 FROM information_schema.columns 
                 WHERE table_name = ? AND table_schema = 'public'", [$table]);
-        } else {
-            // MySQL查询表结构
-            $allow_column = $connection->select("desc `$table`");
         }
         if (!$allow_column) {
             throw new BusinessException('表不存在');

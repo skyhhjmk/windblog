@@ -7,21 +7,16 @@ use support\Model;
 
 /**
  * post_tag 文章-标签关联表
- * @property integer $post_id 文章ID(主键)
- * @property integer $tag_id 标签ID(主键)
- * @property string $created_at 创建时间
- * @property-read \app\model\Post $post 关联的文章
- * @property-read \app\model\Tag $tag 关联的标签
+ *
+ * @property int       $post_id    文章ID(主键)
+ * @property int       $tag_id     标签ID(主键)
+ * @property string    $created_at 创建时间
+ * @property-read Post $post       关联的文章
+ * @property-read Tag  $tag        关联的标签
  */
 class PostTag extends Model
 {
-    /**
-     * The connection name for the model.
-     *
-     * @var string|null
-     */
-    protected $connection = 'mysql';
-    
+
     /**
      * The table associated with the model.
      *
@@ -41,7 +36,7 @@ class PostTag extends Model
      *
      * @var bool
      */
-    public $timestamps = false;
+    public $timestamps = true;
 
     /**
      * 属性类型转换
