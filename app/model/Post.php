@@ -1,6 +1,8 @@
 <?php
 
 namespace app\model;
+use app\service\ElasticSyncService;
+use app\service\BlogService;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -41,6 +43,42 @@ use support\Db;
  */
 class Post extends Model
 {
+    // 如果模型已有 boot 方法，请手动合并。这里新增一个简易事件挂载。
+    protected static function bootEs()
+    {
+        // 保存后立即同步到 ES（仅当开启或用于预建立索引）
+        static::saved(function (Post $post) {
+            // 仅在 ES 开启时处理
+            if (!BlogService::getConfig('es.enabled', false)) {
+                return;
+            }
+            try {
+                // 如果是软删除（deleted_at 已设置），确保从 ES 移除
+                if (!empty($post->deleted_at)) {
+                    ElasticSyncService::deletePost((int)$post->id);
+                } else {
+                    ElasticSyncService::indexPost($post);
+                }
+            } catch (\Throwable $e) {
+                \support\Log::warning('[Post.saved] ES sync failed: ' . $e->getMessage());
+            }
+        });
+
+        // 删除后移除 ES 文档
+        static::deleted(function (Post $post) {
+            // 仅在 ES 开启时处理
+            if (!BlogService::getConfig('es.enabled', false)) {
+                return;
+            }
+            try {
+                // 硬删除或软删除后的 delete 事件都确保 ES 文档移除
+                ElasticSyncService::deletePost((int)$post->id);
+            } catch (\Throwable $e) {
+                \support\Log::warning('[Post.deleted] ES delete failed: ' . $e->getMessage());
+            }
+        });
+
+    }
     /**
      * 与模型关联的表名
      * Eloquent 会自动推断为 'posts'，显式声明以增加代码可读性。
@@ -83,6 +121,7 @@ class Post extends Model
      */
     protected static function booted()
     {
+        self::bootEs();
         // 添加全局作用域，只查询未软删除的记录
         static::addGlobalScope('notDeleted', function (Builder $builder) {
             $builder->whereNull('deleted_at');

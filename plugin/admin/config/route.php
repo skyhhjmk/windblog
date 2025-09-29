@@ -21,6 +21,7 @@ use plugin\admin\app\controller\MediaController;
 use plugin\admin\app\controller\PostsController;
 use plugin\admin\app\controller\WpImportController;
 use plugin\admin\app\controller\SidebarController;
+use plugin\admin\app\controller\ElasticController;
 use Webman\Route;
 use support\Request;
 
@@ -120,6 +121,19 @@ Route::group('/app/admin', function () {
         Route::post('/saveSidebar', [SidebarController::class, 'saveSidebar'])->name('admin.sidebar.saveSidebar');
     });
 
+    // Elasticsearch 路由
+    Route::group('/elastic', function () {
+        Route::get('', [ElasticController::class, 'index']);
+        Route::get('/', [ElasticController::class, 'index']);
+        Route::get('/index', [ElasticController::class, 'index']);
+        Route::post('/save', [ElasticController::class, 'save']);
+        Route::post('/createIndex', [ElasticController::class, 'createIndex']);
+        Route::post('/rebuild', [ElasticController::class, 'rebuild']);
+        Route::get('/get', [ElasticController::class, 'get']);
+        Route::get('/test', [ElasticController::class, 'testConnection']);
+        Route::get('/logs', [ElasticController::class, 'logs']);
+        Route::post('/clearLogs', [ElasticController::class, 'clearLogs']);
+    });
 });
 
 Route::fallback(function (Request $request) {

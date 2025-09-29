@@ -8,6 +8,7 @@ use support\Response;
 use app\service\BlogService;
 use Throwable;
 use League\CommonMark\Exception\CommonMarkException;
+use app\service\ElasticService;
 
 /**
  * 搜索控制器
@@ -98,7 +99,9 @@ class SearchController
                     ];
                 }, $postsArray),
                 'total' => $result['totalCount'],
-                'has_more' => $result['totalCount'] > count($postsArray)
+                'has_more' => $result['totalCount'] > count($postsArray),
+                // 加入联想标题
+                'titles' => ElasticService::suggestTitles($keyword, 10),
             ];
 
             return response(json_encode($response, JSON_UNESCAPED_UNICODE), 200)

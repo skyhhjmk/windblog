@@ -17,6 +17,7 @@ use League\CommonMark\MarkdownConverter;
 use support\Log;
 use support\Redis;
 use Throwable;
+use app\service\ElasticService;
 
 /**
  * 博客服务类
@@ -123,14 +124,38 @@ class BlogService
             }
         }
 
-        // 统计总文章数
-        $total_count = $query->count();
+        // 如果开启了 ES 并且存在搜索关键字，则优先走 ES
+        $esSearch = null;
+        if (!empty($filters['search']) && (bool)self::getConfig('es.enabled', false)) {
+            $esSearch = ElasticService::searchPosts((string)$filters['search'], $page, $posts_per_page);
+        }
 
-        // 获取文章列表并预加载作者信息
-        $posts = $query->orderByDesc('id')
-            ->forPage($page, $posts_per_page)
-            ->with(['authors', 'primaryAuthor'])
-            ->get();
+        if (is_array($esSearch) && ($esSearch['used'] ?? false) && !empty($esSearch['ids'])) {
+            // 使用 ES 返回的顺序与总数
+            $total_count = (int)$esSearch['total'];
+            $ids = $esSearch['ids'];
+
+            // 拉取文章并根据 ES 命中顺序排序
+            $posts = Post::whereIn('id', $ids)
+                ->with(['authors', 'primaryAuthor'])
+                ->get();
+
+            $orderMap = array_flip($ids);
+            $posts = $posts->sortBy(function ($post) use ($orderMap) {
+                $pid = (int)$post->id;
+                return $orderMap[$pid] ?? PHP_INT_MAX;
+            })->values();
+
+        } else {
+            // 统计总文章数
+            $total_count = $query->count();
+
+            // 获取文章列表并预加载作者信息
+            $posts = $query->orderByDesc('id')
+                ->forPage($page, $posts_per_page)
+                ->with(['authors', 'primaryAuthor'])
+                ->get();
+        }
 
         // 处理文章摘要
         try {

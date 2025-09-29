@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+  <head>
+    <meta charset="UTF-8" />
+    <title>搜索设置(ES)</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <link rel="stylesheet" href="/app/admin/component/layui/css/layui.css?v=2.8.12" />
+    <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css" />
+    <link rel="stylesheet" href="/app/admin/admin/css/reset.css" />
+    <style>
+      .layui-input-block input, .layui-input-block select { width: 320px; }
+      .layui-card-body fieldset .layui-field-box { min-height: 180px; }
+      pre { white-space: pre-wrap; word-break: break-word; }
+    </style>
+  </head>
+  <body class="pear-container">
+    <div class="layui-card">
+      <div class="layui-card-header">搜索设置（Elasticsearch）</div>
+      <div class="layui-card-body">
+        <form class="layui-form" id="es-form">
+          <div class="layui-form-item">
+            <label class="layui-form-label">启用ES</label>
+            <div class="layui-input-block">
+              <input type="checkbox" name="enabled" lay-skin="switch" lay-text="ON|OFF" />
+            </div>
+          </div>
+
+          <div class="layui-form-item">
+            <label class="layui-form-label">Host</label>
+            <div class="layui-input-block">
+              <input type="text" name="host" placeholder="http://127.0.0.1:9200" class="layui-input" />
+            </div>
+          </div>
+
+          <div class="layui-form-item">
+            <label class="layui-form-label">Index</label>
+            <div class="layui-input-block">
+              <input type="text" name="index" placeholder="windblog-posts" class="layui-input" />
+            </div>
+          </div>
+
+          <div class="layui-form-item">
+            <label class="layui-form-label">Timeout</label>
+            <div class="layui-input-block">
+              <input type="number" name="timeout" min="1" max="30" class="layui-input" />
+            </div>
+          </div>
+
+          <div class="layui-form-item">
+            <label class="layui-form-label">Basic用户</label>
+            <div class="layui-input-block">
+              <input type="text" name="basic_user" class="layui-input" />
+            </div>
+          </div>
+
+          <div class="layui-form-item">
+            <label class="layui-form-label">Basic密码</label>
+            <div class="layui-input-block">
+              <input type="password" name="basic_pass" class="layui-input" />
+            </div>
+          </div>
+
+          <div class="layui-form-item">
+            <label class="layui-form-label">CA证书内容</label>
+            <div class="layui-input-block">
+              <textarea name="ssl_ca_content" placeholder="粘贴CA证书内容（PEM）" class="layui-textarea" rows="6"></textarea>
+            </div>
+          </div>
+
+          <div class="layui-form-item">
+            <label class="layui-form-label">客户端证书内容</label>
+            <div class="layui-input-block">
+              <textarea name="ssl_client_cert_content" placeholder="粘贴客户端证书内容（PEM）" class="layui-textarea" rows="6"></textarea>
+            </div>
+          </div>
+
+          <div class="layui-form-item">
+            <label class="layui-form-label">客户端私钥内容</label>
+            <div class="layui-input-block">
+              <textarea name="ssl_client_key_content" placeholder="粘贴客户端私钥内容（PEM）" class="layui-textarea" rows="6"></textarea>
+            </div>
+          </div>
+
+          <div class="layui-form-item">
+            <label class="layui-form-label">忽略SSL错误</label>
+            <div class="layui-input-block">
+              <input type="checkbox" name="ssl_ignore" lay-skin="switch" lay-text="忽略|校验" />
+            </div>
+          </div>
+
+          <div class="layui-form-item">
+            <label class="layui-form-label">分析器</label>
+            <div class="layui-input-inline">
+              <select name="analyzer" lay-verify="required" lay-search>
+                <option value=""></option>
+                <option value="standard">standard</option>
+                <option value="ik_max_word">ik_max_word</option>
+                <option value="ik_smart">ik_smart</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="layui-form-item">
+            <div class="layui-input-block">
+              <button type="button" class="layui-btn" id="btn-save">保存</button>
+              <button type="button" class="layui-btn layui-btn-normal" id="btn-create">创建索引</button>
+              <button type="button" class="layui-btn layui-btn-danger" id="btn-rebuild">重建索引</button>
+              <button type="button" class="layui-btn layui-btn-primary" id="btn-test">测试连接</button>
+              <button type="button" class="layui-btn layui-btn-warm" id="btn-logs">查看日志</button>
+              <button type="button" class="layui-btn layui-btn-danger" id="btn-clear-logs">清空日志</button>
+            </div>
+          </div>
+        </form>
+
+        <div class="layui-row" style="margin-top:16px">
+          <div class="layui-col-md6">
+            <fieldset class="layui-elem-field">
+              <legend>连接测试结果</legend>
+              <div class="layui-field-box"><pre id="test-result"></pre></div>
+            </fieldset>
+          </div>
+          <div class="layui-col-md6">
+            <fieldset class="layui-elem-field">
+              <legend>同步日志</legend>
+              <div class="layui-field-box"><pre id="sync-logs"></pre></div>
+            </fieldset>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+    <script src="/app/admin/component/pear/pear.js"></script>
+    <script src="/app/admin/admin/js/permission.js"></script>
+    <script>
+      layui.use(["layer", "form"], function() {
+        var layer = layui.layer;
+        var form = layui.form;
+
+        // 加载配置并填充表单
+        fetch("/app/admin/elastic/get")
+          .then(function(r){ return r.json(); })
+          .then(function(cfg){
+            var f = document.getElementById("es-form");
+            if (!f) return;
+            f.enabled.checked = !!cfg.enabled;
+            f.host.value = cfg.host || "http://127.0.0.1:9200";
+            f.index.value = cfg.index || "windblog-posts";
+            f.timeout.value = cfg.timeout || 3;
+            f.basic_user.value = cfg.basic_user || "";
+            f.basic_pass.value = cfg.basic_pass || "";
+            f.ssl_ca_content.value = cfg.ssl_ca_content || "";
+            f.ssl_client_cert_content.value = cfg.ssl_client_cert_content || "";
+            f.ssl_client_key_content.value = cfg.ssl_client_key_content || "";
+            f.ssl_ignore.checked = !!cfg.ssl_ignore;
+            f.analyzer.value = cfg.analyzer || "standard";
+            form.render(); // 渲染开关与选择
+          });
+
+        function post(url, data){
+          return fetch(url, {
+            method: "POST",
+            headers: {"Content-Type": "application/x-www-form-urlencoded"},
+            body: new URLSearchParams(data || {}).toString()
+          }).then(function(r){ return r.json(); });
+        }
+
+        document.getElementById("btn-save").onclick = function(){
+          var f = document.getElementById("es-form");
+          var data = {
+            enabled: f.enabled.checked ? 1 : 0,
+            host: f.host.value,
+            index: f.index.value,
+            timeout: f.timeout.value,
+            basic_user: f.basic_user.value,
+            basic_pass: f.basic_pass.value,
+            analyzer: f.analyzer.value,
+            ssl_ca_content: f.ssl_ca_content.value,
+            ssl_client_cert_content: f.ssl_client_cert_content.value,
+            ssl_client_key_content: f.ssl_client_key_content.value,
+            ssl_ignore: f.ssl_ignore.checked ? 1 : 0
+          };
+          // 基础校验
+          if (!data.host || !/^https?:\/\/.+/.test(data.host)) {
+            layer.msg("请填写有效的Host（http/https）");
+            return;
+          }
+          if (!data.index) {
+            layer.msg("请填写索引名称");
+            return;
+          }
+          var t = parseInt(data.timeout, 10);
+          if (isNaN(t) || t < 1 || t > 60) {
+            layer.msg("超时需为1-60之间的整数");
+            return;
+          }
+          post("/app/admin/elastic/save", data).then(function(res){
+            layer.msg(res.success ? "已保存" : "保存失败");
+          });
+        };
+
+        document.getElementById("btn-create").onclick = function(){
+          post("/app/admin/elastic/createIndex", {}).then(function(res){
+            layer.msg(res.success ? "索引创建成功" : "索引创建失败");
+          });
+        };
+
+        document.getElementById("btn-rebuild").onclick = function(){
+          layer.prompt({title:"重建索引分页大小", formType:0, value:"200"}, function(val, idx){
+            layer.close(idx);
+            post("/app/admin/elastic/rebuild", {page_size: val}).then(function(res){
+              layer.msg(res.success ? "已触发重建" : "重建失败");
+            });
+          });
+        };
+
+        document.getElementById("btn-test").onclick = function(){
+          fetch("/app/admin/elastic/test")
+            .then(function(r){ return r.json(); })
+            .then(function(res){
+              document.getElementById("test-result").textContent = JSON.stringify(res, null, 2);
+              layer.msg(res.success ? "连接正常" : "连接失败");
+            });
+        };
+
+        document.getElementById("btn-logs").onclick = function(){
+          fetch("/app/admin/elastic/logs?limit=50&offset=0")
+            .then(function(r){ return r.json(); })
+            .then(function(res){
+              document.getElementById("sync-logs").textContent = (res.logs || []).join("\n");
+              layer.msg("已加载日志");
+            });
+        };
+
+        document.getElementById("btn-clear-logs").onclick = function(){
+          post("/app/admin/elastic/clearLogs", {}).then(function(res){
+            if (res.success) {
+              document.getElementById("sync-logs").textContent = "";
+              layer.msg("已清空日志");
+            } else {
+              layer.msg("清空失败");
+            }
+          });
+        };
+      });
+    </script>
+  </body>
+</html>
