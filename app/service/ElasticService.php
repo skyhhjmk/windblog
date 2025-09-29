@@ -143,21 +143,69 @@ class ElasticService
         if (!$cfg['enabled']) {
             return ['ids' => [], 'total' => 0, 'used' => false];
         }
+        // 短TTL缓存（热点关键词）
+        $ckey = 'es_search:' . md5($keyword) . ':' . $page . ':' . $perPage;
+        $cached = CacheService::cache($ckey);
+        if ($cached !== false && is_array($cached)) {
+            return $cached;
+        }
         $from = max(0, ($page - 1) * $perPage);
         $payload = [
             'from' => $from,
             'size' => $perPage,
             'track_total_hits' => true,
+            'timeout' => '2s',
+            'terminate_after' => 10000,
+            '_source' => false,
+            'stored_fields' => [],
             'query' => [
-                'multi_match' => [
-                    'query' => $keyword,
-                    'fields' => ['title^5', 'excerpt^3', 'content^1'],
-                    'type' => 'best_fields',
-                    'operator' => 'and',
-                    'analyzer' => 'wb_synonym_search'
+                'bool' => [
+                    'must' => [
+                        [
+                            'multi_match' => [
+                                'query' => $keyword,
+                                'fields' => ['title^5', 'excerpt^3', 'content^1'],
+                                'type' => 'best_fields',
+                                'operator' => 'and',
+                                'analyzer' => 'wb_synonym_search',
+                                'fuzziness' => 'AUTO'
+                            ]
+                        ]
+                    ],
+                    'should' => [
+                        // 完整标题精确匹配，极高权重
+                        [
+                            'term' => [
+                                'title.keyword' => [
+                                    'value' => $keyword,
+                                    'boost' => 50
+                                ]
+                            ]
+                        ],
+                        // 标题短语匹配，较高权重
+                        [
+                            'match_phrase' => [
+                                'title' => [
+                                    'query' => $keyword,
+                                    'boost' => 12
+                                ]
+                            ]
+                        ],
+                        // 标题前缀短语匹配，辅助提升
+                        [
+                            'match_phrase_prefix' => [
+                                'title' => [
+                                    'query' => $keyword,
+                                    'boost' => 8
+                                ]
+                            ]
+                        ]
+                    ]
                 ]
             ],
             'highlight' => [
+                'pre_tags' => ['<em class="hl">'],
+                'post_tags' => ['</em>'],
                 'fields' => [
                     'title' => new \stdClass(),
                     'content' => new \stdClass(),
@@ -176,14 +224,34 @@ class ElasticService
         $hits = $body['hits']['hits'] ?? [];
         $total = isset($body['hits']['total']['value']) ? (int)$body['hits']['total']['value'] : count($hits);
         $ids = [];
+        $highlights = [];
         foreach ($hits as $h) {
-            if (isset($h['_source']['id'])) {
-                $ids[] = (int)$h['_source']['id'];
-            } elseif (isset($h['_id'])) {
-                $ids[] = (int)$h['_id'];
+            $id = null;
+            if (isset($h['_id'])) {
+                $id = (int)$h['_id'];
+            } elseif (isset($h['_source']['id'])) {
+                $id = (int)$h['_source']['id'];
+            }
+            if ($id !== null) {
+                $ids[] = $id;
+                if (!empty($h['highlight']) && is_array($h['highlight'])) {
+                    $hl = $h['highlight'];
+                    $highlights[$id] = [
+                        'title' => isset($hl['title']) && is_array($hl['title']) ? $hl['title'] : [],
+                        'content' => isset($hl['content']) && is_array($hl['content']) ? $hl['content'] : [],
+                    ];
+                }
             }
         }
-        return ['ids' => $ids, 'total' => $total, 'used' => true];
+        $signals = [
+            'highlighted' => !empty($highlights),
+            'synonym' => str_contains('wb_synonym_search', 'synonym'),
+            'analyzer' => 'wb_synonym_search',
+        ];
+        $result = ['ids' => $ids, 'total' => $total, 'used' => true, 'highlights' => $highlights, 'signals' => $signals];
+        // 写入短TTL缓存（45秒）
+        CacheService::cache($ckey, $result, true, 45);
+        return $result;
     }
 
     /**
@@ -194,6 +262,15 @@ class ElasticService
         $cfg = self::getConfig();
         if (!$cfg['enabled']) {
             return [];
+        }
+        // 超短TTL缓存（联想）
+        if (mb_strlen($prefix) < 1) {
+            return [];
+        }
+        $skey = 'es_suggest:' . md5($prefix) . ':' . (int)$limit;
+        $scached = CacheService::cache($skey);
+        if ($scached !== false && is_array($scached)) {
+            return $scached;
         }
         $usePinyin = (bool)BlogService::getConfig('es.suggest.pinyin', false);
         // 优先使用 title.pinyin（若映射存在且开启），否则使用 title 前缀匹配
@@ -223,6 +300,8 @@ class ElasticService
                 $titles[] = $t;
             }
         }
+        // 写入超短TTL缓存（30秒）
+        CacheService::cache($skey, $titles, true, 30);
         return $titles;
     }
 }

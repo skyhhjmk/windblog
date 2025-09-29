@@ -14,8 +14,28 @@
                 <p class="text-gray-600 text-lg md:text-xl">
                     搜索关键词: <span class="font-semibold text-blue-600">"{{ search_keyword }}"</span>
                 </p>
-                {% if posts|length > 0 %}
-                    <p class="text-gray-500 text-md mt-2">找到 {{ pagination.totalCount }} 条相关结果</p>
+                {% if esMeta is defined and esMeta.signals is defined %}
+                    <p class="text-sm text-blue-600 mt-2">
+                        {% if esMeta.signals.synonym %}已应用同义词扩展匹配{% endif %}
+                        {% if esMeta.signals.highlighted %}{% if esMeta.signals.synonym %}、{% endif %}已为关键词提供高亮{% endif %}
+                        {% if esMeta.signals.analyzer %}{% if esMeta.signals.synonym or esMeta.signals.highlighted %}、{% endif %}使用分词器: {{ esMeta.signals.analyzer }}{% endif %}
+                    </p>
+                {% endif %}
+                <div class="mt-4">
+                    <div class="inline-flex items-center bg-blue-50 border border-blue-100 text-blue-700 rounded-xl px-4 py-2">
+                        <i class="fas fa-list-ol mr-2"></i>
+                        共 {{ totalCount|default(0) }} 条结果
+                    </div>
+                </div>
+                {% if suggest_titles is defined and suggest_titles|length > 0 %}
+                    <div class="mt-4 text-left bg-gray-50 border border-gray-100 rounded-2xl p-4">
+                        <div class="text-gray-700 font-medium mb-2">猜你想搜</div>
+                        <div class="flex flex-wrap gap-2">
+                            {% for t in suggest_titles %}
+                                <a href="/search?q={{ t|url_encode }}" class="px-3 py-1 bg-white hover:bg-blue-50 text-gray-700 hover:text-blue-700 border border-gray-200 rounded-full text-sm transition-colors">{{ t }}</a>
+                            {% endfor %}
+                        </div>
+                    </div>
                 {% endif %}
             {% endif %}
         </div>
@@ -29,7 +49,7 @@
                             <h2 class="text-2xl font-bold text-gray-800 mb-2 group-hover:text-blue-600 transition-colors duration-200">
                                 <a href="/post/{{ post.slug }}.html" target="_blank"
                                    class="block">
-                                    {{ post.title }}
+                                    {{ (esMeta.highlights[post.id].title[0] ?? post.title)|raw }}
                                 </a>
                             </h2>
                             <div class="flex items-center text-gray-500 text-sm mb-4">
@@ -43,7 +63,7 @@
                                 </span>
                             </div>
                             <p class="text-gray-600 mb-4 leading-relaxed">
-                                {{ post.excerpt }}...
+                                {{ (esMeta.highlights[post.id].content[0] ?? (post.excerpt ~ '...'))|raw }}
                             </p>
                             <div class="flex justify-between items-center">
                                 <a href="/post/{{ post.slug }}.html"
@@ -118,6 +138,13 @@
         
         .animate-fade-in {
             animation: fade-in 0.6s ease-out forwards;
+        }
+        .hl {
+            background-color: #ffea7a; /* 更深的橙黄背景 */
+            color: #7c2d12;           /* 深棕文字提高对比度 */
+            padding: 0 2px;
+            border-radius: 2px;
+            font-weight: 700;         /* 加粗 */
         }
     </style>
 {% endblock %}

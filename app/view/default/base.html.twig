@@ -194,6 +194,13 @@
                 white-space: nowrap;
             }
         }
+        .hl {
+            background-color: #ffea7a; /* 更深的橙黄背景 */
+            color: #7c2d12;           /* 深棕文字提高对比度 */
+            padding: 0 2px;
+            border-radius: 2px;
+            font-weight: 700;         /* 加粗 */
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -442,6 +449,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     // 搜索功能
     let searchTimeout;
+    let currentController = null;
     const searchInput = document.getElementById('searchInput');
     const searchResults = document.getElementById('searchResults');
     const searchForm = document.getElementById('searchForm');
@@ -454,26 +462,30 @@ document.addEventListener('DOMContentLoaded', function() {
         
         clearTimeout(searchTimeout);
         
-        // 立即显示加载动画
-        if (keyword.length > 0) {
+        // 立即显示加载动画（仅当长度≥3）
+        if (keyword.length >= 3) {
             document.getElementById('searchLoading').classList.remove('hidden');
         } else {
             document.getElementById('searchLoading').classList.add('hidden');
         }
         
-        if (keyword.length < 1) {
-            searchResults.style.display = 'none';
+        if (keyword.length < 3) {
+            searchResults.innerHTML = '<div class="p-4 text-center text-gray-500">请输入至少 3 个字符以开始搜索</div>';
+            searchResults.style.display = 'block';
             document.getElementById('searchLoading').classList.add('hidden');
             return;
         }
 
         searchTimeout = setTimeout(function() {
-            fetch('/search/ajax?q=' + encodeURIComponent(keyword))
+            if (currentController) { try { currentController.abort(); } catch (e) {} }
+            currentController = new AbortController();
+            fetch('/search/ajax?q=' + encodeURIComponent(keyword), { signal: currentController.signal })
                 .then(response => response.json())
                 .then(data => {
                     document.getElementById('searchLoading').classList.add('hidden');
                     if (data.success) {
-                        displaySearchResults(data.results, data.total);
+                        currentController = null;
+                        displaySearchResults(data.results, data.total, data.tips || []);
                         // 保存搜索历史
                         saveSearchHistory(keyword);
                     } else {
@@ -482,10 +494,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 })
                 .catch(error => {
                     console.error('Search error:', error);
+                    currentController = null;
                     document.getElementById('searchLoading').classList.add('hidden');
                     searchResults.style.display = 'none';
                 });
-        }, 300);
+        }, 800);
     });
 
     // 保存搜索历史
@@ -543,7 +556,7 @@ document.addEventListener('DOMContentLoaded', function() {
     window.clearSearchHistory = clearSearchHistory;
 
     // 显示搜索结果
-    function displaySearchResults(results, total) {
+    function displaySearchResults(results, total, tips) {
         if (results.length === 0) {
             searchResults.innerHTML = '<div class="p-4 text-center text-gray-500">没有找到相关文章</div>';
             searchResults.style.display = 'block';
@@ -551,12 +564,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         let html = '<div class="p-2 border-b border-gray-100 text-sm text-gray-600">找到 ' + total + ' 条结果</div>';
-        
+        if (Array.isArray(tips) && tips.length > 0) {
+            html += '<div class="p-2 text-xs text-blue-600 border-b border-gray-100">提示：' + tips.join('、') + '</div>';
+        }
         results.forEach(function(result) {
             html += `
                 <a href="${result.url}" class="block p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0">
-                    <div class="font-medium text-gray-800">${result.title}</div>
-                    <div class="text-sm text-gray-600 mt-1">${result.excerpt}</div>
+                    <div class="font-medium text-gray-800">${result.highlight_title || result.title}</div>
+                    <div class="text-sm text-gray-600 mt-1">${result.highlight_content || result.excerpt}</div>
                     <div class="text-xs text-gray-400 mt-2">
                         ${result.author} · ${new Date(result.created_at).toLocaleDateString('zh-CN')}
                     </div>

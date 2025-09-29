@@ -156,10 +156,20 @@ class BlogService
             $total_count = $query->count();
 
             // 获取文章列表并预加载作者信息
-            $posts = $query->orderByDesc('id')
-                ->forPage($page, $posts_per_page)
-                ->with(['authors', 'primaryAuthor'])
-                ->get();
+            if (!empty($filters['search'])) {
+                $s = "%{$filters['search']}%";
+                $posts = $query
+                    ->orderByRaw('CASE WHEN title LIKE ? THEN 0 WHEN excerpt LIKE ? THEN 1 WHEN content LIKE ? THEN 2 ELSE 3 END', [$s, $s, $s])
+                    ->orderByDesc('id')
+                    ->forPage($page, $posts_per_page)
+                    ->with(['authors', 'primaryAuthor'])
+                    ->get();
+            } else {
+                $posts = $query->orderByDesc('id')
+                    ->forPage($page, $posts_per_page)
+                    ->with(['authors', 'primaryAuthor'])
+                    ->get();
+            }
         }
 
         // 处理文章摘要
@@ -181,12 +191,20 @@ class BlogService
         );
 
         // 构建结果数组
+        $esMeta = [];
+        if (is_array($esSearch) && ($esSearch['used'] ?? false)) {
+            $esMeta = [
+                'highlights' => $esSearch['highlights'] ?? [],
+                'signals' => $esSearch['signals'] ?? [],
+            ];
+        }
         $result = [
             'posts' => $posts,
             'pagination' => $pagination_html,
             'totalCount' => $total_count,
             'currentPage' => $page,
-            'postsPerPage' => $posts_per_page
+            'postsPerPage' => $posts_per_page,
+            'esMeta' => $esMeta,
         ];
 
         // 缓存结果

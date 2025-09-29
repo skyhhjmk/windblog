@@ -45,13 +45,17 @@ class SearchController
 
         // 获取侧边栏内容
         $sidebar = SidebarService::getSidebarContent($request, 'search');
+        $suggestTitles = !empty($keyword) ? ElasticService::suggestTitles($keyword, 5) : [];
 
         return view('search/index', [
             'page_title' => "搜索: {$keyword} - {$blog_title}",
             'posts' => $result['posts'],
             'pagination' => $result['pagination'],
             'sidebar' => $sidebar,
-            'search_keyword' => $keyword
+            'search_keyword' => $keyword,
+            'esMeta' => $result['esMeta'] ?? [],
+            'suggest_titles' => $suggestTitles,
+            'totalCount' => $result['totalCount'] ?? 0
         ]);
     }
 
@@ -83,10 +87,15 @@ class SearchController
             // 将Collection转换为数组进行处理
             $postsArray = $result['posts']->toArray();
 
+            $hlMap = $result['esMeta']['highlights'] ?? [];
+            $signals = $result['esMeta']['signals'] ?? [];
             $response = [
                 'success' => true,
                 'keyword' => $keyword,
-                'results' => array_map(function ($post) {
+                'results' => array_map(function ($post) use ($hlMap) {
+                    $pid = (int)$post['id'];
+                    $titleHl = $hlMap[$pid]['title'][0] ?? null;
+                    $contentHl = $hlMap[$pid]['content'][0] ?? null;
                     return [
                         'id' => $post['id'],
                         'title' => $post['title'],
@@ -95,11 +104,20 @@ class SearchController
                         'author' => !empty($post['primary_author']) ?
                             (is_array($post['primary_author']) ? ($post['primary_author'][0]['nickname'] ?? '未知作者') : ($post['primary_author']['nickname'] ?? '未知作者')) :
                             (!empty($post['authors']) ? ($post['authors'][0]['nickname'] ?? '未知作者') : '未知作者'),
-                        'url' => '/post/' . $post['id']
+                        'url' => '/post/' . $post['id'],
+                        'highlight_title' => $titleHl,
+                        'highlight_content' => $contentHl,
                     ];
                 }, $postsArray),
                 'total' => $result['totalCount'],
                 'has_more' => $result['totalCount'] > count($postsArray),
+                'signals' => $signals,
+                // 追加提示信息：同义词/高亮/分词器
+                'tips' => array_values(array_filter([
+                    (!empty($signals['synonym']) ? '已应用同义词扩展匹配' : null),
+                    (!empty($signals['highlighted']) ? '已为关键词提供高亮' : null),
+                    (!empty($signals['analyzer']) ? ('使用分词器: ' . $signals['analyzer']) : null),
+                ])),
                 // 加入联想标题
                 'titles' => ElasticService::suggestTitles($keyword, 10),
             ];
