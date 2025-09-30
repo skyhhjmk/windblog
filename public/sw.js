@@ -114,6 +114,8 @@ function extractAssetUrls(html) {
 
 // Network First for pages
 async function networkFirst(req, event, useTimeout = true) {
+  let wasTimeout = false;
+  let networkFailed = false;
   const cache = await caches.open(CACHE_PAGES);
 
   const networkPromise = (async () => {
@@ -158,12 +160,16 @@ async function networkFirst(req, event, useTimeout = true) {
     if (raced) {
       return raced;
     }
+    wasTimeout = true;
   } else {
     // 在线导航不做超时竞速，直接等待网络（失败再走缓存兜底）
     try {
       const direct = await networkPromise;
       if (direct) return direct;
-    } catch (_) {}
+      networkFailed = true;
+    } catch (_) {
+      networkFailed = true;
+    }
   }
 
   // 慢网络：尝试使用旧缓存副本
@@ -179,11 +185,10 @@ async function networkFirst(req, event, useTimeout = true) {
           }
         } catch (_) {}
       })());
-      event.waitUntil(notifyClient(event, {
-        type: 'SHOW_STALE_NOTICE',
-        reason: 'slow_network',
-        message: '网络欠佳，已为您展示缓存副本。'
-      }));
+      const noticePayload = wasTimeout
+        ? { type: 'SHOW_STALE_NOTICE', reason: 'slow_network', message: '网络欠佳，已为您展示缓存副本。' }
+        : { type: 'SHOW_STALE_NOTICE', reason: networkFailed ? 'offline_page_cache' : 'slow_network', message: networkFailed ? '当前离线，已为您展示该页面的缓存副本。' : '网络欠佳，已为您展示缓存副本。' };
+      event.waitUntil(notifyClient(event, noticePayload));
     }
     return cached;
   }

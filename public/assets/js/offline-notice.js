@@ -66,11 +66,23 @@
     const data = event.data || {};
     if (data.type === 'SHOW_STALE_NOTICE') {
       const reason = data.reason || 'info';
-      const title = reason === 'offline_fallback' ? '离线模式' : '网络欠佳';
-      const message = data.message || (reason === 'offline_fallback'
-        ? '当前离线，已为您展示缓存的首页副本。'
-        : '网络较慢，已为您展示缓存副本。');
-      const tone = reason === 'offline_fallback' ? 'warn' : 'info';
+      let title, message, tone;
+      switch (reason) {
+        case 'offline_fallback':
+          title = '离线模式';
+          tone = 'warn';
+          message = data.message || '当前离线，已为您展示缓存的首页副本。';
+          break;
+        case 'offline_page_cache':
+          title = '离线模式';
+          tone = 'warn';
+          message = data.message || '当前离线，已为您展示该页面的缓存副本。';
+          break;
+        default:
+          title = '网络欠佳';
+          tone = 'info';
+          message = data.message || '网络较慢，已为您展示缓存副本。';
+      }
       showToast({ title, message, tone });
     } else if (data.type === 'SW_DEBUG') {
       // 调试输出，可按需移除
