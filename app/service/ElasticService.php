@@ -3,13 +3,75 @@
 namespace app\service;
 
 use support\Log;
+use Elastic\Elasticsearch\ClientBuilder;
+use Elastic\Elasticsearch\ClientInterface;
 
 class ElasticService
 {
+    protected static ?ClientInterface $client = null;
+
     // 暴露配置与请求的代理方法，供同步服务复用（避免重复实现）
     public static function getConfigProxy(): array
     {
         return self::getConfig();
+    }
+
+    /**
+     * 获取统一的 ES 客户端（缓存构建）
+     */
+    public static function client(): ClientInterface
+    {
+        if (self::$client instanceof ClientInterface) {
+            return self::$client;
+        }
+        $cfg = self::getConfig();
+
+        $builder = ClientBuilder::create()
+            ->setHosts([rtrim((string)$cfg['host'], '/')]);
+
+        // Basic 认证
+        if (!empty($cfg['basic_user'])) {
+            $builder->setBasicAuthentication((string)$cfg['basic_user'], (string)($cfg['basic_pass'] ?? ''));
+        }
+
+        // SSL 验证与证书配置
+        $builder->setSSLVerification(!(bool)($cfg['ssl_ignore'] ?? false));
+
+        $caFile = self::materialize((string)($cfg['ssl_ca_content'] ?? ''), '.ca.pem');
+        if (!empty($caFile)) {
+            $builder->setCABundle($caFile);
+        }
+        $certFile = self::materialize((string)($cfg['ssl_client_cert_content'] ?? ''), '.cert.pem');
+        if (!empty($certFile) && method_exists($builder, 'setSSLCert')) {
+            $builder->setSSLCert($certFile);
+        }
+        $keyFile = self::materialize((string)($cfg['ssl_client_key_content'] ?? ''), '.key.pem');
+        if (!empty($keyFile) && method_exists($builder, 'setSSLKey')) {
+            $builder->setSSLKey($keyFile);
+        }
+
+        self::$client = $builder->build();
+        return self::$client;
+    }
+
+    /**
+     * 将证书内容写入临时文件（按内容md5缓存）
+     */
+    protected static function materialize(string $content, string $suffix): ?string
+    {
+        if ($content === '') {
+            return null;
+        }
+        $hash = md5($content);
+        $dir = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'windblog_es';
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0777, true);
+        }
+        $file = $dir . DIRECTORY_SEPARATOR . $hash . $suffix;
+        if (!file_exists($file)) {
+            @file_put_contents($file, $content);
+        }
+        return $file;
     }
 
     public static function curlProxy(string $method, string $url, array $payload = [], int $timeout = 3): array

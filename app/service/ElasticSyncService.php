@@ -30,7 +30,16 @@ class ElasticSyncService
             ]
         ];
         $url = sprintf('%s/%s', rtrim($cfg['host'], '/'), $cfg['index']);
-        $resp = ElasticService::curlProxy('PUT', $url, $settings, $cfg['timeout']);
+        try {
+            $client = ElasticService::client();
+            $client->indices()->create([
+                'index' => $cfg['index'],
+                'body' => $settings
+            ]);
+            $resp = ['ok' => true, 'status' => 200];
+        } catch (\Throwable $e) {
+            $resp = ['ok' => false, 'status' => 0, 'error' => $e->getMessage()];
+        }
         $msg = sprintf('[ES] createIndex analyzer=%s status=%s', $analyzer, $resp['status'] ?? 'n/a');
         Redis::lpush('es:sync:logs', date('Y-m-d H:i:s') . ' ' . $msg);
         if (!$resp['ok']) {
@@ -65,8 +74,17 @@ class ElasticSyncService
             $payload['created_at'] = $created;
         }
 
-        $url = sprintf('%s/%s/_doc/%d', rtrim($cfg['host'], '/'), $cfg['index'], (int)$post->id);
-        $resp = ElasticService::curlProxy('PUT', $url, $payload, $cfg['timeout']);
+        try {
+            $client = ElasticService::client();
+            $client->index([
+                'index' => $cfg['index'],
+                'id' => (int)$post->id,
+                'body' => $payload
+            ]);
+            $resp = ['ok' => true, 'status' => 200];
+        } catch (\Throwable $e) {
+            $resp = ['ok' => false, 'status' => 0, 'error' => $e->getMessage()];
+        }
         $msg = sprintf('[ES] indexPost id=%d status=%s', (int)$post->id, $resp['status'] ?? 'n/a');
         Redis::lpush('es:sync:logs', date('Y-m-d H:i:s') . ' ' . $msg . (isset($resp['body']) ? ' body=' . json_encode($resp['body']) : ''));
         if (!$resp['ok']) {
@@ -82,8 +100,16 @@ class ElasticSyncService
     public static function deletePost(int $id): bool
     {
         $cfg = ElasticService::getConfigProxy();
-        $url = sprintf('%s/%s/_doc/%d', rtrim($cfg['host'], '/'), $cfg['index'], $id);
-        $resp = ElasticService::curlProxy('DELETE', $url, [], $cfg['timeout']);
+        try {
+            $client = ElasticService::client();
+            $client->delete([
+                'index' => $cfg['index'],
+                'id' => $id
+            ]);
+            $resp = ['ok' => true, 'status' => 200];
+        } catch (\Throwable $e) {
+            $resp = ['ok' => false, 'status' => 0, 'error' => $e->getMessage()];
+        }
         $msg = sprintf('[ES] deletePost id=%d status=%s', $id, $resp['status'] ?? 'n/a');
         Redis::lpush('es:sync:logs', date('Y-m-d H:i:s') . ' ' . $msg);
         if (!$resp['ok']) {

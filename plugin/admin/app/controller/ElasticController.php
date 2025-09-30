@@ -85,24 +85,40 @@ class ElasticController extends Base
     // 测试连接（调用 _cluster/health）
     public function testConnection(Request $request): Response
     {
-        $cfg = ElasticService::getConfigProxy();
-        $url = rtrim($cfg['host'], '/') . '/_cluster/health';
-        $resp = ElasticService::curlProxy('GET', $url, [], $cfg['timeout']);
-        $body = is_array($resp['body']) ? $resp['body'] : [];
-        return json([
-            'success' => $resp['ok'],
-            'status' => $resp['status'],
-            'cluster_name' => $body['cluster_name'] ?? null,
-            'health_status' => $body['status'] ?? null,
-            'number_of_nodes' => $body['number_of_nodes'] ?? null,
-            'number_of_data_nodes' => $body['number_of_data_nodes'] ?? null,
-            'active_primary_shards' => $body['active_primary_shards'] ?? null,
-            'active_shards' => $body['active_shards'] ?? null,
-            'relocating_shards' => $body['relocating_shards'] ?? null,
-            'initializing_shards' => $body['initializing_shards'] ?? null,
-            'unassigned_shards' => $body['unassigned_shards'] ?? null,
-            'error' => $resp['error'] ?? null
-        ]);
+        try {
+            $client = ElasticService::client();
+            $response = $client->cluster()->health();
+            $body = $response->asArray();
+            return json([
+                'success' => true,
+                'status' => 200,
+                'cluster_name' => $body['cluster_name'] ?? null,
+                'health_status' => $body['status'] ?? null,
+                'number_of_nodes' => $body['number_of_nodes'] ?? null,
+                'number_of_data_nodes' => $body['number_of_data_nodes'] ?? null,
+                'active_primary_shards' => $body['active_primary_shards'] ?? null,
+                'active_shards' => $body['active_shards'] ?? null,
+                'relocating_shards' => $body['relocating_shards'] ?? null,
+                'initializing_shards' => $body['initializing_shards'] ?? null,
+                'unassigned_shards' => $body['unassigned_shards'] ?? null,
+                'error' => null
+            ]);
+        } catch (\Throwable $e) {
+            return json([
+                'success' => false,
+                'status' => 0,
+                'cluster_name' => null,
+                'health_status' => null,
+                'number_of_nodes' => null,
+                'number_of_data_nodes' => null,
+                'active_primary_shards' => null,
+                'active_shards' => null,
+                'relocating_shards' => null,
+                'initializing_shards' => null,
+                'unassigned_shards' => null,
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 
     // 查看最近同步日志
@@ -183,6 +199,7 @@ class ElasticController extends Base
         $index = (string)($cfg['index'] ?? 'windblog-posts');
         $timeout = (int)($cfg['timeout'] ?? 3);
         $tokenizer = (string)blog_config('es.analyzer', 'standard', true) ?: 'standard';
+        $tokenizer = (string)blog_config('es.analyzer', 'standard', true) ?: 'standard';
 
         $text = (string)blog_config('es.synonyms', '', true);
         $lines = array_values(array_filter(array_map(function ($line) {
@@ -200,46 +217,48 @@ class ElasticController extends Base
             return json(['success' => false, 'error' => 'no synonyms']);
         }
 
-        // 1) 关闭索引
-        $closeUrl = $host . '/' . rawurlencode($index) . '/_close';
-        $closeResp = ElasticService::curlProxy('POST', $closeUrl, [], $timeout);
-        if (!$closeResp['ok']) {
-            return json(['success' => false, 'step' => 'close', 'status' => $closeResp['status'], 'error' => $closeResp['error'] ?? null]);
+        // 1) 关闭索引（使用官方客户端）
+        try {
+            $client = ElasticService::client();
+            $client->indices()->close(['index' => $index]);
+        } catch (\Throwable $e) {
+            return json(['success' => false, 'step' => 'close', 'status' => 0, 'error' => $e->getMessage()]);
         }
 
-        // 2) 更新分析设置（添加 synonym_graph 过滤器与搜索分析器）
-        $settingsUrl = $host . '/' . rawurlencode($index) . '/_settings';
-        $payload = [
-            'analysis' => [
-                'filter' => [
-                    'wb_synonyms' => [
-                        'type' => 'synonym_graph',
-                        'lenient' => true,
-                        'synonyms' => $lines
-                    ]
-                ],
-                'analyzer' => [
-                    'wb_synonym_search' => [
-                        'tokenizer' => $tokenizer,
-                        'filter' => ['lowercase', 'wb_synonyms']
+        // 2) 更新分析设置（官方客户端）
+        try {
+            $client->indices()->putSettings([
+                'index' => $index,
+                'body' => [
+                    'settings' => [
+                        'analysis' => [
+                            'filter' => [
+                                'wb_synonyms' => [
+                                    'type' => 'synonym_graph',
+                                    'lenient' => true,
+                                    'synonyms' => $lines
+                                ]
+                            ],
+                            'analyzer' => [
+                                'wb_synonym_search' => [
+                                    'tokenizer' => $tokenizer,
+                                    'filter' => ['lowercase', 'wb_synonyms']
+                                ]
+                            ]
+                        ]
                     ]
                 ]
-            ]
-        ];
-        $settingsResp = ElasticService::curlProxy('PUT', $settingsUrl, $payload, $timeout);
-        if (!$settingsResp['ok']) {
-            // 尝试重新打开索引以避免卡住
-            $openUrl = $host . '/' . rawurlencode($index) . '/_open';
-            ElasticService::curlProxy('POST', $openUrl, [], $timeout);
-            // 自动回退到重建流程：创建新索引并应用同义词、迁移数据、切换别名/索引
+            ]);
+        } catch (\Throwable $e) {
+            try { $client->indices()->open(['index' => $index]); } catch (\Throwable $ignore) {}
             return $this->applySynonymsRebuild($request);
         }
 
-        // 3) 打开索引
-        $openUrl = $host . '/' . rawurlencode($index) . '/_open';
-        $openResp = ElasticService::curlProxy('POST', $openUrl, [], $timeout);
-        if (!$openResp['ok']) {
-            return json(['success' => false, 'step' => 'open', 'status' => $openResp['status'], 'error' => $openResp['error'] ?? null]);
+        // 3) 打开索引（官方客户端）
+        try {
+            $client->indices()->open(['index' => $index]);
+        } catch (\Throwable $e) {
+            return json(['success' => false, 'step' => 'open', 'status' => 0, 'error' => $e->getMessage()]);
         }
 
         return json(['success' => true]);
@@ -258,19 +277,30 @@ class ElasticController extends Base
         $timeout = (int)($cfg['timeout'] ?? 3);
         $tokenizer = (string)blog_config('es.analyzer', 'standard', true) ?: 'standard';
 
-        $url = $host . '/' . rawurlencode($index) . '/_analyze';
-        $payload = [
-            'text' => $text,
-            'analyzer' => 'wb_synonym_search'
-        ];
-        $resp = ElasticService::curlProxy('POST', $url, $payload, $timeout);
-        $body = is_array($resp['body']) ? $resp['body'] : [];
-        return json([
-            'success' => $resp['ok'],
-            'status' => $resp['status'],
-            'tokens' => $body['tokens'] ?? [],
-            'error' => $resp['error'] ?? null
-        ]);
+        try {
+            $client = ElasticService::client();
+            $response = $client->indices()->analyze([
+                'index' => $index,
+                'body' => [
+                    'text' => $text,
+                    'analyzer' => 'wb_synonym_search'
+                ]
+            ]);
+            $body = $response->asArray();
+            return json([
+                'success' => true,
+                'status' => 200,
+                'tokens' => $body['tokens'] ?? [],
+                'error' => null
+            ]);
+        } catch (\Throwable $e) {
+            return json([
+                'success' => false,
+                'status' => 0,
+                'tokens' => [],
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 
     // 恢复默认查询分析器为 standard（关闭→更新settings→打开）
@@ -281,35 +311,38 @@ class ElasticController extends Base
         $index = (string)($cfg['index'] ?? 'windblog-posts');
         $timeout = (int)($cfg['timeout'] ?? 3);
 
-        // 1) 关闭索引
-        $closeUrl = $host . '/' . rawurlencode($index) . '/_close';
-        $closeResp = ElasticService::curlProxy('POST', $closeUrl, [], $timeout);
-        if (!$closeResp['ok']) {
-            return json(['success' => false, 'step' => 'close', 'status' => $closeResp['status'], 'error' => $closeResp['error'] ?? null]);
+        // 1) 关闭索引（使用官方客户端）
+        try {
+            $client = ElasticService::client();
+            $client->indices()->close(['index' => $index]);
+        } catch (\Throwable $e) {
+            return json(['success' => false, 'step' => 'close', 'status' => 0, 'error' => $e->getMessage()]);
         }
 
-        // 2) 更新 settings：恢复默认查询分析器为 standard
-        $settingsUrl = $host . '/' . rawurlencode($index) . '/_settings';
-        $payload = [
-            'index' => [
-                'search' => [
-                    'default_analyzer' => 'standard'
+        // 2) 更新 settings：恢复默认查询分析器为 standard（官方客户端）
+        try {
+            $client->indices()->putSettings([
+                'index' => $index,
+                'body' => [
+                    'settings' => [
+                        'index' => [
+                            'search' => [
+                                'default_analyzer' => 'standard'
+                            ]
+                        ]
+                    ]
                 ]
-            ]
-        ];
-        $settingsResp = ElasticService::curlProxy('PUT', $settingsUrl, $payload, $timeout);
-        if (!$settingsResp['ok']) {
-            // 尝试重新打开索引以避免卡住
-            $openUrl = $host . '/' . rawurlencode($index) . '/_open';
-            ElasticService::curlProxy('POST', $openUrl, [], $timeout);
-            return json(['success' => false, 'step' => 'settings', 'status' => $settingsResp['status'], 'error' => $settingsResp['error'] ?? null]);
+            ]);
+        } catch (\Throwable $e) {
+            try { $client->indices()->open(['index' => $index]); } catch (\Throwable $ignore) {}
+            return json(['success' => false, 'step' => 'settings', 'status' => 0, 'error' => $e->getMessage()]);
         }
 
-        // 3) 打开索引
-        $openUrl = $host . '/' . rawurlencode($index) . '/_open';
-        $openResp = ElasticService::curlProxy('POST', $openUrl, [], $timeout);
-        if (!$openResp['ok']) {
-            return json(['success' => false, 'step' => 'open', 'status' => $openResp['status'], 'error' => $openResp['error'] ?? null]);
+        // 3) 打开索引（官方客户端）
+        try {
+            $client->indices()->open(['index' => $index]);
+        } catch (\Throwable $e) {
+            return json(['success' => false, 'step' => 'open', 'status' => 0, 'error' => $e->getMessage()]);
         }
 
         return json(['success' => true]);
@@ -337,13 +370,15 @@ class ElasticController extends Base
             return json(['success' => false, 'error' => 'no synonyms']);
         }
 
-        // 1) 读取旧索引 mapping
-        $mapUrl = $host . '/' . rawurlencode($index) . '/_mapping';
-        $mapResp = ElasticService::curlProxy('GET', $mapUrl, [], $timeout);
-        if (!$mapResp['ok'] || !is_array($mapResp['body'])) {
-            return json(['success' => false, 'step' => 'get_mapping', 'status' => $mapResp['status'] ?? 0, 'error' => $mapResp['error'] ?? 'mapping not available']);
+        // 1) 读取旧索引 mapping（官方客户端）
+        try {
+            $client = ElasticService::client();
+            $mapResponse = $client->indices()->getMapping(['index' => $index]);
+            $mapBody = $mapResponse->asArray();
+            $mapping = $mapBody[$index]['mappings'] ?? ($mapBody['mappings'] ?? []);
+        } catch (\Throwable $e) {
+            return json(['success' => false, 'step' => 'get_mapping', 'status' => 0, 'error' => $e->getMessage()]);
         }
-        $mapping = $mapResp['body'][$index]['mappings'] ?? ($mapResp['body']['mappings'] ?? []);
 
         // 2) 新索引名
         // 基于基础索引名进行 -A/-B 轮换，避免后缀累加
@@ -351,79 +386,79 @@ class ElasticController extends Base
         $nextSuffix = (preg_match('/-A$/', $index)) ? '-B' : '-A';
         $newIndex = $base . $nextSuffix;
 
-        // 3) 创建新索引（包含同义词 analysis 与默认查询分析器）
-        $createUrl = $host . '/' . rawurlencode($newIndex);
-        $createPayload = [
-            'settings' => [
-                'analysis' => [
-                    'filter' => [
-                        'wb_synonyms' => [
-                            'type' => 'synonym_graph',
-                            'lenient' => true,
-                            'synonyms' => $lines
+        // 3) 创建新索引（官方客户端）
+        try {
+            $client->indices()->create([
+                'index' => $newIndex,
+                'body' => [
+                    'settings' => [
+                        'analysis' => [
+                            'filter' => [
+                                'wb_synonyms' => [
+                                    'type' => 'synonym_graph',
+                                    'lenient' => true,
+                                    'synonyms' => $lines
+                                ]
+                            ],
+                            'analyzer' => [
+                                'wb_synonym_search' => [
+                                    'tokenizer' => $tokenizer,
+                                    'filter' => ['lowercase', 'wb_synonyms']
+                                ]
+                            ]
                         ]
                     ],
-                    'analyzer' => [
-                        'wb_synonym_search' => [
-                            'tokenizer' => $tokenizer,
-                            'filter' => ['lowercase', 'wb_synonyms']
-                        ]
-                    ]
+                    'mappings' => $mapping
                 ]
-            ],
-            'mappings' => $mapping
-        ];
-        $createResp = ElasticService::curlProxy('PUT', $createUrl, $createPayload, $timeout);
-        if (!$createResp['ok']) {
-            return json(['success' => false, 'step' => 'create_index', 'status' => $createResp['status'], 'error' => $createResp['error'] ?? null]);
+            ]);
+        } catch (\Throwable $e) {
+            return json(['success' => false, 'step' => 'create_index', 'status' => 0, 'error' => $e->getMessage()]);
         }
 
-        // 4) 迁移数据 _reindex（等待完成）
-        $reindexUrl = $host . '/_reindex?wait_for_completion=true';
-        $reindexPayload = [
-            'source' => ['index' => $index],
-            'dest' => ['index' => $newIndex],
-            'conflicts' => 'proceed'
-        ];
-        $reindexResp = ElasticService::curlProxy('POST', $reindexUrl, $reindexPayload, max($timeout, 10));
-        if (!$reindexResp['ok']) {
-            return json(['success' => false, 'step' => 'reindex', 'status' => $reindexResp['status'], 'error' => $reindexResp['error'] ?? null]);
+        // 4) 迁移数据 _reindex（官方客户端，等待完成）
+        try {
+            $client->reindex([
+                'wait_for_completion' => true,
+                'body' => [
+                    'source' => ['index' => $index],
+                    'dest' => ['index' => $newIndex],
+                    'conflicts' => 'proceed'
+                ]
+            ]);
+        } catch (\Throwable $e) {
+            return json(['success' => false, 'step' => 'reindex', 'status' => 0, 'error' => $e->getMessage()]);
         }
 
-        // 5) 别名策略：优先切换别名；若无别名则更新 es.index 指向新索引
-        $aliasUrl = $host . '/' . rawurlencode($index) . '/_alias';
-        $aliasResp = ElasticService::curlProxy('GET', $aliasUrl, [], $timeout);
-        $hasAlias = $aliasResp['ok'] && isset($aliasResp['body']) && is_array($aliasResp['body']) && !empty($aliasResp['body']);
-        if ($hasAlias) {
-            // 取第一个别名名
-            $aliases = array_keys($aliasResp['body'][$index]['aliases'] ?? []);
+        // 5) 别名策略：优先切换别名（官方客户端）；若无别名则更新 es.index 指向新索引
+        try {
+            $aliasInfo = $client->indices()->getAlias(['index' => $index])->asArray();
+            $aliases = array_keys($aliasInfo[$index]['aliases'] ?? []);
             if (!empty($aliases)) {
                 $aliasName = $aliases[0];
-                $actionsUrl = $host . '/_aliases';
-                $actionsPayload = [
-                    'actions' => [
-                        ['remove' => ['index' => $index, 'alias' => $aliasName]],
-                        ['add' => ['index' => $newIndex, 'alias' => $aliasName]]
+                $client->indices()->updateAliases([
+                    'body' => [
+                        'actions' => [
+                            ['remove' => ['index' => $index, 'alias' => $aliasName]],
+                            ['add' => ['index' => $newIndex, 'alias' => $aliasName]]
+                        ]
                     ]
-                ];
-                $aliasActResp = ElasticService::curlProxy('POST', $actionsUrl, $actionsPayload, $timeout);
-                if (!$aliasActResp['ok']) {
-                    return json(['success' => false, 'step' => 'switch_alias', 'status' => $aliasActResp['status'], 'error' => $aliasActResp['error'] ?? null]);
-                }
+                ]);
             } else {
-                // 没有别名条目，降级为更新配置
                 blog_config('es.index', $newIndex, true, true, true);
             }
-        } else {
+        } catch (\Elastic\Elasticsearch\Exception\ClientResponseException $e) {
+            // 无别名或获取失败，降级为更新配置
             blog_config('es.index', $newIndex, true, true, true);
+        } catch (\Throwable $e) {
+            return json(['success' => false, 'step' => 'switch_alias', 'status' => 0, 'error' => $e->getMessage()]);
         }
 
-        // 6) 删除旧索引
-        $delUrl = $host . '/' . rawurlencode($index);
-        $delResp = ElasticService::curlProxy('DELETE', $delUrl, [], $timeout);
-        if (!$delResp['ok']) {
+        // 6) 删除旧索引（官方客户端）
+        try {
+            $client->indices()->delete(['index' => $index]);
+        } catch (\Throwable $e) {
             // 不致命，返回部分成功并提示
-            return json(['success' => true, 'warning' => 'old index not deleted', 'status' => $delResp['status'], 'error' => $delResp['error'] ?? null, 'new_index' => $newIndex]);
+            return json(['success' => true, 'warning' => 'old index not deleted', 'status' => 0, 'error' => $e->getMessage(), 'new_index' => $newIndex]);
         }
 
         return json(['success' => true, 'new_index' => $newIndex]);
