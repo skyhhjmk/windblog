@@ -1,0 +1,145 @@
+<div class="max-w-4xl mx-auto px-4">
+    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+        <div class="p-8">
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-bold text-gray-800 mb-2">申请友链</h1>
+                <p class="text-gray-600">填写以下信息申请友情链接，我们会尽快审核</p>
+            </div>
+
+            <div id="link-rules" class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8 transition-all duration-300">
+                <div class="flex items-start">
+                    <i class="fas fa-info-circle text-blue-500 text-xl mr-3 mt-1"></i>
+                    <div>
+                        <h2 class="text-lg font-semibold text-blue-800 mb-3">友链申请规则</h2>
+                        <!-- 省略：规则列表（同原模板） -->
+                        <ul class="text-gray-700 space-y-2">
+                            <li class="flex items-start"><i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i><div><span>网站内容合法、健康</span></div></li>
+                            <li class="flex items-start"><i class="fas fa fa-shield text-green-500 mt-1 mr-2"></i><div><span>网站有至少三篇原创内容</span></div></li>
+                            <li class="flex items-start"><i class="fas fa-link text-purple-500 mt-1 mr-2"></i><div><span>已将本站添加至贵站友情链接中</span></div></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-6 mb-8">
+                <div class="flex items-start">
+                    <i class="fas fa-home text-gray-500 text-xl mr-3 mt-1"></i>
+                    <div class="flex-1">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-3">本站信息</h2>
+                        <div class="space-y-2 text-gray-700 mb-4">
+                            <p><span class="font-medium">风屿互联协议级别：CAT3E</span></p>
+                            <p><span class="font-medium">网站名称：</span></p>
+                            <p><span class="font-medium">网站描述：</span></p>
+                        </div>
+                        <button id="toggleConfig" class="flex items-center text-blue-600 hover:text-blue-800 font-medium">
+                            <i class="fas fa-code mr-2"></i> 点击展开JSON配置 <i class="fas fa-chevron-down ml-2 transition-transform duration-300"></i>
+                        </button>
+                        <div id="configSection" class="hidden mt-4">
+                            <div class="relative">
+                                <pre class="bg-gray-800 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm" style="max-width: 100%;"><code id="configCode">{{ site_info_json_config|default('{}') }}</code></pre>
+                                <button id="copyConfig" class="absolute top-2 right-2 bg-gray-700 hover:bg-gray-600 text-white px-3 py-1 rounded text-sm transition-colors duration-200 opacity-0 group-hover:opacity-100">
+                                    <i class="fas fa-copy mr-1"></i>复制
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 表单（同原模板） -->
+            <form id="linkRequestForm" class="space-y-6">
+                <input type="hidden" name="_link_request_token" value="{{ csrf }}">
+                <div><label for="name" class="block text-sm font-medium text-gray-700 mb-1">网站名称 <span class="text-red-500">*</span></label><input type="text" id="name" name="name" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200" placeholder="请输入网站名称"></div>
+                <div><label for="url" class="block text-sm font-medium text-gray-700 mb-1">网站地址 <span class="text-red-500">*</span></label><input type="url" id="url" name="url" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200" placeholder="https://example.com"></div>
+                <div><label for="icon" class="block text-sm font-medium text-gray-700 mb-1">网站图标地址（不填则尝试自动获取）</label><input type="url" id="icon" name="icon" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200" placeholder="https://example.com/favicon.ico"></div>
+                <div><label for="description" class="block text-sm font-medium text-gray-700 mb-1">网站描述<span class="text-red-500">*</span></label><textarea id="description" name="description" rows="3" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200" placeholder="请简单描述您的网站内容"></textarea></div>
+                <div><label for="email" class="block text-sm font-medium text-gray-700 mb-1">邮箱</label><input type="text" id="email" name="email" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200" placeholder="邮箱联系方式（可选，用于审核结果通知）"></div>
+                <div><label for="full_description" class="block text-sm font-medium text-gray-700 mb-1">网站详细介绍（支持 Markdown 语法）</label><textarea id="full_description" name="full_description" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200" placeholder="当使用 info 方式跳转时，内容会被渲染在页面上"></textarea></div>
+                <div><label for="contact" class="block text-sm font-medium text-gray-700 mb-1">联系方式</label><input type="text" id="contact" name="contact" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200" placeholder="微信/QQ等联系方式（可选）"></div>
+                <div style="position:absolute; left:-9999px; top:-9999px;"><label for="fullname" class="block text-sm font-medium text-gray-700 mb-1">Full Name</label><input type="text" id="fullname" name="fullname" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Please input your fullname"></div>
+                <div class="flex items-center"><input id="agreement" type="checkbox" required class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"><label for="agreement" class="ml-2 text-sm text-gray-700">我已阅读并同意 <a href="#link-rules" class="text-blue-600 hover:underline">友链申请规则</a></label></div>
+                <div><button type="submit" class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">提交申请</button></div>
+            </form>
+
+            <div id="resultMessage" class="hidden mt-6 p-4 rounded-lg"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 展开/收起配置信息
+    (function () {
+        const toggleConfig = document.getElementById('toggleConfig');
+        const configSection = document.getElementById('configSection');
+        if (toggleConfig && configSection) {
+            const chevronIcon = toggleConfig.querySelector('i.fa-chevron-down');
+            toggleConfig.addEventListener('click', function () {
+                const isHidden = configSection.classList.contains('hidden');
+                if (isHidden) { configSection.classList.remove('hidden'); chevronIcon.classList.add('rotate-180'); }
+                else { configSection.classList.add('hidden'); chevronIcon.classList.remove('rotate-180'); }
+            });
+        }
+    })();
+
+    // 复制配置信息
+    (function () {
+        const copyConfig = document.getElementById('copyConfig');
+        const configCode = document.getElementById('configCode');
+        if (copyConfig && configCode) {
+            const codeContainer = copyConfig.parentElement;
+            codeContainer.classList.add('group');
+            copyConfig.addEventListener('click', function () {
+                const textArea = document.createElement('textarea');
+                textArea.value = configCode.textContent;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                const originalText = copyConfig.innerHTML;
+                copyConfig.innerHTML = '<i class="fas fa-check mr-1"></i>已复制';
+                setTimeout(() => { copyConfig.innerHTML = originalText; }, 2000);
+            });
+        }
+    })();
+
+    // 快速互联与表单提交逻辑（同原模板简化版）
+    (function () {
+        const form = document.getElementById('linkRequestForm');
+        if (!form) return;
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            fetch('/link/request', { method: 'POST', body: formData })
+                .then(r => r.json())
+                .then(data => {
+                    const resultMessage = document.getElementById('resultMessage');
+                    resultMessage.classList.remove('hidden');
+                    if (data.code === 0) {
+                        resultMessage.classList.add('bg-green-100', 'text-green-700');
+                        resultMessage.innerHTML = '<i class="fas fa-check-circle mr-2"></i>' + (data.msg || '申请成功');
+                        form.reset();
+                    } else {
+                        resultMessage.classList.add('bg-red-100', 'text-red-700');
+                        resultMessage.innerHTML = '<i class="fas fa-exclamation-circle mr-2"></i>' + (data.msg || '申请失败');
+                    }
+                    setTimeout(() => { resultMessage.classList.add('hidden'); }, 3000);
+                })
+                .catch(() => {
+                    const resultMessage = document.getElementById('resultMessage');
+                    resultMessage.classList.remove('hidden');
+                    resultMessage.classList.add('bg-red-100', 'text-red-700');
+                    resultMessage.innerHTML = '<i class="fas fa-exclamation-circle mr-2"></i>提交失败，请稍后重试';
+                    setTimeout(() => { resultMessage.classList.add('hidden'); }, 3000);
+                });
+        });
+    })();
+
+    try { document.title = '{{ page_title|default("申请友链")|e("js") }}'; } catch (e) {}
+    document.dispatchEvent(new CustomEvent('page:ready'));
+</script>
+
+<style>
+    @keyframes blink { 0% { border-color: #3b82f6; box-shadow: 0 0 0 0 rgba(59,130,246,.3);} 50% { border-color:#1d4ed8; box-shadow:0 0 0 4px rgba(59,130,246,.3);} 100% { border-color:#3b82f6; box-shadow:0 0 0 0 rgba(59,130,246,.3);} }
+    .blink-border { animation: blink 0.5s ease-in-out 3; }
+    .rotate-180 { transform: rotate(180deg); }
+</style>

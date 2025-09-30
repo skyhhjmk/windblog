@@ -1,0 +1,9 @@
+<div>
+    {{ html|raw }}
+</div>
+
+<script>
+    // 更新文档标题并通知 PJAX 就绪
+    try { document.title = '{{ (page.title ~ " - " ~ (page_title|default("风屿雨博客"))) | e("js") }}'; } catch (e) {}
+    document.dispatchEvent(new CustomEvent('page:ready'));
+</script>

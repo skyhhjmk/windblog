@@ -258,7 +258,7 @@
     <div class="container mx-auto px-4 py-4 flex justify-between items-center">
         <a href="/" class="text-2xl font-bold text-gray-800 flex items-center hover-animate tap-highlight">
             <i class="fas fa-blog text-blue-600 mr-2"></i>
-            <span>{{ page_title|default('风屿雨博客') }}</span>
+            <span id="topbarTitle">{{ page_title|default('风屿雨博客') }}</span>
         </a>
         <!-- 搜索表单 -->
         <div class="relative hidden md:block mr-6">
@@ -483,6 +483,8 @@
                     setTimeout(() => { __bar.style.width = '0'; }, 200);
                 }
                 document.body.classList.remove('pjax-loading');
+                const topbar = document.getElementById('topbarTitle');
+                if (topbar) { topbar.textContent = document.title; }
                 document.dispatchEvent(new CustomEvent('page:ready'));
             });
 

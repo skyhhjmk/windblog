@@ -54,9 +54,16 @@ class IndexController
         // 获取博客标题
         $blog_title = BlogService::getBlogTitle();
 
-        // 获取侧边栏内容
-        $sidebar = \app\service\SidebarService::getSidebarContent($request, 'home');
-        return view('index/index', [
+        // PJAX 优化：检测是否为 PJAX 请求
+        $isPjax = (bool)$request->header('X-PJAX');
+
+        // 获取侧边栏内容（仅非 PJAX 时获取）
+        $sidebar = $isPjax ? null : \app\service\SidebarService::getSidebarContent($request, 'home');
+
+        // 动态选择模板
+        $viewName = $isPjax ? 'index/index.content' : 'index/index';
+
+        return view($viewName, [
             'page_title' => $blog_title . ' - count is -' . $result['totalCount'],
             'posts' => $result['posts'],
             'pagination' => $result['pagination'],

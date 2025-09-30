@@ -1,0 +1,143 @@
+<div class="max-w-full mx-auto">
+    <article class="bg-white rounded-xl shadow-md overflow-hidden">
+        <div class="p-6 border-b border-gray-100">
+            <div class="flex items-start mb-4">
+                <div class="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16 flex items-center justify-center mr-4">
+                    <i class="fas fa-link text-gray-500 text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800 mb-2">{{ link.name }}</h1>
+                    <div class="flex items-center text-gray-500 text-sm gap-2 flex-wrap">
+                        <span class="mr-2 flex items-center">
+                            <i class="far fa-calendar-alt mr-1"></i>
+                            {{ link.created_at|date('Y-m-d H:i') }}
+                        </span>
+                        <span class="flex items-center">
+                            <i class="fas fa-mouse-pointer mr-1"></i>
+                            点击跳转
+                        </span>
+                        {% set _protocol = link.custom_fields.protocol ?? link.custom_fields.protocol_level ?? '' %}
+                        {% set _peer_status = link.custom_fields.peer_status ?? (link.status ? 'established' : (link.is_pending ? 'pending' : '')) %}
+                        {% if _protocol %}
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-purple-100 text-purple-700">协议 {{ _protocol }}</span>
+                        {% endif %}
+                        {% if _peer_status %}
+                            {% set _color = _peer_status == 'established' ? 'green' : (_peer_status == 'waiting' ? 'yellow' : 'gray') %}
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-{{ _color }}-100 text-{{ _color }}-700">{{ _peer_status }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {% if link.url %}
+                <div class="mt-4">
+                    <a href="/link/goto/{{ link.id }}"
+                       target="{{ link.target }}"
+                       class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200">
+                        <i class="fas fa-external-link-alt mr-2"></i>
+                        访问网站
+                    </a>
+                </div>
+            {% endif %}
+
+            {% set _monitor = link.custom_fields.monitor ?? null %}
+            {% set _audit = link.custom_fields.auto_audit ?? null %}
+            {% if _monitor or _audit %}
+                <div class="mt-4 flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-2 sm:space-y-0 text-sm">
+                    {% if _monitor %}
+                        <span class="inline-flex items-center px-2 py-1 rounded bg-gray-100 text-gray-700">
+                            <i class="fas fa-heartbeat mr-2 text-{{ _monitor.ok ? 'green' : 'red' }}-600"></i>
+                            可用性：{{ _monitor.ok ? '正常' : '异常' }}
+                        </span>
+                        {% if _monitor.backlink is defined %}
+                            <span class="inline-flex items-center px-2 py-1 rounded bg-gray-100 text-gray-700">
+                                <i class="fas fa-link mr-2 text-{{ _monitor.backlink.found ? 'green' : 'gray' }}-600"></i>
+                                反链：{{ _monitor.backlink.found ? '已发现' : '未发现' }}（{{ _monitor.backlink.count|default(0) }}）
+                            </span>
+                        {% endif %}
+                        {% if _monitor.time %}
+                            <span class="inline-flex items-center px-2 py-1 rounded bg-gray-100 text-gray-700">
+                                <i class="far fa-clock mr-2"></i>
+                                最近监控：{{ _monitor.time }}
+                            </span>
+                        {% endif %}
+                    {% endif %}
+                    {% if _audit %}
+                        <span class="inline-flex items-center px-2 py-1 rounded bg-purple-100 text-purple-700">
+                            <i class="fas fa-check-circle mr-2"></i>
+                            自动审核分：{{ _audit.score }}{% if _audit.threshold is defined %} / 阈值 {{ _audit.threshold }}{% endif %}
+                        </span>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="p-6">
+            {% if link.description %}
+                <div class="mb-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-3">链接描述</h2>
+                    <p class="text-gray-600 leading-relaxed">
+                        {{ link.description }}
+                    </p>
+                </div>
+            {% endif %}
+
+            {% if link.content %}
+                <div class="border-t border-gray-100 pt-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-3">详细介绍</h2>
+                    <div class="prose max-w-none link-content">
+                        {{ link.content }} TODO:markdown_to_html
+                    </div>
+                </div>
+            {% endif %}
+
+            {% if link.url and link.show_url %}
+                <div class="border-t border-gray-100 pt-6 mt-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-3">网站地址</h2>
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <div class="flex items-center justify-between">
+                            <div class="text-sm text-gray-600 break-all">
+                                <i class="fas fa-globe text-gray-500 mr-2"></i>
+                                {{ link.url }}
+                            </div>
+                            <button onclick="copyUrl()"
+                                    class="ml-2 px-3 py-1 bg-gray-200 text-gray-700 text-xs font-medium rounded hover:bg-gray-300 transition-colors duration-200"
+                                    id="copyButton">
+                                <i class="fas fa-copy mr-1"></i>
+                                复制
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="p-6 border-t border-gray-100">
+            <div class="flex justify-between items-center">
+                <button onclick="history.back()"
+                        class="inline-flex items-center text-gray-600 hover:text-gray-800 font-medium">
+                    <i class="fas fa-arrow-left mr-1"></i>
+                    返回
+                </button>
+                <div class="text-sm text-gray-500">
+                    <i class="far fa-clock mr-1"></i>
+                    更新时间: {{ link.updated_at|date('Y-m-d H:i') }}
+                </div>
+            </div>
+        </div>
+    </article>
+</div>
+
+<script>
+    function copyUrl() {
+        const url = "{{ link.url|e('js') }}";
+        navigator.clipboard.writeText(url).then(() => {
+            const button = document.getElementById('copyButton');
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-check mr-1"></i> 已复制';
+            setTimeout(() => { button.innerHTML = originalText; }, 2000);
+        }).catch(err => { console.error('复制失败: ', err); });
+    }
+    try { document.title = '{{ page_title|default("链接详情")|e("js") }}'; } catch (e) {}
+    document.dispatchEvent(new CustomEvent('page:ready'));
+</script>

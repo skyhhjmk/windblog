@@ -43,11 +43,17 @@ class SearchController
         // 获取博客标题
         $blog_title = BlogService::getBlogTitle();
 
-        // 获取侧边栏内容
-        $sidebar = SidebarService::getSidebarContent($request, 'search');
+        // PJAX 优化：检测是否为 PJAX 请求
+        $isPjax = (bool)$request->header('X-PJAX');
+
+        // 获取侧边栏内容（仅非 PJAX 时获取）
+        $sidebar = $isPjax ? null : SidebarService::getSidebarContent($request, 'search');
         $suggestTitles = !empty($keyword) ? ElasticService::suggestTitles($keyword, 5) : [];
 
-        return view('search/index', [
+        // 动态选择模板
+        $viewName = $isPjax ? 'search/index.content' : 'search/index';
+
+        return view($viewName, [
             'page_title' => "搜索: {$keyword} - {$blog_title}",
             'posts' => $result['posts'],
             'pagination' => $result['pagination'],

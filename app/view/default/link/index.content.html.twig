@@ -1,0 +1,175 @@
+<div class="max-w-full mx-auto px-4">
+    <!-- 页面标题区域 -->
+    <div class="text-center mb-12 animate-fade-in-down">
+        <h1 class="text-4xl md:text-5xl font-bold text-gray-800 mb-4">{{ page_title|default('风屿雨博客') }}</h1>
+        <p class="text-gray-600 text-lg md:text-xl">欢迎来到链接广场，这里汇聚了优质的网站资源</p>
+        <div class="mt-4 flex items-center justify-center gap-3">
+            <a href="/link/request" 
+               class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200">
+                <i class="fas fa-link mr-2"></i>
+                申请友链
+            </a>
+            <div class="inline-flex items-center text-sm">
+                <label for="linkSortSelect" class="mr-2 text-gray-600">排序</label>
+                <select id="linkSortSelect" class="px-2 py-1 border border-gray-300 rounded">
+                    <option value="default">默认</option>
+                    <option value="protocol">协议级别</option>
+                    <option value="score">审核评分</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- 链接列表 -->
+    {% if links|length > 0 %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for link in links %}
+                <div class="bg白 rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 group"
+                     data-protocol="{{ link.custom_fields.protocol ?? link.custom_fields.protocol_level ?? '' }}"
+                     data-score="{{ (link.custom_fields.auto_audit.score ?? 0) }}">
+                    <div class="p-6">
+                        <div class="flex items-start mb-4">
+                            <div class="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16 flex items-center justify-center mr-4 transition-all duration-300 group-hover:bg-blue-100">
+                                <i class="fas fa-link text-gray-500 text-xl group-hover:text-blue-500"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-xl font-bold text-gray-800 mb-1 group-hover:text-blue-600 transition-colors duration-200">
+                                    <a href="{% if link.redirect_type == 'info' %}/link/info/{{ link.id }}{% else %}/link/goto/{{ link.id }}{% endif %}"
+                                       {% if link.redirect_type == 'direct' %}target="{{ link.target }}"{% endif %}
+                                       class="block">
+                                        {{ link.name|length > 20 ? link.name|slice(0, 20) ~ '...' : link.name }}
+                                    </a>
+                                </h2>
+                                <div class="flex items-center text-gray-500 text-xs gap-2 flex-wrap">
+                                    <span class="inline-flex items-center">
+                                        <i class="far fa-calendar-alt mr-1"></i>
+                                        {{ link.created_at|date('Y-m-d') }}
+                                    </span>
+                                    {% set _protocol = link.custom_fields.protocol ?? link.custom_fields.protocol_level ?? '' %}
+                                    {% set _peer_status = link.custom_fields.peer_status ?? (link.status ? 'established' : (link.is_pending ? 'pending' : '')) %}
+                                    {% if _protocol %}
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-purple-100 text-purple-700">协议 {{ _protocol }}</span>
+                                    {% endif %}
+                                    {% if _peer_status %}
+                                        {% set _color = _peer_status == 'established' ? 'green' : (_peer_status == 'waiting' ? 'yellow' : 'gray') %}
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-{{ _color }}-100 text-{{ _color }}-700">{{ _peer_status }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <p class="text-gray-600 mb-4 text-sm leading-relaxed line-clamp-3">
+                            {{ link.description ?: '这个网站还没有添加描述信息' }}
+                        </p>
+                        
+                        <div class="flex justify-between items-center">
+                            <a href="{% if link.redirect_type == 'info' %}/link/info/{{ link.id }}{% else %}/link/goto/{{ link.id }}{% endif %}"
+                               {% if link.redirect_type == 'direct' %}target="{{ link.target }}"{% endif %}
+                               class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium text-sm transition-colors duration-200">
+                                {% if link.redirect_type == 'info' %}
+                                    查看详情
+                                {% else %}
+                                    访问网站
+                                {% endif %}
+                                <svg class="w-4 h-4 ml-1 transition-transform duration-200 group-hover:translate-x-1" 
+                                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                </svg>
+                            </a>
+                            
+                            <div class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                                <i class="fas fa-external-link-alt mr-1"></i>
+                                {% if link.redirect_type == 'direct' %}
+                                    直接跳转
+                                {% elseif link.redirect_type == 'goto' %}
+                                    确认跳转
+                                {% elseif link.redirect_type == 'iframe' %}
+                                    内嵌打开
+                                {% elseif link.redirect_type == 'info' %}
+                                    详情页面
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- 分页 -->
+        <div class="mt-12 flex justify-center">
+            {{ pagination|raw }}
+        </div>
+    {% else %}
+        <div class="bg-white rounded-2xl shadow-lg p-12 text-center animate-fade-in">
+            <div class="text-gray-400 mb-4">
+                <svg class="w-24 h-24 mx-auto opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                          d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1">
+                    </path>
+                </svg>
+            </div>
+            <h3 class="text-2xl font-medium text-gray-700 mb-2">暂无链接</h3>
+            <p class="text-gray-500 max-w-md mx-auto">目前还没有添加任何友情链接，敬请期待！</p>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+    @keyframes fade-in-down {
+        0% { opacity: 0; transform: translateY(-20px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in-down { animation: fade-in-down 0.6s ease-out forwards; }
+    @keyframes fade-in { 0% { opacity: 0; } 100% { opacity: 1; } }
+    .animate-fade-in { animation: fade-in 0.6s ease-out forwards; }
+    .line-clamp-3 {
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const linkCards = document.querySelectorAll('.group');
+        linkCards.forEach(card => {
+            card.addEventListener('mouseenter', function() { this.style.zIndex = '10'; });
+            card.addEventListener('mouseleave', function() { this.style.zIndex = '1'; });
+        });
+
+        const sortSelect = document.getElementById('linkSortSelect');
+        if (sortSelect) {
+            sortSelect.addEventListener('change', function() {
+                const mode = this.value;
+                const grid = document.querySelector('.grid');
+                if (!grid) return;
+                const items = Array.from(grid.children);
+                const protocolRank = { 'CAT5': 5, 'CAT4': 4, 'CAT3': 3, 'CAT2': 2, 'CAT1': 1 };
+
+                const getProtocolWeight = (el) => {
+                    const p = (el.getAttribute('data-protocol') || '').toUpperCase();
+                    const key = p.startsWith('CAT') ? p.slice(0, 4).replace(/[^A-Z0-9]/g, '').replace(/([A-Z0-9]{4}).*/, '$1').slice(0,4) : p;
+                    return protocolRank[key] || 0;
+                };
+                const getScore = (el) => parseInt(el.getAttribute('data-score') || '0', 10) || 0;
+
+                let sorted = items.slice();
+                if (mode === 'protocol') {
+                    sorted.sort((a, b) => getProtocolWeight(b) - getProtocolWeight(a));
+                } else if (mode === 'score') {
+                    sorted.sort((a, b) => getScore(b) - getScore(a));
+                } else {
+                    sorted = items;
+                }
+                sorted.forEach(el => grid.appendChild(el));
+            });
+            sortSelect.value = 'protocol';
+            sortSelect.dispatchEvent(new Event('change'));
+        }
+    });
+
+    try { document.title = '{{ page_title|default("风屿雨博客")|e("js") }}'; } catch (e) {}
+    document.dispatchEvent(new CustomEvent('page:ready'));
+</script>

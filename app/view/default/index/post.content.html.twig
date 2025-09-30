@@ -1,0 +1,72 @@
+<div class="max-w-full mx-auto">
+    <article class="bg-white rounded-xl shadow-md overflow-hidden">
+        <!-- 文章头部 -->
+        <div class="p-6 border-b border-gray-100">
+            <h1 class="text-3xl font-bold text-gray-800 mb-4">{{ post.title }}</h1>
+            <div class="flex items-center text-gray-500 text-sm space-x-4">
+                <span class="flex items-center">
+                    <i class="far fa-calendar-alt mr-1"></i>
+                    {{ post.created_at|date('Y-m-d H:i') }}
+                </span>
+                <span class="flex items-center">
+                    <i class="far fa-user mr-1"></i>
+                    <span class="font-medium text-blue-600 hover:text-blue-800 transition-colors cursor-pointer" title="查看作者详情">
+                        {{ author }}
+                    </span>
+                </span>
+                {% if post.primaryAuthor.first().avatar %}
+                <span class="flex items-center">
+                    <img src="{{ post.primaryAuthor.first().avatar }}" alt="{{ author }}" class="w-6 h-6 rounded-full mr-1 object-cover" loading="lazy" decoding="async" fetchpriority="low">
+                </span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- 文章内容 -->
+        <div class="p-6">
+            <div class="prose max-w-none" id="post-container">
+            </div>
+        </div>
+
+        <!-- 文章底部 -->
+        <div class="p-6 border-t border-gray-100">
+            <div class="flex justify-between items-center">
+                <a href="/"
+                   class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium">
+                    <i class="fas fa-arrow-left mr-1"></i>
+                    返回首页
+                </a>
+                <div class="text-sm text-gray-500">
+                    <i class="far fa-clock mr-1"></i>
+                    最后更新: {{ post.updated_at|date('Y-m-d H:i') }}
+                </div>
+            </div>
+        </div>
+    </article>
+</div>
+
+<div hidden="hidden" id="raw_md">{{ post.content|raw }}</div>
+<script>
+    function renderPost() {
+        if (!window.Vditor) {
+            window.__rpTry = (window.__rpTry || 0) + 1;
+            if (window.__rpTry < 60) { setTimeout(renderPost, 50); }
+            return;
+        }
+        const container = document.getElementById('post-container');
+        const raw = document.getElementById('raw_md');
+        if (!container || !raw) return;
+        container.innerHTML = '';
+        Vditor.preview(container, raw.innerHTML, {
+            mode: 'light',
+            lang: 'zh_CN',
+            anchor: 1,
+            lazyLoadImage: 'https://cdn.jsdelivr.net/npm/vditor/dist/images/img-loading.svg',
+            after() { try { raw.remove(); } catch (e) {} }
+        });
+    }
+    // PJAX 片段内更新标题并通知就绪
+    try { document.title = '{{ (post.title ~ " - " ~ (page_title|default("风屿雨博客"))) | e("js") }}'; } catch (e) {}
+    document.addEventListener('page:ready', renderPost);
+    renderPost();
+</script>
