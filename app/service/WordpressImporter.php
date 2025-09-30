@@ -2,6 +2,7 @@
 
 namespace app\service;
 
+
 use app\model\Admin;
 use app\model\Author;
 use app\model\ImportJob;
@@ -56,7 +57,7 @@ class WordpressImporter
     {
         $this->importJob = $importJob;
         $this->options = json_decode($importJob->options ?? '{}', true);
-        $this->defaultAuthorId = $importJob->author_id;
+        $this->defaultAuthorId = $importJob->author_id ?: $this->resolveDefaultAuthorId();
 
         Log::info('初始化WordPress导入器，任务ID: ' . $importJob->id);
     }
@@ -467,7 +468,6 @@ class WordpressImporter
                             $existingPost->authors()->detach();
                             // 再添加新的关联，并设置额外字段
                             $existingPost->authors()->attach($author, [
-                                'admin_id' => admin_id(),
                                 'is_primary' => 1,
                                 'created_at' => date('Y-m-d H:i:s'),
                                 'updated_at' => date('Y-m-d H:i:s')
@@ -521,7 +521,6 @@ class WordpressImporter
             if ($author) {
                 // 使用attach方法保存文章作者关联
                 $post->authors()->attach($author, [
-                    'admin_id' => admin_id(),
                     'is_primary' => 1,
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s')
@@ -640,39 +639,21 @@ class WordpressImporter
         $authorName = $xpath->evaluate('string(dc:creator)', $node);
         Log::debug("处理作者: " . $authorName);
 
-        // 如果没有默认作者且没有文章作者，则返回null
-        if (is_null($this->defaultAuthorId) && empty($authorName)) {
-            Log::debug("作者为空，返回null");
-            return null;
-        }
-
-        // 如果没有文章作者，使用默认作者
+        // 优先使用任务指定默认作者
         if (empty($authorName)) {
-            Log::debug('使用默认作者ID: ' . $this->defaultAuthorId);
+            Log::debug('使用默认作者ID: ' . var_export($this->defaultAuthorId, true));
             return $this->defaultAuthorId;
         }
-        // 从导入配置中获取管理员ID
-        $admin_id = $this->options['admin_id'] ?? 1;
-        // 查找当前管理员用户名
-        $admin_data = Admin::find($admin_id)->first();
 
-        if ($admin_data) {
-            $admin_username = $admin_data->username;
-            Log::debug('管理员用户名: ' . $admin_username);
-        }
-
-        if (!empty($admin_username)) {
-            // 根据管理员用户名查找对应的普通用户的用户名
-            $author = Author::where('username', $admin_username)->first();
-        }
-
-        if (!empty($author)) {
+        // 按导出的作者名查找现有普通用户
+        $author = Author::where('username', $authorName)->first();
+        if ($author) {
             Log::debug('找到现有用户: ' . $author->username . ' (ID: ' . $author->id . ')');
-            return $author->id;
+            return (int)$author->id;
         }
 
-        // 使用默认作者
-        Log::debug('使用默认作者ID: ' . $this->defaultAuthorId);
+        // 找不到则回退到默认作者
+        Log::debug('未找到作者，回退默认作者ID: ' . var_export($this->defaultAuthorId, true));
         return $this->defaultAuthorId;
     }
 
@@ -699,7 +680,40 @@ class WordpressImporter
             if ($category) {
                 Log::debug("找到现有分类: " . $category->name . " (ID: " . $category->id . ")");
                 return $category->id;
+                /**
+     * 解析默认作者ID：
+     * 1) 任务中已指定 author_id 则使用
+     * 2) 否则查找安装时创建的普通用户（nickname=超级管理员）
+     * 3) 否则使用任意一个已有用户（id最小）
+     * 4) 都没有则返回null
+     */
+    protected function resolveDefaultAuthorId(): ?int
+    {
+        try {
+            // 1) 若任务已指定 author_id，构造函数中已优先使用，这里不重复判断
+
+            // 2) 查找管理员用户名（取第一个管理员作为安装默认管理员）
+            $admin = Admin::orderBy('id', 'asc')->first();
+            if ($admin && !empty($admin->username)) {
+                // 使用与管理员相同用户名的普通用户作为默认作者
+                $user = Author::where('username', $admin->username)->first();
+                if ($user) {
+                    return (int)$user->id;
+                }
             }
+
+            // 3) 回退：选取任意一个已有用户
+            $any = Author::orderBy('id', 'asc')->first();
+            if ($any) {
+                return (int)$any->id;
+            }
+        } catch (\Throwable $e) {
+            Log::warning('解析默认作者ID失败: ' . $e->getMessage());
+        }
+        return null;
+    }
+
+}
 
             // 创建新分类
             Log::debug("创建新分类: " . $categoryName);

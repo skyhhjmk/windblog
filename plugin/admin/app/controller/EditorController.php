@@ -111,7 +111,6 @@ class EditorController
                         $authorRecords[] = [
                             'post_id' => $post_id,
                             'author_id' => $authorId,
-                            'admin_id' => $adminId,
                             'is_primary' => $isPrimary ? 1 : 0,
                             'created_at' => date('Y-m-d H:i:s'),
                             'updated_at' => date('Y-m-d H:i:s')
@@ -140,7 +139,6 @@ class EditorController
                     Db::table('post_author')->insert([
                         'post_id' => $post_id,
                         'author_id' => $adminId,
-                        'admin_id' => $adminId,
                         'is_primary' => 1,
                         'created_at' => date('Y-m-d H:i:s'),
                         'updated_at' => date('Y-m-d H:i:s')
@@ -153,7 +151,6 @@ class EditorController
                         Db::table('post_author')->insert([
                             'post_id' => $post_id,
                             'author_id' => $defaultAuthorId,
-                            'admin_id' => $adminId,
                             'is_primary' => 1,
                             'created_at' => date('Y-m-d H:i:s'),
                             'updated_at' => date('Y-m-d H:i:s')

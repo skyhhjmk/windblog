@@ -17,7 +17,6 @@ use Illuminate\Support\Carbon;
  * @property int         $id                     记录ID (主键)
  * @property int         $post_id                文章ID (外键)
  * @property int         $author_id              作者ID (外键)
- * @property int         $admin_id               管理员作者ID (外键)
  * @property bool        $is_primary             是否为主要作者
  * @property string|null $contribution           贡献描述，例如 "主笔"、"校对" 等
  * @property Carbon|null $created_at             创建时间
@@ -51,7 +50,6 @@ class PostAuthor extends Model
     protected $fillable = [
         'post_id',
         'author_id',
-        'admin_id',
         'is_primary',
         'contribution',
     ];
@@ -65,7 +63,6 @@ class PostAuthor extends Model
     protected $casts = [
         'is_primary' => 'boolean',
         'post_id' => 'integer',
-        'admin_id' => 'integer',
         'author_id' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',

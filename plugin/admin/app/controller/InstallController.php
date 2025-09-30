@@ -68,16 +68,24 @@ class InstallController extends Base
             $smt = $db->query("SELECT tablename FROM pg_tables WHERE schemaname = 'public'");
             $tables = $smt->fetchAll();
         } catch (Throwable $e) {
-            if (stripos($e->getMessage(), 'password authentication failed')) {
+            $msg = $e->getMessage();
+            // 兼容多语言/本地化错误信息
+            if (
+                stripos($msg, 'password authentication failed') !== false
+                || stripos($msg, 'authentication failed') !== false
+                || stripos($msg, '验证失败') !== false
+                || stripos($msg, '密码') !== false && stripos($msg, '失败') !== false
+                || stripos($msg, 'Password') !== false && stripos($msg, 'failed') !== false
+            ) {
                 return $this->json(1, '数据库用户名或密码错误');
             }
-            if (stripos($e->getMessage(), 'Connection refused')) {
+            if (stripos($msg, 'Connection refused') !== false) {
                 return $this->json(1, 'Connection refused. 请确认数据库IP端口是否正确，数据库已经启动');
             }
-            if (stripos($e->getMessage(), 'timed out')) {
+            if (stripos($msg, 'timed out') !== false) {
                 return $this->json(1, '数据库连接超时，请确认数据库IP端口是否正确，安全组及防火墙已经放行端口');
             }
-            throw $e;
+            return $this->json(1, $msg);
         }
 
         $tables_to_install = [
@@ -89,6 +97,7 @@ class InstallController extends Base
             'wa_users',
             'wa_uploads',
             'posts',
+            'post_ext',
             'categories',
             'tags',
             'post_author',
@@ -117,6 +126,7 @@ class InstallController extends Base
                 'post_author',
                 'post_category', 
                 'post_tag',
+                'post_ext',
                 'comments',
                 'import_jobs',
                 'media',
@@ -202,6 +212,16 @@ DB_PGSQL_PORT=$port
 DB_PGSQL_DATABASE=$database
 DB_PGSQL_USERNAME=$user
 DB_PGSQL_PASSWORD=$password
+
+# 缓存配置
+CACHE_DRIVER=redis
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+REDIS_PASSWORD=
+#REDIS_DATABASE=1
+MEMCACHED_HOST=127.0.0.1
+MEMCACHED_PORT=11211
+CACHE_STRICT_MODE=false
 EOF;
         file_put_contents(base_path() . '/.env', $env_config);
 
@@ -227,22 +247,32 @@ EOF;
      */
     public function step2(Request $request): Response
     {
-        $username = $request->post('username');
-        $password = $request->post('password');
-        $password_confirm = $request->post('password_confirm');
-        if ($password != $password_confirm) {
-            return $this->json(1, '两次密码不一致');
-        }
-        if (!is_file($config_file = base_path() . '/config/database.php')) {
-            return $this->json(1, '请先完成第一步数据库配置');
-        }
-        $config = include $config_file;
-        $connection = $config['connections']['pgsql'];
-        $pdo = $this->getPdo($connection['host'], $connection['username'], $connection['password'], $connection['port'], $connection['database']);
+        try {
+            $username = $request->post('username');
+            $password = $request->post('password');
+            $password_confirm = $request->post('password_confirm');
+            if ($password != $password_confirm) {
+                return $this->json(1, '两次密码不一致');
+            }
+            if (!is_file($config_file = base_path() . '/config/database.php')) {
+                return $this->json(1, '请先完成第一步数据库配置');
+            }
+            $config = include $config_file;
+            $connection = $config['connections']['pgsql'];
+            $pdo = $this->getPdo($connection['host'], $connection['username'], $connection['password'], $connection['port'], $connection['database']);
 
-        if ($pdo->query('select * from wa_admins')->fetchAll()) {
-            return $this->json(1, '后台已经安装完毕，无法通过此页面创建管理员');
-        }
+            // 前置校验：确保必需表已存在
+            $existsStmt = $pdo->query("SELECT tablename FROM pg_tables WHERE schemaname = 'public'");
+            $existingTables = array_map(static function($row){ return current($row); }, $existsStmt->fetchAll());
+            $requiredTables = ['wa_admins', 'wa_admin_roles', 'wa_rules', 'wa_users'];
+            $missing = array_diff($requiredTables, $existingTables);
+            if (!empty($missing)) {
+                return $this->json(1, '请先完成第一步（SQL未导入成功或安装未完成），缺少表：' . implode(',', $missing));
+            }
+
+            if ($pdo->query('select * from wa_admins')->fetchAll()) {
+                return $this->json(1, '后台已经安装完毕，无法通过此页面创建管理员');
+            }
 
         $smt = $pdo->prepare("insert into wa_admins (username, password, nickname, created_at, updated_at) values (:username, :password, :nickname, :created_at, :updated_at)");
         $time = date('Y-m-d H:i:s');
@@ -280,6 +310,9 @@ EOF;
 
         $request->session()->flush();
         return $this->json(0);
+        } catch (\Throwable $e) {
+            return $this->json(1, $e->getMessage());
+        }
     }
 
     /**

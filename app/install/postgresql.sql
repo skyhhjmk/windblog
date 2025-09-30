@@ -140,21 +140,18 @@ CREATE TABLE IF NOT EXISTS post_author
     id           BIGSERIAL PRIMARY KEY,
     post_id      BIGINT  NOT NULL,
     author_id    INTEGER                  DEFAULT NULL,
-    admin_id     INTEGER                  DEFAULT NULL,
     is_primary   BOOLEAN NOT NULL         DEFAULT false,
     contribution VARCHAR(50)              DEFAULT NULL,
     created_at   TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at   TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (post_id, author_id),
     CONSTRAINT post_author_post_id_foreign FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE,
-    CONSTRAINT post_author_author_id_foreign FOREIGN KEY (author_id) REFERENCES wa_users (id) ON DELETE CASCADE,
-    CONSTRAINT post_author_admin_id_foreign FOREIGN KEY (admin_id) REFERENCES wa_admins (id) ON DELETE CASCADE
+    CONSTRAINT post_author_author_id_foreign FOREIGN KEY (author_id) REFERENCES wa_users (id) ON DELETE CASCADE
 );
 
 COMMENT ON TABLE post_author IS '文章-作者关联表';
 COMMENT ON COLUMN post_author.post_id IS '文章ID';
 COMMENT ON COLUMN post_author.author_id IS '作者ID';
-COMMENT ON COLUMN post_author.admin_id IS '管理员作者ID';
 COMMENT ON COLUMN post_author.is_primary IS '是否主要作者';
 COMMENT ON COLUMN post_author.contribution IS '贡献类型';
 COMMENT ON COLUMN post_author.created_at IS '创建时间';
@@ -565,7 +562,7 @@ CREATE INDEX idx_post_category_category_id ON post_category USING btree (categor
 
 CREATE INDEX idx_post_author_post_id ON post_author USING btree (post_id);
 CREATE INDEX idx_post_author_author_id ON post_author USING btree (author_id);
-CREATE INDEX idx_post_author_admin_id ON post_author USING btree (admin_id);
+
 
 CREATE INDEX idx_links_status ON links USING btree (status);
 CREATE INDEX idx_links_sort_order ON links USING btree (sort_order);
@@ -1576,7 +1573,7 @@ VALUES ('system_config', '{
 INSERT INTO wa_roles
 VALUES (1, '超级管理员', '*', '2022-08-13 16:15:01', '2022-12-23 12:05:07', NULL);
 INSERT INTO links
-VALUES (null, '雨云',
+VALUES (default, '雨云',
         'https://www.rainyun.com/github_?s=blog-sys-ads',
         '超高性价比云服务商，使用优惠码github注册并绑定微信即可获得5折优惠',
         'https://www.rainyun.com/favicon.ico',
