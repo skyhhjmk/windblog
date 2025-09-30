@@ -25,7 +25,68 @@ class InstallController extends Base
      *
      * @var string[]
      */
-    protected $noNeedLogin = ['step1', 'step2'];
+    protected $noNeedLogin = ['step0', 'step1', 'step2'];
+
+    public function step0(Request $request): Response
+    {
+        $checks = [];
+        $missing = [];
+
+        $add = function(string $name, bool $ok, string $message = '') use (&$checks, &$missing) {
+            $checks[] = ['name' => $name, 'ok' => $ok, 'message' => $message];
+            if (!$ok) { $missing[] = $name; }
+        };
+
+        // PHP 版本
+        $php_ok = version_compare(PHP_VERSION, '8.4.0', '>=');
+        $add('php>=8.4', $php_ok, $php_ok ? '' : ('当前PHP版本为 ' . PHP_VERSION));
+
+        // 扩展
+        $exts = ['pdo','pdo_pgsql','pgsql','openssl','json','mbstring','curl','fileinfo','gd','redis'];
+        foreach ($exts as $ext) {
+            $ok = extension_loaded($ext);
+            $add($ext, $ok, $ok ? '' : '未启用/未安装');
+        }
+
+        // 关键函数
+        $disabled = array_map('trim', explode(',', (string)ini_get('disable_functions')));
+        foreach (['proc_open','exec'] as $fn) {
+            $ok = function_exists($fn) && !in_array($fn, $disabled, true);
+            $add($fn, $ok, $ok ? '' : '函数不可用（可能被禁用）');
+        }
+
+        // 目录写权限
+        $upload_dir = base_path() . '/public/uploads';
+        $ok = is_dir($upload_dir) ? is_writable($upload_dir) : is_writable(dirname($upload_dir));
+        $add('public/uploads writable', $ok, $ok ? '' : ('目录不可写：' . $upload_dir));
+
+        // 追加目录权限检查：runtime、logs、public/assets
+        $dirs = [
+            'runtime' => base_path() . '/runtime',
+            'logs' => base_path() . '/runtime/logs',
+            'public/assets' => base_path() . '/public/assets',
+        ];
+        foreach ($dirs as $label => $dir) {
+            $ok = is_dir($dir) ? is_writable($dir) : is_writable(dirname($dir));
+            $add($label . ' writable', $ok, $ok ? '' : ('目录不可写：' . $dir));
+        }
+
+        // 汇总
+        $ok_all = true;
+        foreach ($checks as $c) { if (!$c['ok']) { $ok_all = false; break; } }
+
+        $driverTip = '';
+        if (!extension_loaded('pdo') || !extension_loaded('pdo_pgsql') || !extension_loaded('pgsql')) {
+            $driverTip = '检测到数据库驱动未启用（pdo/pdo_pgsql/pgsql），这会导致“could not find driver”。请安装并启用后重试。';
+        }
+
+        return $this->json($ok_all ? 0 : 1, $driverTip ?: ($ok_all ? '' : '存在未满足的依赖项'), [
+            'ok' => $ok_all,
+            'checks' => $checks,
+            'missing' => $missing,
+            'php_version' => PHP_VERSION,
+        ]);
+    }
 
     /**
      * 设置数据库
@@ -37,6 +98,9 @@ class InstallController extends Base
      */
     public function step1(Request $request): Response
     {
+        if (!(extension_loaded('pdo') && extension_loaded('pdo_pgsql') && extension_loaded('pgsql'))) {
+            return $this->json(1, '缺少数据库驱动（pdo/pdo_pgsql/pgsql）。请安装并启用后重试安装。');
+        }
         $database_config_file = base_path() . '/.env';
         clearstatcache();
         if (is_file($database_config_file)) {
@@ -222,6 +286,18 @@ REDIS_PASSWORD=
 MEMCACHED_HOST=127.0.0.1
 MEMCACHED_PORT=11211
 CACHE_STRICT_MODE=false
+
+# APP_DEBUG=false
+# TWIG_CACHE_ENABLE=true
+# TWIG_CACHE_PATH=runtime/twig_cache
+# TWIG_AUTO_RELOAD=false
+#
+# 默认策略说明：
+# - 当 APP_DEBUG=false（生产环境），默认：启用缓存、禁用 debug、禁用 auto_reload
+# - 当 APP_DEBUG=true（开发环境），默认：关闭缓存、启用 debug、启用 auto_reload
+# - 若设置 TWIG_CACHE_ENABLE，则优先生效（true 启用缓存，false 关闭缓存）
+# - 若设置 TWIG_AUTO_RELOAD，则优先生效（true 开启自动重载，false 关闭）
+# - 缓存目录默认为 runtime/twig_cache，可用 TWIG_CACHE_PATH 覆盖
 EOF;
         file_put_contents(base_path() . '/.env', $env_config);
 
