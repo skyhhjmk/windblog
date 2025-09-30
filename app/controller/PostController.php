@@ -66,8 +66,8 @@ class PostController
         $primaryAuthor = $post->primaryAuthor->first();
         $authorName = $primaryAuthor ? $primaryAuthor->nickname : ($post->authors->first() ? $post->authors->first()->nickname : '未知作者');
         
-        // 动态选择模板（统一返回完整页面，PJAX 前端抽取片段）
-        $viewName = 'index/post';
+        // 动态选择模板：PJAX 返回片段，非 PJAX 返回完整页面
+        $viewName = $isPjax ? 'index/post.content' : 'index/post';
 
         return view($viewName, [
             'page_title' => $post['title'] . ' - ' . blog_config('title', 'WindBlog', true),
