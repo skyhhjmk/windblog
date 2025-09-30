@@ -17,7 +17,7 @@
                     <div class="bg-white rounded-2xl shadow-md sm:shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 group">
                         <div class="p-4 sm:p-6">
                             <h2 class="text-xl sm:text-2xl font-bold text-gray-800 mb-2 group-hover:text-blue-600 transition-colors duration-200">
-                                <a href="/post/{{ post.slug }}.html" target="_blank"
+                                <a href="/post/{{ post.slug }}.html"
                                    class="block tap-highlight">
                                     {{ post.title }}
                                 </a>
@@ -40,7 +40,7 @@
                                 </span>
                                 {% if post.authors|length > 0 and post.authors.first().avatar %}
                                 <span class="flex items-center">
-                                    <img src="{{ post.authors.first().avatar }}" alt="{{ post.authors.first().nickname ?: post.authors.first().username }}" class="w-5 h-5 sm:w-6 sm:h-6 rounded-full mr-1 object-cover">
+                                    <img src="{{ post.authors.first().avatar }}" alt="{{ post.authors.first().nickname ?: post.authors.first().username }}" class="w-5 h-5 sm:w-6 sm:h-6 rounded-full mr-1 object-cover" loading="lazy" decoding="async" fetchpriority="low">
                                 </span>
                                 {% endif %}
                             </div>

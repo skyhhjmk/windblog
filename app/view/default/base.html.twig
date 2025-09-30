@@ -3,11 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <link rel="dns-prefetch" href="//cdn.tailwindcss.com">
+    <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
+    <link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
     <title>{% block title %}{{ page_title|default('风屿雨博客') }}{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css"
           integrity="sha512-DxV+EoADOkOygM4IR9yXP8Sb2qwgidEmeqAEmDKIOfPRQZOWbXCzLC6vjbZyy0vPisbH2SyW27+ddLVCN+OMzQ=="
           crossorigin="anonymous" referrerpolicy="no-referrer"/>
+
+    <!-- 全局引入：Vditor / KaTeX / Mermaid / Pangu，确保 PJAX 后可用 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vditor/3.11.1/index.min.css"
+          integrity="sha512-Tj6qPPqMhdET85Eu0Hy663goieFRcOde8i0J3DT8L+wb0sSDfgzPwoAYW63yijDXFzrzxOSvPuXfjHqL07hVcg=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"/>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/vditor/3.11.1/method.min.js"
+            integrity="sha512-KiKQQ+WpVlIr0T+67GklTdyp7533hnJY9KVOZROBU/dJ8h046F4QinM/kC46ko6P0lxOB0xDo3Rsph2wlsWTOw=="
+            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css"
+          integrity="sha512-fHwaWebuwA7NSF5Qg/af4UeDx9XqUpYpOGgubo3yWu+b2IQR4UeQwbb42Ti7gVAjNtVoI/I9TEoYeu9omwcC6g=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"/>
+    <script async src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"
+            integrity="sha512-LQNxIMR5rXv7o+b1l8+N1EZMfhG7iFZ9HhnbJkTp4zjNr5Wvst75AqUeFDxeRUa7l5vEDyUiAip//r+EFLLCyA=="
+            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <script async src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.9.0/mermaid.min.js"
+            integrity="sha512-OAr6bl1pt/FD0oVcuPzJ9VIMso+HQhHoodVI7mnDst19p8rNkNiraPLsDCYVhit3Mjd6B7AUHFsoDhq3dDeI7g=="
+            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script async src="https://cdnjs.cloudflare.com/ajax/libs/pangu/7.2.0/pangu.umd.js"
+            integrity="sha512-er1ryC6I6mvQLB6cEcyDj9MYKdSXwuvdqFuir5fzcPlzqagv3Swng87sIPcib8Spm4BTIT5PNTmRaMSdM1QVxQ=="
+            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
     <style>
         .blog-container {
             max-width: 1200px;
@@ -201,6 +228,27 @@
             border-radius: 2px;
             font-weight: 700;         /* 加粗 */
         }
+    /* PJAX 顶部进度条 */
+    #pjax-progress {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 3px;
+        width: 0;
+        background: linear-gradient(90deg, #3b82f6, #60a5fa);
+        z-index: 9999;
+        transform-origin: left center;
+        transition: width 0.3s ease;
+        box-shadow: 0 0 8px rgba(59,130,246,0.6), 0 0 3px rgba(96,165,250,0.6);
+    }
+    body.pjax-loading #pjax-progress {
+        width: 85%;
+        transition: width 1.0s ease;
+    }
+    body:not(.pjax-loading) #pjax-progress {
+        width: 0;
+        transition: width 0.2s ease;
+    }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -291,6 +339,7 @@
         </form>
     </div>
 </header>
+<div id="pjax-progress" aria-hidden="true"></div>
 
 <!-- 移动端导航菜单 -->
 <div class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden" id="mobileMenuOverlay">
@@ -343,7 +392,7 @@
 <main class="flex-grow container mx-auto px-4 pt-20 md:pt-24 pb-6 md:pb-8 blog-container">
     <div class="flex flex-col md:flex-row gap-6 md:gap-8">
         <!-- 主内容区域 - 占3/4宽度 -->
-        <div class="w-full md:w-3/4">
+        <div id="pjax-container" class="w-full md:w-3/4">
             {% block content %}{% endblock %}
         </div>
         <!-- 侧边栏 - 占1/4宽度，移动端隐藏 -->
@@ -388,7 +437,63 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
         integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.pjax/2.0.1/jquery.pjax.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 {% block extra_js %}{% endblock %}
+
+<!-- PJAX 初始化 -->
+<script>
+    (function() {
+        if (!window.jQuery || typeof jQuery.fn.pjax !== 'function') return;
+        jQuery(function($) {
+            const selector = 'a[href^="/"]:not([target="_blank"]):not([data-no-pjax])';
+            $(document).pjax(selector, '#pjax-container', {
+                fragment: '#pjax-container',
+                timeout: 8000,
+                scrollTo: 0
+            });
+
+            // 点击即刻触发动画反馈（不等请求发出）
+            $(document).on('click', selector, function() {
+                const bar = document.getElementById('pjax-progress');
+                if (bar) {
+                    bar.style.transition = 'none';
+                    bar.style.width = '0';
+                    // 触发重绘，确保进度条从 0% 开始
+                    void bar.offsetWidth;
+                    bar.style.transition = 'width 0.3s ease';
+                    bar.style.width = '10%';
+                }
+                document.body.classList.add('pjax-loading');
+            });
+
+            $(document).on('pjax:send', function() {
+                const bar = document.getElementById('pjax-progress');
+                if (bar) {
+                    // 确保至少推进到 30%
+                    const current = parseFloat(bar.style.width) || 0;
+                    if (current < 30) bar.style.width = '30%';
+                }
+                document.body.classList.add('pjax-loading');
+            });
+
+            $(document).on('pjax:complete', function() {
+                const __bar = document.getElementById('pjax-progress');
+                if (__bar) {
+                    __bar.style.width = '100%';
+                    setTimeout(() => { __bar.style.width = '0'; }, 200);
+                }
+                document.body.classList.remove('pjax-loading');
+                document.dispatchEvent(new CustomEvent('page:ready'));
+            });
+
+            $(document).on('pjax:error', function() {
+                const bar = document.getElementById('pjax-progress');
+                if (bar) { bar.style.width = '0'; }
+                document.body.classList.remove('pjax-loading');
+            });
+        });
+    })();
+</script>
 
 <script>
 // 移动端菜单功能
@@ -643,5 +748,33 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+
+<script>
+// Service Worker 注册（仅 HTTPS 或本地环境）
+(function() {
+    if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+        window.addEventListener('load', function() {
+            navigator.serviceWorker.register('/sw.js').then(function(reg) {
+                // 可选：新版本就绪时尝试立即启用
+                if (reg.waiting) { reg.waiting.postMessage({ type: 'SKIP_WAITING' }); }
+                reg.addEventListener('updatefound', function() {
+                    const nw = reg.installing;
+                    if (nw) {
+                        nw.addEventListener('statechange', function() {
+                            if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+                                // 新SW已安装，提示或自动刷新策略可在此扩展
+                                // 这里保持静默以最小侵入
+                            }
+                        });
+                    }
+                });
+            }).catch(function(err) {
+                console.warn('SW register failed:', err);
+            });
+        });
+    }
+})();
+</script>
+  <script src="/assets/js/offline-notice.js"></script>
 </body>
 </html>
