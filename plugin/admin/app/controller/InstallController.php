@@ -38,14 +38,48 @@ class InstallController extends Base
         };
 
         // PHP 版本
-        $php_ok = version_compare(PHP_VERSION, '8.4.0', '>=');
-        $add('php>=8.4', $php_ok, $php_ok ? '' : ('当前PHP版本为 ' . PHP_VERSION));
+        $php_ok = version_compare(PHP_VERSION, '8.2.0', '>=');
+        $add('php>=8.2', $php_ok, $php_ok ? '' : ('当前PHP版本为 ' . PHP_VERSION));
 
-        // 扩展
-        $exts = ['pdo','pdo_pgsql','pgsql','openssl','json','mbstring','curl','fileinfo','gd','redis'];
+        // 扩展（必需）
+        $exts = ['pdo','pdo_pgsql','pgsql','openssl','json','mbstring','curl','fileinfo','gd','xmlreader','dom','libxml'];
         foreach ($exts as $ext) {
             $ok = extension_loaded($ext);
             $add($ext, $ok, $ok ? '' : '未启用/未安装');
+        }
+
+        // 扩展（可选）：从 composer.json 动态解析 ext-*
+        $optional_exts = ['redis'];
+        $composer_file = base_path() . '/composer.json';
+        if (is_file($composer_file)) {
+            $json = @json_decode(@file_get_contents($composer_file), true);
+            if (is_array($json)) {
+                $addExts = function(array $arr) use (&$optional_exts) {
+                    foreach ($arr as $k => $_) {
+                        if (is_string($k) && strpos($k, 'ext-') === 0) {
+                            $optional_exts[] = substr($k, 4);
+                        }
+                    }
+                };
+                if (isset($json['suggest']) && is_array($json['suggest'])) {
+                    $addExts($json['suggest']);
+                }
+                if (isset($json['require-dev']) && is_array($json['require-dev'])) {
+                    $addExts($json['require-dev']);
+                }
+                if (isset($json['extra']['optional-extensions']) && is_array($json['extra']['optional-extensions'])) {
+                    foreach ($json['extra']['optional-extensions'] as $e) {
+                        if (is_string($e)) {
+                            $optional_exts[] = ltrim($e, 'ext-');
+                        }
+                    }
+                }
+            }
+        }
+        $optional_exts = array_values(array_unique($optional_exts));
+        foreach ($optional_exts as $ext) {
+            $ok = extension_loaded($ext);
+            $add($ext, $ok, $ok ? '' : '未启用/未安装（可选）');
         }
 
         // 关键函数
@@ -85,6 +119,7 @@ class InstallController extends Base
             'checks' => $checks,
             'missing' => $missing,
             'php_version' => PHP_VERSION,
+            'optional_exts' => $optional_exts,
         ]);
     }
 

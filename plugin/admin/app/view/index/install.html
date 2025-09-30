@@ -14,6 +14,20 @@
                 <div class="layui-card-body" style="padding-top: 40px;">
                     <h1 style="text-align:center;margin: 20px 0 40px">Webman Admin 安装</h1>
 
+                    <!-- 环境依赖检查 -->
+                    <div class="layui-card" style="max-width: 860px;margin: 0 auto 20px;">
+                        <div class="layui-card-header">环境依赖检查</div>
+                        <div class="layui-card-body">
+                            <div id="dep-check">
+                                <div style="margin-bottom:10px;">
+                                    <button type="button" class="pear-btn pear-btn-primary" id="dep-reload">重新检测</button>
+                                </div>
+                                <ul id="dep-list" class="layui-timeline" style="padding-left:10px;"></ul>
+                                <div id="dep-tip" class="layui-text" style="margin-top:8px;color:#ff4d4f;"></div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="layui-carousel" id="stepForm" lay-filter="stepForm" style="margin: 0 auto;">
                         <div carousel-item>
                             <div>
@@ -136,6 +150,99 @@
 
         layui.code();
 
+        // 依赖检测渲染（平铺卡片样式）
+        var __depMissing = [];
+        function renderDeps(res) {
+            __depMissing = Array.isArray(res.data?.missing) ? res.data.missing : [];
+            var checks = res.data?.checks || [];
+
+            // 分组：版本、必需扩展、可选扩展、关键函数、目录权限
+            var requiredExts = ['pdo','pdo_pgsql','pgsql','openssl','json','mbstring','curl','fileinfo','gd','xmlreader','dom','libxml'];
+            var optionalExts = (res.data && Array.isArray(res.data.optional_exts)) ? res.data.optional_exts : ['redis'];
+            var fnNames = ['proc_open','exec'];
+
+            var groups = {
+                '版本': [],
+                '必需扩展': [],
+                '可选扩展': [],
+                '关键函数': [],
+                '目录权限': []
+            };
+
+            for (var i = 0; i < checks.length; i++) {
+                var c = checks[i], name = c.name;
+                if (name.indexOf('php>=') === 0) {
+                    groups['版本'].push(c);
+                } else if (requiredExts.indexOf(name) >= 0) {
+                    groups['必需扩展'].push(c);
+                } else if (optionalExts.indexOf(name) >= 0) {
+                    groups['可选扩展'].push(c);
+                } else if (fnNames.indexOf(name) >= 0) {
+                    groups['关键函数'].push(c);
+                } else if (name.indexOf('writable') >= 0) {
+                    groups['目录权限'].push(c);
+                } else {
+                    groups['必需扩展'].push(c);
+                }
+            }
+
+            function tileCard(it) {
+                var ok = !!it.ok;
+                var bg = ok ? '#52C41A' : '#ff4d4f';
+                var bgSoft = ok ? '#f6ffed' : '#fff2f0';
+                var msg = it.message ? (' - ' + it.message) : '';
+                return (
+                    '<div class="layui-col-xs12 layui-col-sm6 layui-col-md4">' +
+                        '<div class="layui-card" style="border: 1px solid '+bg+'; background: '+bgSoft+';">' +
+                            '<div class="layui-card-body" style="display:flex;align-items:center;gap:14px;">' +
+                                '<span class="layui-badge" style="background:'+bg+';color:#fff;min-width:92px;height:28px;line-height:28px;font-size:14px;text-align:center;">' + (ok ? '通过' : '缺失') + '</span>' +
+                                '<div>' +
+                                    '<div style="font-weight:600;font-size:14px;margin-bottom:4px;color:#333;">'+ it.name +'</div>' +
+                                    '<div style="color:'+bg+';font-size:13px;">'+ (ok ? '已满足' : '不可用') + msg +'</div>' +
+                                '</div>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>'
+                );
+            }
+
+            function section(title, items) {
+                var html = '';
+                html += '<div class="layui-card" style="margin-bottom:12px;">';
+                html += '<div class="layui-card-header">'+ title +'</div>';
+                html += '<div class="layui-card-body">';
+                html += '<div class="layui-row layui-col-space10">';
+                for (var j = 0; j < items.length; j++) {
+                    html += tileCard(items[j]);
+                }
+                html += '</div></div></div>';
+                return html;
+            }
+
+            var html = '';
+            html += section('版本', groups['版本']);
+            html += section('必需扩展', groups['必需扩展']);
+            html += section('可选扩展', groups['可选扩展']);
+            html += section('关键函数', groups['关键函数']);
+            html += section('目录权限', groups['目录权限']);
+
+            $('#dep-list').html(html);
+
+            // 额外提示 could not find driver 根因
+            var tip = '';
+            if (__depMissing.includes('pdo') || __depMissing.includes('pdo_pgsql') || __depMissing.includes('pgsql')) {
+                tip = '检测到数据库驱动未启用（pdo/pdo_pgsql/pgsql），将导致“could not find driver”。请安装并启用后重试。';
+            }
+            $('#dep-tip').text(tip);
+        }
+        function loadDeps() {
+            $.getJSON('/app/admin/install/step0', function(res) {
+                renderDeps(res);
+            });
+        }
+        $('#dep-reload').on('click', function(){ loadDeps(); });
+        loadDeps();
+
         step.render({
             elem: "#stepForm",
             filter: "stepForm",
@@ -152,6 +259,11 @@
         });
 
         form.on("submit(formStep)", function(data) {
+            // 前置关键驱动校验（前端阻断）
+            if (__depMissing && (__depMissing.includes('pdo') || __depMissing.includes('pdo_pgsql') || __depMissing.includes('pgsql'))) {
+                layui.popup.failure('缺少数据库驱动（pdo/pdo_pgsql/pgsql）。请安装并启用后重试。');
+                return false;
+            }
             let loading = layer.load();
             $.ajax({
                 url: "/app/admin/install/step1",
