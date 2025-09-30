@@ -96,5 +96,11 @@ return [
             'verify_ssl' => false, // 是否验证SSL证书，设置为false可跳过SSL验证
             'ca_cert_path' => null // CA证书路径，如果为空则尝试使用系统默认证书
         ]
+    ],
+    // 友链监控处理进程
+    'link_monitor' => [
+        'handler' => app\process\LinkMonitor::class,
+        'reloadable' => false,
+        'constructor' => []
     ]
 ];

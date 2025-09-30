@@ -13,6 +13,10 @@ use Throwable;
 class MQService
 {
     /**
+     * @var bool LinkMonitor初始化状态
+     */
+    private static $initializedLinkMonitor = false;
+    /**
      * @var AMQPStreamConnection|null
      */
     private static $connection = null;
@@ -45,6 +49,77 @@ class MQService
         }
 
         return self::$connection;
+    }
+
+    /**
+     * 初始化友链监控队列和交换机（一次性执行）
+     */
+    public static function initializeLinkMonitorQueues(): void
+    {
+        if (self::$initializedLinkMonitor) {
+            return;
+        }
+
+        try {
+            $channel = self::getChannel();
+
+            // 主交换机/队列/路由键
+            $exchange = blog_config('rabbitmq_link_monitor_exchange', 'link_monitor_exchange', true);
+            $routingKey = blog_config('rabbitmq_link_monitor_routing_key', 'link_monitor', true);
+            $queueName = blog_config('rabbitmq_link_monitor_queue', 'link_monitor_queue', true);
+
+            // 死信交换机与队列（复用全局配置）
+            $dlxExchange = blog_config('rabbitmq_dlx_exchange', 'dlx_exchange', true);
+            $dlxQueue = blog_config('rabbitmq_dlx_queue', 'dlx_queue', true);
+
+            $channel->exchange_declare($dlxExchange, 'direct', false, true, false);
+            $channel->queue_declare($dlxQueue, false, true, false, false);
+            $channel->queue_bind($dlxQueue, $dlxExchange, $dlxQueue);
+
+            $channel->exchange_declare($exchange, 'direct', false, true, false);
+            $args = [
+                'x-dead-letter-exchange' => ['S', $dlxExchange],
+                'x-dead-letter-routing-key' => ['S', $dlxQueue]
+            ];
+            try {
+                $channel->queue_declare($queueName, false, true, false, false, false, $args);
+            } catch (\Exception $e) {
+                \support\Log::warning('link_monitor 队列声明失败，尝试无参重建: ' . $e->getMessage());
+                $channel->queue_declare($queueName, false, true, false, false, false);
+            }
+            $channel->queue_bind($queueName, $exchange, $routingKey);
+
+            self::$initializedLinkMonitor = true;
+            \support\Log::debug('LinkMonitor queues initialized');
+        } catch (Throwable $e) {
+            \support\Log::error('初始化LinkMonitor队列失败: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 发送消息到友链监控队列
+     */
+    public static function sendToLinkMonitor(array $data): bool
+    {
+        try {
+            self::initializeLinkMonitorQueues();
+            $channel = self::getChannel();
+
+            $exchange = blog_config('rabbitmq_link_monitor_exchange', 'link_monitor_exchange', true);
+            $routingKey = blog_config('rabbitmq_link_monitor_routing_key', 'link_monitor', true);
+
+            $message = new AMQPMessage(
+                json_encode($data, JSON_UNESCAPED_UNICODE),
+                ['delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT]
+            );
+
+            $channel->basic_publish($message, $exchange, $routingKey);
+            \support\Log::debug('Link monitor message sent: ' . json_encode($data));
+            return true;
+        } catch (Throwable $e) {
+            \support\Log::error('发送LinkMonitor消息失败: ' . $e->getMessage());
+            return false;
+        }
     }
 
     /**

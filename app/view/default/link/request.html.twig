@@ -120,6 +120,32 @@
                     </div>
                 </div>
 
+                <!-- CAT3* 快速互联 -->
+                <div class="border border-green-200 rounded-lg p-4 mb-8 bg-green-50">
+                    <div class="flex items-start">
+                        <i class="fas fa-plug text-green-500 text-xl mr-3 mt-1"></i>
+                        <div class="flex-1">
+                            <h3 class="text-lg font-semibold text-green-800 mb-2">快速互联（CAT3*）</h3>
+                            <p class="text-gray-600 text-sm mb-3">
+                                如果对方站点支持风屿互联协议，请填写其接收 API（peer_api），系统将自动向对方发起友链申请并在双方站点创建记录。
+                            </p>
+                            <div class="flex flex-col sm:flex-row gap-3">
+                                <input type="url"
+                                       id="peer_api"
+                                       class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-200"
+                                       placeholder="https://peer.example.com/link/connect/receive"
+                                       pattern="https?://.+">
+                                <button id="quickConnectBtn"
+                                        class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors duration-200">
+                                    一键互联
+                                </button>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-2">提示：将复用你在下方表单中已填写的基本信息一并发送给对方。</p>
+                            <div id="quickConnectResult" class="hidden mt-3 p-3 rounded text-sm"></div>
+                        </div>
+                    </div>
+                </div>
+
                 <form id="linkRequestForm" class="space-y-6">
                     <input type="hidden" name="_link_request_token" value="{{ csrf }}">
                     <div>
@@ -375,6 +401,65 @@
                 }, 3000);
             }
         });
+
+        // CAT3* 快速互联：向本机 /link/connect/apply 发起
+        (function () {
+            const btn = document.getElementById('quickConnectBtn');
+            if (!btn) return;
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                const resBox = document.getElementById('quickConnectResult');
+                const peerApi = (document.getElementById('peer_api') || {}).value || '';
+                if (!peerApi || !/^https?:\/\//i.test(peerApi)) {
+                    showQuickResult(resBox, false, '请输入有效的 peer_api 地址');
+                    return;
+                }
+                // 复用已填写信息
+                const name = (document.getElementById('name') || {}).value || '';
+                const url = (document.getElementById('url') || {}).value || '';
+                const icon = (document.getElementById('icon') || {}).value || '';
+                const description = (document.getElementById('description') || {}).value || '';
+                const callback_url = (document.getElementById('callback_url') || {}).value || '';
+
+                const payload = {
+                    peer_api: peerApi,
+                    site: {
+                        name,
+                        url,
+                        icon,
+                        description,
+                        callback_url
+                    }
+                };
+
+                fetch('/link/connect/apply', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data && data.code === 0) {
+                            showQuickResult(resBox, true, data.msg || '已发起互联申请');
+                        } else {
+                            showQuickResult(resBox, false, (data && data.msg) ? data.msg : '互联申请失败');
+                        }
+                    })
+                    .catch(() => {
+                        showQuickResult(resBox, false, '互联申请请求失败，请稍后重试');
+                    });
+
+                function showQuickResult(el, ok, text) {
+                    if (!el) return;
+                    el.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
+                    el.classList.add(ok ? 'bg-green-100' : 'bg-red-100', ok ? 'text-green-700' : 'text-red-700');
+                    el.innerHTML = (ok ? '<i class="fas fa-check-circle mr-2"></i>' : '<i class="fas fa-exclamation-circle mr-2"></i>') + text;
+                    setTimeout(() => el.classList.add('hidden'), 4000);
+                }
+            });
+        })();
 
         // 表单提交处理
         document.getElementById('linkRequestForm').addEventListener('submit', function (e) {

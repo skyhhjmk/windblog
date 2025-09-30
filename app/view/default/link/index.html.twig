@@ -8,12 +8,20 @@
         <div class="text-center mb-12 animate-fade-in-down">
             <h1 class="text-4xl md:text-5xl font-bold text-gray-800 mb-4">{{ page_title|default('风屿雨博客') }}</h1>
             <p class="text-gray-600 text-lg md:text-xl">欢迎来到链接广场，这里汇聚了优质的网站资源</p>
-            <div class="mt-4">
+            <div class="mt-4 flex items-center justify-center gap-3">
                 <a href="/link/request" 
                    class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200">
                     <i class="fas fa-link mr-2"></i>
                     申请友链
                 </a>
+                <div class="inline-flex items-center text-sm">
+                    <label for="linkSortSelect" class="mr-2 text-gray-600">排序</label>
+                    <select id="linkSortSelect" class="px-2 py-1 border border-gray-300 rounded">
+                        <option value="default">默认</option>
+                        <option value="protocol">协议级别</option>
+                        <option value="score">审核评分</option>
+                    </select>
+                </div>
             </div>
         </div>
 
@@ -21,7 +29,9 @@
         {% if links|length > 0 %}
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {% for link in links %}
-                    <div class="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 group">
+                    <div class="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 group"
+                         data-protocol="{{ link.custom_fields.protocol ?? link.custom_fields.protocol_level ?? '' }}"
+                         data-score="{{ (link.custom_fields.auto_audit.score ?? 0) }}">
                         <div class="p-6">
                             <div class="flex items-start mb-4">
                                 <!-- 网站图标占位 -->
@@ -36,9 +46,20 @@
                                             {{ link.name|length > 20 ? link.name|slice(0, 20) ~ '...' : link.name }}
                                         </a>
                                     </h2>
-                                    <div class="flex items-center text-gray-500 text-xs">
-                                        <i class="far fa-calendar-alt mr-1"></i>
-                                        {{ link.created_at|date('Y-m-d') }}
+                                    <div class="flex items-center text-gray-500 text-xs gap-2 flex-wrap">
+                                        <span class="inline-flex items-center">
+                                            <i class="far fa-calendar-alt mr-1"></i>
+                                            {{ link.created_at|date('Y-m-d') }}
+                                        </span>
+                                        {% set _protocol = link.custom_fields.protocol ?? link.custom_fields.protocol_level ?? '' %}
+                                        {% set _peer_status = link.custom_fields.peer_status ?? (link.status ? 'established' : (link.is_pending ? 'pending' : '')) %}
+                                        {% if _protocol %}
+                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-purple-100 text-purple-700">协议 {{ _protocol }}</span>
+                                        {% endif %}
+                                        {% if _peer_status %}
+                                            {% set _color = _peer_status == 'established' ? 'green' : (_peer_status == 'waiting' ? 'yellow' : 'gray') %}
+                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-{{ _color }}-100 text-{{ _color }}-700">{{ _peer_status }}</span>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>
@@ -138,18 +159,52 @@
     </style>
 
     <script>
-        // 添加悬停效果增强
+        // 添加悬停效果增强 + 客户端排序
         document.addEventListener('DOMContentLoaded', function() {
             const linkCards = document.querySelectorAll('.group');
             linkCards.forEach(card => {
                 card.addEventListener('mouseenter', function() {
                     this.style.zIndex = '10';
                 });
-                
                 card.addEventListener('mouseleave', function() {
                     this.style.zIndex = '1';
                 });
             });
+
+            const sortSelect = document.getElementById('linkSortSelect');
+            if (sortSelect) {
+                sortSelect.addEventListener('change', function() {
+                    const mode = this.value;
+                    const grid = document.querySelector('.grid');
+                    if (!grid) return;
+                    const items = Array.from(grid.children);
+                    const protocolRank = { 'CAT5': 5, 'CAT4': 4, 'CAT3': 3, 'CAT2': 2, 'CAT1': 1 };
+
+                    const getProtocolWeight = (el) => {
+                        const p = (el.getAttribute('data-protocol') || '').toUpperCase();
+                        // 兼容如 "CAT3E" 取前3位
+                        const key = p.startsWith('CAT') ? p.slice(0, 4).replace(/[^A-Z0-9]/g, '').replace(/([A-Z0-9]{4}).*/, '$1').slice(0,4) : p;
+                        return protocolRank[key] || 0;
+                    };
+                    const getScore = (el) => parseInt(el.getAttribute('data-score') || '0', 10) || 0;
+
+                    let sorted = items.slice();
+                    if (mode === 'protocol') {
+                        sorted.sort((a, b) => getProtocolWeight(b) - getProtocolWeight(a));
+                    } else if (mode === 'score') {
+                        sorted.sort((a, b) => getScore(b) - getScore(a));
+                    } else {
+                        // 默认恢复到原始顺序（按出现顺序）
+                        sorted = items;
+                    }
+
+                    // 重新附加到容器以改变顺序
+                    sorted.forEach(el => grid.appendChild(el));
+                });
+                // 默认按协议级别排序一次
+                sortSelect.value = 'protocol';
+                sortSelect.dispatchEvent(new Event('change'));
+            }
         });
         
         function jumpToPage(maxPage) {

@@ -15,15 +15,24 @@
 
                     <div>
                         <h1 class="text-3xl font-bold text-gray-800 mb-2">{{ link.name }}</h1>
-                        <div class="flex items-center text-gray-500 text-sm">
-                        <span class="mr-4 flex items-center">
-                            <i class="far fa-calendar-alt mr-1"></i>
-                            {{ link.created_at|date('Y-m-d H:i') }}
-                        </span>
+                        <div class="flex items-center text-gray-500 text-sm gap-2 flex-wrap">
+                            <span class="mr-2 flex items-center">
+                                <i class="far fa-calendar-alt mr-1"></i>
+                                {{ link.created_at|date('Y-m-d H:i') }}
+                            </span>
                             <span class="flex items-center">
-                            <i class="fas fa-mouse-pointer mr-1"></i>
-                            点击跳转
-                        </span>
+                                <i class="fas fa-mouse-pointer mr-1"></i>
+                                点击跳转
+                            </span>
+                            {% set _protocol = link.custom_fields.protocol ?? link.custom_fields.protocol_level ?? '' %}
+                            {% set _peer_status = link.custom_fields.peer_status ?? (link.status ? 'established' : (link.is_pending ? 'pending' : '')) %}
+                            {% if _protocol %}
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-purple-100 text-purple-700">协议 {{ _protocol }}</span>
+                            {% endif %}
+                            {% if _peer_status %}
+                                {% set _color = _peer_status == 'established' ? 'green' : (_peer_status == 'waiting' ? 'yellow' : 'gray') %}
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-{{ _color }}-100 text-{{ _color }}-700">{{ _peer_status }}</span>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -36,6 +45,38 @@
                             <i class="fas fa-external-link-alt mr-2"></i>
                             访问网站
                         </a>
+                    </div>
+                {% endif %}
+
+                {# 检测/反链状态简要信息 #}
+                {% set _monitor = link.custom_fields.monitor ?? null %}
+                {% set _audit = link.custom_fields.auto_audit ?? null %}
+                {% if _monitor or _audit %}
+                    <div class="mt-4 flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-2 sm:space-y-0 text-sm">
+                        {% if _monitor %}
+                            <span class="inline-flex items-center px-2 py-1 rounded bg-gray-100 text-gray-700">
+                                <i class="fas fa-heartbeat mr-2 text-{{ _monitor.ok ? 'green' : 'red' }}-600"></i>
+                                可用性：{{ _monitor.ok ? '正常' : '异常' }}
+                            </span>
+                            {% if _monitor.backlink is defined %}
+                                <span class="inline-flex items-center px-2 py-1 rounded bg-gray-100 text-gray-700">
+                                    <i class="fas fa-link mr-2 text-{{ _monitor.backlink.found ? 'green' : 'gray' }}-600"></i>
+                                    反链：{{ _monitor.backlink.found ? '已发现' : '未发现' }}（{{ _monitor.backlink.count|default(0) }}）
+                                </span>
+                            {% endif %}
+                            {% if _monitor.time %}
+                                <span class="inline-flex items-center px-2 py-1 rounded bg-gray-100 text-gray-700">
+                                    <i class="far fa-clock mr-2"></i>
+                                    最近监控：{{ _monitor.time }}
+                                </span>
+                            {% endif %}
+                        {% endif %}
+                        {% if _audit %}
+                            <span class="inline-flex items-center px-2 py-1 rounded bg-purple-100 text-purple-700">
+                                <i class="fas fa-check-circle mr-2"></i>
+                                自动审核分：{{ _audit.score }}{% if _audit.threshold is defined %} / 阈值 {{ _audit.threshold }}{% endif %}
+                            </span>
+                        {% endif %}
                     </div>
                 {% endif %}
             </div>

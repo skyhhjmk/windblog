@@ -124,6 +124,15 @@
                 </div>
             </div>
 
+            <!-- 对方接收API（peer_api） -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">对方API</label>
+                <div class="layui-input-block">
+                    <input type="text" name="peer_api" placeholder="https://peer.example.com/link/connect/receive" class="layui-input" lay-verify="url">
+                    <div class="layui-form-mid layui-word-aux">用于CAT5推送与CAT3*对接，保存到 custom_fields.peer_api</div>
+                </div>
+            </div>
+
             <!-- 自定义字段 -->
             <div class="layui-form-item">
                 <label class="layui-form-label">自定义字段</label>
@@ -182,8 +191,17 @@
                         // 处理自定义字段
                         if(link.custom_fields && typeof link.custom_fields === 'object'){
                             $('textarea[name="custom_fields"]').val(JSON.stringify(link.custom_fields, null, 2));
+                            if (link.custom_fields.peer_api) {
+                                $('input[name="peer_api"]').val(link.custom_fields.peer_api);
+                            }
                         } else if(link.custom_fields) {
                             $('textarea[name="custom_fields"]').val(link.custom_fields);
+                            try {
+                                var _tmp = JSON.parse(link.custom_fields);
+                                if (_tmp.peer_api) {
+                                    $('input[name="peer_api"]').val(_tmp.peer_api);
+                                }
+                            } catch (e) {}
                         } else {
                             $('textarea[name="custom_fields"]').val('');
                         }
@@ -292,15 +310,26 @@
             data.field.status = data.field.status === 'on';
             data.field.show_url = data.field.show_url === 'on';
             
-            // 验证自定义字段JSON格式
-            if(data.field.custom_fields && data.field.custom_fields.trim() !== '') {
-                try {
-                    JSON.parse(data.field.custom_fields);
-                } catch (e) {
-                    layer.close(loading);
-                    layer.msg('自定义字段格式错误：请输入有效的JSON格式', {icon: 2});
-                    return false;
+            // 合并 peer_api 到 custom_fields
+            try {
+                var cf = {};
+                if (data.field.custom_fields && data.field.custom_fields.trim() !== '') {
+                    cf = JSON.parse(data.field.custom_fields);
                 }
+                if (data.field.peer_api && data.field.peer_api.trim() !== '') {
+                    cf.peer_api = data.field.peer_api.trim();
+                } else if (cf.peer_api) {
+                    // 若输入为空则保留原值，或按需清空（保持原值更安全）
+                }
+                if (Object.keys(cf).length > 0) {
+                    data.field.custom_fields = JSON.stringify(cf);
+                } else {
+                    data.field.custom_fields = '';
+                }
+            } catch (e) {
+                layer.close(loading);
+                layer.msg('自定义字段格式错误：请输入有效的JSON格式', {icon: 2});
+                return false;
             }
             
             $.ajax({

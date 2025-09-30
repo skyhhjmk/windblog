@@ -8,6 +8,7 @@ use Exception;
 use support\Request;
 use support\Response;
 use Throwable;
+use app\service\MQService;
 
 class LinkController extends Base
 {
@@ -275,6 +276,11 @@ class LinkController extends Base
             if ($saved) {
                 // 清除相关缓存
                 $this->clearLinkCache();
+
+                // 若状态为已启用（审核通过），自动触发CAT5扩展信息推送（静默）
+                if ($link->status) {
+                    try { $this->pushExtendedInfoInternal($link); } catch (\Throwable $e) { \support\Log::warning('CAT5 auto push on save failed: '.$e->getMessage()); }
+                }
 
                 // 返回更新后的数据
                 $responseData = [
@@ -586,6 +592,8 @@ class LinkController extends Base
                     $link->status = $this->parseBooleanForPostgres(true);
                     if ($link->save()) {
                         $count++;
+                        // 审核通过后自动静默推送扩展信息
+                        try { $this->pushExtendedInfoInternal($link); } catch (\Throwable $e) { \support\Log::warning('CAT5 auto push(batch) failed: '.$e->getMessage()); }
                     }
                 }
             }
@@ -1134,5 +1142,225 @@ class LinkController extends Base
         }
         
         return false;
+    }
+
+    /**
+     * CAT2: 友链监控（按ID或URL检测）
+     * POST: ids[]=1&ids[]=2 或 urls[]=https://... 
+     */
+    public function monitor(Request $request): Response
+    {
+        $ids = (array)$request->post('ids', []);
+        $urls = (array)$request->post('urls', []);
+        $myDomain = blog_config('site_url', '', true);
+
+        $targets = [];
+        if (!empty($ids)) {
+            $links = Link::whereIn('id', $ids)->get();
+            foreach ($links as $l) {
+                $targets[] = ['id' => $l->id, 'url' => $l->url, 'name' => $l->name];
+            }
+        }
+        foreach ($urls as $u) {
+            if (is_string($u) && $u !== '') {
+                $targets[] = ['id' => null, 'url' => $u, 'name' => ''];
+            }
+        }
+
+        $accepted = 0;
+        foreach ($targets as $t) {
+            if (!filter_var($t['url'], FILTER_VALIDATE_URL)) {
+                continue;
+            }
+            $payload = [
+                'link_id' => $t['id'],
+                'url' => $t['url'],
+                'name' => $t['name'],
+                'my_domain' => $myDomain,
+                'trigger' => 'admin_monitor',
+                'timestamp' => time(),
+            ];
+            try {
+                if (MQService::sendToLinkMonitor($payload)) {
+                    $accepted++;
+                }
+            } catch (\Throwable $e) {
+                \support\Log::warning('enqueue link monitor failed: '.$e->getMessage());
+            }
+        }
+
+        return $this->success('任务已入队', [
+            'accepted' => $accepted,
+            'total' => count($targets)
+        ])->withHeaders([
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            'Pragma' => 'no-cache',
+            'Expires' => '0'
+        ]);
+    }
+
+    /**
+     * CAT4: 自动审核并计算优先级
+     * 根据反链与页面语义评分，达阈值则通过并设置排序
+     */
+    public function autoAudit(Request $request, int $id): Response
+    {
+        $link = Link::find($id);
+        if (!$link) {
+            return $this->fail('链接不存在');
+        }
+
+        $myDomain = blog_config('site_url', '', true);
+        if (empty($myDomain)) {
+            return $this->fail('未配置本站域名(site_url)');
+        }
+
+        $fetch = $this->fetchWebContent($link->url);
+        if (!$fetch['success']) {
+            return $this->fail('目标不可访问：' . $fetch['error']);
+        }
+        $html = $fetch['html'];
+        $backlink = $this->checkBacklink($html, $myDomain, $link->url);
+
+        $score = $this->scoreBacklink($backlink, $html);
+        // 阈值可配置：link_auto_audit_threshold（默认50）；排序=1000-得分（越前）
+        $threshold = (int)blog_config('link_auto_audit_threshold', 50, true);
+        $pass = $score >= $threshold;
+
+        if ($pass) {
+            $link->status = true;
+            // 只在默认排序时根据评分前置
+            if ((int)$link->sort_order === 999) {
+                $link->sort_order = max(1, 1000 - $score);
+            }
+            $link->setCustomField('auto_audit', [
+                'score' => $score,
+                'time' => date('Y-m-d H:i:s')
+            ]);
+            $link->save();
+            $this->clearLinkCache();
+        }
+
+        return $this->success('自动审核完成', [
+            'id' => $link->id,
+            'score' => $score,
+            'approved' => $pass,
+            'sort_order' => $link->sort_order,
+            'status' => $link->status
+        ]);
+    }
+
+    /**
+     * CAT5: 已建立关系后静默推送扩展信息
+     * 若存在 custom_fields.peer_api 或 callback_url 则POST推送
+     */
+    public function pushExtendedInfo(Request $request, int $id): Response
+    {
+        $link = Link::find($id);
+        if (!$link) {
+            return $this->fail('链接不存在');
+        }
+        if (!$link->status) {
+            return $this->fail('尚未建立友链关系');
+        }
+        try {
+            $ok = $this->pushExtendedInfoInternal($link);
+            if (!$ok['success']) {
+                return $this->fail('推送失败：' . $ok['error']);
+            }
+            return $this->success('推送完成', [
+                'peer_api' => $ok['peer_api'] ?? '',
+                'status' => 'ok'
+            ]);
+        } catch (\Throwable $e) {
+            return $this->fail('推送异常：' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 内部静默推送（供审核通过后自动触发）
+     */
+    private function pushExtendedInfoInternal(Link $link): array
+    {
+        $peerApi = $link->getCustomField('peer_api', '') ?: ($link->callback_url ?? '');
+        if (empty($peerApi)) {
+            return ['success' => false, 'error' => '未配置对方接收API'];
+        }
+        $payload = [
+            'type' => 'wind_connect_push',
+            'site' => [
+                'name' => blog_config('title', 'WindBlog', true),
+                'url' => blog_config('site_url', '', true),
+                'description' => blog_config('description', '', true),
+                'icon' => blog_config('favicon', '', true),
+                'protocol' => 'CAT5',
+                'version' => '1.0'
+            ],
+            'link' => [
+                'name' => $link->name,
+                'url' => $link->url,
+                'icon' => $link->icon,
+                'description' => $link->description,
+                'tags' => $link->getCustomField('tags', [])
+            ],
+            'timestamp' => time()
+        ];
+        $res = $this->httpPostJson($peerApi, $payload);
+        if ($res['success']) {
+            $link->setCustomField('peer_last_push', date('Y-m-d H:i:s'));
+            $link->save();
+            return ['success' => true, 'peer_api' => $peerApi];
+        }
+        return ['success' => false, 'error' => $res['error'] ?? 'unknown'];
+    }
+
+    /**
+     * 反链评分：存在反链基础分；包含“友链/links/friend”等语义包裹再加分；出现多次再加分
+     */
+    private function scoreBacklink(array $backlink, string $html): int
+    {
+        $score = 0;
+        if ($backlink['found'] ?? false) {
+            $score += 40;
+            $count = (int)($backlink['link_count'] ?? 1);
+            $score += min(20, $count * 5);
+        }
+        // 语义加权：section/container含friend/links等
+        if (preg_match('/(friend|links|友情链接|友链)/i', $html)) {
+            $score += 20;
+        }
+        // 主页加载速度（可选，已有性能检测返回给前端展示，不直接计入）
+        return min(100, $score);
+    }
+
+    /**
+     * 简易JSON POST（禁用SSL验证，遵循项目记忆）
+     */
+    private function httpPostJson(string $url, array $payload): array
+    {
+        try {
+            $opts = [
+                'http' => [
+                    'method' => 'POST',
+                    'timeout' => 30,
+                    'header' => "Content-Type: application/json
+
+",
+                    'content' => json_encode($payload, JSON_UNESCAPED_UNICODE)
+                ],
+                'ssl' => [
+                    'verify_peer' => false,
+                    'verify_peer_name' => false
+                ]
+            ];
+            $context = stream_context_create($opts);
+            $result = @file_get_contents($url, false, $context);
+            if ($result === false) {
+                return ['success' => false, 'error' => '请求失败'];
+            }
+            return ['success' => true, 'body' => (string)$result];
+        } catch (\Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
     }
 }

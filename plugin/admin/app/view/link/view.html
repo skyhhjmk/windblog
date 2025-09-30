@@ -19,120 +19,149 @@
             <div class="layui-form-item">
                 <label class="layui-form-label">链接名称</label>
                 <div class="layui-input-block">
-                    <input type="text" name="name" value="{{$link.name}}" class="layui-input" readonly>
+                    <input type="text" name="name" id="field_name" value="" class="layui-input" readonly>
                 </div>
             </div>
 
             <div class="layui-form-item">
                 <label class="layui-form-label">链接地址</label>
                 <div class="layui-input-block">
-                    <input type="text" name="url" value="{{$link.url}}" class="layui-input" readonly>
+                    <input type="text" name="url" id="field_url" value="" class="layui-input" readonly>
                 </div>
             </div>
 
             <div class="layui-form-item">
                 <label class="layui-form-label">链接描述</label>
                 <div class="layui-input-block">
-                    <textarea name="description" class="layui-textarea" readonly>{{$link.description}}</textarea>
+                    <textarea name="description" id="field_description" class="layui-textarea" readonly></textarea>
                 </div>
             </div>
 
             <div class="layui-form-item">
                 <label class="layui-form-label">网站图标</label>
                 <div class="layui-input-block">
-                    {{if $link.icon}}
-                    <img src="{{$link.icon}}" style="max-width: 32px; max-height: 32px; margin-right: 10px;">
-                    <input type="text" name="icon" value="{{$link.icon}}" class="layui-input" style="width: calc(100% - 50px); display: inline-block;" readonly>
-                    {{else}}
-                    <input type="text" name="icon" value="无" class="layui-input" readonly>
-                    {{/if}}
+                    <img id="icon_img" src="" style="max-width: 32px; max-height: 32px; margin-right: 10px; display:none;">
+                    <input type="text" name="icon" id="field_icon" value="" class="layui-input" style="width: calc(100% - 50px); display: inline-block;" readonly>
                 </div>
             </div>
 
             <div class="layui-form-item">
                 <label class="layui-form-label">排序权重</label>
                 <div class="layui-input-block">
-                    <input type="number" name="sort_order" value="{{$link.sort_order}}" class="layui-input" readonly>
+                    <input type="number" name="sort_order" id="field_sort_order" value="" class="layui-input" readonly>
                 </div>
             </div>
 
             <div class="layui-form-item">
                 <label class="layui-form-label">状态</label>
                 <div class="layui-input-block">
-                    {{if $link.status}}
-                    <input type="text" value="已启用" class="layui-input" style="color: #52c41a;" readonly>
-                    {{else}}
-                    <input type="text" value="已禁用" class="layui-input" style="color: #f5222d;" readonly>
-                    {{/if}}
+                    <input type="text" id="field_status" value="" class="layui-input" readonly>
                 </div>
             </div>
+
+            <!-- 对等状态（peer_status） -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">对等状态</label>
+                <div class="layui-input-block">
+                    <input type="text" id="peer_status_input" value="未设置" class="layui-input" readonly>
+                </div>
+            </div>
+
+            <!-- 对方API（peer_api） -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">对方API</label>
+                <div class="layui-input-block">
+                    <div class="layui-input-inline" style="width:calc(100% - 120px);">
+                        <input type="text" id="peer_api_input" class="layui-input" readonly placeholder="未设置">
+                    </div>
+                    <button type="button" class="layui-btn layui-btn-sm" id="copy_peer_api">复制</button>
+                </div>
+            </div>
+
+            <!-- 对方API单独块（已合并至对等状态行，保留为空以避免重复） -->
 
             <div class="layui-form-item">
                 <label class="layui-form-label">打开方式</label>
                 <div class="layui-input-block">
-                    {{if $link.target == '_blank'}}
-                    <input type="text" value="新窗口打开" class="layui-input" readonly>
-                    {{else}}
-                    <input type="text" value="当前窗口打开" class="layui-input" readonly>
-                    {{/if}}
+                    <input type="text" id="field_target" value="" class="layui-input" readonly>
                 </div>
             </div>
 
             <div class="layui-form-item">
                 <label class="layui-form-label">跳转方式</label>
                 <div class="layui-input-block">
-                    {{if $link.redirect_type == 'direct'}}
-                    <input type="text" value="直接跳转" class="layui-input" readonly>
-                    {{else if $link.redirect_type == 'goto'}}
-                    <input type="text" value="中转页跳转" class="layui-input" readonly>
-                    {{else if $link.redirect_type == 'iframe'}}
-                    <input type="text" value="内嵌页面" class="layui-input" readonly>
-                    {{else if $link.redirect_type == 'info'}}
-                    <input type="text" value="详情页" class="layui-input" readonly>
-                    {{/if}}
+                    <input type="text" id="field_redirect_type" value="" class="layui-input" readonly>
                 </div>
             </div>
 
             <div class="layui-form-item">
                 <label class="layui-form-label">显示URL</label>
                 <div class="layui-input-block">
-                    {{if $link.show_url}}
-                    <input type="text" value="是" class="layui-input" style="color: #52c41a;" readonly>
-                    {{else}}
-                    <input type="text" value="否" class="layui-input" style="color: #f5222d;" readonly>
-                    {{/if}}
+                    <input type="text" id="field_show_url" value="" class="layui-input" readonly>
                 </div>
             </div>
 
             <div class="layui-form-item">
                 <label class="layui-form-label">创建时间</label>
                 <div class="layui-input-block">
-                    <input type="text" name="created_at" value="{{$link.created_at}}" class="layui-input" readonly>
+                    <input type="text" name="created_at" id="field_created_at" value="" class="layui-input" readonly>
                 </div>
             </div>
 
             <div class="layui-form-item">
                 <label class="layui-form-label">更新时间</label>
                 <div class="layui-input-block">
-                    <input type="text" name="updated_at" value="{{$link.updated_at}}" class="layui-input" readonly>
+                    <input type="text" name="updated_at" id="field_updated_at" value="" class="layui-input" readonly>
                 </div>
             </div>
 
-            {{if $link.content}}
-            <div class="layui-form-item">
+            <div class="layui-form-item" id="field_content_container" style="display:none;">
                 <label class="layui-form-label">详细介绍</label>
                 <div class="layui-input-block">
-                    <div class="layui-text" style="padding: 10px; border: 1px solid #e6e6e6; border-radius: 2px; background: #f8f8f8;">
-                        {{$link.content}}
+                    <div id="field_content" class="layui-text" style="padding: 10px; border: 1px solid #e6e6e6; border-radius: 2px; background: #f8f8f8;"></div>
+                </div>
+            </div>
+
+            <!-- 监控概要（由JS渲染） -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">监控概要</label>
+                <div class="layui-input-block">
+                    <div class="layui-card" style="margin-bottom: 10px;">
+                        <div class="layui-card-body">
+                            <div class="layui-row layui-col-space10">
+                                <div class="layui-col-md4">
+                                    <span id="monitor_summary_ok" class="layui-badge">-</span>
+                                </div>
+                                <div class="layui-col-md4">
+                                    <span class="layui-badge layui-bg-blue">反链：<span id="monitor_summary_backlink">-</span></span>
+                                </div>
+                                <div class="layui-col-md4">
+                                    <span class="layui-badge-rim">时间：<span id="monitor_summary_time">-</span></span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-            {{/if}}
+
+            <!-- 自动审核（由JS渲染） -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">自动审核</label>
+                <div class="layui-input-block">
+                    <div class="layui-card" style="margin-bottom: 10px;">
+                        <div class="layui-card-body">
+                            <span class="layui-badge layui-bg-purple">分数：<span id="auto_audit_score">-</span></span>
+                            <span class="layui-badge-rim" style="margin-left:8px;">时间：<span id="auto_audit_time">-</span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <div class="layui-form-item">
                 <div class="layui-input-block">
                     <button type="button" class="pear-btn pear-btn-primary" onclick="window.history.back()">返回</button>
-                    <button type="button" class="pear-btn" onclick="window.location.href='/app/admin/link/edit/{{$link.id}}'">编辑</button>
+                    <button type="button" class="pear-btn" id="editBtn">编辑</button>
+                    <button type="button" class="pear-btn pear-btn-warning" id="monitorOnceBtn">一键监控</button>
                 </div>
             </div>
         </form>
@@ -140,10 +169,182 @@
 </div>
 
 <script>
-    layui.use(['form'], function() {
+    layui.use(['form', 'jquery', 'layer'], function() {
         var form = layui.form;
-        // 页面加载完成后执行
+        var $ = layui.jquery;
+        var layer = layui.layer;
+
         form.render();
+
+        function getLinkIdFromUrl() {
+            var path = window.location.pathname.split('/');
+            return path[path.length - 1];
+        }
+
+        function renderPeerStatusBadge(status) {
+            if (!status) return '<span class="layui-text">未设置</span>';
+            if (status === 'established') return '<span class="layui-badge layui-bg-green">established</span>';
+            if (status === 'waiting') return '<span class="layui-badge layui-bg-orange">waiting</span>';
+            if (status === 'pending') return '<span class="layui-badge">pending</span>';
+            return '<span class="layui-badge-rim">' + (status || '-') + '</span>';
+        }
+
+        // 加载详情并渲染
+        var linkId = getLinkIdFromUrl();
+        $.ajax({
+            url: '/app/admin/link/get/' + linkId,
+            type: 'GET',
+            dataType: 'json',
+            success: function(res) {
+                if (res.code !== 0 || !res.data) {
+                    layer.msg(res.msg || '加载失败', {icon: 2});
+                    return;
+                }
+                var link = res.data;
+
+                // 基本字段填充
+                // 基本字段填充
+                $('#field_name').val(link.name || '');
+                $('#field_url').val(link.url || '');
+                $('#field_description').val(link.description || '');
+                if (link.icon) {
+                    $('#field_icon').val(link.icon);
+                    $('#icon_img').attr('src', link.icon).show();
+                } else {
+                    $('#field_icon').val('无');
+                    $('#icon_img').hide();
+                }
+                $('#field_sort_order').val(link.sort_order || 999);
+                $('#field_created_at').val(link.created_at || '');
+                $('#field_updated_at').val(link.updated_at || '');
+                // 状态
+                $('#field_status').val(link.status ? '已启用' : '已禁用')
+                    .css('color', link.status ? '#52c41a' : '#f5222d');
+                // 打开方式
+                $('#field_target').val(link.target === '_blank' ? '新窗口打开' : '当前窗口打开');
+                // 跳转方式
+                var redirectMap = { direct: '直接跳转', goto: '中转页跳转', iframe: '内嵌页面', info: '详情页' };
+                $('#field_redirect_type').val(redirectMap[link.redirect_type] || link.redirect_type || '-');
+                // 显示URL
+                $('#field_show_url').val(link.show_url ? '是' : '否')
+                    .css('color', link.show_url ? '#52c41a' : '#f5222d');
+                // 内容
+                if (link.content) {
+                    $('#field_content').text(link.content);
+                    $('#field_content_container').show();
+                } else {
+                    $('#field_content').text('');
+                    $('#field_content_container').hide();
+                }
+
+                // peer_status + peer_api
+                var peerStatus = (link.custom_fields && link.custom_fields.peer_status) ? link.custom_fields.peer_status : null;
+                var $psi = $('#peer_status_input');
+                if (!peerStatus) {
+                    $psi.val('未设置').css('color', '');
+                } else if (peerStatus === 'established') {
+                    $psi.val('established').css('color', '#52c41a');
+                } else if (peerStatus === 'waiting') {
+                    $psi.val('waiting').css('color', '#fa8c16');
+                } else if (peerStatus === 'pending') {
+                    $psi.val('pending').css('color', '');
+                } else {
+                    $psi.val(peerStatus).css('color', '');
+                }
+                var peerApi = (link.custom_fields && link.custom_fields.peer_api) ? link.custom_fields.peer_api : '';
+                $('#peer_api_input').val(peerApi || '未设置');
+
+                // 监控概要（monitor）：尝试渲染 ok / 时间 / 反链数
+                try {
+                    var monitor = (link.custom_fields && link.custom_fields.monitor) ? link.custom_fields.monitor : null;
+                    if (monitor) {
+                        if ($('#monitor_summary_ok').length) {
+                            $('#monitor_summary_ok').text(monitor.ok ? 'ok' : 'fail');
+                            if (monitor.ok) $('#monitor_summary_ok').addClass('layui-badge layui-bg-green'); else $('#monitor_summary_ok').addClass('layui-badge');
+                        }
+                        if ($('#monitor_summary_time').length) {
+                            $('#monitor_summary_time').text(monitor.time || monitor.checked_at || monitor.updated_at || '-');
+                        }
+                        if ($('#monitor_summary_backlink').length) {
+                            var bl = 0;
+                            if (typeof monitor.backlink_count !== 'undefined' && monitor.backlink_count !== null) {
+                                bl = monitor.backlink_count;
+                            } else if (monitor.backlink && typeof monitor.backlink.link_count !== 'undefined') {
+                                bl = monitor.backlink.link_count;
+                            }
+                            $('#monitor_summary_backlink').text(bl);
+                        }
+                    }
+                } catch(e) {
+                    // 忽略渲染错误，避免影响页面
+                }
+
+                // 自动审核（auto_audit）：渲染 score / time
+                try {
+                    var autoAudit = (link.custom_fields && link.custom_fields.auto_audit) ? link.custom_fields.auto_audit : null;
+                    if (autoAudit) {
+                        if ($('#auto_audit_score').length) {
+                            $('#auto_audit_score').text((typeof autoAudit.score !== 'undefined' && autoAudit.score !== null) ? autoAudit.score : '-');
+                        }
+                        if ($('#auto_audit_time').length) {
+                            $('#auto_audit_time').text(autoAudit.time || '-');
+                        }
+                    }
+                } catch(e) {
+                    // 忽略渲染错误
+                }
+
+                // 自动审核与监控概要由前面模板块渲染为只读文本，这里不重复渲染
+                form.render();
+            },
+            error: function() {
+                layer.msg('网络错误', {icon: 2});
+            }
+        });
+
+        // 一键监控：调用后台 monitor 接口并刷新
+        $('#monitorOnceBtn').on('click', function () {
+            var loading = layer.load();
+            $.ajax({
+                url: '/app/admin/link/monitor',
+                type: 'post',
+                dataType: 'json',
+                data: {'ids[]': linkId},
+                success: function(res) {
+                    layer.close(loading);
+                    if (res && res.code === 0) {
+                        layer.msg('监控已完成', {icon: 1, time: 1000}, function () {
+                            location.reload();
+                        });
+                    } else {
+                        layer.msg((res && res.msg) ? res.msg : '监控失败', {icon: 2, time: 1500});
+                    }
+                },
+                error: function() {
+                    layer.close(loading);
+                    layer.msg('请求失败，请稍后重试', {icon: 2, time: 1500});
+                }
+            });
+        });
+
+        // 编辑
+        $('#editBtn').on('click', function(){
+            window.location.href = '/app/admin/link/edit/' + linkId;
+        });
+
+        // 复制 peer_api
+        $('#copy_peer_api').on('click', function() {
+            var val = $('#peer_api_input').val() || '';
+            if (!val || val === '未设置') {
+                layer.msg('未设置对方API', {icon: 3});
+                return;
+            }
+            navigator.clipboard.writeText(val).then(function(){
+                layer.msg('已复制', {icon: 1});
+            }).catch(function(){
+                layer.msg('复制失败', {icon: 2});
+            });
+        });
     });
 </script>
 </body>

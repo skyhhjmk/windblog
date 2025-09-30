@@ -8,6 +8,31 @@
     <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
     <script src="/app/admin/component/pear/pear.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+<style id="link-table-row-height">
+/* 仅作用于本页表格：提高行高、允许换行，保证“监控概要”完整显示且不溢出 */
+.layui-card-body { overflow-x: auto; } /* 总宽过大时出现横向滚动条 */
+.layui-card-body .layui-table-view .layui-table-cell {
+  height: auto !important;
+  line-height: 20px;
+  white-space: normal;       /* 允许换行 */
+  word-break: break-word;    /* 长词/URL 断行 */
+  overflow: hidden;          /* 禁止内容溢出到单元格外 */
+  text-overflow: clip;       /* 不做省略，完整显示在多行 */
+}
+/* 行与单元格的垂直内边距增大 */
+.layui-card-body .layui-table-view .layui-table-body .layui-table tr {
+  height: auto !important;
+}
+.layui-card-body .layui-table-view .layui-table-body .layui-table td {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+/* 监控概要列内部小徽章与文本间距微调 */
+.layui-card-body .layui-table-view .layui-table-body .layui-table td .text-xs > div {
+  margin-top: 2px;
+  margin-bottom: 2px;
+}
+</style>
 </head>
 
 <body class="bg-gray-100 pear-container">
@@ -126,9 +151,11 @@
 <script type="text/html" id="link-bar">
     <!-- 正常链接操作按钮 -->
     <div class="normal-actions flex space-x-1">
-        <button class="pear-btn pear-btn-primary pear-btn-sm" lay-event="edit"><i
+        <button class="pear-btn pear-btn-primary pear-btn-sm" lay-event="view" title="查看详情"><i
+                class="layui-icon layui-icon-read"></i></button>
+        <button class="pear-btn pear-btn-primary pear-btn-sm" lay-event="edit" title="编辑"><i
                 class="layui-icon layui-icon-edit"></i></button>
-        <button class="pear-btn pear-btn-danger pear-btn-sm" lay-event="remove"><i
+        <button class="pear-btn pear-btn-danger pear-btn-sm" lay-event="remove" title="删除"><i
                 class="layui-icon layui-icon-delete"></i></button>
     </div>
 </script>
@@ -198,6 +225,30 @@
         <div><span class="text-gray-500">IP:</span> {{d.apply_ip}}</div>
         {{# } }}
     </div>
+</script>
+
+<!-- 监控概要模板：ok/时间/反链数（从 custom_fields.monitor 渲染） -->
+<script type="text/html" id="link-monitor">
+    {{# var m = (d.custom_fields && d.custom_fields.monitor) ? d.custom_fields.monitor : null; }}
+    {{# if(!m){ }}
+        <span class="text-gray-400 text-xs">暂无数据</span>
+    {{# } else { }}
+        <div class="text-xs space-y-1">
+            <div>
+                {{# if(m.ok){ }}
+                <span class="px-2 py-0.5 rounded bg-green-100 text-green-700">可用性：正常</span>
+                {{# } else { }}
+                <span class="px-2 py-0.5 rounded bg-red-100 text-red-700">可用性：异常</span>
+                {{# } }}
+            </div>
+            {{# if(m.backlink){ }}
+            <div class="text-gray-700">反链：{{ m.backlink.found ? '已发现' : '未发现' }}（{{ m.backlink.count || 0 }}）</div>
+            {{# } }}
+            {{# if(m.time){ }}
+            <div class="text-gray-500">{{ m.time }}</div>
+            {{# } }}
+        </div>
+    {{# } }}
 </script>
 
 <script>
@@ -279,7 +330,7 @@
                     title: 'ID',
                     field: 'id',
                     align: 'center',
-                    width: 80
+                    width: 70
                 },
                 {
                     title: '链接名称',
@@ -295,34 +346,40 @@
                     title: '状态',
                     field: 'status',
                     align: 'center',
-                    width: 100,
+                    width: 90,
                     templet: '#link-status'
                 },
                 {
                     title: '打开方式',
                     field: 'target',
                     align: 'center',
-                    width: 100,
+                    width: 90,
                     templet: '#link-target'
+                },
+                {
+                    title: '监控概要',
+                    align: 'center',
+                    width: 220,
+                    templet: '#link-monitor'
                 },
                 {
                     title: '排序',
                     field: 'sort_order',
                     align: 'center',
-                    width: 80
+                    width: 70
                 },
                 {
                     title: '创建时间',
                     field: 'created_at',
                     align: 'center',
-                    width: 160,
+                    width: 150,
                     templet: '#link-createTime'
                 },
                 {
                     title: '操作',
                     toolbar: '#link-bar',
                     align: 'left',
-                    width: 120,
+                    width: 150,
                     fixed: 'right'
                 }
             ]
