@@ -254,7 +254,7 @@
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col">
 <!-- 顶部导航 -->
-<header class="bg-white shadow-sm sticky top-0 z-10 animate-fade-in-down">
+<header class="bg-white shadow-sm sticky top-0 z-10">
     <div class="container mx-auto px-4 py-4 flex justify-between items-center">
         <a href="/" class="text-2xl font-bold text-gray-800 flex items-center hover-animate tap-highlight">
             <i class="fas fa-blog text-blue-600 mr-2"></i>
@@ -445,7 +445,12 @@
     (function() {
         if (!window.jQuery || typeof jQuery.fn.pjax !== 'function') return;
         jQuery(function($) {
-            const selector = 'a[href^="/"]:not([target="_blank"]):not([data-no-pjax])';
+            const excludes = ':not([target="_blank"]):not([data-no-pjax]):not([href^="#"]):not([href^="mailto:"]):not([href^="tel:"])';
+            const origin = window.location.origin;
+            const selector = [
+                `a[href^="/"]${excludes}`,
+                `a[href^="${origin}"]${excludes}`
+            ].join(',');
             $(document).pjax(selector, '#pjax-container', {
                 fragment: '#pjax-container',
                 timeout: 8000,
@@ -483,9 +488,12 @@
                     setTimeout(() => { __bar.style.width = '0'; }, 200);
                 }
                 document.body.classList.remove('pjax-loading');
-                const topbar = document.getElementById('topbarTitle');
-                if (topbar) { topbar.textContent = document.title; }
-                document.dispatchEvent(new CustomEvent('page:ready'));
+                // 延后同步标题与触发就绪事件，确保片段内脚本已更新 document.title
+                setTimeout(function () {
+                    const topbar = document.getElementById('topbarTitle');
+                    if (topbar) { topbar.textContent = document.title; }
+                    document.dispatchEvent(new CustomEvent('page:ready'));
+                }, 0);
             });
 
             $(document).on('pjax:error', function() {

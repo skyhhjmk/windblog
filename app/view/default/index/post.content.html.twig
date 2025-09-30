@@ -66,7 +66,7 @@
         });
     }
     // PJAX 片段内更新标题并通知就绪
-    try { document.title = '{{ (post.title ~ " - " ~ (page_title|default("风屿雨博客"))) | e("js") }}'; } catch (e) {}
+
     document.addEventListener('page:ready', renderPost);
     renderPost();
 </script>

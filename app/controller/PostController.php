@@ -53,8 +53,10 @@ class PostController
                 break;
         }
         
-        // PJAX 优化：检测是否为 PJAX 请求
-        $isPjax = (bool)$request->header('X-PJAX');
+        // PJAX 优化：检测是否为 PJAX 请求（兼容 header/_pjax 参数/XHR）
+        $isPjax = ($request->header('X-PJAX') !== null)
+            || (bool)$request->get('_pjax')
+            || strtolower((string)$request->header('X-Requested-With')) === 'xmlhttprequest';
 
         // 获取侧边栏内容（仅非 PJAX 时获取）
         $sidebar = $isPjax ? null : \app\service\SidebarService::getSidebarContent($request, 'post');
@@ -64,11 +66,11 @@ class PostController
         $primaryAuthor = $post->primaryAuthor->first();
         $authorName = $primaryAuthor ? $primaryAuthor->nickname : ($post->authors->first() ? $post->authors->first()->nickname : '未知作者');
         
-        // 动态选择模板
-        $viewName = $isPjax ? 'index/post.content' : 'index/post';
+        // 动态选择模板（统一返回完整页面，PJAX 前端抽取片段）
+        $viewName = 'index/post';
 
         return view($viewName, [
-            'page_title' => blog_config('title', 'WindBlog', true) . ' - ' . $post['title'],
+            'page_title' => $post['title'] . ' - ' . blog_config('title', 'WindBlog', true),
             'post' => $post,
             'author' => $authorName,
             'sidebar' => $sidebar

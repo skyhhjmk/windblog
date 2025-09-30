@@ -138,6 +138,6 @@
             setTimeout(() => { button.innerHTML = originalText; }, 2000);
         }).catch(err => { console.error('复制失败: ', err); });
     }
-    try { document.title = '{{ page_title|default("链接详情")|e("js") }}'; } catch (e) {}
-    document.dispatchEvent(new CustomEvent('page:ready'));
+
+
 </script>
