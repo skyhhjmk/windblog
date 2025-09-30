@@ -24,9 +24,10 @@ use Webman\Route;
 Route::any('/post/{keyword}', [app\controller\PostController::class, 'index']);
 Route::any('/post/{keyword}.html', [app\controller\PostController::class, 'index']);
 
-// 页面路由 - 支持 .html 后缀
-//Route::any('/page/{keyword}', [app\controller\PageController::class, 'index']);
-//Route::any('/page/{keyword}.html', [app\controller\PageController::class, 'index']);
+# 页面路由 - 支持 .html 后缀
+// 首页分页路由 -> IndexController
+Route::any('/page/{page}', [app\controller\IndexController::class, 'index'])->name('index.page');
+Route::any('/page/{page}.html', [app\controller\IndexController::class, 'index'])->name('index.page.html');
 
 // 首页路由
 Route::any('/', [app\controller\IndexController::class, 'index'])->name('index.index');
