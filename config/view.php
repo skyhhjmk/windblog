@@ -24,12 +24,19 @@ use Twig\Extra\Cache\CacheExtension;
 use Twig\Extra\String\StringExtension;
 //use support\view\Twig;
 
+$debug = (bool)env('APP_DEBUG', false);
+$cacheEnableEnv = env('TWIG_CACHE_ENABLE', null);
+$cacheEnable = $cacheEnableEnv !== null ? filter_var($cacheEnableEnv, FILTER_VALIDATE_BOOL) : !$debug;
+$cachePath = env('TWIG_CACHE_PATH', runtime_path() . DIRECTORY_SEPARATOR . 'twig_cache');
+$autoReloadEnv = env('TWIG_AUTO_RELOAD', null);
+$autoReload = $autoReloadEnv !== null ? filter_var($autoReloadEnv, FILTER_VALIDATE_BOOL) : $debug;
+
 return [
     'handler' => TwigTemplateService::class,
     'options' => [
-        'cache' => false,
-        'debug' => true,
-        'auto_reload' => true,
+        'cache' => $cacheEnable ? $cachePath : false,
+        'debug' => $debug,
+        'auto_reload' => $autoReload,
         'view_suffix' => 'html.twig',
     ],
     'extension' => function ($twig) {
