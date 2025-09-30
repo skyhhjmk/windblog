@@ -1,4 +1,5 @@
 <?php
+
 namespace app\service;
 
 use support\Log;
@@ -36,12 +37,12 @@ class CacheService
             }
         }
 
-        $cacheDriver = getenv('CACHE_DRIVER') ?? 'redis';
+        $cacheDriver = getenv('CACHE_DRIVER') ?: 'redis';
         $strictMode = filter_var(getenv('CACHE_STRICT_MODE') ?: 'false', FILTER_VALIDATE_BOOLEAN);
 
         try {
             self::$handler = self::createHandler($cacheDriver);
-            
+
             if (!self::testConnection(self::$handler)) {
                 throw new Exception("Cache driver connection test failed: {$cacheDriver}");
             }
@@ -52,7 +53,7 @@ class CacheService
 
         } catch (Exception $e) {
             Log::error("[cache] exception: {$e->getMessage()}", ['driver' => $cacheDriver]);
-            
+
             if ($strictMode) {
                 throw $e;
             }
@@ -61,7 +62,7 @@ class CacheService
             self::$fallbackMode = true;
             self::$lastFallbackTime = time();
             self::$handler = null;
-            
+
             return self::createNoneHandler();
         }
     }
@@ -75,12 +76,12 @@ class CacheService
             case 'redis':
                 return new class {
                     private $redis;
-                    
+
                     public function __construct()
                     {
                         $this->redis = \support\Redis::connection('cache');
                     }
-                    
+
                     public function get(string $key)
                     {
                         try {
@@ -90,7 +91,7 @@ class CacheService
                             return false;
                         }
                     }
-                    
+
                     public function setex(string $key, int $ttl, string $value): bool
                     {
                         try {
@@ -111,7 +112,7 @@ class CacheService
                             return false;
                         }
                     }
-                    
+
                     public function del(string $key): bool
                     {
                         try {
@@ -127,14 +128,14 @@ class CacheService
                 if (!extension_loaded('apcu') || !apcu_enabled()) {
                     throw new Exception('APCu extension is not loaded or not enabled');
                 }
-                
+
                 return new class {
                     public function get(string $key)
                     {
                         $result = apcu_fetch($key, $success);
                         return $success ? $result : false;
                     }
-                    
+
                     public function setex(string $key, int $ttl, string $value): bool
                     {
                         return apcu_store($key, $value, $ttl);
@@ -145,7 +146,7 @@ class CacheService
                         // ttl=0 表示永久
                         return apcu_store($key, $value, 0);
                     }
-                    
+
                     public function del(string $key): bool
                     {
                         return apcu_delete($key);
@@ -156,10 +157,10 @@ class CacheService
                 if (!extension_loaded('memcached')) {
                     throw new Exception('Memcached extension is not loaded');
                 }
-                
+
                 return new class {
                     private $memcached;
-                    
+
                     public function __construct()
                     {
                         $this->memcached = new \Memcached();
@@ -168,13 +169,13 @@ class CacheService
                             (int)(getenv('MEMCACHED_PORT') ?: 11211)
                         );
                     }
-                    
+
                     public function get(string $key)
                     {
                         $result = $this->memcached->get($key);
                         return $this->memcached->getResultCode() === \Memcached::RES_SUCCESS ? $result : false;
                     }
-                    
+
                     public function setex(string $key, int $ttl, string $value): bool
                     {
                         return $this->memcached->set($key, $value, $ttl);
@@ -185,7 +186,7 @@ class CacheService
                         // Memcached 的 ttl=0 表示不过期
                         return $this->memcached->set($key, $value, 0);
                     }
-                    
+
                     public function del(string $key): bool
                     {
                         return $this->memcached->delete($key);
@@ -210,7 +211,7 @@ class CacheService
             {
                 return false;
             }
-            
+
             public function setex(string $key, int $ttl, string $value): bool
             {
                 return true;
@@ -220,7 +221,7 @@ class CacheService
             {
                 return true;
             }
-            
+
             public function del(string $key): bool
             {
                 return true;
@@ -271,7 +272,7 @@ class CacheService
 
             $cache_handler = self::getHandler();
             $use_igbinary = extension_loaded('igbinary');
-            $cache_driver = getenv('CACHE_DRIVER') ?? 'redis';
+            $cache_driver = getenv('CACHE_DRIVER') ?: 'redis';
 
             if ($set) {
                 // 序列化策略：JSON优先，失败回退 igbinary/serialize，并打标前缀
@@ -515,7 +516,7 @@ class CacheService
     {
         try {
             $cache_handler = self::getHandler();
-            
+
             if (str_contains($pattern, '*')) {
                 $cache_driver = getenv('CACHE_DRIVER') ?? 'redis';
                 $patternWithPrefix = self::$prefix . $pattern;
@@ -528,7 +529,7 @@ class CacheService
                         return false;
                     }
                 }
-                
+
                 switch ($cache_driver) {
                     case 'redis':
                         $redis = \support\Redis::connection('cache');
@@ -548,7 +549,7 @@ class CacheService
                             }
                         } while ($cursor !== 0);
                         return $deleted >= 0;
-                        
+
                     case 'apcu':
                         $regex = '/^' . str_replace('*', '.*', preg_quote($patternWithPrefix, '/')) . '$/';
                         $iterator = new \APCUIterator($regex, APC_ITER_KEY);
@@ -559,14 +560,14 @@ class CacheService
                             }
                         }
                         return $success;
-                        
+
                     case 'memcached':
                         Log::warning('[clear_cache] Memcached does not support pattern-based cache clearing');
                         return false;
-                        
+
                     case 'none':
                         return true;
-                        
+
                     default:
                         Log::warning("[clear_cache] Pattern-based clearing not supported for driver: {$cache_driver}");
                         return false;

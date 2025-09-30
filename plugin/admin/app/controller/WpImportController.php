@@ -176,7 +176,6 @@ class WpImportController extends Base
                 'import_attachments' => (bool)$request->post('import_attachments', 0),
                 'download_attachments' => (bool)$request->post('download_attachments', 0),
                 'duplicate_mode' => $request->post('duplicate_mode', 'skip'),
-                'admin_id' => admin_id(),
                 'author_action' => $request->post('author_action','map_to_system'),
             ];
 

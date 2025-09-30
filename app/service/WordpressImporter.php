@@ -680,40 +680,7 @@ class WordpressImporter
             if ($category) {
                 Log::debug("找到现有分类: " . $category->name . " (ID: " . $category->id . ")");
                 return $category->id;
-                /**
-     * 解析默认作者ID：
-     * 1) 任务中已指定 author_id 则使用
-     * 2) 否则查找安装时创建的普通用户（nickname=超级管理员）
-     * 3) 否则使用任意一个已有用户（id最小）
-     * 4) 都没有则返回null
-     */
-    protected function resolveDefaultAuthorId(): ?int
-    {
-        try {
-            // 1) 若任务已指定 author_id，构造函数中已优先使用，这里不重复判断
-
-            // 2) 查找管理员用户名（取第一个管理员作为安装默认管理员）
-            $admin = Admin::orderBy('id', 'asc')->first();
-            if ($admin && !empty($admin->username)) {
-                // 使用与管理员相同用户名的普通用户作为默认作者
-                $user = Author::where('username', $admin->username)->first();
-                if ($user) {
-                    return (int)$user->id;
-                }
             }
-
-            // 3) 回退：选取任意一个已有用户
-            $any = Author::orderBy('id', 'asc')->first();
-            if ($any) {
-                return (int)$any->id;
-            }
-        } catch (\Throwable $e) {
-            Log::warning('解析默认作者ID失败: ' . $e->getMessage());
-        }
-        return null;
-    }
-
-}
 
             // 创建新分类
             Log::debug("创建新分类: " . $categoryName);
@@ -753,6 +720,39 @@ class WordpressImporter
         }
 
         Log::debug("无分类信息");
+        return null;
+    }
+
+    /**
+     * 解析默认作者ID：
+     * 1) 任务中已指定 author_id 则使用
+     * 2) 否则查找安装时创建的普通用户（nickname=超级管理员）
+     * 3) 否则使用任意一个已有用户（id最小）
+     * 4) 都没有则返回null
+     */
+    protected function resolveDefaultAuthorId(): ?int
+    {
+        try {
+            // 1) 若任务已指定 author_id，构造函数中已优先使用，这里不重复判断
+
+            // 2) 查找管理员用户名（取第一个管理员作为安装默认管理员）
+            $admin = Admin::orderBy('id', 'asc')->first();
+            if ($admin && !empty($admin->username)) {
+                // 使用与管理员相同用户名的普通用户作为默认作者
+                $user = Author::where('username', $admin->username)->first();
+                if ($user) {
+                    return (int)$user->id;
+                }
+            }
+
+            // 3) 回退：选取任意一个已有用户
+            $any = Author::orderBy('id', 'asc')->first();
+            if ($any) {
+                return (int)$any->id;
+            }
+        } catch (\Throwable $e) {
+            Log::warning('解析默认作者ID失败: ' . $e->getMessage());
+        }
         return null;
     }
 

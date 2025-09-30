@@ -191,6 +191,13 @@ return [
                 'href' => '/app/admin/tools/wp-import',
                 'type' => 1,
                 'weight' => 0,
+            ],
+            [
+                'title' => 'ElasticSearch',
+                'key' => 'plugin\\admin\\app\\controller\\ElasticController',
+                'href' => '/app/admin/elastic/index',
+                'type' => 1,
+                'weight' => 0,
             ]
         ]
     ],
