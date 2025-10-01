@@ -9,7 +9,9 @@ WORKDIR /app
 COPY . /app
 # 可选：使用国内镜像
 # RUN composer config -g repo.packagist composer https://mirrors.aliyun.com/composer/
-RUN composer install --no-dev --prefer-dist --no-progress --no-interaction --optimize-autoloader
+# 替换构建阶段的composer install命令
+RUN composer install --no-dev --prefer-dist --no-progress --no-interaction --optimize-autoloader \
+    --ignore-platform-req=ext-xsl --ignore-platform-req=ext-sockets --ignore-platform-req=ext-gd
 
 ############################
 # 2) 运行时镜像（PHP 8.4 Alpine）
