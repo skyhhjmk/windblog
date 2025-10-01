@@ -1,0 +1,30 @@
+# VCS & IDE
+.git
+.gitignore
+.github/
+.idea/
+.vscode/
+
+# Local env & configs
+.env
+.env.*.local
+
+# Runtime & logs
+runtime/
+storage/
+*.log
+
+# Uploads (建议容器挂载)
+public/uploads/
+
+# Node/Front artifacts
+node_modules/
+dist/
+build/
+
+# Composer artifacts from host
+/vendor/
+
+# OS junk
+.DS_Store
+Thumbs.db

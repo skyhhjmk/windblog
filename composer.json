@@ -61,8 +61,7 @@
     "psr-4": {
       "": "./",
       "app\\": "./app",
-      "App\\": "./app",
-      "app\\View\\Components\\": "./app/view/components"
+      "App\\": "./app"
     }
   },
   "scripts": {
