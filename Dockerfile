@@ -3,19 +3,6 @@ FROM php:8.4.13-cli AS runtime
 # 基础依赖与构建依赖
 RUN apt update && apt install -y --no-install-recommends \
     $PHPIZE_DEPS \
-    libicu-dev \
-    libevent-dev \
-    libfreetype6-dev \
-    libjpeg62-turbo-dev \
-    libpng-dev \
-    libpq-dev \
-    libssl-dev \
-    libicu70 \
-    libevent-2.1-7 \
-    libjpeg62-turbo \
-    libpng16-16 \
-    libfreetype6 \
-    libpq5 \
     openssl \
     tzdata \
     bash \
@@ -25,7 +12,7 @@ RUN apt update && apt install -y --no-install-recommends \
 
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) \
-        intl gd mbstring opcache sockets pdo_pgsql fileinfo opcache exif intl pdo_sqlite PDO xml json curl \
+        intl gd mbstring opcache sockets pdo_pgsql fileinfo opcache exif intl pdo_sqlite PDO xml json curl
 
 RUN pecl install redis && \
     pecl install event && \
