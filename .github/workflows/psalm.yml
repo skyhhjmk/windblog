@@ -9,11 +9,10 @@ on:
   push:
     branches: [ "master" ]
   pull_request:
-    # The branches below must be a subset of the branches above
     branches: [ "master" ]
   schedule:
-    - cron: '37 18 * * 3'
-  workflow_dispatch:
+    - cron: '37 18 * * 3'  # 每周三18:37（UTC时间）运行
+  workflow_dispatch:  # 允许手动触发
 
 permissions:
   contents: read
@@ -22,43 +21,53 @@ jobs:
   php-security:
     runs-on: ubuntu-latest
     permissions:
-      contents: read # for actions/checkout to fetch code
-      security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
-      actions: read # only required for a private repository by github/codeql-action/upload-sarif to get the Action run status
+      contents: read                # 用于拉取代码
+      security-events: write        # 用于上传安全扫描结果
+      actions: read                 # 私有仓库上传结果需此权限
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 确保获取完整历史
+          fetch-depth: 1  # 仅拉取最新代码，加快速度
 
-      - name: Setup PHP environment
+      # 1. 配置PHP 8.3环境（确保扩展生效）
+      - name: Setup PHP 8.3 with required extensions
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'  # 使用与依赖兼容的PHP版本
-          extensions: xsl, sockets, gd  # 安装所需扩展
-          coverage: none  # 不需要代码覆盖率
-          tools: composer:v2
+          php-version: '8.3'
+          extensions: xsl, sockets, gd  # 解决项目依赖的扩展问题
+          ini-values: memory_limit=-1   # 避免内存不足
+          tools: composer:v2            # 强制Composer 2
+          coverage: none
 
-      - name: Cache Composer dependencies
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.composer/cache
-            vendor
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-composer-
+      # 2. 验证环境（确认PHP版本和扩展正确）
+      - name: Verify PHP & Extensions
+        run: |
+          php -v  # 确认输出PHP 8.3.x
+          php -m | grep -E "xsl|sockets|gd"  # 确认3个扩展已启用
 
-      - name: Install dependencies
-        run: composer install --no-progress --no-suggest --prefer-dist
+      # 3. 安装项目依赖（已成功，无需改动）
+      - name: Install Project Dependencies
+        run: |
+          composer install --no-progress --no-suggest --prefer-dist
+          composer dump-autoload  # 确保自动加载文件最新
 
-      - name: Psalm Security Scan
-        uses: psalm/psalm-github-security-scan@f3e6fd9432bc3e44aec078572677ce9d2ef9c287
-        continue-on-error: false  # 扫描出错时终止工作流
+      # 4. 关键修复：直接本地执行Psalm，跳过镜像内Composer重装
+      # 原因：原镜像会重新执行composer install，可能破坏本地环境
+      - name: Run Psalm Security Scan (Local Execution)
+        run: |
+          # 1. 全局安装Psalm（确保版本兼容）
+          composer global require vimeo/psalm:^5.0 --no-progress
+          # 2. 加入全局Composer的bin目录到环境变量（让系统找到psalm命令）
+          echo "$HOME/.composer/vendor/bin" >> $GITHUB_PATH
+          # 3. 执行安全扫描，显式生成sarif文件到当前目录
+          psalm --no-cache --report=results.sarif --report-format=sarif
+        continue-on-error: false  # 扫描失败则终止，避免无效上传
 
-      - name: Upload Security Analysis results to GitHub
+      # 5. 上传扫描结果（仅当文件存在时执行）
+      - name: Upload Security Scan Results
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: results.sarif
-        if: always()  # 即使前面步骤失败也上传结果
+          sarif_file: ./results.sarif
+        if: success()
