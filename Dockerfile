@@ -37,9 +37,6 @@ RUN composer install --no-dev --prefer-dist --no-progress --no-interaction --opt
 
 WORKDIR /app
 
-# 复制应用与依赖
-COPY --from=builder /app /app
-
 # 运行环境变量
 ENV TZ=Asia/Shanghai \
     APP_ENV=prod \
