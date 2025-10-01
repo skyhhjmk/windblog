@@ -64,8 +64,7 @@ RUN docker-php-ext-install -j$(nproc) \
 
 
 RUN pecl install redis && \
-    pecl install event && \
-    docker-php-ext-enable redis event && \
+    docker-php-ext-enable redis&& \
     rm -rf /tmp/* /var/tmp/*
 
 RUN curl -sS https://getcomposer.org/installer | php -- \
