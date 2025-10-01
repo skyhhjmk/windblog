@@ -53,7 +53,10 @@ class LinkController
             $links = Link::where('status', 'true')->orderByDesc('id')->forPage($page, $links_per_page)->get();
         }
 
-        return view('link/index', [
+        $isPjax = ($request->header('X-PJAX') !== null)
+            || (bool)$request->get('_pjax')
+            || strtolower((string)$request->header('X-Requested-With')) === 'xmlhttprequest';
+        return view($isPjax ? 'link/index.content' : 'link/index', [
             'page_title' => blog_config('title', 'WindBlog', true) . ' - 链接广场',
             'links' => $links,
             'pagination' => $pagination_html,
@@ -131,7 +134,10 @@ class LinkController
             ]);
         }
 
-        return view('link/info', [
+        $isPjax = ($request->header('X-PJAX') !== null)
+            || (bool)$request->get('_pjax')
+            || strtolower((string)$request->header('X-Requested-With')) === 'xmlhttprequest';
+        return view($isPjax ? 'link/info.content' : 'link/info', [
             'link' => $link,
             'page_title' => $link->name . ' - 链接详情'
         ]);
@@ -284,7 +290,10 @@ class LinkController
         }
 
         // 显示申请页面
-        return view('link/request', [
+        $isPjax = ($request->header('X-PJAX') !== null)
+            || (bool)$request->get('_pjax')
+            || strtolower((string)$request->header('X-Requested-With')) === 'xmlhttprequest';
+        return view($isPjax ? 'link/request.content' : 'link/request', [
             'page_title' => blog_config('title', 'WindBlog', true) . ' - 申请友链',
             'site_info_json_config' => $this->getSiteInfoConfig(),
             'csrf' => CSRFHelper::oneTimeToken($request, '_link_request_token')

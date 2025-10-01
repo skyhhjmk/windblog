@@ -271,6 +271,19 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(req.url);
 
+  // Bypass PJAX/XHR HTML requests to avoid SW interference
+  try {
+    const xpjax = (req.headers.get('x-pjax') || '').toLowerCase();
+    const xr = (req.headers.get('x-requested-with') || '').toLowerCase();
+    const acceptHdr = req.headers.get('accept') || '';
+    const looksHtml = acceptHdr.includes('text/html');
+    const isPjaxLike = (xpjax && xpjax !== 'false') || url.searchParams.has('_pjax') || (xr === 'xmlhttprequest' && looksHtml);
+    if (isPjaxLike) {
+      event.respondWith(fetch(req));
+      return;
+    }
+  } catch (_) {}
+
   // HTML navigations: Network First
   // Some browsers set request.mode='navigate' for navigations
   const accept = req.headers.get('accept') || '';

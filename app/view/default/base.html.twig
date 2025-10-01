@@ -568,6 +568,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('searchInput');
     const searchResults = document.getElementById('searchResults');
     const searchForm = document.getElementById('searchForm');
+    // 防止重复触发（Enter 与 submit 同时触发导致的双请求）
+    let searchNavigating = false;
 
     if (!searchInput || !searchResults || !searchForm) return;
 
@@ -727,22 +729,48 @@ document.addEventListener('DOMContentLoaded', function() {
             searchInput.blur();
         } else if (e.key === 'Enter') {
             e.preventDefault();
+            if (searchNavigating) return;
             const keyword = searchInput.value.trim();
             if (keyword.length > 0) {
-                window.location.href = '/search?q=' + encodeURIComponent(keyword);
+                searchNavigating = true;
+                if (window.jQuery && jQuery.fn.pjax) {
+                    $.pjax({
+                        url: '/search?q=' + encodeURIComponent(keyword),
+                        container: '#pjax-container',
+                        fragment: '#pjax-container',
+                        timeout: 8000,
+                        scrollTo: 0
+                    });
+                } else {
+                    window.location.href = '/search?q=' + encodeURIComponent(keyword);
+                }
             }
         }
     });
 
     // 防止表单提交时页面跳转
     searchForm.addEventListener('submit', function(e) {
+        if (searchNavigating) { e.preventDefault(); return; }
         const keyword = searchInput.value.trim();
         if (keyword.length > 0) {
-            window.location.href = '/search?q=' + encodeURIComponent(keyword);
+            searchNavigating = true;
+            if (window.jQuery && jQuery.fn.pjax) {
+                $.pjax({
+                    url: '/search?q=' + encodeURIComponent(keyword),
+                    container: '#pjax-container',
+                    fragment: '#pjax-container',
+                    timeout: 8000,
+                    scrollTo: 0
+                });
+            } else {
+                window.location.href = '/search?q=' + encodeURIComponent(keyword);
+            }
         }
         e.preventDefault();
     });
 
+    // 在 PJAX 完成后重置搜索导航标记
+    document.addEventListener('page:ready', function() { searchNavigating = false; });
     // 适配触摸设备的交互优化
     if ('ontouchstart' in document.documentElement) {
         // 为触摸设备优化悬停效果
