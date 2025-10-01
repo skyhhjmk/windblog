@@ -55,7 +55,8 @@ RUN docker-php-ext-install -j$(nproc) \
     exif \
     xml \
     xsl \
-    zip
+    zip \
+    pcnt
 
 RUN docker-php-ext-install -j$(nproc) \
     pdo_pgsql \
