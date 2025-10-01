@@ -1,8 +1,7 @@
-FROM php:8.4-cli-alpine AS runtime
+FROM php:8.4.13-cli AS runtime
 
 # 基础依赖与构建依赖
-RUN set -eux; \
-    apk add --no-cache --virtual .build-deps \
+RUN apt install -y \
         $PHPIZE_DEPS \
         icu-dev \
         libevent-dev \
@@ -11,7 +10,7 @@ RUN set -eux; \
         libpng-dev \
         postgresql-dev \
         openssl-dev \
-    && apk add --no-cache \
+    && apt install -y \
         icu-libs \
         libevent \
         libjpeg-turbo \
@@ -29,7 +28,6 @@ RUN set -eux; \
     && pecl install redis \
     && pecl install event \
     && docker-php-ext-enable redis event \
-    && apk del .build-deps \
     && rm -rf /tmp/* /var/tmp/*
 
 RUN composer install --no-dev --prefer-dist --no-progress --no-interaction --optimize-autoloader \
