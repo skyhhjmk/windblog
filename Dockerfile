@@ -1,37 +1,38 @@
 FROM php:8.4.13-cli AS runtime
 
 # 基础依赖与构建依赖
-RUN apt install -y \
-        $PHPIZE_DEPS \
-        icu-dev \
-        libevent-dev \
-        freetype-dev \
-        libjpeg-turbo-dev \
-        libpng-dev \
-        postgresql-dev \
-        openssl-dev \
-    && apt install -y \
-        icu-libs \
-        libevent \
-        libjpeg-turbo \
-        libpng \
-        freetype \
-        postgresql-libs \
-        openssl \
-        tzdata \
-        bash \
-        curl \
-        wget \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+RUN apt update && apt install -y --no-install-recommends \
+    $PHPIZE_DEPS \
+    libicu-dev \
+    libevent-dev \
+    libfreetype6-dev \
+    libjpeg62-turbo-dev \
+    libpng-dev \
+    libpq-dev \
+    libssl-dev \
+    libicu70 \
+    libevent-2.1-7 \
+    libjpeg62-turbo \
+    libpng16-16 \
+    libfreetype6 \
+    libpq5 \
+    openssl \
+    tzdata \
+    bash \
+    curl \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) \
         intl gd mbstring opcache sockets pdo_pgsql fileinfo opcache exif intl pdo_sqlite PDO xml json curl \
-    && pecl install redis \
-    && pecl install event \
-    && docker-php-ext-enable redis event \
-    && rm -rf /tmp/* /var/tmp/*
 
-RUN composer install --no-dev --prefer-dist --no-progress --no-interaction --optimize-autoloader \
-    --ignore-platform-req=ext-xsl --ignore-platform-req=ext-sockets --ignore-platform-req=ext-gd \
+RUN pecl install redis && \
+    pecl install event && \
+    docker-php-ext-enable redis event && \
+    rm -rf /tmp/* /var/tmp/*
+
+RUN composer install --no-dev --prefer-dist --no-progress --no-interaction --optimize-autoloader
 
 WORKDIR /app
 
