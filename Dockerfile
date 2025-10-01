@@ -1,21 +1,3 @@
-# syntax=docker/dockerfile:1
-
-############################
-# 1) 依赖构建阶段（含脚本）
-############################
-# 使用官方 composer 镜像运行 composer install，并携带完整项目以执行 post scripts
-FROM composer:2 AS builder
-WORKDIR /app
-COPY . /app
-# 可选：使用国内镜像
-# RUN composer config -g repo.packagist composer https://mirrors.aliyun.com/composer/
-# 替换构建阶段的composer install命令
-RUN composer install --no-dev --prefer-dist --no-progress --no-interaction --optimize-autoloader \
-    --ignore-platform-req=ext-xsl --ignore-platform-req=ext-sockets --ignore-platform-req=ext-gd
-
-############################
-# 2) 运行时镜像（PHP 8.4 Alpine）
-############################
 FROM php:8.4-cli-alpine AS runtime
 
 # 基础依赖与构建依赖
@@ -49,6 +31,9 @@ RUN set -eux; \
     && docker-php-ext-enable redis event \
     && apk del .build-deps \
     && rm -rf /tmp/* /var/tmp/*
+
+RUN composer install --no-dev --prefer-dist --no-progress --no-interaction --optimize-autoloader \
+    --ignore-platform-req=ext-xsl --ignore-platform-req=ext-sockets --ignore-platform-req=ext-gd \
 
 WORKDIR /app
 
