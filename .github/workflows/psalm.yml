@@ -57,13 +57,16 @@ jobs:
       # 原因：原镜像会重新执行composer install，可能破坏本地环境
       - name: Run Psalm Security Scan (Local Execution)
         run: |
-          # 1. 全局安装Psalm（确保版本兼容）
-          composer global require vimeo/psalm:^5.0 --no-progress
-          # 2. 加入全局Composer的bin目录到环境变量（让系统找到psalm命令）
+          # 1. 全局安装Psalm（已成功，无需改动）
+          composer global require vimeo/psalm:^5.0 --no-progress --quiet
+          # 2. 加入全局Composer的bin目录到环境变量（确保能找到psalm命令）
           echo "$HOME/.composer/vendor/bin" >> $GITHUB_PATH
-          # 3. 执行安全扫描，显式生成sarif文件到当前目录
-          psalm --no-cache --report=results.sarif --report-format=sarif
-        continue-on-error: false  # 扫描失败则终止，避免无效上传
+          # 3. 验证Psalm版本（调试用，可保留）
+          psalm --version
+          # 4. 关键修复：Psalm 5.x正确参数，直接在--report中指定格式
+          # 格式：--report=文件名:格式 （sarif格式需显式指定）
+          psalm --no-cache --report=results.sarif:sarif
+        continue-on-error: false  # 扫描失败则终止
 
       # 5. 上传扫描结果（仅当文件存在时执行）
       - name: Upload Security Scan Results
