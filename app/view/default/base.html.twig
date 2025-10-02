@@ -12,6 +12,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css"
           integrity="sha512-DxV+EoADOkOygM4IR9yXP8Sb2qwgidEmeqAEmDKIOfPRQZOWbXCzLC6vjbZyy0vPisbH2SyW27+ddLVCN+OMzQ=="
           crossorigin="anonymous" referrerpolicy="no-referrer"/>
+    {# 本地资产预加载与指纹化（零编译） #}
+    <link rel="preload" as="style" href="{{ asset('/assets/css/all.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('/assets/css/all.min.css') }}">
+    {# 可选：如需本地脚本，使用 defer 并指纹化（存在时再启用） #}
+    {# <script src="{{ asset('/assets/js/common.js') }}" defer></script> #}
+    {# <script src="{{ asset('/assets/js/highlight.min.js') }}" defer></script> #}
 
     <!-- 全局引入：Vditor / KaTeX / Mermaid / Pangu，确保 PJAX 后可用 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vditor/3.11.1/index.min.css"
@@ -813,6 +819,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 })();
 </script>
-  <script src="/assets/js/offline-notice.js"></script>
+  <script src="{{ asset('/assets/js/offline-notice.js') }}"></script>
 </body>
 </html>

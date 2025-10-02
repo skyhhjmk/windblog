@@ -69,11 +69,34 @@ class PostController
         // 动态选择模板：PJAX 返回片段，非 PJAX 返回完整页面
         $viewName = $isPjax ? 'index/post.content' : 'index/post';
 
-        return view($viewName, [
+        // 非 PJAX 请求启用页面级缓存（TTL=120），键：list:post:index:{hash}:1:{locale}
+        $locale = $request->header('Accept-Language') ?? 'zh-CN';
+        $route = 'post:index';
+        $params = [
+            'keyword' => $keyword,
+            'mode' => blog_config('url_mode', 'mix', true),
+        ];
+        $paramsHash = substr(sha1(json_encode($params, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)), 0, 16);
+        $cacheKey = sprintf('list:%s:%s:%d:%s', $route, $paramsHash, 1, $locale);
+
+        if (!$isPjax) {
+            $conn = \support\Redis::connection('cache');
+            $cached = $conn->get($cacheKey);
+            if ($cached !== null) {
+                return new Response(200, ['X-Cache' => 'HIT'], $cached);
+            }
+        }
+
+        $resp = view($viewName, [
             'page_title' => $post['title'] . ' - ' . blog_config('title', 'WindBlog', true),
             'post' => $post,
             'author' => $authorName,
             'sidebar' => $sidebar
         ]);
+
+        if (!$isPjax) {
+            \support\Redis::connection('cache')->setex($cacheKey, 120, $resp->rawBody());
+        }
+        return $resp;
     }
 }
