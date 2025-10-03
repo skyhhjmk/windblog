@@ -7,8 +7,54 @@
     <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css">
     <style>
         .chart-box { min-height: 360px; background: #fff; padding: 10px; }
-        .kv { display:flex; flex-wrap:wrap; gap:12px; }
-        .kv .item { background:#fff; padding:10px 12px; border:1px solid #eee; border-radius:6px; }
+        /* 更整洁的快照卡片布局 */
+        .kv {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 12px;
+        }
+        .stat-card {
+            background: #fff;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+        }
+        .stat-card .card-head {
+            padding: 10px 12px;
+            font-weight: 600;
+            color: #333;
+            background: #f7f7f8;
+            border-bottom: 1px solid #eee;
+        }
+        .stat-card .card-body {
+            padding: 10px 12px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px 12px;
+        }
+        .kv-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px dashed #f0f0f0;
+            border-radius: 6px;
+            padding: 6px 8px;
+            background: #fff;
+        }
+        .kv-row .label { color: #666; }
+        .kv-row .value { color: #111; font-weight: 500; }
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: #edf2ff;
+            color: #3b82f6;
+            font-size: 12px;
+            line-height: 16px;
+        }
+        /* 兼容历史 .kv .item，避免其他模块受影响 */
+        .kv .item { display:none; }
     </style>
 </head>
 <body class="pear-container">
@@ -52,14 +98,48 @@ layui.config({
 layui.use(['jquery','element','echarts'], function(){
     var $ = layui.jquery, element = layui.element, echarts = layui.echarts;
 
+    // 统一的键/值友好格式化
+    function formatKey(k) {
+        var map = {
+            t: '时间',
+            version: '版本',
+            used_memory_mb: '内存(MB)',
+            connected_clients: '连接数',
+            instantaneous_ops_per_sec: '每秒操作',
+            keys: '键数量',
+            keys_method: '键统计方法',
+            hits: '命中',
+            misses: '未命中',
+            memory_free_mb: '空闲内存(MB)',
+            hit_rate: '命中率(%)'
+        };
+        return map[k] || k;
+    }
+    function formatVal(k, v) {
+        if (v === null || v === undefined) return '-';
+        if (typeof v === 'object') v = JSON.stringify(v);
+        if (k === 'version') return '<span class="badge">' + v + '</span>';
+        if (k === 'used_memory_mb' || k === 'memory_free_mb') return Number(v).toFixed(2);
+        if (k === 'instantaneous_ops_per_sec') return v + ' ops/s';
+        return v;
+    }
+    // 更美观的KV渲染（用于OPcache快照等）
     function renderKV(container, data) {
         var $c = $(container); $c.empty();
-        if (!data) { $c.html('<div class="item">暂无数据</div>'); return; }
-        Object.keys(data).forEach(function(k){
+        var html = '<div class="stat-card"><div class="card-head">快照</div><div class="card-body">';
+        if (!data) {
+            html += '<div class="kv-row"><span class="label">状态</span><span class="value">暂无数据</span></div>';
+            $c.html(html + '</div></div>');
+            return;
+        }
+        var order = ['t','version','used_memory_mb','connected_clients','instantaneous_ops_per_sec','keys','keys_method','hits','misses','memory_free_mb','hit_rate'];
+        var keys = Object.keys(data);
+        order.concat(keys.filter(function(k){ return order.indexOf(k) < 0; })).forEach(function(k){
             var v = data[k];
-            if (typeof v === 'object') v = JSON.stringify(v);
-            $c.append('<div class="item"><b>'+k+':</b> '+v+'</div>');
+            html += '<div class="kv-row"><span class="label">' + formatKey(k) + '</span><span class="value">' + formatVal(k, v) + '</span></div>';
         });
+        html += '</div></div>';
+        $c.html(html);
     }
 
     function buildLineOption(title, series, xData) {
@@ -83,21 +163,28 @@ layui.use(['jquery','element','echarts'], function(){
             if (!respD || respD.code !== 0) respD = { data: { snapshot: null, series: [] } };
             if (!respC || respC.code !== 0) respC = { data: { snapshot: null, series: [] } };
 
-            // 快照并列显示
-            var html = '';
-            function section(title, data) {
-                html += '<div class="item"><b>' + title + '</b></div>';
-                if (!data) { html += '<div class="item">暂无数据</div>'; return; }
-                Object.keys(data).forEach(function (k) {
-                    var v = data[k];
-                    if (typeof v === 'object') v = JSON.stringify(v);
-                    html += '<div class="item"><b>' + k + ':</b> ' + v + '</div>';
-                });
-            }
+            // 快照卡片化并列显示（default / cache）
             var $snap = $('#redis-snapshot'); $snap.empty();
-            section('default', respD.data.snapshot || null);
-            section('cache', respC.data.snapshot || null);
-            $snap.html(html);
+            function buildSnapshotCard(title, data) {
+                var inner = '<div class="stat-card"><div class="card-head">' + title + '</div><div class="card-body">';
+                if (!data) {
+                    inner += '<div class="kv-row"><span class="label">状态</span><span class="value">暂无数据</span></div>';
+                } else {
+                    var order = ['t','version','used_memory_mb','connected_clients','instantaneous_ops_per_sec','keys','keys_method'];
+                    var keys = Object.keys(data);
+                    order.concat(keys.filter(function(k){ return order.indexOf(k) < 0; })).forEach(function(k){
+                        var v = data[k];
+                        if (typeof v === 'object') v = JSON.stringify(v);
+                        inner += '<div class="kv-row"><span class="label">' + formatKey(k) + '</span><span class="value">' + formatVal(k, v) + '</span></div>';
+                    });
+                }
+                inner += '</div></div>';
+                return inner;
+            }
+            $snap.html(
+                buildSnapshotCard('default', respD.data.snapshot || null) +
+                buildSnapshotCard('cache', respC.data.snapshot || null)
+            );
 
             // 同图表叠加 default 与 cache 的内存/键数量
             var pd = (respD.data.series || []).map(function (it) { return { t: it.t, used: it.used_memory_mb, keys: it.keys }; });

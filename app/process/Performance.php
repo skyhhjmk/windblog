@@ -59,6 +59,13 @@ class Performance
             return;
         }
 
+        // 环境变量检查：仅当 CACHE_DRIVER=redis 时启用采集
+        $driver = getenv('CACHE_DRIVER');
+        if (!$driver || strtolower(trim($driver)) !== 'redis') {
+            Log::info("Performance 进程未启用：CACHE_DRIVER={$driver}，仅在 redis 时启用");
+            return;
+        }
+
         Log::info("Performance 进程启动 - PID: " . getmypid());
         $this->collect(); // 立即采集一次
         $this->timerId = Timer::add($this->interval, [$this, 'collect']);
