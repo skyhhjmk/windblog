@@ -389,7 +389,7 @@
             {% block content %}{% endblock %}
         </div>
         <!-- 侧边栏 - 占1/4宽度，移动端隐藏 -->
-        <div class="hidden md:block w-full md:w-1/4">
+        <div id="sidebar-container" class="hidden md:block w-full md:w-1/4">
             {% block sidebar %}
                 {% if sidebar is defined and sidebar.widgets is defined %}
                     {% for widget in sidebar.widgets %}
@@ -478,12 +478,10 @@
             $(document).on('pjax:complete', function () {
                 const __bar = document.getElementById('pjax-progress');
                 if (__bar) {
-                    __bar.style.width = '100%';
-                    setTimeout(() => {
-                        __bar.style.width = '0';
-                    }, 200);
+                    // 导航完成仅推进到 70%，等待页面内容完成后再到 100%
+                    __bar.style.width = '70%';
                 }
-                document.body.classList.remove('pjax-loading');
+                // 不在此处移除 pjax-loading，留待页面内容完成后处理
                 // 延后同步标题与触发就绪事件，确保片段内脚本已更新 document.title
                 setTimeout(function () {
                     const topbar = document.getElementById('topbarTitle');
@@ -500,6 +498,19 @@
                     bar.style.width = '0';
                 }
                 document.body.classList.remove('pjax-loading');
+            });
+
+            // 在 page:ready 时：非文章页面直接完成到 100% 并隐藏进度条
+            document.addEventListener('page:ready', function () {
+                var isArticle = !!document.getElementById('post-container');
+                if (!isArticle) {
+                    const bar = document.getElementById('pjax-progress');
+                    if (bar) {
+                        bar.style.width = '100%';
+                        setTimeout(() => { bar.style.width = '0'; }, 200);
+                    }
+                    document.body.classList.remove('pjax-loading');
+                }
             });
         });
     })();
@@ -826,5 +837,54 @@
     })();
 </script>
 <script src="{{ asset('/assets/js/offline-notice.js') }}"></script>
+<!-- 顶部 PJAX 进度条 -->
+<div id="pjax-progress" style="position:fixed;top:0;left:0;height:2px;width:0;z-index:9999;background:#3b82f6;transition:width 200ms ease,opacity 200ms ease;opacity:0;"></div>
+<script>
+(function(){
+    var bar = null;
+    function ensureBar(){
+        if (!bar) bar = document.getElementById('pjax-progress');
+        return bar;
+    }
+    function setWidth(p){
+        var el = ensureBar();
+        if (!el) return;
+        var pct = Math.max(0, Math.min(100, p));
+        el.style.width = pct + '%';
+    }
+    function show(){
+        var el = ensureBar();
+        if (!el) return;
+        el.style.opacity = '1';
+    }
+    function hide(){
+        var el = ensureBar();
+        if (!el) return;
+        el.style.opacity = '0';
+        // 重置为0以便下次起始
+        setTimeout(function(){ setWidth(0); }, 200);
+    }
+    function to70(){
+        show();
+        setWidth(70);
+    }
+    function to100AndHide(){
+        setWidth(100);
+        setTimeout(hide, 250);
+    }
+    window.PjaxProgress = {
+        start: function(){ show(); setWidth(10); },      // 导航开始时点亮并到10%
+        to70: to70,                                      // 导航完成后推进到70%
+        complete: to100AndHide,                          // 页面内关键内容加载完成后到100并隐藏
+        set: setWidth, show: show, hide: hide
+    };
+
+    // 绑定 jQuery-pjax 事件：开始与完成
+    if (window.$) {
+        $(document).on('pjax:send', function(){ window.PjaxProgress.start(); });
+        $(document).on('pjax:complete', function(){ window.PjaxProgress.to70(); });
+    }
+})();
+</script>
 </body>
 </html>

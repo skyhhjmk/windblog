@@ -1,6 +1,16 @@
 <title>{{ page_title|default('风屿雨博客') }}</title>
 <div id="pjax-container">
 <div class="max-w-full mx-auto">
+<!-- PJAX 隐藏侧栏片段：完成后注入到布局右侧栏 -->
+<div id="pjax-sidebar-html" style="display:none">
+    {% if sidebar is defined and sidebar.widgets is defined %}
+        {% for widget in sidebar.widgets %}
+            {% if widget.enabled and widget.html is defined %}
+                {{ widget.html|raw }}
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+</div>
     <article class="bg-white rounded-xl shadow-md overflow-hidden">
         <!-- 文章头部 -->
         <div class="p-6 border-b border-gray-100">
@@ -50,26 +60,58 @@
 <div hidden="hidden" id="raw_md">{{ post.content|raw }}</div>
 <script>
     function renderPost() {
-        if (!window.Vditor) {
-            window.__rpTry = (window.__rpTry || 0) + 1;
-            if (window.__rpTry < 60) { setTimeout(renderPost, 50); }
-            return;
-        }
         const container = document.getElementById('post-container');
         const raw = document.getElementById('raw_md');
         if (!container || !raw) return;
-        container.innerHTML = '';
-        Vditor.preview(container, raw.innerHTML, {
-            mode: 'light',
-            lang: 'zh_CN',
-            anchor: 1,
-            lazyLoadImage: 'https://cdn.jsdelivr.net/npm/vditor/dist/images/img-loading.svg',
-            after() { try { raw.remove(); } catch (e) {} }
-        });
-    }
-    // PJAX 片段内更新标题并通知就绪
 
-    document.addEventListener('page:ready', renderPost);
-    renderPost();
+        // 先显示骨架占位，保证首屏快速可见
+        container.innerHTML = '<div class="animate-pulse space-y-3"><div class="h-6 bg-blue-100 rounded w-2/3"></div><div class="h-4 bg-blue-100 rounded w-full"></div><div class="h-4 bg-blue-100 rounded w-5/6"></div><div class="h-4 bg-blue-100 rounded w-3/4"></div></div>';
+
+        // 将渲染推迟到首帧之后，避免阻塞页面呈现
+        function doPreview() {
+            if (!window.Vditor) {
+                window.__rpTry = (window.__rpTry || 0) + 1;
+                if (window.__rpTry < 60) { setTimeout(doPreview, 50); }
+                return;
+            }
+            Vditor.preview(container, raw.innerHTML, {
+                mode: 'light',
+                lang: 'zh_CN',
+                anchor: 1,
+                lazyLoadImage: 'https://cdn.jsdelivr.net/npm/vditor/dist/images/img-loading.svg',
+                after() {
+                    try { raw.remove(); } catch (e) {}
+                    // 文章渲染完成，进度到100并隐藏
+                    if (window.PjaxProgress && typeof window.PjaxProgress.complete === 'function') {
+                        window.PjaxProgress.complete();
+                    }
+                }
+            });
+        }
+
+        // 使用 rAF + setTimeout(0) 让骨架先渲染，再执行预览
+        if (window.requestAnimationFrame) {
+            requestAnimationFrame(function () { setTimeout(doPreview, 0); });
+        } else {
+            setTimeout(doPreview, 0);
+        }
+    }
+    (function () {
+        function injectSidebar() {
+            var t = document.getElementById('pjax-sidebar-html');
+            var c = document.getElementById('sidebar-container');
+            if (t && c) {
+                c.innerHTML = t.innerHTML || '';
+            }
+        }
+        // 在页面就绪时同时渲染文章与注入侧栏
+        document.addEventListener('page:ready', function () {
+            injectSidebar();
+            renderPost();
+        });
+        // 初次加载也执行一次
+        injectSidebar();
+        renderPost();
+    })();
 </script>
 </div>

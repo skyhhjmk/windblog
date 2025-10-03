@@ -58,8 +58,8 @@ class PostController
             || (bool)$request->get('_pjax')
             || strtolower((string)$request->header('X-Requested-With')) === 'xmlhttprequest';
 
-        // 获取侧边栏内容（仅非 PJAX 时获取）
-        $sidebar = $isPjax ? null : \app\service\SidebarService::getSidebarContent($request, 'post');
+        // 获取侧边栏内容（PJAX 与非 PJAX 均获取）
+        $sidebar = \app\service\SidebarService::getSidebarContent($request, 'post');
         
         // 加载作者信息
         $post->load(['authors', 'primaryAuthor']);

@@ -49,8 +49,8 @@ class SearchController
             || strtolower((string)$request->header('X-Requested-With')) === 'xmlhttprequest';
 
 
-        // 获取侧边栏内容（仅非 PJAX 时获取）
-        $sidebar = $isPjax ? null : SidebarService::getSidebarContent($request, 'search');
+        // 获取侧边栏内容（PJAX 与非 PJAX 均获取）
+        $sidebar = SidebarService::getSidebarContent($request, 'search');
         $suggestTitles = !empty($keyword) ? ElasticService::suggestTitles($keyword, 5) : [];
 
         // 动态选择模板

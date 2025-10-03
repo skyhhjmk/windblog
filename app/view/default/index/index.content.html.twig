@@ -82,6 +82,17 @@
     {% endif %}
 </div>
 
+<!-- PJAX 隐藏侧栏片段：完成后注入到布局右侧栏 -->
+<div id="pjax-sidebar-html" style="display:none">
+    {% if sidebar is defined and sidebar.widgets is defined %}
+        {% for widget in sidebar.widgets %}
+            {% if widget.enabled and widget.html is defined %}
+                {{ widget.html|raw }}
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+</div>
+
 <style>
     @keyframes fade-in-down {
         0% {
@@ -143,8 +154,20 @@
         window.location.href = '/page/' + page + '.html';
     }
 
-    // PJAX 片段内更新标题并通知就绪
-
+    // PJAX 片段内更新侧栏内容并通知就绪
+    (function () {
+        function injectSidebar() {
+            var t = document.getElementById('pjax-sidebar-html');
+            var c = document.getElementById('sidebar-container');
+            if (t && c) {
+                c.innerHTML = t.innerHTML || '';
+            }
+        }
+        // 立即尝试一次（片段初次替换）
+        injectSidebar();
+        // 在 page:ready 时再确保一次（基页会在 pjax:complete 后触发）
+        document.addEventListener('page:ready', injectSidebar);
+    })();
 
 </script>
 </div>

@@ -1,5 +1,15 @@
 <title>{{ page_title|default('搜索') }}</title>
 <div id="pjax-container">
+<!-- PJAX 隐藏侧栏片段：完成后注入到布局右侧栏 -->
+<div id="pjax-sidebar-html" style="display:none">
+    {% if sidebar is defined and sidebar.widgets is defined %}
+        {% for widget in sidebar.widgets %}
+            {% if widget.enabled and widget.html is defined %}
+                {{ widget.html|raw }}
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+</div>
 <div class="max-w-full mx-auto px-4">
     <!-- 搜索标题区域 -->
     <div class="text-center mb-12 animate-fade-in-down">
@@ -122,5 +132,18 @@
 <script>
 
 
+</script>
+<script>
+    (function () {
+        function injectSidebar() {
+            var t = document.getElementById('pjax-sidebar-html');
+            var c = document.getElementById('sidebar-container');
+            if (t && c) {
+                c.innerHTML = t.innerHTML || '';
+            }
+        }
+        injectSidebar();
+        document.addEventListener('page:ready', injectSidebar);
+    })();
 </script>
 </div>
