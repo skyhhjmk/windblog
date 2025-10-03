@@ -5,6 +5,23 @@ document.addEventListener('DOMContentLoaded', function() {
     debugIcon.className = 'fixed bottom-5 right-5 w-12 h-12 bg-blue-500 text-white rounded-full flex justify-center items-center cursor-pointer z-50 shadow-lg hover:bg-blue-600 transition-all duration-300 hover:scale-110';
     debugIcon.innerHTML = '<i class="fas fa-wrench"></i>';
     document.body.appendChild(debugIcon);
+    // 耗时徽章
+    const badge = document.createElement('span');
+    badge.id = 'debug-badge';
+    badge.className = 'absolute -top-2 -right-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full shadow';
+    badge.textContent = '';
+    debugIcon.style.position = 'fixed';
+    debugIcon.appendChild(badge);
+    // 页面加载完成后立即显示耗时（若有注入数据）
+    (function () {
+        const dbg = window.__DEBUG_TOOLKIT_DATA || null;
+        if (!dbg || !dbg.timing || typeof dbg.timing.total_ms === 'undefined') return;
+        const ms = dbg.timing.total_ms;
+        const badgeEl = document.getElementById('debug-badge');
+        if (!badgeEl) return;
+        badgeEl.textContent = `${ms}ms`;
+        badgeEl.className = 'absolute -top-2 -right-2 text-white text-xs px-2 py-0.5 rounded-full shadow ' + (ms > 500 ? 'bg-red-500' : 'bg-green-500');
+    })();
     
     // 创建调试面板和遮罩
     const overlay = document.createElement('div');
@@ -32,6 +49,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="debug-section mb-6">
                         <div class="debug-section-title font-bold mb-3 text-blue-800">服务器信息</div>
                         <div id="server-info" class="debug-info bg-gray-50 border border-gray-200 rounded p-4 font-mono whitespace-pre-wrap overflow-x-auto max-h-80 overflow-y-auto"></div>
+                    </div>
+                    <div class="debug-section mb-6">
+                        <div class="debug-section-title font-bold mb-3 text-blue-800">耗时详情</div>
+                        <div id="timing-info" class="debug-info bg-gray-50 border border-gray-200 rounded p-4 font-mono whitespace-pre-wrap overflow-x-auto max-h-40 overflow-y-auto">暂无耗时数据</div>
+                    </div>
+                    <div class="debug-section mb-6">
+                        <div class="debug-section-title font-bold mb-3 text-blue-800">日志</div>
+                        <div id="logs-info" class="debug-info bg-gray-50 border border-gray-200 rounded p-4 font-mono whitespace-pre-wrap overflow-x-auto max-h-80 overflow-y-auto">暂无日志</div>
                     </div>
                 </div>
                 
@@ -141,6 +166,8 @@ document.addEventListener('DOMContentLoaded', function() {
         xhr.open(method, url);
         xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
         xhr.setRequestHeader('Content-Type', 'application/json');
+        // 自动附带调试头
+        xhr.setRequestHeader('X-Debug-Toolkit', '1');
         
         xhr.onload = function() {
             if (xhr.status >= 200 && xhr.status < 300) {
@@ -162,55 +189,91 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // 加载调试信息
+    // 加载调试信息（优先使用后端注入的 window.__DEBUG_TOOLKIT_DATA）
     function loadDebugInfo() {
-        // 获取服务器信息
-        fetch('/debug/server-info')
-            .then(response => response.json())
-            .then(data => {
-                const serverInfoElement = document.getElementById('server-info');
-                if (serverInfoElement) {
-                    serverInfoElement.textContent = JSON.stringify(data, null, 2);
+        const dbg = window.__DEBUG_TOOLKIT_DATA || null;
+
+        const setJSON = (elId, obj, fallbackText) => {
+            const el = document.getElementById(elId);
+            if (!el) return;
+            if (obj) {
+                el.textContent = JSON.stringify(obj, null, 2);
+            } else if (fallbackText) {
+                el.textContent = fallbackText;
+            }
+        };
+
+        if (dbg) {
+            // 请求/响应/服务器信息（含扩展与耗时）
+            setJSON('request-info', dbg.request, '无请求信息');
+            setJSON('response-info', dbg.response, '无响应信息');
+
+            const serverPayload = {
+                timing: dbg.timing || {},
+                trigger: dbg.trigger || {}
+            };
+            setJSON('server-info', serverPayload, '无服务器信息');
+
+            // 填充耗时详情（总耗时 + handler占位）
+            (function () {
+                const el = document.getElementById('timing-info');
+                if (!el) return;
+                const total = (dbg.timing && typeof dbg.timing.total_ms !== 'undefined') ? dbg.timing.total_ms : null;
+                const handler = (dbg.timing && typeof dbg.timing.handler_ms !== 'undefined') ? dbg.timing.handler_ms : null;
+                const lines = [];
+                lines.push('total_ms: ' + (total !== null ? total + ' ms' : '未知'));
+                lines.push('handler_ms: ' + (handler !== null ? handler + ' ms' : '占位'));
+                el.textContent = lines.join('\\n');
+            })();
+
+            // 更新耗时徽章（仅展示耗时，不包含扩展状态）
+            try {
+                const ms = (dbg.timing && typeof dbg.timing.total_ms !== 'undefined') ? dbg.timing.total_ms : null;
+                const badgeEl = document.getElementById('debug-badge');
+                if (badgeEl) {
+                    badgeEl.textContent = (ms !== null) ? `${ms}ms` : '';
+                    badgeEl.className = 'absolute -top-2 -right-2 text-white text-xs px-2 py-0.5 rounded-full shadow ' + ((ms !== null && ms > 500) ? 'bg-red-500' : 'bg-green-500');
                 }
-            })
-            .catch(error => {
-                const serverInfoElement = document.getElementById('server-info');
-                if (serverInfoElement) {
-                    serverInfoElement.textContent = '获取服务器信息失败: ' + error.message;
-                }
+            } catch (e) {}
+
+            // 日志拉取（如配置了端点），1秒超时，附带触发头
+            if (dbg.logs && dbg.logs.endpoint) {
+                const controller = new AbortController();
+                const tid = setTimeout(() => controller.abort(), 1000);
+                fetch(dbg.logs.endpoint, {
+                    headers: {
+                        'X-Debug-Toolkit': '1',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    },
+                    signal: controller.signal
+                })
+                .then(r => r.ok ? r.json() : Promise.reject(new Error(r.status + ' ' + r.statusText)))
+                .then(data => {
+                    clearTimeout(tid);
+                    setJSON('logs-info', data, '暂无日志数据');
+                })
+                .catch(err => {
+                    clearTimeout(tid);
+                    const el = document.getElementById('logs-info');
+                    if (el) el.textContent = '获取日志失败: ' + err.message;
+                });
+            } else {
+                setJSON('logs-info', null, '未配置日志端点');
+            }
+        } else {
+            // 回退：兼容旧接口
+            Promise.allSettled([
+                fetch('/debug/server-info').then(r => r.json()),
+                fetch('/debug/request-info').then(r => r.json()),
+                fetch('/debug/response-info').then(r => r.json())
+            ])
+            .then(([s, q, p]) => {
+                setJSON('server-info', s.status === 'fulfilled' ? s.value : null, s.status === 'rejected' ? ('获取服务器信息失败: ' + s.reason) : '无服务器信息');
+                setJSON('request-info', q.status === 'fulfilled' ? q.value : null, q.status === 'rejected' ? ('获取请求信息失败: ' + q.reason) : '无请求信息');
+                setJSON('response-info', p.status === 'fulfilled' ? p.value : null, p.status === 'rejected' ? ('获取响应信息失败: ' + p.reason) : '无响应信息');
             });
-        
-        // 获取请求信息
-        fetch('/debug/request-info')
-            .then(response => response.json())
-            .then(data => {
-                const requestInfoElement = document.getElementById('request-info');
-                if (requestInfoElement) {
-                    requestInfoElement.textContent = JSON.stringify(data, null, 2);
-                }
-            })
-            .catch(error => {
-                const requestInfoElement = document.getElementById('request-info');
-                if (requestInfoElement) {
-                    requestInfoElement.textContent = '获取请求信息失败: ' + error.message;
-                }
-            });
-        
-        // 获取响应信息
-        fetch('/debug/response-info')
-            .then(response => response.json())
-            .then(data => {
-                const responseInfoElement = document.getElementById('response-info');
-                if (responseInfoElement) {
-                    responseInfoElement.textContent = JSON.stringify(data, null, 2);
-                }
-            })
-            .catch(error => {
-                const responseInfoElement = document.getElementById('response-info');
-                if (responseInfoElement) {
-                    responseInfoElement.textContent = '获取响应信息失败: ' + error.message;
-                }
-            });
+        }
     }
     
     // 使元素可拖动的函数
