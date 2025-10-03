@@ -102,5 +102,13 @@ return [
         'handler' => app\process\LinkMonitor::class,
         'reloadable' => false,
         'constructor' => []
+    ],
+    // 全站静态化生成进程
+    'static_generator' => [
+        'handler' => app\process\StaticGenerator::class,
+        'reloadable' => false,
+        'constructor' => [
+            // 目前不需要额外构造参数，如需可在此扩展
+        ]
     ]
 ];
