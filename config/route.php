@@ -47,6 +47,9 @@ Route::get('/api/hello', function() {
     return json(['hello' => 'webman']);
 });
 
+// Rainyun API工具路由
+Route::any('/rainyun', [app\controller\RainyunController::class, 'index'])->name('rainyun.index');
+
 // REST API v1
 Route::group('/api/v1', function () {
     // 文章相关API

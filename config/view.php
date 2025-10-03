@@ -22,6 +22,8 @@ use app\view\extension\PathExtension;
 //use app\view\extension\TranslateExtension;
 use Twig\Extra\Cache\CacheExtension;
 use Twig\Extra\String\StringExtension;
+use Twig\Extra\Cache\CacheRuntime;
+use Twig\RuntimeLoader\FactoryRuntimeLoader;
 //use support\view\Twig;
 
 $debug = (bool)env('APP_DEBUG', false);
@@ -37,6 +39,7 @@ return [
         'cache' => $cacheEnable ? $cachePath : false,
         'debug' => $debug,
         'auto_reload' => $autoReload,
+        'strict_variables' => false,
         'view_suffix' => 'html.twig',
     ],
     'extension' => function ($twig) {
@@ -48,6 +51,19 @@ return [
 //        $twig->addExtension(new TranslateExtension());
         // 添加缓存扩展
         $twig->addExtension(new CacheExtension());
+
+        // 为缓存扩展注入默认的 PSR-16 适配器（Redis）
+        $twig->addRuntimeLoader(new FactoryRuntimeLoader([
+            CacheRuntime::class => function () {
+                // 使用独立的 cache 连接库（config/redis.php 中的 database=1）
+                return new \app\service\cache\RedisCacheAdapter([
+                    'connection' => 'cache',
+                    'prefix' => env('TWIG_CACHE_PREFIX', 'twig:fragment:'),
+                    'default_ttl' => (int)env('TWIG_CACHE_DEFAULT_TTL', 300)
+                ]);
+            }
+        ]));
+
         // 添加字符串扩展
         $twig->addExtension(new StringExtension());
     }

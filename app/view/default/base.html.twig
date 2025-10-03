@@ -9,28 +9,15 @@
     <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
     <title>{% block title %}{{ page_title|default('风屿雨博客') }}{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css"
-          integrity="sha512-DxV+EoADOkOygM4IR9yXP8Sb2qwgidEmeqAEmDKIOfPRQZOWbXCzLC6vjbZyy0vPisbH2SyW27+ddLVCN+OMzQ=="
-          crossorigin="anonymous" referrerpolicy="no-referrer"/>
+    {# 本地资产预加载与指纹化（零编译） #}
+    <link rel="preload" as="style" href="{{ asset('/assets/css/font-awesome.css') }}">
+    <link rel="stylesheet" href="{{ asset('/assets/css/font-awesome.css') }}">
+    <link rel="stylesheet" href="{{ asset('/assets/vditor/index.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('/assets/vditor/content-theme/ant-design.min.css') }}">
+    {# 可选：如需本地脚本，使用 defer 并指纹化（存在时再启用） #}
+    {# <script src="{{ asset('/assets/js/common.js') }}" defer></script> #}
+    <script src="{{ asset('/assets/vditor/method.min.js') }}" defer></script>
 
-    <!-- 全局引入：Vditor / KaTeX / Mermaid / Pangu，确保 PJAX 后可用 -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vditor/3.11.1/index.min.css"
-          integrity="sha512-Tj6qPPqMhdET85Eu0Hy663goieFRcOde8i0J3DT8L+wb0sSDfgzPwoAYW63yijDXFzrzxOSvPuXfjHqL07hVcg=="
-          crossorigin="anonymous" referrerpolicy="no-referrer"/>
-    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/vditor/3.11.1/method.min.js"
-            integrity="sha512-KiKQQ+WpVlIr0T+67GklTdyp7533hnJY9KVOZROBU/dJ8h046F4QinM/kC46ko6P0lxOB0xDo3Rsph2wlsWTOw=="
-            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css"
-          integrity="sha512-fHwaWebuwA7NSF5Qg/af4UeDx9XqUpYpOGgubo3yWu+b2IQR4UeQwbb42Ti7gVAjNtVoI/I9TEoYeu9omwcC6g=="
-          crossorigin="anonymous" referrerpolicy="no-referrer"/>
-    <script async src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"
-            integrity="sha512-LQNxIMR5rXv7o+b1l8+N1EZMfhG7iFZ9HhnbJkTp4zjNr5Wvst75AqUeFDxeRUa7l5vEDyUiAip//r+EFLLCyA=="
-            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-
-    <script async src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.9.0/mermaid.min.js"
-            integrity="sha512-OAr6bl1pt/FD0oVcuPzJ9VIMso+HQhHoodVI7mnDst19p8rNkNiraPLsDCYVhit3Mjd6B7AUHFsoDhq3dDeI7g=="
-            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script async src="https://cdnjs.cloudflare.com/ajax/libs/pangu/7.2.0/pangu.umd.js"
             integrity="sha512-er1ryC6I6mvQLB6cEcyDj9MYKdSXwuvdqFuir5fzcPlzqagv3Swng87sIPcib8Spm4BTIT5PNTmRaMSdM1QVxQ=="
             crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -44,7 +31,7 @@
         body {
             transition: all 0.3s ease;
         }
-        
+
         /* 添加动画支持 */
         @keyframes fade-in-down {
             0% {
@@ -56,7 +43,7 @@
                 transform: translateY(0);
             }
         }
-        
+
         @keyframes fade-in-up {
             0% {
                 opacity: 0;
@@ -67,7 +54,7 @@
                 transform: translateY(0);
             }
         }
-        
+
         @keyframes fade-in {
             0% {
                 opacity: 0;
@@ -76,66 +63,66 @@
                 opacity: 1;
             }
         }
-        
+
         .animate-fade-in-down {
             animation: fade-in-down 0.5s ease-out forwards;
         }
-        
+
         .animate-fade-in-up {
             animation: fade-in-up 0.5s ease-out forwards;
         }
-        
+
         .animate-fade-in {
             animation: fade-in 0.5s ease-out forwards;
         }
-        
+
         /* 悬停动画 */
         .hover-animate {
             transition: all 0.3s ease;
         }
-        
+
         .hover-animate:hover {
             transform: translateY(-2px);
         }
-        
+
         /* Markdown内容样式 */
         .prose {
             color: #374151;
             max-width: none;
         }
-        
+
         .prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
             color: #1f2937;
             font-weight: 600;
             margin-top: 1.5em;
             margin-bottom: 1em;
         }
-        
+
         .prose p {
             margin-top: 1em;
             margin-bottom: 1em;
             line-height: 1.75;
         }
-        
+
         .prose ul, .prose ol {
             margin-top: 1em;
             margin-bottom: 1em;
             padding-left: 1.5em;
         }
-        
+
         .prose li {
             margin-bottom: 0.5em;
         }
-        
+
         .prose a {
             color: #3b82f6;
             text-decoration: underline;
         }
-        
+
         .prose a:hover {
             color: #1d4ed8;
         }
-        
+
         .prose blockquote {
             border-left: 4px solid #d1d5db;
             padding-left: 1em;
@@ -143,31 +130,31 @@
             margin-right: 0;
             color: #6b7280;
         }
-        
+
         .prose pre {
             background-color: #f3f4f6;
             padding: 1em;
             border-radius: 0.375rem;
             overflow-x: auto;
         }
-        
+
         .prose code {
             background-color: #f3f4f6;
             padding: 0.2em 0.4em;
             border-radius: 0.25rem;
             font-size: 0.875em;
         }
-        
+
         .prose pre code {
             background-color: transparent;
             padding: 0;
         }
-        
+
         /* 移动端触摸反馈 */
         .tap-highlight {
             -webkit-tap-highlight-color: rgba(59, 130, 246, 0.2);
         }
-        
+
         /* 移动端导航菜单动画 */
         @keyframes slide-in {
             from {
@@ -179,7 +166,7 @@
                 opacity: 1;
             }
         }
-        
+
         @keyframes slide-out {
             from {
                 transform: translateX(0);
@@ -190,15 +177,15 @@
                 opacity: 0;
             }
         }
-        
+
         .mobile-menu {
             animation: slide-in 0.3s ease-out forwards;
         }
-        
+
         .mobile-menu.closing {
             animation: slide-out 0.3s ease-out forwards;
         }
-        
+
         /* 移动端搜索结果样式优化 */
         @media (max-width: 640px) {
             #searchResults {
@@ -207,13 +194,13 @@
                 left: 1rem;
                 right: 1rem;
             }
-            
+
             /* 优化移动端内容间距 */
             .blog-container {
                 padding-left: 1rem;
                 padding-right: 1rem;
             }
-            
+
             /* 优化移动端表格显示 */
             table {
                 display: block;
@@ -221,34 +208,38 @@
                 white-space: nowrap;
             }
         }
+
         .hl {
             background-color: #ffea7a; /* 更深的橙黄背景 */
-            color: #7c2d12;           /* 深棕文字提高对比度 */
+            color: #7c2d12; /* 深棕文字提高对比度 */
             padding: 0 2px;
             border-radius: 2px;
-            font-weight: 700;         /* 加粗 */
+            font-weight: 700; /* 加粗 */
         }
-    /* PJAX 顶部进度条 */
-    #pjax-progress {
-        position: fixed;
-        top: 0;
-        left: 0;
-        height: 3px;
-        width: 0;
-        background: linear-gradient(90deg, #3b82f6, #60a5fa);
-        z-index: 9999;
-        transform-origin: left center;
-        transition: width 0.3s ease;
-        box-shadow: 0 0 8px rgba(59,130,246,0.6), 0 0 3px rgba(96,165,250,0.6);
-    }
-    body.pjax-loading #pjax-progress {
-        width: 85%;
-        transition: width 1.0s ease;
-    }
-    body:not(.pjax-loading) #pjax-progress {
-        width: 0;
-        transition: width 0.2s ease;
-    }
+
+        /* PJAX 顶部进度条 */
+        #pjax-progress {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            width: 0;
+            background: linear-gradient(90deg, #3b82f6, #60a5fa);
+            z-index: 9999;
+            transform-origin: left center;
+            transition: width 0.3s ease;
+            box-shadow: 0 0 8px rgba(59, 130, 246, 0.6), 0 0 3px rgba(96, 165, 250, 0.6);
+        }
+
+        body.pjax-loading #pjax-progress {
+            width: 85%;
+            transition: width 1.0s ease;
+        }
+
+        body:not(.pjax-loading) #pjax-progress {
+            width: 0;
+            transition: width 0.2s ease;
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -264,17 +255,19 @@
         <div class="relative hidden md:block mr-6">
             <form action="/search" method="get" class="search-form" id="searchForm">
                 <div class="relative">
-                    <input type="text" name="q" id="searchInput" 
-                           placeholder="搜索文章..." 
+                    <input type="text" name="q" id="searchInput"
+                           placeholder="搜索文章..."
                            class="pl-10 pr-4 py-2 border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-64"
                            autocomplete="off">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <i class="fas fa-search text-gray-400"></i>
                     </div>
-                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none hidden" id="searchLoading">
+                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none hidden"
+                         id="searchLoading">
                         <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
                     </div>
-                    <div id="searchResults" class="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg hidden max-h-60 overflow-y-auto"></div>
+                    <div id="searchResults"
+                         class="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg hidden max-h-60 overflow-y-auto"></div>
                 </div>
             </form>
         </div>
@@ -285,19 +278,19 @@
         <nav class="hidden md:block">
             <ul class="flex space-x-6">
                 <li>
-                    <a href="/" 
+                    <a href="/"
                        class="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center hover-animate tap-highlight">
                         <i class="fas fa-home mr-1"></i>
                         首页
                     </a>
                 </li>
-                {#<li>
+                {# <li>
                     <a href="#"
                        class="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center hover-animate tap-highlight">
                         <i class="fas fa-tags mr-1"></i>
                         分类
                     </a>
-                </li>#}
+                </li> #}
                 <li>
                     <a href="/link"
                        class="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center hover-animate tap-highlight">
@@ -305,16 +298,16 @@
                         友情链接
                     </a>
                 </li>
-                {#<li>
+                {# <li>
                     <a href="/admin"
                        class="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center hover-animate tap-highlight">
                         <i class="fas fa-cog mr-1"></i>
                         管理后台
                     </a>
-                </li>#}
+                </li> #}
             </ul>
         </nav>
-        
+
         <!-- 移动端菜单按钮 -->
         <button class="md:hidden text-gray-600 hover-animate tap-highlight" id="mobileMenuBtn">
             <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -323,13 +316,13 @@
             </svg>
         </button>
     </div>
-    
+
     <!-- 移动端搜索栏 -->
     <div class="md:hidden px-4 pb-4 hidden" id="mobileSearchBar">
         <form action="/search" method="get" class="search-form">
             <div class="relative">
-                <input type="text" name="q" 
-                       placeholder="搜索文章..." 
+                <input type="text" name="q"
+                       placeholder="搜索文章..."
                        class="pl-10 pr-4 py-2 border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
                        autocomplete="off">
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -356,19 +349,19 @@
         <nav>
             <ul class="space-y-4">
                 <li>
-                    <a href="/" 
+                    <a href="/"
                        class="block text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center py-2 tap-highlight">
                         <i class="fas fa-home mr-3 w-5 text-center"></i>
                         首页
                     </a>
                 </li>
-                {#<li>
+                {# <li>
                     <a href="#"
                        class="block text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center py-2 tap-highlight">
                         <i class="fas fa-tags mr-3 w-5 text-center"></i>
                         分类
                     </a>
-                </li>#}
+                </li> #}
                 <li>
                     <a href="/link"
                        class="block text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center py-2 tap-highlight">
@@ -376,13 +369,13 @@
                         友情链接
                     </a>
                 </li>
-                {#<li>
+                {# <li>
                     <a href="/admin"
                        class="block text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center py-2 tap-highlight">
                         <i class="fas fa-cog mr-3 w-5 text-center"></i>
                         管理后台
                     </a>
-                </li>#}
+                </li> #}
             </ul>
         </nav>
     </div>
@@ -437,14 +430,15 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
         integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.pjax/2.0.1/jquery.pjax.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.pjax/2.0.1/jquery.pjax.min.js" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
 {% block extra_js %}{% endblock %}
 
 <!-- PJAX 初始化 -->
 <script>
-    (function() {
+    (function () {
         if (!window.jQuery || typeof jQuery.fn.pjax !== 'function') return;
-        jQuery(function($) {
+        jQuery(function ($) {
             const excludes = ':not([target="_blank"]):not([data-no-pjax]):not([href^="#"]):not([href^="mailto:"]):not([href^="tel:"])';
             const origin = window.location.origin;
             const selector = [
@@ -458,7 +452,7 @@
             });
 
             // 点击即刻触发动画反馈（不等请求发出）
-            $(document).on('click', selector, function() {
+            $(document).on('click', selector, function () {
                 const bar = document.getElementById('pjax-progress');
                 if (bar) {
                     bar.style.transition = 'none';
@@ -471,7 +465,7 @@
                 document.body.classList.add('pjax-loading');
             });
 
-            $(document).on('pjax:send', function() {
+            $(document).on('pjax:send', function () {
                 const bar = document.getElementById('pjax-progress');
                 if (bar) {
                     // 确保至少推进到 30%
@@ -481,24 +475,30 @@
                 document.body.classList.add('pjax-loading');
             });
 
-            $(document).on('pjax:complete', function() {
+            $(document).on('pjax:complete', function () {
                 const __bar = document.getElementById('pjax-progress');
                 if (__bar) {
                     __bar.style.width = '100%';
-                    setTimeout(() => { __bar.style.width = '0'; }, 200);
+                    setTimeout(() => {
+                        __bar.style.width = '0';
+                    }, 200);
                 }
                 document.body.classList.remove('pjax-loading');
                 // 延后同步标题与触发就绪事件，确保片段内脚本已更新 document.title
                 setTimeout(function () {
                     const topbar = document.getElementById('topbarTitle');
-                    if (topbar) { topbar.textContent = document.title; }
+                    if (topbar) {
+                        topbar.textContent = document.title;
+                    }
                     document.dispatchEvent(new CustomEvent('page:ready'));
                 }, 0);
             });
 
-            $(document).on('pjax:error', function() {
+            $(document).on('pjax:error', function () {
                 const bar = document.getElementById('pjax-progress');
-                if (bar) { bar.style.width = '0'; }
+                if (bar) {
+                    bar.style.width = '0';
+                }
                 document.body.classList.remove('pjax-loading');
             });
         });
@@ -506,137 +506,142 @@
 </script>
 
 <script>
-// 移动端菜单功能
-(function() {
-    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-    const closeMobileMenuBtn = document.getElementById('closeMobileMenuBtn');
-    const mobileMenuOverlay = document.getElementById('mobileMenuOverlay');
-    const mobileMenu = document.getElementById('mobileMenu');
-    
-    if (mobileMenuBtn && closeMobileMenuBtn && mobileMenuOverlay && mobileMenu) {
-        mobileMenuBtn.addEventListener('click', function() {
-            mobileMenuOverlay.classList.remove('hidden');
-            mobileMenu.classList.remove('closing');
-        });
-        
-        function closeMenu() {
-            mobileMenu.classList.add('closing');
-            setTimeout(() => {
-                mobileMenuOverlay.classList.add('hidden');
-            }, 300);
-        }
-        
-        closeMobileMenuBtn.addEventListener('click', closeMenu);
-        mobileMenuOverlay.addEventListener('click', function(e) {
-            if (e.target === mobileMenuOverlay) {
-                closeMenu();
-            }
-        });
-        
-        // 点击菜单项后关闭菜单
-        const mobileMenuLinks = mobileMenu.querySelectorAll('a');
-        mobileMenuLinks.forEach(link => {
-            link.addEventListener('click', closeMenu);
-        });
-    }
-})();
+    // 移动端菜单功能
+    (function () {
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const closeMobileMenuBtn = document.getElementById('closeMobileMenuBtn');
+        const mobileMenuOverlay = document.getElementById('mobileMenuOverlay');
+        const mobileMenu = document.getElementById('mobileMenu');
 
-// 移动端搜索栏切换
-(function() {
-    const mobileSearchBtn = document.getElementById('mobileSearchBtn');
-    const mobileSearchBar = document.getElementById('mobileSearchBar');
-    
-    if (mobileSearchBtn && mobileSearchBar) {
-        mobileSearchBtn.addEventListener('click', function() {
-            mobileSearchBar.classList.toggle('hidden');
-            if (!mobileSearchBar.classList.contains('hidden')) {
+        if (mobileMenuBtn && closeMobileMenuBtn && mobileMenuOverlay && mobileMenu) {
+            mobileMenuBtn.addEventListener('click', function () {
+                mobileMenuOverlay.classList.remove('hidden');
+                mobileMenu.classList.remove('closing');
+            });
+
+            function closeMenu() {
+                mobileMenu.classList.add('closing');
                 setTimeout(() => {
-                    const searchInput = mobileSearchBar.querySelector('input');
-                    if (searchInput) {
-                        searchInput.focus();
-                    }
-                }, 100);
+                    mobileMenuOverlay.classList.add('hidden');
+                }, 300);
             }
-        });
-    }
-})();
 
-document.addEventListener('DOMContentLoaded', function() {
-    // 搜索功能
-    let searchTimeout;
-    let currentController = null;
-    const searchInput = document.getElementById('searchInput');
-    const searchResults = document.getElementById('searchResults');
-    const searchForm = document.getElementById('searchForm');
-    // 防止重复触发（Enter 与 submit 同时触发导致的双请求）
-    let searchNavigating = false;
+            closeMobileMenuBtn.addEventListener('click', closeMenu);
+            mobileMenuOverlay.addEventListener('click', function (e) {
+                if (e.target === mobileMenuOverlay) {
+                    closeMenu();
+                }
+            });
 
-    if (!searchInput || !searchResults || !searchForm) return;
-
-    // 实时搜索功能
-    searchInput.addEventListener('input', function() {
-        const keyword = this.value.trim();
-        
-        clearTimeout(searchTimeout);
-        
-        // 立即显示加载动画（仅当长度≥3）
-        if (keyword.length >= 3) {
-            document.getElementById('searchLoading').classList.remove('hidden');
-        } else {
-            document.getElementById('searchLoading').classList.add('hidden');
+            // 点击菜单项后关闭菜单
+            const mobileMenuLinks = mobileMenu.querySelectorAll('a');
+            mobileMenuLinks.forEach(link => {
+                link.addEventListener('click', closeMenu);
+            });
         }
-        
-        if (keyword.length < 3) {
-            searchResults.innerHTML = '<div class="p-4 text-center text-gray-500">请输入至少 3 个字符以开始搜索</div>';
-            searchResults.style.display = 'block';
-            document.getElementById('searchLoading').classList.add('hidden');
-            return;
-        }
+    })();
 
-        searchTimeout = setTimeout(function() {
-            if (currentController) { try { currentController.abort(); } catch (e) {} }
-            currentController = new AbortController();
-            fetch('/search/ajax?q=' + encodeURIComponent(keyword), { signal: currentController.signal })
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('searchLoading').classList.add('hidden');
-                    if (data.success) {
-                        currentController = null;
-                        displaySearchResults(data.results, data.total, data.tips || []);
-                        // 保存搜索历史
-                        saveSearchHistory(keyword);
-                    } else {
-                        searchResults.style.display = 'none';
+    // 移动端搜索栏切换
+    (function () {
+        const mobileSearchBtn = document.getElementById('mobileSearchBtn');
+        const mobileSearchBar = document.getElementById('mobileSearchBar');
+
+        if (mobileSearchBtn && mobileSearchBar) {
+            mobileSearchBtn.addEventListener('click', function () {
+                mobileSearchBar.classList.toggle('hidden');
+                if (!mobileSearchBar.classList.contains('hidden')) {
+                    setTimeout(() => {
+                        const searchInput = mobileSearchBar.querySelector('input');
+                        if (searchInput) {
+                            searchInput.focus();
+                        }
+                    }, 100);
+                }
+            });
+        }
+    })();
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // 搜索功能
+        let searchTimeout;
+        let currentController = null;
+        const searchInput = document.getElementById('searchInput');
+        const searchResults = document.getElementById('searchResults');
+        const searchForm = document.getElementById('searchForm');
+        // 防止重复触发（Enter 与 submit 同时触发导致的双请求）
+        let searchNavigating = false;
+
+        if (!searchInput || !searchResults || !searchForm) return;
+
+        // 实时搜索功能
+        searchInput.addEventListener('input', function () {
+            const keyword = this.value.trim();
+
+            clearTimeout(searchTimeout);
+
+            // 立即显示加载动画（仅当长度≥3）
+            if (keyword.length >= 3) {
+                document.getElementById('searchLoading').classList.remove('hidden');
+            } else {
+                document.getElementById('searchLoading').classList.add('hidden');
+            }
+
+            if (keyword.length < 3) {
+                searchResults.innerHTML = '<div class="p-4 text-center text-gray-500">请输入至少 3 个字符以开始搜索</div>';
+                searchResults.style.display = 'block';
+                document.getElementById('searchLoading').classList.add('hidden');
+                return;
+            }
+
+            searchTimeout = setTimeout(function () {
+                if (currentController) {
+                    try {
+                        currentController.abort();
+                    } catch (e) {
                     }
-                })
-                .catch(error => {
-                    console.error('Search error:', error);
-                    currentController = null;
-                    document.getElementById('searchLoading').classList.add('hidden');
-                    searchResults.style.display = 'none';
-                });
-        }, 800);
-    });
+                }
+                currentController = new AbortController();
+                fetch('/search/ajax?q=' + encodeURIComponent(keyword), {signal: currentController.signal})
+                    .then(response => response.json())
+                    .then(data => {
+                        document.getElementById('searchLoading').classList.add('hidden');
+                        if (data.success) {
+                            currentController = null;
+                            displaySearchResults(data.results, data.total, data.tips || []);
+                            // 保存搜索历史
+                            saveSearchHistory(keyword);
+                        } else {
+                            searchResults.style.display = 'none';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Search error:', error);
+                        currentController = null;
+                        document.getElementById('searchLoading').classList.add('hidden');
+                        searchResults.style.display = 'none';
+                    });
+            }, 800);
+        });
 
-    // 保存搜索历史
-    function saveSearchHistory(keyword) {
-        let history = JSON.parse(localStorage.getItem('searchHistory') || '[]');
-        // 去重并限制数量
-        history = history.filter(item => item !== keyword);
-        history.unshift(keyword);
-        history = history.slice(0, 10);
-        localStorage.setItem('searchHistory', JSON.stringify(history));
-    }
+        // 保存搜索历史
+        function saveSearchHistory(keyword) {
+            let history = JSON.parse(localStorage.getItem('searchHistory') || '[]');
+            // 去重并限制数量
+            history = history.filter(item => item !== keyword);
+            history.unshift(keyword);
+            history = history.slice(0, 10);
+            localStorage.setItem('searchHistory', JSON.stringify(history));
+        }
 
-    // 显示搜索历史
-    function showSearchHistory() {
-        const history = JSON.parse(localStorage.getItem('searchHistory') || '[]');
-        if (history.length === 0) {
-            searchResults.innerHTML = '<div class="p-4 text-center text-gray-500">暂无搜索历史</div>';
-        } else {
-            let html = '<div class="p-2 border-b border-gray-100 text-sm text-gray-600">最近搜索</div>';
-            history.forEach(item => {
-                html += `
+        // 显示搜索历史
+        function showSearchHistory() {
+            const history = JSON.parse(localStorage.getItem('searchHistory') || '[]');
+            if (history.length === 0) {
+                searchResults.innerHTML = '<div class="p-4 text-center text-gray-500">暂无搜索历史</div>';
+            } else {
+                let html = '<div class="p-2 border-b border-gray-100 text-sm text-gray-600">最近搜索</div>';
+                history.forEach(item => {
+                    html += `
                     <div class="p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 cursor-pointer flex justify-between items-center" onclick="this.querySelector('a').click()">
                         <a href="/search?q=${encodeURIComponent(item)}" class="flex-1 text-gray-800">
                             <i class="fas fa-history text-gray-400 mr-2"></i>
@@ -647,45 +652,45 @@ document.addEventListener('DOMContentLoaded', function() {
                         </button>
                     </div>
                 `;
-            });
-            html += '<div class="p-2 border-t border-gray-100 text-center"><button class="text-xs text-gray-500 hover:text-gray-700" onclick="clearSearchHistory()">清空历史</button></div>';
-            searchResults.innerHTML = html;
-        }
-        searchResults.style.display = 'block';
-    }
-
-    // 删除单条搜索历史
-    function removeSearchHistory(keyword) {
-        let history = JSON.parse(localStorage.getItem('searchHistory') || '[]');
-        history = history.filter(item => item !== keyword);
-        localStorage.setItem('searchHistory', JSON.stringify(history));
-        showSearchHistory();
-    }
-
-    // 清空搜索历史
-    function clearSearchHistory() {
-        localStorage.removeItem('searchHistory');
-        showSearchHistory();
-    }
-
-    // 全局暴露函数以便HTML调用
-    window.removeSearchHistory = removeSearchHistory;
-    window.clearSearchHistory = clearSearchHistory;
-
-    // 显示搜索结果
-    function displaySearchResults(results, total, tips) {
-        if (results.length === 0) {
-            searchResults.innerHTML = '<div class="p-4 text-center text-gray-500">没有找到相关文章</div>';
+                });
+                html += '<div class="p-2 border-t border-gray-100 text-center"><button class="text-xs text-gray-500 hover:text-gray-700" onclick="clearSearchHistory()">清空历史</button></div>';
+                searchResults.innerHTML = html;
+            }
             searchResults.style.display = 'block';
-            return;
         }
 
-        let html = '<div class="p-2 border-b border-gray-100 text-sm text-gray-600">找到 ' + total + ' 条结果</div>';
-        if (Array.isArray(tips) && tips.length > 0) {
-            html += '<div class="p-2 text-xs text-blue-600 border-b border-gray-100">提示：' + tips.join('、') + '</div>';
+        // 删除单条搜索历史
+        function removeSearchHistory(keyword) {
+            let history = JSON.parse(localStorage.getItem('searchHistory') || '[]');
+            history = history.filter(item => item !== keyword);
+            localStorage.setItem('searchHistory', JSON.stringify(history));
+            showSearchHistory();
         }
-        results.forEach(function(result) {
-            html += `
+
+        // 清空搜索历史
+        function clearSearchHistory() {
+            localStorage.removeItem('searchHistory');
+            showSearchHistory();
+        }
+
+        // 全局暴露函数以便HTML调用
+        window.removeSearchHistory = removeSearchHistory;
+        window.clearSearchHistory = clearSearchHistory;
+
+        // 显示搜索结果
+        function displaySearchResults(results, total, tips) {
+            if (results.length === 0) {
+                searchResults.innerHTML = '<div class="p-4 text-center text-gray-500">没有找到相关文章</div>';
+                searchResults.style.display = 'block';
+                return;
+            }
+
+            let html = '<div class="p-2 border-b border-gray-100 text-sm text-gray-600">找到 ' + total + ' 条结果</div>';
+            if (Array.isArray(tips) && tips.length > 0) {
+                html += '<div class="p-2 text-xs text-blue-600 border-b border-gray-100">提示：' + tips.join('、') + '</div>';
+            }
+            results.forEach(function (result) {
+                html += `
                 <a href="${result.url}" class="block p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0">
                     <div class="font-medium text-gray-800">${result.highlight_title || result.title}</div>
                     <div class="text-sm text-gray-600 mt-1">${result.highlight_content || result.excerpt}</div>
@@ -694,42 +699,66 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </a>
             `;
-        });
+            });
 
-        if (total > results.length) {
-            html += `<div class="p-3 text-center bg-gray-50">
+            if (total > results.length) {
+                html += `<div class="p-3 text-center bg-gray-50">
                 <a href="/search?q=${encodeURIComponent(searchInput.value)}" class="text-blue-600 hover:text-blue-800 text-sm">
                     查看全部 ${total} 条结果 →
                 </a>
             </div>`;
+            }
+
+            searchResults.innerHTML = html;
+            searchResults.style.display = 'block';
         }
 
-        searchResults.innerHTML = html;
-        searchResults.style.display = 'block';
-    }
+        // 点击其他地方隐藏搜索结果
+        document.addEventListener('click', function (e) {
+            if (!searchForm.contains(e.target)) {
+                searchResults.style.display = 'none';
+            }
+        });
 
-    // 点击其他地方隐藏搜索结果
-    document.addEventListener('click', function(e) {
-        if (!searchForm.contains(e.target)) {
-            searchResults.style.display = 'none';
-        }
-    });
+        // 聚焦时显示搜索历史
+        searchInput.addEventListener('focus', function () {
+            if (this.value.trim() === '') {
+                showSearchHistory();
+            }
+        });
 
-    // 聚焦时显示搜索历史
-    searchInput.addEventListener('focus', function() {
-        if (this.value.trim() === '') {
-            showSearchHistory();
-        }
-    });
+        // 键盘导航
+        searchInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                searchResults.style.display = 'none';
+                searchInput.blur();
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (searchNavigating) return;
+                const keyword = searchInput.value.trim();
+                if (keyword.length > 0) {
+                    searchNavigating = true;
+                    if (window.jQuery && jQuery.fn.pjax) {
+                        $.pjax({
+                            url: '/search?q=' + encodeURIComponent(keyword),
+                            container: '#pjax-container',
+                            fragment: '#pjax-container',
+                            timeout: 8000,
+                            scrollTo: 0
+                        });
+                    } else {
+                        window.location.href = '/search?q=' + encodeURIComponent(keyword);
+                    }
+                }
+            }
+        });
 
-    // 键盘导航
-    searchInput.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            searchResults.style.display = 'none';
-            searchInput.blur();
-        } else if (e.key === 'Enter') {
-            e.preventDefault();
-            if (searchNavigating) return;
+        // 防止表单提交时页面跳转
+        searchForm.addEventListener('submit', function (e) {
+            if (searchNavigating) {
+                e.preventDefault();
+                return;
+            }
             const keyword = searchInput.value.trim();
             if (keyword.length > 0) {
                 searchNavigating = true;
@@ -745,74 +774,57 @@ document.addEventListener('DOMContentLoaded', function() {
                     window.location.href = '/search?q=' + encodeURIComponent(keyword);
                 }
             }
-        }
-    });
-
-    // 防止表单提交时页面跳转
-    searchForm.addEventListener('submit', function(e) {
-        if (searchNavigating) { e.preventDefault(); return; }
-        const keyword = searchInput.value.trim();
-        if (keyword.length > 0) {
-            searchNavigating = true;
-            if (window.jQuery && jQuery.fn.pjax) {
-                $.pjax({
-                    url: '/search?q=' + encodeURIComponent(keyword),
-                    container: '#pjax-container',
-                    fragment: '#pjax-container',
-                    timeout: 8000,
-                    scrollTo: 0
-                });
-            } else {
-                window.location.href = '/search?q=' + encodeURIComponent(keyword);
-            }
-        }
-        e.preventDefault();
-    });
-
-    // 在 PJAX 完成后重置搜索导航标记
-    document.addEventListener('page:ready', function() { searchNavigating = false; });
-    // 适配触摸设备的交互优化
-    if ('ontouchstart' in document.documentElement) {
-        // 为触摸设备优化悬停效果
-        document.querySelectorAll('.hover-animate').forEach(element => {
-            element.addEventListener('touchstart', function() {
-                this.style.transform = 'translateY(-2px)';
-            }, {passive: true});
-            
-            element.addEventListener('touchend', function() {
-                this.style.transform = 'translateY(0)';
-            }, {passive: true});
+            e.preventDefault();
         });
-    }
-});
+
+        // 在 PJAX 完成后重置搜索导航标记
+        document.addEventListener('page:ready', function () {
+            searchNavigating = false;
+        });
+        // 适配触摸设备的交互优化
+        if ('ontouchstart' in document.documentElement) {
+            // 为触摸设备优化悬停效果
+            document.querySelectorAll('.hover-animate').forEach(element => {
+                element.addEventListener('touchstart', function () {
+                    this.style.transform = 'translateY(-2px)';
+                }, {passive: true});
+
+                element.addEventListener('touchend', function () {
+                    this.style.transform = 'translateY(0)';
+                }, {passive: true});
+            });
+        }
+    });
 </script>
 
 <script>
-// Service Worker 注册（仅 HTTPS 或本地环境）
-(function() {
-    if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
-        window.addEventListener('load', function() {
-            navigator.serviceWorker.register('/sw.js').then(function(reg) {
-                // 可选：新版本就绪时尝试立即启用
-                if (reg.waiting) { reg.waiting.postMessage({ type: 'SKIP_WAITING' }); }
-                reg.addEventListener('updatefound', function() {
-                    const nw = reg.installing;
-                    if (nw) {
-                        nw.addEventListener('statechange', function() {
-                            if (nw.state === 'installed' && navigator.serviceWorker.controller) {
-                                // 新SW已安装，提示或自动刷新策略可在此扩展
-                                // 这里保持静默以最小侵入
-                            }
-                        });
+    // Service Worker 注册（仅 HTTPS 或本地环境）
+    (function () {
+        if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register('/sw.js').then(function (reg) {
+                    // 可选：新版本就绪时尝试立即启用
+                    if (reg.waiting) {
+                        reg.waiting.postMessage({type: 'SKIP_WAITING'});
                     }
+                    reg.addEventListener('updatefound', function () {
+                        const nw = reg.installing;
+                        if (nw) {
+                            nw.addEventListener('statechange', function () {
+                                if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // 新SW已安装，提示或自动刷新策略可在此扩展
+                                    // 这里保持静默以最小侵入
+                                }
+                            });
+                        }
+                    });
+                }).catch(function (err) {
+                    console.warn('SW register failed:', err);
                 });
-            }).catch(function(err) {
-                console.warn('SW register failed:', err);
             });
-        });
-    }
-})();
+        }
+    })();
 </script>
-  <script src="/assets/js/offline-notice.js"></script>
+<script src="{{ asset('/assets/js/offline-notice.js') }}"></script>
 </body>
 </html>

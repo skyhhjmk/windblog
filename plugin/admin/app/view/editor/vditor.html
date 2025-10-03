@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="../../demos/css/console2.css"/>
 </head>
 <body class="pear-container">
-    <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.11.0/axios.min.js"
         integrity="sha512-h9644v03pHqrIHThkvXhB2PJ8zf5E9IyVnrSfZg8Yj8k4RsO4zldcQc4Bi9iVLUCCsqNY0b4WXVV4UB+wbWENA=="
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -36,51 +36,95 @@
         integrity="sha512-OAr6bl1pt/FD0oVcuPzJ9VIMso+HQhHoodVI7mnDst19p8rNkNiraPLsDCYVhit3Mjd6B7AUHFsoDhq3dDeI7g=="
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-<div class="max-w-6xl mx-auto px-4 py-8 h-full">
+<div class="w-full px-4 py-8 h-full">
     <!-- 编辑器容器 -->
     <div class="bg-white rounded-lg shadow-lg p-6">
         <!-- 标题 -->
         <h1 id="page-title" class="text-2xl font-bold text-gray-800 mb-6">文章编辑</h1>
 
-        <!-- 操作按钮 -->
-        <div class="flex flex-wrap gap-4 mb-6">
-            <div class="flex-1">
-                <input type="text" id="post-title" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="请输入文章标题">
-            </div>
-            <select id="post-status" class="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="draft">草稿</option>
-                <option value="published">已发布</option>
-                <option value="archived">已归档</option>
-            </select>
-            <div class="relative">
-                <input type="text" id="authors-select" class="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-64" placeholder="选择作者" readonly>
-                <div id="authors-dropdown" class="absolute z-50 hidden w-64 mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                    <div class="p-2 border-b border-gray-200">
-                        <input type="text" id="authors-search" class="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="搜索作者">
-                    </div>
-                    <div id="authors-list" class="p-2"></div>
+        <!-- 布局：主编辑区 + 右侧边栏 -->
+        <div class="flex flex-col md:flex-row gap-6">
+            <!-- 主编辑区 -->
+            <div class="flex-1 min-w-0">
+                <!-- 标题输入 -->
+                <div class="mb-6">
+                    <input type="text" id="post-title"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                           placeholder="请输入文章标题">
                 </div>
+                <!-- 编辑器区域 -->
+                <div id="vditor"></div>
             </div>
-            <button id="media-selector-btn"
-                    class="px-4 py-2 bg-purple-500 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50">
-                选择媒体
-            </button>
-            <button id="preview-btn"
-                    class="px-4 py-2 bg-blue-500 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
-                预览
-            </button>
-            <button id="save-btn"
-                    class="px-4 py-2 bg-green-500 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">
-                保存
-            </button>
-            <button id="clear-btn"
-                    class="px-4 py-2 bg-red-500 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50">
-                清除缓存
-            </button>
-        </div>
 
-        <!-- 编辑器区域 -->
-        <div id="vditor"></div>
+            <!-- 右侧边栏 -->
+            <aside class="w-full md:w-80 md:shrink-0">
+                <div class="sticky top-6 space-y-4">
+                    <!-- 统计信息 -->
+                    <div id="editor-stats" class="p-3 bg-gray-50 rounded border border-gray-200">
+                        <div class="flex items-center justify-between text-sm text-gray-600">
+                            <span>字数</span><span id="stats-words">0</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm text-gray-600 mt-1">
+                            <span>字符</span><span id="stats-chars">0</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm text-gray-600 mt-1">
+                            <span>预计阅读</span><span id="stats-readtime">0分钟</span>
+                        </div>
+                        <div class="flex items-center justify-between text-xs text-gray-500 mt-2">
+                            <span>上次保存</span><span id="stats-last-saved">—</span>
+                        </div>
+                    </div>
+
+                    <!-- 文章状态 -->
+                    <div>
+                        <label for="post-status" class="block text-sm text-gray-600 mb-1">文章状态</label>
+                        <select id="post-status"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="draft">草稿</option>
+                            <option value="published">已发布</option>
+                            <option value="archived">已归档</option>
+                        </select>
+                    </div>
+
+                    <!-- 作者选择 -->
+                    <div class="relative">
+                        <label class="block text-sm text-gray-600 mb-1">作者</label>
+                        <input type="text" id="authors-select"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                               placeholder="选择作者" readonly>
+                        <div id="authors-dropdown"
+                             class="absolute z-50 hidden w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                            <div class="p-2 border-b border-gray-200">
+                                <input type="text" id="authors-search"
+                                       class="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                       placeholder="搜索作者">
+                            </div>
+                            <div id="authors-list" class="p-2"></div>
+                        </div>
+                    </div>
+
+                    <!-- 操作按钮 -->
+                    <div class="space-y-2">
+                        <button id="media-selector-btn"
+                                class="w-full px-4 py-2 bg-purple-500 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50 flex items-center justify-center">
+                            <i class="fas fa-photo-video mr-2"></i><span>选择媒体</span>
+                        </button>
+                        <button id="preview-btn"
+                                class="w-full px-4 py-2 bg-blue-500 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 flex items-center justify-center">
+                            <i class="fas fa-eye mr-2"></i><span>预览</span>
+                        </button>
+                        <button id="save-btn"
+                                class="w-full px-4 py-2 bg-green-500 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 flex items-center justify-center">
+                            <i class="fas fa-save mr-2"></i><span>保存</span>
+                        </button>
+                        <button id="clear-btn"
+                                class="w-full px-4 py-2 bg-red-500 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 flex items-center justify-center">
+                            <i class="fas fa-trash-alt mr-2"></i><span>清除缓存</span>
+                        </button>
+                    </div>
+                </div>
+            </aside>
+        </div>
     </div>
 </div>
 
@@ -90,12 +134,12 @@
         let vditor = null;
         let isVditorReady = false;
         let isContentLoaded = false; // 标记内容是否已加载
-        
+
         // 获取文章ID的逻辑
         // 从URL路径中提取ID，兼容多种URL格式
         let pathSegments = window.location.pathname.split('/').filter(Boolean); // 过滤掉空字符串
         let postId = 0;
-        
+
         // 查找符合条件的ID（在vditor后面的数字，支持新的路由结构）
         for (let i = 0; i < pathSegments.length; i++) {
             if (pathSegments[i] === 'vditor' && i + 1 < pathSegments.length) {
@@ -106,7 +150,7 @@
                 }
             }
         }
-        
+
         // 兼容性处理：如果在vditor后面没找到ID，也检查editor后面（为了兼容旧的URL结构）
         if (postId === 0) {
             for (let i = 0; i < pathSegments.length; i++) {
@@ -119,14 +163,14 @@
                 }
             }
         }
-        
+
         // 安全性检查：确保ID是有效的正整数
         postId = postId > 0 ? postId : 0;
-        
+
         // 获取DOM元素 - 使用防御性编程
-        const postTitle = document.getElementById('post-title') || { value: '' };
-        const postStatus = document.getElementById('post-status') || { value: 'draft' };
-        const pageTitle = document.getElementById('page-title') || { textContent: '文章编辑' };
+        const postTitle = document.getElementById('post-title') || {value: ''};
+        const postStatus = document.getElementById('post-status') || {value: 'draft'};
+        const pageTitle = document.getElementById('page-title') || {textContent: '文章编辑'};
         let defaultContent = `# 请输入文章标题
 
 ## 章节标题
@@ -148,187 +192,210 @@
 function example() {
     return '代码块';
 }
+
+\`\`\`
+
+## 任务列表示例
+
+- [ ] 待办事项 A
+- [x] 已完成事项 B
+- [ ] 待办事项 C
+
+## 表格示例
+
+| 列1 | 列2 | 列3 |
+| --- | --- | --- |
+| A1  | B1  | C1  |
+| A2  | B2  | C2  |
+
+## Mermaid 流程图示例
+
+\`\`\`mermaid
+flowchart TD
+    A[开始] --> B{条件?}
+    B -- 是 --> C[执行路径1]
+    B -- 否 --> D[执行路径2]
+    C --> E[结束]
+    D --> E[结束]
 \`\`\``;
 
         // 初始化 Vditor
         console.log('初始化编辑器，当前URL:', window.location.href);
         console.log('提取的文章ID:', postId);
-        
+
         try {
             vditor = new Vditor('vditor', {
-            height: 'auto',
-            minHeight: 500,
-            counter: {
-                enable: true,
-            },
-            // cdn: 'https://cdnjs.cloudflare.com/ajax/libs/vditor/3.11.1', // 无法使用cf公共cdn，没有dist目录
-            mode: 'sv', // 分屏
-            toolbarConfig: {
-                pin: true,
-            },
-            comment: {
-                enable: false, // 不好用
-            },
-            cache: {
-                enable: true, // 启用localStorage缓存
-                id: postId || 'new_post_' + Date.now(), // 使用文章ID或临时ID作为缓存键
-                after: function(html) {
-                    // 缓存后的回调函数，可以在这里添加缓存处理逻辑
-                    return html;
-                }
-            },
-            preview: {
-                markdown: {
-                    sanitize: true,
+                height: 'auto',
+                minHeight: 500,
+                // cdn: 'https://cdnjs.cloudflare.com/ajax/libs/vditor/3.11.1', // 无法使用cf公共cdn，没有dist目录
+                mode: 'sv', // 分屏
+                input(value) { updateStats(value); },
+                toolbarConfig: {
+                    pin: true,
                 },
-                hljs: {
-                    enable: true,
-                    defaultLang: 'bash',
-                    style: 'github-dark',
-                    lineNumber: true,
-                }
-            },
-            upload: {
-                accept: 'image/*',
-                url: '/app/admin/editor/upload-image',
-                fieldName: 'image',
-                max: 50 * 1024 * 1024,
-                filename(name) {
-                    return name.replace(/\?|\\|\/|:|\||<|>|\*|\[|\]|\s+/g, '-')
+                comment: {
+                    enable: false, // 不好用
                 },
-                linkToImgUrl: '/app/admin/editor/upload-image',
-                handler(files) {
-                    const data = new FormData()
-                    data.append('image', files[0])
+                cache: {
+                    enable: true, // 启用localStorage缓存
+                    id: postId || 'new_post_' + Date.now(), // 使用文章ID或临时ID作为缓存键
+                    after: function (html) {
+                        // 缓存后的回调函数，可以在这里添加缓存处理逻辑
+                        return html;
+                    }
+                },
+                preview: {
+                    markdown: {
+                        sanitize: true,
+                    },
+                    hljs: {
+                        enable: true,
+                        defaultLang: 'bash',
+                        style: 'github-dark',
+                        lineNumber: true,
+                    }
+                },
+                upload: {
+                    accept: 'image/*',
+                    url: '/app/admin/editor/upload-image',
+                    fieldName: 'image',
+                    max: 50 * 1024 * 1024,
+                    filename(name) {
+                        return name.replace(/\?|\\|\/|:|\||<|>|\*|\[|\]|\s+/g, '-')
+                    },
+                    linkToImgUrl: '/app/admin/editor/upload-image',
+                    handler(files) {
+                        const data = new FormData()
+                        data.append('image', files[0])
 
-                    fetch('/app/admin/editor/upload-image', {
-                        method: 'POST',
-                        body: data,
-                    }).then(response => response.json()).then(data => {
-                        if (data.success === 1) {
-                            vditor.insertValue(`![](${data.file.url})`)
-                        } else {
-                            alert('图片上传失败: ' + data.message)
-                        }
-                    }).catch(err => {
-                        alert('网络错误: ' + err)
-                    })
-                }
-            },
-            hint: {
-                // emojiPath: 'https://cdn.jsdelivr.net/npm/vditor/dist/images/emoji',
-                emoji: {
-                    "+1": "👍",
-                    "-1": "👎",
-                    "heart": "❤️",
-                    "smile": "😄",
-                    "laughing": "😆",
-                    "smirk": "😏",
-                    "expressionless": "😑",
-                    "tired_face": "😫",
-                    "sleeping": "😴",
-                    "flushed": "😳",
-                    "scream": "😱",
-                    "rage": "😡",
-                    "smiling_imp": "😈",
-                    "sunglasses": "😎",
-                    "thumbsup": "👍",
-                    "thumbsdown": "👎",
-                    "ok_hand": "👌",
-                    "punch": "👊",
-                    "wave": "👋",
-                    "clap": "👏",
-                    "open_hands": "👐",
-                    "pray": "🙏",
-                    "eyes": "👀",
-                    "zzz": "💤",
-                    "poop": "💩",
-                    "muscle": "💪",
-                    "trumpet": "🎺",
-                    "cake": "🍰",
-                    "coffee": "☕",
-                    "bomb": "💣",
-                    "gem": "💎",
-                    "ring": "💍",
-                    "rocket": "🚀",
-                    "train": "🚋",
-                    "bike": "🚲",
-                    "bus": "🚌",
-                    "airplane": "✈️",
-                    "rocket2": "🚀",
-                    "moon": "🌙",
-                    "star2": "🌟",
-                    "sunny": "☀️",
-                    "rainbow": "🌈",
-                    "snowman": "⛄",
-                    "zap": "⚡",
-                    "fire": "🔥",
-                    "ghost": "👻",
-                    "alien": "👽",
-                    "robot": "🤖",
-                    "skull": "💀",
-                    "heart_eyes": "😍",
-                    "kiss": "😘",
-                    "sweat": "😓",
-                    "sob": "😭",
-                    "joy": "😂",
-                    "tongue": "😛",
-                    "v": "✌️",
-                    "santa": "🎅",
-                    "christmas_tree": "🎄",
-                    "gift": "🎁",
-                    "jack_o_lantern": "🎃",
-                    "bamboo": "🎍",
-                    "grapes": "🍇",
-                    "watermelon": "🍉",
-                    "ramen": "🍜",
-                    "soccer": "⚽",
-                    "football": "🏈",
-                    "basketball": "🏀",
-                    "dart": "🎯",
-                    "slot_machine": "🎰",
-                    "8ball": "🎱",
-                    "game_die": "🎲",
-                    "spades": "♠️",
-                    "clubs": "♣️",
-                    "hearts": "♥️",
-                    "diamonds": "♦️",
-                    "clubhouse": "🛖",
-                    "house": "🏠",
-                    "city_sunrise": "🌇",
-                    "bridge_at_night": "🌉",
-                    "ferris_wheel": "🎡",
-                    "roller_coaster": "🎢",
-                    "ship": "🚢",
-                    "speedboat": "🚤",
-                    "sailboat": "⛵",
-                    "anchor": "⚓",
-                    "rocketship": "🚀",
-                    "flying_saucer": "🛸",
-                    "helicopter": "🚁",
-                    "steam_locomotive": "🚂",
-                    "car": "🚗",
-                    "taxi": "🚕",
-                    "busstop": "🚏",
-                    "fuelpump": "⛽",
-                    "rotating_light": "🚨",
-                    "triangular_flag_on_post": "🚩",
-                    "crossed_flags": "🎌",
-                    "waving_black_flag": "🏴",
-                    "waving_white_flag": "🏳️",
-                    "rainbow-flag": "🏳️‍🌈",
-                    "pirate_flag": "🏴‍☠️"
-                }
-            },
-            // 添加初始化完成回调 - 直接放在顶层配置中而不是嵌套对象中
-            after() {
-                console.log('Vditor初始化完成，设置isVditorReady为true');
-                isVditorReady = true;
-                loadPostContent();
-            },
-            // 初始化时直接设置默认内容
-            value: defaultContent
-        });
+                        fetch('/app/admin/editor/upload-image', {
+                            method: 'POST',
+                            body: data,
+                        }).then(response => response.json()).then(data => {
+                            if (data.success === 1) {
+                                vditor.insertValue(`![](${data.file.url})`)
+                            } else {
+                                alert('图片上传失败: ' + data.message)
+                            }
+                        }).catch(err => {
+                            alert('网络错误: ' + err)
+                        })
+                    }
+                },
+                hint: {
+                    // emojiPath: 'https://cdn.jsdelivr.net/npm/vditor/dist/images/emoji',
+                    emoji: {
+                        "+1": "👍",
+                        "-1": "👎",
+                        "heart": "❤️",
+                        "smile": "😄",
+                        "laughing": "😆",
+                        "smirk": "😏",
+                        "expressionless": "😑",
+                        "tired_face": "😫",
+                        "sleeping": "😴",
+                        "flushed": "😳",
+                        "scream": "😱",
+                        "rage": "😡",
+                        "smiling_imp": "😈",
+                        "sunglasses": "😎",
+                        "thumbsup": "👍",
+                        "thumbsdown": "👎",
+                        "ok_hand": "👌",
+                        "punch": "👊",
+                        "wave": "👋",
+                        "clap": "👏",
+                        "open_hands": "👐",
+                        "pray": "🙏",
+                        "eyes": "👀",
+                        "zzz": "💤",
+                        "poop": "💩",
+                        "muscle": "💪",
+                        "trumpet": "🎺",
+                        "cake": "🍰",
+                        "coffee": "☕",
+                        "bomb": "💣",
+                        "gem": "💎",
+                        "ring": "💍",
+                        "rocket": "🚀",
+                        "train": "🚋",
+                        "bike": "🚲",
+                        "bus": "🚌",
+                        "airplane": "✈️",
+                        "rocket2": "🚀",
+                        "moon": "🌙",
+                        "star2": "🌟",
+                        "sunny": "☀️",
+                        "rainbow": "🌈",
+                        "snowman": "⛄",
+                        "zap": "⚡",
+                        "fire": "🔥",
+                        "ghost": "👻",
+                        "alien": "👽",
+                        "robot": "🤖",
+                        "skull": "💀",
+                        "heart_eyes": "😍",
+                        "kiss": "😘",
+                        "sweat": "😓",
+                        "sob": "😭",
+                        "joy": "😂",
+                        "tongue": "😛",
+                        "v": "✌️",
+                        "santa": "🎅",
+                        "christmas_tree": "🎄",
+                        "gift": "🎁",
+                        "jack_o_lantern": "🎃",
+                        "bamboo": "🎍",
+                        "grapes": "🍇",
+                        "watermelon": "🍉",
+                        "ramen": "🍜",
+                        "soccer": "⚽",
+                        "football": "🏈",
+                        "basketball": "🏀",
+                        "dart": "🎯",
+                        "slot_machine": "🎰",
+                        "8ball": "🎱",
+                        "game_die": "🎲",
+                        "spades": "♠️",
+                        "clubs": "♣️",
+                        "hearts": "♥️",
+                        "diamonds": "♦️",
+                        "clubhouse": "🛖",
+                        "house": "🏠",
+                        "city_sunrise": "🌇",
+                        "bridge_at_night": "🌉",
+                        "ferris_wheel": "🎡",
+                        "roller_coaster": "🎢",
+                        "ship": "🚢",
+                        "speedboat": "🚤",
+                        "sailboat": "⛵",
+                        "anchor": "⚓",
+                        "rocketship": "🚀",
+                        "flying_saucer": "🛸",
+                        "helicopter": "🚁",
+                        "steam_locomotive": "🚂",
+                        "car": "🚗",
+                        "taxi": "🚕",
+                        "busstop": "🚏",
+                        "fuelpump": "⛽",
+                        "rotating_light": "🚨",
+                        "triangular_flag_on_post": "🚩",
+                        "crossed_flags": "🎌",
+                        "waving_black_flag": "🏴",
+                        "waving_white_flag": "🏳️",
+                        "rainbow-flag": "🏳️‍🌈",
+                        "pirate_flag": "🏴‍☠️"
+                    }
+                },
+                // 添加初始化完成回调 - 直接放在顶层配置中而不是嵌套对象中
+                after() {
+                    console.log('Vditor初始化完成，设置isVditorReady为true');
+                    isVditorReady = true;
+                    loadPostContent();
+                },
+                // 初始化时直接设置默认内容
+                value: defaultContent
+            });
         } catch (error) {
             console.error('Vditor初始化失败:', error);
             // 即使初始化失败也尝试设置isVditorReady为true，以便继续流程
@@ -381,7 +448,7 @@ function example() {
                 console.log('内容已加载，跳过重复加载');
                 return;
             }
-            
+
             if (postId && isVditorReady) {
                 // 编辑模式，从API获取文章内容 - 修正URL以匹配路由配置
                 const apiUrl = `/api/v1/post/${postId}`;
@@ -389,7 +456,7 @@ function example() {
                 // 添加重试计数和最大重试次数
                 let retryCount = 0;
                 const maxRetries = 2;
-                
+
                 function fetchWithRetry() {
                     fetch(apiUrl)
                         .then(response => {
@@ -403,79 +470,79 @@ function example() {
                             console.log('API返回数据:', data);
                             console.log('数据结构检查:', 'code=' + data.code, 'data=' + (data.data ? '存在' : '不存在'));
                             console.log('标题字段检查:', 'data.data.title=' + (data.data && data.data.title ? data.data.title : '不存在或为空'));
-                            
+
                             if (data.code === 200 && data.data) {
-                            // 标记内容已加载，防止重复加载
-                            isContentLoaded = true;
-                            console.log('API数据加载成功，设置isContentLoaded为true');
-                            
-                            // 确保直接获取DOM元素而不是依赖变量引用
-                            const titleInput = document.getElementById('post-title') || { value: '' };
-                            const statusSelect = document.getElementById('post-status') || { value: 'draft' };
-                            const pageTitleElem = document.getElementById('page-title') || { textContent: '文章编辑' };
-                            
-                            if (titleInput && typeof titleInput.value !== 'undefined') {
-                                // 确保标题值被正确设置
-                                console.log('尝试设置标题，data.data.title值:', data.data.title);
-                                titleInput.value = data.data.title || '';
-                                console.log('标题已设置:', titleInput.value);
-                            } else {
-                                console.error('无法找到或操作post-title元素');
-                            }
-                            
-                            if (statusSelect && typeof statusSelect.value !== 'undefined') {
-                                // 设置文章状态
-                                statusSelect.value = data.data.status || 'draft';
-                            }
-                            
-                            if (pageTitleElem && typeof pageTitleElem.textContent !== 'undefined') {
-                                // 设置页面标题
-                                pageTitleElem.textContent = `编辑文章: ${data.data.title || '未命名'}`;
-                            }
-                            
-                            // 确保vditor已初始化完成再设置值
-                            if (vditor && typeof vditor.setValue === 'function') {
-                                try {
-                                    // 只在有实际内容时设置值，确保标题能够正确加载
-                                    if (data.data.content && data.data.content.trim()) {
-                                        vditor.setValue(data.data.content);
-                                    } else {
-                                        vditor.setValue(defaultContent);
+                                // 标记内容已加载，防止重复加载
+                                isContentLoaded = true;
+                                console.log('API数据加载成功，设置isContentLoaded为true');
+
+                                // 确保直接获取DOM元素而不是依赖变量引用
+                                const titleInput = document.getElementById('post-title') || {value: ''};
+                                const statusSelect = document.getElementById('post-status') || {value: 'draft'};
+                                const pageTitleElem = document.getElementById('page-title') || {textContent: '文章编辑'};
+
+                                if (titleInput && typeof titleInput.value !== 'undefined') {
+                                    // 确保标题值被正确设置
+                                    console.log('尝试设置标题，data.data.title值:', data.data.title);
+                                    titleInput.value = data.data.title || '';
+                                    console.log('标题已设置:', titleInput.value);
+                                } else {
+                                    console.error('无法找到或操作post-title元素');
+                                }
+
+                                if (statusSelect && typeof statusSelect.value !== 'undefined') {
+                                    // 设置文章状态
+                                    statusSelect.value = data.data.status || 'draft';
+                                }
+
+                                if (pageTitleElem && typeof pageTitleElem.textContent !== 'undefined') {
+                                    // 设置页面标题
+                                    pageTitleElem.textContent = `编辑文章: ${data.data.title || '未命名'}`;
+                                }
+
+                                // 确保vditor已初始化完成再设置值
+                                if (vditor && typeof vditor.setValue === 'function') {
+                                    try {
+                                        // 只在有实际内容时设置值，确保标题能够正确加载
+                                        if (data.data.content && data.data.content.trim()) {
+                                            vditor.setValue(data.data.content);
+                                        } else {
+                                            vditor.setValue(defaultContent);
+                                        }
+                                    } catch (error) {
+                                        console.error('设置Vditor内容失败:', error);
                                     }
-                                } catch (error) {
-                                    console.error('设置Vditor内容失败:', error);
+                                } else {
+                                    console.warn('Vditor未完全初始化或setValue方法不可用');
+                                    // 如果Vditor不可用，尝试备用方案（如果有）
                                 }
                             } else {
-                                console.warn('Vditor未完全初始化或setValue方法不可用');
-                                // 如果Vditor不可用，尝试备用方案（如果有）
+                                console.error('API逻辑错误:', data.message || '未知错误');
+                                showUserNotification('加载文章失败: ' + (data.message || '未知错误'), 'error');
+                                if (vditor && typeof vditor.setValue === 'function') {
+                                    vditor.setValue(defaultContent);
+                                }
                             }
-                        } else {
-                            console.error('API逻辑错误:', data.message || '未知错误');
-                            showUserNotification('加载文章失败: ' + (data.message || '未知错误'), 'error');
-                            if (vditor && typeof vditor.setValue === 'function') {
-                                vditor.setValue(defaultContent);
+                        })
+                        .catch(error => {
+                            console.error('API请求失败:', error);
+                            console.error('错误详情:', error.message);
+
+                            // 检查是否需要重试
+                            if (retryCount < maxRetries && (error.message.includes('NetworkError') || error.message.includes('Failed to fetch'))) {
+                                retryCount++;
+                                console.log(`尝试重试API请求 (${retryCount}/${maxRetries})...`);
+                                // 指数退避策略，等待一段时间后重试
+                                setTimeout(fetchWithRetry, 1000 * Math.pow(2, retryCount - 1));
+                            } else {
+                                showUserNotification('加载文章失败，请检查网络连接', 'error');
+                                if (vditor && typeof vditor.setValue === 'function') {
+                                    vditor.setValue(defaultContent);
+                                }
                             }
-                        }
-                    })
-                    .catch(error => {
-                        console.error('API请求失败:', error);
-                        console.error('错误详情:', error.message);
-                        
-                        // 检查是否需要重试
-                        if (retryCount < maxRetries && (error.message.includes('NetworkError') || error.message.includes('Failed to fetch'))) {
-                            retryCount++;
-                            console.log(`尝试重试API请求 (${retryCount}/${maxRetries})...`);
-                            // 指数退避策略，等待一段时间后重试
-                            setTimeout(fetchWithRetry, 1000 * Math.pow(2, retryCount - 1));
-                        } else {
-                            showUserNotification('加载文章失败，请检查网络连接', 'error');
-                            if (vditor && typeof vditor.setValue === 'function') {
-                                vditor.setValue(defaultContent);
-                            }
-                        }
-                    });
+                        });
                 }
-                
+
                 // 开始首次请求
                 fetchWithRetry();
             } else if (isVditorReady && !postId) {
@@ -504,7 +571,36 @@ function example() {
                 alert(message);
             }
         }
-        
+
+        // 统计信息计算与更新
+        function updateStats(value) {
+            try {
+                const text = (value || '').toString();
+                const chars = text.length;
+                const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+                // 简易阅读时长：按每分钟500字符估算
+                const minutes = Math.max(1, Math.ceil(chars / 500));
+
+                const wEl = document.getElementById('stats-words');
+                const cEl = document.getElementById('stats-chars');
+                const rEl = document.getElementById('stats-readtime');
+
+                if (wEl) wEl.textContent = String(words);
+                if (cEl) cEl.textContent = String(chars);
+                if (rEl) rEl.textContent = minutes + '分钟';
+            } catch (e) {
+                console.warn('更新统计信息失败:', e);
+            }
+        }
+
+        function updateLastSaved(date) {
+            const el = document.getElementById('stats-last-saved');
+            if (el) {
+                const d = date instanceof Date ? date : new Date();
+                el.textContent = d.toLocaleString();
+            }
+        }
+
         // 预览按钮事件
         document.getElementById('preview-btn').addEventListener('click', function () {
             if (vditor && typeof vditor.preview === 'function') {
@@ -521,10 +617,10 @@ function example() {
                     if (vditor && typeof vditor.clearCache === 'function') {
                         vditor.clearCache();
                     }
-                    
+
                     // 2. 手动清理localStorage中与当前编辑器相关的缓存
                     clearLocalCache();
-                    
+
                     alert('已清除自动保存的内容');
                 } catch (error) {
                     console.error('清除缓存时出错:', error);
@@ -532,22 +628,22 @@ function example() {
                 }
             }
         });
-        
+
         // 多作者选择功能
         let selectedAuthors = [];
         let allAuthors = [];
-        
+
         // 初始化作者选择器
         function initAuthorsSelector() {
             const authorsSelect = document.getElementById('authors-select');
             const authorsDropdown = document.getElementById('authors-dropdown');
             const authorsSearch = document.getElementById('authors-search');
             const authorsList = document.getElementById('authors-list');
-            
+
             if (!authorsSelect || !authorsDropdown) return;
-            
+
             // 点击输入框显示/隐藏下拉框
-            authorsSelect.addEventListener('click', function(e) {
+            authorsSelect.addEventListener('click', function (e) {
                 e.stopPropagation();
                 authorsDropdown.classList.toggle('hidden');
                 if (!authorsDropdown.classList.contains('hidden')) {
@@ -555,35 +651,35 @@ function example() {
                     loadAuthorsList();
                 }
             });
-            
+
             // 搜索功能
-            authorsSearch.addEventListener('input', function() {
+            authorsSearch.addEventListener('input', function () {
                 loadAuthorsList(this.value);
             });
-            
+
             // 点击其他地方关闭下拉框
-            document.addEventListener('click', function() {
+            document.addEventListener('click', function () {
                 authorsDropdown.classList.add('hidden');
             });
-            
+
             // 阻止下拉框内部点击事件冒泡
-            authorsDropdown.addEventListener('click', function(e) {
+            authorsDropdown.addEventListener('click', function (e) {
                 e.stopPropagation();
             });
-            
+
             // 加载文章时设置已选作者
             if (postId > 0) {
                 loadPostAuthors();
             }
         }
-        
+
         // 加载作者列表
         function loadAuthorsList(search = '') {
             const authorsList = document.getElementById('authors-list');
             if (!authorsList) return;
-            
+
             authorsList.innerHTML = '<div class="p-2 text-gray-500 text-center">加载中...</div>';
-            
+
             fetch(`/app/admin/editor/authors?search=${encodeURIComponent(search)}&limit=20`)
                 .then(response => response.json())
                 .then(data => {
@@ -599,17 +695,17 @@ function example() {
                     authorsList.innerHTML = '<div class="p-2 text-red-500 text-center">加载失败</div>';
                 });
         }
-        
+
         // 渲染作者列表
         function renderAuthorsList(authors) {
             const authorsList = document.getElementById('authors-list');
             if (!authorsList) return;
-            
+
             if (authors.length === 0) {
                 authorsList.innerHTML = '<div class="p-2 text-gray-500 text-center">暂无作者</div>';
                 return;
             }
-            
+
             authorsList.innerHTML = '';
             authors.forEach(author => {
                 const isSelected = selectedAuthors.some(a => a.id === author.id);
@@ -624,13 +720,13 @@ function example() {
                         ${isSelected ? '<span class="text-blue-600">✓</span>' : ''}
                     </div>
                 `;
-                authorItem.addEventListener('click', function() {
+                authorItem.addEventListener('click', function () {
                     toggleAuthorSelection(author);
                 });
                 authorsList.appendChild(authorItem);
             });
         }
-        
+
         // 切换作者选择状态
         function toggleAuthorSelection(author) {
             const index = selectedAuthors.findIndex(a => a.id === author.id);
@@ -642,12 +738,12 @@ function example() {
             updateAuthorsDisplay();
             renderAuthorsList(allAuthors);
         }
-        
+
         // 更新作者显示
         function updateAuthorsDisplay() {
             const authorsSelect = document.getElementById('authors-select');
             if (!authorsSelect) return;
-            
+
             if (selectedAuthors.length === 0) {
                 authorsSelect.value = '';
                 authorsSelect.placeholder = '选择作者';
@@ -656,11 +752,11 @@ function example() {
                 authorsSelect.value = names;
             }
         }
-        
+
         // 加载文章的作者信息
         function loadPostAuthors() {
             if (!postId) return;
-            
+
             fetch(`/api/v1/post/${postId}`)
                 .then(response => response.json())
                 .then(data => {
@@ -678,7 +774,7 @@ function example() {
                     console.error('加载文章作者信息失败:', error);
                 });
         }
-        
+
         // 修改保存按钮事件，添加作者数据
         document.getElementById('save-btn').addEventListener('click', function () {
             if (vditor) {
@@ -688,15 +784,15 @@ function example() {
                     postTitle.focus();
                     return;
                 }
-                
+
                 if (!vditor.getValue().trim()) {
                     alert('请输入文章内容');
                     return;
                 }
-                
+
                 // 准备作者数据
                 const authorIds = selectedAuthors.map(a => a.id);
-                
+
                 // 发送到服务器保存
                 fetch('/app/admin/editor/save', {
                     method: 'POST',
@@ -712,33 +808,34 @@ function example() {
                         authors: authorIds
                     })
                 })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.code === 0) {
-                        alert('保存成功');
-                        if (!postId) {
-                            postId = data.data.id;
-                            pageTitle.textContent = `编辑文章: ${postTitle.value}`;
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.code === 0) {
+                            alert('保存成功');
+                            updateLastSaved(new Date());
+                            if (!postId) {
+                                postId = data.data.id;
+                                pageTitle.textContent = `编辑文章: ${postTitle.value}`;
+                            }
+                        } else {
+                            alert('保存失败: ' + (data.msg || '未知错误'));
                         }
-                    } else {
-                        alert('保存失败: ' + (data.msg || '未知错误'));
-                    }
-                })
-                .catch(error => {
-                    alert('保存失败: ' + error.message);
-                });
+                    })
+                    .catch(error => {
+                        alert('保存失败: ' + error.message);
+                    });
             }
         });
-        
+
         // 初始化作者选择器
         initAuthorsSelector();
-        
+
         // 清除localStorage中与当前编辑器相关的缓存
         function clearLocalCache() {
             try {
                 // 获取当前编辑器的缓存键前缀
                 const cacheKey = 'vditor_cache_' + (postId || 'new_post_' + Date.now());
-                
+
                 // 清除所有匹配的缓存项
                 for (let i = 0; i < localStorage.length; i++) {
                     const key = localStorage.key(i);
@@ -747,9 +844,9 @@ function example() {
                         try {
                             const value = localStorage.getItem(key);
                             const parsed = JSON.parse(value);
-                            
+
                             // 如果是当前编辑器的缓存，或者缓存时间超过7天，则删除
-                            if (key.includes(cacheKey) || 
+                            if (key.includes(cacheKey) ||
                                 (parsed.time && (Date.now() - parsed.time > 7 * 24 * 60 * 60 * 1000))) {
                                 localStorage.removeItem(key);
                             }
@@ -759,23 +856,23 @@ function example() {
                         }
                     }
                 }
-                
+
                 console.log('已清理相关缓存');
             } catch (error) {
                 console.error('清理localStorage缓存时出错:', error);
             }
         }
-        
+
         // 全局函数，确保媒体选择器能访问到
-        window.selectMedia = function(media) {
+        window.selectMedia = function (media) {
             if (!media) return;
             insertMediaToEditor(media);
         };
-        
-        window.closeMediaSelector = function() {
+
+        window.closeMediaSelector = function () {
             // 此函数主要用于iframe方式嵌入时的关闭逻辑
         };
-        
+
         // 打开媒体选择器弹窗
         function openMediaSelector() {
             // 创建一个弹窗
@@ -783,36 +880,36 @@ function example() {
             const height = 600;
             const left = (window.innerWidth - width) / 2;
             const top = (window.innerHeight - height) / 2;
-            
+
             // 打开媒体选择器窗口，添加target参数指明来源
-            const mediaWindow = window.open('/app/admin/editor/media-selector?target=window&origin=' + encodeURIComponent(window.location.href), 'media_selector', 
+            const mediaWindow = window.open('/app/admin/editor/media-selector?target=window&origin=' + encodeURIComponent(window.location.href), 'media_selector',
                 `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`);
-            
+
             if (!mediaWindow) {
                 alert('无法打开媒体选择器，请检查浏览器弹窗设置');
                 return;
             }
-            
+
             // 定期检查窗口是否被关闭
-            const checkInterval = setInterval(function() {
+            const checkInterval = setInterval(function () {
                 if (mediaWindow.closed) {
                     clearInterval(checkInterval);
                 }
             }, 500);
         }
-        
+
         // 将选择的媒体插入到编辑器中
         function insertMediaToEditor(media) {
             if (!vditor) {
                 console.error('编辑器未初始化');
                 return;
             }
-            
+
             if (!media) {
                 console.error('媒体数据为空');
                 return;
             }
-            
+
             // 检查是否是多选模式（media是数组）
             if (Array.isArray(media)) {
                 // 多选模式，遍历所有选中的媒体
@@ -821,11 +918,11 @@ function example() {
                 });
                 return;
             }
-            
+
             // 单选模式，直接插入单个媒体
             insertSingleMedia(media);
         }
-        
+
         // 插入单个媒体的辅助函数
         function insertSingleMedia(media) {
             // 获取媒体URL，支持多种可能的属性名
@@ -849,17 +946,17 @@ function example() {
                     mediaUrl = '/uploads' + basePath + media.file_path;
                 }
             }
-            
+
             // 如果没有找到有效的URL，显示错误信息
             if (!mediaUrl) {
                 console.error('无法获取媒体URL', media);
                 alert('无法获取媒体URL，请检查媒体文件是否存在');
                 return;
             }
-            
+
             // 根据媒体类型生成不同的Markdown格式
             let markdown = '';
-            
+
             if (media.mime_type && media.mime_type.startsWith('image/')) {
                 // 图片类型：使用Markdown图片语法
                 const altText = media.alt_text || media.original_name || '图片';
@@ -875,7 +972,7 @@ function example() {
                 const fileName = media.original_name || '文件';
                 markdown = `[${fileName}](${mediaUrl})`;
             }
-            
+
             // 插入到编辑器
             try {
                 vditor.insertValue(markdown);
@@ -884,9 +981,9 @@ function example() {
                 alert('插入媒体失败: ' + error.message);
             }
         }
-        
+
         // 为媒体选择器按钮绑定点击事件
-        document.getElementById('media-selector-btn').addEventListener('click', function() {
+        document.getElementById('media-selector-btn').addEventListener('click', function () {
             openMediaSelector();
         });
     });

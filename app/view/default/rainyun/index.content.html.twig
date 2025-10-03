@@ -1,0 +1,2288 @@
+<!-- Rainyun API 工具内容 -->
+<div class="mb-8">
+    <!-- 基础信息输入 -->
+    <div class="mb-8 bg-gray-50 rounded-xl p-5 border border-gray-200">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">API 访问配置</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+                <label for="appId" class="block text-sm font-medium text-gray-700 mb-1">App ID</label>
+                <input type="number" id="appId" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" placeholder="输入应用ID">
+            </div>
+            <div>
+                <label for="apiKey" class="block text-sm font-medium text-gray-700 mb-1">API Key</label>
+                <input type="text" id="apiKey" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" placeholder="输入API密钥">
+            </div>
+        </div>
+        <button id="fetchAppData" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors flex items-center">
+            <i class="fas fa-download mr-2"></i> 获取应用详情
+        </button>
+    </div>
+
+    <!-- 版本选择区域 (默认隐藏，获取应用详情后显示) -->
+    <div id="versionSelection" class="mb-8 bg-gray-50 rounded-xl p-5 border border-gray-200 hidden">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">版本选择</h2>
+        <div class="mb-4">
+            <label for="appVersion" class="block text-sm font-medium text-gray-700 mb-1">选择版本</label>
+            <select id="appVersion" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                <option value="">请选择版本</option>
+            </select>
+        </div>
+        <button id="fetchVersionDetails" class="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-6 rounded-lg transition-colors flex items-center">
+            <i class="fas fa-info-circle mr-2"></i> 获取版本详细配置
+        </button>
+    </div>
+
+    <!-- 版本详细配置区域 (默认隐藏，获取版本详情后显示) -->
+    <div id="versionDetails" class="mb-8 bg-white rounded-xl p-5 border border-gray-200 hidden">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-semibold text-gray-800">版本详细配置</h2>
+            <div class="flex space-x-3">
+                <button id="addConfigField" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-1 px-4 rounded-lg transition-colors text-sm flex items-center">
+                    <i class="fas fa-plus mr-1"></i> 新增字段
+                </button>
+                <button id="saveVersionConfig" class="bg-green-600 hover:bg-green-700 text-white font-medium py-1 px-4 rounded-lg transition-colors text-sm flex items-center">
+                    <i class="fas fa-save mr-1"></i> 保存配置
+                </button>
+            </div>
+        </div>
+        
+        <!-- 配置表单 -->
+        <form id="versionConfigForm" class="space-y-4">
+            <!-- 配置字段将通过JavaScript动态生成 -->
+            <div id="configFields" class="space-y-4"></div>
+        </form>
+        
+        <!-- 用于新增字段的临时模板 (默认隐藏) -->
+        <div id="configFieldTemplate" class="hidden">
+            <div class="config-field bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <div class="flex justify-between items-start mb-2">
+                    <div class="flex items-center space-x-4">
+                        <input type="text" class="field-name px-3 py-2 border border-gray-300 rounded-lg w-48 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="字段名">
+                        <select class="field-type px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="string">字符串</option>
+                            <option value="number">数字</option>
+                            <option value="boolean">布尔值</option>
+                            <option value="array">数组</option>
+                            <option value="object">对象</option>
+                            <option value="textarea">多行文本</option>
+                        </select>
+                    </div>
+                    <button type="button" class="remove-field text-red-500 hover:text-red-700 transition-colors">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+                <div class="field-value-container">
+                    <input type="text" class="field-value px-3 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="字段值">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加载状态 -->
+    <div id="loadingIndicator" class="hidden fixed inset-0 bg-black bg-opacity-20 flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-xl shadow-xl flex flex-col items-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+            <p id="loadingMessage" class="text-gray-700">正在处理，请稍候...</p>
+        </div>
+    </div>
+
+    <!-- 应用详情表单 -->
+    <form id="appForm" class="space-y-6 hidden">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">应用信息</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="col-span-1 md:col-span-2">
+                <label for="title" class="block text-sm font-medium text-gray-700 mb-1">应用标题</label>
+                <input type="text" id="title" name="title" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" required>
+            </div>
+            
+            <div class="col-span-1 md:col-span-2">
+                <label for="description" class="block text-sm font-medium text-gray-700 mb-1">应用描述</label>
+                <textarea id="description" name="description" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" required></textarea>
+            </div>
+            
+            <div>
+                <label for="name" class="block text-sm font-medium text-gray-700 mb-1">应用名称（英文标识）</label>
+                <input type="text" id="name" name="name" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" required>
+            </div>
+            
+            <div>
+                <label for="website" class="block text-sm font-medium text-gray-700 mb-1">应用官方网站</label>
+                <input type="url" id="website" name="website" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" required>
+            </div>
+            
+            <div>
+                <label for="project_link" class="block text-sm font-medium text-gray-700 mb-1">应用项目链接</label>
+                <input type="url" id="project_link" name="project_link" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" required>
+            </div>
+            
+            <div>
+                <label for="cross_version_update" class="block text-sm font-medium text-gray-700 mb-1">是否支持跨版本更新</label>
+                <div class="flex items-center space-x-4">
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="cross_version_update" value="true" class="form-radio text-blue-600 focus:ring-blue-500">
+                        <span class="ml-2">是</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="cross_version_update" value="false" class="form-radio text-blue-600 focus:ring-blue-500">
+                        <span class="ml-2">否</span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="col-span-1 md:col-span-2">
+                <label for="tags" class="block text-sm font-medium text-gray-700 mb-1">标签（用逗号分隔）</label>
+                <input type="text" id="tags" name="tags" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" placeholder="如: web,tools,development">
+                <p class="text-xs text-gray-500 mt-1">提示：多个标签请用逗号分隔</p>
+            </div>
+            
+            <div class="col-span-1 md:col-span-2">
+                <label for="readme" class="block text-sm font-medium text-gray-700 mb-1">应用介绍（Markdown格式）</label>
+                <textarea id="readme" name="readme" rows="8" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" required></textarea>
+            </div>
+            
+            <div class="col-span-1 md:col-span-2">
+                <label for="logo" class="block text-sm font-medium text-gray-700 mb-1">Logo（Base64格式，可选）</label>
+                <textarea id="logo" name="logo" rows="4" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" placeholder="输入Base64编码的图片数据（最大50KB）"></textarea>
+            </div>
+        </div>
+        
+        <!-- 操作按钮 -->
+        <div class="flex justify-end space-x-4 pt-4 border-t border-gray-200">
+            <button type="button" id="resetForm" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                重置
+            </button>
+            <button type="submit" id="updateAppData" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-6 rounded-lg transition-colors flex items-center">
+                <i class="fas fa-save mr-2"></i> 保存更新
+            </button>
+        </div>
+    </form>
+
+    <!-- 操作结果提示 -->
+    <div id="resultMessage" class="mt-6 p-4 rounded-lg hidden"></div>
+</div>
+
+<!-- 版本选择区域 (默认隐藏，获取应用详情后显示) -->
+<div id="versionSelection" class="mb-8 bg-gray-50 rounded-xl p-5 border border-gray-200 hidden">
+    <h2 class="text-xl font-semibold text-gray-800 mb-4">版本选择</h2>
+    <div class="mb-4">
+        <label for="appVersion" class="block text-sm font-medium text-gray-700 mb-1">选择版本</label>
+        <select id="appVersion" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+            <option value="">请选择版本</option>
+        </select>
+    </div>
+    <button id="fetchVersionDetails" class="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-6 rounded-lg transition-colors flex items-center">
+        <i class="fas fa-info-circle mr-2"></i> 获取版本详细配置
+    </button>
+</div>
+
+<!-- 版本详细配置区域 (默认隐藏，获取版本详情后显示) -->
+<div id="versionDetails" class="mb-8 bg-white rounded-xl p-5 border border-gray-200 hidden">
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold text-gray-800">版本详细配置</h2>
+        <div class="flex space-x-3">
+            <button id="addConfigField" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-1 px-4 rounded-lg transition-colors text-sm flex items-center">
+                <i class="fas fa-plus mr-1"></i> 新增字段
+            </button>
+            <button id="saveVersionConfig" class="bg-green-600 hover:bg-green-700 text-white font-medium py-1 px-4 rounded-lg transition-colors text-sm flex items-center">
+                <i class="fas fa-save mr-1"></i> 保存配置
+            </button>
+        </div>
+    </div>
+    
+    <!-- 配置表单 -->
+    <form id="versionConfigForm" class="space-y-4">
+        <!-- 配置字段将通过JavaScript动态生成 -->
+        <div id="configFields" class="space-y-4"></div>
+    </form>
+    
+    <!-- 用于新增字段的临时模板 (默认隐藏) -->
+    <div id="configFieldTemplate" class="hidden">
+        <div class="config-field bg-gray-50 p-4 rounded-lg border border-gray-200">
+            <div class="flex justify-between items-start mb-2">
+                <div class="flex items-center space-x-4">
+                    <input type="text" class="field-name px-3 py-2 border border-gray-300 rounded-lg w-48 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="字段名">
+                    <select class="field-type px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="string">字符串</option>
+                        <option value="number">数字</option>
+                        <option value="boolean">布尔值</option>
+                        <option value="array">数组</option>
+                        <option value="object">对象</option>
+                        <option value="textarea">多行文本</option>
+                    </select>
+                </div>
+                <button type="button" class="remove-field text-red-500 hover:text-red-700 transition-colors">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </div>
+            <div class="field-value-container">
+                <input type="text" class="field-value px-3 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="字段值">
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // DOM元素引用
+        const appIdInput = document.getElementById('appId');
+        const apiKeyInput = document.getElementById('apiKey');
+        const fetchAppDataBtn = document.getElementById('fetchAppData');
+        const appForm = document.getElementById('appForm');
+        const resetFormBtn = document.getElementById('resetForm');
+        const updateAppDataBtn = document.getElementById('updateAppData');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const loadingMessage = document.getElementById('loadingMessage');
+        const resultMessage = document.getElementById('resultMessage');
+        const versionSelection = document.getElementById('versionSelection');
+        const appVersionSelect = document.getElementById('appVersion');
+        const fetchVersionDetailsBtn = document.getElementById('fetchVersionDetails');
+        const versionDetails = document.getElementById('versionDetails');
+        const versionConfigForm = document.getElementById('versionConfigForm');
+        const configFields = document.getElementById('configFields');
+        const configFieldTemplate = document.getElementById('configFieldTemplate');
+        const addConfigFieldBtn = document.getElementById('addConfigField');
+        const saveVersionConfigBtn = document.getElementById('saveVersionConfig');
+        
+        // 全局变量存储版本数据
+        let versionsData = [];
+        let currentVersionData = null;
+        
+        // 表单字段引用
+        const titleInput = document.getElementById('title');
+        const descriptionInput = document.getElementById('description');
+        const nameInput = document.getElementById('name');
+        const websiteInput = document.getElementById('website');
+        const projectLinkInput = document.getElementById('project_link');
+        const crossVersionUpdateYes = document.querySelector('input[name="cross_version_update"][value="true"]');
+        const crossVersionUpdateNo = document.querySelector('input[name="cross_version_update"][value="false"]');
+        const tagsInput = document.getElementById('tags');
+        const readmeInput = document.getElementById('readme');
+        const logoInput = document.getElementById('logo');
+        
+        // 显示加载指示器
+        function showLoading(message = '正在处理，请稍候...') {
+            loadingMessage.textContent = message;
+            loadingIndicator.classList.remove('hidden');
+        }
+        
+        // 隐藏加载指示器
+        function hideLoading() {
+            loadingIndicator.classList.add('hidden');
+        }
+        
+        // 显示结果消息
+        function showResult(message, isSuccess = true) {
+            resultMessage.textContent = message;
+            resultMessage.className = 'mt-6 p-4 rounded-lg ' + 
+                (isSuccess ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200');
+            resultMessage.classList.remove('hidden');
+            
+            // 3秒后自动隐藏消息
+            setTimeout(() => {
+                resultMessage.classList.add('hidden');
+            }, 3000);
+        }
+        
+        // 获取应用详情
+        fetchAppDataBtn.addEventListener('click', function() {
+            const appId = appIdInput.value.trim();
+            const apiKey = apiKeyInput.value.trim();
+            
+            if (!appId || !apiKey) {
+                showResult('请填写App ID和API Key', false);
+                return;
+            }
+            
+            showLoading('正在获取应用详情...');
+            
+            // 创建请求对象，避免直接fetch的跨域问题
+            // 注意：API需要在URL末尾添加斜杠以避免301重定向
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', `https://api.v2.rainyun.com/product/rca/appstore/${appId}/`, true);
+            
+            // 设置请求头
+            xhr.setRequestHeader('x-api-key', apiKey);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            
+            // 处理响应
+            xhr.onload = function() {
+                hideLoading();
+                if (xhr.status === 200) {
+                    try {
+                        const data = JSON.parse(xhr.responseText);
+                        
+                        // 检查响应数据是否包含所需字段
+                        if (data && data.data) {
+                            const appData = data.data;
+                            
+                            // 填充表单
+                            titleInput.value = appData.title || '';
+                            descriptionInput.value = appData.description || '';
+                            nameInput.value = appData.name || '';
+                            websiteInput.value = appData.website || '';
+                            projectLinkInput.value = appData.project_link || '';
+                            
+                            // 设置跨版本更新选项
+                            if (appData.cross_version_update === true) {
+                                crossVersionUpdateYes.checked = true;
+                            } else {
+                                crossVersionUpdateNo.checked = true;
+                            }
+                            
+                            // 设置标签（数组转字符串）
+                            tagsInput.value = appData.tags ? appData.tags.join(', ') : '';
+                            readmeInput.value = appData.readme || '';
+                            logoInput.value = appData.logo || '';
+                            
+                            // 显示表单
+                            // 保持“应用信息”表单隐藏，仅使用下方版本详细配置
+                            // appForm.classList.remove('hidden');
+                            
+                            // 处理版本数据
+                            if (appData.versions && Array.isArray(appData.versions)) {
+                                versionsData = appData.versions;
+                                populateVersionDropdown(versionsData);
+                                versionSelection.classList.remove('hidden');
+                            }
+                            
+                            showResult('应用详情获取成功');
+                        } else {
+                            showResult('无效的响应数据', false);
+                        }
+                    } catch (e) {
+                        showResult('响应数据解析失败: ' + e.message, false);
+                        console.error('响应解析错误:', e);
+                    }
+                } else if (xhr.status === 0) {
+                    // 可能是跨域问题或网络错误
+                    showResult('网络请求失败，可能是跨域限制导致。请确认API服务是否支持跨域请求。', false);
+                } else {
+                    showResult(`获取应用详情失败: HTTP状态码 ${xhr.status}`, false);
+                }
+            };
+            
+            // 处理网络错误
+            xhr.onerror = function() {
+                hideLoading();
+                showResult('网络请求错误，请检查网络连接或API服务是否可用。', false);
+                console.error('获取应用详情网络错误');
+            };
+            
+            // 处理超时
+            xhr.timeout = 10000; // 10秒超时
+            xhr.ontimeout = function() {
+                hideLoading();
+                showResult('请求超时，请稍后重试。', false);
+                console.error('获取应用详情请求超时');
+            };
+            
+            // 发送请求
+            xhr.send();
+        });
+        
+        // 填充版本下拉框
+        function populateVersionDropdown(versions) {
+            appVersionSelect.innerHTML = '<option value="">请选择版本</option>';
+            
+            versions.forEach(version => {
+                const option = document.createElement('option');
+                option.value = version.version;
+                option.textContent = version.version;
+                appVersionSelect.appendChild(option);
+            });
+        }
+        
+        // 获取版本详细配置
+        fetchVersionDetailsBtn.addEventListener('click', function() {
+            const appId = appIdInput.value.trim();
+            const apiKey = apiKeyInput.value.trim();
+            const selectedVersion = appVersionSelect.value;
+            
+            if (!appId || !apiKey || !selectedVersion) {
+                showResult('请先输入App ID、API Key并选择版本', false);
+                return;
+            }
+            
+            showLoading('正在获取版本详细配置...');
+            
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', `https://api.v2.rainyun.com/product/rca/appstore/${appId}/release?version=${encodeURIComponent(selectedVersion)}`, true);
+            
+            // 设置请求头
+            xhr.setRequestHeader('x-api-key', apiKey);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            
+            // 处理响应
+            xhr.onload = function() {
+                hideLoading();
+                if (xhr.status === 200) {
+                    try {
+                        const data = JSON.parse(xhr.responseText);
+                        
+                        if (data && data.data) {
+                            // 保存当前版本数据
+                            currentVersionData = data.data;
+                            
+                            // 检查currentVersionData是否包含另一个data字段，如果有则展开它
+                            if (currentVersionData.hasOwnProperty('data') && 
+                                typeof currentVersionData.data === 'object' && 
+                                currentVersionData.data !== null) {
+                                // 保存展开后的数据
+                                currentVersionData = currentVersionData.data;
+                            }
+                            
+                            // 清空现有字段
+                            configFields.innerHTML = '';
+                            
+                            // 动态生成配置表单
+                            generateConfigForm(currentVersionData);
+                            
+                            // 显示版本详情区域
+                            versionDetails.classList.remove('hidden');
+                            showResult('版本详细配置获取成功');
+                        } else {
+                            showResult('无效的版本配置数据', false);
+                        }
+                    } catch (e) {
+                        showResult('版本配置数据解析失败: ' + e.message, false);
+                        console.error('版本配置解析错误:', e);
+                    }
+                } else if (xhr.status === 0) {
+                    showResult('网络请求失败，可能是跨域限制导致', false);
+                } else {
+                    showResult(`获取版本配置失败: HTTP状态码 ${xhr.status}`, false);
+                }
+            };
+            
+            // 处理网络错误
+            xhr.onerror = function() {
+                hideLoading();
+                showResult('网络请求错误，请检查网络连接', false);
+                console.error('获取版本配置网络错误');
+            };
+            
+            // 处理超时
+            xhr.timeout = 10000; // 10秒超时
+            xhr.ontimeout = function() {
+                hideLoading();
+                showResult('请求超时，请稍后重试', false);
+                console.error('获取版本配置请求超时');
+            };
+            
+            // 发送请求
+            xhr.send();
+        });
+        
+        // 动态生成配置表单
+        function generateConfigForm(configData) {
+            // 清空现有字段
+            configFields.innerHTML = '';
+
+            // Tabs 导航 + 容器
+            const tabsWrap = document.createElement('div');
+            tabsWrap.className = 'w-full';
+
+            const tabsNav = document.createElement('div');
+            tabsNav.className = 'sticky top-0 z-10 bg-white flex flex-wrap gap-2 mb-4 border-b border-gray-200';
+
+            const tabDefs = [
+                { id: 'commands', label: '命令与参数' },
+                { id: 'scripts', label: '脚本设定' },
+                { id: 'configmaps', label: '配置文件（configmap）' },
+                { id: 'env', label: '环境变量' },
+                { id: 'volumes', label: '持久化卷' },
+                { id: 'services', label: '服务配置' },
+                { id: 'options', label: '选项配置' },
+            ];
+
+            const tabsBody = document.createElement('div');
+            const tabContainers = {};
+            const tabButtons = {};
+            tabDefs.forEach((t, i) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.dataset.tab = t.id;
+                btn.className = 'px-3 py-2 text-sm rounded-t border border-b-0 ' + (i === 0 ? 'bg-white text-blue-600 border-gray-200' : 'bg-gray-100 text-gray-600 border-transparent');
+                btn.textContent = t.label;
+                tabButtons[t.id] = btn;
+                tabsNav.appendChild(btn);
+
+                const pane = document.createElement('div');
+                pane.id = `tab-${t.id}`;
+                pane.className = (i === 0 ? '' : 'hidden') + ' p-0';
+                tabContainers[t.id] = pane;
+                tabsBody.appendChild(pane);
+            });
+
+            function activateTab(id) {
+                // nav
+                tabsNav.querySelectorAll('button').forEach(b => {
+                    const active = b.dataset.tab === id;
+                    b.className = 'px-3 py-2 text-sm rounded-t border border-b-0 ' + (active ? 'bg-white text-blue-600 border-gray-200' : 'bg-gray-100 text-gray-600 border-transparent');
+                });
+                // panes
+                Object.keys(tabContainers).forEach(k => {
+                    const pane = tabContainers[k];
+                    if (k === id) pane.classList.remove('hidden');
+                    else pane.classList.add('hidden');
+                });
+            }
+            tabsNav.addEventListener('click', (e) => {
+                const btn = e.target.closest('button[data-tab]');
+                if (!btn) return;
+                activateTab(btn.dataset.tab);
+            });
+
+            tabsWrap.appendChild(tabsNav);
+            tabsWrap.appendChild(tabsBody);
+            configFields.appendChild(tabsWrap);
+            
+            if (typeof configData !== 'object' || configData === null) {
+                // 如果不是对象，直接添加一个字段
+                addConfigField('config', configData);
+                return;
+            }
+            
+            // 定义要处理的分组（按 Tab 分类）
+            const groups = [
+                { id: 'commands',   title: '命令与参数',              fields: ['command', 'args'] },
+                { id: 'scripts',    title: '脚本设定',                fields: ['scripts'] },
+                { id: 'configmaps', title: '配置文件（configmap）',   fields: ['config_maps'] },
+                { id: 'env',        title: '环境变量',                fields: ['env'] },
+                { id: 'volumes',    title: '持久化卷',                fields: ['volume_mounts', 'resource_request'] },
+                { id: 'services',   title: '服务配置',                fields: ['services'] },
+                { id: 'options',    title: '选项配置',                fields: ['options'] }
+            ];
+            
+            // 跟踪已处理的字段
+            const processedFields = new Set();
+            
+            // 处理每个分组
+            groups.forEach(group => {
+                // 创建分组容器
+                const groupContainer = document.createElement('div');
+                groupContainer.className = 'config-group border border-gray-200 rounded-lg p-4 mb-6';
+                
+                // 添加分组标题
+                const groupTitle = document.createElement('h3');
+                groupTitle.className = 'text-lg font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-200';
+                groupTitle.textContent = group.title;
+                groupContainer.appendChild(groupTitle);
+                
+                // 添加分组内的字段
+                group.fields.forEach(fieldName => {
+                    if (configData.hasOwnProperty(fieldName)) {
+                        const fieldValue = configData[fieldName];
+                        
+                        if (fieldName === 'options' && Array.isArray(fieldValue)) {
+                            // 特殊处理options数组
+                            renderOptionsField(fieldValue, groupContainer);
+                        } else if (fieldName === 'env' && Array.isArray(fieldValue)) {
+                            // 特殊处理env数组
+                            renderEnvField(fieldValue, groupContainer);
+                        } else if (fieldName === 'volume_mounts' && Array.isArray(fieldValue)) {
+                            // 特殊处理volume_mounts数组
+                            renderVolumeMountsField(fieldValue, groupContainer);
+                        } else if (fieldName === 'services' && Array.isArray(fieldValue)) {
+                            // 特殊处理services数组
+                            renderServicesField(fieldValue, groupContainer);
+                        } else if (fieldName === 'resource_request' && typeof fieldValue === 'object' && fieldValue !== null) {
+                            // 资源限制（单卡片、滑块编辑）
+                            renderResourceRequest(fieldValue, groupContainer);
+                        } else if (fieldName === 'scripts' && typeof fieldValue === 'object' && fieldValue !== null) {
+                            // 脚本（单卡片、文本域编辑）
+                            renderScriptsField(fieldValue, groupContainer);
+                        } else {
+                            // 普通字段处理
+                            addConfigField(fieldName, fieldValue, groupContainer);
+                        }
+                        
+                        processedFields.add(fieldName);
+                    }
+                });
+                
+                // 只有当分组有内容时才添加到对应 Tab
+                if (groupContainer.children.length > 1 && tabContainers[group.id]) {
+                    tabContainers[group.id].appendChild(groupContainer);
+                }
+            });
+
+            // 渲染完成后更新各 Tab 数量徽标
+            (function updateTabBadges() {
+                // 计算数量的辅助函数
+                const countArray = v => Array.isArray(v) ? v.length : 0;
+                const countScripts = scr => {
+                    if (!scr || typeof scr !== 'object') return 0;
+                    return ['install','install_image','post_start','pre_stop'].reduce((n,k)=> n + (scr[k] ? 1 : 0), 0);
+                };
+                const countCmdArgs = data => {
+                    const c = Array.isArray(data.command) ? data.command.length : (data.command ? 1 : 0);
+                    const a = Array.isArray(data.args) ? data.args.length : (data.args ? 1 : 0);
+                    return c + a;
+                };
+
+                const counts = {
+                    commands:   countCmdArgs(configData),
+                    scripts:    countScripts(configData.scripts),
+                    configmaps: countArray(configData.config_maps),
+                    env:        countArray(configData.env),
+                    volumes:    countArray(configData.volume_mounts) + (configData.resource_request ? 1 : 0),
+                    services:   countArray(configData.services),
+                    options:    countArray(configData.options)
+                };
+
+                Object.entries(counts).forEach(([id, num]) => {
+                    const btn = tabButtons[id];
+                    if (btn) btn.textContent = `${tabDefs.find(t=>t.id===id)?.label || id} (${num})`;
+                });
+            })();
+            
+            // 处理未分组的其他字段
+            const otherFieldsGroup = document.createElement('div');
+            otherFieldsGroup.className = 'config-group border border-gray-200 rounded-lg p-4';
+            
+            const otherFieldsTitle = document.createElement('h3');
+            otherFieldsTitle.className = 'text-lg font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-200';
+            otherFieldsTitle.textContent = '其他配置';
+            otherFieldsGroup.appendChild(otherFieldsTitle);
+            
+            let hasOtherFields = false;
+            for (const [key, value] of Object.entries(configData)) {
+                if (!processedFields.has(key)) {
+                    addConfigField(key, value, otherFieldsGroup);
+                    hasOtherFields = true;
+                }
+            }
+            
+            // 如果有未分组的字段，添加到表单
+            if (hasOtherFields) {
+                configFields.appendChild(otherFieldsGroup);
+            }
+        }
+        
+        // 渲染配置选项字段
+        function renderOptionsField(options, container) {
+            if (!Array.isArray(options)) {
+                return;
+            }
+            
+            const optionsContainer = document.createElement('div');
+            optionsContainer.className = 'options-container space-y-4';
+            
+            options.forEach((option, index) => {
+                const optionCard = document.createElement('div');
+                optionCard.className = 'bg-gray-50 p-4 rounded-lg border border-gray-200';
+                // 绑定原始选项完整数据
+                optionCard.dataset.optionJson = JSON.stringify(option);
+                
+                // 选项标题
+                const optionTitle = document.createElement('div');
+                optionTitle.className = 'font-medium text-gray-800 mb-2';
+                optionTitle.textContent = `${option.label} (${option.env_key || '无环境键'})`;
+                optionCard.appendChild(optionTitle);
+                
+                // 选项表单
+                const optionForm = document.createElement('div');
+                optionForm.className = 'space-y-2 text-sm';
+                
+                // 基本属性（类型使用下拉）
+                const typeRow = document.createElement('div');
+                typeRow.className = 'mb-2';
+                const typeLabel = document.createElement('label');
+                typeLabel.className = 'block text-gray-700 mb-1';
+                typeLabel.textContent = '类型';
+                const typeSelect = document.createElement('select');
+                typeSelect.className = 'opt-type-original px-3 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
+                ['apps','select','text','password','number'].forEach(t => {
+                    const optEl = document.createElement('option');
+                    optEl.value = t;
+                    optEl.textContent = t;
+                    if (t === option.type) optEl.selected = true;
+                    typeSelect.appendChild(optEl);
+                });
+                typeRow.appendChild(typeLabel);
+                typeRow.appendChild(typeSelect);
+                optionForm.appendChild(typeRow);
+
+                // 必填改为可编辑复选框
+                const reqRow = document.createElement('div');
+                reqRow.className = 'mb-2';
+                const reqLabel = document.createElement('label');
+                reqLabel.className = 'inline-flex items-center gap-2 text-gray-700';
+                const reqCheckbox = document.createElement('input');
+                reqCheckbox.type = 'checkbox';
+                reqCheckbox.className = 'opt-required-original';
+                reqCheckbox.checked = !!option.required;
+                const reqText = document.createElement('span');
+                reqText.textContent = '必填';
+                reqLabel.appendChild(reqCheckbox);
+                reqLabel.appendChild(reqText);
+                reqRow.appendChild(reqLabel);
+                optionForm.appendChild(reqRow);
+                
+                // 标签 label（可编辑）
+                const labelRow = document.createElement('div');
+                labelRow.className = 'mb-2';
+                const labelLab = document.createElement('label');
+                labelLab.className = 'block text-gray-700 mb-1';
+                labelLab.textContent = '标签 label';
+                const labelInput = document.createElement('input');
+                labelInput.type = 'text';
+                labelInput.className = 'opt-label-original px-3 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
+                labelInput.value = option.label || '';
+                labelRow.appendChild(labelLab);
+                labelRow.appendChild(labelInput);
+                optionForm.appendChild(labelRow);
+
+                // env_key（可编辑）
+                const envKeyRow = document.createElement('div');
+                envKeyRow.className = 'mb-2';
+                const envKeyLab = document.createElement('label');
+                envKeyLab.className = 'block text-gray-700 mb-1';
+                envKeyLab.textContent = '环境变量键 env_key';
+                const envKeyInput = document.createElement('input');
+                envKeyInput.type = 'text';
+                envKeyInput.className = 'opt-envkey-original px-3 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
+                envKeyInput.value = option.env_key || '';
+                envKeyRow.appendChild(envKeyLab);
+                envKeyRow.appendChild(envKeyInput);
+                optionForm.appendChild(envKeyRow);
+
+                // 默认值 default（可编辑）
+                const defRow = document.createElement('div');
+                defRow.className = 'mb-2';
+                const defLab = document.createElement('label');
+                defLab.className = 'block text-gray-700 mb-1';
+                defLab.textContent = '默认值 default';
+                const defInput = document.createElement('input');
+                defInput.type = 'text';
+                defInput.className = 'opt-default-original px-3 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
+                defInput.value = option.default ?? '';
+                defRow.appendChild(defLab);
+                defRow.appendChild(defInput);
+                optionForm.appendChild(defRow);
+
+                // 验证规则 rule（可编辑）
+                const ruleRow = document.createElement('div');
+                ruleRow.className = 'mb-2';
+                const ruleLab = document.createElement('label');
+                ruleLab.className = 'block text-gray-700 mb-1';
+                ruleLab.textContent = '验证规则 rule';
+                const ruleInput = document.createElement('input');
+                ruleInput.type = 'text';
+                ruleInput.className = 'opt-rule-original px-3 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
+                ruleInput.value = option.rule ?? '';
+                ruleRow.appendChild(ruleLab);
+                ruleRow.appendChild(ruleInput);
+                optionForm.appendChild(ruleRow);
+
+                // disabled / random（可编辑开关）
+                const flagsRow = document.createElement('div');
+                flagsRow.className = 'mb-2 flex items-center gap-6';
+                const disLab = document.createElement('label');
+                disLab.className = 'inline-flex items-center gap-2 text-gray-700';
+                const disCb = document.createElement('input');
+                disCb.type = 'checkbox';
+                disCb.className = 'opt-disabled-original';
+                disCb.checked = !!option.disabled;
+                const disText = document.createElement('span'); disText.textContent = '禁用 disabled';
+                disLab.appendChild(disCb); disLab.appendChild(disText);
+
+                const rndLab = document.createElement('label');
+                rndLab.className = 'inline-flex items-center gap-2 text-gray-700';
+                const rndCb = document.createElement('input');
+                rndCb.type = 'checkbox';
+                rndCb.className = 'opt-random-original';
+                rndCb.checked = !!option.random;
+                const rndText = document.createElement('span'); rndText.textContent = '随机生成 random';
+                rndLab.appendChild(rndCb); rndLab.appendChild(rndText);
+
+                flagsRow.appendChild(disLab);
+                flagsRow.appendChild(rndLab);
+                optionForm.appendChild(flagsRow);
+
+                // 标题动态更新：显示“标签（env_key）”
+                const updateTitle = () => {
+                    const lbl = (labelInput.value || option.label || '').trim();
+                    const evk = (envKeyInput.value || option.env_key || '').trim();
+                    optionTitle.textContent = `${lbl || '选项'} (${evk || '无环境键'})`;
+                };
+                labelInput.addEventListener('input', updateTitle);
+                envKeyInput.addEventListener('input', updateTitle);
+                // 初始化一次
+                updateTitle();
+                
+                // 根据类型显示不同的输入控件
+                if ((option.type === 'apps' || option.type === 'select')) {
+                    // 多可选项编辑器 + 当前值选择
+                    const valuesWrap = document.createElement('div');
+                    valuesWrap.className = 'mb-2';
+                    const valuesLabel = document.createElement('label');
+                    valuesLabel.className = 'block text-gray-700 mb-1';
+                    valuesLabel.textContent = '可选项（label/value，可添加多个）';
+                    valuesWrap.appendChild(valuesLabel);
+
+                    const editor = document.createElement('div');
+                    editor.className = 'opt-values-editor space-y-2';
+
+                    const list = document.createElement('div');
+                    list.className = 'vals-list space-y-2';
+                    editor.appendChild(list);
+
+                    function addValRow(item={label:'', value:''}) {
+                        const row = document.createElement('div');
+                        row.className = 'val-row flex items-center gap-2';
+                        row.innerHTML = `
+                            <input type="text" class="val-label px-3 py-2 border border-gray-300 rounded-lg flex-1" placeholder="label" value="${item.label || ''}">
+                            <input type="text" class="val-value px-3 py-2 border border-gray-300 rounded-lg flex-1" placeholder="value" value="${item.value || ''}">
+                            <button type="button" class="val-del text-red-500 hover:text-red-700"><i class="fas fa-trash-alt"></i></button>
+                        `;
+                        row.querySelector('.val-del').addEventListener('click', () => { row.remove(); rebuildSelect(); });
+                        list.appendChild(row);
+                    }
+
+                    // 初始化已有 values
+                    if (Array.isArray(option.values)) {
+                        option.values.forEach(v => addValRow(v));
+                    } else {
+                        addValRow();
+                    }
+
+                    const addBtn = document.createElement('button');
+                    addBtn.type = 'button';
+                    addBtn.className = 'mt-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-1 px-3 rounded-lg text-sm';
+                    addBtn.innerHTML = '<i class="fas fa-plus mr-1"></i> 添加选项';
+                    addBtn.addEventListener('click', () => { addValRow(); rebuildSelect(); });
+
+                    editor.appendChild(addBtn);
+                    valuesWrap.appendChild(editor);
+                    optionForm.appendChild(valuesWrap);
+
+                    // 当前值选择框
+                    const selectContainer = document.createElement('div');
+                    selectContainer.className = 'mb-2';
+                    const selectLabel = document.createElement('label');
+                    selectLabel.className = 'block text-gray-700 mb-1';
+                    selectLabel.textContent = '值';
+                    selectContainer.appendChild(selectLabel);
+
+                    const select = document.createElement('select');
+                    select.className = 'field-value px-3 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
+                    selectContainer.appendChild(select);
+                    optionForm.appendChild(selectContainer);
+
+                    function rebuildSelect() {
+                        const rows = list.querySelectorAll('.val-row');
+                        const current = select.value;
+                        select.innerHTML = '';
+                        rows.forEach(r => {
+                            const lbl = r.querySelector('.val-label')?.value || '';
+                            const val = r.querySelector('.val-value')?.value || '';
+                            const optEl = document.createElement('option');
+                            optEl.value = val;
+                            optEl.textContent = lbl || val || '-';
+                            select.appendChild(optEl);
+                        });
+                        // 还原选中值或使用原始值
+                        if (current) {
+                            const found = Array.from(select.options).some(o => o.value === current);
+                            if (found) select.value = current;
+                        } else if (option.value) {
+                            const found2 = Array.from(select.options).some(o => o.value === String(option.value));
+                            if (found2) select.value = String(option.value);
+                        }
+                    }
+                    function validateDup() {
+                        const valueInputs = list.querySelectorAll('.val-value');
+                        const counts = {};
+                        valueInputs.forEach(inp => {
+                            const v = (inp.value || '').trim();
+                            if (!v) return;
+                            counts[v] = (counts[v] || 0) + 1;
+                        });
+                        valueInputs.forEach(inp => {
+                            const v = (inp.value || '').trim();
+                            if (v && counts[v] > 1) inp.classList.add('border-red-500');
+                            else inp.classList.remove('border-red-500');
+                        });
+                    }
+                    function rebuildAndValidate() {
+                        rebuildSelect();
+                        validateDup();
+                    }
+                    rebuildAndValidate();
+                    // 当编辑器行变化时，尝试更新下拉并校验
+                    list.addEventListener('input', rebuildAndValidate);
+                } else {
+                    // 文本输入类型
+                    const inputContainer = document.createElement('div');
+                    inputContainer.className = 'mb-2';
+                    
+                    const inputLabel = document.createElement('label');
+                    inputLabel.className = 'block text-gray-700 mb-1';
+                    inputLabel.textContent = '值';
+                    inputContainer.appendChild(inputLabel);
+                    
+                    const input = document.createElement('input');
+                    input.type = option.type === 'password' ? 'password' : 
+                                option.type === 'number' ? 'number' : 'text';
+                    input.className = 'field-value px-3 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
+                    input.value = option.value || option.default || '';
+                    inputContainer.appendChild(input);
+                    optionForm.appendChild(inputContainer);
+                }
+                
+                // 默认值显示
+                if (option.default) {
+                    addOptionAttribute(optionForm, '默认值', option.default);
+                }
+                
+                // 删除按钮
+                const deleteBtn = document.createElement('button');
+                deleteBtn.type = 'button';
+                deleteBtn.className = 'text-red-500 hover:text-red-700 transition-colors text-sm';
+                deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+                deleteBtn.addEventListener('click', function() { optionCard.remove(); });
+
+                optionCard.appendChild(optionForm);
+                optionCard.appendChild(deleteBtn);
+                optionsContainer.appendChild(optionCard);
+            });
+            
+            // 新增选项按钮
+            const addOptionBtn = document.createElement('button');
+            addOptionBtn.type = 'button';
+            addOptionBtn.className = 'mt-3 bg-blue-600 hover:bg-blue-700 text-white font-medium py-1 px-4 rounded-lg transition-colors text-sm';
+            addOptionBtn.innerHTML = '<i class="fas fa-plus mr-1"></i> 新增选项';
+            addOptionBtn.addEventListener('click', function() {
+                addOptionItem(optionsContainer);
+            });
+
+            container.appendChild(optionsContainer);
+            container.appendChild(addOptionBtn);
+        }
+        
+        // 添加选项属性显示
+        function addOptionAttribute(container, label, value) {
+            const attribute = document.createElement('div');
+            attribute.className = 'flex justify-between text-gray-600';
+            
+            const labelSpan = document.createElement('span');
+            labelSpan.className = 'font-medium';
+            labelSpan.textContent = label + ':';
+            
+            const valueSpan = document.createElement('span');
+            valueSpan.textContent = value !== undefined && value !== null ? value : '-';
+            
+            attribute.appendChild(labelSpan);
+            attribute.appendChild(valueSpan);
+            container.appendChild(attribute);
+        }
+        
+        // 渲染环境变量字段
+        function renderEnvField(envVars, container) {
+            if (!Array.isArray(envVars)) {
+                return;
+            }
+            
+            const envContainer = document.createElement('div');
+            envContainer.className = 'env-container space-y-2';
+            
+            envVars.forEach((envVar, index) => {
+                const envRow = document.createElement('div');
+                envRow.className = 'flex flex-wrap items-center gap-2 bg-gray-50 p-3 rounded-lg';
+                // 绑定原始环境变量key
+                envRow.dataset.key = envVar.key;
+                
+                const keyInput = document.createElement('input');
+                keyInput.type = 'text';
+                keyInput.className = 'env-key px-3 py-1 border border-gray-300 rounded-lg min-w-[150px]';
+                keyInput.value = envVar.key || '';
+                
+                const valueInput = document.createElement('input');
+                valueInput.type = 'text';
+                valueInput.className = 'field-value px-3 py-1 border border-gray-300 rounded-lg flex-grow focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
+                valueInput.value = envVar.value || '';
+                
+                // 删除按钮
+                const deleteBtn = document.createElement('button');
+                deleteBtn.type = 'button';
+                deleteBtn.className = 'text-red-500 hover:text-red-700 transition-colors text-sm';
+                deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+                deleteBtn.addEventListener('click', function() { envRow.remove(); });
+
+                envRow.appendChild(keyInput);
+                envRow.appendChild(valueInput);
+                envRow.appendChild(deleteBtn);
+                envContainer.appendChild(envRow);
+            });
+            
+            // 新增环境变量按钮
+            const addEnvBtn = document.createElement('button');
+            addEnvBtn.type = 'button';
+            addEnvBtn.className = 'mt-3 bg-blue-600 hover:bg-blue-700 text-white font-medium py-1 px-4 rounded-lg transition-colors text-sm';
+            addEnvBtn.innerHTML = '<i class="fas fa-plus mr-1"></i> 新增环境变量';
+            addEnvBtn.addEventListener('click', function() {
+                addEnvVar(envContainer);
+            });
+
+            container.appendChild(envContainer);
+            container.appendChild(addEnvBtn);
+        }
+        
+        // 渲染卷挂载字段
+        function renderVolumeMountsField(volumeMounts, container) {
+            if (!Array.isArray(volumeMounts)) {
+                return;
+            }
+            
+            const volumesContainer = document.createElement('div');
+            volumesContainer.className = 'volumes-container space-y-4';
+            
+            volumeMounts.forEach((volume, index) => {
+                const volumeCard = document.createElement('div');
+                volumeCard.className = 'bg-gray-50 p-4 rounded-lg border border-gray-200';
+                // 绑定原始卷挂载完整数据
+                volumeCard.dataset.volumeJson = JSON.stringify(volume);
+                
+                const volumeTitle = document.createElement('div');
+                volumeTitle.className = 'font-medium text-gray-800 mb-2';
+                volumeTitle.textContent = volume.name || `卷挂载 ${index + 1}`;
+                volumeCard.appendChild(volumeTitle);
+                
+                const volumeDetails = document.createElement('div');
+                volumeDetails.className = 'space-y-1 text-sm text-gray-600';
+                
+                if (volume.mount_path) {
+                    volumeDetails.innerHTML += `<div><span class="font-medium">挂载路径:</span> ${volume.mount_path}</div>`;
+                }
+                if (volume.sub_path) {
+                    volumeDetails.innerHTML += `<div><span class="font-medium">子路径:</span> ${volume.sub_path}</div>`;
+                }
+                if (volume.mount_content_type) {
+                    volumeDetails.innerHTML += `<div><span class="font-medium">类型:</span> ${volume.mount_content_type}</div>`;
+                }
+                
+                // 删除按钮
+                const deleteBtn = document.createElement('button');
+                deleteBtn.type = 'button';
+                deleteBtn.className = 'text-red-500 hover:text-red-700 transition-colors text-sm';
+                deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+                deleteBtn.addEventListener('click', function() { volumeCard.remove(); });
+
+                volumeCard.appendChild(volumeDetails);
+                volumeCard.appendChild(deleteBtn);
+                volumesContainer.appendChild(volumeCard);
+            });
+            
+            // 新增卷挂载按钮
+            const addVolBtn = document.createElement('button');
+            addVolBtn.type = 'button';
+            addVolBtn.className = 'mt-3 bg-blue-600 hover:bg-blue-700 text-white font-medium py-1 px-4 rounded-lg transition-colors text-sm';
+            addVolBtn.innerHTML = '<i class="fas fa-plus mr-1"></i> 新增卷挂载';
+            addVolBtn.addEventListener('click', function() {
+                addVolumeMount(volumesContainer);
+            });
+
+            container.appendChild(volumesContainer);
+            container.appendChild(addVolBtn);
+        }
+        
+        // 渲染服务字段
+        function renderServicesField(services, container) {
+            if (!Array.isArray(services)) {
+                return;
+            }
+            
+            const servicesContainer = document.createElement('div');
+            servicesContainer.className = 'services-container space-y-4';
+            
+            services.forEach((service, index) => {
+                const serviceCard = document.createElement('div');
+                serviceCard.className = 'bg-gray-50 p-4 rounded-lg border border-gray-200';
+                // 绑定原始服务完整数据
+                serviceCard.dataset.serviceJson = JSON.stringify(service);
+                
+                const serviceTitle = document.createElement('div');
+                serviceTitle.className = 'font-medium text-gray-800 mb-2';
+                serviceTitle.textContent = service.name || service.label || `服务 ${index + 1}`;
+                serviceCard.appendChild(serviceTitle);
+                
+                const serviceDetails = document.createElement('div');
+                serviceDetails.className = 'space-y-1 text-sm text-gray-600';
+                
+                if (service.type) {
+                    serviceDetails.innerHTML += `<div><span class="font-medium">类型:</span> ${service.type}</div>`;
+                }
+                if (service.internal_port) {
+                    serviceDetails.innerHTML += `<div><span class="font-medium">内部端口:</span> ${service.internal_port}</div>`;
+                }
+                if (service.external_port) {
+                    serviceDetails.innerHTML += `<div><span class="font-medium">外部端口:</span> ${service.external_port}</div>`;
+                }
+                if (service.protocol) {
+                    serviceDetails.innerHTML += `<div><span class="font-medium">协议:</span> ${service.protocol}</div>`;
+                }
+                
+                // 删除按钮
+                const deleteBtn = document.createElement('button');
+                deleteBtn.type = 'button';
+                deleteBtn.className = 'text-red-500 hover:text-red-700 transition-colors text-sm';
+                deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+                deleteBtn.addEventListener('click', function() { serviceCard.remove(); });
+
+                serviceCard.appendChild(serviceDetails);
+                serviceCard.appendChild(deleteBtn);
+                servicesContainer.appendChild(serviceCard);
+            });
+            
+            // 新增服务按钮
+            const addServiceBtn = document.createElement('button');
+            addServiceBtn.type = 'button';
+            addServiceBtn.className = 'mt-3 bg-blue-600 hover:bg-blue-700 text-white font-medium py-1 px-4 rounded-lg transition-colors text-sm';
+            addServiceBtn.innerHTML = '<i class="fas fa-plus mr-1"></i> 新增服务';
+            addServiceBtn.addEventListener('click', function() {
+                addServiceItem(servicesContainer);
+            });
+
+            container.appendChild(servicesContainer);
+            container.appendChild(addServiceBtn);
+        }
+        
+        // 渲染资源限制（滑块，单条不可新增）
+        function renderResourceRequest(resource, container) {
+            const wrap = document.createElement('div');
+            wrap.className = 'resource-request-container bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-3';
+
+            const title = document.createElement('div');
+            title.className = 'font-medium text-gray-800';
+            title.textContent = '资源限制（不可新增，仅编辑）';
+            wrap.appendChild(title);
+
+            // CPU 滑块（单位：mCPU）
+            const cpuRow = document.createElement('div');
+            cpuRow.className = 'space-y-1';
+            const cpuLabel = document.createElement('label');
+            cpuLabel.className = 'block text-gray-700 text-sm';
+            cpuLabel.textContent = 'CPU (mCPU)';
+            const cpuValue = document.createElement('div');
+            cpuValue.className = 'text-xs text-gray-500';
+            cpuValue.textContent = `${resource.min_cpu ?? 0} mCPU`;
+            const cpuInput = document.createElement('input');
+            cpuInput.type = 'range';
+            cpuInput.className = 'res-cpu w-full';
+            cpuInput.min = '128';
+            cpuInput.max = '4000';
+            cpuInput.step = '50';
+            cpuInput.value = (resource.min_cpu ?? 500);
+            cpuInput.addEventListener('input', () => { cpuValue.textContent = `${cpuInput.value} mCPU`; });
+            cpuRow.appendChild(cpuLabel);
+            cpuRow.appendChild(cpuInput);
+            cpuRow.appendChild(cpuValue);
+
+            // Memory 滑块（单位：MB）
+            const memRow = document.createElement('div');
+            memRow.className = 'space-y-1';
+            const memLabel = document.createElement('label');
+            memLabel.className = 'block text-gray-700 text-sm';
+            memLabel.textContent = '内存 (MB)';
+            const memValue = document.createElement('div');
+            memValue.className = 'text-xs text-gray-500';
+            memValue.textContent = `${resource.min_memory ?? 0} MB`;
+            const memInput = document.createElement('input');
+            memInput.type = 'range';
+            memInput.className = 'res-mem w-full';
+            memInput.min = '128';
+            memInput.max = '8192';
+            memInput.step = '64';
+            memInput.value = (resource.min_memory ?? 256);
+            memInput.addEventListener('input', () => { memValue.textContent = `${memInput.value} MB`; });
+            memRow.appendChild(memLabel);
+            memRow.appendChild(memInput);
+            memRow.appendChild(memValue);
+
+            wrap.appendChild(cpuRow);
+            wrap.appendChild(memRow);
+            container.appendChild(wrap);
+        }
+
+        // 渲染脚本（文本域，单条不可新增）
+        function renderScriptsField(scripts, container) {
+            const wrap = document.createElement('div');
+            wrap.className = 'scripts-container bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-3';
+
+            const title = document.createElement('div');
+            title.className = 'font-medium text-gray-800';
+            title.textContent = '脚本（不可新增，仅编辑既有键）';
+            wrap.appendChild(title);
+
+            const defs = [
+                { key: 'install', label: 'install' },
+                { key: 'install_image', label: 'install_image' },
+                { key: 'post_start', label: 'post_start' },
+                { key: 'pre_stop', label: 'pre_stop' }
+            ];
+
+            defs.forEach(def => {
+                const row = document.createElement('div');
+                row.className = 'space-y-1';
+                const lab = document.createElement('label');
+                lab.className = 'block text-gray-700 text-sm';
+                lab.textContent = def.label;
+                const ta = document.createElement('textarea');
+                ta.className = `scr-${def.key} px-3 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500`;
+                ta.rows = 3;
+                ta.placeholder = `输入 ${def.label} 脚本...`;
+                ta.value = scripts && typeof scripts[def.key] === 'string' ? scripts[def.key] : '';
+                row.appendChild(lab);
+                row.appendChild(ta);
+                wrap.appendChild(row);
+            });
+
+            container.appendChild(wrap);
+        }
+
+        // 添加配置字段
+        function addConfigField(fieldName = '', fieldValue = '', container = configFields) {
+            // 克隆模板
+            const template = configFieldTemplate.querySelector('.config-field');
+            const newField = template.cloneNode(true);
+            
+            // 设置字段名
+            const nameInput = newField.querySelector('.field-name');
+            nameInput.value = fieldName;
+            
+            // 设置字段值
+            const valueInput = newField.querySelector('.field-value');
+            const valueContainer = newField.querySelector('.field-value-container');
+            
+            // 根据值类型设置字段类型
+            const typeSelect = newField.querySelector('.field-type');
+            
+            if (Array.isArray(fieldValue)) {
+                typeSelect.value = 'array';
+                valueInput.value = JSON.stringify(fieldValue);
+            } else if (typeof fieldValue === 'object' && fieldValue !== null) {
+                typeSelect.value = 'object';
+                valueInput.value = JSON.stringify(fieldValue);
+            } else if (typeof fieldValue === 'number') {
+                typeSelect.value = 'number';
+                valueInput.value = fieldValue;
+                valueInput.type = 'number';
+            } else if (typeof fieldValue === 'boolean') {
+                typeSelect.value = 'boolean';
+                // 创建复选框
+                valueContainer.innerHTML = '';
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'field-value h-4 w-4 text-blue-600 border-gray-300 rounded';
+                checkbox.checked = fieldValue;
+                valueContainer.appendChild(checkbox);
+            } else {
+                typeSelect.value = 'string';
+                valueInput.value = fieldValue !== undefined ? fieldValue : '';
+            }
+            
+            // 添加删除按钮事件
+            const removeBtn = newField.querySelector('.remove-field');
+            removeBtn.addEventListener('click', function() {
+                newField.remove();
+            });
+            
+            // 添加类型变更事件
+            typeSelect.addEventListener('change', function() {
+                const currentValue = getFieldValue(newField);
+                updateFieldInputType(newField, typeSelect.value, currentValue);
+            });
+            
+            // 添加到指定容器，如果没有指定则添加到默认容器
+            container.appendChild(newField);
+        }
+        
+        // 更新字段输入类型
+        function updateFieldInputType(fieldElement, type, currentValue) {
+            const valueContainer = fieldElement.querySelector('.field-value-container');
+            
+            // 清空容器
+            valueContainer.innerHTML = '';
+            
+            // 根据类型创建不同的输入控件
+            if (type === 'boolean') {
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'field-value h-4 w-4 text-blue-600 border-gray-300 rounded';
+                checkbox.checked = currentValue === true || currentValue === 'true';
+                valueContainer.appendChild(checkbox);
+            } else if (type === 'textarea') {
+                const textarea = document.createElement('textarea');
+                textarea.className = 'field-value px-3 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
+                textarea.rows = 4;
+                textarea.value = currentValue !== undefined ? currentValue : '';
+                valueContainer.appendChild(textarea);
+            } else if (type === 'number') {
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.className = 'field-value px-3 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
+                input.value = currentValue !== undefined ? currentValue : '';
+                valueContainer.appendChild(input);
+            } else {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'field-value px-3 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
+                input.value = currentValue !== undefined ? currentValue : '';
+                valueContainer.appendChild(input);
+            }
+        }
+        
+        // 新增：选项卡片（可编辑）
+        function addOptionItem(optionsContainer) {
+            const card = document.createElement('div');
+            card.className = 'option-new-card bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-2';
+            card.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <input type="text" class="opt-label px-3 py-2 border border-gray-300 rounded-lg flex-1" placeholder="选项标签">
+                    <select class="opt-type px-3 py-2 border border-gray-300 rounded-lg">
+                        <option value="apps">apps</option>
+                        <option value="select">select</option>
+                        <option value="text" selected>text</option>
+                        <option value="password">password</option>
+                        <option value="number">number</option>
+                    </select>
+                    <label class="text-sm text-gray-700 inline-flex items-center gap-2">
+                        <input type="checkbox" class="opt-required"> 必填
+                    </label>
+                    <button type="button" class="text-red-500 hover:text-red-700 transition-colors">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <input type="text" class="opt-envkey px-3 py-2 border border-gray-300 rounded-lg" placeholder="env_key">
+                    <input type="text" class="opt-default px-3 py-2 border border-gray-300 rounded-lg" placeholder="默认值 default">
+                    <!-- 动态区域：根据类型渲染 值/可选项 编辑器 -->
+                    <div class="opt-dynamic md:col-span-2"></div>
+                    <!-- 兼容旧实现的 JSON 文本域（隐藏，仅作回退） -->
+                    <textarea class="opt-values px-3 py-2 border border-gray-300 rounded-lg md:col-span-2 hidden" rows="2" placeholder="values（JSON数组，apps/select 可填）"></textarea>
+                </div>
+            `;
+            
+            const delBtn = card.querySelector('button');
+            delBtn.addEventListener('click', function() { card.remove(); });
+
+            const typeSel = card.querySelector('.opt-type');
+            const dynamic = card.querySelector('.opt-dynamic');
+
+            function renderDynamic() {
+                dynamic.innerHTML = '';
+                const t = typeSel.value;
+                if (t === 'apps' || t === 'select') {
+                    // 可选项编辑器
+                    const valuesWrap = document.createElement('div');
+                    valuesWrap.className = 'mb-2';
+                    const valuesLabel = document.createElement('label');
+                    valuesLabel.className = 'block text-gray-700 mb-1';
+                    valuesLabel.textContent = '可选项（label/value，可添加多个）';
+                    valuesWrap.appendChild(valuesLabel);
+
+                    const editor = document.createElement('div');
+                    editor.className = 'opt-values-editor space-y-2';
+                    const list = document.createElement('div');
+                    list.className = 'vals-list space-y-2';
+                    editor.appendChild(list);
+
+                    function addValRow(item = { label: '', value: '' }) {
+                        const row = document.createElement('div');
+                        row.className = 'val-row flex items-center gap-2';
+                        row.innerHTML = `
+                            <input type="text" class="val-label px-3 py-2 border border-gray-300 rounded-lg flex-1" placeholder="label" value="${item.label || ''}">
+                            <input type="text" class="val-value px-3 py-2 border border-gray-300 rounded-lg flex-1" placeholder="value" value="${item.value || ''}">
+                            <button type="button" class="val-del text-red-500 hover:text-red-700"><i class="fas fa-trash-alt"></i></button>
+                        `;
+                        row.querySelector('.val-del').addEventListener('click', () => { row.remove(); rebuildSelect(); });
+                        list.appendChild(row);
+                    }
+
+                    // 初始化一行
+                    addValRow();
+
+                    const addBtn = document.createElement('button');
+                    addBtn.type = 'button';
+                    addBtn.className = 'mt-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-1 px-3 rounded-lg text-sm';
+                    addBtn.innerHTML = '<i class="fas fa-plus mr-1"></i> 添加选项';
+                    addBtn.addEventListener('click', () => { addValRow(); rebuildSelect(); });
+                    editor.appendChild(addBtn);
+                    valuesWrap.appendChild(editor);
+                    dynamic.appendChild(valuesWrap);
+
+                    // 当前值选择
+                    const selectContainer = document.createElement('div');
+                    selectContainer.className = 'mb-2';
+                    const selectLabel = document.createElement('label');
+                    selectLabel.className = 'block text-gray-700 mb-1';
+                    selectLabel.textContent = '值';
+                    const select = document.createElement('select');
+                    select.className = 'field-value px-3 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
+                    selectContainer.appendChild(selectLabel);
+                    selectContainer.appendChild(select);
+                    dynamic.appendChild(selectContainer);
+
+                    function rebuildSelect() {
+                        const rows = list.querySelectorAll('.val-row');
+                        const cur = select.value;
+                        select.innerHTML = '';
+                        rows.forEach(r => {
+                            const lbl = r.querySelector('.val-label')?.value || '';
+                            const val = r.querySelector('.val-value')?.value || '';
+                            const optEl = document.createElement('option');
+                            optEl.value = val;
+                            optEl.textContent = lbl || val || '-';
+                            select.appendChild(optEl);
+                        });
+                        if (cur && Array.from(select.options).some(o => o.value === cur)) {
+                            select.value = cur;
+                        }
+                    }
+                    function validateDup() {
+                        const valueInputs = list.querySelectorAll('.val-value');
+                        const counts = {};
+                        valueInputs.forEach(inp => {
+                            const v = (inp.value || '').trim();
+                            if (!v) return;
+                            counts[v] = (counts[v] || 0) + 1;
+                        });
+                        valueInputs.forEach(inp => {
+                            const v = (inp.value || '').trim();
+                            if (v && counts[v] > 1) inp.classList.add('border-red-500');
+                            else inp.classList.remove('border-red-500');
+                        });
+                    }
+                    function rebuildAndValidate() {
+                        rebuildSelect();
+                        validateDup();
+                    }
+                    list.addEventListener('input', rebuildAndValidate);
+                    rebuildAndValidate();
+                } else {
+                    // 单值文本框
+                    const inputContainer = document.createElement('div');
+                    inputContainer.className = 'mb-2';
+                    const inputLabel = document.createElement('label');
+                    inputLabel.className = 'block text-gray-700 mb-1';
+                    inputLabel.textContent = '值';
+                    const input = document.createElement('input');
+                    input.type = t === 'password' ? 'password' : (t === 'number' ? 'number' : 'text');
+                    input.className = 'field-value px-3 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
+                    inputContainer.appendChild(inputLabel);
+                    inputContainer.appendChild(input);
+                    dynamic.appendChild(inputContainer);
+                }
+            }
+            typeSel.addEventListener('change', renderDynamic);
+            renderDynamic();
+
+            optionsContainer.appendChild(card);
+        }
+
+        // 新增：环境变量行
+        function addEnvVar(envContainer) {
+            const row = document.createElement('div');
+            row.className = 'env-new-row flex flex-wrap items-center gap-2 bg-gray-50 p-3 rounded-lg';
+            row.innerHTML = `
+                <input type="text" class="env-key px-3 py-1 border border-gray-300 rounded-lg min-w-[150px]" placeholder="KEY">
+                <input type="text" class="field-value px-3 py-1 border border-gray-300 rounded-lg flex-grow" placeholder="VALUE">
+                <button type="button" class="text-red-500 hover:text-red-700 transition-colors text-sm"><i class="fas fa-trash-alt"></i></button>
+            `;
+            row.querySelector('button').addEventListener('click', function() { row.remove(); });
+            envContainer.appendChild(row);
+        }
+
+        // 新增：卷挂载卡片
+        function addVolumeMount(volumesContainer) {
+            const card = document.createElement('div');
+            card.className = 'volume-new-card bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-2';
+            card.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <input type="text" class="vol-name px-3 py-2 border border-gray-300 rounded-lg flex-1 mr-3" placeholder="卷名称 name">
+                    <button type="button" class="text-red-500 hover:text-red-700 transition-colors"><i class="fas fa-trash-alt"></i></button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <input type="text" class="vol-mount-path px-3 py-2 border border-gray-300 rounded-lg" placeholder="挂载路径 mount_path">
+                    <input type="text" class="vol-sub-path px-3 py-2 border border-gray-300 rounded-lg" placeholder="子路径 sub_path">
+                    <input type="text" class="vol-type px-3 py-2 border border-gray-300 rounded-lg" placeholder="类型 mount_content_type">
+                    <input type="text" class="vol-pre-content px-3 py-2 border border-gray-300 rounded-lg" placeholder="预置内容 pre_content">
+                </div>
+            `;
+            card.querySelector('button').addEventListener('click', function() { card.remove(); });
+            volumesContainer.appendChild(card);
+        }
+
+        // 新增：服务卡片
+        function addServiceItem(servicesContainer) {
+            const card = document.createElement('div');
+            card.className = 'service-new-card bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-2';
+            card.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <input type="text" class="svc-name px-3 py-2 border border-gray-300 rounded-lg flex-1 mr-3" placeholder="服务名 name">
+                    <button type="button" class="text-red-500 hover:text-red-700 transition-colors"><i class="fas fa-trash-alt"></i></button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <input type="text" class="svc-label px-3 py-2 border border-gray-300 rounded-lg" placeholder="标签 label">
+                    <input type="text" class="svc-type px-3 py-2 border border-gray-300 rounded-lg" placeholder="类型 type（如 external）">
+                    <input type="text" class="svc-internal px-3 py-2 border border-gray-300 rounded-lg" placeholder="内部端口 internal_port">
+                    <input type="text" class="svc-external px-3 py-2 border border-gray-300 rounded-lg" placeholder="外部端口 external_port">
+                    <input type="text" class="svc-protocol px-3 py-2 border border-gray-300 rounded-lg" placeholder="协议 protocol（如 tcp）">
+                </div>
+            `;
+            card.querySelector('button').addEventListener('click', function() { card.remove(); });
+            servicesContainer.appendChild(card);
+        }
+
+        // 获取字段值
+        function getFieldValue(fieldElement) {
+            const type = fieldElement.querySelector('.field-type').value;
+            const valueElement = fieldElement.querySelector('.field-value');
+            
+            if (type === 'boolean') {
+                return valueElement.checked;
+            } else if (type === 'number') {
+                const value = parseFloat(valueElement.value);
+                return isNaN(value) ? 0 : value;
+            } else if (type === 'array' || type === 'object') {
+                try {
+                    return JSON.parse(valueElement.value);
+                } catch (e) {
+                    return type === 'array' ? [] : {};
+                }
+            } else {
+                return valueElement.value;
+            }
+        }
+        
+        // 获取所有配置字段数据
+        function getConfigData() {
+            // 创建一个基于原始数据的配置对象，确保保留所有字段
+            const configData = currentVersionData ? { ...currentVersionData } : {};
+            
+            // 1. 更新从普通配置字段中收集的数据
+            const fields = document.querySelectorAll('.config-field');
+            fields.forEach(field => {
+                const name = field.querySelector('.field-name').value.trim();
+                if (name) {
+                    configData[name] = getFieldValue(field);
+                }
+            });
+            
+            // 2. 处理options字段（基于当前DOM，删除的原始项不收集）
+            const optionsContainer = document.querySelector('.options-container');
+            if (optionsContainer) {
+                const options = [];
+                // 原始卡片：读取绑定的JSON并覆盖用户修改的value
+                const originalCards = optionsContainer.querySelectorAll('.bg-gray-50');
+                originalCards.forEach(card => {
+                    if (card.dataset.optionJson) {
+                        try {
+                            const opt = JSON.parse(card.dataset.optionJson);
+                            const valueInput = card.querySelector('.field-value');
+                            if (valueInput) {
+                                opt.value = valueInput.value;
+                            }
+                            options.push(opt);
+                        } catch (e) {}
+                    }
+                });
+                // 新增卡片
+                const newOptionCards = document.querySelectorAll('.option-new-card');
+                newOptionCards.forEach(card => {
+                    const label = card.querySelector('.opt-label')?.value || '';
+                    const type = card.querySelector('.opt-type')?.value || 'text';
+                    const required = !!card.querySelector('.opt-required')?.checked;
+                    const envKey = card.querySelector('.opt-envkey')?.value || '';
+                    const defVal = card.querySelector('.opt-default')?.value || '';
+                    const value = card.querySelector('.opt-value')?.value || '';
+                    let values = null;
+                    const valuesText = card.querySelector('.opt-values')?.value || '';
+                    if (valuesText.trim()) {
+                        try { values = JSON.parse(valuesText); } catch (e) { values = null; }
+                    }
+                    options.push({
+                        label,
+                        rule: '',
+                        required,
+                        disabled: false,
+                        random: false,
+                        type,
+                        env_key: envKey,
+                        default: defVal,
+                        value,
+                        values
+                    });
+                });
+                if (options.length > 0) {
+                    configData.options = options;
+                }
+            }
+            
+            // 3. 处理env字段
+            const envContainer = document.querySelector('.env-container');
+            if (envContainer) {
+                const envVars = [];
+                const envRows = envContainer.querySelectorAll('div.flex');
+                
+                envRows.forEach(row => {
+                    const keySpan = row.querySelector('span');
+                    const valueInput = row.querySelector('.field-value');
+                    
+                    if (keySpan && valueInput) {
+                        // 从span文本中提取key (去掉末尾的冒号)
+                        const key = keySpan.textContent.replace(':', '').trim();
+                        envVars.push({
+                            key: key,
+                            value: valueInput.value
+                        });
+                    }
+                });
+                
+                // 采集新增的环境变量行
+                const newEnvRows = document.querySelectorAll('.env-new-row');
+                newEnvRows.forEach(row => {
+                    const keyInput = row.querySelector('.env-key');
+                    const valInput = row.querySelector('.field-value');
+                    if (keyInput && valInput) {
+                        const key = keyInput.value.trim();
+                        const value = valInput.value;
+                        if (key) { envVars.push({ key, value }); }
+                    }
+                });
+
+                if (envVars.length > 0) {
+                    configData.env = envVars;
+                }
+            }
+
+            // 4. 采集新增的 volume_mounts
+            const volumesContainerRef = document.querySelector('.volumes-container');
+            if (volumesContainerRef) {
+                const mounts = [];
+                const volumeCards = volumesContainerRef.querySelectorAll('.volume-new-card');
+                volumeCards.forEach(card => {
+                    const name = card.querySelector('.vol-name')?.value || '';
+                    const mount_path = card.querySelector('.vol-mount-path')?.value || '';
+                    const sub_path = card.querySelector('.vol-sub-path')?.value || '';
+                    const mount_content_type = card.querySelector('.vol-type')?.value || '';
+                    const pre_content = card.querySelector('.vol-pre-content')?.value || '';
+                    mounts.push({ name, mount_path, sub_path, mount_content_type, pre_content });
+                });
+                if (mounts.length) {
+                    const original = Array.isArray(configData.volume_mounts) ? configData.volume_mounts : [];
+                    configData.volume_mounts = [...original, ...mounts];
+                }
+            }
+
+            // 5. 采集新增的 services
+            const servicesContainerRef = document.querySelector('.services-container');
+            if (servicesContainerRef) {
+                const servicesArr = [];
+                const serviceCards = servicesContainerRef.querySelectorAll('.service-new-card');
+                serviceCards.forEach(card => {
+                    const name = card.querySelector('.svc-name')?.value || '';
+                    const label = card.querySelector('.svc-label')?.value || '';
+                    const type = card.querySelector('.svc-type')?.value || '';
+                    const internal_port = card.querySelector('.svc-internal')?.value || '';
+                    const external_port = card.querySelector('.svc-external')?.value || '';
+                    const protocol = card.querySelector('.svc-protocol')?.value || '';
+                    servicesArr.push({ name, label, type, internal_port, external_port, protocol });
+                });
+                if (servicesArr.length) {
+                    const original = Array.isArray(configData.services) ? configData.services : [];
+                    configData.services = [...original, ...servicesArr];
+                }
+            }
+            
+            // 6. 采集资源限制
+            const resWrap = document.querySelector('.resource-request-container');
+            if (resWrap) {
+                const cpuInput = resWrap.querySelector('.res-cpu');
+                const memInput = resWrap.querySelector('.res-mem');
+                const min_cpu = cpuInput ? parseInt(cpuInput.value, 10) : undefined;
+                const min_memory = memInput ? parseInt(memInput.value, 10) : undefined;
+                configData.resource_request = {
+                    min_cpu: isNaN(min_cpu) ? (configData.resource_request?.min_cpu ?? 0) : min_cpu,
+                    min_memory: isNaN(min_memory) ? (configData.resource_request?.min_memory ?? 0) : min_memory
+                };
+            }
+
+            // 7. 采集脚本
+            const scriptsWrap = document.querySelector('.scripts-container');
+            if (scriptsWrap) {
+                const vals = {};
+                ['install', 'install_image', 'post_start', 'pre_stop'].forEach(k => {
+                    const ta = scriptsWrap.querySelector(`.scr-${k}`);
+                    vals[k] = ta ? ta.value : (configData.scripts?.[k] ?? '');
+                });
+                configData.scripts = vals;
+            }
+
+            // 确保不会将data作为一个整体字段返回
+            // 如果存在名为data的字段，将其展开（如果是对象）
+            if (configData.hasOwnProperty('data') && typeof configData.data === 'object' && configData.data !== null) {
+                const dataObj = configData.data;
+                delete configData.data;
+                
+                // 将data对象的属性合并到configData中
+                for (const [key, value] of Object.entries(dataObj)) {
+                    if (!(key in configData)) {
+                        configData[key] = value;
+                    }
+                }
+            }
+            
+            return configData;
+        }
+        
+        // 构造最终提交payload（仅收集当前DOM中的元素，删除的原始项不包含）
+        function getFinalPayload() {
+            const payload = {};
+
+            // 基本字段
+            payload.version = currentVersionData?.version ?? '';
+            payload.image = currentVersionData?.image ?? '';
+
+            // 资源限制
+            const resWrap = document.querySelector('.resource-request-container');
+            if (resWrap) {
+                const cpuInput = resWrap.querySelector('.res-cpu');
+                const memInput = resWrap.querySelector('.res-mem');
+                const min_cpu = cpuInput ? parseInt(cpuInput.value, 10) : undefined;
+                const min_memory = memInput ? parseInt(memInput.value, 10) : undefined;
+                payload.resource_request = {
+                    min_cpu: isNaN(min_cpu) ? (currentVersionData?.resource_request?.min_cpu ?? 0) : min_cpu,
+                    min_memory: isNaN(min_memory) ? (currentVersionData?.resource_request?.min_memory ?? 0) : min_memory
+                };
+            } else {
+                payload.resource_request = currentVersionData?.resource_request ?? { min_cpu: 0, min_memory: 0 };
+            }
+
+            // command / args
+            payload.command = Array.isArray(currentVersionData?.command) ? currentVersionData.command : [];
+            payload.args = Array.isArray(currentVersionData?.args) ? currentVersionData.args : [];
+
+            // scripts
+            const scriptsWrap = document.querySelector('.scripts-container');
+            if (scriptsWrap) {
+                const vals = {};
+                ['install', 'install_image', 'post_start', 'pre_stop'].forEach(k => {
+                    const ta = scriptsWrap.querySelector(`.scr-${k}`);
+                    vals[k] = ta ? ta.value : (currentVersionData?.scripts?.[k] ?? '');
+                });
+                payload.scripts = vals;
+            } else {
+                payload.scripts = currentVersionData?.scripts ?? { install: '', install_image: '', post_start: '', pre_stop: '' };
+            }
+
+            // volume_mounts
+            const volumesContainerRef = document.querySelector('.volumes-container');
+            payload.volume_mounts = [];
+            if (volumesContainerRef) {
+                const volumeCards = volumesContainerRef.querySelectorAll('.bg-gray-50, .volume-new-card');
+                volumeCards.forEach(card => {
+                    if (card.classList.contains('volume-new-card')) {
+                        const name = card.querySelector('.vol-name')?.value || '';
+                        const mount_path = card.querySelector('.vol-mount-path')?.value || '';
+                        const sub_path = card.querySelector('.vol-sub-path')?.value || '';
+                        const mount_content_type = card.querySelector('.vol-type')?.value || '';
+                        const pre_content = card.querySelector('.vol-pre-content')?.value || '';
+                        payload.volume_mounts.push({ name, mount_path, sub_path, mount_content_type, pre_content });
+                    } else if (card.dataset.volumeJson) {
+                        try {
+                            const v = JSON.parse(card.dataset.volumeJson);
+                            payload.volume_mounts.push(v);
+                        } catch (e) {}
+                    }
+                });
+            }
+
+            // config_maps
+            payload.config_maps = Array.isArray(currentVersionData?.config_maps) ? currentVersionData.config_maps : [];
+
+            // env
+            const envContainer = document.querySelector('.env-container');
+            payload.env = [];
+            if (envContainer) {
+                const envRows = envContainer.querySelectorAll('.env-new-row, .flex.bg-gray-50');
+                envRows.forEach(row => {
+                    const valueInput = row.querySelector('.field-value');
+                    const keyInput = row.querySelector('.env-key');
+                    const key = keyInput ? keyInput.value.trim() : (row.dataset.key || '');
+                    if (key) {
+                        payload.env.push({
+                            key,
+                            value: valueInput ? valueInput.value : ''
+                        });
+                    }
+                });
+            }
+
+            // services
+            const servicesContainerRef = document.querySelector('.services-container');
+            payload.services = [];
+            if (servicesContainerRef) {
+                const serviceCards = servicesContainerRef.querySelectorAll('.bg-gray-50, .service-new-card');
+                serviceCards.forEach(card => {
+                    if (card.classList.contains('service-new-card')) {
+                        const name = card.querySelector('.svc-name')?.value || '';
+                        const label = card.querySelector('.svc-label')?.value || '';
+                        const type = card.querySelector('.svc-type')?.value || '';
+                        const internal_port = card.querySelector('.svc-internal')?.value || '';
+                        const external_port = card.querySelector('.svc-external')?.value || '';
+                        const protocol = card.querySelector('.svc-protocol')?.value || '';
+                        payload.services.push({ name, label, type, internal_port, external_port, protocol });
+                    } else if (card.dataset.serviceJson) {
+                        try {
+                            const s = JSON.parse(card.dataset.serviceJson);
+                            payload.services.push(s);
+                        } catch (e) {}
+                    }
+                });
+            }
+
+            // options
+            const optionsContainer = document.querySelector('.options-container');
+            payload.options = [];
+            if (optionsContainer) {
+                // 新增
+                const newOptionCards = optionsContainer.querySelectorAll('.option-new-card');
+                newOptionCards.forEach(card => {
+                    const label = card.querySelector('.opt-label')?.value || '';
+                    const type = card.querySelector('.opt-type')?.value || 'text';
+                    const required = !!card.querySelector('.opt-required')?.checked;
+                    const env_key = card.querySelector('.opt-envkey')?.value || '';
+                    const defVal = card.querySelector('.opt-default')?.value || '';
+
+                    let value = '';
+                    let values = null;
+
+                    if (type === 'apps' || type === 'select') {
+                        // 优先从可视化编辑器采集
+                        const rows = card.querySelectorAll('.opt-values-editor .val-row');
+                        const vals = [];
+                        rows.forEach(r => {
+                            const lbl = r.querySelector('.val-label')?.value || '';
+                            const val = r.querySelector('.val-value')?.value || '';
+                            if (lbl || val) vals.push({ label: lbl, value: val });
+                        });
+                        if (vals.length) values = vals;
+                        const currentSel = card.querySelector('.field-value');
+                        value = currentSel ? currentSel.value : '';
+                        // 兼容旧的 JSON 文本域
+                        if (!values) {
+                            const valuesText = card.querySelector('.opt-values')?.value || '';
+                            if (valuesText.trim()) {
+                                try { values = JSON.parse(valuesText); } catch (e) { values = null; }
+                            }
+                        }
+                    } else {
+                        // 单值文本框
+                        value = card.querySelector('.field-value')?.value
+                             || card.querySelector('.opt-value')?.value || '';
+                    }
+
+                    payload.options.push({
+                        label,
+                        rule: '',
+                        required,
+                        disabled: false,
+                        random: false,
+                        type,
+                        env_key,
+                        default: defVal,
+                        value,
+                        values
+                    });
+                });
+                // 原始
+                const originalCards = optionsContainer.querySelectorAll('.bg-gray-50');
+                originalCards.forEach(card => {
+                    if (card.dataset.optionJson) {
+                        try {
+                            const opt = JSON.parse(card.dataset.optionJson);
+                            const valueInput = card.querySelector('.field-value');
+                            if (valueInput) {
+                                opt.value = valueInput.value;
+                            }
+                            const typeSel = card.querySelector('.opt-type-original');
+                            if (typeSel) {
+                                opt.type = typeSel.value;
+                            }
+                            const reqCb = card.querySelector('.opt-required-original');
+                            if (reqCb) {
+                                opt.required = !!reqCb.checked;
+                            }
+                            // 读取新增的可编辑字段
+                            const lblInput = card.querySelector('.opt-label-original');
+                            if (lblInput) {
+                                opt.label = lblInput.value || '';
+                            }
+                            const evkInput = card.querySelector('.opt-envkey-original');
+                            if (evkInput) {
+                                opt.env_key = evkInput.value || '';
+                            }
+                            const defInput = card.querySelector('.opt-default-original');
+                            if (defInput) {
+                                opt.default = defInput.value;
+                            }
+                            const ruleInput = card.querySelector('.opt-rule-original');
+                            if (ruleInput) {
+                                opt.rule = ruleInput.value || '';
+                            }
+                            const disCb = card.querySelector('.opt-disabled-original');
+                            if (disCb) {
+                                opt.disabled = !!disCb.checked;
+                            }
+                            const rndCb = card.querySelector('.opt-random-original');
+                            if (rndCb) {
+                                opt.random = !!rndCb.checked;
+                            }
+                            // apps/select 采集可编辑的 values 列表
+                            if (opt.type === 'apps' || opt.type === 'select') {
+                                const rows = card.querySelectorAll('.opt-values-editor .val-row');
+                                const vals = [];
+                                rows.forEach(r => {
+                                    const lbl = r.querySelector('.val-label')?.value || '';
+                                    const val = r.querySelector('.val-value')?.value || '';
+                                    if (lbl || val) vals.push({ label: lbl, value: val });
+                                });
+                                if (vals.length) {
+                                    opt.values = vals;
+                                } else {
+                                    delete opt.values;
+                                }
+                            }
+                            payload.options.push(opt);
+                        } catch (e) {}
+                    }
+                });
+            }
+
+            // release_id
+            payload.release_id = currentVersionData?.id ?? null;
+
+            return payload;
+        }
+
+        // 新增字段按钮事件
+        addConfigFieldBtn.addEventListener('click', function() {
+            addConfigField();
+        });
+        
+        // 保存版本配置按钮事件
+        saveVersionConfigBtn.addEventListener('click', function() {
+            const appId = appIdInput.value.trim();
+            const apiKey = apiKeyInput.value.trim();
+            const selectedVersion = appVersionSelect.value;
+            
+            if (!appId || !apiKey || !selectedVersion) {
+                showResult('请先输入App ID、API Key并选择版本', false);
+                return;
+            }
+            
+            // apps/select 的可选项 value 唯一性校验（同一组内不可重复）
+            {
+                const editors = document.querySelectorAll('.opt-values-editor');
+                let hasDup = false;
+                editors.forEach(ed => {
+                    const valueInputs = ed.querySelectorAll('.val-value');
+                    const counts = {};
+                    valueInputs.forEach(inp => {
+                        const v = (inp.value || '').trim();
+                        if (!v) return;
+                        counts[v] = (counts[v] || 0) + 1;
+                    });
+                    const dup = Object.values(counts).some(c => c > 1);
+                    valueInputs.forEach(inp => {
+                        const v = (inp.value || '').trim();
+                        if (v && counts[v] > 1) {
+                            inp.classList.add('border-red-500');
+                        } else {
+                            inp.classList.remove('border-red-500');
+                        }
+                    });
+                    if (dup) hasDup = true;
+                });
+                if (hasDup) {
+                    showResult('可选项的 value 不可重复，请修改后再提交', false);
+                    return;
+                }
+            }
+
+            // 先校验 JSON 格式（如 options.values 必须是数组或对象）
+            const jsonFields = document.querySelectorAll('.opt-values');
+            for (const ta of jsonFields) {
+                const txt = ta.value.trim();
+                if (txt) {
+                    try {
+                        const parsed = JSON.parse(txt);
+                        if (!Array.isArray(parsed) && typeof parsed !== 'object') {
+                            ta.classList.add('border-red-500');
+                            showResult('options.values 需为JSON数组或对象', false);
+                            return;
+                        } else {
+                            ta.classList.remove('border-red-500');
+                        }
+                    } catch (e) {
+                        ta.classList.add('border-red-500');
+                        showResult('options.values JSON格式不合法', false);
+                        return;
+                    }
+                } else {
+                    ta.classList.remove('border-red-500');
+                }
+            }
+
+            // env.value 的占位符格式校验（${...}），允许与纯文本组合，例如 ${A}:${B}
+            (function validateEnvPlaceholders() {
+                const envContainer = document.querySelector('.env-container');
+                if (!envContainer) return;
+                const rows = envContainer.querySelectorAll('.env-new-row, .flex.bg-gray-50');
+                for (const row of rows) {
+                    const valInput = row.querySelector('.field-value');
+                    if (!valInput) continue;
+                    const raw = valInput.value || '';
+                    const openCount = (raw.match(/\$\{/g) || []).length;
+                    const validMatches = (raw.match(/\$\{[A-Za-z0-9_]+\}/g) || []).length;
+                    // 只要出现占位符起始符，就要求每个都匹配合法形式
+                    if (openCount > 0 && openCount !== validMatches) {
+                        valInput.classList.add('border-red-500');
+                        showResult('env.value 中的占位符需使用合法格式 ${KEY}，可与文本组合，例如 ${PANEL_DB_HOST}:${PANEL_DB_PORT}', false);
+                        throw new Error('env placeholder invalid');
+                    } else {
+                        valInput.classList.remove('border-red-500');
+                    }
+                }
+            })();
+
+            // services 端口校验：internal_port 必须为 1-65535 的数字；external_port 可为 1-65535 的数字或 ${VAR} 占位符
+            (function validateServicePorts() {
+                const servicesContainer = document.querySelector('.services-container');
+                if (!servicesContainer) return;
+
+                // 校验新增服务卡片
+                const newCards = servicesContainer.querySelectorAll('.service-new-card');
+                for (const card of newCards) {
+                    const internalInput = card.querySelector('.svc-internal');
+                    const externalInput = card.querySelector('.svc-external');
+                    const intVal = internalInput?.value || '';
+                    const extVal = externalInput?.value || '';
+
+                    // internal_port 必须为数字且范围有效
+                    if (!/^\d+$/.test(intVal) || parseInt(intVal, 10) < 1 || parseInt(intVal, 10) > 65535) {
+                        internalInput?.classList.add('border-red-500');
+                        showResult('services.internal_port 必须为 1-65535 的数字', false);
+                        throw new Error('service internal_port invalid');
+                    } else {
+                        internalInput?.classList.remove('border-red-500');
+                    }
+
+                    // external_port 可为数字范围或占位符
+                    const extIsNum = /^\d+$/.test(extVal);
+                    const extIsPlaceholder = /^\$\{[A-Za-z0-9_]+\}$/.test(extVal);
+                    if (!(extIsNum || extIsPlaceholder)) {
+                        externalInput?.classList.add('border-red-500');
+                        showResult('services.external_port 必须为 1-65535 的数字或 ${VAR} 形式占位符', false);
+                        throw new Error('service external_port invalid');
+                    } else if (extIsNum) {
+                        const num = parseInt(extVal, 10);
+                        if (num < 1 || num > 65535) {
+                            externalInput?.classList.add('border-red-500');
+                            showResult('services.external_port 数值需在 1-65535 范围内', false);
+                            throw new Error('service external_port range invalid');
+                        } else {
+                            externalInput?.classList.remove('border-red-500');
+                        }
+                    } else {
+                        externalInput?.classList.remove('border-red-500');
+                    }
+                }
+
+                // 校验原始服务卡片（读取绑定的 JSON）
+                const originalCards = servicesContainer.querySelectorAll('.bg-gray-50');
+                for (const card of originalCards) {
+                    const json = card.dataset.serviceJson;
+                    if (!json) continue;
+                    let svc;
+                    try { svc = JSON.parse(json); } catch { continue; }
+                    const intVal = svc?.internal_port ?? '';
+                    const extVal = svc?.external_port ?? '';
+
+                    // internal_port 必须为数字且范围有效
+                    if (!/^\d+$/.test(String(intVal)) || parseInt(String(intVal), 10) < 1 || parseInt(String(intVal), 10) > 65535) {
+                        card.classList.add('border-red-500');
+                        showResult('原始服务项 internal_port 应为 1-65535 的数字', false);
+                        throw new Error('service internal_port invalid (original)');
+                    } else {
+                        card.classList.remove('border-red-500');
+                    }
+
+                    // external_port 可为数字范围或占位符
+                    const extIsNum = /^\d+$/.test(String(extVal));
+                    const extIsPlaceholder = /^\$\{[A-Za-z0-9_]+\}$/.test(String(extVal));
+                    if (!(extIsNum || extIsPlaceholder)) {
+                        card.classList.add('border-red-500');
+                        showResult('原始服务项 external_port 必须为 1-65535 的数字或 ${VAR} 形式占位符', false);
+                        throw new Error('service external_port invalid (original)');
+                    } else if (extIsNum) {
+                        const num = parseInt(String(extVal), 10);
+                        if (num < 1 || num > 65535) {
+                            card.classList.add('border-red-500');
+                            showResult('原始服务项 external_port 数值需在 1-65535 范围内', false);
+                            throw new Error('service external_port range invalid (original)');
+                        } else {
+                            card.classList.remove('border-red-500');
+                        }
+                    } else {
+                        card.classList.remove('border-red-500');
+                    }
+                }
+            })();
+
+            // 获取配置数据
+            const configData = getFinalPayload();
+            
+            // 构建更新数据（这里假设API接受的参数结构）
+            const updateData = {
+                // 根据API要求构建数据结构
+                // 这里简单使用configData作为示例
+                ...configData
+            };
+            
+            showLoading('正在保存版本配置...');
+            
+            const xhr = new XMLHttpRequest();
+            // 注意：这里需要根据实际API的更新端点进行调整
+            xhr.open('PATCH', `https://api.v2.rainyun.com/product/rca/appstore/${appId}/release?version=${encodeURIComponent(selectedVersion)}`, true);
+            
+            // 设置请求头
+            xhr.setRequestHeader('x-api-key', apiKey);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            
+            // 处理响应
+            xhr.onload = function() {
+                hideLoading();
+                if (xhr.status === 200) {
+                    try {
+                        const data = JSON.parse(xhr.responseText);
+                        showResult('版本配置保存成功');
+                        console.log('配置保存成功响应:', data);
+                    } catch (e) {
+                        showResult('响应数据解析失败: ' + e.message, false);
+                        console.error('响应解析错误:', e);
+                    }
+                } else if (xhr.status === 0) {
+                    showResult('网络请求失败，可能是跨域限制导致', false);
+                } else {
+                    showResult(`保存版本配置失败: HTTP状态码 ${xhr.status}`, false);
+                }
+            };
+            
+            // 处理网络错误
+            xhr.onerror = function() {
+                hideLoading();
+                showResult('网络请求错误，请检查网络连接', false);
+                console.error('保存版本配置网络错误');
+            };
+            
+            // 处理超时
+            xhr.timeout = 15000; // 15秒超时
+            xhr.ontimeout = function() {
+                hideLoading();
+                showResult('请求超时，请稍后重试', false);
+                console.error('保存版本配置请求超时');
+            };
+            
+            // 发送请求
+            xhr.send(JSON.stringify(updateData));
+        });
+        
+        // 重置表单
+        resetFormBtn.addEventListener('click', function() {
+            appForm.reset();
+        });
+        
+        // 提交表单更新应用数据
+        appForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            
+            const appId = appIdInput.value.trim();
+            const apiKey = apiKeyInput.value.trim();
+            
+            if (!appId || !apiKey) {
+                showResult('请填写App ID和API Key', false);
+                return;
+            }
+            
+            // 构建请求数据
+            const formData = {
+                title: titleInput.value.trim(),
+                description: descriptionInput.value.trim(),
+                name: nameInput.value.trim(),
+                website: websiteInput.value.trim(),
+                project_link: projectLinkInput.value.trim(),
+                cross_version_update: crossVersionUpdateYes.checked,
+                tags: tagsInput.value.trim().split(',').map(tag => tag.trim()).filter(tag => tag),
+                readme: readmeInput.value.trim()
+            };
+            
+            // 可选字段
+            if (logoInput.value.trim()) {
+                formData.logo = logoInput.value.trim();
+            }
+            
+            showLoading('正在更新应用信息...');
+            
+            // 使用XMLHttpRequest替代fetch
+            const xhr = new XMLHttpRequest();
+            xhr.open('PATCH', `https://api.v2.rainyun.com/product/rca/appstore/${appId}/`, true);
+            
+            // 设置请求头
+            xhr.setRequestHeader('x-api-key', apiKey);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            
+            // 处理响应
+            xhr.onload = function() {
+                hideLoading();
+                if (xhr.status === 200) {
+                    try {
+                        const data = JSON.parse(xhr.responseText);
+                        showResult('应用信息更新成功');
+                        console.log('更新成功响应:', data);
+                    } catch (e) {
+                        showResult('响应数据解析失败: ' + e.message, false);
+                        console.error('响应解析错误:', e);
+                    }
+                } else if (xhr.status === 0) {
+                    // 可能是跨域问题或网络错误
+                    showResult('网络请求失败，可能是跨域限制导致。请确认API服务是否支持跨域请求。', false);
+                } else {
+                    showResult(`更新应用信息失败: HTTP状态码 ${xhr.status}`, false);
+                }
+            };
+            
+            // 处理网络错误
+            xhr.onerror = function() {
+                hideLoading();
+                showResult('网络请求错误，请检查网络连接或API服务是否可用。', false);
+                console.error('更新应用信息网络错误');
+            };
+            
+            // 处理超时
+            xhr.timeout = 15000; // 15秒超时
+            xhr.ontimeout = function() {
+                hideLoading();
+                showResult('请求超时，请稍后重试。', false);
+                console.error('更新应用信息请求超时');
+            };
+            
+            // 发送请求
+            xhr.send(JSON.stringify(formData));
+        });
+    });
+</script>

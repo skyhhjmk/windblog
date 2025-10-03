@@ -1,0 +1,18 @@
+parameters:
+  level: 6
+  paths:
+    - app
+    - plugin/*/app
+  excludePaths:
+    - vendor
+    - tests
+  checkMissingIterableValueType: true
+  checkGenericClassInNonGenericObjectType: true
+  inferPrivatePropertyTypeFromConstructor: true
+  reportUnmatchedIgnoredErrors: true
+  ignoreErrors:
+    - '#Call to undefined method .*::.*#'
+    - '#Access to an undefined property .*::\$.*#'
+    - '#Parameter .* of method .* expects .* array\\|Traversable, .* given#'
+  bootstrapFiles:
+    - vendor/autoload.php
