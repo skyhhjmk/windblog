@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Carbon;
 use Throwable;
 
@@ -37,6 +38,7 @@ class Category extends Model
      * 如果你的表名不是 'categories'，请在这里修改。
      * 例如：protected $table = 'my_categories';
      */
+    protected $connection = 'pgsql';
     protected $table = 'categories';
 
     /**
@@ -171,14 +173,13 @@ class Category extends Model
 
     /**
      * 获取该分类下的所有文章。
-     * 一个分类可以有多篇文章。
+     * 分类与文章为多对多关系，通过 post_category 中间表。
      *
-     * @return HasMany
+     * @return BelongsToMany
      */
-    public function posts(): HasMany
+    public function posts(): BelongsToMany
     {
-        // 第二个参数是 Post 模型中的外键，默认是 category_id
-        return $this->hasMany(Post::class, 'category_id');
+        return $this->belongsToMany(Post::class, 'post_category', 'category_id', 'post_id');
     }
 
     /**

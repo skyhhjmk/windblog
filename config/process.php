@@ -36,23 +36,6 @@ return [
             'publicPath' => public_path()
         ]
     ],
-    'webman2' => [
-        'handler' => Http::class,
-        'listen' => 'http://0.0.0.0:8788',
-        'count' => cpu_count() * 4,
-//        'count' => 1,
-        'user' => '',
-        'group' => '',
-        'reusePort' => true,
-        'eventLoop' => '',
-        'context' => [],
-        'constructor' => [
-            'requestClass' => Request::class,
-            'logger' => Log::channel('default'),
-            'appPath' => app_path(),
-            'publicPath' => public_path()
-        ]
-    ],
     // File update detection and automatic reload
     'monitor' => [
         'handler' => app\process\Monitor::class,
@@ -109,6 +92,16 @@ return [
         'reloadable' => false,
         'constructor' => [
             // 目前不需要额外构造参数，如需可在此扩展
+        ]
+    ],
+
+    // 性能监控采集进程
+    'performance' => [
+        'handler' => app\process\Performance::class,
+        'reloadable' => false,
+        'constructor' => [
+            'interval' => 60,
+            'max_series' => 500
         ]
     ]
 ];

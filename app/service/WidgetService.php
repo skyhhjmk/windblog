@@ -138,7 +138,7 @@ class WidgetService
             $renderMethod = 'render' . str_replace('_', '', ucwords($widgetType, '_'));
             
             if (method_exists(__CLASS__, $renderMethod)) {
-                return self::$renderMethod($widget);
+                return self::{$renderMethod}($widget);
             }
             
             Log::warning("[WidgetService] 未知小工具类型: {$widgetType}");
@@ -216,7 +216,7 @@ class WidgetService
             $htmlMethod = 'render' . str_replace('_', '', ucwords($widgetType, '_')) . 'Html';
             
             if (method_exists(__CLASS__, $htmlMethod)) {
-                $content = self::$htmlMethod($widgetData);
+                $content = self::{$htmlMethod}($widgetData);
                 return self::wrapWidgetHtml($title, $content);
             }
             
@@ -366,7 +366,9 @@ class WidgetService
     {
         return self::getDataWrapper(function() use ($widget) {
             $count = $widget['params']['count'] ?? 5;
-            $query = Category::withCount('posts')->orderBy('posts_count', 'desc');
+            $query = Category::withCount(['posts' => function($q) {
+                $q->where('status', 'published');
+            }])->orderBy('posts_count', 'desc');
             
             if ($count > 0) {
                 $query->take($count);
@@ -384,7 +386,9 @@ class WidgetService
     {
         return self::getDataWrapper(function() use ($widget) {
             $count = $widget['params']['count'] ?? 5;
-            $query = Tag::withCount('posts')->orderBy('posts_count', 'desc');
+            $query = Tag::withCount(['posts' => function($q) {
+                $q->where('status', 'published');
+            }])->orderBy('posts_count', 'desc');
             
             if ($count > 0) {
                 $query->take($count);

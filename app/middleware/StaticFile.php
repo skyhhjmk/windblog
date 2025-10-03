@@ -63,7 +63,7 @@ class StaticFile implements MiddlewareInterface
         $response = $handler($request);
 
         // 添加跨域HTTP头
-        try {
+        /*try {
             if (blog_config('allow_static_cors', false, true)) {
                 $response->withHeaders([
                     'Access-Control-Allow-Origin'      => blog_config('allow_static_cors_origin', '*', true),
@@ -73,7 +73,7 @@ class StaticFile implements MiddlewareInterface
         } catch (\Throwable $e) {
             $response->withHeaders(['X-Error' => 'YES']);
             Log::error('[StaticFile Middleware] Error: ' . $e->getMessage());
-        }
+        }*/
 
 
         // 处理缓存控制

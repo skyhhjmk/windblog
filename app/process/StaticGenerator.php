@@ -35,6 +35,13 @@ class StaticGenerator
 
     public function onWorkerStart(): void
     {
+        // 在启动前检查 .env 是否存在
+        $envPath = base_path() . '/.env';
+        if (!file_exists($envPath)) {
+            Log::warning("StaticGenerator 检测到缺少 .env，已跳过启动：{$envPath}");
+            return;
+        }
+
         $this->initMq();
         $this->startConsumer();
 
@@ -96,7 +103,14 @@ class StaticGenerator
         if (class_exists(\Workerman\Timer::class)) {
             \Workerman\Timer::add(1, function () {
                 if ($this->mqChannel) {
-                    $this->mqChannel->wait(null, false, 0.1);
+                    try {
+                        // 增大超时时间并忽略超时异常
+                        $this->mqChannel->wait(null, false, 1.0);
+                    } catch (\PhpAmqpLib\Exception\AMQPTimeoutException $e) {
+                        // 无数据到达的正常超时，忽略
+                    } catch (\Throwable $e) {
+                        Log::warning('StaticGenerator 消费轮询异常: ' . $e->getMessage());
+                    }
                 }
             });
         }

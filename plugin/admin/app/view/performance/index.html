@@ -1,0 +1,153 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>性能监控</title>
+    <link rel="stylesheet" href="/app/admin/component/layui/css/layui.css">
+    <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css">
+    <style>
+        .chart-box { min-height: 360px; background: #fff; padding: 10px; }
+        .kv { display:flex; flex-wrap:wrap; gap:12px; }
+        .kv .item { background:#fff; padding:10px 12px; border:1px solid #eee; border-radius:6px; }
+    </style>
+</head>
+<body class="pear-container">
+<div class="layui-card">
+    <div class="layui-card-header">性能监控</div>
+    <div class="layui-card-body">
+        <div class="layui-tab layui-tab-brief" lay-filter="perf-tab">
+            <ul class="layui-tab-title">
+                <li class="layui-this">Redis状态</li>
+                <li>OPcache状态</li>
+                <li>分析图表</li>
+            </ul>
+            <div class="layui-tab-content">
+                <!-- Redis -->
+                <div class="layui-tab-item layui-show">
+                    <div class="kv" id="redis-snapshot"></div>
+                    <div id="redis-chart" class="chart-box"></div>
+                </div>
+                <!-- OPcache -->
+                <div class="layui-tab-item">
+                    <div class="kv" id="opcache-snapshot"></div>
+                    <div id="opcache-chart" class="chart-box"></div>
+                </div>
+                <!-- 分析 -->
+                <div class="layui-tab-item">
+                    <div id="analysis-line" class="chart-box"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+<script src="/app/admin/component/pear/pear.js"></script>
+<script>
+layui.config({
+    base: '/app/admin/component/pear/module/'
+}).extend({
+    echarts: 'echarts'
+});
+layui.use(['jquery','element','echarts'], function(){
+    var $ = layui.jquery, element = layui.element, echarts = layui.echarts;
+
+    function renderKV(container, data) {
+        var $c = $(container); $c.empty();
+        if (!data) { $c.html('<div class="item">暂无数据</div>'); return; }
+        Object.keys(data).forEach(function(k){
+            var v = data[k];
+            if (typeof v === 'object') v = JSON.stringify(v);
+            $c.append('<div class="item"><b>'+k+':</b> '+v+'</div>');
+        });
+    }
+
+    function buildLineOption(title, series, xData) {
+        return {
+            title: { text: title },
+            tooltip: { trigger: 'axis' },
+            legend: { data: series.map(function(s){return s.name;}) },
+            xAxis: { type: 'category', data: xData },
+            yAxis: { type: 'value' },
+            series: series
+        };
+    }
+
+    function loadRedis() {
+        var base = '/app/admin/performance/redisStatus';
+        $.when(
+            $.get(base + '?conn=default'),
+            $.get(base + '?conn=cache')
+        ).done(function(rd, rc){
+            var respD = rd[0], respC = rc[0];
+            if (!respD || respD.code !== 0) respD = { data: { snapshot: null, series: [] } };
+            if (!respC || respC.code !== 0) respC = { data: { snapshot: null, series: [] } };
+
+            // 快照并列显示
+            var html = '';
+            function section(title, data) {
+                html += '<div class="item"><b>' + title + '</b></div>';
+                if (!data) { html += '<div class="item">暂无数据</div>'; return; }
+                Object.keys(data).forEach(function (k) {
+                    var v = data[k];
+                    if (typeof v === 'object') v = JSON.stringify(v);
+                    html += '<div class="item"><b>' + k + ':</b> ' + v + '</div>';
+                });
+            }
+            var $snap = $('#redis-snapshot'); $snap.empty();
+            section('default', respD.data.snapshot || null);
+            section('cache', respC.data.snapshot || null);
+            $snap.html(html);
+
+            // 同图表叠加 default 与 cache 的内存/键数量
+            var pd = (respD.data.series || []).map(function (it) { return { t: it.t, used: it.used_memory_mb, keys: it.keys }; });
+            var pc = (respC.data.series || []).map(function (it) { return { t: it.t, used: it.used_memory_mb, keys: it.keys }; });
+            var x = (pd.length ? pd : pc).map(function (p) { return p.t; });
+            var s = [
+                { name: 'default 内存(MB)', type: 'line', smooth: true, data: pd.map(function (p) { return p.used; }) },
+                { name: 'cache 内存(MB)', type: 'line', smooth: true, data: pc.map(function (p) { return p.used; }) },
+                { name: 'default 键数量', type: 'line', smooth: true, data: pd.map(function (p) { return p.keys; }) },
+                { name: 'cache 键数量', type: 'line', smooth: true, data: pc.map(function (p) { return p.keys; }) }
+            ];
+            echarts.init(document.getElementById('redis-chart')).setOption(buildLineOption('Redis趋势（default vs cache）', s, x));
+        });
+    }
+
+    function loadOpcache() {
+        $.get('/app/admin/performance/opcacheStatus', function(resp){
+            if (resp.code !== 0) return;
+            renderKV('#opcache-snapshot', resp.data.snapshot || {});
+            var points = (resp.data.series || []).map(function(it){ return { t: it.t, hits: it.hits, misses: it.misses, memory_free_mb: it.memory_free_mb }; });
+            var x = points.map(function(p){ return p.t; });
+            var s = [
+                { name:'命中', type:'line', smooth:true, data: points.map(function(p){ return p.hits; }) },
+                { name:'未命中', type:'line', smooth:true, data: points.map(function(p){ return p.misses; }) },
+                { name:'空闲内存(MB)', type:'line', smooth:true, data: points.map(function(p){ return p.memory_free_mb; }) }
+            ];
+            echarts.init(document.getElementById('opcache-chart')).setOption(buildLineOption('OPcache趋势', s, x));
+        });
+    }
+
+    function loadAnalysis() {
+        $.get('/app/admin/performance/series', function(resp){
+            if (resp.code !== 0) return;
+            var r = resp.data.redis || [], o = resp.data.opcache || [];
+            var x = r.map(function(it){ return it.t; });
+            var s = [
+                { name:'Redis内存(MB)', type:'line', smooth:true, data: r.map(function(it){ return it.used_memory_mb; }) },
+                { name:'OPcache命中率(%)', type:'line', smooth:true, data: o.map(function(it){ return it.hit_rate; }) }
+            ];
+            echarts.init(document.getElementById('analysis-line')).setOption(buildLineOption('性能分析', s, x));
+        });
+    }
+
+    loadRedis(); loadOpcache(); loadAnalysis();
+    element.on('tab(perf-tab)', function(){ setTimeout(function(){ 
+        echarts.init(document.getElementById('redis-chart')).resize();
+        echarts.init(document.getElementById('opcache-chart')).resize();
+        echarts.init(document.getElementById('analysis-line')).resize();
+    }, 50); });
+});
+</script>
+</body>
+</html>

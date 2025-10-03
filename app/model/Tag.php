@@ -4,6 +4,7 @@ namespace app\model;
 
 use support\Model;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Throwable;
 
 /**
@@ -165,5 +166,16 @@ class Tag extends Model
             \support\Log::error('Restore failed for tag ID ' . $this->id . ': ' . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * 获取与该标签关联的所有文章。
+     * 标签与文章为多对多关系，通过 post_tag 中间表。
+     *
+     * @return BelongsToMany
+     */
+    public function posts(): BelongsToMany
+    {
+        return $this->belongsToMany(Post::class, 'post_tag', 'tag_id', 'post_id');
     }
 }

@@ -198,6 +198,13 @@ return [
                 'href' => '/app/admin/elastic/index',
                 'type' => 1,
                 'weight' => 0,
+            ],
+            [
+                'title' => '性能监控',
+                'key' => 'plugin\\admin\\app\\controller\\PerformanceController',
+                'href' => '/app/admin/performance/index',
+                'type' => 1,
+                'weight' => 0,
             ]
         ]
     ],
