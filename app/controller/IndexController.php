@@ -42,9 +42,7 @@ class IndexController
     #[RateLimiter(limit: 3, ttl: 3)]
     public function index(Request $request, int $page = 1): Response
     {
-        if ($request->get('test')){
-            sleep(20);
-        }
+
         // 构建筛选条件，并进行输入过滤
         $filters = $this->filterInput($request->get() ?: []);
 
@@ -59,18 +57,40 @@ class IndexController
             || (bool)$request->get('_pjax')
             || strtolower((string)$request->header('X-Requested-With')) === 'xmlhttprequest';
 
-        // 获取侧边栏内容（仅非 PJAX 时获取）
-        $sidebar = $isPjax ? null : \app\service\SidebarService::getSidebarContent($request, 'home');
+        // 获取侧边栏内容（PJAX 与非 PJAX 均获取，便于片段携带并在完成后注入右栏）
+        $sidebar = \app\service\SidebarService::getSidebarContent($request, 'home');
 
         // 动态选择模板：PJAX 返回片段，非 PJAX 返回完整页面
         $viewName = $isPjax ? 'index/index.content' : 'index/index';
 
-        return view($viewName, [
+        // 仅对 PJAX 片段启用HTML缓存（TTL=120秒）
+        if ($isPjax) {
+            $route = 'home:index.content';
+            $params = [
+                'page' => $page,
+                'filters' => $filters,
+            ];
+            $paramsHash = substr(sha1(json_encode($params, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)), 0, 16);
+            $cacheKey = sprintf('list:%s:%s:%d', $route, $paramsHash, 1);
+            $conn = \support\Redis::connection('cache');
+            $cached = $conn->get($cacheKey);
+            if ($cached !== null) {
+                return new Response(200, ['X-Cache' => 'HIT'], $cached);
+            }
+        }
+
+        $resp = view($viewName, [
             'page_title' => $blog_title,
             'posts' => $result['posts'],
             'pagination' => $result['pagination'],
             'sidebar' => $sidebar
         ]);
+
+        if ($isPjax) {
+            \support\Redis::connection('cache')->setex($cacheKey, 120, $resp->rawBody());
+        }
+
+        return $resp;
     }
 
     /**

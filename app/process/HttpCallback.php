@@ -166,6 +166,13 @@ class HttpCallback
      */
     public function onWorkerStart(Worker $worker): void
     {
+        // 在启动前检查 .env 是否存在
+        $envPath = base_path() . '/.env';
+        if (!file_exists($envPath)) {
+            Log::warning("HttpCallback 检测到缺少 .env，已跳过启动：{$envPath}");
+            return;
+        }
+
         Log::info("HTTP回调进程已启动 - PID: " . getmypid());
 
         // 初始化MQ连接
@@ -217,7 +224,14 @@ class HttpCallback
 
             // 阻塞模式处理消息，确保每条消息都完整处理
             while ($channel->is_consuming()) {
-                $channel->wait();
+                try {
+                    $channel->wait(null, false, 1.0);
+                } catch (\PhpAmqpLib\Exception\AMQPTimeoutException $e) {
+                    // 正常超时，无消息到达，忽略
+                } catch (\Throwable $e) {
+                    Log::warning('HttpCallback 消费轮询异常: ' . $e->getMessage());
+                    break;
+                }
             }
 
         } catch (\Exception $e) {

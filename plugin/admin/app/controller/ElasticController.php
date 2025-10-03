@@ -3,11 +3,13 @@
 namespace plugin\admin\app\controller;
 
 use plugin\admin\app\controller\Base;
+use support\Log;
 use support\Request;
 use support\Response;
 use app\service\ElasticService;
 use app\service\ElasticSyncService;
 use app\service\ElasticRebuildService;
+use function Symfony\Component\Translation\t;
 
 /**
  * 搜索设置（Elasticsearch）
@@ -104,6 +106,8 @@ class ElasticController extends Base
                 'error' => null
             ]);
         } catch (\Throwable $e) {
+            Log::warning('[ElasticController] Elastic connection test failed: ' . $e);
+            Log::debug('[ElasticController] Elastic connection test using config: ' . var_export(ElasticService::getConfigProxy(), true));
             return json([
                 'success' => false,
                 'status' => 0,
@@ -147,6 +151,7 @@ class ElasticController extends Base
             'total' => $total
         ]);
     }
+
     // 清空同步日志
     public function clearLogs(Request $request): Response
     {
@@ -158,16 +163,13 @@ class ElasticController extends Base
     public function getSynonyms(Request $request): Response
     {
         $text = (string)blog_config('es.synonyms', '', true);
-        // 规范化行尾，过滤空行
+        // 统一换行为 LF，过滤空行
+        $normalized = str_replace(["\r\n", "\r"], "\n", $text);
         $lines = array_values(array_filter(array_map(function ($line) {
-            $line = trim(str_replace(["
-
-", "
-"], "
-", $line));
+            $line = trim($line);
             return $line === '' ? null : $line;
-        }, explode("
-", $text))));
+        }, preg_split('/\n/', $normalized))));
+
         return json([
             'success' => true,
             'text' => $text,
@@ -177,6 +179,7 @@ class ElasticController extends Base
             'analyzer' => 'wb_synonym_search'
         ]);
     }
+
 
     // 保存同义词规则
     public function saveSynonyms(Request $request): Response
@@ -199,18 +202,14 @@ class ElasticController extends Base
         $index = (string)($cfg['index'] ?? 'windblog-posts');
         $timeout = (int)($cfg['timeout'] ?? 3);
         $tokenizer = (string)blog_config('es.analyzer', 'standard', true) ?: 'standard';
-        $tokenizer = (string)blog_config('es.analyzer', 'standard', true) ?: 'standard';
 
         $text = (string)blog_config('es.synonyms', '', true);
+        // 统一换行为 LF，过滤空行
+        $normalized = str_replace(["\r\n", "\r"], "\n", $text);
         $lines = array_values(array_filter(array_map(function ($line) {
-            $line = trim(str_replace(["
-
-", "
-"], "
-", $line));
+            $line = trim($line);
             return $line === '' ? null : $line;
-        }, explode("
-", $text))));
+        }, preg_split('/\n/', $normalized))));
 
         // 如果没有规则也允许应用（移除过滤器），但这里简单返回错误
         if (empty($lines)) {
@@ -250,7 +249,10 @@ class ElasticController extends Base
                 ]
             ]);
         } catch (\Throwable $e) {
-            try { $client->indices()->open(['index' => $index]); } catch (\Throwable $ignore) {}
+            try {
+                $client->indices()->open(['index' => $index]);
+            } catch (\Throwable $ignore) {
+            }
             return $this->applySynonymsRebuild($request);
         }
 
@@ -263,6 +265,7 @@ class ElasticController extends Base
 
         return json(['success' => true]);
     }
+
 
     // 预览分词（_analyze 使用同义词搜索分析器）
     public function tokenizePreview(Request $request): Response
@@ -334,7 +337,10 @@ class ElasticController extends Base
                 ]
             ]);
         } catch (\Throwable $e) {
-            try { $client->indices()->open(['index' => $index]); } catch (\Throwable $ignore) {}
+            try {
+                $client->indices()->open(['index' => $index]);
+            } catch (\Throwable $ignore) {
+            }
             return json(['success' => false, 'step' => 'settings', 'status' => 0, 'error' => $e->getMessage()]);
         }
 
@@ -356,37 +362,37 @@ class ElasticController extends Base
         $index = (string)($cfg['index'] ?? 'windblog-posts');
         $timeout = (int)($cfg['timeout'] ?? 3);
 
+        // 统一换行为 LF
         $text = (string)blog_config('es.synonyms', '', true);
+        $normalized = str_replace(["\r\n", "\r"], "\n", $text);
         $lines = array_values(array_filter(array_map(function ($line) {
-            $line = trim(str_replace(["
-
-", "
-"], "
-", $line));
+            $line = trim($line);
             return $line === '' ? null : $line;
-        }, explode("
-", $text))));
+        }, preg_split('/\n/', $normalized))));
         if (empty($lines)) {
             return json(['success' => false, 'error' => 'no synonyms']);
         }
 
-        // 1) 读取旧索引 mapping（官方客户端）
+        // 读取旧索引 mapping
         try {
             $client = ElasticService::client();
             $mapResponse = $client->indices()->getMapping(['index' => $index]);
             $mapBody = $mapResponse->asArray();
             $mapping = $mapBody[$index]['mappings'] ?? ($mapBody['mappings'] ?? []);
         } catch (\Throwable $e) {
+            Log::warning("[ElasticController] getMapping failed for index={$index}: {$e->getMessage()}");
             return json(['success' => false, 'step' => 'get_mapping', 'status' => 0, 'error' => $e->getMessage()]);
         }
 
-        // 2) 新索引名
-        // 基于基础索引名进行 -A/-B 轮换，避免后缀累加
-        $base = preg_replace('/(-syn-\\d{14}|-[AB])$/', '', $index);
-        $nextSuffix = (preg_match('/-A$/', $index)) ? '-B' : '-A';
+        // 新索引名（A/B轮换）
+        $base = preg_replace('/(-syn-\d{14}|-[AB])$/', '', $index);
+        $nextSuffix = (str_ends_with($index, '-A')) ? '-B' : '-A';
         $newIndex = $base . $nextSuffix;
 
-        // 3) 创建新索引（官方客户端）
+        // 初始化 tokenizer（缺失问题修复）
+        $tokenizer = (string)blog_config('es.analyzer', 'standard', true) ?: 'standard';
+
+        // 创建新索引并应用同义词
         try {
             $client->indices()->create([
                 'index' => $newIndex,
@@ -412,10 +418,11 @@ class ElasticController extends Base
                 ]
             ]);
         } catch (\Throwable $e) {
+            Log::warning("[ElasticController] create index failed newIndex={$newIndex}: {$e->getMessage()}");
             return json(['success' => false, 'step' => 'create_index', 'status' => 0, 'error' => $e->getMessage()]);
         }
 
-        // 4) 迁移数据 _reindex（官方客户端，等待完成）
+        // 迁移数据 _reindex
         try {
             $client->reindex([
                 'wait_for_completion' => true,
@@ -426,10 +433,11 @@ class ElasticController extends Base
                 ]
             ]);
         } catch (\Throwable $e) {
+            Log::warning("[ElasticController] reindex failed from {$index} to {$newIndex}: {$e->getMessage()}");
             return json(['success' => false, 'step' => 'reindex', 'status' => 0, 'error' => $e->getMessage()]);
         }
 
-        // 5) 别名策略：优先切换别名（官方客户端）；若无别名则更新 es.index 指向新索引
+        // 别名策略：优先切换别名；若无别名则更新 es.index 指向新索引
         try {
             $aliasInfo = $client->indices()->getAlias(['index' => $index])->asArray();
             $aliases = array_keys($aliasInfo[$index]['aliases'] ?? []);
@@ -447,17 +455,18 @@ class ElasticController extends Base
                 blog_config('es.index', $newIndex, true, true, true);
             }
         } catch (\Elastic\Elasticsearch\Exception\ClientResponseException $e) {
-            // 无别名或获取失败，降级为更新配置
+            Log::info("[ElasticController] getAlias/updateAliases degraded to config update: {$e->getMessage()}");
             blog_config('es.index', $newIndex, true, true, true);
         } catch (\Throwable $e) {
+            Log::warning("[ElasticController] switch_alias failed: {$e->getMessage()}");
             return json(['success' => false, 'step' => 'switch_alias', 'status' => 0, 'error' => $e->getMessage()]);
         }
 
-        // 6) 删除旧索引（官方客户端）
+        // 删除旧索引
         try {
             $client->indices()->delete(['index' => $index]);
         } catch (\Throwable $e) {
-            // 不致命，返回部分成功并提示
+            Log::info("[ElasticController] old index delete failed index={$index}: {$e->getMessage()}");
             return json(['success' => true, 'warning' => 'old index not deleted', 'status' => 0, 'error' => $e->getMessage(), 'new_index' => $newIndex]);
         }
 

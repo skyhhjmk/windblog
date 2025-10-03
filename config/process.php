@@ -17,28 +17,12 @@ use support\Request;
 use app\process\Http;
 
 global $argv;
+$__cacheDriver = env('CACHE_DRIVER');
 
-return [
+$__processes = [
     'webman' => [
         'handler' => Http::class,
         'listen' => 'http://0.0.0.0:8787',
-        'count' => cpu_count() * 4,
-//        'count' => 1,
-        'user' => '',
-        'group' => '',
-        'reusePort' => true,
-        'eventLoop' => '',
-        'context' => [],
-        'constructor' => [
-            'requestClass' => Request::class,
-            'logger' => Log::channel('default'),
-            'appPath' => app_path(),
-            'publicPath' => public_path()
-        ]
-    ],
-    'webman2' => [
-        'handler' => Http::class,
-        'listen' => 'http://0.0.0.0:8788',
         'count' => cpu_count() * 4,
 //        'count' => 1,
         'user' => '',
@@ -81,26 +65,49 @@ return [
     'task'  => [
         'handler'  => app\process\Task::class
     ],
-    // WordPress导入处理进程
-    'importer' => [
-        'handler' => app\process\ImportProcess::class,
-        'reloadable' => false,
-        'constructor' => []
-    ],
-    // HTTP回调处理进程
-    'http_callback' => [
+
+];
+// 仅在 CACHE_DRIVER=redis 时注册性能采集进程
+if (strtolower(trim((string)$__cacheDriver)) === 'redis') {
+    $__processes['performance'] = [
+        'handler' => \app\process\Performance::class,
+        'count' => 1,
+        'reloadable' => true,
+        'constructor' => [60, 500],
+    ];
+}
+
+$__envPath = base_path() . '/.env';
+if (file_exists($__envPath)) {
+    // HTTP回调处理进程（存在 .env 时注册）
+    $__processes['http_callback'] = [
         'handler' => app\process\HttpCallback::class,
         'reloadable' => false,
         'constructor' => [
-            // SSL证书验证配置
-            'verify_ssl' => false, // 是否验证SSL证书，设置为false可跳过SSL验证
-            'ca_cert_path' => null // CA证书路径，如果为空则尝试使用系统默认证书
+            'verify_ssl' => false,
+            'ca_cert_path' => null
         ]
-    ],
-    // 友链监控处理进程
-    'link_monitor' => [
+    ];
+    // 友链监控处理进程（存在 .env 时注册）
+    $__processes['link_monitor'] = [
         'handler' => app\process\LinkMonitor::class,
         'reloadable' => false,
         'constructor' => []
-    ]
-];
+    ];
+    // WordPress导入处理进程（存在 .env 时注册）
+    $__processes['importer'] = [
+        'handler' => app\process\ImportProcess::class,
+        'reloadable' => false,
+        'constructor' => []
+    ];
+    // 全站静态化生成进程（存在 .env 时注册）
+    $__processes['static_generator'] = [
+        'handler' => app\process\StaticGenerator::class,
+        'reloadable' => false,
+        'constructor' => [
+            // 目前不需要额外构造参数，如需可在此扩展
+        ]
+    ];
+}
+
+return $__processes;

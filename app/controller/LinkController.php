@@ -56,10 +56,13 @@ class LinkController
         $isPjax = ($request->header('X-PJAX') !== null)
             || (bool)$request->get('_pjax')
             || strtolower((string)$request->header('X-Requested-With')) === 'xmlhttprequest';
+        // 侧边栏（PJAX 与非 PJAX 均获取）
+        $sidebar = \app\service\SidebarService::getSidebarContent($request, 'link');
         return view($isPjax ? 'link/index.content' : 'link/index', [
             'page_title' => blog_config('title', 'WindBlog', true) . ' - 链接广场',
             'links' => $links,
             'pagination' => $pagination_html,
+            'sidebar' => $sidebar
         ]);
     }
 
@@ -137,9 +140,12 @@ class LinkController
         $isPjax = ($request->header('X-PJAX') !== null)
             || (bool)$request->get('_pjax')
             || strtolower((string)$request->header('X-Requested-With')) === 'xmlhttprequest';
+        // 侧边栏（PJAX 与非 PJAX 均获取）
+        $sidebar = \app\service\SidebarService::getSidebarContent($request, 'link');
         return view($isPjax ? 'link/info.content' : 'link/info', [
             'link' => $link,
-            'page_title' => $link->name . ' - 链接详情'
+            'page_title' => $link->name . ' - 链接详情',
+            'sidebar' => $sidebar
         ]);
     }
 
@@ -293,10 +299,13 @@ class LinkController
         $isPjax = ($request->header('X-PJAX') !== null)
             || (bool)$request->get('_pjax')
             || strtolower((string)$request->header('X-Requested-With')) === 'xmlhttprequest';
+        // 侧边栏（PJAX 与非 PJAX 均获取）
+        $sidebar = \app\service\SidebarService::getSidebarContent($request, 'link');
         return view($isPjax ? 'link/request.content' : 'link/request', [
             'page_title' => blog_config('title', 'WindBlog', true) . ' - 申请友链',
             'site_info_json_config' => $this->getSiteInfoConfig(),
-            'csrf' => CSRFHelper::oneTimeToken($request, '_link_request_token')
+            'csrf' => CSRFHelper::oneTimeToken($request, '_link_request_token'),
+            'sidebar' => $sidebar
         ]);
     }
 

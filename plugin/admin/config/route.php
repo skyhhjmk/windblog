@@ -22,6 +22,7 @@ use plugin\admin\app\controller\PostsController;
 use plugin\admin\app\controller\WpImportController;
 use plugin\admin\app\controller\SidebarController;
 use plugin\admin\app\controller\ElasticController;
+use plugin\admin\app\controller\PerformanceController;
 use Webman\Route;
 use support\Request;
 
@@ -133,6 +134,16 @@ Route::group('/app/admin', function () {
         Route::get('/test', [ElasticController::class, 'testConnection']);
         Route::get('/logs', [ElasticController::class, 'logs']);
         Route::post('/clearLogs', [ElasticController::class, 'clearLogs']);
+    });
+
+    // 性能监控 路由
+    Route::group('/performance', function () {
+        Route::get('', [PerformanceController::class, 'index']);
+        Route::get('/', [PerformanceController::class, 'index']);
+        Route::get('/index', [PerformanceController::class, 'index']);
+        Route::get('/redisStatus', [PerformanceController::class, 'redisStatus']);
+        Route::get('/opcacheStatus', [PerformanceController::class, 'opcacheStatus']);
+        Route::get('/series', [PerformanceController::class, 'series']);
     });
 });
 
