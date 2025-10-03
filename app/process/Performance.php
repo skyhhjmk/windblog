@@ -6,7 +6,6 @@ use support\Log;
 use support\Redis;
 use Workerman\Timer;
 use Workerman\Worker;
-use app\model\Setting;
 
 /**
  * 性能采集进程
@@ -117,17 +116,6 @@ class Performance
                 $this->trimList($default, 'perf:opcache:series', $this->maxSeries);
             }
 
-            // 概要写入 PGSQL settings（以 default 连接的 Redis 统计为主）
-            $redisStatsDefault = $statsByConn['default'] ?? [];
-            $summary = [
-                'time' => $t,
-                'redis_used_memory_mb' => $redisStatsDefault['used_memory_mb'] ?? null,
-                'redis_keys' => $redisStatsDefault['keys'] ?? null,
-                'opcache_hit_rate' => $opStats['hit_rate'] ?? null,
-                'opcache_cached_scripts' => $opStats['cached_scripts'] ?? null,
-            ];
-            $this->writeSetting('perf:last_snapshot', $summary);
-
             Log::debug("Performance 采集完成: {$t}");
         } catch (\Throwable $e) {
             Log::error("Performance 采集失败: " . $e->getMessage());
@@ -215,22 +203,6 @@ class Performance
             }
         } catch (\Throwable $e) {
             // ignore
-        }
-    }
-
-    protected function writeSetting(string $key, array $value): void
-    {
-        try {
-            $json = json_encode($value, JSON_UNESCAPED_UNICODE);
-            $row = Setting::where('key', $key)->first();
-            if ($row) {
-                $row->value = $json;
-                $row->save();
-            } else {
-                Setting::create(['key' => $key, 'value' => $json]);
-            }
-        } catch (\Throwable $e) {
-            Log::warning('写入Setting失败: ' . $e->getMessage());
         }
     }
 }
