@@ -36,59 +36,95 @@
         integrity="sha512-OAr6bl1pt/FD0oVcuPzJ9VIMso+HQhHoodVI7mnDst19p8rNkNiraPLsDCYVhit3Mjd6B7AUHFsoDhq3dDeI7g=="
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-<div class="max-w-6xl mx-auto px-4 py-8 h-full">
+<div class="w-full px-4 py-8 h-full">
     <!-- 编辑器容器 -->
     <div class="bg-white rounded-lg shadow-lg p-6">
         <!-- 标题 -->
         <h1 id="page-title" class="text-2xl font-bold text-gray-800 mb-6">文章编辑</h1>
 
-        <!-- 操作按钮 -->
-        <div class="flex flex-wrap gap-4 mb-6">
-            <div class="flex-1">
-                <input type="text" id="post-title"
-                       class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                       placeholder="请输入文章标题">
-            </div>
-            <select id="post-status"
-                    class="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="draft">草稿</option>
-                <option value="published">已发布</option>
-                <option value="archived">已归档</option>
-            </select>
-            <div class="relative">
-                <input type="text" id="authors-select"
-                       class="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
-                       placeholder="选择作者" readonly>
-                <div id="authors-dropdown"
-                     class="absolute z-50 hidden w-64 mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                    <div class="p-2 border-b border-gray-200">
-                        <input type="text" id="authors-search"
-                               class="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                               placeholder="搜索作者">
-                    </div>
-                    <div id="authors-list" class="p-2"></div>
+        <!-- 布局：主编辑区 + 右侧边栏 -->
+        <div class="flex flex-col md:flex-row gap-6">
+            <!-- 主编辑区 -->
+            <div class="flex-1 min-w-0">
+                <!-- 标题输入 -->
+                <div class="mb-6">
+                    <input type="text" id="post-title"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                           placeholder="请输入文章标题">
                 </div>
+                <!-- 编辑器区域 -->
+                <div id="vditor"></div>
             </div>
-            <button id="media-selector-btn"
-                    class="px-4 py-2 bg-purple-500 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50">
-                选择媒体
-            </button>
-            <button id="preview-btn"
-                    class="px-4 py-2 bg-blue-500 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
-                预览
-            </button>
-            <button id="save-btn"
-                    class="px-4 py-2 bg-green-500 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">
-                保存
-            </button>
-            <button id="clear-btn"
-                    class="px-4 py-2 bg-red-500 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50">
-                清除缓存
-            </button>
-        </div>
 
-        <!-- 编辑器区域 -->
-        <div id="vditor"></div>
+            <!-- 右侧边栏 -->
+            <aside class="w-full md:w-80 md:shrink-0">
+                <div class="sticky top-6 space-y-4">
+                    <!-- 统计信息 -->
+                    <div id="editor-stats" class="p-3 bg-gray-50 rounded border border-gray-200">
+                        <div class="flex items-center justify-between text-sm text-gray-600">
+                            <span>字数</span><span id="stats-words">0</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm text-gray-600 mt-1">
+                            <span>字符</span><span id="stats-chars">0</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm text-gray-600 mt-1">
+                            <span>预计阅读</span><span id="stats-readtime">0分钟</span>
+                        </div>
+                        <div class="flex items-center justify-between text-xs text-gray-500 mt-2">
+                            <span>上次保存</span><span id="stats-last-saved">—</span>
+                        </div>
+                    </div>
+
+                    <!-- 文章状态 -->
+                    <div>
+                        <label for="post-status" class="block text-sm text-gray-600 mb-1">文章状态</label>
+                        <select id="post-status"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="draft">草稿</option>
+                            <option value="published">已发布</option>
+                            <option value="archived">已归档</option>
+                        </select>
+                    </div>
+
+                    <!-- 作者选择 -->
+                    <div class="relative">
+                        <label class="block text-sm text-gray-600 mb-1">作者</label>
+                        <input type="text" id="authors-select"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                               placeholder="选择作者" readonly>
+                        <div id="authors-dropdown"
+                             class="absolute z-50 hidden w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                            <div class="p-2 border-b border-gray-200">
+                                <input type="text" id="authors-search"
+                                       class="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                       placeholder="搜索作者">
+                            </div>
+                            <div id="authors-list" class="p-2"></div>
+                        </div>
+                    </div>
+
+                    <!-- 操作按钮 -->
+                    <div class="space-y-2">
+                        <button id="media-selector-btn"
+                                class="w-full px-4 py-2 bg-purple-500 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50 flex items-center justify-center">
+                            <i class="fas fa-photo-video mr-2"></i><span>选择媒体</span>
+                        </button>
+                        <button id="preview-btn"
+                                class="w-full px-4 py-2 bg-blue-500 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 flex items-center justify-center">
+                            <i class="fas fa-eye mr-2"></i><span>预览</span>
+                        </button>
+                        <button id="save-btn"
+                                class="w-full px-4 py-2 bg-green-500 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 flex items-center justify-center">
+                            <i class="fas fa-save mr-2"></i><span>保存</span>
+                        </button>
+                        <button id="clear-btn"
+                                class="w-full px-4 py-2 bg-red-500 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 flex items-center justify-center">
+                            <i class="fas fa-trash-alt mr-2"></i><span>清除缓存</span>
+                        </button>
+                    </div>
+                </div>
+            </aside>
+        </div>
     </div>
 </div>
 
@@ -191,11 +227,9 @@ flowchart TD
             vditor = new Vditor('vditor', {
                 height: 'auto',
                 minHeight: 500,
-                counter: {
-                    enable: true,
-                },
                 // cdn: 'https://cdnjs.cloudflare.com/ajax/libs/vditor/3.11.1', // 无法使用cf公共cdn，没有dist目录
                 mode: 'sv', // 分屏
+                input(value) { updateStats(value); },
                 toolbarConfig: {
                     pin: true,
                 },
@@ -538,6 +572,35 @@ flowchart TD
             }
         }
 
+        // 统计信息计算与更新
+        function updateStats(value) {
+            try {
+                const text = (value || '').toString();
+                const chars = text.length;
+                const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+                // 简易阅读时长：按每分钟500字符估算
+                const minutes = Math.max(1, Math.ceil(chars / 500));
+
+                const wEl = document.getElementById('stats-words');
+                const cEl = document.getElementById('stats-chars');
+                const rEl = document.getElementById('stats-readtime');
+
+                if (wEl) wEl.textContent = String(words);
+                if (cEl) cEl.textContent = String(chars);
+                if (rEl) rEl.textContent = minutes + '分钟';
+            } catch (e) {
+                console.warn('更新统计信息失败:', e);
+            }
+        }
+
+        function updateLastSaved(date) {
+            const el = document.getElementById('stats-last-saved');
+            if (el) {
+                const d = date instanceof Date ? date : new Date();
+                el.textContent = d.toLocaleString();
+            }
+        }
+
         // 预览按钮事件
         document.getElementById('preview-btn').addEventListener('click', function () {
             if (vditor && typeof vditor.preview === 'function') {
@@ -749,6 +812,7 @@ flowchart TD
                     .then(data => {
                         if (data.code === 0) {
                             alert('保存成功');
+                            updateLastSaved(new Date());
                             if (!postId) {
                                 postId = data.data.id;
                                 pageTitle.textContent = `编辑文章: ${postTitle.value}`;
