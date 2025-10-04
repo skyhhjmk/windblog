@@ -56,7 +56,7 @@ class InstallController extends Base
             if (is_array($json)) {
                 $addExts = function(array $arr) use (&$optional_exts) {
                     foreach ($arr as $k => $_) {
-                        if (is_string($k) && strpos($k, 'ext-') === 0) {
+                        if (is_string($k) && str_starts_with($k, 'ext-')) {
                             $optional_exts[] = substr($k, 4);
                         }
                     }
@@ -110,8 +110,8 @@ class InstallController extends Base
         foreach ($checks as $c) { if (!$c['ok']) { $ok_all = false; break; } }
 
         $driverTip = '';
-        if (!extension_loaded('pdo') || !extension_loaded('pdo_pgsql') || !extension_loaded('pgsql')) {
-            $driverTip = '检测到数据库驱动未启用（pdo/pdo_pgsql/pgsql），这会导致“could not find driver”。请安装并启用后重试。';
+        if (!extension_loaded('pdo') || !extension_loaded('pdo_pgsql')) {
+            $driverTip = '检测到数据库驱动未启用（pdo/pdo_pgsql），这会导致“could not find driver”。请安装并启用后重试。';
         }
 
         return $this->json($ok_all ? 0 : 1, $driverTip ?: ($ok_all ? '' : '存在未满足的依赖项'), [
@@ -133,8 +133,8 @@ class InstallController extends Base
      */
     public function step1(Request $request): Response
     {
-        if (!(extension_loaded('pdo') && extension_loaded('pdo_pgsql') && extension_loaded('pgsql'))) {
-            return $this->json(1, '缺少数据库驱动（pdo/pdo_pgsql/pgsql）。请安装并启用后重试安装。');
+        if (!(extension_loaded('pdo') && extension_loaded('pdo_pgsql'))) {
+            return $this->json(1, '缺少数据库驱动（pdo/pdo_pgsql）。请安装并启用后重试安装。');
         }
         $database_config_file = base_path() . '/.env';
         clearstatcache();

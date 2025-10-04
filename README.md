@@ -12,6 +12,12 @@
 
 # NOTE
 
+> Ads: 雨云 5 折优惠码 `github` ，绑定微信即可领取，aff 连接：[https://www.rainyun.com/github_](https://www.rainyun.com/github_)
+
+> Ads: 云驰互联不定期零元购，aff 链接：[https://cloud.zyidc.net/aff/TKYFRZBG](https://cloud.zyidc.net/aff/TKYFRZBG)
+
+> Ads: 毫秒镜像，好用的 Docker 镜像站，aff 链接：[https://1ms.run/?aff=2853](https://1ms.run/?aff=2853)
+
 当你浏览这个项目，你可以看到:
 
 - 一堆 AI 和一个人脑在互相博弈
@@ -22,6 +28,8 @@
 - 使用的依赖库达到了 60MiB
 - 如何让执行效率变的很低
 - 如何将 MySQL 项目硬改为 PGSQL 项目并且获得许多 bug
+
+![又不是不能用](doc/img/emg.png)
 
 [doc](doc) 目录下的文档均由 AI 博弈而来
 
@@ -67,6 +75,19 @@ ES 仅仅被用于搜索优化，这也许说得过去
 [CacheService.php](app/service/CacheService.php) 封装了 Redis 的功能，提供了缓存功能，目前仅支持 Redis 和 Null 缓存驱动，有 GPT-5 编写的貌似不能用的防止缓存穿透的设计，并且附带有缓存回退等高级功能
 
 # Install & use
+
+基本依赖：
+
+- PostgreSQL
+- PHP >= 8.2
+- PHP PDO 扩展
+- PHP pdo_pgsql 扩展
+
+要想使用完整功能，需要额外安装：
+
+- ElasticSearch
+- Redis
+- RabbitMQ
 
 ## Linux
 
