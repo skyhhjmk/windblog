@@ -38,7 +38,7 @@ RUN curl -sS https://getcomposer.org/installer | php -- \
 COPY . /app/
 
 # 安装生产依赖
-RUN composer install --no-dev --prefer-dist --no-progress --no-interaction --optimize-autoloader
+RUN composer install --no-dev --prefer-dist --no-progress --no-interaction --optimize-autoloader --ignore-platform-req=ext-xsl --ignore-platform-req=ext-sockets --ignore-platform-req=ext-gd
 
 ############################
 # Stage 2: runtime image   #
