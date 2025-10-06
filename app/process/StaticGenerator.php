@@ -134,7 +134,7 @@ class StaticGenerator
                 $this->generateByUrl($url, $force, $jobId);
             } elseif ($type === 'scope') {
                 $scope = (string)$payload['value'];
-                $pages = (int)($options['pages'] ?? 50);
+                $pages = (int)($options['pages'] ?? 1);
                 $this->generateByScope($scope, $pages, $force, $jobId);
             } else {
                 throw new \RuntimeException('未知消息类型: ' . $type);
@@ -187,7 +187,7 @@ class StaticGenerator
     }
 
     // 生成：按范围（带进度）
-    protected function generateByScope(string $scope, int $pages = 50, bool $force = false, ?string $jobId = null): void
+    protected function generateByScope(string $scope, int $pages = 1, bool $force = false, ?string $jobId = null): void
     {
         // 估算总数
         $total = 0;
@@ -501,22 +501,6 @@ class StaticGenerator
                 'value' => '/link',
                 'options' => ['force' => true],
             ]);
-            // 首页分页 /page/2..5
-            for ($p = 2; $p <= 5; $p++) {
-                $this->publish([
-                    'type' => 'url',
-                    'value' => '/page/' . $p,
-                    'options' => ['force' => true],
-                ]);
-            }
-            // 友链分页 /link/page/2..5
-            for ($p = 2; $p <= 5; $p++) {
-                $this->publish([
-                    'type' => 'url',
-                    'value' => '/link/page/' . $p,
-                    'options' => ['force' => true],
-                ]);
-            }
 
             Log::info('增量静态化任务入队: ' . count($posts) . ' 篇（含首页/友链及其分页2-5刷新）');
         } catch (\Throwable $e) {

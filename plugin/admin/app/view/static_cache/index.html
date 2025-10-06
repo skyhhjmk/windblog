@@ -174,7 +174,7 @@ layui.use(['form','layer','element'], function(){
   var latestJobId = '';
   $('#btn-refresh-cache').on('click', function(){
     var idx = layer.msg('已触发刷新（异步生成中）', {icon:16, shade:0.1, time:800});
-    $.post('/app/admin/static-cache/refresh', {scope: 'all', pages: 50}, function(res){
+    $.post('/app/admin/static-cache/refresh', {scope: 'all', pages: 1, prefer_strategies: true}, function(res){
       if(res && res.success){
         latestJobId = res.job_id || '';
         layer.msg('刷新任务已投递' + (latestJobId ? ('，任务ID=' + latestJobId) : ''), {icon:1});

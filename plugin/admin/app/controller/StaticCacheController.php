@@ -4,6 +4,7 @@ namespace plugin\admin\app\controller;
 use support\Request;
 use support\Response;
 use app\model\Post;
+use function publish_static;
 
 /**
  * 静态缓存设置
@@ -12,17 +13,74 @@ use app\model\Post;
  */
 class StaticCacheController extends Base
 {
+    /**
+     * 展开URL中的区间语法：
+     * - {a..b} 或 {a..b..step}
+     * - 支持同一URL中多个区间的笛卡尔积展开
+     */
+    protected function expandUrlPatterns(string $pattern): array
+    {
+        // 快速判断，无区间直接返回
+        if (strpos($pattern, '{') === false || strpos($pattern, '..') === false) {
+            return [$pattern];
+        }
+
+        // 解析所有 {..} 片段
+        $segments = [];
+        $re = '/\{(\d+)\.\.(\d+)(?:\.\.(\d+))?\}/';
+        $idx = 0;
+        $replaced = preg_replace_callback($re, function($m) use (&$segments, &$idx) {
+            $start = (int)$m[1];
+            $end = (int)$m[2];
+            $step = isset($m[3]) ? max(1, (int)$m[3]) : 1;
+            $list = [];
+            if ($start <= $end) {
+                for ($i = $start; $i <= $end; $i += $step) { $list[] = (string)$i; }
+            } else {
+                for ($i = $start; $i >= $end; $i -= $step) { $list[] = (string)$i; }
+            }
+            $segments[] = $list;
+            return '%%SEG' . ($idx++) . '%%';
+        }, $pattern);
+
+        // 若没有匹配成功，原样返回
+        if ($replaced === null || empty($segments)) {
+            return [$pattern];
+        }
+
+        // 生成笛卡尔积
+        $results = [''];
+        $parts = preg_split('/(%%SEG\d+%%)/', $replaced, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
+        foreach ($parts as $part) {
+            if (preg_match('/^%%SEG(\d+)%%$/', $part, $m)) {
+                $segIdx = (int)$m[1];
+                $newResults = [];
+                foreach ($results as $prefix) {
+                    foreach ($segments[$segIdx] as $val) {
+                        $newResults[] = $prefix . $val;
+                    }
+                }
+                $results = $newResults;
+            } else {
+                // 普通文本拼接
+                foreach ($results as &$prefix) { $prefix .= $part; }
+                unset($prefix);
+            }
+        }
+        return $results;
+    }
+
     // 页面
     public function index(Request $request): Response
     {
         return raw_view('static_cache/index');
     }
 
-    // 手动刷新（投递范围任务，走分段覆盖策略）
+    // 手动刷新（优先按URL策略入队；无策略时再按scope+pages入队）
     public function refresh(Request $request): Response
     {
         $scope = (string)$request->post('scope', 'all'); // all/index/list/post/url
-        $pages = (int)$request->post('pages', 50);
+        $pages = (int)$request->post('pages', 1); // 避免默认大量分页
         $url   = (string)$request->post('url', '');
         $jobId = 'static_' . date('Ymd_His') . '_' . substr((string)microtime(true), -3);
 
@@ -30,25 +88,30 @@ class StaticCacheController extends Base
             if ($scope === 'url' && $url) {
                 publish_static(['type' => 'url', 'value' => $url, 'options' => ['force' => true, 'job_id' => $jobId]]);
             } else {
-                // 1) 先发布全量范围任务（包含文章）
-                publish_static(['type' => 'scope', 'value' => $scope, 'options' => ['pages' => $pages, 'force' => true, 'job_id' => $jobId]]);
-                if ($scope === 'all' || $scope === 'post') {
-                    // 显式确保文章范围入队
-                    publish_static(['type' => 'scope', 'value' => 'post', 'options' => ['force' => true, 'job_id' => $jobId]]);
-                }
-                // 2) 再按URL策略逐条投递
                 $strategies = (array)(blog_config('static_url_strategies', [], true) ?: []);
-                foreach ($strategies as $it) {
-                    $u = (string)($it['url'] ?? '');
-                    if (!$u) continue;
-                    $enabled = !empty($it['enabled']);
-                    if (!$enabled) continue;
-                    $minify = !empty($it['minify']);
-                    publish_static([
-                        'type' => 'url',
-                        'value' => $u,
-                        'options' => ['force' => true, 'job_id' => $jobId, 'minify' => $minify]
-                    ]);
+
+                if (!empty($strategies)) {
+                    foreach ($strategies as $it) {
+                        $u = (string)($it['url'] ?? '');
+                        if ($u === '') continue;
+                        if (empty($it['enabled'])) continue;
+                        $minify = !empty($it['minify']);
+                        // 区间展开：支持 {a..b} 与 {a..b..step}，以及多个区间组合
+                        $urls = $this->expandUrlPatterns($u);
+                        foreach ($urls as $eu) {
+                            publish_static([
+                                'type' => 'url',
+                                'value' => $eu,
+                                'options' => ['force' => true, 'job_id' => $jobId, 'minify' => $minify]
+                            ]);
+                        }
+                    }
+                } else {
+                    // 无策略时回退到 scope 模式；默认仅1页，避免大量分页
+                    publish_static(['type' => 'scope', 'value' => $scope, 'options' => ['pages' => max(1, $pages), 'force' => true, 'job_id' => $jobId]]);
+                    if ($scope === 'all' || $scope === 'post') {
+                        publish_static(['type' => 'scope', 'value' => 'post', 'options' => ['force' => true, 'job_id' => $jobId]]);
+                    }
                 }
             }
             return json(['success' => true, 'job_id' => $jobId]);
