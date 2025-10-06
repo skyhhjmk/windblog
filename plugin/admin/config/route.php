@@ -23,6 +23,7 @@ use plugin\admin\app\controller\WpImportController;
 use plugin\admin\app\controller\SidebarController;
 use plugin\admin\app\controller\ElasticController;
 use plugin\admin\app\controller\PerformanceController;
+use plugin\admin\app\controller\StaticCacheController;
 use Webman\Route;
 use support\Request;
 
@@ -144,6 +145,20 @@ Route::group('/app/admin', function () {
         Route::get('/redisStatus', [PerformanceController::class, 'redisStatus']);
         Route::get('/opcacheStatus', [PerformanceController::class, 'opcacheStatus']);
         Route::get('/series', [PerformanceController::class, 'series']);
+    });
+
+    // 静态缓存 路由（移动到 /app/admin 分组内部）
+    Route::group('/static-cache', function () {
+        Route::get('', [StaticCacheController::class, 'index']);
+        Route::get('/', [StaticCacheController::class, 'index']);
+        Route::get('/index', [StaticCacheController::class, 'index']);
+        Route::post('/refresh', [StaticCacheController::class, 'refresh']);
+        Route::get('/progress', [StaticCacheController::class, 'progress']);
+
+        // URL 策略
+        Route::get('/strategies/get', [StaticCacheController::class, 'strategiesGet']);
+        Route::post('/strategies/save', [StaticCacheController::class, 'strategiesSave']);
+        Route::post('/strategies/scan-posts', [StaticCacheController::class, 'strategiesScanPosts']);
     });
 });
 
