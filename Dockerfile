@@ -124,7 +124,7 @@ RUN rm -rf /var/lib/apt/lists/*
 
 # 非 root 运行与目录权限
 RUN mkdir -p /app/runtime /app/public/uploads && \
-    chown -R www-data:www-data /app/runtime /app/public/uploads
+    chown -R www-data:www-data /app
 USER www-data
 
 # 暴露端口（可通过 APP_PORT 自定义，默认 8787）
