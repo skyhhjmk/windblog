@@ -230,7 +230,7 @@
 
             // 额外提示 could not find driver 根因
             var tip = '';
-            if (__depMissing.includes('pdo') || __depMissing.includes('pdo_pgsql') || __depMissing.includes('pgsql')) {
+            if (__depMissing.includes('pdo') || __depMissing.includes('pdo_pgsql')) {
                 tip = '检测到数据库驱动未启用（pdo/pdo_pgsql），将导致“could not find driver”。请安装并启用后重试。';
             }
             $('#dep-tip').text(tip);
@@ -260,7 +260,7 @@
 
         form.on("submit(formStep)", function(data) {
             // 前置关键驱动校验（前端阻断）
-            if (__depMissing && (__depMissing.includes('pdo') || __depMissing.includes('pdo_pgsql') || __depMissing.includes('pgsql'))) {
+            if (__depMissing && (__depMissing.includes('pdo') || __depMissing.includes('pdo_pgsql'))) {
                 layui.popup.failure('缺少数据库驱动（pdo/pdo_pgsql）。请安装并启用后重试。');
                 return false;
             }

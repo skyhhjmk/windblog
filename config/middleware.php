@@ -15,7 +15,7 @@
 return [
     // 全局中间件
     '' => [
-        app\middleware\AuthCheck::class,
+//        app\middleware\AuthCheck::class,
         app\middleware\Lang::class,
         app\middleware\DebugToolkit::class,
         app\middleware\IpChecker::class,

@@ -60,11 +60,6 @@ function blog_config(string $key, mixed $default = null, bool $init = false, boo
     $key = trim($key);
     $fullCacheKey = 'blog_config_' . $key;
 
-    // 空key返回全量配置（建议后续优化为分页或缓存）
-    if ($key === '') {
-        return app\model\Setting::all();
-    }
-
     // 优先处理写操作
     if ($set) {
         return blog_config_write($key, $fullCacheKey, $default, $use_cache);
