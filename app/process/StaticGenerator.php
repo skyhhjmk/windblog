@@ -1,16 +1,10 @@
 <?php
 namespace app\process;
 
-use app\controller\IndexController;
-use app\controller\LinkController;
-use app\controller\PostController;
-use app\controller\SearchController;
 use app\model\Post;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
 use support\Log;
-use support\Request;
-use support\Response;
 
 /**
  * 全站静态化生成进程
@@ -65,6 +59,13 @@ class StaticGenerator
             );
             $this->mqChannel = $this->mqConnection->channel();
 
+            // 允许通过配置覆盖命名
+            $this->exchange    = (string)blog_config('rabbitmq_static_exchange', $this->exchange, true) ?: $this->exchange;
+            $this->routingKey  = (string)blog_config('rabbitmq_static_routing_key', $this->routingKey, true) ?: $this->routingKey;
+            $this->queueName   = (string)blog_config('rabbitmq_static_queue', $this->queueName, true) ?: $this->queueName;
+            $this->dlxExchange = (string)blog_config('rabbitmq_static_dlx_exchange', $this->dlxExchange, true) ?: $this->dlxExchange;
+            $this->dlxQueue    = (string)blog_config('rabbitmq_static_dlx_queue', $this->dlxQueue, true) ?: $this->dlxQueue;
+
             // 声明死信交换机/队列
             $this->mqChannel->exchange_declare($this->dlxExchange, 'direct', false, true, false);
             $this->mqChannel->queue_declare($this->dlxQueue, false, true, false, false);
@@ -95,7 +96,7 @@ class StaticGenerator
         if (!$this->mqChannel) {
             return;
         }
-        $this->mqChannel->basic_qos(null, 1, null);
+        $this->mqChannel->basic_qos(0, 1, null);
         $this->mqChannel->basic_consume($this->queueName, '', false, false, false, false, function (AMQPMessage $message) {
             $this->handleMessage($message);
         });
@@ -126,14 +127,15 @@ class StaticGenerator
             $type = $payload['type'] ?? 'url';
             $options = $payload['options'] ?? [];
             $force = (bool)($options['force'] ?? false);
+            $jobId = (string)($options['job_id'] ?? ('auto_' . date('Ymd_His')));
 
             if ($type === 'url') {
                 $url = (string)$payload['value'];
-                $this->generateByUrl($url, $force);
+                $this->generateByUrl($url, $force, $jobId);
             } elseif ($type === 'scope') {
                 $scope = (string)$payload['value'];
                 $pages = (int)($options['pages'] ?? 50);
-                $this->generateByScope($scope, $pages, $force);
+                $this->generateByScope($scope, $pages, $force, $jobId);
             } else {
                 throw new \RuntimeException('未知消息类型: ' . $type);
             }
@@ -169,142 +171,244 @@ class StaticGenerator
         }
     }
 
-    // 生成：按URL
-    protected function generateByUrl(string $url, bool $force = false): void
+    // 生成：按URL（HTTP自调用）
+    protected function generateByUrl(string $url, bool $force = false, ?string $jobId = null): void
     {
         $path = parse_url($url, PHP_URL_PATH) ?: '/';
-        // 映射到具体渲染
-        if ($path === '/' || preg_match('#^/page/(\d+)(?:\.html)?$#', $path, $m)) {
-            $page = isset($m[1]) ? (int)$m[1] : 1;
-            $resp = $this->renderIndex($page);
-            $this->writeHtml($path, $resp, $force);
-            return;
+        if ($jobId) {
+            $this->progressStart($jobId, 'url', 1);
         }
-        if ($path === '/link' || preg_match('#^/link/page/(\d+)$#', $path, $m)) {
-            $page = isset($m[1]) ? (int)$m[1] : 1;
-            $resp = $this->renderLink($page);
-            $this->writeHtml($path, $resp, $force);
-            return;
+        [$code, $body] = $this->httpFetch($path);
+        $this->writeHtml($path, $code, $body, $force);
+        if ($jobId) {
+            $this->progressTick($jobId, 1, $path);
+            $this->progressFinish($jobId);
         }
-        if (preg_match('#^/post/(.+?)(?:\.html)?$#', $path, $m)) {
-            $keyword = $m[1];
-            $resp = $this->renderPost($keyword);
-            $this->writeHtml($path, $resp, $force);
-            return;
-        }
-        if ($path === '/search') {
-            $resp = $this->renderSearch();
-            $this->writeHtml($path, $resp, $force);
-            return;
-        }
-        // 其他页面可按需扩展
-        Log::warning('未匹配的静态化URL: ' . $url);
     }
 
-    // 生成：按范围
-    protected function generateByScope(string $scope, int $pages = 50, bool $force = false): void
+    // 生成：按范围（带进度）
+    protected function generateByScope(string $scope, int $pages = 50, bool $force = false, ?string $jobId = null): void
     {
+        // 估算总数
+        $total = 0;
+        if ($scope === 'index') {
+            $total = max(1, $pages) + 1; // /page/1..N + /
+        } elseif ($scope === 'list') {
+            $total = max(1, $pages) + 1; // /link/page/1..N + /link
+        } elseif ($scope === 'post') {
+            $total = (int)Post::where('status', 'published')->count('*');
+        } elseif ($scope === 'all') {
+            $total = (max(1, $pages) + 1) // index
+                   + (max(1, $pages) + 1) // list
+                   + (int)Post::where('status', 'published')->count('*')
+                   + 1; // /search
+        }
+        if ($jobId) {
+            $this->progressStart($jobId, $scope, $total);
+        }
+
+        $done = 0;
         switch ($scope) {
             case 'index':
                 for ($p = 1; $p <= $pages; $p++) {
-                    $resp = $this->renderIndex($p);
-                    $this->writeHtml("/page/$p", $resp, $force);
+                    $path = "/page/$p";
+                    [$code, $body] = $this->httpFetch($path);
+                    $this->writeHtml($path, $code, $body, $force);
+                    $done++; if ($jobId) $this->progressTick($jobId, $done, $path);
                 }
-                // 首页单独
-                $this->writeHtml('/', $this->renderIndex(1), $force);
+                $path = '/';
+                [$code, $body] = $this->httpFetch($path);
+                $this->writeHtml($path, $code, $body, $force);
+                $done++; if ($jobId) $this->progressTick($jobId, $done, $path);
                 break;
             case 'list':
                 for ($p = 1; $p <= $pages; $p++) {
-                    $resp = $this->renderLink($p);
-                    $this->writeHtml("/link/page/$p", $resp, $force);
+                    $path = "/link/page/$p";
+                    [$code, $body] = $this->httpFetch($path);
+                    $this->writeHtml($path, $code, $body, $force);
+                    $done++; if ($jobId) $this->progressTick($jobId, $done, $path);
                 }
-                $this->writeHtml('/link', $this->renderLink(1), $force);
+                $path = '/link';
+                [$code, $body] = $this->httpFetch($path);
+                $this->writeHtml($path, $code, $body, $force);
+                $done++; if ($jobId) $this->progressTick($jobId, $done, $path);
                 break;
             case 'post':
-                // 遍历已发布文章
                 $posts = Post::where('status', 'published')->select(['slug', 'id'])->get();
                 foreach ($posts as $post) {
                     $keyword = $post->slug ?? $post->id;
-                    $resp = $this->renderPost((string)$keyword);
-                    $this->writeHtml("/post/$keyword", $resp, $force);
+                    $path = "/post/$keyword";
+                    [$code, $body] = $this->httpFetch($path);
+                    $this->writeHtml($path, $code, $body, $force);
+                    $done++; if ($jobId) $this->progressTick($jobId, $done, $path);
                 }
                 break;
             case 'all':
-                $this->generateByScope('index', $pages, $force);
-                $this->generateByScope('list', $pages, $force);
-                $this->generateByScope('post', $pages, $force);
-                $this->writeHtml('/search', $this->renderSearch(), $force);
+                $this->generateByScope('index', $pages, $force, $jobId);
+                $this->generateByScope('list', $pages, $force, $jobId);
+                $this->generateByScope('post', $pages, $force, $jobId);
+                $path = '/search';
+                [$code, $body] = $this->httpFetch($path);
+                $this->writeHtml($path, $code, $body, $force);
+                $done++; if ($jobId) $this->progressTick($jobId, $done, $path);
                 break;
             default:
                 Log::warning('未知静态化范围: ' . $scope);
         }
-    }
 
-    // 内部渲染：Index
-    protected function renderIndex(int $page = 1): Response
-    {
-        $controller = new IndexController();
-        $req = $this->makeRequest('/', ['X-PJAX' => 'false']);
-        return $controller->index($req, $page);
-    }
-
-    // 内部渲染：Link
-    protected function renderLink(int $page = 1): Response
-    {
-        $controller = new LinkController();
-        $req = $this->makeRequest('/link', ['X-PJAX' => 'false']);
-        return $controller->index($req, $page);
-    }
-
-    // 内部渲染：Post
-    protected function renderPost(string $keyword): Response
-    {
-        $controller = new PostController();
-        $req = $this->makeRequest('/post/' . $keyword, ['X-PJAX' => 'false']);
-        return $controller->index($req, $keyword);
-    }
-
-    // 内部渲染：Search（默认空关键词页）
-    protected function renderSearch(): Response
-    {
-        $controller = new SearchController();
-        $req = $this->makeRequest('/search', ['X-PJAX' => 'false']);
-        return $controller->index($req, 1);
-    }
-
-    protected function makeRequest(string $path, array $headers = []): Request
-    {
-        $server = [
-            'REQUEST_METHOD' => 'GET',
-            'REQUEST_URI' => $path,
-            'HTTP_HOST' => blog_config('site_host', 'localhost', true),
-        ];
-        foreach ($headers as $k => $v) {
-            $server['HTTP_' . strtoupper(str_replace('-', '_', $k))] = $v;
+        if ($jobId) {
+            $this->progressFinish($jobId);
         }
-        return new Request($server, [], [], [], '', '');
     }
 
-    protected function writeHtml(string $urlPath, Response $resp, bool $force = false): void
+
+
+
+
+
+
+
+
+
+
+    protected function writeHtml(string $urlPath, int $code, string $body, bool $force = false): void
     {
-        $code = $resp->getStatusCode();
         if ($code !== 200) {
             Log::warning("渲染非200，跳过: {$urlPath}, code={$code}");
             return;
         }
-        $body = $resp->rawBody();
+
+        // 按策略决定是否做JS/CSS压缩替换（若库缺失则自动跳过）
+        $body = $this->maybeMinifyHtml($urlPath, $body);
+
         $target = $this->mapPath($urlPath);
-        $full = public_path() . DIRECTORY_SEPARATOR . 'static' . DIRECTORY_SEPARATOR . $target;
-        $dir = dirname($full);
-        if (!is_dir($dir)) {
-            @mkdir($dir, 0775, true);
+
+        // 目录：正式与临时
+        $final = public_path() . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'static' . DIRECTORY_SEPARATOR . $target;
+        $stage = public_path() . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'static_tmp' . DIRECTORY_SEPARATOR . $target;
+
+        // 确保目录存在
+        $finalDir = dirname($final);
+        $stageDir = dirname($stage);
+        if (!is_dir($finalDir)) {
+            @mkdir($finalDir, 0775, true);
         }
-        if (!$force && file_exists($full)) {
-            // 简单命中跳过
+        if (!is_dir($stageDir)) {
+            @mkdir($stageDir, 0775, true);
+        }
+
+        // 1) 将页面写入临时目录文件
+        if (file_exists($stage)) {
+            @unlink($stage);
+        }
+        file_put_contents($stage, $body);
+
+        // 2) 若非强制且正式文件已存在，则保留旧缓存，丢弃临时文件
+        if (!$force && file_exists($final)) {
+            @unlink($stage);
             return;
         }
-        file_put_contents($full, $body);
-        Log::info("静态页面生成: {$full}");
+
+        // 3) 删除旧正式文件（若有），再将临时文件移动到正式目录
+        if (file_exists($final)) {
+            @unlink($final);
+        }
+        // 跨目录移动（同盘rename即为移动）
+        @rename($stage, $final);
+
+        Log::info("静态页面生成(临时->正式，逐页替换): {$final}");
+    }
+
+    /**
+     * 若URL策略启用minify，则对HTML中的本地JS/CSS进行压缩与引用改写
+     * - 需要 matthiasmullie/minify 库；若不存在则跳过并记录日志
+     */
+    protected function maybeMinifyHtml(string $urlPath, string $html): string
+    {
+        try {
+            $strategies = (array)(blog_config('static_url_strategies', [], true) ?: []);
+            $needMinify = false;
+            $pathVariants = [$urlPath, rtrim($urlPath, '/'), $this->mapPath($urlPath)];
+            foreach ($strategies as $it) {
+                $u = (string)($it['url'] ?? '');
+                if (!$u) continue;
+                // 允许匹配 /path 与 /path.html 两种写法
+                if (in_array($u, $pathVariants, true) || $u === $urlPath) {
+                    if (!empty($it['enabled']) && !empty($it['minify'])) {
+                        $needMinify = true;
+                    }
+                    break;
+                }
+            }
+            if (!$needMinify) {
+                return $html;
+            }
+
+            if (!class_exists(\MatthiasMullie\Minify\JS::class) || !class_exists(\MatthiasMullie\Minify\CSS::class)) {
+                Log::warning('minify库未安装，已跳过JS/CSS压缩（composer require matthiasmullie/minify）');
+                return $html;
+            }
+
+            // 仅处理本地资源：/ 开头的 src/href
+            $public = rtrim((string)public_path(), DIRECTORY_SEPARATOR);
+            $minBaseUrl = '/assets/min';
+            $minBaseDir = $public . DIRECTORY_SEPARATOR . 'assets' . DIRECTORY_SEPARATOR . 'min';
+            if (!is_dir($minBaseDir)) {
+                @mkdir($minBaseDir, 0775, true);
+            }
+
+            // 替换 <script src="..."> 与 <link rel="stylesheet" href="...">
+            $replaced = $html;
+
+            // JS
+            $replaced = preg_replace_callback('#(<script[^>]+src=["\'])(/[^"\']+?\.js)(["\'][^>]*>\s*</script>)#i', function ($m) use ($public, $minBaseDir, $minBaseUrl) {
+                $src = $m[2];
+                $srcPath = $public . str_replace('/', DIRECTORY_SEPARATOR, $src);
+                if (!is_file($srcPath)) return $m[0];
+
+                $hash = md5($srcPath . '|' . (string)@filemtime($srcPath));
+                $outRel = $minBaseUrl . '/' . $hash . '.js';
+                $outPath = $minBaseDir . DIRECTORY_SEPARATOR . $hash . '.js';
+
+                if (!file_exists($outPath)) {
+                    try {
+                        $minifier = new \MatthiasMullie\Minify\JS($srcPath);
+                        $minifier->minify($outPath);
+                    } catch (\Throwable $e) {
+                        Log::warning('JS压缩失败，回退原始: ' . $e->getMessage());
+                        return $m[0];
+                    }
+                }
+                return $m[1] . $outRel . $m[3];
+            }, $replaced);
+
+            // CSS
+            $replaced = preg_replace_callback('#(<link[^>]+href=["\'])(/[^"\']+?\.css)(["\'][^>]*>)#i', function ($m) use ($public, $minBaseDir, $minBaseUrl) {
+                $href = $m[2];
+                $hrefPath = $public . str_replace('/', DIRECTORY_SEPARATOR, $href);
+                if (!is_file($hrefPath)) return $m[0];
+
+                $hash = md5($hrefPath . '|' . (string)@filemtime($hrefPath));
+                $outRel = $minBaseUrl . '/' . $hash . '.css';
+                $outPath = $minBaseDir . DIRECTORY_SEPARATOR . $hash . '.css';
+
+                if (!file_exists($outPath)) {
+                    try {
+                        $minifier = new \MatthiasMullie\Minify\CSS($hrefPath);
+                        $minifier->minify($outPath);
+                    } catch (\Throwable $e) {
+                        Log::warning('CSS压缩失败，回退原始: ' . $e->getMessage());
+                        return $m[0];
+                    }
+                }
+                return $m[1] . $outRel . $m[3];
+            }, $replaced);
+
+            return $replaced;
+        } catch (\Throwable $e) {
+            Log::warning('HTML压缩替换异常，已回退原始: ' . $e->getMessage());
+            return $html;
+        }
     }
 
     // URL -> 相对文件路径（相对于 public/static）
@@ -318,6 +422,52 @@ class StaticGenerator
         $path = preg_replace('#\.html$#', '', $path);
         // 归一化
         return $path . '.html';
+    }
+
+    // 计算基础访问地址：优先 static_base_url，其次 scheme://host[:port]
+    protected function getBaseUrl(): string
+    {
+        $base = (string)blog_config('static_base_url', '', true);
+        if ($base !== '') {
+            return rtrim($base, '/');
+        }
+        $scheme = (string)blog_config('site_scheme', 'http', true);
+        $host = (string)blog_config('site_host', '127.0.0.1', true);
+        $port = (int)blog_config('site_port', 8787, true);
+        // 常见端口省略
+        $portPart = ($port === 80 && $scheme === 'http') || ($port === 443 && $scheme === 'https') ? '' : ':' . $port;
+        return $scheme . '://' . $host . $portPart;
+    }
+
+    // 通过 HTTP 获取页面内容（返回 [code, body]）
+    protected function httpFetch(string $path): array
+    {
+        $url = $this->getBaseUrl() . (str_starts_with($path, '/') ? $path : '/' . $path);
+        $ch = curl_init();
+        $headers = [
+            'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'User-Agent: StaticGenerator/1.0',
+        ];
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_CONNECTTIMEOUT => 5,
+            CURLOPT_TIMEOUT => 15,
+            CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_SSL_VERIFYHOST => 0,
+            CURLOPT_SSL_VERIFYPEER => 0,
+        ]);
+        $body = curl_exec($ch);
+        if ($body === false) {
+            $err = curl_error($ch);
+            curl_close($ch);
+            Log::warning("HTTP 获取失败: {$url}, error={$err}");
+            return [0, ''];
+        }
+        $code = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+        curl_close($ch);
+        return [$code, (string)$body];
     }
 
     // 每小时增量：最近 N 小时更新的文章
@@ -339,7 +489,36 @@ class StaticGenerator
                 ];
                 $this->publish($payload);
             }
-            Log::info('增量静态化任务入队: ' . count($posts) . ' 篇');
+
+            // 同步刷新常用页面（首页与友链页 + 分页2-5）
+            $this->publish([
+                'type' => 'url',
+                'value' => '/',
+                'options' => ['force' => true],
+            ]);
+            $this->publish([
+                'type' => 'url',
+                'value' => '/link',
+                'options' => ['force' => true],
+            ]);
+            // 首页分页 /page/2..5
+            for ($p = 2; $p <= 5; $p++) {
+                $this->publish([
+                    'type' => 'url',
+                    'value' => '/page/' . $p,
+                    'options' => ['force' => true],
+                ]);
+            }
+            // 友链分页 /link/page/2..5
+            for ($p = 2; $p <= 5; $p++) {
+                $this->publish([
+                    'type' => 'url',
+                    'value' => '/link/page/' . $p,
+                    'options' => ['force' => true],
+                ]);
+            }
+
+            Log::info('增量静态化任务入队: ' . count($posts) . ' 篇（含首页/友链及其分页2-5刷新）');
         } catch (\Throwable $e) {
             Log::error('增量入队失败: ' . $e->getMessage());
         }
@@ -357,6 +536,68 @@ class StaticGenerator
         $this->mqChannel->basic_publish($msg, $this->exchange, $this->routingKey);
     }
 
+    // 进度：开始
+    protected function progressStart(string $jobId, string $scope, int $total): void
+    {
+        $data = [
+            'job_id' => $jobId,
+            'scope' => $scope,
+            'total' => max(0, $total),
+            'current' => 0,
+            'status' => 'running',
+            'started_at' => time(),
+            'updated_at' => time(),
+            'current_path' => ''
+        ];
+        // 将最新任务ID与详情写入缓存，延长TTL以便短任务仍可被查询到
+        cache('static_progress_latest', $jobId, true, 3600);
+        cache('static_progress_' . $jobId, $data, true, 900);
+    }
+
+    // 进度：步进
+    protected function progressTick(string $jobId, int $current, string $path): void
+    {
+        $key = 'static_progress_' . $jobId;
+        $data = cache($key) ?: [];
+        $data['current'] = $current;
+        $data['updated_at'] = time();
+        $data['current_path'] = $path;
+        // 步进更新，刷新TTL
+        cache($key, $data, true, 900);
+    }
+
+    // 进度：结束
+    protected function progressFinish(string $jobId): void
+    {
+        $key = 'static_progress_' . $jobId;
+        $data = cache($key) ?: [];
+        $data['status'] = 'finished';
+        $data['finished_at'] = time();
+        $data['updated_at'] = time();
+        // 保持完成后的进度条可查询一段时间（15分钟）
+        cache($key, $data, true, 900);
+
+        // 写入历史列表（保留最近10条）
+        $histKey = 'static_progress_history';
+        $history = cache($histKey) ?: [];
+        $summary = [
+            'job_id' => $data['job_id'] ?? $jobId,
+            'scope' => $data['scope'] ?? '',
+            'total' => $data['total'] ?? 0,
+            'finished_at' => $data['finished_at'] ?? time(),
+            'duration' => isset($data['started_at']) ? (($data['finished_at'] ?? time()) - $data['started_at']) : null,
+            'status' => $data['status'] ?? 'finished'
+        ];
+        // 将最新记录插入列表头部
+        array_unshift($history, $summary);
+        // 仅保留最近10条
+        if (count($history) > 10) {
+            $history = array_slice($history, 0, 10);
+        }
+        // 历史列表保留时长更久（1小时）
+        cache($histKey, $history, true, 3600);
+    }
+
     public function onWorkerStop(): void
     {
         try {
@@ -368,7 +609,7 @@ class StaticGenerator
             }
             Log::info('StaticGenerator MQ连接已关闭');
         } catch (\Throwable $e) {
-            Log::warning('关闭MQ连接失败: ' . $e->getMessage());
+            Log::warning('关闭MQ连接失败: ' . $e->Message());
         }
     }
 }

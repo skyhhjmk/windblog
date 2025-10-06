@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>消息队列设置</title>
+  <link rel="stylesheet" href="/app/admin/component/layui/css/layui.css?v=2.8.12"/>
+  <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css"/>
+  <link rel="stylesheet" href="/app/admin/admin/css/reset.css"/>
+</head>
+<body class="pear-container">
+<div class="layui-card">
+  <div class="layui-card-header">消息队列设置</div>
+  <div class="layui-card-body">
+    <form class="layui-form" lay-filter="form-mq">
+      <fieldset class="layui-elem-field">
+        <legend>RabbitMQ 连接</legend>
+        <div class="layui-field-box">
+          <div class="layui-form-item">
+            <label class="layui-form-label">Host</label>
+            <div class="layui-input-inline">
+              <input type="text" name="rabbitmq_host" placeholder="127.0.0.1" autocomplete="off" class="layui-input">
+            </div>
+            <label class="layui-form-label">Port</label>
+            <div class="layui-input-inline">
+              <input type="number" name="rabbitmq_port" min="1" placeholder="5672" autocomplete="off" class="layui-input">
+            </div>
+          </div>
+          <div class="layui-form-item">
+            <label class="layui-form-label">User</label>
+            <div class="layui-input-inline">
+              <input type="text" name="rabbitmq_user" placeholder="guest" autocomplete="off" class="layui-input">
+            </div>
+            <label class="layui-form-label">Password</label>
+            <div class="layui-input-inline">
+              <input type="password" name="rabbitmq_password" placeholder="guest" autocomplete="off" class="layui-input">
+            </div>
+          </div>
+          <div class="layui-form-item">
+            <label class="layui-form-label">VHost</label>
+            <div class="layui-input-inline">
+              <input type="text" name="rabbitmq_vhost" placeholder="/" autocomplete="off" class="layui-input">
+            </div>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="layui-elem-field">
+        <legend>静态化队列命名</legend>
+        <div class="layui-field-box">
+          <div class="layui-form-item">
+            <label class="layui-form-label">Exchange</label>
+            <div class="layui-input-inline">
+              <input type="text" name="rabbitmq_static_exchange" placeholder="windblog_static_gen" autocomplete="off" class="layui-input">
+            </div>
+            <label class="layui-form-label">RoutingKey</label>
+            <div class="layui-input-inline">
+              <input type="text" name="rabbitmq_static_routing_key" placeholder="static_gen" autocomplete="off" class="layui-input">
+            </div>
+          </div>
+          <div class="layui-form-item">
+            <label class="layui-form-label">Queue</label>
+            <div class="layui-input-inline">
+              <input type="text" name="rabbitmq_static_queue" placeholder="windblog_static_queue" autocomplete="off" class="layui-input">
+            </div>
+          </div>
+          <div class="layui-form-item">
+            <label class="layui-form-label">DLX Exchange</label>
+            <div class="layui-input-inline">
+              <input type="text" name="rabbitmq_static_dlx_exchange" placeholder="windblog_static_dlx" autocomplete="off" class="layui-input">
+            </div>
+            <label class="layui-form-label">DLQ</label>
+            <div class="layui-input-inline">
+              <input type="text" name="rabbitmq_static_dlx_queue" placeholder="windblog_static_dlq" autocomplete="off" class="layui-input">
+            </div>
+          </div>
+          <div class="hint">说明：更改命名后请重启相关进程生效。</div>
+        </div>
+      </fieldset>
+
+      <div class="layui-form-item">
+        <div class="layui-input-block">
+          <button class="layui-btn" lay-submit lay-filter="btn-save">保存</button>
+          <button type="button" class="layui-btn layui-btn-normal" id="btn-test">测试连接</button>
+          <button type="button" class="layui-btn layui-btn-primary" id="btn-reload">刷新</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+<script src="/app/admin/component/pear/pear.js"></script>
+<script src="/app/admin/admin/js/permission.js"></script>
+<script>
+layui.use(['form','layer'], function(){
+  var form = layui.form, layer = layui.layer, $ = layui.$;
+
+  function load(){
+    $.get('/app/admin/mq/get', function(res){
+      if(res && res.success){
+        form.val('form-mq', res.data || {});
+      } else {
+        layer.msg('加载配置失败', {icon:2});
+      }
+    }).fail(function(){
+      layer.msg('请求失败', {icon:2});
+    });
+  }
+
+  form.on('submit(btn-save)', function(obj){
+    var data = obj.field || {};
+    var idx = layer.msg('保存中...', {icon:16, shade:0.1, time:0});
+    $.post('/app/admin/mq/save', data, function(res){
+      layer.close(idx);
+      if(res && res.success){
+        layer.msg('保存成功', {icon:1});
+      } else {
+        layer.msg('保存失败', {icon:2});
+      }
+    }).fail(function(){
+      layer.close(idx);
+      layer.msg('请求失败', {icon:2});
+    });
+    return false;
+  });
+
+  $('#btn-test').on('click', function(){
+    var $btn = $(this);
+    $btn.prop('disabled', true).addClass('layui-btn-disabled');
+    layer.msg('正在测试连接...', {icon:16, shade:0.1, time:0});
+    $.post('/app/admin/mq/test', {}, function(res){
+      layer.closeAll();
+      if(res && res.success){
+        layer.msg(res.message || '连接成功', {icon:1});
+      } else {
+        layer.msg((res && res.message) || '连接失败', {icon:2, time: 4000});
+      }
+      $btn.prop('disabled', false).removeClass('layui-btn-disabled');
+    }).fail(function(){
+      layer.closeAll();
+      layer.msg('请求失败', {icon:2});
+      $btn.prop('disabled', false).removeClass('layui-btn-disabled');
+    });
+  });
+
+  $('#btn-reload').on('click', load);
+
+  load();
+});
+</script>
+</body>
+</html>
