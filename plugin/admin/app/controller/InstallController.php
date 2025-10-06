@@ -42,7 +42,7 @@ class InstallController extends Base
         $add('php>=8.2', $php_ok, $php_ok ? '' : ('当前PHP版本为 ' . PHP_VERSION));
 
         // 扩展（必需）
-        $exts = ['pdo','pdo_pgsql','pgsql','openssl','json','mbstring','curl','fileinfo','gd','xmlreader','dom','libxml'];
+        $exts = ['pdo','pdo_pgsql','openssl','json','mbstring','curl','fileinfo','gd','xmlreader','dom','libxml'];
         foreach ($exts as $ext) {
             $ok = extension_loaded($ext);
             $add($ext, $ok, $ok ? '' : '未启用/未安装');
