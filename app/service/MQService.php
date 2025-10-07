@@ -100,6 +100,7 @@ class MQService
         $args = [
             'x-dead-letter-exchange' => ['S', $dlxExchange],
             'x-dead-letter-routing-key' => ['S', $dlxQueue],
+            'x-max-priority' => ['I', 10], // 开启队列优先级（0-9）
         ];
         try {
             $channel->queue_declare($queueName, false, true, false, false, false, $args);
