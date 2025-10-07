@@ -92,6 +92,10 @@ class LinkMonitor
             $peak = memory_get_peak_usage(true) / 1024 / 1024;
             Log::debug("LinkMonitor 状态 - 内存: {$memoryUsage}MB, 峰值: {$peak}MB");
         });
+        // 每60秒进行一次 MQ 健康检查
+        Timer::add(60, function () {
+            try { \app\service\MQService::checkAndHeal(); } catch (\Throwable $e) { Log::warning('MQ 健康检查异常(LinkMonitor): ' . $e->getMessage()); }
+        });
 
         $this->processMessages();
         $this->timerId2 = Timer::add($this->interval, [$this, 'processMessages']);

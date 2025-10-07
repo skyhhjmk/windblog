@@ -79,14 +79,31 @@ class MailService
             $exchange   = (string)blog_config('rabbitmq_mail_exchange', 'mail_exchange', true);
             $routingKey = (string)blog_config('rabbitmq_mail_routing_key', 'mail_send', true);
 
+            // 计算优先级（0-9），支持字符串映射 high/normal/low
+            $priority = 0;
+            if (isset($payload['priority'])) {
+                $p = $payload['priority'];
+                if (is_string($p)) {
+                    $map = [
+                        'high' => 9,
+                        'normal' => 5,
+                        'low' => 1,
+                    ];
+                    $priority = $map[strtolower($p)] ?? 0;
+                } elseif (is_numeric($p)) {
+                    $priority = max(0, min(9, (int)$p));
+                }
+            }
             $msg = new AMQPMessage(json_encode($payload, JSON_UNESCAPED_UNICODE), [
                 'content_type'  => 'application/json',
                 'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT,
+                'priority'      => $priority,
             ]);
             $channel->basic_publish($msg, $exchange, $routingKey);
             Log::debug('Mail enqueued: ' . json_encode([
                 'to' => $payload['to'] ?? null,
-                'subject' => $payload['subject'] ?? null
+                'subject' => $payload['subject'] ?? null,
+                'priority' => $priority
             ], JSON_UNESCAPED_UNICODE));
             return true;
         } catch (Throwable $e) {
@@ -144,6 +161,7 @@ class MailService
             $args = new AMQPTable([
                 'x-dead-letter-exchange'    => $dlxExchange,
                 'x-dead-letter-routing-key' => $mailDlxQueue,
+                'x-max-priority'            => 10, // 开启队列优先级（0-9）
             ]);
             try {
                 $ch->queue_declare($queueName, false, true, false, false, false, $args);

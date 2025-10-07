@@ -44,6 +44,10 @@ class StaticGenerator
             \Workerman\Timer::add(3600, function () {
                 $this->enqueueIncrementalPosts(24);
             });
+            // 每60秒进行一次 MQ 健康检查
+            \Workerman\Timer::add(60, function () {
+                try { \app\service\MQService::checkAndHeal(); } catch (\Throwable $e) { \support\Log::warning('MQ 健康检查异常(StaticGenerator): ' . $e->getMessage()); }
+            });
         }
     }
 
