@@ -150,11 +150,9 @@ class HttpCallback
     protected function getMqChannel()
     {
         if ($this->mqChannel === null) {
-            $connection = $this->getMqConnection();
-            $this->mqChannel = $connection->channel();
-            $this->mqChannel->basic_qos(0, 1, false);
+            // 使用 MQService 提供的通道
+            $this->mqChannel = MQService::getChannel();
         }
-
         return $this->mqChannel;
     }
 
@@ -175,12 +173,25 @@ class HttpCallback
 
         Log::info("HTTP回调进程已启动 - PID: " . getmypid());
 
-        // 初始化MQ连接
+        // 初始化MQ连接与本进程专属交换机/队列/死信
         try {
-            $this->getMqChannel();
-            Log::info("RabbitMQ连接初始化成功");
+            $channel = MQService::getChannel();
+
+            $exchange   = (string)blog_config('rabbitmq_http_callback_exchange', 'http_callback_exchange', true);
+            $routingKey = (string)blog_config('rabbitmq_http_callback_routing_key', 'http_callback', true);
+            $queueName  = (string)blog_config('rabbitmq_http_callback_queue', 'http_callback_queue', true);
+
+            // 使用 HttpCallback 专属 DLX/DLQ（不共用）
+            $dlxExchange = (string)blog_config('rabbitmq_http_dlx_exchange', 'http_dlx_exchange', true);
+            $dlxQueue    = (string)blog_config('rabbitmq_http_dlx_queue', 'http_dlx_queue', true);
+
+            MQService::declareDlx($channel, $dlxExchange, $dlxQueue);
+            MQService::setupQueueWithDlx($channel, $exchange, $routingKey, $queueName, $dlxExchange, $dlxQueue);
+
+            $this->mqChannel = $channel;
+            Log::info("RabbitMQ连接初始化成功(HttpCallback)");
         } catch (\Exception $e) {
-            Log::error("RabbitMQ连接初始化失败: " . $e->getMessage());
+            Log::error("RabbitMQ连接初始化失败(HttpCallback): " . $e->getMessage());
         }
 
         // 监控进程状态

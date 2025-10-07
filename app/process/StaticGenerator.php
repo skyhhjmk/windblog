@@ -20,7 +20,7 @@ class StaticGenerator
     /** @var \PhpAmqpLib\Channel\AMQPChannel|null */
     protected $mqChannel = null;
 
-    // MQ 命名（按要求将 . 替换为 _）
+    // MQ 命名
     private string $exchange = 'windblog_static_gen';
     private string $routingKey = 'static_gen';
     private string $queueName = 'windblog_static_queue';
@@ -50,14 +50,8 @@ class StaticGenerator
     protected function initMq(): void
     {
         try {
-            $this->mqConnection = new AMQPStreamConnection(
-                blog_config('rabbitmq_host', '127.0.0.1', true),
-                (int)blog_config('rabbitmq_port', 5672, true),
-                blog_config('rabbitmq_user', 'guest', true),
-                blog_config('rabbitmq_password', 'guest', true),
-                blog_config('rabbitmq_vhost', '/', true)
-            );
-            $this->mqChannel = $this->mqConnection->channel();
+            // 使用 MQService 通道
+            $this->mqChannel = \app\service\MQService::getChannel();
 
             // 允许通过配置覆盖命名
             $this->exchange    = (string)blog_config('rabbitmq_static_exchange', $this->exchange, true) ?: $this->exchange;
@@ -66,24 +60,9 @@ class StaticGenerator
             $this->dlxExchange = (string)blog_config('rabbitmq_static_dlx_exchange', $this->dlxExchange, true) ?: $this->dlxExchange;
             $this->dlxQueue    = (string)blog_config('rabbitmq_static_dlx_queue', $this->dlxQueue, true) ?: $this->dlxQueue;
 
-            // 声明死信交换机/队列
-            $this->mqChannel->exchange_declare($this->dlxExchange, 'direct', false, true, false);
-            $this->mqChannel->queue_declare($this->dlxQueue, false, true, false, false);
-            $this->mqChannel->queue_bind($this->dlxQueue, $this->dlxExchange, $this->dlxQueue);
-
-            // 主交换机/队列（带死信）
-            $this->mqChannel->exchange_declare($this->exchange, 'direct', false, true, false);
-            $args = [
-                'x-dead-letter-exchange' => ['S', $this->dlxExchange],
-                'x-dead-letter-routing-key' => ['S', $this->dlxQueue],
-            ];
-            try {
-                $this->mqChannel->queue_declare($this->queueName, false, true, false, false, false, $args);
-            } catch (\Exception $e) {
-                Log::warning('StaticGenerator 队列声明失败，尝试无参重建: ' . $e->getMessage());
-                $this->mqChannel->queue_declare($this->queueName, false, true, false, false, false);
-            }
-            $this->mqChannel->queue_bind($this->queueName, $this->exchange, $this->routingKey);
+            // 使用 MQService 的通用初始化（专属 DLX/DLQ）
+            \app\service\MQService::declareDlx($this->mqChannel, $this->dlxExchange, $this->dlxQueue);
+            \app\service\MQService::setupQueueWithDlx($this->mqChannel, $this->exchange, $this->routingKey, $this->queueName, $this->dlxExchange, $this->dlxQueue);
 
             Log::info('StaticGenerator MQ 初始化成功');
         } catch (\Throwable $e) {
@@ -588,9 +567,8 @@ class StaticGenerator
             if ($this->mqChannel) {
                 $this->mqChannel->close();
             }
-            if ($this->mqConnection) {
-                $this->mqConnection->close();
-            }
+            // 统一通过 MQService 关闭
+            \app\service\MQService::closeConnection();
             Log::info('StaticGenerator MQ连接已关闭');
         } catch (\Throwable $e) {
             Log::warning('关闭MQ连接失败: ' . $e->Message());

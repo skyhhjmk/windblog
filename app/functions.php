@@ -243,27 +243,6 @@ function blog_config_normalize_default(mixed $value): mixed
 }
 
 /**
- * 翻译函数，用于多语言支持
- *
- * @param string      $id         翻译键名
- * @param array       $parameters 替换参数
- * @param string|null $domain     翻译域
- * @param string|null $locale     语言代码
- *
- * @return string
- */
-function __($id, array $parameters = [], ?string $domain = null, ?string $locale = null): string
-{
-    static $translator = null;
-    if ($translator === null) {
-        $translator = new Translator('en');
-        $translator->addLoader('array', new ArrayLoader());
-        $translator->addResource('array', [], 'en');
-    }
-    return $translator->trans($id, $parameters, $domain, $locale);
-}
-
-/**
  * 格式化日期时间
  *
  * @param string $time 时间字符串
@@ -396,4 +375,12 @@ function publish_static(array $data): bool
         \support\Log::error('publish_static 失败: ' . $e->getMessage());
         return false;
     }
+}
+
+/**
+ * 渲染邮件 HTML（返回字符串而非 Response）
+ */
+function mail_view(mixed $template = null, array $vars = [], ?string $app = null, ?string $plugin = null): string
+{
+    return \app\service\TwigTemplateService::render((string)$template, $vars, $app, $plugin);
 }

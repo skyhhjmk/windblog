@@ -9,6 +9,7 @@ use support\Request;
 use support\Response;
 use Throwable;
 use app\service\MQService;
+use PhpAmqpLib\Message\AMQPMessage;
 
 class LinkController extends Base
 {
@@ -1181,9 +1182,16 @@ class LinkController extends Base
                 'timestamp' => time(),
             ];
             try {
-                if (MQService::sendToLinkMonitor($payload)) {
-                    $accepted++;
-                }
+                // 发布到 link_monitor 队列
+                $exchange   = (string)blog_config('rabbitmq_link_monitor_exchange', 'link_monitor_exchange', true);
+                $routingKey = (string)blog_config('rabbitmq_link_monitor_routing_key', 'link_monitor', true);
+                $channel = MQService::getChannel();
+                $msg = new AMQPMessage(json_encode($payload, JSON_UNESCAPED_UNICODE), [
+                    'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT,
+                    'content_type' => 'application/json',
+                ]);
+                $channel->basic_publish($msg, $exchange, $routingKey);
+                $accepted++;
             } catch (\Throwable $e) {
                 \support\Log::warning('enqueue link monitor failed: '.$e->getMessage());
             }

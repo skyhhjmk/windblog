@@ -146,6 +146,14 @@ return [
                 'type' => 1,
                 'weight' => 0,
             ],
+            [
+                'title' => '邮件',
+                'key' => 'plugin\\admin\\app\\controller\\MailController',
+                'href' => '/app/admin/mail/index',
+                'type' => 1,
+                'weight' => 470
+            ],
+
         ]
     ],
     [

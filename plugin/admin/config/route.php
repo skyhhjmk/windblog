@@ -24,6 +24,7 @@ use plugin\admin\app\controller\SidebarController;
 use plugin\admin\app\controller\ElasticController;
 use plugin\admin\app\controller\PerformanceController;
 use plugin\admin\app\controller\StaticCacheController;
+use plugin\admin\app\controller\MailController;
 use Webman\Route;
 use support\Request;
 
@@ -159,6 +160,23 @@ Route::group('/app/admin', function () {
         Route::get('/strategies/get', [StaticCacheController::class, 'strategiesGet']);
         Route::post('/strategies/save', [StaticCacheController::class, 'strategiesSave']);
         Route::post('/strategies/scan-posts', [StaticCacheController::class, 'strategiesScanPosts']);
+    });
+
+    // 邮件 路由
+    Route::group('/mail', function () {
+        Route::get('', [MailController::class, 'index']);
+        Route::get('/', [MailController::class, 'index']);
+        Route::get('/index', [MailController::class, 'index']);
+
+        // 基础配置
+        Route::get('/config', [MailController::class, 'configGet']);
+        Route::post('/config-save', [MailController::class, 'configSave']);
+        Route::post('/config-test', [MailController::class, 'configTest']);
+
+        // 其他功能
+        Route::get('/preview', [MailController::class, 'templatesPreview']);
+        Route::get('/queue-stats', [MailController::class, 'queueStats']);
+        Route::post('/enqueue-test', [MailController::class, 'enqueueTest']);
     });
 });
 

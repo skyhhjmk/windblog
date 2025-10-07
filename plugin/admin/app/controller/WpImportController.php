@@ -14,6 +14,9 @@ use support\Response;
 use Throwable;
 use Webman\Http\UploadFile;
 
+use app\service\MQService;
+use PhpAmqpLib\Message\AMQPMessage;
+
 class WpImportController extends Base
 {
     /**
@@ -163,13 +166,7 @@ class WpImportController extends Base
                 }
             }
 
-            // 创建导入任务
-            $importJob = new ImportJob();
-            $importJob->name = $file->getUploadName();
-            $importJob->type = 'wordpress_xml';
-            $importJob->file_path = $filePath;
-            $importJob->author_id = $defaultAuthorId;
-
+            // 构造并投递导入任务到 MQ（不写数据库）
             $options = [
                 'convert_to' => $request->post('convert_to', 'markdown'),
                 'create_users' => (bool)$request->post('create_users', 0),
@@ -179,13 +176,29 @@ class WpImportController extends Base
                 'author_action' => $request->post('author_action','map_to_system'),
             ];
 
-            $importJob->options = json_encode($options);
-            $importJob->save();
+            $payload = [
+                'type' => 'wordpress_xml',
+                'name' => $file->getUploadName(),
+                'file_path' => $filePath,
+                'author_id' => $defaultAuthorId,
+                'options' => $options,
+                'force' => (bool)$force,
+            ];
 
-            // 成功响应格式兼容layui
+            $exchange   = (string)blog_config('rabbitmq_import_exchange', 'import_exchange', true);
+            $routingKey = (string)blog_config('rabbitmq_import_routing_key', 'import_job', true);
+
+            $channel = MQService::getChannel();
+            $message = new AMQPMessage(json_encode($payload, JSON_UNESCAPED_UNICODE), [
+                'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT,
+                'content_type' => 'application/json',
+            ]);
+            $channel->basic_publish($message, $exchange, $routingKey);
+
+            // 成功响应（兼容layui）
             return json([
                 'code' => 0,
-                'msg' => trans('Import job created')
+                'msg' => trans('Import job enqueued')
             ]);
         } catch (\Exception $e) {
             // 记录错误日志

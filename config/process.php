@@ -108,6 +108,13 @@ if (file_exists($__envPath)) {
             // 目前不需要额外构造参数，如需可在此扩展
         ]
     ];
+
+    // 邮件发送处理进程（存在 .env 时注册）
+    $__processes['mail_worker'] = [
+        'handler' => app\process\MailWorker::class,
+        'reloadable' => false,
+        'constructor' => []
+    ];
 }
 
 return $__processes;
