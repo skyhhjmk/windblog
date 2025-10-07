@@ -67,8 +67,21 @@ class LinkMonitor
 
         Log::info("LinkMonitor 进程已启动 - PID: " . getmypid());
         try {
-            $this->getMqChannel();
-            MQService::initializeLinkMonitorQueues();
+            // 使用 MQService 通道与通用方法初始化本进程专属的交换机/队列/死信
+            $channel = MQService::getChannel();
+
+            $exchange   = (string)blog_config('rabbitmq_link_monitor_exchange', 'link_monitor_exchange', true);
+            $routingKey = (string)blog_config('rabbitmq_link_monitor_routing_key', 'link_monitor', true);
+            $queueName  = (string)blog_config('rabbitmq_link_monitor_queue', 'link_monitor_queue', true);
+
+            // 为 LinkMonitor 使用专属 DLX/DLQ，不共用
+            $dlxExchange = (string)blog_config('rabbitmq_link_monitor_dlx_exchange', 'link_monitor_dlx_exchange', true);
+            $dlxQueue    = (string)blog_config('rabbitmq_link_monitor_dlx_queue', 'link_monitor_dlx_queue', true);
+
+            MQService::declareDlx($channel, $dlxExchange, $dlxQueue);
+            MQService::setupQueueWithDlx($channel, $exchange, $routingKey, $queueName, $dlxExchange, $dlxQueue);
+
+            $this->mqChannel = $channel;
             Log::info("RabbitMQ连接初始化成功(LinkMonitor)");
         } catch (\Exception $e) {
             Log::error("RabbitMQ连接初始化失败(LinkMonitor): " . $e->getMessage());
@@ -303,7 +316,8 @@ class LinkMonitor
             $retry = 0;
             $headers = $message->has('application_headers') ? $message->get('application_headers') : null;
             if ($headers instanceof \PhpAmqpLib\Wire\AMQPTable) {
-                $retry = $headers->get('x-retry-count', 0);
+                $native = method_exists($headers, 'getNativeData') ? $headers->getNativeData() : (array)$headers;
+                $retry = (int)($native['x-retry-count'] ?? 0);
             }
 
             if ($this->shouldSendToDeadLetter($url)) {

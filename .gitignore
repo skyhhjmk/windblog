@@ -12,3 +12,5 @@
 /.cunzhi-memory/
 /.codebuddy/
 /vendor/
+/public/cache/
+/public/assets/min/

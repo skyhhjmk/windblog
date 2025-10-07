@@ -8,6 +8,7 @@ namespace app\controller;
 use app\annotation\CSRFVerify;
 use app\service\CSRFHelper;
 use app\service\MQService;
+use PhpAmqpLib\Message\AMQPMessage;
 use support\Request;
 use app\model\Link;
 use app\service\PaginationService;
@@ -365,8 +366,15 @@ class LinkController
                 'user_agent' => request()->header('User-Agent', '')
             ];
 
-            // 使用MQ服务发送到http_callback队列
-            MQService::sendToHttpCallback($callbackData);
+            // 发布到 http_callback 队列
+            $exchange   = (string)blog_config('rabbitmq_http_callback_exchange', 'http_callback_exchange', true);
+            $routingKey = (string)blog_config('rabbitmq_http_callback_routing_key', 'http_callback', true);
+            $channel = MQService::getChannel();
+            $message = new AMQPMessage(json_encode($callbackData, JSON_UNESCAPED_UNICODE), [
+                'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT,
+                'content_type' => 'application/json',
+            ]);
+            $channel->basic_publish($message, $exchange, $routingKey);
 
         } catch (\Exception $e) {
             \support\Log::error('Callback error: ' . $e->getMessage());

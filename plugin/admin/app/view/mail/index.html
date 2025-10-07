@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>邮件设置</title>
+  <link rel="stylesheet" href="/app/admin/component/layui/css/layui.css?v=2.8.12"/>
+  <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css"/>
+  <link rel="stylesheet" href="/app/admin/admin/css/reset.css"/>
+</head>
+<body class="pear-container">
+<div class="layui-card">
+  <div class="layui-card-header">邮件设置</div>
+  <div class="layui-card-body">
+    <form class="layui-form" lay-filter="form-mail">
+      <fieldset class="layui-elem-field">
+        <legend>SMTP 基础配置</legend>
+        <div class="layui-field-box">
+          <div class="layui-form-item">
+            <label class="layui-form-label">传输</label>
+            <div class="layui-input-inline">
+              <select name="mail_transport">
+                <option value="smtp">smtp</option>
+              </select>
+            </div>
+            <label class="layui-form-label">加密</label>
+            <div class="layui-input-inline">
+              <select name="mail_encryption">
+                <option value="tls">tls</option>
+                <option value="ssl">ssl</option>
+                <option value="none">none</option>
+              </select>
+            </div>
+          </div>
+          <div class="layui-form-item">
+            <label class="layui-form-label">主机</label>
+            <div class="layui-input-inline">
+              <input type="text" name="mail_host" required lay-verify="required" placeholder="SMTP 服务器" autocomplete="off" class="layui-input">
+            </div>
+            <label class="layui-form-label">端口</label>
+            <div class="layui-input-inline">
+              <input type="number" name="mail_port" min="1" placeholder="587" autocomplete="off" class="layui-input">
+            </div>
+          </div>
+          <div class="layui-form-item">
+            <label class="layui-form-label">用户名</label>
+            <div class="layui-input-inline">
+              <input type="text" name="mail_username" placeholder="可为空" autocomplete="off" class="layui-input">
+            </div>
+            <label class="layui-form-label">密码</label>
+            <div class="layui-input-inline">
+              <input type="password" name="mail_password" placeholder="不修改留空" autocomplete="off" class="layui-input">
+            </div>
+          </div>
+          <div class="layui-form-item">
+            <label class="layui-form-label">发件地址</label>
+            <div class="layui-input-inline">
+              <input type="text" name="mail_from_address" required lay-verify="required" placeholder="noreply@example.com" autocomplete="off" class="layui-input">
+            </div>
+            <label class="layui-form-label">发件名称</label>
+            <div class="layui-input-inline">
+              <input type="text" name="mail_from_name" placeholder="显示名称" autocomplete="off" class="layui-input">
+            </div>
+          </div>
+          <div class="layui-form-item">
+            <label class="layui-form-label">Reply-To</label>
+            <div class="layui-input-inline">
+              <input type="text" name="mail_reply_to" placeholder="可选" autocomplete="off" class="layui-input">
+            </div>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="layui-elem-field">
+        <legend>邮件队列命名</legend>
+        <div class="layui-field-box">
+          <div class="layui-form-item">
+            <label class="layui-form-label">Exchange</label>
+            <div class="layui-input-inline">
+              <input type="text" name="rabbitmq_mail_exchange" placeholder="mail_exchange" autocomplete="off" class="layui-input">
+            </div>
+            <label class="layui-form-label">RoutingKey</label>
+            <div class="layui-input-inline">
+              <input type="text" name="rabbitmq_mail_routing_key" placeholder="mail_send" autocomplete="off" class="layui-input">
+            </div>
+          </div>
+          <div class="layui-form-item">
+            <label class="layui-form-label">Queue</label>
+            <div class="layui-input-inline">
+              <input type="text" name="rabbitmq_mail_queue" placeholder="mail_queue" autocomplete="off" class="layui-input">
+            </div>
+          </div>
+          <div class="layui-form-item">
+            <label class="layui-form-label">DLX Exchange</label>
+            <div class="layui-input-inline">
+              <input type="text" name="rabbitmq_mail_dlx_exchange" placeholder="mail_dlx_exchange" autocomplete="off" class="layui-input">
+            </div>
+            <label class="layui-form-label">DLQ</label>
+            <div class="layui-input-inline">
+              <input type="text" name="rabbitmq_mail_dlx_queue" placeholder="mail_dlx_queue" autocomplete="off" class="layui-input">
+            </div>
+          </div>
+          <div class="hint">说明：更改命名后请重启相关进程（MailWorker）以确保生效。</div>
+        </div>
+      </fieldset>
+
+      <div class="layui-form-item">
+        <div class="layui-input-block">
+          <button class="layui-btn" lay-submit lay-filter="btn-save">保存</button>
+          <button type="button" class="layui-btn layui-btn-normal" id="btn-test">测试连接</button>
+          <button type="button" class="layui-btn layui-btn-primary" id="btn-reload">刷新</button>
+        </div>
+      </div>
+    </form>
+
+    <fieldset class="layui-elem-field">
+      <legend>队列监控</legend>
+      <div class="layui-field-box">
+        <table class="layui-table">
+          <colgroup>
+            <col width="180"><col>
+          </colgroup>
+          <tbody id="queueTable">
+            <tr><td>exchange</td><td>-</td></tr>
+            <tr><td>routingKey</td><td>-</td></tr>
+            <tr><td>queue</td><td>-</td></tr>
+            <tr><td>queue_depth</td><td>-</td></tr>
+            <tr><td>dlx</td><td>-</td></tr>
+            <tr><td>dlq</td><td>-</td></tr>
+            <tr><td>dlq_depth</td><td>-</td></tr>
+          </tbody>
+        </table>
+        <div style="color:#888;" id="lastTime"></div>
+      </div>
+    </fieldset>
+  </div>
+</div>
+
+<script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+<script src="/app/admin/component/pear/pear.js"></script>
+<script src="/app/admin/admin/js/permission.js"></script>
+<script>
+layui.use(['form','layer'], function(){
+  var form = layui.form, layer = layui.layer, $ = layui.$;
+
+  function load(){
+    $.get('/app/admin/mail/config', function(res){
+      if(res && res.code === 0 && res.data){
+        form.val('form-mail', res.data || {});
+      } else {
+        layer.msg((res && res.msg) || '加载配置失败', {icon:2});
+      }
+    }).fail(function(){
+      layer.msg('请求失败', {icon:2});
+    });
+
+    reloadStats();
+  }
+
+  form.on('submit(btn-save)', function(obj){
+    var data = obj.field || {};
+    if(!data.mail_password){ delete data.mail_password; }
+    var idx = layer.msg('保存中...', {icon:16, shade:0.1, time:0});
+    $.ajax({
+      url: '/app/admin/mail/config-save',
+      method: 'POST',
+      contentType: 'application/json',
+      data: JSON.stringify(data)
+    }).done(function(res){
+      layer.close(idx);
+      if(res && res.code === 0){
+        layer.msg('保存成功', {icon:1});
+      } else {
+        layer.msg('保存失败：' + ((res && res.msg) || ''), {icon:2});
+      }
+    }).fail(function(){
+      layer.close(idx);
+      layer.msg('请求失败', {icon:2});
+    });
+    return false;
+  });
+
+  $('#btn-test').on('click', function(){
+    var data = form.val('form-mail') || {};
+    if(!data.mail_password){ delete data.mail_password; }
+    var idx = layer.msg('正在测试连接...', {icon:16, shade:0.1, time:0});
+    $.ajax({
+      url: '/app/admin/mail/config-test',
+      method: 'POST',
+      contentType: 'application/json',
+      data: JSON.stringify(data)
+    }).done(function(res){
+      layer.close(idx);
+      if(res && res.code === 0){
+        layer.msg(res.msg || '连接成功', {icon:1});
+      } else {
+        layer.msg((res && res.msg) || '连接失败', {icon:2, time: 4000});
+      }
+    }).fail(function(){
+      layer.close(idx);
+      layer.msg('请求失败', {icon:2});
+    });
+  });
+
+  $('#btn-reload').on('click', load);
+
+  function reloadStats(){
+    $.get('/app/admin/mail/queue-stats', function(d){
+      if(d && d.data){
+        var map = d.data;
+        var el = document.getElementById('queueTable');
+        el.innerHTML = '';
+        [
+          ['exchange', map.exchange],
+          ['routingKey', map.routingKey],
+          ['queue', map.queue],
+          ['queue_depth', map.queue_depth],
+          ['dlx', map.dlx],
+          ['dlq', map.dlq],
+          ['dlq_depth', map.dlq_depth],
+        ].forEach(function(pair){
+          var tr = document.createElement('tr');
+          var td1 = document.createElement('td'); td1.textContent = pair[0];
+          var td2 = document.createElement('td'); td2.textContent = (pair[1]===undefined||pair[1]===null)?'-':String(pair[1]);
+          tr.appendChild(td1); tr.appendChild(td2);
+          el.appendChild(tr);
+        });
+        document.getElementById('lastTime').textContent = 'Last update: ' + new Date().toLocaleString();
+      }
+    });
+  }
+
+  load();
+});
+</script>
+</body>
+</html>

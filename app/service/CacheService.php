@@ -37,8 +37,23 @@ class CacheService
             }
         }
 
-        $cacheDriver = getenv('CACHE_DRIVER') ?: 'redis';
+        $rawDriver = getenv('CACHE_DRIVER');
+        $cacheDriver = is_string($rawDriver) ? strtolower(trim($rawDriver)) : '';
+        if ($cacheDriver === '' || $cacheDriver === 'null' || $cacheDriver === 'none' || $rawDriver === false) {
+            $cacheDriver = 'none';
+        } elseif ($cacheDriver === 'array') {
+            // 将 array 作为 memory 的别名
+            $cacheDriver = 'memory';
+        }
         $strictMode = filter_var(getenv('CACHE_STRICT_MODE') ?: 'false', FILTER_VALIDATE_BOOLEAN);
+
+        // 显式禁用缓存时直接返回无缓存处理器，避免进入连接测试/回退模式
+        if ($cacheDriver === 'none') {
+            self::$handler = self::createNoneHandler();
+            self::$fallbackMode = false;
+            self::$prefix = getenv('CACHE_PREFIX') ?: '';
+            return self::$handler;
+        }
 
         try {
             self::$handler = self::createHandler($cacheDriver);
@@ -190,6 +205,50 @@ class CacheService
                     public function del(string $key): bool
                     {
                         return $this->memcached->delete($key);
+                    }
+                };
+
+            case 'memory':
+                // 进程内内存缓存（仅在当前进程有效），支持 TTL
+                return new class {
+                    private array $data = [];
+
+                    public function get(string $key)
+                    {
+                        $now = time();
+                        if (!isset($this->data[$key])) {
+                            return false;
+                        }
+                        $item = $this->data[$key];
+                        if ($item['expire'] !== null && $item['expire'] < $now) {
+                            unset($this->data[$key]);
+                            return false;
+                        }
+                        return $item['value'];
+                    }
+
+                    public function setex(string $key, int $ttl, string $value): bool
+                    {
+                        $this->data[$key] = [
+                            'value' => $value,
+                            'expire' => $ttl > 0 ? time() + $ttl : null
+                        ];
+                        return true;
+                    }
+
+                    public function set(string $key, string $value): bool
+                    {
+                        $this->data[$key] = [
+                            'value' => $value,
+                            'expire' => null
+                        ];
+                        return true;
+                    }
+
+                    public function del(string $key): bool
+                    {
+                        unset($this->data[$key]);
+                        return true;
                     }
                 };
 
@@ -564,6 +623,10 @@ class CacheService
                     case 'memcached':
                         Log::warning('[clear_cache] Memcached does not support pattern-based cache clearing');
                         return false;
+
+                    case 'memory':
+                        // 进程内缓存：当前进程内的键会在后续请求中按需重建
+                        return true;
 
                     case 'none':
                         return true;

@@ -19,6 +19,7 @@ return [
         app\middleware\Lang::class,
         app\middleware\DebugToolkit::class,
         app\middleware\IpChecker::class,
+        app\middleware\StaticCacheRedirect::class,
         app\middleware\CSRFMiddleware::class,
     ],
 ];

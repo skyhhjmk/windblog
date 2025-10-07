@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>邮件发信测试</title>
+  <link rel="stylesheet" href="/app/admin/component/layui/css/layui.css?v=2.8.12"/>
+  <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css"/>
+  <link rel="stylesheet" href="/app/admin/admin/css/reset.css"/>
+</head>
+<body class="pear-container">
+<div class="layui-card">
+  <div class="layui-card-header">邮件发信测试</div>
+  <div class="layui-card-body">
+    <form class="layui-form" lay-filter="form-send">
+      <div class="layui-form-item">
+        <label class="layui-form-label">收件人</label>
+        <div class="layui-input-block">
+          <input type="text" name="to" required lay-verify="required" placeholder="test@example.com，或JSON数组" autocomplete="off" class="layui-input">
+        </div>
+      </div>
+      <div class="layui-form-item">
+        <label class="layui-form-label">主题</label>
+        <div class="layui-input-block">
+          <input type="text" name="subject" required lay-verify="required" placeholder="邮件主题" autocomplete="off" class="layui-input">
+        </div>
+      </div>
+      <div class="layui-form-item">
+        <label class="layui-form-label">模板名</label>
+        <div class="layui-input-inline">
+          <input type="text" name="view" placeholder="如：emails/example（可留空）" autocomplete="off" class="layui-input">
+        </div>
+        <label class="layui-form-label">模板变量</label>
+        <div class="layui-input-inline" style="width: 380px;">
+          <textarea name="view_vars" placeholder='如：{"name":"Alice"}' class="layui-textarea" style="height:80px;"></textarea>
+        </div>
+      </div>
+      <div class="layui-form-item">
+        <label class="layui-form-label">纯文本</label>
+        <div class="layui-input-block">
+          <textarea name="text" placeholder="可选：纯文本正文（HTML不填时生效）" class="layui-textarea" style="height:80px;"></textarea>
+        </div>
+      </div>
+
+      <fieldset class="layui-elem-field">
+        <legend>内联模板（备选）</legend>
+        <div class="layui-field-box">
+          <div class="layui-form-item">
+            <label class="layui-form-label">inline_template</label>
+            <div class="layui-input-block">
+              <textarea name="inline_template" placeholder="Twig 内联模板字符串（填写则优先生效）" class="layui-textarea" style="height:120px;"></textarea>
+            </div>
+          </div>
+          <div class="layui-form-item">
+            <label class="layui-form-label">inline_vars</label>
+            <div class="layui-input-block">
+              <textarea name="inline_vars" placeholder='如：{"name":"Alice"}' class="layui-textarea" style="height:100px;"></textarea>
+            </div>
+          </div>
+        </div>
+      </fieldset>
+
+      <div class="layui-form-item">
+        <div class="layui-input-block">
+          <button class="layui-btn" lay-submit lay-filter="btn-send">发信测试</button>
+          <button type="button" class="layui-btn layui-btn-primary" id="btn-reset">重置</button>
+        </div>
+      </div>
+    </form>
+    <pre id="sendResult" class="layui-code"></pre>
+  </div>
+</div>
+
+<script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+<script src="/app/admin/component/pear/pear.js"></script>
+<script src="/app/admin/admin/js/permission.js"></script>
+<script>
+layui.use(['form','layer'], function(){
+  var form = layui.form, layer = layui.layer, $ = layui.$;
+
+  form.on('submit(btn-send)', function(obj){
+    var data = obj.field || {};
+    var body = {};
+    // to 支持字符串或JSON数组
+    var toRaw = (data.to||'').trim();
+    try { body.to = JSON.parse(toRaw); } catch(e) { body.to = toRaw; }
+    body.subject = (data.subject||'').trim();
+    if(data.view){ body.view = (data.view||'').trim(); }
+    if(data.view_vars){
+      try { body.view_vars = JSON.parse(data.view_vars); } catch(e){ layer.msg('模板变量JSON格式错误', {icon:2}); return false; }
+    }
+    if(data.text){ body.text = data.text; }
+    // 内联模板优先
+    if(data.inline_template){
+      body.inline_template = data.inline_template;
+      if(data.inline_vars){
+        try { body.inline_vars = JSON.parse(data.inline_vars); } catch(e){ layer.msg('inline_vars JSON格式错误', {icon:2}); return false; }
+      }
+    }
+
+    var idx = layer.msg('发送中...', {icon:16, shade:0.1, time:0});
+    $.ajax({
+      url: '/app/admin/mail/enqueue-test',
+      method: 'POST',
+      contentType: 'application/json',
+      data: JSON.stringify(body)
+    }).done(function(res){
+      layer.close(idx);
+      $('#sendResult').text(JSON.stringify(res || {}, null, 2));
+      layer.msg(res && res.code===0 ? '已入队' : ('失败: '+((res && res.msg)||'')), {icon: res && res.code===0 ? 1 : 2});
+    }).fail(function(){
+      layer.close(idx);
+      layer.msg('请求失败', {icon:2});
+    });
+    return false;
+  });
+
+  $('#btn-reset').on('click', function(){
+    form.val('form-send', {to:'', subject:'', view:'', view_vars:'', text:'', inline_template:'', inline_vars:''});
+    document.getElementById('sendResult').textContent = '';
+  });
+});
+</script>
+</body>
+</html>

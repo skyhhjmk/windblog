@@ -130,6 +130,15 @@ return [
                 'type' => 1,
                 'weight' => 490,
             ],
+
+            [
+                'title' => '消息队列设置',
+                'key' => 'plugin\\admin\\app\\controller\\MqController',
+                'href' => '/app/admin/mq/index',
+                'type' => 1,
+                'weight' => 480,
+            ],
+
             [
                 'title' => '短信设置',
                 'key' => 'plugin\\sms\\app\\admin\\controller\\SettingController',
@@ -137,6 +146,33 @@ return [
                 'type' => 1,
                 'weight' => 0,
             ],
+            [
+                'title' => '邮件',
+                'key' => 'mail',
+                'href' => '',
+                'type' => 0,
+                'children' => [
+                    [
+                        'title' => '设置',
+                        'key' => 'plugin\\admin\\app\\controller\\MailController@index',
+                        'href' => '/app/admin/mail/index',
+                        'type' => 1,
+                    ],
+                    [
+                        'title' => '模板预览',
+                        'key' => 'plugin\\admin\\app\\controller\\MailController@pagePreview',
+                        'href' => '/app/admin/mail/preview',
+                        'type' => 1,
+                    ],
+                    [
+                        'title' => '发信测试',
+                        'key' => 'plugin\\admin\\app\\controller\\MailController@pageSend',
+                        'href' => '/app/admin/mail/send',
+                        'type' => 1,
+                    ]
+                ],
+                'weight' => 470
+            ]
         ]
     ],
     [
@@ -205,7 +241,14 @@ return [
                 'href' => '/app/admin/performance/index',
                 'type' => 1,
                 'weight' => 0,
-            ]
+            ],
+            [
+                'title' => '静态缓存',
+                'key' => 'plugin\\admin\\app\\controller\\StaticCacheController',
+                'href' => '/app/admin/static-cache/index',
+                'type' => 1,
+                'weight' => 0
+            ],
         ]
     ],
     [

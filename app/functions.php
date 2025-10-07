@@ -243,27 +243,6 @@ function blog_config_normalize_default(mixed $value): mixed
 }
 
 /**
- * 翻译函数，用于多语言支持
- *
- * @param string      $id         翻译键名
- * @param array       $parameters 替换参数
- * @param string|null $domain     翻译域
- * @param string|null $locale     语言代码
- *
- * @return string
- */
-function __($id, array $parameters = [], ?string $domain = null, ?string $locale = null): string
-{
-    static $translator = null;
-    if ($translator === null) {
-        $translator = new Translator('en');
-        $translator->addLoader('array', new ArrayLoader());
-        $translator->addResource('array', [], 'en');
-    }
-    return $translator->trans($id, $parameters, $domain, $locale);
-}
-
-/**
  * 格式化日期时间
  *
  * @param string $time 时间字符串
@@ -329,4 +308,79 @@ function random_string(int $length = 10, string $type = 'mix'): string
         $result .= $chars[rand(0, $charsLength - 1)];
     }
     return $result;
+}
+
+/**
+ * 发布静态化任务到 RabbitMQ（供后台“手动刷新缓存”等调用）
+ * 期望数据格式示例：
+ *  - ['type' => 'scope', 'value' => 'all', 'options' => ['pages' => 50, 'force' => true]]
+ *  - ['type' => 'url', 'value' => '/link', 'options' => ['force' => true]]
+ *
+ * @param array $data
+ * @return bool 发布是否成功
+ */
+function publish_static(array $data): bool
+{
+    try {
+        $host   = (string)blog_config('rabbitmq_host', '127.0.0.1', true);
+        $port   = (int)blog_config('rabbitmq_port', 5672, true);
+        $user   = (string)blog_config('rabbitmq_user', 'guest', true);
+        $pass   = (string)blog_config('rabbitmq_password', 'guest', true);
+        $vhost  = (string)blog_config('rabbitmq_vhost', '/', true);
+
+        $exchange   = (string)blog_config('rabbitmq_static_exchange', 'static_exchange', true);
+        $routingKey = (string)blog_config('rabbitmq_static_routing_key', 'static_routing', true);
+        $queueName  = (string)blog_config('rabbitmq_static_queue', 'static_queue', true);
+
+        $dlxExchange = (string)blog_config('rabbitmq_static_dlx_exchange', 'static_dlx', true);
+        $dlxQueue    = (string)blog_config('rabbitmq_static_dlx_queue', 'static_dlx_queue', true);
+
+        $conn = new \PhpAmqpLib\Connection\AMQPStreamConnection($host, $port, $user, $pass, $vhost);
+        $ch = $conn->channel();
+
+        // 声明死信交换机与队列
+        $ch->exchange_declare($dlxExchange, 'direct', false, true, false);
+        $ch->queue_declare($dlxQueue, false, true, false, false);
+        $ch->queue_bind($dlxQueue, $dlxExchange, $dlxQueue);
+
+        // 主交换机
+        $ch->exchange_declare($exchange, 'direct', false, true, false);
+
+        // 队列（带死信参数，尽量与 StaticGenerator 保持一致）
+        $args = new \PhpAmqpLib\Wire\AMQPTable([
+            'x-dead-letter-exchange'    => $dlxExchange,
+            'x-dead-letter-routing-key' => $dlxQueue,
+        ]);
+        try {
+            $ch->queue_declare($queueName, false, true, false, false, false, $args);
+        } catch (\Throwable $e) {
+            // 兼容不支持参数的场景，回退无参声明
+            \support\Log::warning('publish_static 队列声明失败，尝试无参重建: ' . $e->getMessage());
+            $ch->queue_declare($queueName, false, true, false, false, false);
+        }
+        $ch->queue_bind($queueName, $exchange, $routingKey);
+
+        // 发布消息
+        $payload = json_encode($data, JSON_UNESCAPED_UNICODE);
+        $msg = new \PhpAmqpLib\Message\AMQPMessage($payload, [
+            'content_type'  => 'application/json',
+            'delivery_mode' => 2, // 持久化
+        ]);
+        $ch->basic_publish($msg, $exchange, $routingKey);
+
+        $ch->close();
+        $conn->close();
+        return true;
+    } catch (\Throwable $e) {
+        \support\Log::error('publish_static 失败: ' . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * 渲染邮件 HTML（返回字符串而非 Response）
+ */
+function mail_view(mixed $template = null, array $vars = [], ?string $app = null, ?string $plugin = null): string
+{
+    return \app\service\TwigTemplateService::render((string)$template, $vars, $app, $plugin);
 }

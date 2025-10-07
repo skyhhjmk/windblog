@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+  <meta charset="utf-8">
+  <title>静态缓存</title>
+  <meta name="renderer" content="webkit">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <link rel="stylesheet" href="/app/admin/component/layui/css/layui.css?v=2.8.12"/>
+  <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css"/>
+  <link rel="stylesheet" href="/app/admin/admin/css/reset.css"/>
+  <style>
+    .container{padding:16px;max-width:900px}
+    .desc{color:#666;margin-bottom:12px}
+    .hint{color:#999;font-size:12px}
+  </style>
+</head>
+<body class="pear-container">
+<div class="layui-card">
+  <div class="layui-card-header">静态缓存</div>
+  <div class="layui-card-body">
+    <div class="layui-tab" lay-filter="tab-static">
+      <ul class="layui-tab-title">
+        <li class="layui-this">基础设置</li>
+        <li>URL 策略</li>
+      </ul>
+      <div class="layui-tab-content" style="padding:12px 0;">
+        <div class="layui-tab-item layui-show">
+          <p class="desc">用于 StaticGenerator 通过 HTTP 自调用渲染并静态化页面。</p>
+
+          <div class="layui-row" style="margin-bottom:12px;">
+      <div class="layui-col-xs12">
+        <div class="layui-card">
+          <div class="layui-card-header">生成进度</div>
+          <div class="layui-card-body">
+            <div id="progress-info" class="hint">暂无任务</div>
+            <div class="layui-progress" lay-showPercent="true" lay-filter="static-progress">
+              <div class="layui-progress-bar" lay-percent="0%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="layui-col-xs12" style="margin-top:12px;">
+        <div class="layui-card">
+          <div class="layui-card-header">历史任务</div>
+          <div class="layui-card-body">
+            <table class="layui-table">
+              <thead>
+                <tr>
+                  <th>任务ID</th>
+                  <th>范围</th>
+                  <th>总数</th>
+                  <th>状态</th>
+                  <th>耗时</th>
+                  <th>完成时间</th>
+                </tr>
+              </thead>
+              <tbody id="history-tbody">
+                <tr><td colspan="6" class="hint">暂无历史</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <form class="layui-form" lay-filter="form-static-cache">
+        <div class="layui-form-item">
+          <label class="layui-form-label">完整基址</label>
+          <div class="layui-input-block">
+            <input type="text" name="static_base_url" placeholder="示例：http://127.0.0.1:8787 或 https://yourdomain.com" autocomplete="off" class="layui-input">
+            <div class="hint">优先使用此项；留空时由 协议+主机+端口 组合生成。</div>
+          </div>
+        </div>
+        <div class="layui-form-item">
+          <label class="layui-form-label">协议</label>
+          <div class="layui-input-block">
+            <select name="site_scheme">
+              <option value="http">http</option>
+              <option value="https">https</option>
+            </select>
+          </div>
+        </div>
+        <div class="layui-form-item">
+          <label class="layui-form-label">主机名</label>
+          <div class="layui-input-block">
+            <input type="text" name="site_host" placeholder="示例：127.0.0.1 或 yourdomain.com" autocomplete="off" class="layui-input">
+          </div>
+        </div>
+        <div class="layui-form-item">
+          <label class="layui-form-label">端口</label>
+          <div class="layui-input-inline">
+            <input type="number" name="site_port" min="1" placeholder="如 8787 / 80 / 443" autocomplete="off" class="layui-input">
+          </div>
+          <div class="layui-form-mid layui-word-aux">https 可用 443，http 可用 80 或框架监听端口。</div>
+        </div>
+        <div class="layui-form-item">
+          <div class="layui-input-block">
+            <button class="layui-btn" lay-submit lay-filter="btn-save">保存</button>
+            <button type="button" class="layui-btn layui-btn-normal" id="btn-refresh-cache">手动刷新缓存</button>
+            <button type="button" class="layui-btn layui-btn-warm" id="btn-progress">查看进度</button>
+            <button type="button" class="layui-btn layui-btn-primary" id="btn-reload">刷新</button>
+          </div>
+        </div>
+      </form>
+        </div>
+
+        <div class="layui-tab-item">
+          <div class="layui-row" style="margin-bottom:12px;">
+            <div class="layui-col-xs12">
+              <div class="layui-card">
+                <div class="layui-card-header">URL 策略列表</div>
+                <div class="layui-card-body">
+                  <div class="layui-btn-group" style="margin-bottom:8px;">
+                    <button class="layui-btn layui-btn-sm" id="btn-add-url">添加</button>
+                    <button class="layui-btn layui-btn-sm layui-btn-warm" id="btn-scan-posts">扫描文章并添加</button>
+                    <button class="layui-btn layui-btn-sm layui-btn-normal" id="btn-save-strategies">保存策略</button>
+                    <button class="layui-btn layui-btn-sm layui-btn-primary" id="btn-reload-strategies">刷新</button>
+                  </div>
+                  <table class="layui-table">
+                    <thead>
+                      <tr>
+                        <th style="width:48px;">启用</th>
+                        <th style="width:72px;">内容替换</th>
+                        <th>URL</th>
+                        <th style="width:80px;">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody id="tbody-strategies">
+                      <tr><td colspan="4" class="hint">暂无数据</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div><!-- /tab 2 -->
+      </div><!-- /tab content -->
+    </div><!-- /layui-tab -->
+  </div>
+</div>
+
+<script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+<script src="/app/admin/component/pear/pear.js"></script>
+<script src="/app/admin/admin/js/permission.js"></script>
+<script>
+layui.use(['form','layer','element'], function(){
+  var form = layui.form, layer = layui.layer, $ = layui.$, element = layui.element;
+
+  function load(){
+    $.get('/app/admin/static-cache/get', function(res){
+      if(res && res.success){
+        form.val('form-static-cache', res.data || {});
+      } else {
+        layer.msg('加载失败', {icon:2});
+      }
+    });
+  }
+
+  form.on('submit(btn-save)', function(data){
+    $.post('/app/admin/static-cache/save', data.field, function(res){
+      if(res && res.success){
+        layer.msg('保存成功', {icon:1});
+      } else {
+        layer.msg((res && res.message) || '保存失败', {icon:2});
+      }
+    });
+    return false;
+  });
+
+  $('#btn-reload').on('click', load);
+
+  // 手动刷新缓存：默认全量，可在此扩展范围选择
+  var latestJobId = '';
+  $('#btn-refresh-cache').on('click', function(){
+    var idx = layer.msg('已触发刷新（异步生成中）', {icon:16, shade:0.1, time:800});
+    $.post('/app/admin/static-cache/refresh', {scope: 'all', pages: 1, prefer_strategies: true}, function(res){
+      if(res && res.success){
+        latestJobId = res.job_id || '';
+        layer.msg('刷新任务已投递' + (latestJobId ? ('，任务ID=' + latestJobId) : ''), {icon:1});
+      } else {
+        layer.msg((res && res.message) || '投递失败', {icon:2});
+      }
+    }).fail(function(){
+      layer.msg('请求失败', {icon:2});
+    });
+  });
+
+  function formatDuration(sec){
+    sec = Math.max(0, parseInt(sec||0));
+    var m = Math.floor(sec/60), s = sec%60;
+    return m + '分' + s + '秒';
+  }
+
+  function renderHistory(list){
+    var $tb = $('#history-tbody');
+    if(!list || !list.length){
+      $tb.html('<tr><td colspan="6" class="hint">暂无历史</td></tr>');
+      return;
+    }
+    var html = '';
+    list.forEach(function(it){
+      var dur = (typeof it.duration === 'number' && it.duration >= 0) ? formatDuration(it.duration) : '-';
+      var finished = it.finished_at ? new Date(it.finished_at * 1000).toLocaleString() : '-';
+      html += '<tr>'
+           + '<td>' + (it.job_id||'') + '</td>'
+           + '<td>' + (it.scope||'') + '</td>'
+           + '<td>' + (it.total||0) + '</td>'
+           + '<td>' + (it.status||'') + '</td>'
+           + '<td>' + dur + '</td>'
+           + '<td>' + finished + '</td>'
+           + '</tr>';
+    });
+    $tb.html(html);
+  }
+
+  function pollProgress(){
+    var url = '/app/admin/static-cache/progress';
+    if(latestJobId){ url += ('?job_id=' + encodeURIComponent(latestJobId)); }
+    $.get(url, function(res){
+      if(!res || !res.success){ return; }
+      var d = res.data;
+      var hist = res.history || [];
+      // 历史列表渲染
+      renderHistory(hist);
+
+      if(!d){
+        // 无当前任务，则尝试从历史显示最新一条作为“已完成”提示
+        if(hist && hist.length){
+          var h = hist[0];
+          var text = '最近任务 ' + (h.job_id||'') + ' | 范围=' + (h.scope||'') + ' | 进度=' + (h.total||0) + '/' + (h.total||0) + ' (100%)'
+                   + ' | 耗时=' + ((typeof h.duration === 'number' && h.duration >= 0) ? formatDuration(h.duration) : '-')
+                   + ' | 完成时间=' + (h.finished_at ? new Date(h.finished_at * 1000).toLocaleString() : '-');
+          $('#progress-info').text(text);
+          element.progress('static-progress', '100%');
+        } else {
+          $('#progress-info').text('暂无任务');
+          element.progress('static-progress', '0%');
+        }
+        return;
+      }
+      var pct = d.total ? Math.floor((d.current / d.total) * 100) : 0;
+      var nowSec = Math.floor(Date.now()/1000);
+      var elapsed = d.started_at ? (nowSec - d.started_at) : 0;
+      var text = '任务 ' + (res.job_id||d.job_id) + ' | 范围=' + d.scope + ' | 进度=' + d.current + '/' + d.total + ' ('+pct+'%)'
+               + ' | 用时=' + formatDuration(elapsed)
+               + (d.current_path ? (' | 当前: ' + d.current_path) : '');
+      if(d.status === 'finished' && d.finished_at){
+        var totalSec = d.finished_at - (d.started_at||d.finished_at);
+        text += ' | 已完成，用时=' + formatDuration(totalSec);
+      }
+      $('#progress-info').text(text);
+      element.progress('static-progress', pct + '%');
+    });
+  }
+
+  // 手动查看进度
+  $('#btn-progress').on('click', function(){
+    pollProgress();
+    layer.msg('已更新进度', {time:600});
+  });
+
+  // 定时轮询
+  setInterval(pollProgress, 5000);
+
+  // ========== URL策略 ==========
+  function renderStrategies(list){
+    var $tb = $('#tbody-strategies');
+    if(!list || !list.length){
+      $tb.html('<tr><td colspan="4" class="hint">暂无数据</td></tr>');
+      return;
+    }
+    var html = '';
+    list.forEach(function(it, idx){
+      var checked = it.enabled ? 'checked' : '';
+      var minify = it.minify ? 'checked' : '';
+      var url = it.url || '';
+      html += '<tr>'
+           + '<td><input type="checkbox" lay-skin="primary" class="row-enabled" data-idx="'+idx+'" '+checked+'></td>'
+           + '<td><input type="checkbox" lay-skin="primary" class="row-minify" data-idx="'+idx+'" '+minify+'></td>'
+           + '<td><input type="text" class="layui-input row-url" data-idx="'+idx+'" value="'+layui.util.escape(url)+'"></td>'
+           + '<td><button type="button" class="layui-btn layui-btn-danger layui-btn-xs btn-del" data-idx="'+idx+'">删除</button></td>'
+           + '</tr>';
+    });
+    $tb.html(html);
+    form.render('checkbox');
+  }
+
+  var strategies = [];
+  function loadStrategies(){
+    $.get('/app/admin/static-cache/strategies/get', function(res){
+      if(res && res.success){
+        strategies = res.data || [];
+        renderStrategies(strategies);
+      }
+    });
+  }
+  $('#btn-reload-strategies').on('click', loadStrategies);
+
+  $('#btn-add-url').on('click', function(){
+    strategies.push({url:'/', enabled:1, minify:1});
+    renderStrategies(strategies);
+  });
+
+  $(document).on('click', '.btn-del', function(){
+    var idx = parseInt($(this).data('idx'));
+    strategies.splice(idx, 1);
+    renderStrategies(strategies);
+  });
+
+  $(document).on('change', '.row-enabled', function(){
+    var idx = parseInt($(this).data('idx'));
+    strategies[idx].enabled = $(this).is(':checked') ? 1 : 0;
+  });
+  $(document).on('change', '.row-minify', function(){
+    var idx = parseInt($(this).data('idx'));
+    strategies[idx].minify = $(this).is(':checked') ? 1 : 0;
+  });
+  $(document).on('change', '.row-url', function(){
+    var idx = parseInt($(this).data('idx'));
+    strategies[idx].url = $(this).val();
+  });
+
+  $('#btn-save-strategies').on('click', function(){
+    $.post('/app/admin/static-cache/strategies/save', {list: JSON.stringify(strategies||[])}, function(res){
+      if(res && res.success){
+        layer.msg('已保存', {icon:1});
+        loadStrategies();
+      }else{
+        layer.msg((res&&res.message)||'保存失败', {icon:2});
+      }
+    });
+  });
+
+  $('#btn-scan-posts').on('click', function(){
+    var idx = layer.msg('扫描中...', {icon:16, shade:0.1, time:800});
+    $.post('/app/admin/static-cache/strategies/scan-posts', {}, function(res){
+      if(res && res.success){
+        layer.msg('已添加 '+(res.added||0)+' 条文章URL（共'+(res.total||0)+'）', {icon:1});
+        loadStrategies();
+      }else{
+        layer.msg((res&&res.message)||'失败', {icon:2});
+      }
+    }).fail(function(){
+      layer.msg('请求失败', {icon:2});
+    });
+  });
+
+  // 初始加载
+  load();
+  loadStrategies();
+});
+</script>
+</body>
+</html>
