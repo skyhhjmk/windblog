@@ -17,6 +17,7 @@ class MailWorker
     protected array $providers = [];
     protected string $failFile = '';
     protected string $strategy = 'weighted'; // weighted | rr
+    protected ?string $lastError = null;
     /** @var AMQPStreamConnection|null */
     protected ?AMQPStreamConnection $mqConnection = null;
     /** @var \PhpAmqpLib\Channel\AMQPChannel|null */
@@ -45,7 +46,7 @@ class MailWorker
     protected function getMqChannel(): \PhpAmqpLib\Channel\AMQPChannel
     {
         if ($this->mqChannel === null) {
-            $this->ensureMailDefaults();
+
             // 使用 MQService 通道
             $this->mqChannel = \app\service\MQService::getChannel();
 
@@ -70,6 +71,11 @@ class MailWorker
         $this->strategy = (string)blog_config('mail_strategy', 'weighted', true) ?: 'weighted';
 
         $channel = $this->getMqChannel();
+
+        // 每60秒进行一次 MQ 健康检查
+        \Workerman\Timer::add(60, function () {
+            try { \app\service\MQService::checkAndHeal(); } catch (\Throwable $e) { \support\Log::warning('MQ 健康检查异常: ' . $e->getMessage()); }
+        });
 
         $channel->basic_consume(
             $this->queueName,
@@ -114,7 +120,9 @@ class MailWorker
                     // 指定平台失败：仅在该平台重试一次（快速重试），随后交给队列重试
                     $ok2 = $this->sendViaProvider($data, $specified);
                     if (!$ok2) {
-                        throw new \RuntimeException('Specified provider send failed twice: ' . $specified);
+                        $msg = 'Specified provider send failed twice: ' . $specified;
+                        if ($this->lastError) { $msg .= ' | last=' . $this->lastError; }
+                        throw new \RuntimeException($msg);
                     }
                 }
             } else {
@@ -130,17 +138,22 @@ class MailWorker
                     if ($alt !== null) {
                         $ok2 = $this->sendViaProvider($data, $alt);
                         if (!$ok2) {
-                            throw new \RuntimeException('Failover provider also failed: ' . $alt);
+                            $msg = 'Failover provider also failed: ' . $alt;
+                            if ($this->lastError) { $msg .= ' | last=' . $this->lastError; }
+                            throw new \RuntimeException($msg);
                         }
                     } else {
-                        throw new \RuntimeException('No alternative provider for failover');
+                        $msg = 'No alternative provider for failover';
+                        if ($this->lastError) { $msg .= ' | last=' . $this->lastError; }
+                        throw new \RuntimeException($msg);
                     }
                 }
             }
 
             $message->ack();
         } catch (\Throwable $e) {
-            Log::error('Send mail failed: ' . $e->getMessage());
+            $extra = $this->lastError ? (' | last=' . $this->lastError) : '';
+            Log::error('Send mail failed: ' . $e->getMessage() . $extra);
             $this->handleFailedMessage($message);
         }
     }
@@ -300,6 +313,7 @@ class MailWorker
     protected function sendViaProvider(array $data, string $providerId): bool
     {
         $provider = $this->providers[$providerId] ?? null;
+        $this->lastError = null;
         if (!$provider || !$this->canUseProvider($providerId)) {
             return false;
         }
@@ -329,27 +343,27 @@ class MailWorker
                     $mailer->isMail();
                 } elseif ($type === 'sendmail') {
                     $mailer->isSendmail();
+                    $path = (string)($provider['sendmail_path'] ?? '');
+                    if ($path !== '') { $mailer->Sendmail = $path; }
                 } elseif ($type === 'qmail') {
                     $mailer->isQmail();
+                    $qpath = (string)($provider['qmail_path'] ?? '');
+                    if ($qpath !== '') { $mailer->Sendmail = $qpath; }
                 } else {
                     $mailer->isSMTP();
                 }
             }
 
-            // 公共配置
-            $fromAddress = (string)blog_config('mail_from_address', 'no-reply@example.com', true);
-            $fromName    = (string)blog_config('mail_from_name', 'WindBlog', true);
-            $replyTo     = (string)blog_config('mail_reply_to', '', true);
-            if (!empty($data['from_name'])) {
-                $fromName = (string)$data['from_name'];
-            }
-            if (!empty($data['reply_to'])) {
-                $replyTo = (string)$data['reply_to'];
-            }
+            // 使用卡片内的发件信息（严格不读 blog_config）
+            $fromAddress = (string)($provider['from_address'] ?? '');
+            $fromName    = (string)($provider['from_name'] ?? '');
+            $replyTo     = (string)($provider['reply_to'] ?? '');
             $mailer->CharSet = 'UTF-8';
-            $mailer->setFrom($fromAddress, $fromName);
+            if ($fromAddress !== '') {
+                $mailer->setFrom($fromAddress, $fromName !== '' ? $fromName : '');
+            }
             if ($replyTo !== '') {
-                $mailer->addReplyTo($replyTo, $fromName);
+                $mailer->addReplyTo($replyTo, $fromName !== '' ? $fromName : '');
             }
 
             // 收件人
@@ -422,9 +436,11 @@ class MailWorker
             // 成功：如果之前有降权或禁用，在恢复窗口到时自动恢复由后台任务/下次选择判断；此处不做立即恢复以降低抖动
             return true;
         } catch (MailException $e) {
+            $this->lastError = $e->getMessage();
             $this->recordFailure($providerId);
             return false;
         } catch (\Throwable $e) {
+            $this->lastError = $e->getMessage();
             $this->recordFailure($providerId);
             return false;
         }
@@ -486,6 +502,29 @@ class MailWorker
                 if ($id === '') continue;
                 $out[$id] = $item;
             }
+        }
+        // 当没有配置任何平台时，使用全局 mail_* 作为后备平台（只读）
+        if (!$out) {
+            $transport = strtolower((string)blog_config('mail_transport', 'smtp', true) ?: 'smtp');
+            $host = (string)blog_config('mail_host', '', true);
+            $port = (int)blog_config('mail_port', 587, true);
+            $username = (string)blog_config('mail_username', '', true);
+            $password = (string)blog_config('mail_password', '', true);
+            $encryption = (string)blog_config('mail_encryption', 'tls', true);
+            $out['legacy_smtp'] = [
+                'id' => 'legacy_smtp',
+                'name' => '默认邮件平台',
+                'type' => $transport ?: 'smtp',
+                'host' => $host,
+                'port' => $port,
+                'username' => $username,
+                'password' => $password,
+                'encryption' => $encryption,
+                'smtp_auth' => true,
+                'enabled' => true,
+                'weight' => 1,
+                'dsn' => ''
+            ];
         }
         return $out;
     }
@@ -576,20 +615,10 @@ class MailWorker
     /**
      * 初始化 mail_* 的默认配置（首次无记录时落库）
      */
-    protected function ensureMailDefaults(): void
+    public function getLastError(): ?string
     {
-        try {
-            blog_config('mail_transport', 'smtp', true);
-            blog_config('mail_host', '', true);
-            blog_config('mail_port', 587, true);
-            blog_config('mail_username', '', true);
-            blog_config('mail_password', '', true);
-            blog_config('mail_encryption', 'tls', true);
-            blog_config('mail_from_address', 'no-reply@example.com', true);
-            blog_config('mail_from_name', 'WindBlog', true);
-            blog_config('mail_reply_to', '', true);
-        } catch (\Throwable $e) {
-            Log::warning('ensureMailDefaults warn: ' . $e->getMessage());
-        }
+        return $this->lastError;
     }
+
+
 }

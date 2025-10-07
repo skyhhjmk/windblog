@@ -104,6 +104,13 @@ class ImportProcess
                 });
             }
 
+            // 每60秒进行一次 MQ 健康检查
+            if (class_exists(\Workerman\Timer::class)) {
+                \Workerman\Timer::add(60, function () {
+                    try { \app\service\MQService::checkAndHeal(); } catch (\Throwable $e) { \support\Log::warning('MQ 健康检查异常(ImportProcess): ' . $e->getMessage()); }
+                });
+            }
+
             \support\Log::info("ImportProcess 队列初始化成功");
         } catch (\Throwable $e) {
             \support\Log::error("ImportProcess 队列初始化失败: " . $e->getMessage());

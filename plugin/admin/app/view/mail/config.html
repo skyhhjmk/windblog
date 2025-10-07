@@ -47,23 +47,7 @@
       </div>
       <!-- 右侧：策略与可用类型面板 -->
       <div class="available-widgets" style="width:320px;">
-        <div class="available-widgets-header"><strong>平台选择策略</strong></div>
-        <div class="available-widgets-content">
-          <div class="item-content">
-            <div class="layui-form">
-              <div class="layui-form-item">
-                <label class="layui-form-label">策略</label>
-                <div class="layui-input-block">
-                  <select id="strategy" class="layui-select">
-                    <option value="weighted">加权随机</option>
-                    <option value="rr">加权轮询</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="available-widgets-header" style="margin-top:10px;"><strong>可用平台类型</strong></div>
+        <div class="available-widgets-header"><strong>可用平台类型</strong></div>
         <div class="available-widgets-content" id="available-types">
           <div class="available-widget-item available-type" data-type="smtp">SMTP/smtps</div>
           <div class="available-widget-item available-type" data-type="mail">mail()</div>
@@ -99,8 +83,6 @@ layui.use(['layer','form'], function(){
       if(res && res.code === 0) {
         var data = res.data || {};
         providers = data.providers || [];
-        strategy = data.strategy || 'weighted';
-        $('#strategy').val(strategy);
         render();
       } else {
         layer.msg((res && res.msg) || '加载失败', {icon:2});
@@ -119,13 +101,17 @@ layui.use(['layer','form'], function(){
     }
     $('#provider-list').html(html);
     initSortable();
+    applyTypeVisibility();
+    if (typeof form !== 'undefined' && form && typeof form.render === 'function') {
+      form.render();
+    }
   }
 
   function itemHtml(p) {
     var enabled = p.enabled !== false;
     var name = p.name || ('未命名('+ (p.type||'dsn') +')');
     var weight = p.weight || 1;
-    var html = '<div class="item" data-id="'+ p.id +'">';
+    var html = '<div class="item" data-id="'+ p.id +'" data-type="'+ (p.type||'smtp') +'">';
     html += '<div class="item-header"><span>'+ name +'</span><div class="tools">';
     html += '<span class="tool tool-test" title="测试"><i class="layui-icon layui-icon-release"></i></span>';
     html += '<span class="tool tool-edit" title="编辑"><i class="layui-icon layui-icon-edit"></i></span>';
@@ -138,10 +124,34 @@ layui.use(['layer','form'], function(){
     html += '<div class="layui-form-item"><label class="layui-form-label">启用</label><div class="layui-input-block"><input type="checkbox" class="ip-enabled" '+ (enabled?'checked':'') +'></div></div>';
     html += '<fieldset class="layui-elem-field"><legend>DSN</legend><div class="layui-field-box"><input type="text" class="layui-input ip-dsn" value="'+ (p.dsn||'') +'" placeholder="如：smtp://user:pass@smtp.example.com:587?encryption=tls"></div></fieldset>';
     html += '<div class="hint">若不使用 DSN，可留空，使用下方类型配置</div>';
-    html += '<div class="layui-form-item"><label class="layui-form-label">类型</label><div class="layui-input-inline"><select class="ip-type"><option value="smtp" '+((p.type||'smtp')==='smtp'?'selected':'')+'>smtp</option><option value="smtps" '+((p.type||'')==='smtps'?'selected':'')+'>smtps</option><option value="mail" '+((p.type||'')==='mail'?'selected':'')+'>mail</option><option value="sendmail" '+((p.type||'')==='sendmail'?'selected':'')+'>sendmail</option><option value="qmail" '+((p.type||'')==='qmail'?'selected':'')+'>qmail</option></select></div></div>';
+    html += '<div class="layui-form-item"><label class="layui-form-label">类型</label><div class="layui-form-mid">'+ ((p.type||'smtp')) +'</div></div>';
+    html += '<fieldset class="layui-elem-field"><legend>发件信息</legend><div class="layui-field-box">';
+    html += '<div class="layui-form-item"><label class="layui-form-label">From地址</label><div class="layui-input-block"><input type="text" class="layui-input ip-from-address" value="'+ (p.from_address||'') +'" placeholder="no-reply@example.com"></div></div>';
+    html += '<div class="layui-form-item"><label class="layui-form-label">From名称</label><div class="layui-input-block"><input type="text" class="layui-input ip-from-name" value="'+ (p.from_name||'') +'" placeholder="WindBlog"></div></div>';
+    html += '<div class="layui-form-item"><label class="layui-form-label">Reply-To</label><div class="layui-input-block"><input type="text" class="layui-input ip-reply-to" value="'+ (p.reply_to||'') +'" placeholder=""></div></div>';
+    html += '</div></fieldset>';
+    // SMTP/smtps 面板
+    html += '<div class="type-panel type-smtp">';
     html += '<div class="layui-form-item"><label class="layui-form-label">Host</label><div class="layui-input-inline"><input type="text" class="layui-input ip-host" value="'+ (p.host||'') +'"></div><label class="layui-form-label">Port</label><div class="layui-input-inline"><input type="number" class="layui-input ip-port" value="'+ (p.port||'') +'"></div></div>';
     html += '<div class="layui-form-item"><label class="layui-form-label">用户名</label><div class="layui-input-inline"><input type="text" class="layui-input ip-username" value="'+ (p.username||'') +'"></div><label class="layui-form-label">密码</label><div class="layui-input-inline"><input type="password" class="layui-input ip-password" value="'+ (p.password||'') +'"></div></div>';
-    html += '<div class="layui-form-item"><label class="layui-form-label">加密</label><div class="layui-input-inline"><select class="ip-encryption"><option value="">none</option><option value="tls" '+((p.encryption||'')==='tls'?'selected':'')+'>tls</option><option value="ssl" '+((p.encryption||'')==='ssl'?'selected':'')+'>ssl</option></select></div></div>';
+    html += '<div class="layui-form-item"><label class="layui-form-label">加密</label><div class="layui-input-inline"><select class="ip-encryption"><option value="">none</option><option value="tls" '+((p.encryption||'')==='tls'?'selected':'')+'>tls</option><option value="ssl" '+((p.encryption||'')==='ssl'?'selected':'')+'>ssl</option></select></div><div class="layui-form-mid">SMTPS 使用 ssl</div></div>';
+    html += '<div class="layui-form-item"><label class="layui-form-label">SMTP认证</label><div class="layui-input-block"><input type="checkbox" class="ip-smtp-auth" '+ ((p.smtp_auth!==false)?'checked':'') +'> <span class="hint">关闭认证用于无需登录的中继</span></div></div>';
+    html += '</div>';
+
+    // mail() 面板
+    html += '<div class="type-panel type-mail">';
+    html += '<div class="hint">使用 PHP mail() 发送，无需额外配置。</div>';
+    html += '</div>';
+
+    // sendmail 面板
+    html += '<div class="type-panel type-sendmail">';
+    html += '<div class="layui-form-item"><label class="layui-form-label">Sendmail路径</label><div class="layui-input-block"><input type="text" class="layui-input ip-sendmail-path" value="'+ (p.sendmail_path||'') +'" placeholder="/usr/sbin/sendmail -t -i"></div></div>';
+    html += '</div>';
+
+    // qmail 面板
+    html += '<div class="type-panel type-qmail">';
+    html += '<div class="layui-form-item"><label class="layui-form-label">Qmail路径</label><div class="layui-input-block"><input type="text" class="layui-input ip-qmail-path" value="'+ (p.qmail_path||'') +'" placeholder="/var/qmail/bin/qmail-inject"></div></div>';
+    html += '</div>';
     html += '</div>';
     html += '</div>';
     html += '</div>';
@@ -200,6 +210,12 @@ layui.use(['layer','form'], function(){
     // 输入变更同步
     $(document).off('change', '.item-content input,.item-content select').on('change', '.item-content input,.item-content select', function(){
       syncFromDom();
+      if ($(this).hasClass('ip-dsn')) {
+        applyTypeVisibility();
+        if (typeof form !== 'undefined' && form && typeof form.render === 'function') {
+          form.render();
+        }
+      }
     });
   }
 
@@ -226,6 +242,31 @@ layui.use(['layer','form'], function(){
     }
   }
 
+  // 根据类型与 DSN 动态显示字段面板
+  function applyTypeVisibility() {
+    $('#provider-list .item').each(function(){
+      var $card = $(this);
+      var $c = $card.find('.item-content');
+      var dsn = ($c.find('.ip-dsn').val()||'').trim();
+      var type = ($card.data('type')||'smtp').toLowerCase();
+      var hideAll = dsn !== '';
+      $c.find('.type-panel').toggle(!hideAll);
+      if (hideAll) return;
+      $c.find('.type-panel').hide();
+      if (type === 'smtp' || type === 'smtps') {
+        $c.find('.type-smtp').show();
+      } else if (type === 'mail') {
+        $c.find('.type-mail').show();
+      } else if (type === 'sendmail') {
+        $c.find('.type-sendmail').show();
+      } else if (type === 'qmail') {
+        $c.find('.type-qmail').show();
+      } else {
+        $c.find('.type-smtp').show();
+      }
+    });
+  }
+
   function syncFromDom() {
     var updated = [];
     $('#provider-list .item').each(function(){
@@ -237,34 +278,40 @@ layui.use(['layer','form'], function(){
         weight: parseInt($c.find('.ip-weight').val()||'1', 10) || 0,
         enabled: $c.find('.ip-enabled').is(':checked'),
         dsn: $c.find('.ip-dsn').val().trim(),
-        type: $c.find('.ip-type').val(),
+        type: ($(this).data('type')||'smtp'),
         host: $c.find('.ip-host').val().trim(),
         port: parseInt($c.find('.ip-port').val()||'0',10)||0,
         username: $c.find('.ip-username').val().trim(),
         password: $c.find('.ip-password').val(),
-        encryption: $c.find('.ip-encryption').val()
+        encryption: $c.find('.ip-encryption').val(),
+        smtp_auth: $c.find('.ip-smtp-auth').is(':checked'),
+        sendmail_path: $c.find('.ip-sendmail-path').val() || '',
+        qmail_path: $c.find('.ip-qmail-path').val() || '',
+        from_address: $c.find('.ip-from-address').val().trim(),
+        from_name: $c.find('.ip-from-name').val().trim(),
+        reply_to: $c.find('.ip-reply-to').val().trim()
       });
     });
     providers = updated;
   }
 
   function addProvider(type) {
-    var p = { id: uid(), name: '新平台', type: type||'smtp', weight: 1, enabled: true, dsn: '' };
+    var p = { id: uid(), name: '新平台', type: type||'smtp', weight: 1, enabled: true, dsn: '', smtp_auth: true, from_address: '', from_name: '', reply_to: '' };
     providers.push(p);
     render();
+    applyTypeVisibility();
   }
 
 
 
   $('#btn-save').on('click', function(){
     syncFromDom();
-    strategy = $('#strategy').val();
     var idx = layer.msg('保存中...', {icon:16, shade:0.1, time:0});
     $.ajax({
       url: '/app/admin/mail/providers-save',
       method: 'POST',
       contentType: 'application/json',
-      data: JSON.stringify({ strategy: strategy, providers: providers })
+      data: JSON.stringify(providers)
     }).done(function(res){
       layer.close(idx);
       if(res && res.code === 0) {

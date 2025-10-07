@@ -200,6 +200,10 @@ class HttpCallback
             $memoryPeak = memory_get_peak_usage(true) / 1024 / 1024;
             Log::debug("HTTP回调进程状态 - 内存使用: {$memoryUsage}MB, 峰值内存: {$memoryPeak}MB");
         });
+        // 每60秒进行一次 MQ 健康检查
+        Timer::add(60, function () {
+            try { \app\service\MQService::checkAndHeal(); } catch (\Throwable $e) { Log::warning('MQ 健康检查异常(HttpCallback): ' . $e->getMessage()); }
+        });
 
         // 立即开始处理消息，然后定时检查
         $this->processMessages();

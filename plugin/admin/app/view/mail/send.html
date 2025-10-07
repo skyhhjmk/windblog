@@ -25,16 +25,7 @@
           <input type="text" name="subject" required lay-verify="required" placeholder="邮件主题" autocomplete="off" class="layui-input">
         </div>
       </div>
-      <div class="layui-form-item">
-        <label class="layui-form-label">模板名</label>
-        <div class="layui-input-inline">
-          <input type="text" name="view" placeholder="如：emails/example（可留空）" autocomplete="off" class="layui-input">
-        </div>
-        <label class="layui-form-label">模板变量</label>
-        <div class="layui-input-inline" style="width: 380px;">
-          <textarea name="view_vars" placeholder='如：{"name":"Alice"}' class="layui-textarea" style="height:80px;"></textarea>
-        </div>
-      </div>
+
       <div class="layui-form-item">
         <label class="layui-form-label">纯文本</label>
         <div class="layui-input-block">
@@ -42,23 +33,7 @@
         </div>
       </div>
 
-      <fieldset class="layui-elem-field">
-        <legend>内联模板（备选）</legend>
-        <div class="layui-field-box">
-          <div class="layui-form-item">
-            <label class="layui-form-label">inline_template</label>
-            <div class="layui-input-block">
-              <textarea name="inline_template" placeholder="Twig 内联模板字符串（填写则优先生效）" class="layui-textarea" style="height:120px;"></textarea>
-            </div>
-          </div>
-          <div class="layui-form-item">
-            <label class="layui-form-label">inline_vars</label>
-            <div class="layui-input-block">
-              <textarea name="inline_vars" placeholder='如：{"name":"Alice"}' class="layui-textarea" style="height:100px;"></textarea>
-            </div>
-          </div>
-        </div>
-      </fieldset>
+
 
       <div class="layui-form-item">
         <div class="layui-input-block">
@@ -85,18 +60,9 @@ layui.use(['form','layer'], function(){
     var toRaw = (data.to||'').trim();
     try { body.to = JSON.parse(toRaw); } catch(e) { body.to = toRaw; }
     body.subject = (data.subject||'').trim();
-    if(data.view){ body.view = (data.view||'').trim(); }
-    if(data.view_vars){
-      try { body.view_vars = JSON.parse(data.view_vars); } catch(e){ layer.msg('模板变量JSON格式错误', {icon:2}); return false; }
-    }
+
     if(data.text){ body.text = data.text; }
-    // 内联模板优先
-    if(data.inline_template){
-      body.inline_template = data.inline_template;
-      if(data.inline_vars){
-        try { body.inline_vars = JSON.parse(data.inline_vars); } catch(e){ layer.msg('inline_vars JSON格式错误', {icon:2}); return false; }
-      }
-    }
+
 
     var idx = layer.msg('发送中...', {icon:16, shade:0.1, time:0});
     $.ajax({
@@ -116,7 +82,7 @@ layui.use(['form','layer'], function(){
   });
 
   $('#btn-reset').on('click', function(){
-    form.val('form-send', {to:'', subject:'', view:'', view_vars:'', text:'', inline_template:'', inline_vars:''});
+    form.val('form-send', {to:'', subject:'', text:''});
     document.getElementById('sendResult').textContent = '';
   });
 });
