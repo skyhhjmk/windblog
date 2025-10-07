@@ -169,6 +169,12 @@ return [
                         'key' => 'plugin\\admin\\app\\controller\\MailController@pageSend',
                         'href' => '/app/admin/mail/send',
                         'type' => 1,
+                    ],
+                    [
+                        'title' => '发信配置',
+                        'key' => 'plugin\\admin\\app\\controller\\MailController@configPage',
+                        'href' => '/app/admin/mail/config-page',
+                        'type' => 1,
                     ]
                 ],
                 'weight' => 470

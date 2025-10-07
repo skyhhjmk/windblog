@@ -175,10 +175,23 @@ Route::group('/app/admin', function () {
 
         // 其他功能
         Route::get('/preview', [MailController::class, 'pagePreview']);
+        // 多平台配置页（新）
+        Route::get('/config-page', function() {
+            $path = base_path() . DIRECTORY_SEPARATOR . 'plugin' . DIRECTORY_SEPARATOR . 'admin' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'view' . DIRECTORY_SEPARATOR . 'mail' . DIRECTORY_SEPARATOR . 'config.html';
+            if (is_file($path)) {
+                return new \support\Response(200, ['Content-Type' => 'text/html; charset=utf-8'], (string)file_get_contents($path));
+            }
+            return new \support\Response(404, ['Content-Type' => 'text/plain; charset=utf-8'], 'mail config template not found');
+        });
         Route::get('/send', [MailController::class, 'pageSend']);
         Route::get('/preview-render', [MailController::class, 'previewRender']);
         Route::get('/queue-stats', [MailController::class, 'queueStats']);
         Route::post('/enqueue-test', [MailController::class, 'enqueueTest']);
+
+        // 多平台配置 API
+        Route::get('/providers', [MailController::class, 'providersGet']);
+        Route::post('/providers-save', [MailController::class, 'providersSave']);
+        Route::post('/provider-test', [MailController::class, 'providerTest']);
     });
 });
 

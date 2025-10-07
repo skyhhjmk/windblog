@@ -384,3 +384,73 @@ function mail_view(mixed $template = null, array $vars = [], ?string $app = null
 {
     return \app\service\TwigTemplateService::render((string)$template, $vars, $app, $plugin);
 }
+
+/**
+ * 统一发信入口：将邮件任务入队到 RabbitMQ，由 MailWorker 异步发送
+ *
+ * 用法示例：
+ *  - sendmail('user@example.com', '欢迎', '<b>Hello</b>');
+ *  - sendmail(['a@x.com', 'b@y.com'], '通知', ['text' => '纯文本'], ['cc' => ['c@z.com']]);
+ *  - sendmail('user@example.com', '模板渲染', ['view' => 'emails/welcome', 'view_vars' => ['name' => '张三']]);
+ *
+ * @param string|array $to 收件人：字符串或数组（支持 ['email'=>'','name'=>'']）
+ * @param string $subject 主题
+ * @param string|array|null $contentOrOptions 第三参为字符串时视为 html；为数组时与 $options 合并
+ * @param array $options 其他选项（headers, attachments, cc, bcc, text, view, view_vars, inline_template, inline_vars, priority）
+ * @return bool 入队是否成功
+ */
+function sendmail(string|array $to, string $subject, string|array|null $contentOrOptions = null, array $options = []): bool
+{
+    $payload = [
+        'to' => $to,
+        'subject' => $subject,
+    ];
+
+    // 兼容第三参数：字符串 => 作为 HTML；数组 => 与 options 合并
+    if (is_string($contentOrOptions) && $contentOrOptions !== '') {
+        $payload['html'] = $contentOrOptions;
+    } elseif (is_array($contentOrOptions)) {
+        $options = array_merge($contentOrOptions, $options);
+    }
+
+    // 允许的可选键
+    $allowedKeys = [
+        'html', 'text',
+        'headers', 'attachments',
+        'cc', 'bcc',
+        'view', 'view_vars',
+        'inline_template', 'inline_vars',
+        'from_name', 'reply_to',
+        'priority',
+    ];
+    foreach ($allowedKeys as $k) {
+        if (array_key_exists($k, $options)) {
+            $payload[$k] = $options[$k];
+        }
+    }
+
+    // 默认优先级：normal（5）
+    if (!array_key_exists('priority', $payload)) {
+        $payload['priority'] = 'normal';
+    }
+
+    // 委托入队，由 MailWorker 异步发送
+    return \app\service\MailService::enqueue($payload);
+}
+
+/**
+ * 快捷函数：发送HTML邮件
+ */
+function sendhtml(string|array $to, string $subject, string $html, array $options = []): bool
+{
+    return sendmail($to, $subject, $html, $options);
+}
+
+/**
+ * 快捷函数：发送纯文本邮件
+ */
+function sendtext(string|array $to, string $subject, string $text, array $options = []): bool
+{
+    $opts = array_merge($options, ['text' => $text, 'html' => '']);
+    return sendmail($to, $subject, null, $opts);
+}

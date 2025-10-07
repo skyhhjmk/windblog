@@ -21,6 +21,116 @@ use support\Response;
 class MailController
 {
     /**
+     * 多平台配置读取
+     * GET /app/admin/mail/providers
+     */
+    public function providersGet(Request $request): Response
+    {
+        $raw = blog_config('mail_providers', '[]', false, true, false);
+        if (is_string($raw)) {
+            $list = json_decode($raw, true);
+        } else {
+            $list = $raw;
+        }
+        $strategy = (string)blog_config('mail_strategy', 'weighted', false, true, false) ?: 'weighted';
+        return json(['code' => 0, 'data' => [
+            'providers' => is_array($list) ? $list : [],
+            'strategy' => in_array($strategy, ['weighted','rr'], true) ? $strategy : 'weighted'
+        ]]);
+    }
+
+    /**
+     * 多平台配置保存
+     * POST /app/admin/mail/providers-save
+     * body: [{id,name,dsn|type,host,port,username,password,encryption,weight,enabled}, ...]
+     */
+    public function providersSave(Request $request): Response
+    {
+        try {
+            $payload = $request->post();
+            if (!is_array($payload)) {
+                $json = (string)$request->rawBody();
+                $payload = json_decode($json, true);
+            }
+            if (!is_array($payload)) {
+                return json(['code' => 1, 'msg' => 'invalid payload']);
+            }
+
+            // 支持两种格式：
+            // 1) 旧格式：直接是 providers 数组
+            // 2) 新格式：{ strategy: 'weighted'|'rr', providers: [...] }
+            $strategy = 'weighted';
+            $list = [];
+            if (isset($payload['providers']) && is_array($payload['providers'])) {
+                $list = $payload['providers'];
+                $st = (string)($payload['strategy'] ?? 'weighted');
+                $strategy = in_array($st, ['weighted','rr'], true) ? $st : 'weighted';
+            } else {
+                // 旧格式
+                $list = $payload;
+            }
+
+            // 规范化与校验
+            $out = [];
+            foreach ($list as $item) {
+                if (!is_array($item)) continue;
+                $id = trim((string)($item['id'] ?? ''));
+                $name = trim((string)($item['name'] ?? ''));
+                if ($id === '' || $name === '') continue;
+                $weight = max(0, (int)($item['weight'] ?? 1));
+                $enabled = (bool)($item['enabled'] ?? true);
+                $norm = $item;
+                $norm['id'] = $id;
+                $norm['name'] = $name;
+                $norm['weight'] = $weight;
+                $norm['enabled'] = $enabled;
+                $out[] = $norm;
+            }
+
+            blog_config('mail_providers', json_encode($out, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), false, true, true);
+            blog_config('mail_strategy', $strategy, false, true, true);
+
+            return json(['code' => 0, 'msg' => '保存成功']);
+        } catch (\Throwable $e) {
+            return json(['code' => 1, 'msg' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * 分平台测试发信（不入队，直接发送）
+     * POST /app/admin/mail/provider-test
+     * body: { provider: 'id', to:'x@y', subject:'...', text:'...'|view/inline_template... }
+     */
+    public function providerTest(Request $request): Response
+    {
+        try {
+            $data = (array)$request->post();
+            $provider = (string)($data['provider'] ?? '');
+            if ($provider === '') {
+                return json(['code' => 1, 'msg' => 'provider is required']);
+            }
+            // 渲染 html（与 enqueue 逻辑一致）
+            if (empty($data['html'])) {
+                if (!empty($data['view'])) {
+                    $vars = (array)($data['view_vars'] ?? []);
+                    $data['html'] = MailService::renderView((string)$data['view'], $vars);
+                } elseif (!empty($data['inline_template'])) {
+                    $vars = (array)($data['inline_vars'] ?? []);
+                    $data['html'] = MailService::renderInline((string)$data['inline_template'], $vars);
+                }
+            }
+            // 直接调用 MailWorker 的发送方法（构造一次实例）
+            $worker = new \app\process\MailWorker();
+            $ref = new \ReflectionClass($worker);
+            $method = $ref->getMethod('sendViaProvider');
+            $method->setAccessible(true);
+            $ok = (bool)$method->invoke($worker, $data, $provider);
+            return json(['code' => $ok ? 0 : 1, 'msg' => $ok ? 'ok' : 'failed']);
+        } catch (\Throwable $e) {
+            return json(['code' => 1, 'msg' => $e->getMessage()]);
+        }
+    }
+    /**
      * 获取/保存配置所用的键名清单
      */
     protected function mailConfigKeys(): array
