@@ -174,7 +174,9 @@ Route::group('/app/admin', function () {
         Route::post('/config-test', [MailController::class, 'configTest']);
 
         // 其他功能
-        Route::get('/preview', [MailController::class, 'templatesPreview']);
+        Route::get('/preview', [MailController::class, 'pagePreview']);
+        Route::get('/send', [MailController::class, 'pageSend']);
+        Route::get('/preview-render', [MailController::class, 'previewRender']);
         Route::get('/queue-stats', [MailController::class, 'queueStats']);
         Route::post('/enqueue-test', [MailController::class, 'enqueueTest']);
     });

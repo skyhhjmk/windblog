@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>邮件模板预览</title>
+  <link rel="stylesheet" href="/app/admin/component/layui/css/layui.css?v=2.8.12"/>
+  <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css"/>
+  <link rel="stylesheet" href="/app/admin/admin/css/reset.css"/>
+</head>
+<body class="pear-container">
+<div class="layui-card">
+  <div class="layui-card-header">邮件模板预览</div>
+  <div class="layui-card-body">
+    <form class="layui-form" lay-filter="form-preview">
+      <div class="layui-form-item">
+        <label class="layui-form-label">模板名</label>
+        <div class="layui-input-inline">
+          <input type="text" name="view" required lay-verify="required" placeholder="如：emails/example" autocomplete="off" class="layui-input">
+        </div>
+      </div>
+      <div class="layui-form-item">
+        <label class="layui-form-label">变量(JSON)</label>
+        <div class="layui-input-block">
+          <textarea name="vars" placeholder='如：{"username":"Alice"}' class="layui-textarea" style="height:120px;"></textarea>
+        </div>
+      </div>
+      <div class="layui-form-item">
+        <div class="layui-input-block">
+          <button class="layui-btn" lay-submit lay-filter="btn-preview">预览</button>
+          <button type="button" class="layui-btn layui-btn-primary" id="btn-reset">重置</button>
+        </div>
+      </div>
+    </form>
+    <iframe id="previewFrame" style="width:100%;min-height:520px;border:1px solid #eee;"></iframe>
+  </div>
+</div>
+
+<script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+<script src="/app/admin/component/pear/pear.js"></script>
+<script src="/app/admin/admin/js/permission.js"></script>
+<script>
+layui.use(['form','layer'], function(){
+  var form = layui.form, layer = layui.layer, $ = layui.$;
+
+  form.on('submit(btn-preview)', function(obj){
+    var data = obj.field || {};
+    var view = (data.view || '').trim();
+    if(!view){ return false; }
+    var vars = {};
+    if(data.vars){
+      try { vars = JSON.parse(data.vars); } catch(e){ layer.msg('变量JSON格式错误', {icon:2}); return false; }
+    }
+    var q = new URLSearchParams();
+    q.set('view', view);
+    Object.keys(vars).forEach(function(k){
+      q.set('vars['+k+']', vars[k]);
+    });
+    var url = '/app/admin/mail/preview-render?' + q.toString();
+    document.getElementById('previewFrame').src = url;
+    return false;
+  });
+
+  $('#btn-reset').on('click', function(){
+    form.val('form-preview', {view:'', vars:''});
+    document.getElementById('previewFrame').src = 'about:blank';
+  });
+});
+</script>
+</body>
+</html>

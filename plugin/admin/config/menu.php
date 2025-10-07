@@ -148,12 +148,31 @@ return [
             ],
             [
                 'title' => '邮件',
-                'key' => 'plugin\\admin\\app\\controller\\MailController',
-                'href' => '/app/admin/mail/index',
-                'type' => 1,
+                'key' => 'mail',
+                'href' => '',
+                'type' => 0,
+                'children' => [
+                    [
+                        'title' => '设置',
+                        'key' => 'plugin\\admin\\app\\controller\\MailController@index',
+                        'href' => '/app/admin/mail/index',
+                        'type' => 1,
+                    ],
+                    [
+                        'title' => '模板预览',
+                        'key' => 'plugin\\admin\\app\\controller\\MailController@pagePreview',
+                        'href' => '/app/admin/mail/preview',
+                        'type' => 1,
+                    ],
+                    [
+                        'title' => '发信测试',
+                        'key' => 'plugin\\admin\\app\\controller\\MailController@pageSend',
+                        'href' => '/app/admin/mail/send',
+                        'type' => 1,
+                    ]
+                ],
                 'weight' => 470
-            ],
-
+            ]
         ]
     ],
     [
