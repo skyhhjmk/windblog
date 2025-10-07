@@ -316,7 +316,8 @@ class LinkMonitor
             $retry = 0;
             $headers = $message->has('application_headers') ? $message->get('application_headers') : null;
             if ($headers instanceof \PhpAmqpLib\Wire\AMQPTable) {
-                $retry = $headers->get('x-retry-count', 0);
+                $native = method_exists($headers, 'getNativeData') ? $headers->getNativeData() : (array)$headers;
+                $retry = (int)($native['x-retry-count'] ?? 0);
             }
 
             if ($this->shouldSendToDeadLetter($url)) {

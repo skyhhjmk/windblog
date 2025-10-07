@@ -529,7 +529,8 @@ class HttpCallback
             $headers = $message->has('application_headers') ? $message->get('application_headers') : null;
             
             if ($headers instanceof \PhpAmqpLib\Wire\AMQPTable) {
-                $retryCount = $headers->get('x-retry-count', 0);
+                $native = method_exists($headers, 'getNativeData') ? $headers->getNativeData() : (array)$headers;
+                $retryCount = (int)($native['x-retry-count'] ?? 0);
             }
             
             // 检查是否应该直接进入死信队列（URL级别统计）

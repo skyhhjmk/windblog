@@ -88,7 +88,14 @@ class MailWorker
     protected function handleMessage(AMQPMessage $message): void
     {
         try {
-            $data = json_decode($message->getBody(), true) ?: [];
+            $raw = $message->getBody();
+            if ($raw === '' || $raw === null) {
+                throw new \RuntimeException('Message body empty');
+            }
+            $data = json_decode($raw, true);
+            if (!is_array($data)) {
+                throw new \RuntimeException('Message body invalid JSON');
+            }
             $this->sendMail($data);
             $message->ack();
         } catch (\Throwable $e) {
@@ -102,7 +109,8 @@ class MailWorker
         $headers = $message->has('application_headers') ? $message->get('application_headers') : null;
         $retry = 0;
         if ($headers instanceof AMQPTable) {
-            $retry = (int)($headers->get('x-retry-count') ?? 0);
+            $native = method_exists($headers, 'getNativeData') ? $headers->getNativeData() : (array)$headers;
+            $retry = (int)($native['x-retry-count'] ?? 0);
         }
 
         if ($retry < 2) { // 第1、2次失败重试；第3次进入死信

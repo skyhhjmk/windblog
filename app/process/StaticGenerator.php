@@ -131,7 +131,8 @@ class StaticGenerator
         $headers = $message->has('application_headers') ? $message->get('application_headers') : null;
         $retry = 0;
         if ($headers instanceof \PhpAmqpLib\Wire\AMQPTable) {
-            $retry = (int)$headers->get('x-retry-count', 0);
+            $native = method_exists($headers, 'getNativeData') ? $headers->getNativeData() : (array)$headers;
+            $retry = (int)($native['x-retry-count'] ?? 0);
         }
         if ($retry < 2) { // 第1、2次失败重试；第3次进入死信
             $newHeaders = $headers ? clone $headers : new \PhpAmqpLib\Wire\AMQPTable();
