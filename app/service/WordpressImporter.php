@@ -705,7 +705,7 @@ class WordpressImporter
                 $category = new \app\model\Category();
                 $category->name = $categoryName;
                 $category->slug = $slug;
-                $category->parent_id = 0; // 默认作为顶级分类
+                $category->parent_id = null; // 顶级分类用NULL表示
                 $category->sort_order = 0; // 默认排序
                 $category->created_at = date('Y-m-d H:i:s');
                 $category->updated_at = date('Y-m-d H:i:s');
