@@ -14,7 +14,7 @@
     <div class="text-center mb-8 sm:mb-12 animate-fade-in-down">
         <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-800 mb-3 sm:mb-4">
             <i class="fas fa-tags text-blue-600 mr-3"></i>
-            标签：{{ tag_slug }}
+            标签：{{ tag_name|default(tag_slug) }}
         </h1>
         <div class="mt-2">
             <div class="inline-flex items-center bg-blue-50 border border-blue-100 text-blue-700 rounded-xl px-3 py-1">
@@ -49,7 +49,23 @@
                             {% endif %}
                         </div>
                         <p class="text-gray-600 mb-3 sm:mb-4 leading-relaxed">{{ post.excerpt }}...</p>
-                        <div class="flex justify-between items-center">
+                        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                            <div class="flex flex-wrap gap-2">
+                                {% if post.categories is defined and post.categories|length > 0 %}
+                                    {% for c in post.categories %}
+                                        <a href="/category/{{ c.slug }}.html" class="px-2 py-1 text-xs rounded-full bg-blue-50 text-blue-700 border border-blue-100 hover:bg-blue-100 transition-colors">
+                                            <i class="fas fa-folder-open mr-1"></i>{{ c.name }}
+                                        </a>
+                                    {% endfor %}
+                                {% endif %}
+                                {% if post.tags is defined and post.tags|length > 0 %}
+                                    {% for t in post.tags %}
+                                        <a href="/tag/{{ t.slug }}.html" class="px-2 py-1 text-xs rounded-full bg-purple-50 text-purple-700 border border-purple-100 hover:bg-purple-100 transition-colors">
+                                            <i class="fas fa-hashtag mr-1"></i>{{ t.name }}
+                                        </a>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
                             <a href="/post/{{ post.slug }}.html" class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium transition-colors duration-200 tap-highlight">
                                 阅读更多
                                 <svg class="w-4 h-4 ml-1 transition-transform duration-200 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">

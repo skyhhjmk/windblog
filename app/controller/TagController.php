@@ -49,6 +49,10 @@ class TagController
         // 选择模板
         $viewName = $isPjax ? 'tag/index.content' : 'tag/index';
 
+        // 获取标签名称用于标题展示
+        $tagModel = Tag::query()->where('slug', $slug)->first(['name', 'slug']);
+        $tag_name = $tagModel ? (string)$tagModel->name : $slug;
+
         // 统一分页渲染
         $pagination_html = PaginationService::generatePagination(
             $page,
@@ -60,8 +64,9 @@ class TagController
         );
 
         return view($viewName, [
-            'page_title' => "标签: {$slug} - {$blog_title}",
+            'page_title' => "标签: {$tag_name} - {$blog_title}",
             'tag_slug' => $slug,
+            'tag_name' => $tag_name,
             'posts' => $result['posts'],
             'pagination' => $pagination_html,
             'totalCount' => $result['totalCount'] ?? 0,

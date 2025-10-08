@@ -22,7 +22,7 @@
     {% if categories|length > 0 %}
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {% for c in categories %}
-                <a href="/c/{{ c.slug }}.html" class="block bg-white rounded-2xl shadow hover:shadow-xl transition p-5 group">
+                <a href="/category/{{ c.slug }}.html" class="block bg-white rounded-2xl shadow hover:shadow-xl transition p-5 group">
                     <div class="flex items-center justify-between">
                         <div class="text-lg font-semibold text-gray-800 group-hover:text-blue-600">{{ c.name }}</div>
                         <div class="text-sm text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">

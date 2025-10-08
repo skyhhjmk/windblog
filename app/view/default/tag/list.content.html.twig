@@ -22,7 +22,7 @@
     {% if tags|length > 0 %}
         <div class="flex flex-wrap gap-3">
             {% for t in tags %}
-                <a href="/t/{{ t.slug }}.html" class="inline-flex items-center bg-white rounded-full shadow px-4 py-2 hover:shadow-lg transition group">
+                <a href="/tag/{{ t.slug }}.html" class="inline-flex items中心 bg-white rounded-full shadow px-4 py-2 hover:shadow-lg transition group">
                     <span class="text-gray-800 group-hover:text-blue-600 font-medium">{{ t.name }}</span>
                     <span class="ml-2 text-xs text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">{{ t.count }}</span>
                 </a>

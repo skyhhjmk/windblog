@@ -32,12 +32,25 @@
                 </span>
                 {% endif %}
             </div>
+            <div class="mt-3 text-sm text-gray-600 space-x-2 flex flex-wrap px-6">
+                {% if post.categories|length > 0 %}
+                    <span class="text-gray-500">分类：</span>
+                    {% for c in post.categories %}
+                        <a href="/category/{{ c.slug }}.html" class="inline-flex items-center px-2 py-1 bg-blue-50 text-blue-700 rounded hover:bg-blue-100 mr-2">#{{ c.name }}</a>
+                    {% endfor %}
+                {% endif %}
+                {% if post.tags|length > 0 %}
+                    <span class="text-gray-500 ml-3">标签：</span>
+                    {% for t in post.tags %}
+                        <a href="/tag/{{ t.slug }}.html" class="inline-flex items-center px-2 py-1 bg-purple-50 text-purple-700 rounded hover:bg-purple-100 mr-2">#{{ t.name }}</a>
+                    {% endfor %}
+                {% endif %}
+            </div>
         </div>
 
         <!-- 文章内容 -->
         <div class="p-6">
-            <div class="prose max-w-none" id="post-container">
-            </div>
+            <div class="prose max-w-none" id="post-container">加载中...</div>
         </div>
 
         <!-- 文章底部 -->

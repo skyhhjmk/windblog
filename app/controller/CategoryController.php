@@ -49,6 +49,10 @@ class CategoryController
         // 选择模板
         $viewName = $isPjax ? 'category/index.content' : 'category/index';
 
+        // 获取分类名称用于标题展示
+        $categoryModel = Category::query()->where('slug', $slug)->first(['name', 'slug']);
+        $category_name = $categoryModel ? (string)$categoryModel->name : $slug;
+
         // 使用项目统一的分页渲染，保证路由正确
         $pagination_html = PaginationService::generatePagination(
             $page,
@@ -60,8 +64,9 @@ class CategoryController
         );
 
         return view($viewName, [
-            'page_title' => "分类: {$slug} - {$blog_title}",
+            'page_title' => "分类: {$category_name} - {$blog_title}",
             'category_slug' => $slug,
+            'category_name' => $category_name,
             'posts' => $result['posts'],
             'pagination' => $pagination_html,
             'totalCount' => $result['totalCount'] ?? 0,

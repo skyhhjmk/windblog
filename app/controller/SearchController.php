@@ -152,7 +152,7 @@ class SearchController
                             'type' => 'tag',
                             'id' => (int)$t->id,
                             'title' => (string)$t->name,
-                            'url' => '/t/' . (string)$t->slug,
+                            'url' => '/tag/' . (string)$t->slug . '.html',
                         ];
                     }
                 } catch (\Throwable $e) {}
@@ -167,7 +167,7 @@ class SearchController
                             'type' => 'category',
                             'id' => (int)$c->id,
                             'title' => (string)$c->name,
-                            'url' => '/c/' . (string)$c->slug,
+                            'url' => '/category/' . (string)$c->slug . '.html',
                         ];
                     }
                 } catch (\Throwable $e) {}

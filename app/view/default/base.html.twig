@@ -809,7 +809,7 @@
                     if (cats.length > 0) {
                         catsHtml = cats.map(function(c){
                             if (!c || !c.slug) return '';
-                            return '<a href="/c/' + (c.slug || '') + '" class="badge-cat"><i class="fas fa-folder-open mr-1"></i>' + (c.name || '') + '</a>';
+                            return '<a href="/category/' + (c.slug || '') + '.html" class="badge-cat"><i class="fas fa-folder-open mr-1"></i>' + (c.name || '') + '</a>';
                         }).join('');
                     } else {
                         catsHtml = '<span class="px-2 py-0.5 text-[11px] rounded-full bg-gray-50 text-gray-500 border border-gray-100"><i class="fas fa-folder-open mr-1"></i>无分类</span>';
@@ -818,7 +818,7 @@
                     if (tags.length > 0) {
                         tagsHtml = tags.map(function(tg){
                             if (!tg || !tg.slug) return '';
-                            return '<a href="/t/' + (tg.slug || '') + '" class="badge-tag"><i class="fas fa-hashtag mr-1"></i>' + (tg.name || '') + '</a>';
+                            return '<a href="/tag/' + (tg.slug || '') + '.html" class="badge-tag"><i class="fas fa-hashtag mr-1"></i>' + (tg.name || '') + '</a>';
                         }).join('');
                     } else {
                         tagsHtml = '<span class="px-2 py-0.5 text-[11px] rounded-full bg-gray-50 text-gray-500 border border-gray-100"><i class="fas fa-hashtag mr-1"></i>无标签</span>';

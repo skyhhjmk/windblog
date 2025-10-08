@@ -61,8 +61,8 @@ class PostController
         // 获取侧边栏内容（PJAX 与非 PJAX 均获取）
         $sidebar = \app\service\SidebarService::getSidebarContent($request, 'post');
         
-        // 加载作者信息
-        $post->load(['authors', 'primaryAuthor']);
+        // 加载作者信息与分类、标签
+        $post->load(['authors', 'primaryAuthor', 'categories', 'tags']);
         $primaryAuthor = $post->primaryAuthor->first();
         $authorName = $primaryAuthor ? $primaryAuthor->nickname : ($post->authors->first() ? $post->authors->first()->nickname : '未知作者');
         
