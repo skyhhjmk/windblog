@@ -123,7 +123,8 @@ class WidgetService
                 return ['enabled' => false];
             }
 
-            $widget = array_merge($widget, $config);
+            $widget = array_merge($config, $widget);
+            $widget['params'] = array_merge($config['params'] ?? [], $widget['params'] ?? []);
             
             // 优先使用自定义渲染器
             if (isset(self::$widgetRenderers[$widgetType]) && is_callable(self::$widgetRenderers[$widgetType])) {
@@ -158,10 +159,21 @@ class WidgetService
      */
     public static function getWidgetConfig(string $widgetType, string $pageType = 'default'): array
     {
+        // 按类型设置默认参数，避免全局默认影响其它小工具
+        $defaultParamsMap = [
+            'tags' => ['count' => 50, 'visible' => 30],
+            'categories' => ['count' => 5],
+            'recent_posts' => ['count' => 5],
+            'popular_posts' => ['count' => 5],
+            'random_posts' => ['count' => 5],
+            'archive' => ['count' => 5],
+            'about' => [],
+            'html' => []
+        ];
         $defaultConfig = [
             'enabled' => true,
             'title' => self::$defaultTitles[$widgetType] ?? ucfirst($widgetType),
-            'params' => ['count' => 5]
+            'params' => $defaultParamsMap[$widgetType] ?? ['count' => 5]
         ];
 
         try {
@@ -279,7 +291,7 @@ class WidgetService
             self::registerWidget($type, $info[0], $info[1], $info[2], $info[3]);
         }
         
-        Log::info('[WidgetService] 默认小工具注册完成');
+        Log::debug('[WidgetService] 默认小工具注册完成');
     }
     
     /**
@@ -385,7 +397,7 @@ class WidgetService
     protected static function renderTags(array $widget): array
     {
         return self::getDataWrapper(function() use ($widget) {
-            $count = $widget['params']['count'] ?? 5;
+            $count = $widget['params']['count'] ?? 50;
             $query = Tag::withCount(['posts' => function($q) {
                 $q->where('status', 'published');
             }])->orderBy('posts_count', 'desc');
@@ -523,9 +535,9 @@ class WidgetService
         
         $html = '<div class="space-y-2">';
         foreach ($categories as $category) {
-            $html .= '<a href="' . URLHelper::generateCategoryUrl($category['slug']) . '" class="flex justify-between items-center text-gray-700 hover:text-blue-600 transition-colors">';
+            $html .= '<a href="' . URLHelper::generateCategoryUrl($category['slug']) . '" class="flex justify-between items-center text-gray-800 hover:text-blue-600 transition-colors">';
             $html .= '<span>' . htmlspecialchars($category['name']) . '</span>';
-            $html .= '<span class="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">' . htmlspecialchars($category['posts_count']) . '</span>';
+            $html .= '<span class="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full border border-blue-100">' . htmlspecialchars($category['posts_count']) . '</span>';
             $html .= '</a>';
         }
         $html .= '</div>';
@@ -535,17 +547,80 @@ class WidgetService
     protected static function renderTagsHtml(array $widget): string
     {
         $tags = $widget['tags'] ?? [];
+        if ($tags instanceof \Illuminate\Support\Collection) {
+            $tags = $tags->all();
+        }
         if (empty($tags)) {
             return '<div class="text-gray-500 text-sm italic">暂无标签</div>';
         }
-        
+
+        // 按用户配置的首屏直显数量展示，其余折叠
+        $visible = (int)($widget['params']['visible'] ?? 30);
+        if ($visible < 0) { $visible = 0; }
+        $primary = array_slice($tags, 0, $visible);
+        $extra = array_slice($tags, $visible);
+
+        // 柔和渐变色池
+        $gradients = [
+            'bg-gradient-to-r from-indigo-200 via-purple-200 to-pink-200 text-indigo-700 hover:from-indigo-300 hover:via-purple-300 hover:to-pink-300',
+            'bg-gradient-to-r from-sky-200 via-cyan-200 to-teal-200 text-sky-700 hover:from-sky-300 hover:via-cyan-300 hover:to-teal-300',
+            'bg-gradient-to-r from-amber-200 via-orange-200 to-rose-200 text-amber-700 hover:from-amber-300 hover:via-orange-300 hover:to-rose-300',
+            'bg-gradient-to-r from-lime-200 via-green-200 to-emerald-200 text-green-700 hover:from-lime-300 hover:via-green-300 hover:to-emerald-300',
+            'bg-gradient-to-r from-fuchsia-200 via-pink-200 to-rose-200 text-fuchsia-700 hover:from-fuchsia-300 hover:via-pink-300 hover:to-rose-300',
+            'bg-gradient-to-r from-blue-200 via-indigo-200 to-violet-200 text-blue-700 hover:from-blue-300 hover:via-indigo-300 hover:to-violet-300',
+        ];
+
+        // 生成稳定的旋转角与透明度
+        $computeStyle = function($tag) use ($gradients) {
+            // 同时兼容数组与Eloquent模型对象
+            if (is_array($tag)) {
+                $key = (string)($tag['slug'] ?? $tag['id'] ?? $tag['name'] ?? '');
+            } else {
+                $key = (string)($tag->slug ?? $tag->id ?? $tag->name ?? '');
+            }
+            $seed = crc32($key);
+            $angle = (($seed % 11) - 5); // -5 ~ +5 度
+            $opacity = 0.90 + (($seed % 10) * 0.01); // 0.90 ~ 0.99
+            $gidx = $seed % count($gradients);
+            $gradient = $gradients[$gidx];
+
+            // 初始旋转 + 半透明；hover通过内联事件修改transform以回正并放大
+            $style = 'transform: rotate(' . $angle . 'deg); opacity: ' . number_format($opacity, 2) . '; will-change: transform, opacity;';
+            $classes = 'text-sm px-3 py-1 rounded-full border border-white/60 shadow-sm transition-all duration-150 ' . $gradient . ' hover:shadow-md';
+            return [$style, $classes, $angle];
+        };
+
+        $renderTag = function($tag) use ($computeStyle) {
+            [$style, $classes, $angle] = $computeStyle($tag);
+            $name = is_array($tag) ? ($tag['name'] ?? '') : ($tag->name ?? '');
+            $count = is_array($tag) ? ($tag['posts_count'] ?? 0) : ($tag->posts_count ?? 0);
+            $slug = is_array($tag) ? ($tag['slug'] ?? '') : ($tag->slug ?? '');
+            $label = htmlspecialchars($name) . ' (' . htmlspecialchars($count) . ')';
+            return '<a href="' . URLHelper::generateTagUrl($slug) . '"'
+                . ' class="' . $classes . '"'
+                . ' style="' . $style . '"'
+                . ' onmouseover="this.style.transform=\'rotate(0deg) scale(1.05)\'"'
+                . ' onmouseout="this.style.transform=\'rotate(' . (int)$angle . 'deg) scale(1)\'">'
+                . $label . '</a>';
+        };
+
         $html = '<div class="flex flex-wrap gap-2">';
-        foreach ($tags as $tag) {
-            $html .= '<a href="' . URLHelper::generateTagUrl($tag['slug']) . '" class="text-sm bg-gray-100 text-gray-700 px-3 py-1 rounded-full hover:bg-blue-100 hover:text-blue-600 transition-colors">';
-            $html .= htmlspecialchars($tag['name']) . ' (' . htmlspecialchars($tag['posts_count']) . ')';
-            $html .= '</a>';
+        foreach ($primary as $tag) {
+            $html .= $renderTag($tag);
         }
         $html .= '</div>';
+
+        if (!empty($extra)) {
+            $html .= '<details class="mt-3 group">';
+            $html .= '<summary class="cursor-pointer text-sm text-gray-600 hover:text-blue-600 transition-colors select-none">更多标签</summary>';
+            $html .= '<div class="mt-2 flex flex-wrap gap-2">';
+            foreach ($extra as $tag) {
+                $html .= $renderTag($tag);
+            }
+            $html .= '</div>';
+            $html .= '</details>';
+        }
+
         return $html;
     }
 

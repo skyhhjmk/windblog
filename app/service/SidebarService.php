@@ -135,7 +135,8 @@ class SidebarService
                     'id' => 'tags',
                     'title' => '标签云',
                     'type' => 'tags',
-                    'enabled' => true
+                    'enabled' => true,
+                    'params' => ['count' => 50, 'visible' => 30]
                 ]
             ]
         ];
