@@ -49,7 +49,9 @@ class URLHelper
      */
     public static function generateCategoryUrl(string $slug, bool $withHtmlSuffix = true): string
     {
-        $url = '/category/' . urlencode($slug);
+        // 如果已包含百分号编码（%xx），视为已编码，避免二次编码
+        $encodedSlug = preg_match('/%[0-9A-Fa-f]{2}/', $slug) ? $slug : rawurlencode($slug);
+        $url = '/category/' . $encodedSlug;
         if ($withHtmlSuffix) {
             $url .= '.html';
         }
@@ -65,7 +67,9 @@ class URLHelper
      */
     public static function generateTagUrl(string $slug, bool $withHtmlSuffix = true): string
     {
-        $url = '/tag/' . urlencode($slug);
+        // 如果已包含百分号编码（%xx），视为已编码，避免二次编码
+        $encodedSlug = preg_match('/%[0-9A-Fa-f]{2}/', $slug) ? $slug : rawurlencode($slug);
+        $url = '/tag/' . $encodedSlug;
         if ($withHtmlSuffix) {
             $url .= '.html';
         }

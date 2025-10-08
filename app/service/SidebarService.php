@@ -224,7 +224,7 @@ class SidebarService
             Log::debug("[SidebarService] Updating config for page: {$pageKey}");
             
             // 转换为JSON
-            $jsonConfig = json_encode($allConfigs, JSON_UNESCAPED_UNICODE);
+            $jsonConfig = json_encode($allConfigs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             if ($jsonConfig === false) {
                 throw new \RuntimeException('Failed to encode sidebar config to JSON: ' . json_last_error_msg());
             }
