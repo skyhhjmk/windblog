@@ -18,6 +18,8 @@
 
 > Ads: 毫秒镜像，好用的 Docker 镜像站，aff 链接：[https://1ms.run/?aff=2853](https://1ms.run/?aff=2853)
 
+本项目版本号命名于 `1.0.0` 后开始遵循`语义化版本 2.0 规范`
+
 当你浏览这个项目，你可以看到:
 
 - 一堆 AI 和一个人脑在互相博弈
@@ -41,12 +43,15 @@
 - Twig
 - ES
 - RabbitMQ
+- LLM(For development)
 
 # Overkill Everywhere
 
 ES 仅仅被用于搜索优化，这也许说得过去
 
-但是因为友链的 callback 和监控功能，硬生生塞了一个消息队列到项目中
+友链的 callback 和监控功能、邮件发送、缓存生成等能使用事件或轮询的地方全部使用了消息队列
+
+放着原本的高度继承的 MySQL 不用，硬生生顶着一堆 BUG 重构为了 PGSQL
 
 # Features to be Proud Of
 
@@ -72,7 +77,17 @@ ES 仅仅被用于搜索优化，这也许说得过去
 
 [CSRFService.php](app/service/CSRFService.php) 提供了 CSRF 令牌相关的功能，支持众多特性，包括一次性令牌，限时令牌，绑定到某个参数的令牌等，并且只要在控制器上添加注解即可启用 CSRF 验证
 
-[CacheService.php](app/service/CacheService.php) 封装了 Redis 的功能，提供了缓存功能，目前仅支持 Redis 和 Null 缓存驱动，有 GPT-5 编写的貌似不能用的防止缓存穿透的设计，并且附带有缓存回退等高级功能
+[CacheService.php](app/service/CacheService.php) 封装了 Redis 的功能，提供了缓存功能，支持多种缓存驱动，有 GPT-5 编写的貌似不能用的防止缓存穿透的设计，并且附带有缓存回退等高级功能
+
+[WordpressImporter.php](app/service/WordpressImporter.php) 和 [ImportProcess.php](app/process/ImportProcess.php) 实现了从 WordPress 导入的功能
+
+[StaticGenerator.php](app/process/StaticGenerator.php) 实现了全站静态缓存生成的功能
+
+[LinkMonitor.php](app/process/LinkMonitor.php) 实现了友链监控的功能
+
+[MailWorker.php](app/process/MailWorker.php) 和 [MailService.php](app/service/MailService.php) 实现了多发信平台轮询使用的功能，并且提供发信失败自动隔离的功能
+
+[DebugToolkit.php](app/middleware/DebugToolkit.php) 提供一个简易工具箱用于监测页面渲染时间、请求数据等，还提供一个简易请求发送工具
 
 # Install & use
 

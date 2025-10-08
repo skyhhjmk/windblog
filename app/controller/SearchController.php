@@ -30,11 +30,17 @@ class SearchController
     public function index(Request $request, int $page = 1): Response
     {
         $keyword = $request->get('q', '');
+        $type = strtolower((string)$request->get('type', 'all'));
 
         // 构建筛选条件
         $filters = [];
         if (!empty($keyword)) {
             $filters['search'] = $keyword;
+        }
+        if (in_array($type, ['post','tag','category'], true)) {
+            $filters['type'] = $type;
+        } else {
+            $type = 'all';
         }
 
         // 调用博客服务获取文章数据
@@ -64,6 +70,7 @@ class SearchController
             'pagination' => $result['pagination'],
             'sidebar' => $sidebar,
             'search_keyword' => $keyword,
+            'search_type' => $type,
             'esMeta' => $result['esMeta'] ?? [],
             'suggest_titles' => $suggestTitles,
             'totalCount' => $result['totalCount'] ?? 0
@@ -82,6 +89,10 @@ class SearchController
     public function ajax(Request $request): Response
     {
         $keyword = $request->get('q', '');
+        $type = strtolower((string)$request->get('type', 'all'));
+        if (!in_array($type, ['all','post','tag','category'], true)) {
+            $type = 'all';
+        }
 
         if (empty($keyword)) {
             return response(json_encode(['success' => false, 'message' => '请输入搜索关键词']), 200)
@@ -90,46 +101,97 @@ class SearchController
 
         // 构建筛选条件
         $filters = ['search' => $keyword];
+        if ($type !== 'all') {
+            $filters['type'] = $type;
+        }
 
         try {
-            // 获取第一页搜索结果
-            $result = BlogService::getBlogPosts(1, $filters);
-
-            // 将Collection转换为数组进行处理
+            // 获取第一页文章搜索结果
+            $result = BlogService::getBlogPosts(1, ['search' => $keyword]);
             $postsArray = $result['posts']->toArray();
-
             $hlMap = $result['esMeta']['highlights'] ?? [];
             $signals = $result['esMeta']['signals'] ?? [];
+
+            // 构造文章类条目（不返回长摘要详情，仅附带类型与分类/标签）
+            $postItems = array_map(function ($post) use ($hlMap) {
+                $pid = (int)$post['id'];
+                $titleHl = $hlMap[$pid]['title'][0] ?? null;
+                // 分类与标签（如存在）
+                $categories = [];
+                if (!empty($post['categories']) && is_array($post['categories'])) {
+                    foreach ($post['categories'] as $c) {
+                        $categories[] = ['name' => $c['name'] ?? '', 'slug' => $c['slug'] ?? ''];
+                    }
+                }
+                $tags = [];
+                if (!empty($post['tags']) && is_array($post['tags'])) {
+                    foreach ($post['tags'] as $t) {
+                        $tags[] = ['name' => $t['name'] ?? '', 'slug' => $t['slug'] ?? ''];
+                    }
+                }
+                return [
+                    'type' => 'post',
+                    'id' => $post['id'],
+                    'title' => $post['title'],
+                    'highlight_title' => $titleHl,
+                    'url' => '/post/' . $post['slug'] . '.html',
+                    'categories' => $categories,
+                    'tags' => $tags,
+                ];
+            }, $postsArray);
+
+            // 标签与分类匹配（最小实现，名称模糊匹配）
+            $mixedItems = $postItems;
+            if ($type === 'all' || $type === 'tag') {
+                try {
+                    $tagModel = \app\model\Tag::where('name', 'like', '%' . $keyword . '%')
+                        ->orWhere('slug', 'like', '%' . $keyword . '%')
+                        ->limit(10)->get(['id','name','slug']);
+                    foreach ($tagModel as $t) {
+                        $mixedItems[] = [
+                            'type' => 'tag',
+                            'id' => (int)$t->id,
+                            'title' => (string)$t->name,
+                            'url' => '/t/' . (string)$t->slug,
+                        ];
+                    }
+                } catch (\Throwable $e) {}
+            }
+            if ($type === 'all' || $type === 'category') {
+                try {
+                    $catModel = \app\model\Category::where('name', 'like', '%' . $keyword . '%')
+                        ->orWhere('slug', 'like', '%' . $keyword . '%')
+                        ->limit(10)->get(['id','name','slug']);
+                    foreach ($catModel as $c) {
+                        $mixedItems[] = [
+                            'type' => 'category',
+                            'id' => (int)$c->id,
+                            'title' => (string)$c->name,
+                            'url' => '/c/' . (string)$c->slug,
+                        ];
+                    }
+                } catch (\Throwable $e) {}
+            }
+
+            // 若指定了单一类型，则按类型过滤
+            if ($type !== 'all') {
+                $mixedItems = array_values(array_filter($mixedItems, function($it) use ($type) {
+                    return $it['type'] === $type;
+                }));
+            }
+
             $response = [
                 'success' => true,
                 'keyword' => $keyword,
-                'results' => array_map(function ($post) use ($hlMap) {
-                    $pid = (int)$post['id'];
-                    $titleHl = $hlMap[$pid]['title'][0] ?? null;
-                    $contentHl = $hlMap[$pid]['content'][0] ?? null;
-                    return [
-                        'id' => $post['id'],
-                        'title' => $post['title'],
-                        'excerpt' => $post['excerpt'],
-                        'created_at' => $post['created_at'],
-                        'author' => !empty($post['primary_author']) ?
-                            (is_array($post['primary_author']) ? ($post['primary_author'][0]['nickname'] ?? '未知作者') : ($post['primary_author']['nickname'] ?? '未知作者')) :
-                            (!empty($post['authors']) ? ($post['authors'][0]['nickname'] ?? '未知作者') : '未知作者'),
-                        'url' => '/post/' . $post['id'],
-                        'highlight_title' => $titleHl,
-                        'highlight_content' => $contentHl,
-                    ];
-                }, $postsArray),
-                'total' => $result['totalCount'],
-                'has_more' => $result['totalCount'] > count($postsArray),
+                'results' => $mixedItems,
+                'total' => count($mixedItems),
+                'has_more' => false,
                 'signals' => $signals,
-                // 追加提示信息：同义词/高亮/分词器
                 'tips' => array_values(array_filter([
                     (!empty($signals['synonym']) ? '已应用同义词扩展匹配' : null),
                     (!empty($signals['highlighted']) ? '已为关键词提供高亮' : null),
                     (!empty($signals['analyzer']) ? ('使用分词器: ' . $signals['analyzer']) : null),
                 ])),
-                // 加入联想标题
                 'titles' => ElasticService::suggestTitles($keyword, 10),
             ];
 

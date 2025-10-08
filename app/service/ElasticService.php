@@ -226,7 +226,7 @@ class ElasticService
                         [
                             'multi_match' => [
                                 'query' => $keyword,
-                                'fields' => ['title^5', 'excerpt^3', 'content^1'],
+                                'fields' => ['title^5', 'excerpt^3', 'content^1', 'categories_names^2', 'tags_names^2'],
                                 'type' => 'best_fields',
                                 'operator' => 'and',
                                 'analyzer' => 'wb_synonym_search',
@@ -271,6 +271,8 @@ class ElasticService
                 'fields' => [
                     'title' => new \stdClass(),
                     'content' => new \stdClass(),
+                    'categories_names' => new \stdClass(),
+                    'tags_names' => new \stdClass(),
                 ]
             ]
         ];

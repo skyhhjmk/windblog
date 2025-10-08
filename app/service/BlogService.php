@@ -108,13 +108,26 @@ class BlogService
                         break;
                     case 'category':
                         if (!empty($value)) {
-                            $query->where('category_id', $value);
+                            // 支持按分类ID或slug过滤（多对多关系）
+                            $query->whereHas('categories', function($q) use ($value) {
+                                if (is_numeric($value)) {
+                                    $q->where('categories.id', (int)$value);
+                                } else {
+                                    $q->where('categories.slug', (string)$value)
+                                      ->orWhere('categories.name', (string)$value);
+                                }
+                            });
                         }
                         break;
                     case 'tag':
                         if (!empty($value)) {
                             $query->whereHas('tags', function($q) use ($value) {
-                                $q->where('name', $value);
+                                if (is_numeric($value)) {
+                                    $q->where('tags.id', (int)$value);
+                                } else {
+                                    $q->where('tags.slug', (string)$value)
+                                      ->orWhere('tags.name', (string)$value);
+                                }
                             });
                         }
                         break;
@@ -142,7 +155,7 @@ class BlogService
 
             // 拉取文章并根据 ES 命中顺序排序
             $posts = Post::whereIn('id', $ids)
-                ->with(['authors', 'primaryAuthor'])
+                ->with(['authors', 'primaryAuthor', 'categories:id,name,slug', 'tags:id,name,slug'])
                 ->get();
 
             $orderMap = array_flip($ids);
@@ -155,21 +168,25 @@ class BlogService
             // 统计总文章数
             $total_count = $query->count();
 
+            // 排序：支持 latest(默认) 与 hot(按评论数)
+            $sort = $filters['sort'] ?? 'latest';
+
             // 获取文章列表并预加载作者信息
             if (!empty($filters['search'])) {
                 $s = "%{$filters['search']}%";
-                $posts = $query
-                    ->orderByRaw('CASE WHEN title LIKE ? THEN 0 WHEN excerpt LIKE ? THEN 1 WHEN content LIKE ? THEN 2 ELSE 3 END', [$s, $s, $s])
-                    ->orderByDesc('id')
-                    ->forPage($page, $posts_per_page)
-                    ->with(['authors', 'primaryAuthor'])
-                    ->get();
-            } else {
-                $posts = $query->orderByDesc('id')
-                    ->forPage($page, $posts_per_page)
-                    ->with(['authors', 'primaryAuthor'])
-                    ->get();
+                $query = $query->orderByRaw('CASE WHEN title LIKE ? THEN 0 WHEN excerpt LIKE ? THEN 1 WHEN content LIKE ? THEN 2 ELSE 3 END', [$s, $s, $s]);
             }
+
+            if ($sort === 'hot') {
+                $query = $query->withCount('comments')->orderByDesc('comments_count')->orderByDesc('id');
+            } else {
+                $query = $query->orderByDesc('id');
+            }
+
+            $posts = $query
+                ->forPage($page, $posts_per_page)
+                ->with(['authors', 'primaryAuthor', 'categories:id,name,slug', 'tags:id,name,slug'])
+                ->get();
         }
 
         // 处理文章摘要

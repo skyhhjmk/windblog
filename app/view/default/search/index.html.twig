@@ -39,6 +39,19 @@
                 {% endif %}
             {% endif %}
         </div>
+        <!-- 类型筛选 -->
+        <div class="mt-6 flex justify-center">
+            {% set currentType = search_type|default('all') %}
+            <div class="inline-flex flex-wrap gap-2">
+                {% set types = {'all':'全部','post':'文章','tag':'标签','category':'分类'} %}
+                {% for key,label in types %}
+                    <a href="/search?q={{ search_keyword|url_encode }}&type={{ key }}"
+                       class="px-3 py-1 rounded-full border text-sm {{ currentType==key ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-blue-50 hover:text-blue-700' }}">
+                        {{ label }}
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
 
         <!-- 博客文章列表 -->
         {% if posts|length > 0 %}
@@ -53,6 +66,9 @@
                                 </a>
                             </h2>
                             <div class="flex items-center text-gray-500 text-sm mb-4">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full border bg-green-50 text-green-700 border-green-100 mr-3 text-xs">
+                                    文章
+                                </span>
                                 <span class="mr-4">
                                     <i class="far fa-calendar-alt mr-1"></i>
                                     {{ post.created_at|date('Y-m-d') }}
@@ -65,7 +81,23 @@
                             <p class="text-gray-600 mb-4 leading-relaxed">
                                 {{ (esMeta.highlights[post.id].content[0] ?? (post.excerpt ~ '...'))|raw }}
                             </p>
-                            <div class="flex justify-between items-center">
+                            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                                <div class="flex flex-wrap gap-2">
+                                    {% if post.categories is defined and post.categories|length > 0 %}
+                                        {% for c in post.categories %}
+                                            <a href="/c/{{ c.slug }}" class="px-2 py-1 text-xs rounded-full bg-blue-50 text-blue-700 border border-blue-100 hover:bg-blue-100 transition-colors">
+                                                <i class="fas fa-folder-open mr-1"></i>{{ c.name }}
+                                            </a>
+                                        {% endfor %}
+                                    {% endif %}
+                                    {% if post.tags is defined and post.tags|length > 0 %}
+                                        {% for t in post.tags %}
+                                            <a href="/t/{{ t.slug }}" class="px-2 py-1 text-xs rounded-full bg-purple-50 text-purple-700 border border-purple-100 hover:bg-purple-100 transition-colors">
+                                                <i class="fas fa-hashtag mr-1"></i>{{ t.name }}
+                                            </a>
+                                        {% endfor %}
+                                    {% endif %}
+                                </div>
                                 <a href="/post/{{ post.slug }}.html"
                                    class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium transition-colors duration-200">
                                     阅读更多

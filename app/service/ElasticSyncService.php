@@ -25,7 +25,11 @@ class ElasticSyncService
                     'excerpt' => ['type' => 'text', 'analyzer' => $analyzer === 'ik_max_word' ? 'ik_max_word' : 'standard'],
                     'content' => ['type' => 'text', 'analyzer' => $analyzer === 'ik_max_word' ? 'ik_max_word' : 'standard'],
                     'created_at' => ['type' => 'date', 'format' => 'strict_date_optional_time||epoch_millis'],
-                    'author' => ['type' => 'keyword']
+                    'author' => ['type' => 'keyword'],
+                    'categories_names' => ['type' => 'text', 'analyzer' => $analyzer === 'ik_max_word' ? 'ik_max_word' : 'standard'],
+                    'tags_names' => ['type' => 'text', 'analyzer' => $analyzer === 'ik_max_word' ? 'ik_max_word' : 'standard'],
+                    'categories_slugs' => ['type' => 'keyword'],
+                    'tags_slugs' => ['type' => 'keyword']
                 ]
             ]
         ];
@@ -72,6 +76,51 @@ class ElasticSyncService
         ];
         if ($created) {
             $payload['created_at'] = $created;
+        }
+
+        // 补充分类/标签信息到索引文档（名称与 slug）
+        try {
+            if (method_exists($post, 'relationLoaded')) {
+                $needLoadCat = !$post->relationLoaded('categories');
+                $needLoadTag = !$post->relationLoaded('tags');
+            } else {
+                $needLoadCat = $needLoadTag = true;
+            }
+            if (($needLoadCat || $needLoadTag) && method_exists($post, 'loadMissing')) {
+                $load = [];
+                if ($needLoadCat) $load[] = 'categories:id,name,slug';
+                if ($needLoadTag) $load[] = 'tags:id,name,slug';
+                if ($load) $post->loadMissing($load);
+            }
+
+            $catNames = [];
+            $catSlugs = [];
+            if (isset($post->categories) && $post->categories) {
+                foreach ($post->categories as $c) {
+                    $name = (string)($c->name ?? '');
+                    $slug = (string)($c->slug ?? '');
+                    if ($name !== '') $catNames[] = $name;
+                    if ($slug !== '') $catSlugs[] = $slug;
+                }
+            }
+
+            $tagNames = [];
+            $tagSlugs = [];
+            if (isset($post->tags) && $post->tags) {
+                foreach ($post->tags as $t) {
+                    $name = (string)($t->name ?? '');
+                    $slug = (string)($t->slug ?? '');
+                    if ($name !== '') $tagNames[] = $name;
+                    if ($slug !== '') $tagSlugs[] = $slug;
+                }
+            }
+
+            if ($catNames) $payload['categories_names'] = array_values($catNames);
+            if ($catSlugs) $payload['categories_slugs'] = array_values($catSlugs);
+            if ($tagNames) $payload['tags_names'] = array_values($tagNames);
+            if ($tagSlugs) $payload['tags_slugs'] = array_values($tagSlugs);
+        } catch (\Throwable $e) {
+            // 忽略关系异常，不影响基础索引
         }
 
         try {
