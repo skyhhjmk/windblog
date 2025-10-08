@@ -8,6 +8,22 @@
     <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
     <script src="/app/admin/component/pear/pear.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 全局：单元格内容使用flex并垂直居中 */
+        .layui-table-view .layui-table td .layui-table-cell {
+            display: flex;
+            align-items: center;
+        }
+        /* 行操作容器居中与间距优化（文章列表与垃圾箱） */
+        .layui-table-view .layui-table td .layui-table-cell .normal-actions,
+        .layui-table-view .layui-table td .layui-table-cell .trash-actions {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            height: 100%;
+        }
+    </style>
 </head>
 
 <body class="bg-gray-100 pear-container">
@@ -116,18 +132,12 @@
         <button class="pear-btn pear-btn-sm" id="more_{{d.id}}"><i class="layui-icon layui-icon-triangle-d"></i></button>
     </div>
 
-    <!-- 垃圾箱文章操作按钮 -->
-    <div class="trash-actions flex space-x-1 hidden">
-        <button class="pear-btn pear-btn-success pear-btn-sm" lay-event="restore"><i
-                class="layui-icon layui-icon-refresh-1"></i></button>
-        <button class="pear-btn pear-btn-danger pear-btn-sm" lay-event="forceDelete"><i
-                class="layui-icon layui-icon-delete"></i></button>
-    </div>
+
 </script>
 
 <script type="text/html" id="trash-post-bar">
     <!-- 垃圾箱文章操作按钮 -->
-    <div class="trash-actions flex space-x-1">
+    <div class="trash-actions flex items-center space-x-2">
         <button class="pear-btn pear-btn-success pear-btn-sm" lay-event="restore"><i
                 class="layui-icon layui-icon-refresh-1"></i></button>
         <button class="pear-btn pear-btn-danger pear-btn-sm" lay-event="forceDelete"><i
