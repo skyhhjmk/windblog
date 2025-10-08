@@ -32,15 +32,48 @@ Route::any('/page/{page}.html', [app\controller\IndexController::class, 'index']
 // 首页路由
 Route::any('/', [app\controller\IndexController::class, 'index'])->name('index.index');
 
-// 搜索路由
+ // 搜索路由
 Route::any('/search', [app\controller\SearchController::class, 'index'])->name('search.index');
 Route::any('/search/ajax', [app\controller\SearchController::class, 'ajax'])->name('search.ajax');
+// 搜索分页路由
+Route::any('/search/page/{page}', [app\controller\SearchController::class, 'index'])->name('search.page');
+Route::any('/search/page/{page}.html', [app\controller\SearchController::class, 'index'])->name('search.page.html');
 
-// 链接页&分页路由
+// 分类/标签 汇总入口
+Route::any('/category', [app\controller\CategoryController::class, 'list'])->name('category.list');
+Route::any('/tag', [app\controller\TagController::class, 'list'])->name('tag.list');
+
+ // 链接页&分页路由
 Route::any('/link', [app\controller\LinkController::class, 'index'])->name('link.index');
 Route::any('/link/goto/{id}', [app\controller\LinkController::class, 'goto'])->name('link.goto');
 Route::any('/link/info/{id}', [app\controller\LinkController::class, 'info'])->name('link.info');
 Route::any('/link/page/{page}', [app\controller\LinkController::class, 'index'])->name('link.page');
+
+ // 分类浏览（兼容旧路由）
+Route::any('/category/{slug}', [app\controller\CategoryController::class, 'index'])->name('category.index');
+Route::any('/category/{slug}.html', [app\controller\CategoryController::class, 'index'])->name('category.index.html');
+Route::any('/category/{slug}/page/{page}', [app\controller\CategoryController::class, 'index'])->name('category.page');
+Route::any('/category/{slug}/page/{page}.html', [app\controller\CategoryController::class, 'index'])->name('category.page.html');
+
+// 标签浏览（兼容旧路由）
+Route::any('/tag/{slug}', [app\controller\TagController::class, 'index'])->name('tag.index');
+Route::any('/tag/{slug}.html', [app\controller\TagController::class, 'index'])->name('tag.index.html');
+Route::any('/tag/{slug}/page/{page}', [app\controller\TagController::class, 'index'])->name('tag.page');
+Route::any('/tag/{slug}/page/{page}.html', [app\controller\TagController::class, 'index'])->name('tag.page.html');
+
+// 简写分类路由
+Route::any('/c', [app\controller\CategoryController::class, 'list'])->name('c.list');
+Route::any('/c/{slug}', [app\controller\CategoryController::class, 'index'])->name('c.index');
+Route::any('/c/{slug}.html', [app\controller\CategoryController::class, 'index'])->name('c.index.html');
+Route::any('/c/{slug}/page/{page}', [app\controller\CategoryController::class, 'index'])->name('c.page');
+Route::any('/c/{slug}/page/{page}.html', [app\controller\CategoryController::class, 'index'])->name('c.page.html');
+
+// 简写标签路由
+Route::any('/t', [app\controller\TagController::class, 'list'])->name('t.list');
+Route::any('/t/{slug}', [app\controller\TagController::class, 'index'])->name('t.index');
+Route::any('/t/{slug}.html', [app\controller\TagController::class, 'index'])->name('t.index.html');
+Route::any('/t/{slug}/page/{page}', [app\controller\TagController::class, 'index'])->name('t.page');
+Route::any('/t/{slug}/page/{page}.html', [app\controller\TagController::class, 'index'])->name('t.page.html');
 
 // 调试 API
 Route::get('/api/hello', function() {

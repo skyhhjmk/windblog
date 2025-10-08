@@ -18,7 +18,7 @@ use Throwable;
  * @property string $name 分类名称
  * @property string $slug 分类别名 (用于URL)
  * @property string|null $description 分类描述
- * @property int $parent_id 父分类ID (0表示顶级分类)
+ * @property int|null $parent_id 父分类ID (NULL表示顶级分类)
  * @property int $sort_order 排序权重
  * @property Carbon|null $created_at 创建时间
  * @property Carbon|null $updated_at 更新时间
@@ -214,7 +214,7 @@ class Category extends Model
      */
     public function scopeTopLevel(Builder $query): Builder
     {
-        return $query->where('parent_id', 0);
+        return $query->whereNull('parent_id');
     }
 
     /**

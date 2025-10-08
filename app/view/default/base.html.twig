@@ -240,6 +240,54 @@
             width: 0;
             transition: width 0.2s ease;
         }
+        /* 类型/标签胶囊样式 */
+        .badge-type {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            background: #EEF2FF;
+            color: #1F2937;
+            border: 1px solid #E5E7EB;
+            font-size: 12px;
+            line-height: 18px;
+        }
+        .badge-cat {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            background: #EAF2FF;
+            color: #1E40AF;
+            border: 1px solid #CFE0FF;
+            font-size: 11px;
+            line-height: 18px;
+        }
+        .badge-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            background: #DCFCE7;
+            color: #065F46;
+            border: 1px solid #CCE3D1;
+            font-size: 11px;
+            line-height: 18px;
+        }
+        /* 顶部站点标题单行省略，避免过长文本撑乱布局 */
+        #topbarTitle {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: inline-block;
+            /* 在 Flex 容器中允许内容收缩 */
+            min-width: 0;
+            /* 桌面端最大宽度占视口，避免过宽 */
+            max-width: 40vw;
+        }
+        /* 移动端可适当放宽最大宽度以提升可读性 */
+        @media (max-width: 640px) {
+            #topbarTitle {
+                max-width: 55vw;
+            }
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -256,7 +304,7 @@
             <form action="/search" method="get" class="search-form" id="searchForm">
                 <div class="relative">
                     <input type="text" name="q" id="searchInput"
-                           placeholder="搜索文章..."
+                           placeholder="搜点什么"
                            class="pl-10 pr-4 py-2 border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-64"
                            autocomplete="off">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -322,7 +370,7 @@
         <form action="/search" method="get" class="search-form">
             <div class="relative">
                 <input type="text" name="q"
-                       placeholder="搜索文章..."
+                       placeholder="搜点什么"
                        class="pl-10 pr-4 py-2 border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
                        autocomplete="off">
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -584,6 +632,18 @@
 
         if (!searchInput || !searchResults || !searchForm) return;
 
+        // AJAX 内联筛选当前类型
+        let inlineType = (function(){
+            try {
+                const allowed = ['all','post','tag','category'];
+                const params = new URLSearchParams(window.location.search);
+                const t = (params.get('type') || 'all').toLowerCase();
+                return allowed.includes(t) ? t : 'all';
+            } catch (e) {
+                return 'all';
+            }
+        })();
+
         // 实时搜索功能
         searchInput.addEventListener('input', function () {
             const keyword = this.value.trim();
@@ -612,7 +672,7 @@
                     }
                 }
                 currentController = new AbortController();
-                fetch('/search/ajax?q=' + encodeURIComponent(keyword), {signal: currentController.signal})
+                fetch('/search/ajax?q=' + encodeURIComponent(keyword) + '&type=' + encodeURIComponent(inlineType), {signal: currentController.signal})
                     .then(response => response.json())
                     .then(data => {
                         document.getElementById('searchLoading').classList.add('hidden');
@@ -631,7 +691,7 @@
                         document.getElementById('searchLoading').classList.add('hidden');
                         searchResults.style.display = 'none';
                     });
-            }, 800);
+            }, 300);
         });
 
         // 保存搜索历史
@@ -691,36 +751,167 @@
         // 显示搜索结果
         function displaySearchResults(results, total, tips) {
             if (results.length === 0) {
-                searchResults.innerHTML = '<div class="p-4 text-center text-gray-500">没有找到相关文章</div>';
+                // 空结果也渲染筛选条
+                let header = `
+                    <div class="p-2 border-b border-gray-100 text-sm text-gray-600 flex items-center justify-between">
+                        <span>找到 0 条结果</span>
+                        <div class="inline-flex gap-1">
+                            ${['all','post','tag','category'].map(function(k){
+                                var lbl={'all':'全部','post':'文章','tag':'标签','category':'分类'}[k];
+                                var active=(inlineType===k);
+                                return '<button type="button" data-type="'+k+'" class="px-2 py-0.5 rounded-full border text-xs '+(active?'bg-blue-600 text-white border-blue-600':'bg-white text-gray-700 border-gray-300 hover:bg-blue-50 hover:text-blue-700')+'">'+lbl+'</button>';
+                            }).join('')}
+                        </div>
+                    </div>`;
+                searchResults.innerHTML = header + '<div class="p-4 text-center text-gray-500">没有找到相关文章</div>';
+                // 绑定筛选按钮事件
+                var btns0 = searchResults.querySelectorAll('button[data-type]');
+                btns0.forEach(function(btn){
+                    btn.addEventListener('click', function(e){
+                        e.preventDefault();
+                        var t = this.getAttribute('data-type') || 'all';
+                        if (t === inlineType) return;
+                        inlineType = t;
+                        window.scrollTo({top: 0, behavior: 'smooth'});
+                        const keyword = (searchInput.value || '').trim();
+                        if (keyword.length < 3) return;
+                        document.getElementById('searchLoading').classList.remove('hidden');
+                        fetch('/search/ajax?q=' + encodeURIComponent(keyword) + '&type=' + encodeURIComponent(inlineType))
+                            .then(resp => resp.json())
+                            .then(data => {
+                                document.getElementById('searchLoading').classList.add('hidden');
+                                if (data && data.success) {
+                                    displaySearchResults(data.results, data.total, data.tips || []);
+                                }
+                            })
+                            .catch(()=>{ document.getElementById('searchLoading').classList.add('hidden'); });
+                    });
+                });
                 searchResults.style.display = 'block';
                 return;
             }
 
-            let html = '<div class="p-2 border-b border-gray-100 text-sm text-gray-600">找到 ' + total + ' 条结果</div>';
+            var safeTotal = (typeof total === 'number' && isFinite(total)) ? total : (Array.isArray(results) ? results.length : 0);
+            let html = `
+                <div class="p-2 border-b border-gray-100 text-sm text-gray-600 flex items-center justify-between">
+                    <span>找到 ${safeTotal} 条结果</span>
+                    <div class="inline-flex gap-1">
+                        ${['all','post','tag','category'].map(function(k){
+                            var lbl={'all':'全部','post':'文章','tag':'标签','category':'分类'}[k];
+                            var active=(inlineType===k);
+                            return '<button type="button" data-type="'+k+'" class="px-2 py-0.5 rounded-full border text-xs '+(active?'bg-blue-600 text-white border-blue-600':'bg-white text-gray-700 border-gray-300 hover:bg-blue-50 hover:text-blue-700')+'">'+lbl+'</button>';
+                        }).join('')}
+                    </div>
+                </div>`;
             if (Array.isArray(tips) && tips.length > 0) {
                 html += '<div class="p-2 text-xs text-blue-600 border-b border-gray-100">提示：' + tips.join('、') + '</div>';
             }
             results.forEach(function (result) {
+                var r = result || {};
+                var t = String(r.type || '').toLowerCase();
+                var typeLabel = (t === 'post') ? '文章' : (t === 'tag' ? '标签' : (t === 'category' ? '分类' : '文章'));
+                var rawTitle = (r.highlight_title != null) ? r.highlight_title : r.title;
+                var title = String(rawTitle == null ? '' : rawTitle).trim();
+                if (title === 'undefined' || title === 'null') title = '';
+                var url = (typeof r.url === 'string' && r.url.trim() && r.url !== 'undefined' && r.url !== 'null') ? r.url : '#';
+
+                var catTagsHtml = '';
+                if (t === 'post') {
+                    var cats = Array.isArray(r.categories) ? r.categories : [];
+                    var tags = Array.isArray(r.tags) ? r.tags : [];
+
+                    var catsHtml = '';
+                    var tagsHtml = '';
+
+                    if (cats.length > 0) {
+                        catsHtml = cats.map(function(c){
+                            if (!c || !c.slug) return '';
+                            return '<a href="/category/' + (c.slug || '') + '.html" class="badge-cat"><i class="fas fa-folder-open mr-1"></i>' + (c.name || '') + '</a>';
+                        }).join('');
+                    } else {
+                        catsHtml = '<span class="px-2 py-0.5 text-[11px] rounded-full bg-gray-50 text-gray-500 border border-gray-100"><i class="fas fa-folder-open mr-1"></i>无分类</span>';
+                    }
+
+                    if (tags.length > 0) {
+                        tagsHtml = tags.map(function(tg){
+                            if (!tg || !tg.slug) return '';
+                            return '<a href="/tag/' + (tg.slug || '') + '.html" class="badge-tag"><i class="fas fa-hashtag mr-1"></i>' + (tg.name || '') + '</a>';
+                        }).join('');
+                    } else {
+                        tagsHtml = '<span class="px-2 py-0.5 text-[11px] rounded-full bg-gray-50 text-gray-500 border border-gray-100"><i class="fas fa-hashtag mr-1"></i>无标签</span>';
+                    }
+
+                    catTagsHtml = '<div class="mt-1 flex flex-wrap gap-1">' + catsHtml + tagsHtml + '</div>';
+                }
+
+                var catsText = '';
+                var tagsText = '';
+                if (t === 'post') {
+                    var cats = Array.isArray(r.categories) ? r.categories : [];
+                    var tags = Array.isArray(r.tags) ? r.tags : [];
+
+                    catsText = cats.map(function(c) {
+                        return (c && c.name != null) ? String(c.name) : '';
+                    }).filter(Boolean).join('、') || '无分类';
+
+                    tagsText = tags.map(function(g) {
+                        return (g && g.name != null) ? String(g.name) : '';
+                    }).filter(Boolean).join('、') || '无标签';
+
+                } else if (t === 'tag') {
+                    catsText = '—';
+                    tagsText = (r.title != null && r.title !== '') ? String(r.title) : '标签';
+                } else if (t === 'category') {
+                    catsText = (r.title != null && r.title !== '') ? String(r.title) : '分类';
+                    tagsText = '—';
+                } else {
+                    catsText = '—';
+                    tagsText = '—';
+                }
+
+                var textLine = catsText + ' · ' + tagsText;
+
                 html += `
-                <a href="${result.url}" class="block p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0">
-                    <div class="font-medium text-gray-800">${result.highlight_title || result.title}</div>
-                    <div class="text-sm text-gray-600 mt-1">${result.highlight_content || result.excerpt}</div>
-                    <div class="text-xs text-gray-400 mt-2">
-                        ${result.author} · ${new Date(result.created_at).toLocaleDateString('zh-CN')}
-                    </div>
+                <a href="${url}" class="block p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0">
+                    <div class="font-medium text-gray-800">${title}</div>
+                    <div class="text-sm mt-1"><span class="badge-type">${typeLabel}</span></div>
+                    <div class="text-xs text-gray-400 mt-2">${textLine}</div>
                 </a>
             `;
             });
 
-            if (total > results.length) {
+            if (safeTotal > results.length) {
                 html += `<div class="p-3 text-center bg-gray-50">
                 <a href="/search?q=${encodeURIComponent(searchInput.value)}" class="text-blue-600 hover:text-blue-800 text-sm">
-                    查看全部 ${total} 条结果 →
+                    查看全部 ${safeTotal} 条结果 →
                 </a>
             </div>`;
             }
 
             searchResults.innerHTML = html;
+            // 绑定筛选按钮事件
+            var btns = searchResults.querySelectorAll('button[data-type]');
+            btns.forEach(function(btn){
+                btn.addEventListener('click', function(e){
+                    e.preventDefault();
+                    var t = this.getAttribute('data-type') || 'all';
+                    if (t === inlineType) return;
+                    inlineType = t;
+                    window.scrollTo({top: 0, behavior: 'smooth'});
+                    const keyword = (searchInput.value || '').trim();
+                    if (keyword.length < 3) return;
+                    document.getElementById('searchLoading').classList.remove('hidden');
+                    fetch('/search/ajax?q=' + encodeURIComponent(keyword) + '&type=' + encodeURIComponent(inlineType))
+                        .then(resp => resp.json())
+                        .then(data => {
+                            document.getElementById('searchLoading').classList.add('hidden');
+                            if (data && data.success) {
+                                displaySearchResults(data.results, data.total, data.tips || []);
+                            }
+                        })
+                        .catch(()=>{ document.getElementById('searchLoading').classList.add('hidden'); });
+                });
+            });
             searchResults.style.display = 'block';
         }
 
@@ -788,9 +979,15 @@
             e.preventDefault();
         });
 
-        // 在 PJAX 完成后重置搜索导航标记
+        // 在 PJAX 完成后重置搜索导航标记，并同步内联筛选类型
         document.addEventListener('page:ready', function () {
             searchNavigating = false;
+            try {
+                const allowed = ['all','post','tag','category'];
+                const params = new URLSearchParams(window.location.search);
+                const t = (params.get('type') || 'all').toLowerCase();
+                if (allowed.includes(t)) inlineType = t;
+            } catch (e) {}
         });
         // 适配触摸设备的交互优化
         if ('ontouchstart' in document.documentElement) {

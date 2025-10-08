@@ -84,6 +84,51 @@ class ElasticController extends Base
         return json(['success' => $ok]);
     }
 
+    /**
+     * 增量同步 ES 索引（同步全部标签/分类 + 最近文章页）
+     */
+    public function sync(Request $request): Response
+    {
+        try {
+            $pageSize = (int)$request->post('page_size', 200);
+            if ($pageSize < 1) $pageSize = 200;
+
+            // 同步标签
+            $tpage = 1;
+            while (true) {
+                $tBatch = \app\model\Tag::orderBy('id')->forPage($tpage, $pageSize)->get(['id','name','slug','description']);
+                if ($tBatch->isEmpty()) break;
+                foreach ($tBatch as $tag) {
+                    ElasticSyncService::indexTag($tag);
+                }
+                $tpage++;
+            }
+
+            // 同步分类
+            $cpage = 1;
+            while (true) {
+                $cBatch = \app\model\Category::orderBy('id')->forPage($cpage, $pageSize)->get(['id','name','slug','description']);
+                if ($cBatch->isEmpty()) break;
+                foreach ($cBatch as $cat) {
+                    ElasticSyncService::indexCategory($cat);
+                }
+                $cpage++;
+            }
+
+            // 同步最近文章页（按 id 倒序取前两页）
+            $pp = \app\service\BlogService::getPostsPerPage();
+            $recent = \app\model\Post::published()->orderByDesc('id')->forPage(1, max(1, $pp*2))->get();
+            foreach ($recent as $post) {
+                ElasticSyncService::indexPost($post);
+            }
+
+            return json(['success' => true, 'message' => '同步完成']);
+        } catch (\Throwable $e) {
+            Log::warning('[ElasticController] sync error: ' . $e->getMessage());
+            return json(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
     // 测试连接（调用 _cluster/health）
     public function testConnection(Request $request): Response
     {

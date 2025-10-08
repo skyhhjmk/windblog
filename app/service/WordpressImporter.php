@@ -375,8 +375,9 @@ class WordpressImporter
         // 处理作者
         $authorId = $this->processAuthor($xpath, $node);
 
-        // 处理分类
-        $categoryId = $this->processCategories($xpath, $node);
+        // 处理分类与标签（多选）
+        $categoryIds = $this->processCategories($xpath, $node);
+        $tagIds = $this->processTags($xpath, $node);
 
         // 转换状态
         $statusMap = [
@@ -475,17 +476,17 @@ class WordpressImporter
                         }
                     }
 
-                    // 更新分类关联
-                    if ($categoryId) {
-                        // 获取分类模型实例
-                        $category = \app\model\Category::find($categoryId);
-                        if ($category) {
-                            // 使用attach方法更新文章分类关联
-                            // 先清除现有关联
-                            $existingPost->categories()->detach();
-                            // 再添加新的关联
-                            $existingPost->categories()->attach($category);
-                        }
+                    // 更新分类/标签关联，采用 sync 覆盖式同步
+                    if (!empty($categoryIds)) {
+                        $existingPost->categories()->sync($categoryIds);
+                    } else {
+                        // 若无分类传入则清空
+                        $existingPost->categories()->sync([]);
+                    }
+                    if (!empty($tagIds)) {
+                        $existingPost->tags()->sync($tagIds);
+                    } else {
+                        $existingPost->tags()->sync([]);
                     }
 
                     Log::debug("文章更新完成，ID: " . $existingPost->id);
@@ -529,15 +530,18 @@ class WordpressImporter
             }
         }
 
-        // 保存文章分类关联
-        if ($categoryId) {
-            // 获取分类模型实例
-            $category = \app\model\Category::find($categoryId);
-            if ($category) {
-                // 使用attach方法保存文章分类关联
-                $post->categories()->attach($category);
-                Log::debug("文章分类关联已保存，文章ID: " . $post->id . "，分类ID: " . $categoryId);
-            }
+        // 保存文章分类/标签关联（覆盖式同步）
+        if (!empty($categoryIds)) {
+            $post->categories()->sync($categoryIds);
+            Log::debug("文章分类已同步，文章ID: " . $post->id . "，分类IDs: " . implode(',', $categoryIds));
+        } else {
+            $post->categories()->sync([]);
+        }
+        if (!empty($tagIds)) {
+            $post->tags()->sync($tagIds);
+            Log::debug("文章标签已同步，文章ID: " . $post->id . "，标签IDs: " . implode(',', $tagIds));
+        } else {
+            $post->tags()->sync([]);
         }
 
         Log::debug("文章保存完成，ID: " . $post->id);
@@ -666,33 +670,52 @@ class WordpressImporter
      *
      * @return int|null
      */
-    protected function processCategories(DOMXPath $xpath, DOMNode $node): ?int
+    /**
+     * 收集分类IDs（支持多个）
+     *
+     * 优先使用 nicename 作为 slug；无 nicename 时，使用翻译生成 slug。
+     * 若已存在则复用；否则创建后返回ID。
+     *
+     * @return int[] 分类ID数组
+     */
+    protected function processCategories(DOMXPath $xpath, DOMNode $node): array
     {
-        $categories = $xpath->query('category[@domain="category"]', $node);
+        $ids = [];
+        $nodes = $xpath->query('category[@domain="category"]', $node);
+        if (!$nodes || $nodes->length === 0) {
+            Log::debug("无分类信息");
+            return $ids;
+        }
 
-        if ($categories->length > 0) {
-            $categoryName = $categories->item(0)->nodeValue;
-            Log::debug("处理分类: " . $categoryName);
+        foreach ($nodes as $n) {
+            $name = trim((string)$n->nodeValue);
+            $nicename = '';
+            if ($n instanceof \DOMElement) {
+                $nicename = (string)$n->getAttribute('nicename');
+            }
+            if ($name === '') {
+                continue;
+            }
 
-            // 查找现有分类
-            $category = \app\model\Category::where('name', $categoryName)->first();
+            // 确定slug：优先 nicename，否则翻译生成
+            $slug = $nicename ?: $this->translateTitle($name);
+            if (empty($slug)) {
+                $slug = \Illuminate\Support\Str::slug($name) ?: ('category-' . time());
+            }
+
+            // 先按 slug 查找，找不到再按 name 查找
+            $category = \app\model\Category::where('slug', $slug)->first();
+            if (!$category) {
+                $category = \app\model\Category::where('name', $name)->first();
+            }
 
             if ($category) {
-                Log::debug("找到现有分类: " . $category->name . " (ID: " . $category->id . ")");
-                return $category->id;
+                $ids[] = (int)$category->id;
+                Log::debug("复用分类: {$category->name} ({$category->id})");
+                continue;
             }
 
-            // 创建新分类
-            Log::debug("创建新分类: " . $categoryName);
-
-            // 生成slug，确保不为空
-            $slug = \Illuminate\Support\Str::slug($categoryName);
-            if (empty($slug)) {
-                // 如果生成的slug为空，则使用分类名加上时间戳
-                $slug = 'category-' . time();
-            }
-
-            // 检查slug是否已存在，如果存在则添加唯一后缀
+            // 唯一 slug 处理
             $originalSlug = $slug;
             $suffix = 1;
             while (\app\model\Category::where('slug', $slug)->exists()) {
@@ -700,27 +723,97 @@ class WordpressImporter
                 $suffix++;
             }
 
-            // 使用Category模型创建新分类
             try {
                 $category = new \app\model\Category();
-                $category->name = $categoryName;
+                $category->name = $name;
                 $category->slug = $slug;
-                $category->parent_id = 0; // 默认作为顶级分类
-                $category->sort_order = 0; // 默认排序
+                $category->parent_id = null;
+                $category->sort_order = 0;
                 $category->created_at = date('Y-m-d H:i:s');
                 $category->updated_at = date('Y-m-d H:i:s');
                 $category->save();
-
+                $ids[] = (int)$category->id;
                 Log::debug("新分类创建完成，ID: " . $category->id);
-                return $category->id;
             } catch (\Exception $e) {
                 Log::error('创建分类时出错: ' . $e->getMessage());
-                return null;
             }
         }
 
-        Log::debug("无分类信息");
-        return null;
+        // 去重
+        $ids = array_values(array_unique(array_filter($ids)));
+        return $ids;
+    }
+
+    /**
+     * 收集标签IDs（支持多个）
+     *
+     * 优先使用 nicename 作为 slug；无 nicename 时，使用翻译生成 slug。
+     * 若已存在则复用；否则创建后返回ID。
+     *
+     * @return int[] 标签ID数组
+     */
+    protected function processTags(DOMXPath $xpath, DOMNode $node): array
+    {
+        $ids = [];
+        $nodes = $xpath->query('category[@domain="post_tag"]', $node);
+        if (!$nodes || $nodes->length === 0) {
+            Log::debug("无标签信息");
+            return $ids;
+        }
+
+        foreach ($nodes as $n) {
+            $name = trim((string)$n->nodeValue);
+            $nicename = '';
+            if ($n instanceof \DOMElement) {
+                $nicename = (string)$n->getAttribute('nicename');
+            }
+            if ($name === '') {
+                continue;
+            }
+
+            // 确定slug：优先 nicename，否则翻译生成
+            $slug = $nicename ?: $this->translateTitle($name);
+            if (empty($slug)) {
+                $slug = \Illuminate\Support\Str::slug($name) ?: ('tag-' . time());
+            }
+
+            // 先按 slug 查找，找不到再按 name 查找
+            $tag = \app\model\Tag::where('slug', $slug)->first();
+            if (!$tag) {
+                $tag = \app\model\Tag::where('name', $name)->first();
+            }
+
+            if ($tag) {
+                $ids[] = (int)$tag->id;
+                Log::debug("复用标签: {$tag->name} ({$tag->id})");
+                continue;
+            }
+
+            // 唯一 slug 处理
+            $originalSlug = $slug;
+            $suffix = 1;
+            while (\app\model\Tag::where('slug', $slug)->exists()) {
+                $slug = $originalSlug . '-' . $suffix;
+                $suffix++;
+            }
+
+            try {
+                $tag = new \app\model\Tag();
+                $tag->name = $name;
+                $tag->slug = $slug;
+                $tag->created_at = date('Y-m-d H:i:s');
+                $tag->updated_at = date('Y-m-d H:i:s');
+                $tag->save();
+                $ids[] = (int)$tag->id;
+                Log::debug("新标签创建完成，ID: " . $tag->id);
+            } catch (\Exception $e) {
+                Log::error('创建标签时出错: ' . $e->getMessage());
+            }
+        }
+
+        // 去重
+        $ids = array_values(array_unique(array_filter($ids)));
+        return $ids;
     }
 
     /**

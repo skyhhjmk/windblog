@@ -9,6 +9,136 @@ use Elastic\Elasticsearch\ClientInterface;
 class ElasticService
 {
     protected static ?ClientInterface $client = null;
+    
+    /**
+     * 在 ES 中按标签名称聚合并返回标准化标签列表（通过数据库补全id/slug）
+     */
+    public static function searchTags(string $keyword, int $limit = 10): array
+    {
+        $cfg = self::getConfig();
+        if (!$cfg['enabled']) {
+            return [];
+        }
+        $kw = trim($keyword);
+        if ($kw === '') {
+            return [];
+        }
+        $ckey = 'es_tags:' . md5($kw) . ':' . $limit;
+        $cached = CacheService::cache($ckey);
+        if ($cached !== false && is_array($cached)) {
+            return $cached;
+        }
+
+        $analyzer = (string)\app\service\BlogService::getConfig('es.analyzer', 'standard');
+        $payload = [
+            'size' => max(10, $limit),
+            'query' => [
+                'bool' => [
+                    'must' => [
+                        ['term' => ['item_type' => 'tag']],
+                        [
+                            'bool' => [
+                                'should' => [
+                                    ['match' => ['tag_name' => ['query' => $kw, 'operator' => 'and', 'fuzziness' => 'AUTO', 'analyzer' => $analyzer]]],
+                                    ['match_phrase_prefix' => ['tag_name' => ['query' => $kw]]],
+                                    ['term' => ['tag_slug' => $kw]],
+                                ],
+                                'minimum_should_match' => 1
+                            ]
+                        ]
+                    ]
+                ]
+            ],
+            '_source' => ['tag_id', 'tag_name', 'tag_slug']
+        ];
+        $url = sprintf('%s/%s/_search', $cfg['host'], $cfg['index']);
+        $resp = self::curlRequest('POST', $url, $payload, $cfg['timeout']);
+        if (!$resp['ok'] || !is_array($resp['body'])) {
+            return [];
+        }
+        $hits = $resp['body']['hits']['hits'] ?? [];
+        $results = [];
+        foreach ($hits as $h) {
+            $src = $h['_source'] ?? [];
+            $results[] = [
+                'id' => (int)($src['tag_id'] ?? 0),
+                'name' => (string)($src['tag_name'] ?? ''),
+                'slug' => (string)($src['tag_slug'] ?? ''),
+            ];
+            if (count($results) >= $limit) {
+                break;
+            }
+        }
+        $total = isset($resp['body']['hits']['total']['value']) ? (int)$resp['body']['hits']['total']['value'] : count($hits);
+        \support\Log::debug(sprintf('[ElasticService] searchTags kw="%s" total=%d results=%d', $kw, $total, count($results)));
+        CacheService::cache($ckey, $results, true, 45);
+        return $results;
+    }
+
+    /**
+     * 在 ES 中按分类名称聚合并返回标准化分类列表（通过数据库补全id/slug）
+     */
+    public static function searchCategories(string $keyword, int $limit = 10): array
+    {
+        $cfg = self::getConfig();
+        if (!$cfg['enabled']) {
+            return [];
+        }
+        $kw = trim($keyword);
+        if ($kw === '') {
+            return [];
+        }
+        $ckey = 'es_cats:' . md5($kw) . ':' . $limit;
+        $cached = CacheService::cache($ckey);
+        if ($cached !== false && is_array($cached)) {
+            return $cached;
+        }
+
+        $analyzer = (string)\app\service\BlogService::getConfig('es.analyzer', 'standard');
+        $payload = [
+            'size' => max(10, $limit),
+            'query' => [
+                'bool' => [
+                    'must' => [
+                        ['term' => ['item_type' => 'category']],
+                        [
+                            'bool' => [
+                                'should' => [
+                                    ['match' => ['category_name' => ['query' => $kw, 'operator' => 'and', 'fuzziness' => 'AUTO', 'analyzer' => $analyzer]]],
+                                    ['match_phrase_prefix' => ['category_name' => ['query' => $kw]]],
+                                    ['term' => ['category_slug' => $kw]],
+                                ],
+                                'minimum_should_match' => 1
+                            ]
+                        ]
+                    ]
+                ]
+            ],
+            '_source' => ['category_id', 'category_name', 'category_slug']
+        ];
+        $url = sprintf('%s/%s/_search', $cfg['host'], $cfg['index']);
+        $resp = self::curlRequest('POST', $url, $payload, $cfg['timeout']);
+        if (!$resp['ok'] || !is_array($resp['body'])) {
+            return [];
+        }
+        $hits = $resp['body']['hits']['hits'] ?? [];
+        $results = [];
+        foreach ($hits as $h) {
+            $src = $h['_source'] ?? [];
+            $results[] = [
+                'id' => (int)($src['category_id'] ?? 0),
+                'name' => (string)($src['category_name'] ?? ''),
+                'slug' => (string)($src['category_slug'] ?? ''),
+            ];
+            if (count($results) >= $limit) {
+                break;
+            }
+        }
+        $total = isset($resp['body']['hits']['total']['value']) ? (int)$resp['body']['hits']['total']['value'] : count($hits);
+        \support\Log::debug(sprintf('[ElasticService] searchCategories kw="%s" total=%d results=%d', $kw, $total, count($results)));
+        CacheService::cache($ckey, $results, true, 45);
+        return $results;
+    }
 
     // 暴露配置与请求的代理方法，供同步服务复用（避免重复实现）
     public static function getConfigProxy(): array
@@ -218,7 +348,9 @@ class ElasticService
             'track_total_hits' => true,
             'timeout' => '2s',
             'terminate_after' => 10000,
-            '_source' => false,
+            // 为高亮提供必要的源字段（保持轻量）
+            '_source' => ['id', 'title', 'content'],
+            // 可选：不返回 stored_fields
             'stored_fields' => [],
             'query' => [
                 'bool' => [
@@ -226,24 +358,16 @@ class ElasticService
                         [
                             'multi_match' => [
                                 'query' => $keyword,
-                                'fields' => ['title^5', 'excerpt^3', 'content^1'],
+                                'fields' => ['title^5', 'excerpt^3', 'content^1', 'categories_names^2', 'tags_names^2'],
                                 'type' => 'best_fields',
                                 'operator' => 'and',
-                                'analyzer' => 'wb_synonym_search',
+                                'analyzer' => (string)\app\service\BlogService::getConfig('es.analyzer', 'standard'),
                                 'fuzziness' => 'AUTO'
                             ]
                         ]
                     ],
                     'should' => [
-                        // 完整标题精确匹配，极高权重
-                        [
-                            'term' => [
-                                'title.keyword' => [
-                                    'value' => $keyword,
-                                    'boost' => 50
-                                ]
-                            ]
-                        ],
+                        // 标题短语匹配，较高权重（保留），去除对不存在的 title.keyword 精确匹配以避免400
                         // 标题短语匹配，较高权重
                         [
                             'match_phrase' => [
@@ -271,6 +395,8 @@ class ElasticService
                 'fields' => [
                     'title' => new \stdClass(),
                     'content' => new \stdClass(),
+                    'categories_names' => new \stdClass(),
+                    'tags_names' => new \stdClass(),
                 ]
             ]
         ];
@@ -278,7 +404,8 @@ class ElasticService
         $url = sprintf('%s/%s/_search', $cfg['host'], $cfg['index']);
         $resp = self::curlRequest('POST', $url, $payload, $cfg['timeout']);
         if (!$resp['ok'] || !is_array($resp['body'])) {
-            Log::warning('[ElasticService] search fallback to DB, status=' . $resp['status']);
+            $bodyStr = isset($resp['body']) ? json_encode($resp['body'], JSON_UNESCAPED_UNICODE) : '';
+            Log::warning('[ElasticService] search fallback to DB, status=' . $resp['status'] . ' body=' . $bodyStr);
             return ['ids' => [], 'total' => 0, 'used' => false];
         }
 
@@ -305,10 +432,11 @@ class ElasticService
                 }
             }
         }
+        $analyzerUsed = (string)\app\service\BlogService::getConfig('es.analyzer', 'standard');
         $signals = [
             'highlighted' => !empty($highlights),
-            'synonym' => str_contains('wb_synonym_search', 'synonym'),
-            'analyzer' => 'wb_synonym_search',
+            'synonym' => str_contains(mb_strtolower($analyzerUsed), 'synonym'),
+            'analyzer' => $analyzerUsed,
         ];
         $result = ['ids' => $ids, 'total' => $total, 'used' => true, 'highlights' => $highlights, 'signals' => $signals];
         // 写入短TTL缓存（45秒）
@@ -343,7 +471,7 @@ class ElasticService
                 'match_phrase_prefix' => [
                     $field => [
                         'query' => $prefix,
-                        'analyzer' => 'wb_synonym_search'
+                        'analyzer' => (string)BlogService::getConfig('es.analyzer', 'standard')
                     ]
                 ]
             ],

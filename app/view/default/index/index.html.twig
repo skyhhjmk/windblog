@@ -57,8 +57,21 @@
                                               d="M9 5l7 7-7 7"></path>
                                     </svg>
                                 </a>
-                                <div class="flex space-x-2">
-                                    <!-- 这里可以添加标签 -->
+                                <div class="flex flex-wrap gap-2">
+                                    {% if post.categories is defined and post.categories|length > 0 %}
+                                        {% for c in post.categories %}
+                                            <a href="/category/{{ c.slug }}.html" class="px-2 py-1 text-xs rounded-full bg-blue-50 text-blue-700 border border-blue-100 hover:bg-blue-100 transition-colors">
+                                                <i class="fas fa-folder-open mr-1"></i>{{ c.name }}
+                                            </a>
+                                        {% endfor %}
+                                    {% endif %}
+                                    {% if post.tags is defined and post.tags|length > 0 %}
+                                        {% for t in post.tags %}
+                                            <a href="/tag/{{ t.slug }}.html" class="px-2 py-1 text-xs rounded-full bg-purple-50 text-purple-700 border border-purple-100 hover:bg-purple-100 transition-colors">
+                                                <i class="fas fa-hashtag mr-1"></i>{{ t.name }}
+                                            </a>
+                                        {% endfor %}
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>

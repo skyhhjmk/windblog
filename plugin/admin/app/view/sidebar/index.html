@@ -410,7 +410,7 @@ layui.use(['jquery', 'layer', 'form'], function() {
         
         // 小工具类型特定设置
         var contentTypes = ['about', 'html'];
-        var listTypes = ['recent_posts', 'popular_posts', 'random_posts', 'categories', 'tags_cloud', 'archives'];
+        var listTypes = ['recent_posts', 'popular_posts', 'random_posts', 'categories', 'tags', 'archives'];
         
         if (contentTypes.indexOf(widget.type) !== -1) {
             html += '<div class="layui-form-item">';
@@ -426,6 +426,24 @@ layui.use(['jquery', 'layer', 'form'], function() {
             html += '<label class="layui-form-label">显示数量</label>';
             html += '<div class="layui-input-block">';
             html += '<input type="number" name="limit" value="' + (widget.limit || 5) + '" class="layui-input" min="1" max="20">';
+            html += '</div>';
+            html += '</div>';
+        }
+        
+        // 标签云：支持用户可控的总数(count)与首屏直显(visible)
+        if (widget.type === 'tags') {
+            var tagCount = (widget.params && widget.params.count != null) ? widget.params.count : 50;
+            var tagVisible = (widget.params && widget.params.visible != null) ? widget.params.visible : 30;
+            html += '<div class="layui-form-item">';
+            html += '<label class="layui-form-label">标签总数(N)</label>';
+            html += '<div class="layui-input-block">';
+            html += '<input type="number" name="count" value="' + tagCount + '" class="layui-input" min="0" max="200" placeholder="默认50">';
+            html += '</div>';
+            html += '</div>';
+            html += '<div class="layui-form-item">';
+            html += '<label class="layui-form-label">首屏直显(M)</label>';
+            html += '<div class="layui-input-block">';
+            html += '<input type="number" name="visible" value="' + tagVisible + '" class="layui-input" min="0" max="' + tagCount + '" placeholder="默认30">';
             html += '</div>';
             html += '</div>';
         }
@@ -591,6 +609,21 @@ layui.use(['jquery', 'layer', 'form'], function() {
                 config[field.name] = field.value;
             }
         });
+        
+        // 将标签云的 count/visible 组装为嵌套的 params
+        var editingWidget = currentSidebarConfig.widgets.find(function(w){ return w.id === currentEditWidgetId; });
+        if (editingWidget && editingWidget.type === 'tags') {
+            var defCount = (editingWidget.params && editingWidget.params.count != null) ? editingWidget.params.count : 50;
+            var defVisible = (editingWidget.params && editingWidget.params.visible != null) ? editingWidget.params.visible : 30;
+            var count = parseInt(config.count != null ? config.count : defCount, 10);
+            var visible = parseInt(config.visible != null ? config.visible : defVisible, 10);
+            if (isNaN(count) || count < 0) count = 50;
+            if (isNaN(visible) || visible < 0) visible = 30;
+            if (visible > count) visible = count;
+            config.params = Object.assign({}, editingWidget.params || {}, { count: count, visible: visible });
+            delete config.count;
+            delete config.visible;
+        }
         
         // 显示加载状态
         var loading = layer.load(2);
