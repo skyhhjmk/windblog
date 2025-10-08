@@ -271,6 +271,23 @@
             font-size: 11px;
             line-height: 18px;
         }
+        /* 顶部站点标题单行省略，避免过长文本撑乱布局 */
+        #topbarTitle {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: inline-block;
+            /* 在 Flex 容器中允许内容收缩 */
+            min-width: 0;
+            /* 桌面端最大宽度占视口，避免过宽 */
+            max-width: 40vw;
+        }
+        /* 移动端可适当放宽最大宽度以提升可读性 */
+        @media (max-width: 640px) {
+            #topbarTitle {
+                max-width: 55vw;
+            }
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
