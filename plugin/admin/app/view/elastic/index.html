@@ -128,6 +128,7 @@
                         <button type="button" class="layui-btn" id="btn-save">保存</button>
                         <button type="button" class="layui-btn layui-btn-normal" id="btn-create">创建索引</button>
                         <button type="button" class="layui-btn layui-btn-danger" id="btn-rebuild">重建索引</button>
+                        <button type="button" class="layui-btn" id="btn-sync">同步索引</button>
                         <button type="button" class="layui-btn layui-btn-primary" id="btn-test">测试连接</button>
                         <button type="button" class="layui-btn layui-btn-warm" id="btn-logs">查看日志</button>
                         <button type="button" class="layui-btn layui-btn-danger" id="btn-clear-logs">清空日志</button>
@@ -299,6 +300,19 @@
                 });
             });
         };
+
+        // 同步索引（标签/分类 + 最近文章），带二次确认
+        var btnSync = document.getElementById("btn-sync");
+        if (btnSync) {
+            btnSync.onclick = function () {
+                layer.confirm("确认执行同步索引？（将同步全部标签/分类与最近文章）", {icon: 3, title: "提示"}, function (idx) {
+                    layer.close(idx);
+                    post("/app/admin/elastic/sync", {page_size: 200}).then(function (res) {
+                        layer.msg(res.success ? "同步完成" : ("同步失败：" + (res.error || "")));
+                    });
+                });
+            };
+        }
 
         document.getElementById("btn-test").onclick = function () {
             fetch("/app/admin/elastic/test")

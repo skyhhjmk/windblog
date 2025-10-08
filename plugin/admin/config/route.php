@@ -128,10 +128,14 @@ Route::group('/app/admin', function () {
     Route::group('/elastic', function () {
         Route::get('', [ElasticController::class, 'index']);
         Route::get('/', [ElasticController::class, 'index']);
+        // ES 同步与重建接口
+        Route::post('/rebuild', [ElasticController::class, 'rebuild'])->name('admin.elastic.rebuild');
+        Route::post('/sync', [ElasticController::class, 'sync'])->name('admin.elastic.sync');
         Route::get('/index', [ElasticController::class, 'index']);
         Route::post('/save', [ElasticController::class, 'save']);
         Route::post('/createIndex', [ElasticController::class, 'createIndex']);
-        Route::post('/rebuild', [ElasticController::class, 'rebuild']);
+
+
         Route::get('/get', [ElasticController::class, 'get']);
         Route::get('/test', [ElasticController::class, 'testConnection']);
         Route::get('/logs', [ElasticController::class, 'logs']);

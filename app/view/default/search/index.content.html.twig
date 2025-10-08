@@ -27,6 +27,12 @@
                     {% if esMeta.signals.highlighted %}{% if esMeta.signals.synonym %}、{% endif %}已为关键词提供高亮{% endif %}
                     {% if esMeta.signals.analyzer %}{% if esMeta.signals.synonym or esMeta.signals.highlighted %}、{% endif %}使用分词器: {{ esMeta.signals.analyzer }}{% endif %}
                 </p>
+                {% if esMeta.signals.degraded %}
+                    <div class="mt-3 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-xl px-4 py-2 inline-flex items-center">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                        服务降级：ES 搜索优化失效
+                    </div>
+                {% endif %}
             {% endif %}
             <div class="mt-4">
                 <div class="inline-flex items-center bg-blue-50 border border-blue-100 text-blue-700 rounded-xl px-4 py-2">
@@ -46,6 +52,61 @@
             {% endif %}
         {% endif %}
     </div>
+
+    <!-- 搜索表单（统一宽度为内容区宽度） -->
+    <div class="mt-4 mb-2">
+        <div class="max-w-3xl mx-auto">
+            <form action="/search" method="get" class="flex flex-wrap gap-3 items-center">
+                <input type="text" name="q" value="{{ search_keyword|default('') }}" placeholder="搜索关键词" class="flex-1 min-w-[240px] px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
+
+                <button type="submit" class="px-5 py-2 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-700">搜索</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 美化后的筛选区域（置于搜索表单下方） -->
+    <div class="mt-4 mb-12 md:mb-16">
+        <div class="max-w-3xl mx-auto">
+            <div class="bg-white border border-gray-200 rounded-2xl p-3 sm:p-4 shadow-sm">
+                <div class="flex flex-wrap gap-2 items-center">
+                    {% set currentType = search_type|default('all') %}
+                    {% set types = {'all':'全部','post':'文章','tag':'标签','category':'分类'} %}
+                    {% for key,label in types %}
+                        <a href="/search?q={{ search_keyword|url_encode }}&type={{ key }}{% if search_sort is defined and search_sort %}&sort={{ search_sort }}{% endif %}{% if search_date is defined and search_date %}&date={{ search_date }}{% endif %}"
+                           class="inline-flex items-center px-3 py-1.5 rounded-full border text-sm transition-colors {{ currentType==key ? 'bg-blue-600 text-white border-blue-600 shadow' : 'bg-white text-gray-700 border-gray-300 hover:bg-blue-50 hover:text-blue-700' }}">
+                            {{ label }}
+                        </a>
+                    {% endfor %}
+
+                    <!-- 排序 -->
+                    <div class="ml-2 inline-flex items-center gap-2">
+                        <span class="text-xs text-gray-500">排序</span>
+                        {% set sorts = {'':'默认','latest':'最新','hot':'热度'} %}
+                        {% for sk,sl in sorts %}
+                            <a href="/search?q={{ search_keyword|url_encode }}&type={{ currentType }}{% if sk %}&sort={{ sk }}{% endif %}{% if search_date is defined and search_date %}&date={{ search_date }}{% endif %}"
+                               class="inline-flex items-center px-3 py-1.5 rounded-full border text-xs transition-colors {{ (search_sort|default('')==sk) ? 'bg-purple-600 text-white border-purple-600 shadow' : 'bg-white text-gray-700 border-gray-300 hover:bg-purple-50 hover:text-purple-700' }}">
+                                {{ sl }}
+                            </a>
+                        {% endfor %}
+                    </div>
+
+                    <!-- 时间范围 -->
+                    <div class="ml-2 inline-flex items-center gap-2">
+                        <span class="text-xs text-gray-500">时间</span>
+                        {% set dates = {'':'全部','7d':'近7天','30d':'近30天','365d':'近一年'} %}
+                        {% for dk,dl in dates %}
+                            <a href="/search?q={{ search_keyword|url_encode }}&type={{ currentType }}{% if search_sort is defined and search_sort %}&sort={{ search_sort }}{% endif %}{% if dk %}&date={{ dk }}{% endif %}"
+                               class="inline-flex items-center px-3 py-1.5 rounded-full border text-xs transition-colors {{ (search_date|default('')==dk) ? 'bg-green-600 text-white border-green-600 shadow' : 'bg-white text-gray-700 border-gray-300 hover:bg-green-50 hover:text-green-700' }}">
+                                {{ dl }}
+                            </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
 
     <!-- 博客文章列表 -->
     {% if posts|length > 0 %}
@@ -86,7 +147,7 @@
                                 {% endif %}
                                 {% if post.tags is defined and post.tags|length > 0 %}
                                     {% for t in post.tags %}
-                                        <a href="/tag/{{ t.slug }}.html" class="px-2 py-1 text-xs rounded-full bg紫-50 text紫-700 border border紫-100 hover:bg紫-100 transition-colors">
+                                        <a href="/tag/{{ t.slug }}.html" class="px-2 py-1 text-xs rounded-full bg-purple-50 text-purple-700 border-purple-100 hover:bg-purple-100 transition-colors">
                                             <i class="fas fa-hashtag mr-1"></i>{{ t.name }}
                                         </a>
                                     {% endfor %}
@@ -112,7 +173,7 @@
             {{ pagination|raw }}
         </div>
     {% else %}
-        <div class="bg白 rounded-2xl shadow-lg p-12 text-center animate-fade-in">
+        <div class="bg-white rounded-2xl shadow-lg p-12 text-center animate-fade-in">
             <div class="text-gray-400 mb-4">
                 <svg class="w-24 h-24 mx-auto opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"

@@ -20,16 +20,56 @@ class ElasticSyncService
         $settings = [
             'mappings' => [
                 'properties' => [
+                    // 通用区分类型字段
+                    'item_type' => ['type' => 'keyword'], // post | tag | category
+
+                    // 文章(post)字段
                     'id' => ['type' => 'integer'],
                     'title' => ['type' => 'text', 'analyzer' => $analyzer === 'ik_max_word' ? 'ik_max_word' : 'standard'],
                     'excerpt' => ['type' => 'text', 'analyzer' => $analyzer === 'ik_max_word' ? 'ik_max_word' : 'standard'],
                     'content' => ['type' => 'text', 'analyzer' => $analyzer === 'ik_max_word' ? 'ik_max_word' : 'standard'],
                     'created_at' => ['type' => 'date', 'format' => 'strict_date_optional_time||epoch_millis'],
                     'author' => ['type' => 'keyword'],
-                    'categories_names' => ['type' => 'text', 'analyzer' => $analyzer === 'ik_max_word' ? 'ik_max_word' : 'standard'],
-                    'tags_names' => ['type' => 'text', 'analyzer' => $analyzer === 'ik_max_word' ? 'ik_max_word' : 'standard'],
+                    'categories_names' => [
+                        'type' => 'text',
+                        'analyzer' => $analyzer === 'ik_max_word' ? 'ik_max_word' : 'standard',
+                        'fields' => [
+                            'keyword' => ['type' => 'keyword']
+                        ]
+                    ],
+                    'tags_names' => [
+                        'type' => 'text',
+                        'analyzer' => $analyzer === 'ik_max_word' ? 'ik_max_word' : 'standard',
+                        'fields' => [
+                            'keyword' => ['type' => 'keyword']
+                        ]
+                    ],
                     'categories_slugs' => ['type' => 'keyword'],
-                    'tags_slugs' => ['type' => 'keyword']
+                    'tags_slugs' => ['type' => 'keyword'],
+
+                    // 标签(tag)独立文档字段
+                    'tag_id' => ['type' => 'integer'],
+                    'tag_name' => [
+                        'type' => 'text',
+                        'analyzer' => $analyzer === 'ik_max_word' ? 'ik_max_word' : 'standard',
+                        'fields' => [
+                            'keyword' => ['type' => 'keyword']
+                        ]
+                    ],
+                    'tag_slug' => ['type' => 'keyword'],
+                    'tag_description' => ['type' => 'text', 'analyzer' => $analyzer === 'ik_max_word' ? 'ik_max_word' : 'standard'],
+
+                    // 分类(category)独立文档字段
+                    'category_id' => ['type' => 'integer'],
+                    'category_name' => [
+                        'type' => 'text',
+                        'analyzer' => $analyzer === 'ik_max_word' ? 'ik_max_word' : 'standard',
+                        'fields' => [
+                            'keyword' => ['type' => 'keyword']
+                        ]
+                    ],
+                    'category_slug' => ['type' => 'keyword'],
+                    'category_description' => ['type' => 'text', 'analyzer' => $analyzer === 'ik_max_word' ? 'ik_max_word' : 'standard'],
                 ]
             ]
         ];
@@ -68,6 +108,7 @@ class ElasticSyncService
         }
 
         $payload = [
+            'item_type' => 'post',
             'id' => (int)$post->id,
             'title' => (string)$post->title,
             'excerpt' => (string)$post->excerpt,
@@ -144,6 +185,62 @@ class ElasticSyncService
     }
 
     /**
+     * 索引单个标签为独立文档
+     */
+    public static function indexTag(\app\model\Tag $tag): bool
+    {
+        $cfg = ElasticService::getConfigProxy();
+        $body = [
+            'item_type' => 'tag',
+            'tag_id' => (int)$tag->id,
+            'tag_name' => (string)$tag->name,
+            'tag_slug' => (string)($tag->slug ?? ''),
+            'tag_description' => (string)($tag->description ?? ''),
+        ];
+        try {
+            $client = ElasticService::client();
+            $client->index([
+                'index' => $cfg['index'],
+                'id' => 'tag_' . (int)$tag->id,
+                'body' => $body
+            ]);
+            \support\Redis::lpush('es:sync:logs', date('Y-m-d H:i:s') . ' [ES] indexTag id=' . (int)$tag->id . ' name=' . (string)$tag->name);
+            return true;
+        } catch (\Throwable $e) {
+            Log::warning('[ElasticSyncService] indexTag failed id=' . $tag->id . ' error=' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 索引单个分类为独立文档
+     */
+    public static function indexCategory(\app\model\Category $category): bool
+    {
+        $cfg = ElasticService::getConfigProxy();
+        $body = [
+            'item_type' => 'category',
+            'category_id' => (int)$category->id,
+            'category_name' => (string)$category->name,
+            'category_slug' => (string)($category->slug ?? ''),
+            'category_description' => (string)($category->description ?? ''),
+        ];
+        try {
+            $client = ElasticService::client();
+            $client->index([
+                'index' => $cfg['index'],
+                'id' => 'category_' . (int)$category->id,
+                'body' => $body
+            ]);
+            \support\Redis::lpush('es:sync:logs', date('Y-m-d H:i:s') . ' [ES] indexCategory id=' . (int)$category->id . ' name=' . (string)$category->name);
+            return true;
+        } catch (\Throwable $e) {
+            Log::warning('[ElasticSyncService] indexCategory failed id=' . $category->id . ' error=' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
      * 删除文章索引
      */
     public static function deletePost(int $id): bool
@@ -166,6 +263,44 @@ class ElasticSyncService
             return false;
         }
         return true;
+    }
+
+    /**
+     * 删除标签文档
+     */
+    public static function deleteTag(int $id): bool
+    {
+        $cfg = ElasticService::getConfigProxy();
+        try {
+            $client = ElasticService::client();
+            $client->delete([
+                'index' => $cfg['index'],
+                'id' => 'tag_' . $id
+            ]);
+            return true;
+        } catch (\Throwable $e) {
+            Log::warning('[ElasticSyncService] deleteTag failed id=' . $id . ' error=' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 删除分类文档
+     */
+    public static function deleteCategory(int $id): bool
+    {
+        $cfg = ElasticService::getConfigProxy();
+        try {
+            $client = ElasticService::client();
+            $client->delete([
+                'index' => $cfg['index'],
+                'id' => 'category_' . $id
+            ]);
+            return true;
+        } catch (\Throwable $e) {
+            Log::warning('[ElasticSyncService] deleteCategory failed id=' . $id . ' error=' . $e->getMessage());
+            return false;
+        }
     }
 
     protected static function pickAuthor(Post $post): string

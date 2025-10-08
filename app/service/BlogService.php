@@ -214,6 +214,13 @@ class BlogService
                 'highlights' => $esSearch['highlights'] ?? [],
                 'signals' => $esSearch['signals'] ?? [],
             ];
+        } else {
+            // ES 已启用但搜索未使用（回退到数据库），提供降级信号供前端提示
+            if (!empty($filters['search']) && (bool)self::getConfig('es.enabled', false)) {
+                $esMeta = [
+                    'signals' => ['degraded' => true],
+                ];
+            }
         }
         $result = [
             'posts' => $posts,

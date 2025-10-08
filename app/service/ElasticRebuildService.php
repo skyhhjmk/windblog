@@ -3,6 +3,8 @@
 namespace app\service;
 
 use app\model\Post;
+use app\model\Tag;
+use app\model\Category;
 use support\Log;
 
 class ElasticRebuildService
@@ -14,6 +16,33 @@ class ElasticRebuildService
     {
         $page = 1;
         try {
+            // 先重建全部标签
+            $tpage = 1;
+            while (true) {
+                $tBatch = \app\model\Tag::orderBy('id')->forPage($tpage, $pageSize)->get(['id','name','slug','description']);
+                if ($tBatch->isEmpty()) {
+                    break;
+                }
+                foreach ($tBatch as $tag) {
+                    ElasticSyncService::indexTag($tag);
+                }
+                $tpage++;
+            }
+
+            // 再重建全部分类
+            $cpage = 1;
+            while (true) {
+                $cBatch = \app\model\Category::orderBy('id')->forPage($cpage, $pageSize)->get(['id','name','slug','description']);
+                if ($cBatch->isEmpty()) {
+                    break;
+                }
+                foreach ($cBatch as $cat) {
+                    ElasticSyncService::indexCategory($cat);
+                }
+                $cpage++;
+            }
+
+            // 最后重建文章
             while (true) {
                 $query = Post::published()->orderBy('id')->forPage($page, $pageSize)->with(['authors', 'primaryAuthor']);
                 $batch = $query->get();

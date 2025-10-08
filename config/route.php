@@ -35,6 +35,9 @@ Route::any('/', [app\controller\IndexController::class, 'index'])->name('index.i
  // 搜索路由
 Route::any('/search', [app\controller\SearchController::class, 'index'])->name('search.index');
 Route::any('/search/ajax', [app\controller\SearchController::class, 'ajax'])->name('search.ajax');
+// 搜索分页路由
+Route::any('/search/page/{page}', [app\controller\SearchController::class, 'index'])->name('search.page');
+Route::any('/search/page/{page}.html', [app\controller\SearchController::class, 'index'])->name('search.page.html');
 
 // 分类/标签 汇总入口
 Route::any('/category', [app\controller\CategoryController::class, 'list'])->name('category.list');
