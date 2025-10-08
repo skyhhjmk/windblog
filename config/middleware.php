@@ -21,5 +21,6 @@ return [
         app\middleware\IpChecker::class,
         app\middleware\StaticCacheRedirect::class,
         app\middleware\CSRFMiddleware::class,
+        app\middleware\PluginSupport::class,
     ],
 ];

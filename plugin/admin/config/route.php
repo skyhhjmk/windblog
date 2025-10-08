@@ -25,6 +25,7 @@ use plugin\admin\app\controller\ElasticController;
 use plugin\admin\app\controller\PerformanceController;
 use plugin\admin\app\controller\StaticCacheController;
 use plugin\admin\app\controller\MailController;
+use plugin\admin\app\controller\PluginSystemController;
 use Webman\Route;
 use support\Request;
 
@@ -164,6 +165,18 @@ Route::group('/app/admin', function () {
         Route::get('/strategies/get', [StaticCacheController::class, 'strategiesGet']);
         Route::post('/strategies/save', [StaticCacheController::class, 'strategiesSave']);
         Route::post('/strategies/scan-posts', [StaticCacheController::class, 'strategiesScanPosts']);
+    });
+
+    // 插件系统 路由（独立插件管理）
+    Route::group('/plugin-system', function () {
+        Route::get('', [PluginSystemController::class, 'index']);
+        Route::get('/', [PluginSystemController::class, 'index']);
+        Route::get('/index', [PluginSystemController::class, 'index']);
+
+        Route::get('/list', [PluginSystemController::class, 'list']);
+        Route::post('/enable', [PluginSystemController::class, 'enable']);
+        Route::post('/disable', [PluginSystemController::class, 'disable']);
+        Route::post('/uninstall', [PluginSystemController::class, 'uninstall']);
     });
 
     // 邮件 路由

@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>插件管理</title>
+    <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css"/>
+    <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+    <script src="/app/admin/component/pear/pear.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+    /* 仅操作列垂直居中与间距优化，不影响其他列 */
+    .layui-table-view .layui-table td { vertical-align: middle; }
+    .layui-table-view .layui-table td .layui-table-cell .op-actions {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        height: 100%;
+    }
+    .layui-table-view .layui-table td .layui-table-cell .op-actions .pear-btn {
+        vertical-align: middle;
+    }
+    </style>
+</head>
+<body class="bg-gray-100 pear-container">
+<div class="layui-card rounded-lg shadow-sm">
+    <div class="layui-card-body">
+        <form id="pluginForm" class="layui-form" action="">
+            <div class="layui-form-item">
+                <div class="layui-inline">
+                    <label class="layui-form-label font-medium">关键词</label>
+                    <div class="layui-input-inline">
+                        <input type="text" name="q" id="q" placeholder="名称/标识/作者/描述" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <label class="layui-form-label font-medium">状态</label>
+                    <div class="layui-input-inline">
+                        <select name="status" id="status" class="layui-input">
+                            <option value="all">全部</option>
+                            <option value="enabled">已启用</option>
+                            <option value="disabled">未启用</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-inline ml-[50px]">
+                    <button class="pear-btn pear-btn-md pear-btn-primary" lay-submit lay-filter="plugin-query">
+                        <i class="layui-icon layui-icon-search"></i>
+                        查询
+                    </button>
+                    <button type="reset" class="pear-btn pear-btn-md">
+                        <i class="layui-icon layui-icon-refresh"></i>
+                        重置
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="layui-card rounded-lg shadow-sm">
+    <div class="layui-card-body">
+        <table id="plugin-table" lay-filter="plugin-table"></table>
+    </div>
+</div>
+
+<script type="text/html" id="plugin-toolbar">
+    <div class="layui-btn-container flex items-center gap-2 flex-wrap">
+        <button class="pear-btn pear-btn-primary pear-btn-md" lay-event="add">
+            <i class="layui-icon layui-icon-add-1"></i>
+            新增插件
+        </button>
+        <button class="pear-btn pear-btn-warm pear-btn-md" lay-event="batchEnable">
+            <i class="layui-icon layui-icon-play"></i>
+            批量启用
+        </button>
+        <button class="pear-btn pear-btn-md" lay-event="batchDisable">
+            <i class="layui-icon layui-icon-pause"></i>
+            批量停用
+        </button>
+        <button class="pear-btn pear-btn-danger pear-btn-md" lay-event="batchUninstall">
+            <i class="layui-icon layui-icon-delete"></i>
+            批量卸载
+        </button>
+    </div>
+</script>
+
+<script type="text/html" id="plugin-status">
+    {{# if(d.enabled){ }}
+    <span class="px-2 py-1 text-xs rounded bg-green-100 text-green-800">已启用</span>
+    {{# } else { }}
+    <span class="px-2 py-1 text-xs rounded bg-gray-100 text-gray-800">未启用</span>
+    {{# } }}
+</script>
+
+<script type="text/html" id="plugin-bar">
+    <div class="op-actions flex items-center justify-center space-x-2">
+        {{# if(d.enabled){ }}
+        <button class="pear-btn pear-btn-warm pear-btn-sm" lay-event="disable"><i class="layui-icon layui-icon-pause"></i></button>
+        {{# } else { }}
+        <button class="pear-btn pear-btn-primary pear-btn-sm" lay-event="enable"><i class="layui-icon layui-icon-play"></i></button>
+        {{# } }}
+        <button class="pear-btn pear-btn-neutral pear-btn-sm" lay-event="permissions"><i class="layui-icon layui-icon-set"></i></button>
+        <button class="pear-btn pear-btn-danger pear-btn-sm" lay-event="uninstall"><i class="layui-icon layui-icon-delete"></i></button>
+    </div>
+</script>
+
+<script>
+layui.use(['table', 'form', 'jquery', 'layer'], function () {
+    var table = layui.table;
+    var form = layui.form;
+    var $ = layui.jquery;
+    var layer = layui.layer;
+
+    var MODULE_PATH = "/app/admin/plugin-system/";
+
+    function currentParams() {
+        var formData = form.val('pluginForm');
+        // 兜底获取
+        formData.q = formData.q || ($('#q').val() || '');
+        formData.status = formData.status || ($('#status').val() || 'all');
+        return {
+            q: (formData.q || '').trim(),
+            status: formData.status || 'all'
+        };
+    }
+
+    var currentTable = null;
+    var lastParams = {};
+
+    function renderTable() {
+        lastParams = currentParams();
+        if (currentTable) {
+            currentTable.reload({
+                url: MODULE_PATH + "list",
+                where: lastParams,
+                page: { curr: 1 }
+            });
+            return;
+        }
+        currentTable = table.render({
+            elem: '#plugin-table',
+            url: MODULE_PATH + 'list',
+            where: lastParams,
+            page: true,
+            skin: 'line',
+            toolbar: '#plugin-toolbar',
+            defaultToolbar: [{
+                layEvent: 'refresh',
+                icon: 'layui-icon-refresh',
+            }, 'filter', 'print', 'exports'],
+            cols: [[
+                { type: 'checkbox' },
+                { field: 'name', title: '名称', align: 'center', minWidth: 160, sort: true },
+                { field: 'slug', title: '标识', align: 'center', minWidth: 140, sort: true },
+                { field: 'version', title: '版本', align: 'center', width: 100, sort: true },
+                { field: 'author', title: '作者', align: 'center', width: 140, sort: true },
+                { field: 'requires_php', title: 'Requires PHP', align: 'center', width: 120, sort: true },
+                { field: 'requires_at_least', title: 'Requires at least', align: 'center', width: 140, sort: true },
+                { field: 'enabled', title: '状态', align: 'center', width: 120, templet: '#plugin-status', sort: true },
+                { title: '操作', toolbar: '#plugin-bar', align: 'center', width: 180, fixed: 'right' }
+            ]],
+            request: { pageName: 'page', limitName: 'limit' }
+        });
+    }
+
+    // 查询提交
+    form.on('submit(plugin-query)', function (data) {
+        renderTable();
+        return false;
+    });
+
+    // 工具栏事件
+    table.on('toolbar(plugin-table)', function (obj) {
+        if (obj.event === 'add') {
+            layer.msg('新增插件：请接入安装/上传流程', { icon: 1, time: 1200 });
+        } else if (obj.event === 'refresh') {
+            if (currentTable) {
+                currentTable.reload({ where: lastParams });
+            }
+        } else if (obj.event === 'batchEnable') {
+            batchOperate('enable', '确认批量启用所选插件？');
+        } else if (obj.event === 'batchDisable') {
+            batchOperate('disable', '确认批量停用所选插件？');
+        } else if (obj.event === 'batchUninstall') {
+            batchOperate('uninstall', '确认批量卸载所选插件？此操作不可恢复！');
+        }
+    });
+
+    // 行工具事件
+    table.on('tool(plugin-table)', function (obj) {
+        var data = obj.data;
+        if (obj.event === 'enable') {
+            // 启用弹窗，展示声明权限明细与当前授权状态
+            fetch(MODULE_PATH + 'permissions?slug=' + encodeURIComponent(data.slug))
+                .then(function (r) { return r.json(); })
+                .then(function (res) {
+                    if (res.code !== 0) { layer.msg('获取权限信息失败', {icon:2}); return; }
+                    var info = res.data || {};
+                    var html = renderPermDialog(data.slug, info);
+                    layer.open({
+                        type: 1,
+                        title: '启用插件并确认权限',
+                        area: ['600px', '460px'],
+                        content: html,
+                        btn: ['启用', '取消'],
+                        yes: function (index) {
+                            layer.close(index);
+                            post(MODULE_PATH + 'enable', { slug: data.slug }).then(doneReload('已启用', '启用失败'));
+                        }
+                    });
+                });
+        } else if (obj.event === 'disable') {
+            layer.confirm('确认停用该插件？', { icon: 3, title: '提示' }, function (index) {
+                layer.close(index);
+                post(MODULE_PATH + 'disable', { slug: data.slug }).then(doneReload('已停用', '停用失败'));
+            });
+        } else if (obj.event === 'uninstall') {
+            layer.confirm('确认卸载该插件？此操作不可恢复！', { icon: 3, title: '警告' }, function (index) {
+                layer.close(index);
+                post(MODULE_PATH + 'uninstall', { slug: data.slug }).then(doneReload('已卸载', '卸载失败'));
+            });
+        } else if (obj.event === 'permissions') {
+            fetch(MODULE_PATH + 'permissions?slug=' + encodeURIComponent(data.slug))
+                .then(function (r) { return r.json(); })
+                .then(function (res) {
+                    if (res.code !== 0) { layer.msg('获取权限信息失败', {icon:2}); return; }
+                    var info = res.data || {};
+                    var html = renderPermDialog(data.slug, info);
+                    layer.open({
+                        type: 1,
+                        title: '权限管理',
+                        area: ['600px', '460px'],
+                        content: html
+                    });
+                });
+        }
+    });
+
+    function renderPermDialog(slug, info) {
+        var declared = info.declared || [];
+        var granted = info.granted || [];
+        var pending = info.pending || [];
+        var stats = info.stats || {};
+        function badge(list) { return list.map(function(p){ return '<span class="px-2 py-1 text-xs rounded bg-gray-100 mr-2">'+p+'</span>'; }).join(''); }
+        function statRows(list) {
+            return list.map(function(p){
+                var s = stats[p] || {calls:0, denied:0};
+                var isGranted = granted.indexOf(p) !== -1;
+                var btn = isGranted
+                    ? '<button class="pear-btn pear-btn-danger pear-btn-xs perm-revoke-one" data-perm="'+p+'">撤销</button>'
+                    : '<button class="pear-btn pear-btn-primary pear-btn-xs perm-grant-one" data-perm="'+p+'">授权</button>';
+                return '<tr><td class="py-1">'+p+'</td><td class="py-1 text-center">'+s.calls+'</td><td class="py-1 text-center">'+s.denied+'</td><td class="py-1 text-center">'+btn+'</td></tr>';
+            }).join('');
+        }
+        var html =
+            '<div id="perm-popup-body" class="p-4 space-y-3">'+
+                '<div><div class="font-medium mb-1">声明权限</div>'+badge(declared)+'</div>'+
+                '<div><div class="font-medium mb-1">已授权</div>'+badge(granted)+'</div>'+
+                '<div><div class="font-medium mb-1">待授权</div>'+badge(pending)+'</div>'+
+                '<div class="mt-2"><div class="font-medium mb-1">统计（调用/拒绝）</div>'+
+                    '<table class="w-full text-sm"><thead><tr><th class="text-left">权限</th><th class="text-center">calls</th><th class="text-center">denied</th><th class="text-center">操作</th></tr></thead>'+
+                    '<tbody>'+statRows(declared)+'</tbody></table>'+
+                '</div>'+
+                '<div class="flex gap-2 mt-3">'+
+                    '<button class="pear-btn pear-btn-primary pear-btn-sm" id="perm-grant">批量授权待授权</button>'+
+                    '<button class="pear-btn pear-btn-danger pear-btn-sm" id="perm-revoke">批量撤销全部</button>'+
+                '</div>'+
+            '</div>';
+        setTimeout(function(){
+            var grantBtn = document.getElementById('perm-grant');
+            var revokeBtn = document.getElementById('perm-revoke');
+            if (grantBtn) grantBtn.onclick = function(){
+                post(MODULE_PATH + 'grantPermissions', { slug: slug, permissions: pending })
+                    .then(function(r){
+                        layer.msg(r.code===0?'授权成功':'授权失败',{icon:r.code===0?1:2});
+                        renderTable();
+                        refreshPermPopup(slug);
+                    });
+            };
+            if (revokeBtn) revokeBtn.onclick = function(){
+                post(MODULE_PATH + 'revokePermissions', { slug: slug, permissions: declared })
+                    .then(function(r){
+                        layer.msg(r.code===0?'撤销成功':'撤销失败',{icon:r.code===0?1:2});
+                        renderTable();
+                        refreshPermPopup(slug);
+                    });
+            };
+
+            // 单项授权
+            var grantOnes = document.querySelectorAll('.perm-grant-one');
+            grantOnes.forEach(function(el){
+                el.onclick = function(){
+                    var perm = el.getAttribute('data-perm');
+                    post(MODULE_PATH + 'grantPermission', { slug: slug, permission: perm })
+                        .then(function(r){
+                            layer.msg(r.code===0?('已授权 '+perm):'授权失败',{icon:r.code===0?1:2});
+                            renderTable();
+                            refreshPermPopup(slug);
+                        });
+                };
+            });
+            // 单项撤销
+            var revokeOnes = document.querySelectorAll('.perm-revoke-one');
+            revokeOnes.forEach(function(el){
+                el.onclick = function(){
+                    var perm = el.getAttribute('data-perm');
+                    post(MODULE_PATH + 'revokePermission', { slug: slug, permission: perm })
+                        .then(function(r){
+                            layer.msg(r.code===0?('已撤销 '+perm):'撤销失败',{icon:r.code===0?1:2});
+                            renderTable();
+                            refreshPermPopup(slug);
+                        });
+                };
+            });
+        }, 0);
+        return html;
+    }
+
+    function doneReload(successText, failText) {
+        return function (res) {
+            layer.msg(res.code === 0 ? successText : (failText + '：' + (res.msg || '')), { icon: res.code === 0 ? 1 : 2, time: 1000 }, function () {
+                if (currentTable) {
+                    currentTable.reload({ where: lastParams });
+                }
+            });
+        };
+    }
+
+    function batchOperate(op, confirmText) {
+        var data = table.checkStatus('plugin-table').data;
+        if (!data || data.length === 0) {
+            layer.msg("未选中数据", { icon: 3, time: 1000 });
+            return;
+        }
+        var slugs = data.map(function (d) { return d.slug; }).filter(Boolean);
+        layer.confirm(confirmText, { icon: 3, title: '提示' }, function (index) {
+            layer.close(index);
+            var loading = layer.load();
+            // 顺序执行，避免过多并发
+            var seq = Promise.resolve();
+            slugs.forEach(function (slug) {
+                seq = seq.then(function () {
+                    return post(MODULE_PATH + op, { slug: slug });
+                });
+            });
+            seq.then(function () {
+                layer.close(loading);
+                layer.msg('操作完成', { icon: 1, time: 1000 }, function () {
+                    if (currentTable) {
+                        currentTable.reload({ where: lastParams });
+                    }
+                });
+            }).catch(function (e) {
+                layer.close(loading);
+                layer.msg('部分操作失败', { icon: 2, time: 1200 });
+                if (currentTable) {
+                    currentTable.reload({ where: lastParams });
+                }
+            });
+        });
+    }
+
+    function post(url, data) {
+        return fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams(data || {}).toString()
+        }).then(function (r) { return r.json(); });
+    }
+
+    // 刷新权限弹窗内容（原地更新，找不到容器时回退为关闭并重开）
+    function refreshPermPopup(slug) {
+        fetch(MODULE_PATH + 'permissions?slug=' + encodeURIComponent(slug))
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                if (res.code !== 0) { layer.msg('刷新失败',{icon:2}); return; }
+                var info = res.data || {};
+                var html = renderPermDialog(slug, info);
+                var container = document.getElementById('perm-popup-body');
+                if (container && container.outerHTML !== undefined) {
+                    // 直接替换整块内容，触发 renderPermDialog 内部绑定
+                    container.outerHTML = html;
+                } else {
+                    // 回退：关闭并重开
+                    try { layer.closeAll('page'); } catch (e) {}
+                    layer.open({
+                        type: 1,
+                        title: '权限管理',
+                        area: ['600px', '460px'],
+                        content: html
+                    });
+                }
+            });
+    }
+
+    // 初始化渲染
+    form.render();
+    renderTable();
+});
+</script>
+</body>
+</html>

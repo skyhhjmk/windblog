@@ -18,6 +18,12 @@ class MediaLibraryService
     public function upload(UploadFile $file, array $data = []): array
     {
         try {
+            \app\service\PluginService::do_action('media.upload_start', [
+                'name' => $file->getUploadName(),
+                'mime' => $file->getUploadMimeType(),
+                'size' => $file->getSize(),
+                'data' => $data
+            ]);
             // 检查文件是否有效
             if (!$file->isValid()) {
                 return ['code' => 400, 'msg' => '文件无效'];
@@ -95,6 +101,11 @@ class MediaLibraryService
                 $this->generateThumbnail($media);
             }
             
+            \app\service\PluginService::do_action('media.upload_done', [
+                'id' => $media->id ?? null,
+                'path' => $media->file_path ?? null,
+                'mime' => $media->mime_type ?? null
+            ]);
             return ['code' => 0, 'msg' => '上传成功', 'data' => $media];
         } catch (\Exception $e) {
             return ['code' => 1, 'msg' => '上传失败: ' . $e->getMessage()];
@@ -187,6 +198,10 @@ class MediaLibraryService
         }
 
         try {
+            \app\service\PluginService::do_action('media.delete_start', [
+                'id' => $id,
+                'path' => $media->file_path ?? null
+            ]);
             // 删除物理文件
             $filePath = public_path('uploads/' . $media->file_path);
             if (file_exists($filePath)) {
@@ -214,6 +229,11 @@ class MediaLibraryService
 
             // 删除数据库记录
             $media->delete();
+
+            \app\service\PluginService::do_action('media.delete_done', [
+                'id' => $id,
+                'path' => $filePath
+            ]);
 
             return ['code' => 0, 'msg' => '文件删除成功'];
         } catch (\Exception $e) {

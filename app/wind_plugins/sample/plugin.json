@@ -1,0 +1,14 @@
+{
+  "name": "Sample Demo",
+  "slug": "sample",
+  "version": "1.0.0",
+  "description": "演示插件：注册请求进入/响应退出动作与响应过滤器。",
+  "author": "WindBlog",
+  "requires": {
+    "php": ">=8.2"
+  },
+  "permissions": [
+    "request:action"
+  ],
+  "capabilities": []
+}

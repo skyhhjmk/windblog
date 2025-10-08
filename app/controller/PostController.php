@@ -97,6 +97,16 @@ class PostController
         if (!$isPjax) {
             \support\Redis::connection('cache')->setex($cacheKey, 120, $resp->rawBody());
         }
+
+        // 动作：文章内容渲染完成（需权限 content:action.post_rendered）
+        \app\service\PluginService::do_action('content.post_rendered', [
+            'slug' => is_string($keyword) ? $keyword : null,
+            'id' => is_numeric($keyword) ? (int)$keyword : null
+        ]);
+
+        // 过滤器：文章响应（需权限 content:filter.post_response）
+        $resp = \app\service\PluginService::apply_filters('content.post_response_filter', $resp);
+
         return $resp;
     }
 }
