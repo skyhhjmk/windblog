@@ -94,12 +94,26 @@ class MailService
                     $priority = max(0, min(9, (int)$p));
                 }
             }
+            // 过滤器：允许插件调整邮件payload（需权限 mail:filter.payload）
+            $payload = \app\service\PluginService::apply_filters('mail.payload_filter', $payload);
+            // 动作：入队前（需权限 mail:action.before_enqueue）
+            \app\service\PluginService::do_action('mail.before_enqueue', $payload);
+
             $msg = new AMQPMessage(json_encode($payload, JSON_UNESCAPED_UNICODE), [
                 'content_type'  => 'application/json',
                 'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT,
                 'priority'      => $priority,
             ]);
             $channel->basic_publish($msg, $exchange, $routingKey);
+
+            // 动作：入队后（需权限 mail:action.after_enqueue）
+            \app\service\PluginService::do_action('mail.after_enqueue', [
+                'payload' => $payload,
+                'priority' => $priority,
+                'exchange' => $exchange,
+                'routingKey' => $routingKey
+            ]);
+
             Log::debug('Mail enqueued: ' . json_encode([
                 'to' => $payload['to'] ?? null,
                 'subject' => $payload['subject'] ?? null,

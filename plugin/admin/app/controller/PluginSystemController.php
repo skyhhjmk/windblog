@@ -213,4 +213,32 @@ class PluginSystemController extends Base
         PluginService::revokePermissions($slug, array_map('strval', $perms));
         return json(['code' => 0, 'msg' => 'ok']);
     }
+
+    /**
+     * 单项授权
+     */
+    public function grantPermission(Request $request): Response
+    {
+        $slug = (string)$request->post('slug');
+        $perm = (string)$request->post('permission');
+        if ($slug === '' || $perm === '') {
+            return json(['code' => 1, 'msg' => '缺少参数']);
+        }
+        PluginService::grantPermission($slug, $perm);
+        return json(['code' => 0, 'msg' => 'ok']);
+    }
+
+    /**
+     * 单项撤销
+     */
+    public function revokePermission(Request $request): Response
+    {
+        $slug = (string)$request->post('slug');
+        $perm = (string)$request->post('permission');
+        if ($slug === '' || $perm === '') {
+            return json(['code' => 1, 'msg' => '缺少参数']);
+        }
+        PluginService::revokePermission($slug, $perm);
+        return json(['code' => 0, 'msg' => 'ok']);
+    }
 }

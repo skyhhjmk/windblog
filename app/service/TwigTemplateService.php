@@ -94,7 +94,42 @@ class TwigTemplateService implements View
         if (isset($request->_view_vars)) {
             $vars = array_merge((array)$request->_view_vars, $vars);
         }
+
+        // 过滤器：模板变量（需权限 template:filter.vars）
+        $vars = \app\service\PluginService::apply_filters('template.vars_filter', [
+            'template' => $template,
+            'vars' => $vars,
+            'app' => $app,
+            'plugin' => $plugin
+        ])['vars'] ?? $vars;
+
+        // 动作：渲染开始（需权限 template:action.render_start）
+        \app\service\PluginService::do_action('template.render_start', [
+            'template' => $template,
+            'app' => $app,
+            'plugin' => $plugin,
+            'paths' => $loaderPaths
+        ]);
+
         // 使用多路径缓存键进行渲染
-        return $views[$viewsKey]->render("$template.$viewSuffix", $vars);
+        $html = $views[$viewsKey]->render("$template.$viewSuffix", $vars);
+
+        // 动作：渲染结束（需权限 template:action.render_end）
+        \app\service\PluginService::do_action('template.render_end', [
+            'template' => $template,
+            'app' => $app,
+            'plugin' => $plugin,
+            'html_len' => strlen($html)
+        ]);
+
+        // 过滤器：HTML输出（需权限 template:filter.html）
+        $html = \app\service\PluginService::apply_filters('template.html_filter', [
+            'template' => $template,
+            'html' => $html,
+            'app' => $app,
+            'plugin' => $plugin
+        ])['html'] ?? $html;
+
+        return $html;
     }
 }

@@ -117,10 +117,14 @@ class PluginManager
             }
         }
 
+        // 插件注册上下文：在激活阶段统一进行系统权限校验（未授权拒绝注册并告警）
+        $this->hooks->beginRegistering($slug, $this);
         try {
             $entry['instance']->activate($this->hooks);
         } catch (\Throwable $e) {
             return false;
+        } finally {
+            $this->hooks->endRegistering();
         }
 
         $enabled = (array)(blog_config('plugins.enabled', [], true) ?: []);

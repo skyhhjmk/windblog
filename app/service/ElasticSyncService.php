@@ -115,6 +115,9 @@ class ElasticSyncService
             'content' => (string)$post->content,
             'author' => self::pickAuthor($post),
         ];
+
+        // 过滤器：允许插件调整索引payload（需权限 search:filter.index_post_payload）
+        $payload = \app\service\PluginService::apply_filters('es.index_post_payload_filter', $payload);
         if ($created) {
             $payload['created_at'] = $created;
         }
@@ -197,6 +200,12 @@ class ElasticSyncService
             'tag_slug' => (string)($tag->slug ?? ''),
             'tag_description' => (string)($tag->description ?? ''),
         ];
+
+        // 过滤器：索引标签payload（需权限 search:filter.index_tag_payload）
+        $body = \app\service\PluginService::apply_filters('es.index_tag_payload_filter', $body);
+        // 动作：开始索引标签（需权限 search:action.index_tag_start）
+        \app\service\PluginService::do_action('elastic.index_tag_start', ['id' => (int)$tag->id]);
+
         try {
             $client = ElasticService::client();
             $client->index([
@@ -205,6 +214,10 @@ class ElasticSyncService
                 'body' => $body
             ]);
             \support\Redis::lpush('es:sync:logs', date('Y-m-d H:i:s') . ' [ES] indexTag id=' . (int)$tag->id . ' name=' . (string)$tag->name);
+
+            // 动作：完成索引标签（需权限 search:action.index_tag_done）
+            \app\service\PluginService::do_action('elastic.index_tag_done', ['id' => (int)$tag->id]);
+
             return true;
         } catch (\Throwable $e) {
             Log::warning('[ElasticSyncService] indexTag failed id=' . $tag->id . ' error=' . $e->getMessage());
@@ -225,6 +238,12 @@ class ElasticSyncService
             'category_slug' => (string)($category->slug ?? ''),
             'category_description' => (string)($category->description ?? ''),
         ];
+
+        // 过滤器：索引分类payload（需权限 search:filter.index_category_payload）
+        $body = \app\service\PluginService::apply_filters('es.index_category_payload_filter', $body);
+        // 动作：开始索引分类（需权限 search:action.index_category_start）
+        \app\service\PluginService::do_action('elastic.index_category_start', ['id' => (int)$category->id]);
+
         try {
             $client = ElasticService::client();
             $client->index([
@@ -233,6 +252,10 @@ class ElasticSyncService
                 'body' => $body
             ]);
             \support\Redis::lpush('es:sync:logs', date('Y-m-d H:i:s') . ' [ES] indexCategory id=' . (int)$category->id . ' name=' . (string)$category->name);
+
+            // 动作：完成索引分类（需权限 search:action.index_category_done）
+            \app\service\PluginService::do_action('elastic.index_category_done', ['id' => (int)$category->id]);
+
             return true;
         } catch (\Throwable $e) {
             Log::warning('[ElasticSyncService] indexCategory failed id=' . $category->id . ' error=' . $e->getMessage());
@@ -247,11 +270,14 @@ class ElasticSyncService
     {
         $cfg = ElasticService::getConfigProxy();
         try {
+            \app\service\PluginService::do_action('elastic.delete_post_start', ['id' => $id]);
+
             $client = ElasticService::client();
             $client->delete([
                 'index' => $cfg['index'],
                 'id' => $id
             ]);
+            \app\service\PluginService::do_action('elastic.delete_post_done', ['id' => $id]);
             $resp = ['ok' => true, 'status' => 200];
         } catch (\Throwable $e) {
             $resp = ['ok' => false, 'status' => 0, 'error' => $e->getMessage()];
@@ -272,11 +298,14 @@ class ElasticSyncService
     {
         $cfg = ElasticService::getConfigProxy();
         try {
+            \app\service\PluginService::do_action('elastic.delete_tag_start', ['id' => $id]);
+
             $client = ElasticService::client();
             $client->delete([
                 'index' => $cfg['index'],
                 'id' => 'tag_' . $id
             ]);
+            \app\service\PluginService::do_action('elastic.delete_tag_done', ['id' => $id]);
             return true;
         } catch (\Throwable $e) {
             Log::warning('[ElasticSyncService] deleteTag failed id=' . $id . ' error=' . $e->getMessage());
@@ -291,11 +320,14 @@ class ElasticSyncService
     {
         $cfg = ElasticService::getConfigProxy();
         try {
+            \app\service\PluginService::do_action('elastic.delete_category_start', ['id' => $id]);
+
             $client = ElasticService::client();
             $client->delete([
                 'index' => $cfg['index'],
                 'id' => 'category_' . $id
             ]);
+            \app\service\PluginService::do_action('elastic.delete_category_done', ['id' => $id]);
             return true;
         } catch (\Throwable $e) {
             Log::warning('[ElasticSyncService] deleteCategory failed id=' . $id . ' error=' . $e->getMessage());
