@@ -157,4 +157,60 @@ class PluginSystemController extends Base
         $ok = PluginService::uninstall($slug);
         return json(['code' => $ok ? 0 : 1, 'msg' => $ok ? 'ok' : '卸载失败']);
     }
+
+    /**
+     * 权限详情（声明/已授权/待授权 + 每项统计）
+     */
+    public function permissions(Request $request): Response
+    {
+        $slug = (string)$request->get('slug', '');
+        if ($slug === '') {
+            return json(['code' => 1, 'msg' => '缺少slug']);
+        }
+        $declared = PluginService::getDeclaredPermissions($slug);
+        $granted = PluginService::getGrantedPermissions($slug);
+        $pending = PluginService::getPendingPermissions($slug);
+
+        $stats = [];
+        foreach ($declared as $perm) {
+            $base = PluginService::getCounts($slug, (string)$perm);
+            $win  = PluginService::getWindowCounts($slug, (string)$perm);
+            $stats[$perm] = array_merge($base, $win);
+        }
+
+        return json(['code' => 0, 'msg' => 'ok', 'data' => [
+            'declared' => $declared,
+            'granted' => $granted,
+            'pending' => $pending,
+            'stats' => $stats,
+        ]]);
+    }
+
+    /**
+     * 批量授权
+     */
+    public function grantPermissions(Request $request): Response
+    {
+        $slug = (string)$request->post('slug');
+        $perms = (array)$request->post('permissions');
+        if ($slug === '' || empty($perms)) {
+            return json(['code' => 1, 'msg' => '缺少参数']);
+        }
+        PluginService::grantPermissions($slug, array_map('strval', $perms));
+        return json(['code' => 0, 'msg' => 'ok']);
+    }
+
+    /**
+     * 批量撤销
+     */
+    public function revokePermissions(Request $request): Response
+    {
+        $slug = (string)$request->post('slug');
+        $perms = (array)$request->post('permissions');
+        if ($slug === '' || empty($perms)) {
+            return json(['code' => 1, 'msg' => '缺少参数']);
+        }
+        PluginService::revokePermissions($slug, array_map('strval', $perms));
+        return json(['code' => 0, 'msg' => 'ok']);
+    }
 }

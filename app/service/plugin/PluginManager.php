@@ -89,6 +89,34 @@ class PluginManager
             }
             $entry['instance'] = $instance;
         }
+        // 生命周期：安装/升级检测（不强制接口，动态调用）
+        $prevVersion = (string)(blog_config("plugins.version.$slug", '', true) ?: '');
+        $curVersion  = $entry['meta']->version;
+        try {
+            if ($prevVersion === '' && \method_exists($entry['instance'], 'onInstall')) {
+                $entry['instance']->onInstall($this->hooks);
+            } elseif ($prevVersion !== '' && $curVersion !== '' && $prevVersion !== $curVersion && \method_exists($entry['instance'], 'onUpgrade')) {
+                $entry['instance']->onUpgrade($prevVersion, $curVersion, $this->hooks);
+            }
+        } catch (\Throwable $e) {
+            // 安装/升级异常不影响后续 activate，但可记录日志/统计
+        }
+
+        // 权限：检测声明的权限并收集待授权
+        $declared = (array)($entry['meta']->permissions ?? []);
+        if ($declared) {
+            $pending = [];
+            foreach ($declared as $perm) {
+                if (!$this->hasPermission($slug, (string)$perm)) {
+                    $pending[] = (string)$perm;
+                }
+            }
+            if ($pending) {
+                blog_config("plugins.permissions.$slug.pending", $pending, true, true, true);
+                CacheService::clearCache("blog_config_plugins.permissions.$slug*");
+            }
+        }
+
         try {
             $entry['instance']->activate($this->hooks);
         } catch (\Throwable $e) {
@@ -102,7 +130,255 @@ class PluginManager
             // 清理缓存键，避免旧状态影响
             CacheService::clearCache('blog_config_plugins.enabled*');
         }
+        // 更新版本持久化
+        if ($curVersion !== '') {
+            blog_config("plugins.version.$slug", $curVersion, true, true, true);
+            CacheService::clearCache("blog_config_plugins.version.$slug*");
+        }
         return true;
+    }
+
+    /**
+     * 权限白名单：检查/授予/撤销（admin 可对接）
+     */
+    public function hasPermission(string $slug, string $permission): bool
+    {
+        $granted = (array)(blog_config("plugins.permissions.$slug.granted", [], true) ?: []);
+        return in_array($permission, $granted, true);
+    }
+
+    public function grantPermission(string $slug, string $permission): void
+    {
+        $granted = (array)(blog_config("plugins.permissions.$slug.granted", [], true) ?: []);
+        if (!in_array($permission, $granted, true)) {
+            $granted[] = $permission;
+            blog_config("plugins.permissions.$slug.granted", $granted, true, true, true);
+            CacheService::clearCache("blog_config_plugins.permissions.$slug*");
+        }
+        // 从待授权中移除
+        $pending = (array)(blog_config("plugins.permissions.$slug.pending", [], true) ?: []);
+        $pending = array_values(array_filter($pending, fn($p) => $p !== $permission));
+        blog_config("plugins.permissions.$slug.pending", $pending, true, true, true);
+
+        // 权限变更后重置计数器（calls/denied）
+        $this->resetCounts($slug, $permission);
+    }
+
+    public function revokePermission(string $slug, string $permission): void
+    {
+        $granted = (array)(blog_config("plugins.permissions.$slug.granted", [], true) ?: []);
+        $granted = array_values(array_filter($granted, fn($p) => $p !== $permission));
+        blog_config("plugins.permissions.$slug.granted", $granted, true, true, true);
+        CacheService::clearCache("blog_config_plugins.permissions.$slug*");
+
+        // 权限变更后重置计数器（calls/denied）
+        $this->resetCounts($slug, $permission);
+    }
+
+    /**
+     * 权限：查询声明/已授权/待授权，便于 admin 展示
+     */
+    public function getDeclaredPermissions(string $slug): array
+    {
+        $entry = $this->plugins[$slug] ?? null;
+        return $entry ? (array)($entry['meta']->permissions ?? []) : [];
+    }
+
+    public function getGrantedPermissions(string $slug): array
+    {
+        return (array)(blog_config("plugins.permissions.$slug.granted", [], true) ?: []);
+    }
+
+    public function getPendingPermissions(string $slug): array
+    {
+        return (array)(blog_config("plugins.permissions.$slug.pending", [], true) ?: []);
+    }
+
+    /**
+     * 获取某权限的调用/拒绝统计（Redis）
+     */
+    public function getCounts(string $slug, string $permission): array
+    {
+        $r = $this->redis();
+        $keys = [
+            $this->keyFor($slug, $permission, 'calls'),
+            $this->keyFor($slug, $permission, 'denied'),
+        ];
+        $vals = $r->mGet($keys);
+        return [
+            'calls' => (int)($vals[0] ?? 0),
+            'denied' => (int)($vals[1] ?? 0),
+        ];
+    }
+
+    /**
+     * 批量授权/撤销（admin 对接）
+     */
+    public function grantPermissions(string $slug, array $permissions): void
+    {
+        foreach ($permissions as $perm) {
+            $this->grantPermission($slug, (string)$perm);
+        }
+    }
+
+    public function revokePermissions(string $slug, array $permissions): void
+    {
+        foreach ($permissions as $perm) {
+            $this->revokePermission($slug, (string)$perm);
+        }
+    }
+
+    /**
+     * 计数器实现（Redis）
+     */
+    private function redis()
+    {
+        try {
+            return \support\Redis::connection('default');
+        } catch (\Throwable $e) {
+            // 回退：使用内存式简易对象（Redis不可用时，统计不持久）
+            static $dummy = null;
+            if ($dummy === null) {
+                $dummy = new class {
+                    private array $store = [];
+                    public function incrBy($key, $by) { $this->store[$key] = ($this->store[$key] ?? 0) + $by; return $this->store[$key]; }
+                    public function mGet($keys) { return array_map(fn($k) => $this->store[$k] ?? null, $keys); }
+                    public function del($keys) { foreach ((array)$keys as $k) { unset($this->store[$k]); } }
+                };
+            }
+            return $dummy;
+        }
+    }
+
+    private function keyFor(string $slug, string $permission, string $type): string
+    {
+        return "plugins:perm:{$slug}:{$permission}:{$type}";
+    }
+
+    private function incCallWindow(string $slug, string $permission): void
+    {
+        $r = $this->redis();
+        $now = time();
+        $hourKey = $this->keyFor($slug, $permission, 'calls') . ':hour:' . date('YmdH', $now);
+        $dayKey  = $this->keyFor($slug, $permission, 'calls') . ':day:'  . date('Ymd', $now);
+        $r->incrBy($hourKey, 1);
+        $r->incrBy($dayKey, 1);
+        if (method_exists($r, 'expire')) {
+            $r->expire($hourKey, 3600 * 24 * 8);
+            $r->expire($dayKey, 86400 * 8);
+        }
+    }
+
+    private function incDeniedWindow(string $slug, string $permission): void
+    {
+        $r = $this->redis();
+        $now = time();
+        $hourKey = $this->keyFor($slug, $permission, 'denied') . ':hour:' . date('YmdH', $now);
+        $dayKey  = $this->keyFor($slug, $permission, 'denied') . ':day:'  . date('Ymd', $now);
+        $r->incrBy($hourKey, 1);
+        $r->incrBy($dayKey, 1);
+        if (method_exists($r, 'expire')) {
+            $r->expire($hourKey, 3600 * 24 * 8);
+            $r->expire($dayKey, 86400 * 8);
+        }
+    }
+
+    /**
+     * 统计窗口汇总：近24小时与近7天
+     */
+    public function getWindowCounts(string $slug, string $permission): array
+    {
+        $r = $this->redis();
+        $now = time();
+        $calls24 = 0; $denied24 = 0;
+        for ($h = 0; $h < 24; $h++) {
+            $ts = $now - $h * 3600;
+            $hk = $this->keyFor($slug, $permission, 'calls') . ':hour:' . date('YmdH', $ts);
+            $dk = $this->keyFor($slug, $permission, 'denied') . ':hour:' . date('YmdH', $ts);
+            $calls24 += (int)($r->mGet([$hk])[0] ?? 0);
+            $denied24 += (int)($r->mGet([$dk])[0] ?? 0);
+        }
+        $calls7d = 0; $denied7d = 0;
+        for ($d = 0; $d < 7; $d++) {
+            $ts = $now - $d * 86400;
+            $hk = $this->keyFor($slug, $permission, 'calls') . ':day:' . date('Ymd', $ts);
+            $dk = $this->keyFor($slug, $permission, 'denied') . ':day:' . date('Ymd', $ts);
+            $calls7d += (int)($r->mGet([$hk])[0] ?? 0);
+            $denied7d += (int)($r->mGet([$dk])[0] ?? 0);
+        }
+        return [
+            'calls_24h' => $calls24,
+            'denied_24h' => $denied24,
+            'calls_7d' => $calls7d,
+            'denied_7d' => $denied7d,
+        ];
+    }
+
+    private function incCall(string $slug, string $permission): int
+    {
+        $r = $this->redis();
+        $v = (int)$r->incrBy($this->keyFor($slug, $permission, 'calls'), 1);
+        $this->incCallWindow($slug, $permission);
+        return $v;
+    }
+
+    private function incDenied(string $slug, string $permission): int
+    {
+        $r = $this->redis();
+        $v = (int)$r->incrBy($this->keyFor($slug, $permission, 'denied'), 1);
+        $this->incDeniedWindow($slug, $permission);
+        return $v;
+    }
+
+    private function resetCounts(string $slug, string $permission): void
+    {
+        $r = $this->redis();
+        $r->del([
+            $this->keyFor($slug, $permission, 'calls'),
+            $this->keyFor($slug, $permission, 'denied'),
+        ]);
+        // 清理最近8天窗口桶
+        $now = time();
+        for ($h = 0; $h < 24 * 8; $h++) {
+            $ts = $now - $h * 3600;
+            $r->del([
+                $this->keyFor($slug, $permission, 'calls') . ':hour:' . date('YmdH', $ts),
+                $this->keyFor($slug, $permission, 'denied') . ':hour:' . date('YmdH', $ts),
+            ]);
+        }
+        for ($d = 0; $d < 8; $d++) {
+            $ts = $now - $d * 86400;
+            $r->del([
+                $this->keyFor($slug, $permission, 'calls') . ':day:' . date('Ymd', $ts),
+                $this->keyFor($slug, $permission, 'denied') . ':day:' . date('Ymd', $ts),
+            ]);
+        }
+    }
+
+    /**
+     * 权限强制检查：未授权一律拒绝（默认拒绝），并进行计数+日志
+     * 返回 true 表示允许，false 表示拒绝
+     */
+    public function ensurePermission(string $slug, string $permission): bool
+    {
+        // 记录调用次数（Redis）
+        $this->incCall($slug, $permission);
+
+        if ($this->hasPermission($slug, $permission)) {
+            return true;
+        }
+
+        // 记录拒绝次数（Redis），并获取最新拒绝计数
+        $denied = $this->incDenied($slug, $permission);
+
+        // 日志：记录拒绝事件（包含插件与权限）
+        try {
+            \support\Log::warning("[plugin-permission-denied] slug={$slug} perm={$permission} denied={$denied}");
+        } catch (\Throwable $e) {
+            // 忽略日志异常，保持主流程
+        }
+
+        return false;
     }
 
     /**
@@ -204,7 +480,10 @@ class PluginManager
                 try {
                     $ref = new \ReflectionClass($cls);
                     if ($ref->isInstantiable() && $ref->getConstructor()?->getNumberOfRequiredParameters() === 0) {
-                        return $ref->newInstance();
+                        $inst = $ref->newInstance();
+                        if ($inst instanceof PluginInterface) {
+                            return $inst;
+                        }
                     }
                 } catch (\Throwable $e) {
                     // 忽略并继续

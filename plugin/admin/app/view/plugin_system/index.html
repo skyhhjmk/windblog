@@ -100,6 +100,7 @@
         {{# } else { }}
         <button class="pear-btn pear-btn-primary pear-btn-sm" lay-event="enable"><i class="layui-icon layui-icon-play"></i></button>
         {{# } }}
+        <button class="pear-btn pear-btn-neutral pear-btn-sm" lay-event="permissions"><i class="layui-icon layui-icon-set"></i></button>
         <button class="pear-btn pear-btn-danger pear-btn-sm" lay-event="uninstall"><i class="layui-icon layui-icon-delete"></i></button>
     </div>
 </script>
@@ -190,10 +191,25 @@ layui.use(['table', 'form', 'jquery', 'layer'], function () {
     table.on('tool(plugin-table)', function (obj) {
         var data = obj.data;
         if (obj.event === 'enable') {
-            layer.confirm('确认启用该插件？', { icon: 3, title: '提示' }, function (index) {
-                layer.close(index);
-                post(MODULE_PATH + 'enable', { slug: data.slug }).then(doneReload('已启用', '启用失败'));
-            });
+            // 启用弹窗，展示声明权限明细与当前授权状态
+            fetch(MODULE_PATH + 'permissions?slug=' + encodeURIComponent(data.slug))
+                .then(function (r) { return r.json(); })
+                .then(function (res) {
+                    if (res.code !== 0) { layer.msg('获取权限信息失败', {icon:2}); return; }
+                    var info = res.data || {};
+                    var html = renderPermDialog(data.slug, info);
+                    layer.open({
+                        type: 1,
+                        title: '启用插件并确认权限',
+                        area: ['600px', '460px'],
+                        content: html,
+                        btn: ['启用', '取消'],
+                        yes: function (index) {
+                            layer.close(index);
+                            post(MODULE_PATH + 'enable', { slug: data.slug }).then(doneReload('已启用', '启用失败'));
+                        }
+                    });
+                });
         } else if (obj.event === 'disable') {
             layer.confirm('确认停用该插件？', { icon: 3, title: '提示' }, function (index) {
                 layer.close(index);
@@ -204,8 +220,63 @@ layui.use(['table', 'form', 'jquery', 'layer'], function () {
                 layer.close(index);
                 post(MODULE_PATH + 'uninstall', { slug: data.slug }).then(doneReload('已卸载', '卸载失败'));
             });
+        } else if (obj.event === 'permissions') {
+            fetch(MODULE_PATH + 'permissions?slug=' + encodeURIComponent(data.slug))
+                .then(function (r) { return r.json(); })
+                .then(function (res) {
+                    if (res.code !== 0) { layer.msg('获取权限信息失败', {icon:2}); return; }
+                    var info = res.data || {};
+                    var html = renderPermDialog(data.slug, info);
+                    layer.open({
+                        type: 1,
+                        title: '权限管理',
+                        area: ['600px', '460px'],
+                        content: html
+                    });
+                });
         }
     });
+
+    function renderPermDialog(slug, info) {
+        var declared = info.declared || [];
+        var granted = info.granted || [];
+        var pending = info.pending || [];
+        var stats = info.stats || {};
+        function badge(list) { return list.map(function(p){ return '<span class="px-2 py-1 text-xs rounded bg-gray-100 mr-2">'+p+'</span>'; }).join(''); }
+        function statRows(list) {
+            return list.map(function(p){
+                var s = stats[p] || {calls:0, denied:0};
+                return '<tr><td class="py-1">'+p+'</td><td class="py-1 text-center">'+s.calls+'</td><td class="py-1 text-center">'+s.denied+'</td></tr>';
+            }).join('');
+        }
+        var html =
+            '<div class="p-4 space-y-3">'+
+                '<div><div class="font-medium mb-1">声明权限</div>'+badge(declared)+'</div>'+
+                '<div><div class="font-medium mb-1">已授权</div>'+badge(granted)+'</div>'+
+                '<div><div class="font-medium mb-1">待授权</div>'+badge(pending)+'</div>'+
+                '<div class="mt-2"><div class="font-medium mb-1">统计（调用/拒绝）</div>'+
+                    '<table class="w-full text-sm"><thead><tr><th class="text-left">权限</th><th class="text-center">calls</th><th class="text-center">denied</th></tr></thead>'+
+                    '<tbody>'+statRows(declared)+'</tbody></table>'+
+                '</div>'+
+                '<div class="flex gap-2 mt-3">'+
+                    '<button class="pear-btn pear-btn-primary pear-btn-sm" id="perm-grant">批量授权待授权</button>'+
+                    '<button class="pear-btn pear-btn-danger pear-btn-sm" id="perm-revoke">批量撤销全部</button>'+
+                '</div>'+
+            '</div>';
+        setTimeout(function(){
+            var grantBtn = document.getElementById('perm-grant');
+            var revokeBtn = document.getElementById('perm-revoke');
+            if (grantBtn) grantBtn.onclick = function(){
+                post(MODULE_PATH + 'grantPermissions', { slug: slug, permissions: pending })
+                    .then(function(r){ layer.msg(r.code===0?'授权成功':'授权失败',{icon:r.code===0?1:2}); renderTable(); });
+            };
+            if (revokeBtn) revokeBtn.onclick = function(){
+                post(MODULE_PATH + 'revokePermissions', { slug: slug, permissions: declared })
+                    .then(function(r){ layer.msg(r.code===0?'撤销成功':'撤销失败',{icon:r.code===0?1:2}); renderTable(); });
+            };
+        }, 0);
+        return html;
+    }
 
     function doneReload(successText, failText) {
         return function (res) {

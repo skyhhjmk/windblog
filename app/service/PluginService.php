@@ -95,6 +95,70 @@ class PluginService
         return self::$manager->allMetadata();
     }
 
+    // 权限包装：声明/已授权/待授权
+    public static function getDeclaredPermissions(string $slug): array
+    {
+        self::ensureInit();
+        return self::$manager->getDeclaredPermissions($slug);
+    }
+
+    public static function getGrantedPermissions(string $slug): array
+    {
+        self::ensureInit();
+        return self::$manager->getGrantedPermissions($slug);
+    }
+
+    public static function getPendingPermissions(string $slug): array
+    {
+        self::ensureInit();
+        return self::$manager->getPendingPermissions($slug);
+    }
+
+    // 统计包装：Redis中的调用/拒绝计数
+    public static function getCounts(string $slug, string $permission): array
+    {
+        self::ensureInit();
+        return self::$manager->getCounts($slug, $permission);
+    }
+
+    public static function getWindowCounts(string $slug, string $permission): array
+    {
+        self::ensureInit();
+        return self::$manager->getWindowCounts($slug, $permission);
+    }
+
+    // 授权/撤销与批量操作
+    public static function grantPermission(string $slug, string $permission): void
+    {
+        self::ensureInit();
+        self::$manager->grantPermission($slug, $permission);
+    }
+
+    public static function revokePermission(string $slug, string $permission): void
+    {
+        self::ensureInit();
+        self::$manager->revokePermission($slug, $permission);
+    }
+
+    public static function grantPermissions(string $slug, array $permissions): void
+    {
+        self::ensureInit();
+        self::$manager->grantPermissions($slug, $permissions);
+    }
+
+    public static function revokePermissions(string $slug, array $permissions): void
+    {
+        self::ensureInit();
+        self::$manager->revokePermissions($slug, $permissions);
+    }
+
+    // 权限强制检查（默认拒绝未授权）
+    public static function ensurePermission(string $slug, string $permission): bool
+    {
+        self::ensureInit();
+        return self::$manager->ensurePermission($slug, $permission);
+    }
+
     private static function ensureInit(): void
     {
         if (self::$hooks === null || self::$manager === null) {

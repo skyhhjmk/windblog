@@ -23,6 +23,12 @@ class PluginMetadata
     public string $requires_php = '';
     public string $requires_at_least = '';
     public string $file = '';
+    /** @var array<string, string> 版本/环境依赖约束，如 { "php": ">=8.2" } */
+    public array $requires = [];
+    /** @var array<string> 能力声明，如 [ "template", "route", "queue" ] */
+    public array $capabilities = [];
+    /** @var array<string> 权限声明，如 [ "send_mail", "read_posts" ] */
+    public array $permissions = [];
 
     public static function parseFromFile(string $file): ?self
     {
@@ -62,6 +68,28 @@ class PluginMetadata
             if (preg_match('/^\s*\*\s*' . preg_quote($label, '/') . '\s*:\s*(.+)$/mi', $block, $mm)) {
                 $val = trim($mm[1]);
                 $meta->{$prop} = $val;
+            }
+        }
+
+        // 可选：读取同目录下的 plugin.json 以覆盖/补充元数据与权限声明
+        $jsonFile = dirname($file) . DIRECTORY_SEPARATOR . 'plugin.json';
+        if (is_file($jsonFile)) {
+            try {
+                $json = json_decode((string)@file_get_contents($jsonFile), true, 512, JSON_THROW_ON_ERROR);
+                if (is_array($json)) {
+                    $meta->name = $json['name']    ?? $meta->name;
+                    $meta->slug = $json['slug']    ?? $meta->slug;
+                    $meta->version = $json['version'] ?? $meta->version;
+                    $meta->description = $json['description'] ?? $meta->description;
+                    $meta->author = $json['author'] ?? $meta->author;
+                    $meta->requires_php = $json['requires_php'] ?? ($json['requires']['php'] ?? $meta->requires_php);
+                    $meta->requires_at_least = $json['requires_at_least'] ?? $meta->requires_at_least;
+                    $meta->requires = is_array($json['requires'] ?? null) ? $json['requires'] : $meta->requires;
+                    $meta->capabilities = is_array($json['capabilities'] ?? null) ? $json['capabilities'] : $meta->capabilities;
+                    $meta->permissions = is_array($json['permissions'] ?? null) ? $json['permissions'] : $meta->permissions;
+                }
+            } catch (\Throwable $e) {
+                // 忽略 plugin.json 解析错误，保持兼容
             }
         }
 
