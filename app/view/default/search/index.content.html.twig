@@ -12,7 +12,7 @@
 </div>
 <div class="max-w-full mx-auto px-4">
     <!-- 搜索标题区域 -->
-    <div class="text-center mb-12 animate-fade-in-down">
+    <div class="text-center mb-12 fade-in-on-scroll" data-animation-delay="0">
         <h1 class="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
             <i class="fas fa-search text-blue-600 mr-3"></i>
             搜索结果
@@ -45,7 +45,9 @@
                     <div class="text-gray-700 font-medium mb-2">猜你想搜</div>
                     <div class="flex flex-wrap gap-2">
                         {% for t in suggest_titles %}
-                            <a href="/search?q={{ t|url_encode }}" class="px-3 py-1 bg-white hover:bg-blue-50 text-gray-700 hover:text-blue-700 border border-gray-200 rounded-full text-sm transition-colors">{{ t }}</a>
+                            <a href="/search?q={{ t|url_encode }}" class="px-3 py-1 bg-white hover:bg-blue-50 text-gray-700 hover:text-blue-700 border border-gray-200 rounded-full text-sm transition-colors hover-lift accelerated">
+                                {{ t }}
+                            </a>
                         {% endfor %}
                     </div>
                 </div>
@@ -59,7 +61,9 @@
             <form action="/search" method="get" class="flex flex-wrap gap-3 items-center">
                 <input type="text" name="q" value="{{ search_keyword|default('') }}" placeholder="搜索关键词" class="flex-1 min-w-[240px] px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
 
-                <button type="submit" class="px-5 py-2 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-700">搜索</button>
+                <button type="submit" class="px-5 py-2 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-700 hover-lift accelerated">
+                    搜索
+                </button>
             </form>
         </div>
     </div>
@@ -67,13 +71,13 @@
     <!-- 美化后的筛选区域（置于搜索表单下方） -->
     <div class="mt-4 mb-12 md:mb-16">
         <div class="max-w-3xl mx-auto">
-            <div class="bg-white border border-gray-200 rounded-2xl p-3 sm:p-4 shadow-sm">
+            <div class="bg-white border border-gray-200 rounded-2xl p-3 sm:p-4 shadow-sm fade-in-on-scroll" data-animation-delay="0.1">
                 <div class="flex flex-wrap gap-2 items-center">
                     {% set currentType = search_type|default('all') %}
                     {% set types = {'all':'全部','post':'文章','tag':'标签','category':'分类'} %}
                     {% for key,label in types %}
                         <a href="/search?q={{ search_keyword|url_encode }}&type={{ key }}{% if search_sort is defined and search_sort %}&sort={{ search_sort }}{% endif %}{% if search_date is defined and search_date %}&date={{ search_date }}{% endif %}"
-                           class="inline-flex items-center px-3 py-1.5 rounded-full border text-sm transition-colors {{ currentType==key ? 'bg-blue-600 text-white border-blue-600 shadow' : 'bg-white text-gray-700 border-gray-300 hover:bg-blue-50 hover:text-blue-700' }}">
+                           class="inline-flex items-center px-3 py-1.5 rounded-full border text-sm transition-colors hover-lift accelerated {{ currentType==key ? 'bg-blue-600 text-white border-blue-600 shadow' : 'bg-white text-gray-700 border-gray-300 hover:bg-blue-50 hover:text-blue-700' }}">
                             {{ label }}
                         </a>
                     {% endfor %}
@@ -84,7 +88,7 @@
                         {% set sorts = {'':'默认','latest':'最新','hot':'热度'} %}
                         {% for sk,sl in sorts %}
                             <a href="/search?q={{ search_keyword|url_encode }}&type={{ currentType }}{% if sk %}&sort={{ sk }}{% endif %}{% if search_date is defined and search_date %}&date={{ search_date }}{% endif %}"
-                               class="inline-flex items-center px-3 py-1.5 rounded-full border text-xs transition-colors {{ (search_sort|default('')==sk) ? 'bg-purple-600 text-white border-purple-600 shadow' : 'bg-white text-gray-700 border-gray-300 hover:bg-purple-50 hover:text-purple-700' }}">
+                               class="inline-flex items-center px-3 py-1.5 rounded-full border text-xs transition-colors hover-lift accelerated {{ (search_sort|default('')==sk) ? 'bg-purple-600 text-white border-purple-600 shadow' : 'bg-white text-gray-700 border-gray-300 hover:bg-purple-50 hover:text-purple-700' }}">
                                 {{ sl }}
                             </a>
                         {% endfor %}
@@ -96,7 +100,7 @@
                         {% set dates = {'':'全部','7d':'近7天','30d':'近30天','365d':'近一年'} %}
                         {% for dk,dl in dates %}
                             <a href="/search?q={{ search_keyword|url_encode }}&type={{ currentType }}{% if search_sort is defined and search_sort %}&sort={{ search_sort }}{% endif %}{% if dk %}&date={{ dk }}{% endif %}"
-                               class="inline-flex items-center px-3 py-1.5 rounded-full border text-xs transition-colors {{ (search_date|default('')==dk) ? 'bg-green-600 text-white border-green-600 shadow' : 'bg-white text-gray-700 border-gray-300 hover:bg-green-50 hover:text-green-700' }}">
+                               class="inline-flex items-center px-3 py-1.5 rounded-full border text-xs transition-colors hover-lift accelerated {{ (search_date|default('')==dk) ? 'bg-green-600 text-white border-green-600 shadow' : 'bg-white text-gray-700 border-gray-300 hover:bg-green-50 hover:text-green-700' }}">
                                 {{ dl }}
                             </a>
                         {% endfor %}
@@ -112,11 +116,11 @@
     {% if posts|length > 0 %}
         <div class="space-y-8">
             {% for post in posts %}
-                <div class="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 group">
+                <div class="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 group hover-lift accelerated fade-in-on-scroll" data-animation-delay="{{ loop.index0 * 0.1 }}">
                     <div class="p-6">
                         <h2 class="text-2xl font-bold text-gray-800 mb-2 group-hover:text-blue-600 transition-colors duration-200">
                             <a href="/post/{{ post.slug }}.html" target="_blank"
-                               class="block">
+                               class="block hover-lift accelerated">
                                 {{ (esMeta.highlights[post.id].title[0] ?? post.title)|raw }}
                             </a>
                         </h2>
@@ -140,21 +144,21 @@
                             <div class="flex flex-wrap gap-2">
                                 {% if post.categories is defined and post.categories|length > 0 %}
                                     {% for c in post.categories %}
-                                        <a href="/category/{{ c.slug }}.html" class="px-2 py-1 text-xs rounded-full bg-blue-50 text-blue-700 border border-blue-100 hover:bg-blue-100 transition-colors">
+                                        <a href="/category/{{ c.slug }}.html" class="px-2 py-1 text-xs rounded-full bg-blue-50 text-blue-700 border border-blue-100 hover:bg-blue-100 transition-colors hover-lift accelerated">
                                             <i class="fas fa-folder-open mr-1"></i>{{ c.name }}
                                         </a>
                                     {% endfor %}
                                 {% endif %}
                                 {% if post.tags is defined and post.tags|length > 0 %}
                                     {% for t in post.tags %}
-                                        <a href="/tag/{{ t.slug }}.html" class="px-2 py-1 text-xs rounded-full bg-purple-50 text-purple-700 border-purple-100 hover:bg-purple-100 transition-colors">
+                                        <a href="/tag/{{ t.slug }}.html" class="px-2 py-1 text-xs rounded-full bg-purple-50 text-purple-700 border-purple-100 hover:bg-purple-100 transition-colors hover-lift accelerated">
                                             <i class="fas fa-hashtag mr-1"></i>{{ t.name }}
                                         </a>
                                     {% endfor %}
                                 {% endif %}
                             </div>
                             <a href="/post/{{ post.slug }}.html"
-                               class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium transition-colors duration-200">
+                               class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium transition-colors duration-200 hover-lift accelerated">
                                 阅读更多
                                 <svg class="w-4 h-4 ml-1 transition-transform duration-200 group-hover:translate-x-1" 
                                      fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -169,11 +173,11 @@
         </div>
 
         <!-- 分页 -->
-        <div class="mt-12 flex justify-center">
+        <div class="mt-12 flex justify-center fade-in-on-scroll" data-animation-delay="0.3">
             {{ pagination|raw }}
         </div>
     {% else %}
-        <div class="bg-white rounded-2xl shadow-lg p-12 text-center animate-fade-in">
+        <div class="bg-white rounded-2xl shadow-lg p-12 text-center fade-in-on-scroll" data-animation-delay="0.2">
             <div class="text-gray-400 mb-4">
                 <svg class="w-24 h-24 mx-auto opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -189,7 +193,7 @@
                 {% endif %}
             </p>
             <div class="mt-6">
-                <a href="/" class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium transition-colors duration-200">
+                <a href="/" class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium transition-colors duration-200 hover-lift accelerated">
                     <i class="fas fa-home mr-2"></i>
                     返回首页
                 </a>
@@ -199,13 +203,6 @@
 </div>
 
 <style>
-    @keyframes fade-in-down {
-        0% { opacity: 0; transform: translateY(-20px); }
-        100% { opacity: 1; transform: translateY(0); }
-    }
-    .animate-fade-in-down { animation: fade-in-down 0.6s ease-out forwards; }
-    @keyframes fade-in { 0% { opacity: 0; } 100% { opacity: 1; } }
-    .animate-fade-in { animation: fade-in 0.6s ease-out forwards; }
     .hl { background-color: #ffea7a; color: #7c2d12; padding: 0 2px; border-radius: 2px; font-weight: 700; }
 </style>
 

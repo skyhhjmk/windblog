@@ -1,0 +1,518 @@
+/* ==========================================================================
+   风屿雨博客 - 高级动画样式
+   ========================================================================== */
+
+/* 基础动画变量定义 */
+:root {
+  --animation-duration: 0.4s;
+  --animation-duration-slow: 0.6s;
+  --animation-timing: cubic-bezier(0.4, 0, 0.2, 1);
+  --animation-delay-step: 0.1s;
+}
+
+/* 工具类：设置硬件加速 */
+.accelerated {
+  transform: translateZ(0);
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+/* 工具类：动画延迟 */
+.delay-100 {
+  animation-delay: calc(var(--animation-delay-step) * 1);
+}
+.delay-200 {
+  animation-delay: calc(var(--animation-delay-step) * 2);
+}
+.delay-300 {
+  animation-delay: calc(var(--animation-delay-step) * 3);
+}
+.delay-400 {
+  animation-delay: calc(var(--animation-delay-step) * 4);
+}
+.delay-500 {
+  animation-delay: calc(var(--animation-delay-step) * 5);
+}
+
+/* 1. 增强版入场动画 */
+
+/* 淡入动画 - 增强版 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn var(--animation-duration) var(--animation-timing) forwards;
+}
+
+/* 淡入下滑动画 - 增强版 */
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-down {
+  animation: fadeInDown var(--animation-duration) var(--animation-timing) forwards;
+}
+
+/* 淡入上滑动画 - 增强版 */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp var(--animation-duration) var(--animation-timing) forwards;
+}
+
+/* 淡入左滑动画 */
+@keyframes fadeInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-fade-in-left {
+  animation: fadeInLeft var(--animation-duration) var(--animation-timing) forwards;
+}
+
+/* 淡入右滑动画 */
+@keyframes fadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-fade-in-right {
+  animation: fadeInRight var(--animation-duration) var(--animation-timing) forwards;
+}
+
+/* 2. 悬停动画增强 */
+
+/* 悬停上移效果 - 增强版 */
+.hover-lift,
+section .hover-lift,
+article .hover-lift,
+.div .hover-lift {
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-lift:hover,
+section .hover-lift:hover,
+article .hover-lift:hover,
+.div .hover-lift:hover {
+  transform: translateY(-6px) translateZ(0);
+  box-shadow: 0 12px 20px -10px rgba(0, 0, 0, 0.1), 0 4px 8px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* 悬停缩放效果 */
+.hover-scale,
+section .hover-scale,
+article .hover-scale,
+.div .hover-scale {
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-scale:hover,
+section .hover-scale:hover,
+article .hover-scale:hover,
+.div .hover-scale:hover {
+  transform: scale(1.1) translateZ(0);
+}
+
+/* 悬停旋转效果（适合图标） */
+.hover-spin,
+section .hover-spin,
+article .hover-spin,
+.div .hover-spin {
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-spin:hover,
+section .hover-spin:hover,
+article .hover-spin:hover,
+.div .hover-spin:hover {
+  transform: rotate(45deg) translateZ(0);
+}
+
+/* 悬停旋转效果别名（兼容旧代码） */
+.hover-rotate,
+section .hover-rotate,
+article .hover-rotate,
+.div .hover-rotate {
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-rotate:hover,
+section .hover-rotate:hover,
+article .hover-rotate:hover,
+.div .hover-rotate:hover {
+  transform: rotate(45deg) translateZ(0);
+}
+
+/* 3. 元素状态变化动画 */
+
+/* 脉冲动画 */
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* 呼吸动画 */
+@keyframes breathe {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.animate-breathe {
+  animation: breathe 3s ease-in-out infinite;
+}
+
+/* 抖动动画（适合错误提示） */
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  75% {
+    transform: translateX(5px);
+  }
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out infinite;
+}
+
+/* 闪烁动画（适合通知） */
+@keyframes blink {
+  0%, 50%, 100% {
+    opacity: 1;
+  }
+  25%, 75% {
+    opacity: 0.5;
+  }
+}
+
+.animate-blink {
+  animation: blink 1.5s ease-in-out infinite;
+}
+
+/* 闪烁动画别名（兼容旧代码） */
+.animate-flash {
+  animation: blink 1.5s ease-in-out infinite;
+}
+
+/* 4. 加载动画 */
+
+/* 旋转加载动画 */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* 快速旋转动画 */
+.animate-spin-fast {
+  animation: spin 0.5s linear infinite;
+}
+
+/* 跳跃加载动画 */
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-bounce {
+  animation: bounce 1s ease-in-out infinite;
+}
+
+/* 带延迟的跳跃动画（用于加载指示器） */
+.animate-bounce-1 {
+  animation: bounce 1s ease-in-out infinite 0s;
+}
+
+.animate-bounce-2 {
+  animation: bounce 1s ease-in-out infinite 0.2s;
+}
+
+.animate-bounce-3 {
+  animation: bounce 1s ease-in-out infinite 0.4s;
+}
+
+/* 5. 滚动触发动画 */
+
+/* 滚动触发元素显示 */
+.fade-in-on-scroll {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s var(--animation-timing), transform 0.6s var(--animation-timing);
+}
+
+.fade-in-on-scroll.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* 6. 页面过渡动画 */
+
+/* 内容区域过渡 */
+.transition-content {
+  transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
+}
+
+/* 侧边栏过渡 */
+.transition-sidebar {
+  transition: width 0.4s ease-in-out, opacity 0.4s ease-in-out;
+}
+
+/* 7. 按钮交互动画 */
+
+/* 涟漪效果 */
+.ripple-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple-btn::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.5);
+  opacity: 0;
+  border-radius: 100%;
+  transform: scale(1, 1) translate(-50%, -50%);
+  transform-origin: 50% 50%;
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(0, 0);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(100, 100);
+    opacity: 0;
+  }
+}
+
+.ripple-btn:focus:not(:active)::after {
+  animation: ripple 1s ease-out;
+}
+
+/* 8. 骨架屏动画 */
+
+@keyframes shimmer {
+  0% {
+    background-position: -468px 0;
+  }
+  100% {
+    background-position: 468px 0;
+  }
+}
+
+.skeleton-loading {
+  background: linear-gradient(to right, #f6f7f8 8%, #edeef1 18%, #f6f7f8 33%);
+  background-size: 800px 104px;
+  animation: shimmer 1.5s infinite linear;
+}
+
+/* 9. 文本动画 */
+
+/* 打字机效果 */
+@keyframes typing {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+@keyframes blink-caret {
+  from, to {
+    border-color: transparent;
+  }
+  50% {
+    border-color: currentColor;
+  }
+}
+
+.typewriter {
+  overflow: hidden;
+  border-right: 0.15em solid currentColor;
+  white-space: nowrap;
+  margin: 0 auto;
+  animation: typing 3.5s steps(40, end), blink-caret 0.75s step-end infinite;
+}
+
+/* 10. 背景动画 */
+
+/* 渐变背景动画 */
+@keyframes gradientBackground {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.gradient-animate {
+  background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+  background-size: 400% 400%;
+  animation: gradientBackground 15s ease infinite;
+}
+
+/* 渐变背景动画别名（兼容旧代码） */
+.bg-gradient-animation {
+  background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+  background-size: 400% 400%;
+  animation: gradientBackground 15s ease infinite;
+}
+
+/* 11. 标签云动画效果 */
+
+.tag-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tag-cloud-item {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  transition: all var(--animation-duration) var(--animation-timing);
+  cursor: pointer;
+}
+
+.tag-cloud-item:hover {
+  transform: scale(1.1) translateZ(0);
+}
+
+/* 12. 移动端触摸反馈增强 */
+
+@media (hover: none) and (pointer: coarse) {
+  .touch-feedback {
+    transition: transform 0.15s ease, opacity 0.15s ease;
+  }
+  
+  .touch-feedback:active {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+}
+
+/* 13. 滚动条美化 */
+
+/* WebKit 浏览器滚动条 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+  transition: background 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+/* 14. 优化后的 PJAX 进度条 */
+
+#pjax-progress {
+  height: 3px;
+  background: linear-gradient(90deg, #3b82f6, #60a5fa, #3b82f6);
+  background-size: 200% 100%;
+  animation: gradientBackground 2s ease infinite;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.6), 0 0 4px rgba(96, 165, 250, 0.6);
+}
+
+/* 响应式调整 */
+
+@media (max-width: 640px) {
+  :root {
+    --animation-duration: 0.3s;
+    --animation-duration-slow: 0.5s;
+  }
+}
+
+/* 动画性能优化 */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

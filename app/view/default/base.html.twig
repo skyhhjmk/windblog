@@ -14,8 +14,12 @@
     <link rel="stylesheet" href="{{ asset('/assets/css/font-awesome.css') }}">
     <link rel="stylesheet" href="{{ asset('/assets/vditor/index.min.css') }}">
     <link rel="stylesheet" href="{{ asset('/assets/vditor/content-theme/ant-design.min.css') }}">
+    <!-- 高级动画样式 -->
+    <link rel="stylesheet" href="{{ asset('/assets/css/animations.css') }}">
     {# 可选：如需本地脚本，使用 defer 并指纹化（存在时再启用） #}
     {# <script src="{{ asset('/assets/js/common.js') }}" defer></script> #}
+    <!-- 动画工具库 -->
+    <script src="{{ asset('/assets/js/animation-utils.js') }}" defer></script>
     <script src="{{ asset('/assets/vditor/method.min.js') }}" defer></script>
 
     <script async src="https://cdnjs.cloudflare.com/ajax/libs/pangu/7.2.0/pangu.umd.js"
@@ -32,57 +36,35 @@
             transition: all 0.3s ease;
         }
 
-        /* 添加动画支持 */
-        @keyframes fade-in-down {
-            0% {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            100% {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes fade-in-up {
-            0% {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            100% {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes fade-in {
-            0% {
+        /* 保留移动端导航菜单特有的动画 */
+        @keyframes slide-in {
+            from {
+                transform: translateX(100%);
                 opacity: 0;
             }
-            100% {
+            to {
+                transform: translateX(0);
                 opacity: 1;
             }
         }
 
-        .animate-fade-in-down {
-            animation: fade-in-down 0.5s ease-out forwards;
+        @keyframes slide-out {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
         }
 
-        .animate-fade-in-up {
-            animation: fade-in-up 0.5s ease-out forwards;
+        .mobile-menu {
+            animation: slide-in 0.3s ease-out forwards;
         }
 
-        .animate-fade-in {
-            animation: fade-in 0.5s ease-out forwards;
-        }
-
-        /* 悬停动画 */
-        .hover-animate {
-            transition: all 0.3s ease;
-        }
-
-        .hover-animate:hover {
-            transform: translateY(-2px);
+        .mobile-menu.closing {
+            animation: slide-out 0.3s ease-out forwards;
         }
 
         /* Markdown内容样式 */
@@ -150,40 +132,9 @@
             padding: 0;
         }
 
-        /* 移动端触摸反馈 */
+        /* 增强移动端触摸反馈 */
         .tap-highlight {
             -webkit-tap-highlight-color: rgba(59, 130, 246, 0.2);
-        }
-
-        /* 移动端导航菜单动画 */
-        @keyframes slide-in {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-
-        @keyframes slide-out {
-            from {
-                transform: translateX(0);
-                opacity: 1;
-            }
-            to {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-        }
-
-        .mobile-menu {
-            animation: slide-in 0.3s ease-out forwards;
-        }
-
-        .mobile-menu.closing {
-            animation: slide-out 0.3s ease-out forwards;
         }
 
         /* 移动端搜索结果样式优化 */
@@ -193,99 +144,6 @@
                 width: calc(100vw - 2rem);
                 left: 1rem;
                 right: 1rem;
-            }
-
-            /* 优化移动端内容间距 */
-            .blog-container {
-                padding-left: 1rem;
-                padding-right: 1rem;
-            }
-
-            /* 优化移动端表格显示 */
-            table {
-                display: block;
-                overflow-x: auto;
-                white-space: nowrap;
-            }
-        }
-
-        .hl {
-            background-color: #ffea7a; /* 更深的橙黄背景 */
-            color: #7c2d12; /* 深棕文字提高对比度 */
-            padding: 0 2px;
-            border-radius: 2px;
-            font-weight: 700; /* 加粗 */
-        }
-
-        /* PJAX 顶部进度条 */
-        #pjax-progress {
-            position: fixed;
-            top: 0;
-            left: 0;
-            height: 3px;
-            width: 0;
-            background: linear-gradient(90deg, #3b82f6, #60a5fa);
-            z-index: 9999;
-            transform-origin: left center;
-            transition: width 0.3s ease;
-            box-shadow: 0 0 8px rgba(59, 130, 246, 0.6), 0 0 3px rgba(96, 165, 250, 0.6);
-        }
-
-        body.pjax-loading #pjax-progress {
-            width: 85%;
-            transition: width 1.0s ease;
-        }
-
-        body:not(.pjax-loading) #pjax-progress {
-            width: 0;
-            transition: width 0.2s ease;
-        }
-        /* 类型/标签胶囊样式 */
-        .badge-type {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 9999px;
-            background: #EEF2FF;
-            color: #1F2937;
-            border: 1px solid #E5E7EB;
-            font-size: 12px;
-            line-height: 18px;
-        }
-        .badge-cat {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 9999px;
-            background: #EAF2FF;
-            color: #1E40AF;
-            border: 1px solid #CFE0FF;
-            font-size: 11px;
-            line-height: 18px;
-        }
-        .badge-tag {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 9999px;
-            background: #DCFCE7;
-            color: #065F46;
-            border: 1px solid #CCE3D1;
-            font-size: 11px;
-            line-height: 18px;
-        }
-        /* 顶部站点标题单行省略，避免过长文本撑乱布局 */
-        #topbarTitle {
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            display: inline-block;
-            /* 在 Flex 容器中允许内容收缩 */
-            min-width: 0;
-            /* 桌面端最大宽度占视口，避免过宽 */
-            max-width: 40vw;
-        }
-        /* 移动端可适当放宽最大宽度以提升可读性 */
-        @media (max-width: 640px) {
-            #topbarTitle {
-                max-width: 55vw;
             }
         }
     </style>
@@ -452,7 +310,7 @@
 </main>
 
 <!-- 页脚 -->
-<footer class="bg-white border-t mt-8 md:mt-12 py-6 md:py-8 animate-fade-in">
+<footer class="bg-white border-t mt-8 md:mt-12 py-6 md:py-8 fade-in-on-scroll" data-animation-delay="0.4">
     <div class="container mx-auto px-4">
         <div class="flex flex-col md:flex-row justify-between items-center">
             <div class="mb-4 md:mb-0 text-center md:text-left">
@@ -555,7 +413,9 @@
                     const bar = document.getElementById('pjax-progress');
                     if (bar) {
                         bar.style.width = '100%';
-                        setTimeout(() => { bar.style.width = '0'; }, 200);
+                        setTimeout(() => {
+                            bar.style.width = '0';
+                        }, 200);
                     }
                     document.body.classList.remove('pjax-loading');
                 }
@@ -633,9 +493,9 @@
         if (!searchInput || !searchResults || !searchForm) return;
 
         // AJAX 内联筛选当前类型
-        let inlineType = (function(){
+        let inlineType = (function () {
             try {
-                const allowed = ['all','post','tag','category'];
+                const allowed = ['all', 'post', 'tag', 'category'];
                 const params = new URLSearchParams(window.location.search);
                 const t = (params.get('type') || 'all').toLowerCase();
                 return allowed.includes(t) ? t : 'all';
@@ -756,18 +616,18 @@
                     <div class="p-2 border-b border-gray-100 text-sm text-gray-600 flex items-center justify-between">
                         <span>找到 0 条结果</span>
                         <div class="inline-flex gap-1">
-                            ${['all','post','tag','category'].map(function(k){
-                                var lbl={'all':'全部','post':'文章','tag':'标签','category':'分类'}[k];
-                                var active=(inlineType===k);
-                                return '<button type="button" data-type="'+k+'" class="px-2 py-0.5 rounded-full border text-xs '+(active?'bg-blue-600 text-white border-blue-600':'bg-white text-gray-700 border-gray-300 hover:bg-blue-50 hover:text-blue-700')+'">'+lbl+'</button>';
-                            }).join('')}
+                            ${['all', 'post', 'tag', 'category'].map(function (k) {
+                    var lbl = {'all': '全部', 'post': '文章', 'tag': '标签', 'category': '分类'}[k];
+                    var active = (inlineType === k);
+                    return '<button type="button" data-type="' + k + '" class="px-2 py-0.5 rounded-full border text-xs ' + (active ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-blue-50 hover:text-blue-700') + '">' + lbl + '</button>';
+                }).join('')}
                         </div>
                     </div>`;
                 searchResults.innerHTML = header + '<div class="p-4 text-center text-gray-500">没有找到相关文章</div>';
                 // 绑定筛选按钮事件
                 var btns0 = searchResults.querySelectorAll('button[data-type]');
-                btns0.forEach(function(btn){
-                    btn.addEventListener('click', function(e){
+                btns0.forEach(function (btn) {
+                    btn.addEventListener('click', function (e) {
                         e.preventDefault();
                         var t = this.getAttribute('data-type') || 'all';
                         if (t === inlineType) return;
@@ -784,7 +644,9 @@
                                     displaySearchResults(data.results, data.total, data.tips || []);
                                 }
                             })
-                            .catch(()=>{ document.getElementById('searchLoading').classList.add('hidden'); });
+                            .catch(() => {
+                                document.getElementById('searchLoading').classList.add('hidden');
+                            });
                     });
                 });
                 searchResults.style.display = 'block';
@@ -796,11 +658,11 @@
                 <div class="p-2 border-b border-gray-100 text-sm text-gray-600 flex items-center justify-between">
                     <span>找到 ${safeTotal} 条结果</span>
                     <div class="inline-flex gap-1">
-                        ${['all','post','tag','category'].map(function(k){
-                            var lbl={'all':'全部','post':'文章','tag':'标签','category':'分类'}[k];
-                            var active=(inlineType===k);
-                            return '<button type="button" data-type="'+k+'" class="px-2 py-0.5 rounded-full border text-xs '+(active?'bg-blue-600 text-white border-blue-600':'bg-white text-gray-700 border-gray-300 hover:bg-blue-50 hover:text-blue-700')+'">'+lbl+'</button>';
-                        }).join('')}
+                        ${['all', 'post', 'tag', 'category'].map(function (k) {
+                var lbl = {'all': '全部', 'post': '文章', 'tag': '标签', 'category': '分类'}[k];
+                var active = (inlineType === k);
+                return '<button type="button" data-type="' + k + '" class="px-2 py-0.5 rounded-full border text-xs ' + (active ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-blue-50 hover:text-blue-700') + '">' + lbl + '</button>';
+            }).join('')}
                     </div>
                 </div>`;
             if (Array.isArray(tips) && tips.length > 0) {
@@ -824,7 +686,7 @@
                     var tagsHtml = '';
 
                     if (cats.length > 0) {
-                        catsHtml = cats.map(function(c){
+                        catsHtml = cats.map(function (c) {
                             if (!c || !c.slug) return '';
                             return '<a href="/category/' + (c.slug || '') + '.html" class="badge-cat"><i class="fas fa-folder-open mr-1"></i>' + (c.name || '') + '</a>';
                         }).join('');
@@ -833,7 +695,7 @@
                     }
 
                     if (tags.length > 0) {
-                        tagsHtml = tags.map(function(tg){
+                        tagsHtml = tags.map(function (tg) {
                             if (!tg || !tg.slug) return '';
                             return '<a href="/tag/' + (tg.slug || '') + '.html" class="badge-tag"><i class="fas fa-hashtag mr-1"></i>' + (tg.name || '') + '</a>';
                         }).join('');
@@ -850,11 +712,11 @@
                     var cats = Array.isArray(r.categories) ? r.categories : [];
                     var tags = Array.isArray(r.tags) ? r.tags : [];
 
-                    catsText = cats.map(function(c) {
+                    catsText = cats.map(function (c) {
                         return (c && c.name != null) ? String(c.name) : '';
                     }).filter(Boolean).join('、') || '无分类';
 
-                    tagsText = tags.map(function(g) {
+                    tagsText = tags.map(function (g) {
                         return (g && g.name != null) ? String(g.name) : '';
                     }).filter(Boolean).join('、') || '无标签';
 
@@ -891,8 +753,8 @@
             searchResults.innerHTML = html;
             // 绑定筛选按钮事件
             var btns = searchResults.querySelectorAll('button[data-type]');
-            btns.forEach(function(btn){
-                btn.addEventListener('click', function(e){
+            btns.forEach(function (btn) {
+                btn.addEventListener('click', function (e) {
                     e.preventDefault();
                     var t = this.getAttribute('data-type') || 'all';
                     if (t === inlineType) return;
@@ -909,7 +771,9 @@
                                 displaySearchResults(data.results, data.total, data.tips || []);
                             }
                         })
-                        .catch(()=>{ document.getElementById('searchLoading').classList.add('hidden'); });
+                        .catch(() => {
+                            document.getElementById('searchLoading').classList.add('hidden');
+                        });
                 });
             });
             searchResults.style.display = 'block';
@@ -983,11 +847,12 @@
         document.addEventListener('page:ready', function () {
             searchNavigating = false;
             try {
-                const allowed = ['all','post','tag','category'];
+                const allowed = ['all', 'post', 'tag', 'category'];
                 const params = new URLSearchParams(window.location.search);
                 const t = (params.get('type') || 'all').toLowerCase();
                 if (allowed.includes(t)) inlineType = t;
-            } catch (e) {}
+            } catch (e) {
+            }
         });
         // 适配触摸设备的交互优化
         if ('ontouchstart' in document.documentElement) {
@@ -1035,53 +900,70 @@
 </script>
 <script src="{{ asset('/assets/js/offline-notice.js') }}"></script>
 <!-- 顶部 PJAX 进度条 -->
-<div id="pjax-progress" style="position:fixed;top:0;left:0;height:2px;width:0;z-index:9999;background:#3b82f6;transition:width 200ms ease,opacity 200ms ease;opacity:0;"></div>
+<div id="pjax-progress"
+     style="position:fixed;top:0;left:0;height:2px;width:0;z-index:9999;background:#3b82f6;transition:width 200ms ease,opacity 200ms ease;opacity:0;"></div>
 <script>
-(function(){
-    var bar = null;
-    function ensureBar(){
-        if (!bar) bar = document.getElementById('pjax-progress');
-        return bar;
-    }
-    function setWidth(p){
-        var el = ensureBar();
-        if (!el) return;
-        var pct = Math.max(0, Math.min(100, p));
-        el.style.width = pct + '%';
-    }
-    function show(){
-        var el = ensureBar();
-        if (!el) return;
-        el.style.opacity = '1';
-    }
-    function hide(){
-        var el = ensureBar();
-        if (!el) return;
-        el.style.opacity = '0';
-        // 重置为0以便下次起始
-        setTimeout(function(){ setWidth(0); }, 200);
-    }
-    function to70(){
-        show();
-        setWidth(70);
-    }
-    function to100AndHide(){
-        setWidth(100);
-        setTimeout(hide, 250);
-    }
-    window.PjaxProgress = {
-        start: function(){ show(); setWidth(10); },      // 导航开始时点亮并到10%
-        to70: to70,                                      // 导航完成后推进到70%
-        complete: to100AndHide,                          // 页面内关键内容加载完成后到100并隐藏
-        set: setWidth, show: show, hide: hide
-    };
+    (function () {
+        var bar = null;
 
-    // 绑定 jQuery-pjax 事件：开始与完成
-    if (window.$) {
-        $(document).on('pjax:send', function(){ window.PjaxProgress.start(); });
-        $(document).on('pjax:complete', function(){ window.PjaxProgress.to70(); });
-    }
-})();
+        function ensureBar() {
+            if (!bar) bar = document.getElementById('pjax-progress');
+            return bar;
+        }
+
+        function setWidth(p) {
+            var el = ensureBar();
+            if (!el) return;
+            var pct = Math.max(0, Math.min(100, p));
+            el.style.width = pct + '%';
+        }
+
+        function show() {
+            var el = ensureBar();
+            if (!el) return;
+            el.style.opacity = '1';
+        }
+
+        function hide() {
+            var el = ensureBar();
+            if (!el) return;
+            el.style.opacity = '0';
+            // 重置为0以便下次起始
+            setTimeout(function () {
+                setWidth(0);
+            }, 200);
+        }
+
+        function to70() {
+            show();
+            setWidth(70);
+        }
+
+        function to100AndHide() {
+            setWidth(100);
+            setTimeout(hide, 250);
+        }
+
+        window.PjaxProgress = {
+            start: function () {
+                show();
+                setWidth(10);
+            },      // 导航开始时点亮并到10%
+            to70: to70,                                      // 导航完成后推进到70%
+            complete: to100AndHide,                          // 页面内关键内容加载完成后到100并隐藏
+            set: setWidth, show: show, hide: hide
+        };
+
+        // 绑定 jQuery-pjax 事件：开始与完成
+        if (window.$) {
+            $(document).on('pjax:send', function () {
+                window.PjaxProgress.start();
+            });
+            $(document).on('pjax:complete', function () {
+                window.PjaxProgress.to70();
+            });
+        }
+    })();
 </script>
 </body>
 </html>

@@ -96,6 +96,10 @@ Route::group('/api/v1', function () {
 // 友链互联API
 Route::post('/api/wind-connect', [app\controller\LinkController::class, 'windConnect']);
 
+// 动画演示页面路由
+Route::any('/animation-demo', [app\controller\AnimationDemoController::class, 'index'])->name('animation.demo');
+Route::any('/animation-demo.html', [app\controller\AnimationDemoController::class, 'index'])->name('animation.demo.html');
+
 Route::fallback(function () {
     return view('error/404');
 });

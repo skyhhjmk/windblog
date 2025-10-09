@@ -5,7 +5,7 @@
 {% block content %}
     <div class="max-w-full mx-auto px-4">
         <!-- 页面标题区域 -->
-        <div class="text-center mb-12 animate-fade-in-down">
+        <div class="text-center mb-12 fade-in-on-scroll" data-animation-delay="0">
             <h1 class="text-4xl md:text-5xl font-bold text-gray-800 mb-4">{{ page_title|default('风屿雨博客') }}</h1>
             <p class="text-gray-600 text-lg md:text-xl">欢迎来到链接广场，这里汇聚了优质的网站资源</p>
             <div class="mt-4 flex items-center justify-center gap-3">
@@ -107,7 +107,7 @@
                 {{ pagination|raw }}
             </div>
         {% else %}
-            <div class="bg-white rounded-2xl shadow-lg p-12 text-center animate-fade-in">
+            <div class="bg-white rounded-2xl shadow-lg p-12 text-center fade-in-on-scroll" data-animation-delay="0.2">
                 <div class="text-gray-400 mb-4">
                     <svg class="w-24 h-24 mx-auto opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -122,39 +122,28 @@
     </div>
     
     <style>
-        @keyframes fade-in-down {
-            0% {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            100% {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
         
-        .animate-fade-in-down {
-            animation: fade-in-down 0.6s ease-out forwards;
-        }
-        
-        @keyframes fade-in {
-            0% {
-                opacity: 0;
-            }
-            100% {
-                opacity: 1;
-            }
-        }
-        
-        .animate-fade-in {
-            animation: fade-in 0.6s ease-out forwards;
-        }
-        
+        /* 文本截断样式 */
         .line-clamp-3 {
             display: -webkit-box;
             -webkit-line-clamp: 3;
             -webkit-box-orient: vertical;
             overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        /* 文本截断样式 */
+        .line-clamp-3 {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        /* 加载动画样式 */
+        .fa-spinner {
+            animation: fa-spin 1s linear infinite;
         }
     </style>
 

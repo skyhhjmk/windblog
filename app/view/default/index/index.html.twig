@@ -5,7 +5,7 @@
 {% block content %}
     <div class="max-w-full mx-auto px-4">
         <!-- 页面标题区域 - 优化响应式字体大小 -->
-        <div class="text-center mb-8 sm:mb-12 animate-fade-in-down">
+        <div class="text-center mb-8 sm:mb-12 fade-in-on-scroll">
             <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-800 mb-3 sm:mb-4">{{ page_title|default('风屿雨博客') }}</h1>
             <p class="text-gray-600 text-base sm:text-lg md:text-xl">欢迎来到我的博客，这里记录了我的技术分享和生活感悟</p>
         </div>
@@ -14,7 +14,7 @@
         {% if posts|length > 0 %}
             <div class="space-y-6 sm:space-y-8">
                 {% for post in posts %}
-                    <div class="bg-white rounded-2xl shadow-md sm:shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 group">
+                    <div class="bg-white rounded-2xl shadow-md sm:shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 hover-lift accelerated group fade-in-on-scroll">
                         <div class="p-4 sm:p-6">
                             <h2 class="text-xl sm:text-2xl font-bold text-gray-800 mb-2 group-hover:text-blue-600 transition-colors duration-200">
                                 <a href="/post/{{ post.slug }}.html"
@@ -85,7 +85,7 @@
             </div>
         {% else %}
             <!-- 无文章提示 - 优化移动端布局 -->
-            <div class="bg-white rounded-2xl shadow-md sm:shadow-lg p-6 sm:p-12 text-center animate-fade-in">
+            <div class="bg-white rounded-2xl shadow-md sm:shadow-lg p-6 sm:p-12 text-center fade-in-on-scroll">
                 <div class="text-gray-400 mb-4">
                     <svg class="w-16 h-16 sm:w-24 sm:h-24 mx-auto opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -99,39 +99,6 @@
     </div>
     
     <style>
-        @keyframes fade-in-down {
-            0% {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            100% {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        .animate-fade-in-down {
-            animation: fade-in-down 0.6s ease-out forwards;
-        }
-        
-        @keyframes fade-in {
-            0% {
-                opacity: 0;
-            }
-            100% {
-                opacity: 1;
-            }
-        }
-        
-        .animate-fade-in {
-            animation: fade-in 0.6s ease-out forwards;
-        }
-        
-        /* 新增移动端触摸反馈样式 */
-        .tap-highlight {
-            -webkit-tap-highlight-color: rgba(59, 130, 246, 0.2);
-        }
-        
         /* 优化移动端文章标题的行高 */
         @media (max-width: 640px) {
             h2 {
@@ -161,6 +128,44 @@
 
             window.location.href = '/page/' + page + '.html';
         }
+        
+        // 滚动触发动画已由全局动画工具库统一管理
+        // 此处保留原有逻辑以兼容不支持全局脚本的情况
+        document.addEventListener('DOMContentLoaded', function() {
+            // 检查是否已由全局工具库初始化
+            if (window.AnimationUtils && window.AnimationUtils.scrollManager) {
+                return; // 已由全局工具库处理
+            }
+            
+            const fadeElements = document.querySelectorAll('.fade-in-on-scroll');
+            
+            if (!fadeElements.length) return;
+            
+            // 检查用户是否偏好减少动画
+            if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                fadeElements.forEach(el => {
+                    el.classList.add('visible');
+                });
+                return;
+            }
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, {
+                root: null,
+                rootMargin: '0px',
+                threshold: 0.1
+            });
+            
+            fadeElements.forEach(el => {
+                observer.observe(el);
+            });
+        });
     </script>
 
 {% endblock %}

@@ -5,7 +5,7 @@
 {% block content %}
     <div class="max-w-full mx-auto px-4">
         <!-- 搜索标题区域 -->
-        <div class="text-center mb-12 animate-fade-in-down">
+        <div class="text-center mb-12 fade-in-on-scroll" data-animation-delay="0">
             <h1 class="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
                 <i class="fas fa-search text-blue-600 mr-3"></i>
                 搜索结果
@@ -51,7 +51,7 @@
                 <form action="/search" method="get" class="flex flex-wrap gap-3 items-center">
                     <input type="text" name="q" value="{{ search_keyword|default('') }}" placeholder="搜索关键词" class="flex-1 min-w-[240px] px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
 
-                    <button type="submit" class="px-5 py-2 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-700">搜索</button>
+                    <button type="submit" class="px-5 py-2 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-700 hover-lift accelerated">搜索</button>
                 </form>
             </div>
         </div>
@@ -59,7 +59,7 @@
         <!-- 美化后的筛选区域（置于搜索表单下方） -->
         <div class="mt-4 mb-12 md:mb-16">
             <div class="max-w-3xl mx-auto">
-                <div class="bg-white border border-gray-200 rounded-2xl p-3 sm:p-4 shadow-sm">
+                <div class="bg-white border border-gray-200 rounded-2xl p-3 sm:p-4 shadow-sm fade-in-on-scroll">
                     <div class="flex flex-wrap gap-2 items-center">
                         {% set currentType = search_type|default('all') %}
                         {% set types = {'all':'全部','post':'文章','tag':'标签','category':'分类'} %}
@@ -67,7 +67,7 @@
                             <a href="/search?q={{ search_keyword|url_encode }}&type={{ key }}{% if search_sort is defined and search_sort %}&sort={{ search_sort }}{% endif %}{% if search_date is defined and search_date %}&date={{ search_date }}{% endif %}"
                                class="inline-flex items-center px-3 py-1.5 rounded-full border text-sm transition-colors {{ currentType==key ? 'bg-blue-600 text-white border-blue-600 shadow' : 'bg-white text-gray-700 border-gray-300 hover:bg-blue-50 hover:text-blue-700' }}">
                                 {{ label }}
-                            </a>
+                            </a> hover-lift accelerated
                         {% endfor %}
 
                         <!-- 排序 -->
@@ -103,11 +103,11 @@
         {% if posts|length > 0 %}
             <div class="space-y-8">
                 {% for post in posts %}
-                    <div class="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 group">
+                    <div class="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 group hover-lift accelerated fade-in-on-scroll">
                         <div class="p-6">
                             <h2 class="text-2xl font-bold text-gray-800 mb-2 group-hover:text-blue-600 transition-colors duration-200">
                                 <a href="/post/{{ post.slug }}.html" target="_blank"
-                                   class="block">
+                                   class="block hover-lift accelerated">
                                     {{ (esMeta.highlights[post.id].title[0] ?? post.title)|raw }}
                                 </a>
                             </h2>
@@ -164,7 +164,7 @@
                 {{ pagination|raw }}
             </div>
         {% else %}
-            <div class="bg-white rounded-2xl shadow-lg p-12 text-center animate-fade-in">
+            <div class="bg-white rounded-2xl shadow-lg p-12 text-center fade-in-on-scroll" data-animation-delay="0.2">
                 <div class="text-gray-400 mb-4">
                     <svg class="w-24 h-24 mx-auto opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -190,39 +190,43 @@
     </div>
     
     <style>
-        @keyframes fade-in-down {
-            0% {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            100% {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        .animate-fade-in-down {
-            animation: fade-in-down 0.6s ease-out forwards;
-        }
-        
-        @keyframes fade-in {
-            0% {
-                opacity: 0;
-            }
-            100% {
-                opacity: 1;
-            }
-        }
-        
-        .animate-fade-in {
-            animation: fade-in 0.6s ease-out forwards;
-        }
         .hl {
-            background-color: #ffea7a; /* 更深的橙黄背景 */
-            color: #7c2d12;           /* 深棕文字提高对比度 */
+            background-color: #ffeb3b;
             padding: 0 2px;
             border-radius: 2px;
-            font-weight: 700;         /* 加粗 */
+        }
+        
+        /* 搜索高亮样式 */
+        .search-highlight {
+            background-color: rgba(255, 235, 59, 0.3);
+            padding: 0 1px;
+            border-radius: 2px;
+        }
+        
+        /* 搜索结果评分样式 */
+        .search-rating {
+            display: inline-flex;
+            align-items: center;
+        }
+        
+        .search-rating .star {
+            color: #f59e0b;
+            font-size: 12px;
+            margin-right: 1px;
+        }
+        
+        .search-rating .star.gray {
+            color: #d1d5db;
+        }
+        
+        /* 防止搜索建议区域在点击后消失 */
+        .search-suggestions:focus-within {
+            display: block;
+        }
+        
+        /* 搜索建议列表项悬停效果 */
+        .search-suggestion-item:hover {
+            background-color: #f3f4f6;
         }
     </style>
 {% endblock %}

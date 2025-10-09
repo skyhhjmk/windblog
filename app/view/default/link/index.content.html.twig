@@ -12,12 +12,12 @@
 </div>
 <div class="max-w-full mx-auto px-4">
     <!-- 页面标题区域 -->
-    <div class="text-center mb-12 animate-fade-in-down">
+    <div class="text-center mb-12 fade-in-on-scroll" data-animation-delay="0">
         <h1 class="text-4xl md:text-5xl font-bold text-gray-800 mb-4">{{ page_title|default('风屿雨博客') }}</h1>
         <p class="text-gray-600 text-lg md:text-xl">欢迎来到链接广场，这里汇聚了优质的网站资源</p>
         <div class="mt-4 flex items-center justify-center gap-3">
             <a href="/link/request" 
-               class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200">
+               class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200 hover-lift accelerated">
                 <i class="fas fa-link mr-2"></i>
                 申请友链
             </a>
@@ -36,9 +36,10 @@
     {% if links|length > 0 %}
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {% for link in links %}
-                <div class="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 group"
+                <div class="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 group hover-lift accelerated fade-in-on-scroll" 
                      data-protocol="{{ link.custom_fields.protocol ?? link.custom_fields.protocol_level ?? '' }}"
-                     data-score="{{ (link.custom_fields.auto_audit.score ?? 0) }}">
+                     data-score="{{ (link.custom_fields.auto_audit.score ?? 0) }}"
+                     data-animation-delay="{{ loop.index0 * 0.05 }}">
                     <div class="p-6">
                         <div class="flex items-start mb-4">
                             <div class="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16 flex items-center justify-center mr-4 transition-all duration-300 group-hover:bg-blue-100">
@@ -48,7 +49,7 @@
                                 <h2 class="text-xl font-bold text-gray-800 mb-1 group-hover:text-blue-600 transition-colors duration-200">
                                     <a href="{% if link.redirect_type == 'info' %}/link/info/{{ link.id }}{% else %}/link/goto/{{ link.id }}{% endif %}"
                                        {% if link.redirect_type == 'direct' %}target="{{ link.target }}"{% endif %}
-                                       class="block">
+                                       class="block hover-lift accelerated">
                                         {{ link.name|length > 20 ? link.name|slice(0, 20) ~ '...' : link.name }}
                                     </a>
                                 </h2>
@@ -77,7 +78,7 @@
                         <div class="flex justify-between items-center">
                             <a href="{% if link.redirect_type == 'info' %}/link/info/{{ link.id }}{% else %}/link/goto/{{ link.id }}{% endif %}"
                                {% if link.redirect_type == 'direct' %}target="{{ link.target }}"{% endif %}
-                               class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium text-sm transition-colors duration-200">
+                               class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium text-sm transition-colors duration-200 hover-lift accelerated">
                                 {% if link.redirect_type == 'info' %}
                                     查看详情
                                 {% else %}
@@ -109,11 +110,11 @@
         </div>
 
         <!-- 分页 -->
-        <div class="mt-12 flex justify-center">
+        <div class="mt-12 flex justify-center fade-in-on-scroll" data-animation-delay="0.3">
             {{ pagination|raw }}
         </div>
     {% else %}
-        <div class="bg-white rounded-2xl shadow-lg p-12 text-center animate-fade-in">
+        <div class="bg-white rounded-2xl shadow-lg p-12 text-center fade-in-on-scroll" data-animation-delay="0.2">
             <div class="text-gray-400 mb-4">
                 <svg class="w-24 h-24 mx-auto opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -128,13 +129,6 @@
 </div>
 
 <style>
-    @keyframes fade-in-down {
-        0% { opacity: 0; transform: translateY(-20px); }
-        100% { opacity: 1; transform: translateY(0); }
-    }
-    .animate-fade-in-down { animation: fade-in-down 0.6s ease-out forwards; }
-    @keyframes fade-in { 0% { opacity: 0; } 100% { opacity: 1; } }
-    .animate-fade-in { animation: fade-in 0.6s ease-out forwards; }
     .line-clamp-3 {
         display: -webkit-box;
         -webkit-line-clamp: 3;
