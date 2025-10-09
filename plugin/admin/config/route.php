@@ -189,6 +189,7 @@ Route::group('/app/admin', function () {
         Route::get('/redisStatus', [PerformanceController::class, 'redisStatus']);
         Route::get('/opcacheStatus', [PerformanceController::class, 'opcacheStatus']);
         Route::get('/series', [PerformanceController::class, 'series']);
+        Route::get('/cacheStats', [PerformanceController::class, 'cacheStats']);
     });
 
     // 静态缓存 路由（移动到 /app/admin 分组内部）

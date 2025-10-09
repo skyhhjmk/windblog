@@ -9,6 +9,8 @@ use app\service\PaginationService;
 use Webman\RateLimiter\Annotation\RateLimiter;
 use app\model\Category;
 use support\Redis;
+use app\service\EnhancedCacheService;
+use app\service\PJAXHelper;
 
 class CategoryController
 {
@@ -26,6 +28,15 @@ class CategoryController
         $sort = $request->get('sort', 'latest');
         $sort = in_array($sort, ['latest','hot']) ? $sort : 'latest';
 
+        // 使用PJAXHelper检测是否为PJAX请求
+        $isPjax = PJAXHelper::isPJAX($request);
+
+        // 为PJAX请求生成缓存键
+        $cacheKey = null;
+        if ($isPjax) {
+            $cacheKey = sprintf('category:%s:page:%d:sort:%s', $slug, $page, $sort);
+        }
+
         // 构建筛选条件：传递 slug，由服务层适配
         $filters = [
             'category' => $this->sanitize($slug),
@@ -38,16 +49,11 @@ class CategoryController
         // 标题
         $blog_title = BlogService::getBlogTitle();
 
-        // PJAX 检测
-        $isPjax = ($request->header('X-PJAX') !== null)
-            || (bool)$request->get('_pjax')
-            || strtolower((string)$request->header('X-Requested-With')) === 'xmlhttprequest';
-
         // 侧边栏
         $sidebar = \app\service\SidebarService::getSidebarContent($request, 'category');
 
-        // 选择模板
-        $viewName = $isPjax ? 'category/index.content' : 'category/index';
+        // 动态选择模板：PJAX 返回片段，非 PJAX 返回完整页面
+        $viewName = PJAXHelper::getViewName('category/index', $isPjax);
 
         // 获取分类名称用于标题展示
         $categoryModel = Category::query()->where('slug', $slug)->first(['name', 'slug']);
@@ -63,16 +69,26 @@ class CategoryController
             10
         );
 
-        return view($viewName, [
-            'page_title' => "分类: {$category_name} - {$blog_title}",
-            'category_slug' => $slug,
-            'category_name' => $category_name,
-            'posts' => $result['posts'],
-            'pagination' => $pagination_html,
-            'totalCount' => $result['totalCount'] ?? 0,
-            'sort' => $sort,
-            'sidebar' => $sidebar
-        ]);
+        // 创建带缓存的PJAX响应
+        $resp = PJAXHelper::createResponse(
+            $request,
+            $viewName,
+            [
+                'page_title' => "分类: {$category_name} - {$blog_title}",
+                'category_slug' => $slug,
+                'category_name' => $category_name,
+                'posts' => $result['posts'],
+                'pagination' => $pagination_html,
+                'totalCount' => $result['totalCount'] ?? 0,
+                'sort' => $sort,
+                'sidebar' => $sidebar
+            ],
+            $cacheKey,
+            120,
+            'category'
+        );
+
+        return $resp;
     }
 
     /**
@@ -87,8 +103,9 @@ class CategoryController
         $sidebar = \app\service\SidebarService::getSidebarContent($request, 'category');
 
         $cacheKey = 'category_list_counts_v1';
-        $data = Redis::connection('cache')->get($cacheKey);
-        if ($data) {
+        $enhancedCache = new EnhancedCacheService();
+        $data = $enhancedCache->get($cacheKey, 'category', null, 300);
+        if ($data !== false) {
             $categories = json_decode($data, true) ?: [];
         } else {
             $categories = Category::query()
@@ -102,7 +119,7 @@ class CategoryController
                     'description' => (string)($c->description ?? ''),
                     'count' => (int)($c->posts_count ?? 0)
                 ])->toArray();
-            Redis::connection('cache')->setex($cacheKey, 300, json_encode($categories, JSON_UNESCAPED_UNICODE));
+            $enhancedCache->set($cacheKey, json_encode($categories, JSON_UNESCAPED_UNICODE), 300, 'category');
         }
 
         $blog_title = BlogService::getBlogTitle();

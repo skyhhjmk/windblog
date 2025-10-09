@@ -65,6 +65,7 @@
             <ul class="layui-tab-title">
                 <li class="layui-this">Redis状态</li>
                 <li>OPcache状态</li>
+                <li>缓存统计</li>
                 <li>分析图表</li>
             </ul>
             <div class="layui-tab-content">
@@ -77,6 +78,11 @@
                 <div class="layui-tab-item">
                     <div class="kv" id="opcache-snapshot"></div>
                     <div id="opcache-chart" class="chart-box"></div>
+                </div>
+                <!-- 缓存统计 -->
+                <div class="layui-tab-item">
+                    <div class="kv" id="cache-stats-snapshot"></div>
+                    <div id="cache-stats-chart" class="chart-box"></div>
                 </div>
                 <!-- 分析 -->
                 <div class="layui-tab-item">
@@ -110,8 +116,10 @@ layui.use(['jquery','element','echarts'], function(){
             keys_method: '键统计方法',
             hits: '命中',
             misses: '未命中',
+            requests: '请求数',
+            hit_rate: '命中率(%)',
             memory_free_mb: '空闲内存(MB)',
-            hit_rate: '命中率(%)'
+            secondary_cache_size: '二级缓存大小'
         };
         return map[k] || k;
     }
@@ -215,6 +223,30 @@ layui.use(['jquery','element','echarts'], function(){
         });
     }
 
+    function loadCacheStats() {
+        $.get('/app/admin/performance/cacheStats', function(resp){
+            if (resp.code !== 0) return;
+            renderKV('#cache-stats-snapshot', resp.data.stats || {});
+            var points = (resp.data.series || []).map(function(it){ 
+                return { 
+                    t: it.t, 
+                    hits: it.hits, 
+                    misses: it.misses, 
+                    requests: it.requests, 
+                    secondary_cache_size: it.secondary_cache_size 
+                }; 
+            });
+            var x = points.map(function(p){ return p.t; });
+            var s = [
+                { name:'命中', type:'line', smooth:true, data: points.map(function(p){ return p.hits; }) },
+                { name:'未命中', type:'line', smooth:true, data: points.map(function(p){ return p.misses; }) },
+                { name:'请求数', type:'line', smooth:true, data: points.map(function(p){ return p.requests; }) },
+                { name:'二级缓存大小', type:'line', smooth:true, data: points.map(function(p){ return p.secondary_cache_size; }) }
+            ];
+            echarts.init(document.getElementById('cache-stats-chart')).setOption(buildLineOption('缓存统计趋势', s, x));
+        });
+    }
+
     function loadAnalysis() {
         $.get('/app/admin/performance/series', function(resp){
             if (resp.code !== 0) return;
@@ -228,10 +260,11 @@ layui.use(['jquery','element','echarts'], function(){
         });
     }
 
-    loadRedis(); loadOpcache(); loadAnalysis();
+    loadRedis(); loadOpcache(); loadCacheStats(); loadAnalysis();
     element.on('tab(perf-tab)', function(){ setTimeout(function(){ 
         echarts.init(document.getElementById('redis-chart')).resize();
         echarts.init(document.getElementById('opcache-chart')).resize();
+        echarts.init(document.getElementById('cache-stats-chart')).resize();
         echarts.init(document.getElementById('analysis-line')).resize();
     }, 50); });
 });
