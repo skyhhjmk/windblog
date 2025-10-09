@@ -93,6 +93,9 @@ Route::group('/api/v1', function () {
     Route::get('/posts', [\app\api\controller\v1\ApiPostController::class, 'index']);
 });
 
+// 友链互联API
+Route::post('/api/wind-connect', [app\controller\LinkController::class, 'windConnect']);
+
 Route::fallback(function () {
     return view('error/404');
 });

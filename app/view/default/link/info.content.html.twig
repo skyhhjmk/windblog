@@ -141,28 +141,106 @@
 </div>
 
 <script>
-    function copyUrl() {
-        const url = "{{ link.url|e('js') }}";
-        navigator.clipboard.writeText(url).then(() => {
+    // 初始化复制URL功能
+    function initCopyUrlFunctionality() {
+        // 确保copyUrl函数只定义一次
+        if (window._copyUrlInitialized) {
+            return;
+        }
+        window._copyUrlInitialized = true;
+        
+        // 全局复制URL函数
+        window.copyUrl = function() {
+            const url = "{{ link.url|e('js') }}";
+            
+            // 使用原生clipboard API复制
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(url).then(() => {
+                    showCopySuccess();
+                }).catch(err => {
+                    console.error('复制失败: ', err);
+                    fallbackCopyTextToClipboard(url);
+                });
+            } else {
+                // 降级方案
+                fallbackCopyTextToClipboard(url);
+            }
+        };
+        
+        // 复制成功反馈
+        function showCopySuccess() {
             const button = document.getElementById('copyButton');
+            if (!button) return;
+            
             const originalText = button.innerHTML;
             button.innerHTML = '<i class="fas fa-check mr-1"></i> 已复制';
-            setTimeout(() => { button.innerHTML = originalText; }, 2000);
-        }).catch(err => { console.error('复制失败: ', err); });
+            button.classList.add('bg-green-100', 'text-green-700');
+            
+            setTimeout(() => {
+                button.innerHTML = originalText;
+                button.classList.remove('bg-green-100', 'text-green-700');
+            }, 2000);
+        }
+        
+        // 降级的复制方案
+        function fallbackCopyTextToClipboard(text) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    showCopySuccess();
+                } else {
+                    console.error('复制命令执行失败');
+                }
+            } catch (err) {
+                console.error('降级复制方案失败: ', err);
+            }
+            
+            document.body.removeChild(textArea);
+        }
+        
+        // 重新绑定复制按钮事件（如果存在）
+        const copyButton = document.getElementById('copyButton');
+        if (copyButton) {
+            // 移除可能存在的旧事件绑定
+            const newButton = copyButton.cloneNode(true);
+            copyButton.parentNode.replaceChild(newButton, copyButton);
+            newButton.addEventListener('click', window.copyUrl);
+        }
     }
-
-
+    
+    // 在DOM加载完成时初始化
+    document.addEventListener('DOMContentLoaded', initCopyUrlFunctionality);
+    // 支持PJAX页面切换后重新初始化
+    document.addEventListener('page:ready', initCopyUrlFunctionality);
 </script>
 <script>
     (function () {
+        // 侧边栏注入功能
         function injectSidebar() {
             var t = document.getElementById('pjax-sidebar-html');
             var c = document.getElementById('sidebar-container');
             if (t && c) {
-                c.innerHTML = t.innerHTML || '';
+                // 仅在内容不同时才更新，避免不必要的DOM操作
+                if (c.innerHTML !== t.innerHTML) {
+                    c.innerHTML = t.innerHTML || '';
+                    // 通知侧边栏内容已更新
+                    document.dispatchEvent(new Event('sidebar:updated'));
+                }
             }
         }
+        
+        // 初始化时注入侧边栏
         injectSidebar();
+        // 支持PJAX页面切换后重新注入
         document.addEventListener('page:ready', injectSidebar);
     })();
 </script>

@@ -3,7 +3,7 @@
 {% block title %}{{ page_title|default('外链跳转确认') }}{% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto">
+<div id="pjax-container" class="max-w-2xl mx-auto">
     <div class="bg-white rounded-xl shadow-lg overflow-hidden">
         <div class="p-8 text-center">
             <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-yellow-100 mb-6">
@@ -42,7 +42,7 @@
                     继续访问
                 </a>
                 
-                <button onclick="history.back()" 
+                <button id="backButton" 
                         class="px-6 py-3 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
                     <i class="fas fa-arrow-left mr-2"></i>
                     返回上页
@@ -55,4 +55,55 @@
         <p>安全提示：请确认链接地址无误后再访问</p>
     </div>
 </div>
+
+    <script>
+        // 初始化重定向确认页面功能
+        function initGotoPage() {
+            // 为返回按钮添加事件监听（避免内联onclick属性）
+            const backButton = document.getElementById('backButton');
+            if (backButton) {
+                // 移除可能存在的旧事件绑定
+                backButton.removeEventListener('click', handleBackButtonClick);
+                backButton.addEventListener('click', handleBackButtonClick);
+            }
+            
+            // 为继续访问链接添加事件监听（可选择性添加额外逻辑）
+            const continueLinks = document.querySelectorAll('a[href="{{ link.url|e('js') }}"]');
+            continueLinks.forEach(link => {
+                // 可选：添加点击跟踪或其他逻辑
+                link.addEventListener('click', function(e) {
+                    // 可选：添加点击跟踪代码
+                    console.log('用户选择继续访问外部链接:', this.href);
+                });
+            });
+            
+            // 添加页面淡入动画效果
+            document.querySelectorAll('.bg-white.rounded-xl').forEach(el => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(20px)';
+                el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                
+                setTimeout(() => {
+                    el.style.opacity = '1';
+                    el.style.transform = 'translateY(0)';
+                }, 100);
+            });
+        }
+        
+        // 返回按钮点击处理
+        function handleBackButtonClick() {
+            // 尝试使用PJAX的返回功能，如果可用
+            if (window.PJAX && window.PJAX.back) {
+                window.PJAX.back();
+            } else {
+                // 降级到标准浏览器历史返回
+                history.back();
+            }
+        }
+        
+        // 在DOM加载完成时初始化
+        document.addEventListener('DOMContentLoaded', initGotoPage);
+        // 支持PJAX页面切换后重新初始化
+        document.addEventListener('page:ready', initGotoPage);
+    </script>
 {% endblock %}

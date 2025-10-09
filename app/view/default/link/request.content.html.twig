@@ -392,11 +392,16 @@
 </script>
 
 <script>
-    // CAT3* 快速互联：向本机 /link/connect/apply 发起
-    (function () {
+    // CAT3* 快速互联：向本机 /link/connect/apply 发起 - 支持 PJAX
+    function setupQuickConnect() {
         const btn = document.getElementById('quickConnectBtn');
         if (!btn) return;
-        btn.addEventListener('click', function (e) {
+        
+        // 移除之前的事件监听器，避免重复绑定
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        
+        newBtn.addEventListener('click', function (e) {
             e.preventDefault();
             const resBox = document.getElementById('quickConnectResult');
             const peerApi = (document.getElementById('peer_api') || {}).value || '';
@@ -409,23 +414,46 @@
             const icon = (document.getElementById('icon') || {}).value || '';
             const description = (document.getElementById('description') || {}).value || '';
             const callback_url = (document.getElementById('callback_url') || {}).value || '';
+            const email = (document.getElementById('email') || {}).value || '';
 
             const payload = {
                 peer_api: peerApi,
-                site: { name, url, icon, description, callback_url }
+                name: name,
+                url: url,
+                icon: icon,
+                description: description,
+                email: email,
+                callback_url: callback_url
             };
 
-            // 禁用按钮并显示加载状态
-            btn.disabled = true;
+            // 禁用按钮并显示加载状态（加强版）
+            newBtn.disabled = true;
+            newBtn.classList.add('opacity-70', 'cursor-not-allowed');
             document.getElementById('quickConnectBtnText').classList.add('hidden');
             document.getElementById('quickConnectBtnLoader').classList.remove('hidden');
+            
+            // 添加临时样式增强视觉反馈
+            const tempStyle = document.createElement('style');
+            tempStyle.textContent = `
+                #quickConnectBtn:disabled {
+                    transform: scale(0.98);
+                    transition: all 0.2s ease;
+                }
+            `;
+            document.head.appendChild(tempStyle);
 
             fetch('/link/connect/apply', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
                 body: JSON.stringify(payload)
             })
-                .then(r => r.json())
+                .then(r => {
+                    if (!r.ok) throw new Error(`HTTP错误: ${r.status}`);
+                    return r.json();
+                })
                 .then(data => {
                     if (data && data.code === 0) {
                         showQuickResult(resBox, true, data.msg || '已发起互联申请');
@@ -433,14 +461,21 @@
                         showQuickResult(resBox, false, (data && data.msg) ? data.msg : '互联申请失败');
                     }
                 })
-                .catch(() => {
+                .catch(error => {
+                    console.error('互联申请错误:', error);
                     showQuickResult(resBox, false, '互联申请请求失败，请稍后重试');
                 })
                 .finally(() => {
                     // 恢复按钮状态
-                    btn.disabled = false;
+                    newBtn.disabled = false;
+                    newBtn.classList.remove('opacity-70', 'cursor-not-allowed');
                     document.getElementById('quickConnectBtnText').classList.remove('hidden');
                     document.getElementById('quickConnectBtnLoader').classList.add('hidden');
+                    
+                    // 移除临时样式
+                    if (tempStyle.parentNode) {
+                        document.head.removeChild(tempStyle);
+                    }
                 });
 
             function showQuickResult(el, ok, text) {
@@ -448,10 +483,29 @@
                 el.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
                 el.classList.add(ok ? 'bg-green-100' : 'bg-red-100', ok ? 'text-green-700' : 'text-red-700');
                 el.innerHTML = (ok ? '<i class="fas fa-check-circle mr-2"></i>' : '<i class="fas fa-exclamation-circle mr-2"></i>') + text;
-                setTimeout(() => el.classList.add('hidden'), 4000);
+                
+                // 添加淡入动画
+                el.style.opacity = '0';
+                el.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => { el.style.opacity = '1'; }, 10);
+                
+                setTimeout(() => {
+                    el.style.opacity = '0';
+                    setTimeout(() => el.classList.add('hidden'), 300);
+                }, 4000);
             }
         });
-    })();
+    }
+    
+    // 初始加载时设置
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupQuickConnect);
+    } else {
+        setupQuickConnect();
+    }
+    
+    // PJAX环境下重新设置
+    document.addEventListener('page:ready', setupQuickConnect);
 </script>
 
 <script>
