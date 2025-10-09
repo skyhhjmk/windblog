@@ -264,7 +264,7 @@ class LinkController extends Base
 
             // 保存数据
             $saved = $link->save();
-            
+
             // 调试保存结果
             \support\Log::info('Link save result: ', [
                 'saved' => $saved,
@@ -273,14 +273,18 @@ class LinkController extends Base
                 'dirty' => $link->getDirty(),
                 'changes' => $link->getChanges()
             ]);
-            
+
             if ($saved) {
                 // 清除相关缓存
                 $this->clearLinkCache();
 
                 // 若状态为已启用（审核通过），自动触发CAT5扩展信息推送（静默）
                 if ($link->status) {
-                    try { $this->pushExtendedInfoInternal($link); } catch (\Throwable $e) { \support\Log::warning('CAT5 auto push on save failed: '.$e->getMessage()); }
+                    try {
+                        $this->pushExtendedInfoInternal($link);
+                    } catch (\Throwable $e) {
+                        \support\Log::warning('CAT5 auto push on save failed: ' . $e->getMessage());
+                    }
                 }
 
                 // 返回更新后的数据
@@ -594,7 +598,11 @@ class LinkController extends Base
                     if ($link->save()) {
                         $count++;
                         // 审核通过后自动静默推送扩展信息
-                        try { $this->pushExtendedInfoInternal($link); } catch (\Throwable $e) { \support\Log::warning('CAT5 auto push(batch) failed: '.$e->getMessage()); }
+                        try {
+                            $this->pushExtendedInfoInternal($link);
+                        } catch (\Throwable $e) {
+                            \support\Log::warning('CAT5 auto push(batch) failed: ' . $e->getMessage());
+                        }
                     }
                 }
             }
@@ -736,7 +744,7 @@ class LinkController extends Base
         $result['performance'] = $this->runPerformanceDetector($url, $html, $loadTime);
         $result['seo'] = $this->runSeoDetector($dom, $xpath);
         $result['security'] = $this->runSecurityDetector($url, $html);
-        
+
         if (!empty($myDomain)) {
             $result['backlink_check'] = $this->runBacklinkDetector($html, $myDomain, $url);
         }
@@ -1132,22 +1140,22 @@ class LinkController extends Base
         if (is_bool($value)) {
             return $value;
         }
-        
+
         if (is_string($value)) {
             $value = strtolower(trim($value));
             return in_array($value, ['1', 'true', 'on', 'yes', 't']);
         }
-        
+
         if (is_numeric($value)) {
             return (int)$value === 1;
         }
-        
+
         return false;
     }
 
     /**
      * CAT2: 友链监控（按ID或URL检测）
-     * POST: ids[]=1&ids[]=2 或 urls[]=https://... 
+     * POST: ids[]=1&ids[]=2 或 urls[]=https://...
      */
     public function monitor(Request $request): Response
     {
@@ -1183,7 +1191,7 @@ class LinkController extends Base
             ];
             try {
                 // 发布到 link_monitor 队列
-                $exchange   = (string)blog_config('rabbitmq_link_monitor_exchange', 'link_monitor_exchange', true);
+                $exchange = (string)blog_config('rabbitmq_link_monitor_exchange', 'link_monitor_exchange', true);
                 $routingKey = (string)blog_config('rabbitmq_link_monitor_routing_key', 'link_monitor', true);
                 $channel = MQService::getChannel();
                 $msg = new AMQPMessage(json_encode($payload, JSON_UNESCAPED_UNICODE), [
@@ -1193,7 +1201,7 @@ class LinkController extends Base
                 $channel->basic_publish($msg, $exchange, $routingKey);
                 $accepted++;
             } catch (\Throwable $e) {
-                \support\Log::warning('enqueue link monitor failed: '.$e->getMessage());
+                \support\Log::warning('enqueue link monitor failed: ' . $e->getMessage());
             }
         }
 

@@ -79,7 +79,7 @@ class MQService
             }
 
             if (self::$connection === null) {
-                throw new \RuntimeException('RabbitMQ连接初始化失败: ' . $lastError);
+                Log::error('RabbitMQ连接初始化失败: ' . $lastError);
             }
         }
 

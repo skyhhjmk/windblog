@@ -95,7 +95,7 @@ class MailWorker
             } catch (\PhpAmqpLib\Exception\AMQPTimeoutException $e) {
                 // 正常超时，无消息到达
             } catch (\Throwable $e) {
-                Log::error('MailWorker wait error: ' . $e->getMessage());
+//                Log::error('MailWorker wait error: ' . $e->getMessage());
             }
         }
     }

@@ -58,6 +58,17 @@ Route::group('/app/admin', function () {
         Route::get('/get/{id}', [LinkController::class, 'get']);
     });
 
+    // 互联协议路由
+    Route::group('/link/connect', function () {
+        Route::get('', [\plugin\admin\app\controller\LinkConnectController::class, 'index']);
+        Route::get('/', [\plugin\admin\app\controller\LinkConnectController::class, 'index']);
+        Route::get('/index', [\plugin\admin\app\controller\LinkConnectController::class, 'index']);
+        Route::get('/getConfig', [\plugin\admin\app\controller\LinkConnectController::class, 'getConfig']);
+        Route::post('/saveConfig', [\plugin\admin\app\controller\LinkConnectController::class, 'saveConfig']);
+        Route::get('/getExample', [\plugin\admin\app\controller\LinkConnectController::class, 'getExample']);
+        Route::post('/testConnection', [\plugin\admin\app\controller\LinkConnectController::class, 'testConnection']);
+    });
+
     // Post 路由
     Route::group('/posts', function () {
         Route::get('', [PostsController::class, 'index']);

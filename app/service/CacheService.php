@@ -37,7 +37,7 @@ class CacheService
             }
         }
 
-        $rawDriver = getenv('CACHE_DRIVER');
+        $rawDriver = getenv('CACHE_DRIVER') ?: 'null';
         $cacheDriver = is_string($rawDriver) ? strtolower(trim($rawDriver)) : '';
         if ($cacheDriver === '' || $cacheDriver === 'null' || $cacheDriver === 'none' || $rawDriver === false) {
             $cacheDriver = 'none';

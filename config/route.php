@@ -14,7 +14,7 @@
 
 use Webman\Route;
 
-//Route::disableDefaultRoute();
+Route::disableDefaultRoute();
 
 //Route::any('/push/{id}', function ($id) {
 //    return view('push/id-test', ['id' => $id]);

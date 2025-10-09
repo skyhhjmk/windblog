@@ -220,8 +220,8 @@ return [
             ],
             [
                 'title' => '互联协议',
-                'key' => 'plugin\\windconnect\\app\\controller\\LinkController',
-                'href' => '/app/admin/link/protocol',
+                'key' => 'plugin\\windconnect\\app\\controller\\LinkConnectController',
+                'href' => '/app/admin/linkconnect/index',
                 'type' => 1,
                 'weight' => 700,
             ]

@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>互联协议管理</title>
+    <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css"/>
+    <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+    <script src="/app/admin/component/pear/pear.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .layui-form-item {
+            margin-bottom: 15px;
+        }
+        .form-section {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .form-section-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .json-editor {
+            min-height: 300px;
+            border: 1px solid #e6e6e6;
+            border-radius: 4px;
+            padding: 10px;
+            background: #fff;
+            font-family: monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            overflow: auto;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 pear-container">
+<div class="layui-card rounded-lg shadow-sm">
+    <div class="layui-card-header flex items-center justify-between">
+        <h3 class="text-lg font-medium">互联协议管理</h3>
+        <div class="layui-btn-group">
+            <button class="pear-btn pear-btn-md pear-btn-primary" id="saveBtn">
+                <i class="layui-icon layui-icon-save"></i>
+                保存配置
+            </button>
+            <button class="pear-btn pear-btn-md" id="testBtn">
+                <i class="layui-icon layui-icon-test"></i>
+                测试连接
+            </button>
+            <button class="pear-btn pear-btn-md" id="getExampleBtn">
+                <i class="layui-icon layui-icon-template"></i>
+                查看示例
+            </button>
+        </div>
+    </div>
+    <div class="layui-card-body">
+        <form id="configForm" class="layui-form" action="">
+            <!-- 基本设置 -->
+            <div class="form-section">
+                <div class="form-section-title">基本设置</div>
+                <div class="layui-form-item">
+                    <div class="layui-col-md2">
+                        <label class="layui-form-label">启用互联协议</label>
+                    </div>
+                    <div class="layui-col-md4">
+                        <input type="checkbox" name="enabled" lay-skin="switch" lay-filter="enabled" lay-text="开启|关闭">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <div class="layui-col-md2">
+                        <label class="layui-form-label">协议名称</label>
+                    </div>
+                    <div class="layui-col-md4">
+                        <input type="text" name="protocol_name" placeholder="请输入协议名称" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <div class="layui-col-md2">
+                        <label class="layui-form-label">协议版本</label>
+                    </div>
+                    <div class="layui-col-md4">
+                        <input type="text" name="version" placeholder="请输入协议版本" class="layui-input">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 站点信息设置 -->
+            <div class="form-section">
+                <div class="form-section-title">站点信息</div>
+                <div class="layui-form-item">
+                    <div class="layui-col-md2">
+                        <label class="layui-form-label">网站名称</label>
+                    </div>
+                    <div class="layui-col-md4">
+                        <input type="text" name="site_info.name" placeholder="请输入网站名称" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <div class="layui-col-md2">
+                        <label class="layui-form-label">网站URL</label>
+                    </div>
+                    <div class="layui-col-md4">
+                        <input type="text" name="site_info.url" placeholder="请输入网站URL" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <div class="layui-col-md2">
+                        <label class="layui-form-label">网站域名</label>
+                    </div>
+                    <div class="layui-col-md4">
+                        <input type="text" name="site_info.domain" placeholder="请输入网站域名" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <div class="layui-col-md2">
+                        <label class="layui-form-label">网站Logo</label>
+                    </div>
+                    <div class="layui-col-md4">
+                        <input type="text" name="site_info.logo" placeholder="请输入网站Logo URL" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <div class="layui-col-md2">
+                        <label class="layui-form-label">网站Banner</label>
+                    </div>
+                    <div class="layui-col-md4">
+                        <input type="text" name="site_info.banner" placeholder="请输入网站Banner URL" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <div class="layui-col-md2">
+                        <label class="layui-form-label">网站描述</label>
+                    </div>
+                    <div class="layui-col-md8">
+                        <textarea name="site_info.description" placeholder="请输入网站描述" class="layui-textarea"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 友链交换设置 -->
+            <div class="form-section">
+                <div class="form-section-title">友链交换设置</div>
+                <div class="layui-form-item">
+                    <div class="layui-col-md2">
+                        <label class="layui-form-label">启用友链交换</label>
+                    </div>
+                    <div class="layui-col-md4">
+                        <input type="checkbox" name="link_exchange.enabled" lay-skin="switch" lay-filter="link_exchange_enabled" lay-text="开启|关闭">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <div class="layui-col-md2">
+                        <label class="layui-form-label">交换要求</label>
+                    </div>
+                    <div class="layui-col-md8">
+                        <textarea name="link_exchange.requirements" placeholder="请输入友链交换要求" class="layui-textarea"></textarea>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <div class="layui-col-md2">
+                        <label class="layui-form-label">联系邮箱</label>
+                    </div>
+                    <div class="layui-col-md4">
+                        <input type="text" name="link_exchange.contact_email" placeholder="请输入联系邮箱" class="layui-input">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 安全设置 -->
+            <div class="form-section">
+                <div class="form-section-title">安全设置</div>
+                <div class="layui-form-item">
+                    <div class="layui-col-md2">
+                        <label class="layui-form-label">启用校验和</label>
+                    </div>
+                    <div class="layui-col-md4">
+                        <input type="checkbox" name="security.enable_checksum" lay-skin="switch" lay-filter="enable_checksum" lay-text="开启|关闭">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <div class="layui-col-md2">
+                        <label class="layui-form-label">校验和算法</label>
+                    </div>
+                    <div class="layui-col-md4">
+                        <select name="security.checksum_algorithm" class="layui-input">
+                            <option value="sha512">SHA-512</option>
+                            <option value="sha256">SHA-256</option>
+                            <option value="md5">MD5</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <div class="layui-col-md2">
+                        <label class="layui-form-label">启用Token验证</label>
+                    </div>
+                    <div class="layui-col-md4">
+                        <input type="checkbox" name="security.enable_token" lay-skin="switch" lay-filter="enable_token" lay-text="开启|关闭">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <div class="layui-col-md2">
+                        <label class="layui-form-label">访问Token</label>
+                    </div>
+                    <div class="layui-col-md4">
+                        <input type="text" name="security.token" placeholder="请输入访问Token" class="layui-input">
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 测试连接弹窗 -->
+<div id="testModal" style="display: none;">
+    <div class="layui-form" style="padding: 20px;">
+        <div class="layui-form-item">
+            <label class="layui-form-label">测试URL</label>
+            <div class="layui-input-block">
+                <input type="text" name="test_url" placeholder="请输入要测试的互联协议URL" class="layui-input" style="width: 100%;">
+            </div>
+        </div>
+        <div class="layui-form-item" style="margin-top: 20px;">
+            <div class="layui-input-block" id="testResult" style="display: none;">
+                <div class="layui-card" style="border: 1px solid #e6e6e6;">
+                    <div class="layui-card-header">测试结果</div>
+                    <div class="layui-card-body">
+                        <pre id="testResultContent"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 示例配置弹窗 -->
+<div id="exampleModal" style="display: none;">
+    <div class="layui-form" style="padding: 20px;">
+        <div class="layui-form-item">
+            <label class="layui-form-label">互联协议示例</label>
+            <div class="layui-input-block">
+                <pre id="exampleContent" class="json-editor"></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    layui.use(['form', 'jquery', 'layer'], function() {
+        var form = layui.form;
+        var $ = layui.jquery;
+        var layer = layui.layer;
+
+        // 加载配置数据
+        function loadConfig() {
+            $.ajax({
+                url: '/app/admin/link/connect/getConfig',
+                type: 'GET',
+                dataType: 'json',
+                success: function(res) {
+                    if (res.code === 0) {
+                        var config = res.data;
+                        
+                        // 填充表单数据
+                        form.val('configForm', {
+                            'enabled': config.enabled ? true : false,
+                            'protocol_name': config.protocol_name || '',
+                            'version': config.version || '',
+                            'site_info.name': config.site_info?.name || '',
+                            'site_info.url': config.site_info?.url || '',
+                            'site_info.domain': config.site_info?.domain || '',
+                            'site_info.logo': config.site_info?.logo || '',
+                            'site_info.banner': config.site_info?.banner || '',
+                            'site_info.description': config.site_info?.description || '',
+                            'link_exchange.enabled': config.link_exchange?.enabled ? true : false,
+                            'link_exchange.requirements': config.link_exchange?.requirements || '',
+                            'link_exchange.contact_email': config.link_exchange?.contact_email || '',
+                            'security.enable_checksum': config.security?.enable_checksum ? true : false,
+                            'security.checksum_algorithm': config.security?.checksum_algorithm || 'sha512',
+                            'security.enable_token': config.security?.enable_token ? true : false,
+                            'security.token': config.security?.token || ''
+                        });
+                        
+                        // 重新渲染表单
+                        form.render();
+                    } else {
+                        layer.msg('加载配置失败：' + res.msg, {icon: 5});
+                    }
+                },
+                error: function() {
+                    layer.msg('加载配置失败', {icon: 5});
+                }
+            });
+        }
+
+        // 保存配置
+        $('#saveBtn').click(function() {
+            // 构建配置对象
+            var config = {
+                enabled: $('input[name="enabled"]').is(':checked'),
+                protocol_name: $('input[name="protocol_name"]').val(),
+                version: $('input[name="version"]').val(),
+                site_info: {
+                    name: $('input[name="site_info.name"]').val(),
+                    url: $('input[name="site_info.url"]').val(),
+                    domain: $('input[name="site_info.domain"]').val(),
+                    logo: $('input[name="site_info.logo"]').val(),
+                    banner: $('input[name="site_info.banner"]').val(),
+                    description: $('textarea[name="site_info.description"]').val()
+                },
+                link_exchange: {
+                    enabled: $('input[name="link_exchange.enabled"]').is(':checked'),
+                    requirements: $('textarea[name="link_exchange.requirements"]').val(),
+                    contact_email: $('input[name="link_exchange.contact_email"]').val()
+                },
+                security: {
+                    enable_checksum: $('input[name="security.enable_checksum"]').is(':checked'),
+                    checksum_algorithm: $('select[name="security.checksum_algorithm"]').val(),
+                    enable_token: $('input[name="security.enable_token"]').is(':checked'),
+                    token: $('input[name="security.token"]').val()
+                }
+            };
+
+            $.ajax({
+                url: '/app/admin/link/connect/saveConfig',
+                type: 'POST',
+                data: {config: config},
+                dataType: 'json',
+                success: function(res) {
+                    if (res.code === 0) {
+                        layer.msg('配置保存成功', {icon: 6});
+                    } else {
+                        layer.msg('配置保存失败：' + res.msg, {icon: 5});
+                    }
+                },
+                error: function() {
+                    layer.msg('配置保存失败', {icon: 5});
+                }
+            });
+        });
+
+        // 测试连接
+        $('#testBtn').click(function() {
+            // 清空测试结果
+            $('#testResult').hide();
+            $('#testResultContent').text('');
+            
+            layer.open({
+                type: 1,
+                title: '测试互联协议连接',
+                area: ['800px', '500px'],
+                content: $('#testModal'),
+                btn: ['测试', '关闭'],
+                yes: function(index) {
+                    var url = $('input[name="test_url"]').val();
+                    
+                    if (!url) {
+                        layer.msg('请输入测试URL', {icon: 5});
+                        return;
+                    }
+                    
+                    // 显示加载中
+                    var loadingIndex = layer.load();
+                    
+                    $.ajax({
+                        url: '/app/admin/link/connect/testConnection',
+                        type: 'POST',
+                        data: {url: url},
+                        dataType: 'json',
+                        success: function(res) {
+                            layer.close(loadingIndex);
+                            
+                            if (res.code === 0) {
+                                // 显示测试结果
+                                $('#testResultContent').text(JSON.stringify(res.data, null, 2));
+                                $('#testResult').show();
+                            } else {
+                                layer.msg('测试失败：' + res.msg, {icon: 5});
+                            }
+                        },
+                        error: function() {
+                            layer.close(loadingIndex);
+                            layer.msg('测试请求失败', {icon: 5});
+                        }
+                    });
+                },
+                btn2: function(index) {
+                    layer.close(index);
+                }
+            });
+        });
+
+        // 查看示例
+        $('#getExampleBtn').click(function() {
+            $.ajax({
+                url: '/app/admin/link/connect/getExample',
+                type: 'GET',
+                dataType: 'json',
+                success: function(res) {
+                    if (res.code === 0) {
+                        // 格式化JSON
+                        var formattedJson = JSON.stringify(res.data, null, 2);
+                        $('#exampleContent').text(formattedJson);
+                        
+                        layer.open({
+                            type: 1,
+                            title: '互联协议示例配置',
+                            area: ['900px', '600px'],
+                            content: $('#exampleModal'),
+                            btn: ['关闭'],
+                            btn1: function(index) {
+                                layer.close(index);
+                            }
+                        });
+                    } else {
+                        layer.msg('获取示例失败：' + res.msg, {icon: 5});
+                    }
+                },
+                error: function() {
+                    layer.msg('获取示例失败', {icon: 5});
+                }
+            });
+        });
+
+        // 初始化加载配置
+        loadConfig();
+    });
+</script>
+</body>
+</html>

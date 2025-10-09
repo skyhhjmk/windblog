@@ -12,6 +12,7 @@ use PhpAmqpLib\Message\AMQPMessage;
 use support\Request;
 use app\model\Link;
 use app\service\PaginationService;
+use app\service\LinkConnectService;
 use support\Response;
 use Throwable;
 use Webman\RateLimiter\Annotation\RateLimiter;
@@ -390,73 +391,15 @@ class LinkController
         if ($request->method() !== 'POST') {
             return json(['code' => 1, 'msg' => '仅支持POST']);
         }
-
-        $peerApi = $request->post('peer_api', '');
-        $name = $request->post('name', '');
-        $url = $request->post('url', '');
-        $icon = $request->post('icon', '');
-        $description = $request->post('description', '');
-        $email = $request->post('email', '');
-
-        if (!$peerApi || !$name || !$url) {
-            return json(['code' => 1, 'msg' => '参数不完整']);
-        }
-        if (!filter_var($url, FILTER_VALIDATE_URL)) {
-            return json(['code' => 1, 'msg' => '无效URL']);
-        }
-
-        // 本地创建对方B站记录，状态为 pending（status=false）
-        $existing = Link::where('url', $url)->first();
-        if ($existing) {
-            return json(['code' => 1, 'msg' => '该链接已存在或审核中']);
-        }
-
-        $link = new Link();
-        $link->name = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
-        $link->url = $url;
-        $link->icon = $icon;
-        $link->description = htmlspecialchars($description, ENT_QUOTES, 'UTF-8');
-        $link->status = false;
-        $link->sort_order = 999;
-        $link->target = '_blank';
-        $link->redirect_type = 'goto';
-        $link->show_url = true;
-        $link->email = $email;
-        $link->setCustomFields([
-            'peer_status' => 'pending',
-            'peer_api' => $peerApi,
-            'peer_protocol' => 'CAT3',
-            'source' => 'connect_apply'
+        $result = LinkConnectService::applyToPeer([
+            'peer_api' => $request->post('peer_api', ''),
+            'name' => $request->post('name', ''),
+            'url' => $request->post('url', ''),
+            'icon' => $request->post('icon', ''),
+            'description' => $request->post('description', ''),
+            'email' => $request->post('email', ''),
         ]);
-        $link->save();
-
-        // 组织发送给对方的数据（我们的站点信息）
-        $payload = [
-            'type' => 'wind_connect_apply',
-            'site' => [
-                'name' => blog_config('title', 'WindBlog', true),
-                'url' => blog_config('site_url', '', true),
-                'description' => blog_config('description', '', true),
-                'icon' => blog_config('favicon', '', true),
-                'protocol' => 'CAT3',
-                'version' => '1.0'
-            ],
-            'link' => [
-                'name' => blog_config('title', 'WindBlog', true),
-                'url' => blog_config('site_url', '', true),
-                'icon' => blog_config('favicon', '', true),
-                'description' => blog_config('description', '', true),
-                'email' => blog_config('admin_email', '', true)
-            ],
-            'timestamp' => time()
-        ];
-
-        $res = $this->httpPostJson($peerApi, $payload);
-        if (!$res['success']) {
-            return json(['code' => 0, 'msg' => '本地记录创建成功，但未能联系对方：' . $res['error']]);
-        }
-
-        return json(['code' => 0, 'msg' => '申请已发送，对方将自动创建等待记录']);
+        return json($result);
     }
 
     /**
@@ -468,86 +411,12 @@ class LinkController
         if ($request->method() !== 'POST') {
             return json(['code' => 1, 'msg' => '仅支持POST']);
         }
-        // 鉴权：要求 X-WIND-CONNECT-TOKEN 匹配配置
-        $incoming = $request->header('X-WIND-CONNECT-TOKEN', '');
-        $expected = blog_config('wind_connect_token', '', true);
-        if (empty($expected) || $incoming !== $expected) {
-            return json(['code' => 1, 'msg' => '鉴权失败']);
-        }
-
-        $raw = file_get_contents('php://input');
-        $data = json_decode($raw, true);
-        if (!$data || ($data['type'] ?? '') !== 'wind_connect_apply') {
-            return json(['code' => 1, 'msg' => '无效载荷']);
-        }
-
-        $fromSite = $data['site'] ?? [];
-        $fromLink = $data['link'] ?? [];
-        $peerUrl = $fromLink['url'] ?? '';
-        if (!filter_var($peerUrl, FILTER_VALIDATE_URL)) {
-            return json(['code' => 1, 'msg' => '无效对方站点URL']);
-        }
-
-        // 若已存在则跳过创建
-        $exist = Link::where('url', $peerUrl)->first();
-        if (!$exist) {
-            $new = new Link();
-            $new->name = htmlspecialchars($fromLink['name'] ?? ($fromSite['name'] ?? '友链'), ENT_QUOTES, 'UTF-8');
-            $new->url = $peerUrl;
-            $new->icon = $fromLink['icon'] ?? ($fromSite['icon'] ?? '');
-            $new->description = htmlspecialchars($fromLink['description'] ?? '', ENT_QUOTES, 'UTF-8');
-            $new->status = false; // waiting
-            $new->sort_order = 999;
-            $new->target = '_blank';
-            $new->redirect_type = 'goto';
-            $new->show_url = true;
-            $new->email = $fromLink['email'] ?? '';
-            $new->setCustomFields([
-                'peer_status' => 'waiting',
-                'peer_protocol' => $fromSite['protocol'] ?? 'CAT3',
-                'source' => 'connect_receive'
-            ]);
-            $new->save();
-        }
-
-        return json(['code' => 0, 'msg' => '已接收，等待审核']);
-    }
-
-    /**
-     * 简易JSON POST（禁用SSL验证）
-     */
-    private function httpPostJson(string $url, array $payload): array
-    {
-        try {
-            $token = blog_config('wind_connect_token', '', true);
-            $headers = "Content-Type: application/json
-
-";
-            if (!empty($token)) {
-                $headers .= "X-WIND-CONNECT-TOKEN: {$token}
-
-";
-            }
-            $opts = [
-                'http' => [
-                    'method' => 'POST',
-                    'timeout' => 30,
-                    'header' => $headers,
-                    'content' => json_encode($payload, JSON_UNESCAPED_UNICODE)
-                ],
-                'ssl' => [
-                    'verify_peer' => false,
-                    'verify_peer_name' => false
-                ]
-            ];
-            $context = stream_context_create($opts);
-            $result = @file_get_contents($url, false, $context);
-            if ($result === false) {
-                return ['success' => false, 'error' => '请求失败'];
-            }
-            return ['success' => true, 'body' => (string)$result];
-        } catch (\Exception $e) {
-            return ['success' => false, 'error' => $e->getMessage()];
-        }
+        $raw = $request->rawBody();
+        $data = json_decode($raw, true) ?: [];
+        $result = LinkConnectService::receiveFromPeer(
+            ['X-WIND-CONNECT-TOKEN' => $request->header('X-WIND-CONNECT-TOKEN', '')],
+            $data
+        );
+        return json($result);
     }
 }
