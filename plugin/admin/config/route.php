@@ -37,6 +37,9 @@ Route::group('/app/admin', function () {
     // Link 路由
     Route::group('/link', function () {
         Route::get('', [LinkController::class, 'index']);
+        // 快速连接接口
+        Route::get('/quickConnect', [app\controller\LinkController::class, 'quickConnect']);
+        Route::get('/quickConnect/', [app\controller\LinkController::class, 'quickConnect']);
         Route::get('/', [LinkController::class, 'index']);
         Route::get('/index', [LinkController::class, 'index']);
         Route::get('/list', [LinkController::class, 'list']);

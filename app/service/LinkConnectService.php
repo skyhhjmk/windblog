@@ -338,11 +338,22 @@ class LinkConnectService
      */
     public static function applyToPeer(array $input): array
     {
+        // 记录接收到的请求参数
+        $debugId = uniqid('link_apply_', true);
+        Log::debug("友链申请开始 [{$debugId}] - 参数: " . json_encode([
+            'peerApi' => substr((string)($input['peer_api'] ?? ''), 0, 50) . (strlen((string)($input['peer_api'] ?? '')) > 50 ? '...' : ''),
+            'name' => (string)($input['name'] ?? ''),
+            'url' => (string)($input['url'] ?? ''),
+            'icon' => substr((string)($input['icon'] ?? ''), 0, 50) . (strlen((string)($input['icon'] ?? '')) > 50 ? '...' : ''),
+            'hasEmail' => !empty((string)($input['email'] ?? ''))
+        ]));
+        
         // 获取配置
         $config = self::getConfig();
 
         // 检查互联协议是否启用
         if (!$config['enabled']) {
+            Log::debug("友链申请失败 [{$debugId}] - 原因: 互联协议未启用");
             return ['code' => 1, 'msg' => '互联协议未启用'];
         }
 
@@ -352,38 +363,78 @@ class LinkConnectService
         $icon = (string)($input['icon'] ?? '');
         $description = (string)($input['description'] ?? '');
         $email = (string)($input['email'] ?? '');
+        
+        $peerApi = trim($peerApi);
+        $name = trim($name);
+        $url = trim($url);
+        $icon = trim($icon);
+        $description = trim($description);
+        $email = trim($email);
 
+        // 参数验证
         if (!$peerApi || !$name || !$url) {
+            Log::debug("友链申请失败 [{$debugId}] - 原因: 参数不完整");
             return ['code' => 1, 'msg' => '参数不完整'];
         }
+        
         if (!self::validateUrl($url)) {
+            Log::debug("友链申请失败 [{$debugId}] - 原因: 无效URL ({$url})");
             return ['code' => 1, 'msg' => '无效URL'];
         }
+        
+        Log::debug("友链申请 [{$debugId}] - 参数验证通过");
 
-        // 去重
-        if (Link::where('url', $url)->first()) {
+        // 去重检查
+        $existingLink = Link::where('url', $url)->first();
+        if ($existingLink) {
+            Log::debug("友链申请失败 [{$debugId}] - 原因: 该链接已存在或审核中 (ID: {$existingLink->id})");
             return ['code' => 1, 'msg' => '该链接已存在或审核中'];
         }
+        
+        Log::debug("友链申请 [{$debugId}] - 去重检查通过，链接不存在");
 
-        // 构建并保存本地 pending 记录
-        $link = self::buildLocalPendingLink([
-            'name' => $name,
-            'url' => $url,
-            'icon' => $icon,
-            'description' => $description,
-            'email' => $email,
-            'peer_api' => $peerApi,
-        ]);
-        $link->save();
+        try {
+            // 构建并保存本地 pending 记录
+            $link = self::buildLocalPendingLink([
+                'name' => $name,
+                'url' => $url,
+                'icon' => $icon,
+                'description' => $description,
+                'email' => $email,
+                'peer_api' => $peerApi,
+            ]);
+            
+            $link->save();
+            Log::debug("友链申请 [{$debugId}] - 本地pending记录创建成功 (ID: {$link->id})");
 
-        // 组织对外载荷并发送
-        $payload = self::buildOutboundPayload();
-        $res = self::httpPostJson($peerApi, $payload);
+            // 组织对外载荷
+            $payload = self::buildOutboundPayload();
+            Log::debug("友链申请 [{$debugId}] - 准备发送对外请求到: " . substr($peerApi, 0, 100) . (strlen($peerApi) > 100 ? '...' : ''));
 
-        if (!$res['success']) {
-            return ['code' => 0, 'msg' => '本地记录创建成功，但未能联系对方：' . ($res['error'] ?? '请求失败')];
+            // 发送HTTP请求
+            $startTime = microtime(true);
+            $res = self::httpPostJson($peerApi, $payload);
+            $endTime = microtime(true);
+            $responseTime = round(($endTime - $startTime) * 1000, 2);
+            
+            Log::debug("友链申请 [{$debugId}] - 对外请求完成 (耗时: {$responseTime}ms, 成功: " . ($res['success'] ? '是' : '否') . ", 响应: " . json_encode([
+                'code' => $res['code'] ?? null,
+                'hasData' => isset($res['data']),
+                'error' => $res['error'] ?? null
+            ]));
+
+            // 根据请求结果返回相应消息
+            if (!$res['success']) {
+                Log::debug("友链申请 [{$debugId}] - 完成，状态: 本地记录成功，对方站点连接失败");
+                return ['code' => 0, 'msg' => '友链申请已提交，请等待对方站点审核'];
+            }
+            
+            Log::debug("友链申请 [{$debugId}] - 完成，状态: 成功发送到对方站点");
+            return ['code' => 0, 'msg' => '申请已发送，对方将自动创建等待记录'];
+        } catch (\Exception $e) {
+            Log::error("友链申请异常 [{$debugId}] - 错误: " . $e->getMessage() . ", 堆栈: " . $e->getTraceAsString());
+            throw $e;
         }
-        return ['code' => 0, 'msg' => '申请已发送，对方将自动创建等待记录'];
     }
 
     /**

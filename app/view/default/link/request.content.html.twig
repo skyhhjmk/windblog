@@ -143,8 +143,11 @@
                                    placeholder="https://peer.example.com/link/connect/receive?key=xxx"
                                    pattern="https?://.+">
                             <button id="quickConnectBtn"
-                                    class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors duration-200">
-                                一键互联
+                                    class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors duration-200 relative overflow-hidden">
+                                <span id="quickConnectBtnText">一键互联</span>
+                                <span id="quickConnectBtnLoader" class="hidden absolute inset-0 flex items-center justify-center bg-green-700">
+                                    <i class="fas fa-spinner fa-spin mr-2"></i>处理中...
+                                </span>
                             </button>
                         </div>
                         <p class="text-xs text-gray-500 mt-2">提示：将复用你在下方表单中已填写的基本信息一并发送给本站。</p>
@@ -300,8 +303,11 @@
 
                 <div>
                     <button type="submit"
-                            class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                        提交申请
+                            class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 relative overflow-hidden">
+                        <span id="submitBtnText">提交申请</span>
+                        <span id="submitBtnLoader" class="hidden absolute inset-0 flex items-center justify-center bg-blue-700">
+                            <i class="fas fa-spinner fa-spin mr-2"></i>提交中...
+                        </span>
                     </button>
                 </div>
             </form>
@@ -409,6 +415,11 @@
                 site: { name, url, icon, description, callback_url }
             };
 
+            // 禁用按钮并显示加载状态
+            btn.disabled = true;
+            document.getElementById('quickConnectBtnText').classList.add('hidden');
+            document.getElementById('quickConnectBtnLoader').classList.remove('hidden');
+
             fetch('/link/connect/apply', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -424,6 +435,12 @@
                 })
                 .catch(() => {
                     showQuickResult(resBox, false, '互联申请请求失败，请稍后重试');
+                })
+                .finally(() => {
+                    // 恢复按钮状态
+                    btn.disabled = false;
+                    document.getElementById('quickConnectBtnText').classList.remove('hidden');
+                    document.getElementById('quickConnectBtnLoader').classList.add('hidden');
                 });
 
             function showQuickResult(el, ok, text) {
@@ -447,6 +464,12 @@
             e.preventDefault();
 
             const formData = new FormData(this);
+            const submitBtn = form.querySelector('button[type="submit"]');
+            
+            // 禁用按钮并显示加载状态
+            submitBtn.disabled = true;
+            document.getElementById('submitBtnText').classList.add('hidden');
+            document.getElementById('submitBtnLoader').classList.remove('hidden');
 
             fetch('/link/request', { method: 'POST', body: formData })
                 .then(response => response.json())
@@ -471,6 +494,12 @@
                     resultMessage.classList.add('bg-red-100', 'text-red-700');
                     resultMessage.innerHTML = '<i class="fas fa-exclamation-circle mr-2"></i>提交失败，请稍后重试';
                     setTimeout(() => { resultMessage.classList.add('hidden'); }, 3000);
+                })
+                .finally(() => {
+                    // 恢复按钮状态
+                    submitBtn.disabled = false;
+                    document.getElementById('submitBtnText').classList.remove('hidden');
+                    document.getElementById('submitBtnLoader').classList.add('hidden');
                 });
         });
     })();
@@ -504,6 +533,20 @@
         100% {
             border-color: #3b82f6;
             box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.3);
+        }
+    }
+
+    /* 加载动画优化 */
+    .fa-spinner {
+        animation: fa-spin 1s linear infinite;
+    }
+
+    @keyframes fa-spin {
+        0% {
+            transform: rotate(0deg);
+        }
+        100% {
+            transform: rotate(360deg);
         }
     }
 
