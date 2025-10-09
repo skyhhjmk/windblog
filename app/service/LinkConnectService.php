@@ -18,66 +18,156 @@ class LinkConnectService
 {
     /**
      * 获取互联协议配置
+     *
      * @return array 配置信息
+     * @throws Throwable
      */
     public static function getConfig(): array
     {
         // 从数据库获取配置
         $config = Setting::where('key', 'link_connect_config')->value('value');
-        
+
         if ($config) {
             return json_decode($config, true);
         }
-        
+
         // 返回默认配置
         return self::getDefaultConfig();
     }
-    
+
     /**
      * 获取默认配置
+     *
      * @return array 默认配置信息
+     * @throws Throwable
      */
     public static function getDefaultConfig(): array
     {
+        // 从系统配置填充默认值，保证页面初次可见合理默认
+        $siteUrl = (string)blog_config('site_url', '', true);
+        $domain = parse_url($siteUrl, PHP_URL_HOST) ?: '';
         return [
             'enabled' => true,
             'protocol_name' => 'wind_connect',
             'version' => '1.0.0',
             'site_info' => [
-                'name' => '',
-                'url' => '',
-                'domain' => '',
-                'logo' => '',
-                'banner' => '',
-                'description' => ''
+                'name' => (string)blog_config('title', 'WindBlog', true),
+                'url' => $siteUrl,
+                'domain' => $domain,
+                'logo' => (string)blog_config('favicon', '', true),
+                'banner' => (string)blog_config('banner', '', true),
+                'description' => (string)blog_config('description', '', true),
             ],
             'link_exchange' => [
-                'enabled' => true,
-                'requirements' => '',
-                'contact_email' => ''
+                'enabled' => (bool)blog_config('link_exchange_enabled', true, true),
+                'requirements' => (string)blog_config('link_exchange_requirements', '网站内容健康', true),
+                'contact_email' => (string)blog_config('admin_email', '', true),
             ],
             'security' => [
                 'enable_checksum' => true,
                 'checksum_algorithm' => 'sha512',
                 'enable_token' => false,
-                'token' => ''
-            ]
+                'token' => (string)blog_config('wind_connect_token', '', true),
+            ],
         ];
     }
-    
+
+    /**
+     * Token 存储：使用 Setting key=link_connect_tokens 保存数组
+     * 结构：[
+     *   ['token'=>string,'status'=>'unused|used|revoked','used_by'=>'','used_at'=>null,'created_at'=>ISO8601]
+     * ]
+     */
+    public static function listTokens(): array
+    {
+        $row = \app\model\Setting::where('key', 'link_connect_tokens')->first();
+        if (!$row) return [];
+        $val = json_decode((string)$row->value, true);
+        return is_array($val) ? $val : [];
+    }
+
+    protected static function saveTokens(array $tokens): bool
+    {
+        $row = \app\model\Setting::where('key', 'link_connect_tokens')->first();
+        if (!$row) {
+            $row = new \app\model\Setting();
+            $row->key = 'link_connect_tokens';
+        }
+        $row->value = json_encode(array_values($tokens), JSON_UNESCAPED_UNICODE);
+        return (bool)$row->save();
+    }
+
+    public static function generateToken(): array
+    {
+        $tokens = self::listTokens();
+        $token = bin2hex(random_bytes(16));
+        $record = [
+            'token' => $token,
+            'status' => 'unused',
+            'used_by' => '',
+            'used_at' => null,
+            'created_at' => date('c'),
+        ];
+        array_unshift($tokens, $record); // 最近生成的在最前
+        self::saveTokens($tokens);
+        return $record;
+    }
+
+    public static function invalidateToken(string $token): bool
+    {
+        $tokens = self::listTokens();
+        $changed = false;
+        foreach ($tokens as &$t) {
+            if (($t['token'] ?? '') === $token && ($t['status'] ?? '') !== 'revoked') {
+                $t['status'] = 'revoked';
+                $changed = true;
+                break;
+            }
+        }
+        return $changed ? self::saveTokens($tokens) : true;
+    }
+
+    public static function getLatestUnusedToken(): ?string
+    {
+        foreach (self::listTokens() as $t) {
+            if (($t['status'] ?? '') === 'unused' && !empty($t['token'])) {
+                return $t['token'];
+            }
+        }
+        return null;
+    }
+
+    public static function markTokenUsed(string $token, string $usedBy = ''): bool
+    {
+        $tokens = self::listTokens();
+        $changed = false;
+        foreach ($tokens as &$t) {
+            if (($t['token'] ?? '') === $token) {
+                $t['status'] = 'used';
+                $t['used_by'] = $usedBy;
+                $t['used_at'] = date('c');
+                $changed = true;
+                break;
+            }
+        }
+        return $changed ? self::saveTokens($tokens) : false;
+    }
+
     /**
      * 保存互联协议配置
+     *
      * @param array $config 配置信息
+     *
      * @return bool 保存结果
      */
     public static function saveConfig(array $config): bool
     {
         try {
             // 获取现有配置
-            $existing = Setting::where('key', 'link_connect_config')->find();
-            
+            $existing = Setting::where('key', 'link_connect_config')->first();
+
             $configJson = json_encode($config, JSON_UNESCAPED_UNICODE);
-            
+
             if ($existing) {
                 $existing->value = $configJson;
                 return $existing->save();
@@ -91,36 +181,38 @@ class LinkConnectService
             return false;
         }
     }
-    
+
     /**
      * 获取互联协议示例
+     *
      * @return array 示例配置
+     * @throws Throwable
      */
     public static function getExample(): array
     {
         // 获取当前配置
         $config = self::getConfig();
-        
+
         // 获取站点信息
         $siteInfo = $config['site_info'];
-        
+
         // 获取链接列表
-        $links = Link::where('status', 1)->select()->toArray();
+        $links = Link::where('status', 1)->get()->toArray();
         $formattedLinks = [];
-        
+
         foreach ($links as $link) {
             $formattedLinks[] = [
                 'id' => (string)$link['id'],
                 'name' => $link['name'],
                 'url' => $link['url'],
-                'logo' => $link['logo'],
+                'icon' => $link['icon'],
                 'description' => $link['description'],
                 'status' => $link['status'],
-                'sort' => $link['sort'],
+                'sort_order' => $link['sort_order'],
                 'created_at' => $link['created_at']
             ];
         }
-        
+
         // 构建示例数据
         $example = [
             'protocol' => $config['protocol_name'],
@@ -142,19 +234,21 @@ class LinkConnectService
             'links' => $formattedLinks,
             'checksum' => '' // 留空，实际使用时会计算
         ];
-        
+
         // 计算校验和
         $dataToSign = $example;
         unset($dataToSign['checksum']);
         $checksum = self::calculateChecksum($dataToSign);
         $example['checksum'] = $checksum;
-        
+
         return $example;
     }
-    
+
     /**
      * 测试连接
+     *
      * @param string $url 要测试的URL
+     *
      * @return array 测试结果
      */
     public static function testConnection(string $url): array
@@ -164,33 +258,33 @@ class LinkConnectService
             curl_setopt($ch, CURLOPT_URL, $url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
             curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-            
+
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            
+
             curl_close($ch);
-            
+
             if ($httpCode != 200) {
                 return ['success' => false, 'message' => "HTTP错误码：$httpCode"];
             }
-            
+
             // 尝试解析JSON
             $data = json_decode($response, true);
-            
+
             if (json_last_error() !== JSON_ERROR_NONE) {
                 return ['success' => false, 'message' => "无效的JSON响应"];
             }
-            
+
             // 验证数据结构
             $requiredFields = ['protocol', 'version', 'timestamp', 'links'];
             $missingFields = [];
-            
+
             foreach ($requiredFields as $field) {
                 if (!isset($data[$field])) {
                     $missingFields[] = $field;
                 }
             }
-            
+
             if (!empty($missingFields)) {
                 return [
                     'success' => false,
@@ -198,13 +292,13 @@ class LinkConnectService
                     'data' => $data
                 ];
             }
-            
+
             // 验证校验和（如果存在）
             if (isset($data['checksum'])) {
                 $dataToVerify = $data;
                 unset($dataToVerify['checksum']);
                 $calculatedChecksum = self::calculateChecksum($dataToVerify);
-                
+
                 if ($calculatedChecksum !== $data['checksum']) {
                     return [
                         'success' => false,
@@ -213,7 +307,7 @@ class LinkConnectService
                         'checksum_valid' => false
                     ];
                 }
-                
+
                 return [
                     'success' => true,
                     'message' => "连接测试成功，校验和验证通过",
@@ -221,7 +315,7 @@ class LinkConnectService
                     'checksum_valid' => true
                 ];
             }
-            
+
             return [
                 'success' => true,
                 'message' => "连接测试成功",
@@ -246,12 +340,12 @@ class LinkConnectService
     {
         // 获取配置
         $config = self::getConfig();
-        
+
         // 检查互联协议是否启用
         if (!$config['enabled']) {
             return ['code' => 1, 'msg' => '互联协议未启用'];
         }
-        
+
         $peerApi = (string)($input['peer_api'] ?? '');
         $name = (string)($input['name'] ?? '');
         $url = (string)($input['url'] ?? '');
@@ -308,12 +402,12 @@ class LinkConnectService
     {
         // 获取配置
         $config = self::getConfig();
-        
+
         // 检查互联协议是否启用
         if (!$config['enabled']) {
             return ['code' => 1, 'msg' => '互联协议未启用'];
         }
-    
+
         $incoming = (string)($headers['X-WIND-CONNECT-TOKEN'] ?? '');
         $expected = (string)blog_config('wind_connect_token', '', true);
 

@@ -45,9 +45,12 @@ Route::any('/tag', [app\controller\TagController::class, 'list'])->name('tag.lis
 
  // 链接页&分页路由
 Route::any('/link', [app\controller\LinkController::class, 'index'])->name('link.index');
+Route::any('/link/', [app\controller\LinkController::class, 'index']);
 Route::any('/link/goto/{id}', [app\controller\LinkController::class, 'goto'])->name('link.goto');
 Route::any('/link/info/{id}', [app\controller\LinkController::class, 'info'])->name('link.info');
 Route::any('/link/page/{page}', [app\controller\LinkController::class, 'index'])->name('link.page');
+Route::any('/link/request', [app\controller\LinkController::class, 'request'])->name('link.request');
+Route::any('/link/connect/apply', [app\controller\LinkController::class, 'connectApply'])->name('link.connect.apply');
 
  // 分类浏览（兼容旧路由）
 Route::any('/category/{slug}', [app\controller\CategoryController::class, 'index'])->name('category.index');

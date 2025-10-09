@@ -58,7 +58,7 @@ Route::group('/app/admin', function () {
         Route::get('/get/{id}', [LinkController::class, 'get']);
     });
 
-    // 互联协议路由
+    // 互联协议路由（保留原 /link/connect）
     Route::group('/link/connect', function () {
         Route::get('', [\plugin\admin\app\controller\LinkConnectController::class, 'index']);
         Route::get('/', [\plugin\admin\app\controller\LinkConnectController::class, 'index']);
@@ -67,6 +67,30 @@ Route::group('/app/admin', function () {
         Route::post('/saveConfig', [\plugin\admin\app\controller\LinkConnectController::class, 'saveConfig']);
         Route::get('/getExample', [\plugin\admin\app\controller\LinkConnectController::class, 'getExample']);
         Route::post('/testConnection', [\plugin\admin\app\controller\LinkConnectController::class, 'testConnection']);
+        // 兼容新增接口
+        Route::get('/generateLink', [\plugin\admin\app\controller\LinkConnectController::class, 'generateLink']);
+        Route::post('/applyToPeer', [\plugin\admin\app\controller\LinkConnectController::class, 'applyToPeer']);
+        // Token 管理（策略B）
+        Route::get('/tokens', [\plugin\admin\app\controller\LinkConnectController::class, 'tokens']);
+        Route::post('/generateToken', [\plugin\admin\app\controller\LinkConnectController::class, 'generateToken']);
+        Route::post('/invalidateToken', [\plugin\admin\app\controller\LinkConnectController::class, 'invalidateToken']);
+    });
+
+    // 新增 /linkconnect 路由组（前端使用该前缀）
+    Route::group('/linkconnect', function () {
+        Route::get('', [\plugin\admin\app\controller\LinkConnectController::class, 'index']);
+        Route::get('/', [\plugin\admin\app\controller\LinkConnectController::class, 'index']);
+        Route::get('/index', [\plugin\admin\app\controller\LinkConnectController::class, 'index']);
+        Route::get('/getConfig', [\plugin\admin\app\controller\LinkConnectController::class, 'getConfig']);
+        Route::post('/saveConfig', [\plugin\admin\app\controller\LinkConnectController::class, 'saveConfig']);
+        Route::get('/getExample', [\plugin\admin\app\controller\LinkConnectController::class, 'getExample']);
+        Route::post('/testConnection', [\plugin\admin\app\controller\LinkConnectController::class, 'testConnection']);
+        Route::get('/generateLink', [\plugin\admin\app\controller\LinkConnectController::class, 'generateLink']);
+        Route::post('/applyToPeer', [\plugin\admin\app\controller\LinkConnectController::class, 'applyToPeer']);
+        // Token 管理（策略B）
+        Route::get('/tokens', [\plugin\admin\app\controller\LinkConnectController::class, 'tokens']);
+        Route::post('/generateToken', [\plugin\admin\app\controller\LinkConnectController::class, 'generateToken']);
+        Route::post('/invalidateToken', [\plugin\admin\app\controller\LinkConnectController::class, 'invalidateToken']);
     });
 
     // Post 路由
