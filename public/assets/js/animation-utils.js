@@ -192,7 +192,8 @@ const AnimationUtils = {
      */
     initPJAXAnimations() {
         // 监听PJAX内容替换前事件
-        document.addEventListener('pjax:beforeReplace', (e, contents) => {
+        document.addEventListener('pjax:beforeReplace', (e) => {
+            const contents = (e && e.detail && e.detail.contents) ? e.detail.contents : document;
             // 为新内容中的区块添加动画类和延迟
             const sections = contents.querySelectorAll('section, .main-section, .article-section');
             sections.forEach((section, index) => {
@@ -227,11 +228,12 @@ const AnimationUtils = {
         });
         
         // 监听PJAX错误事件
-        document.addEventListener('pjax:error', (e, xhr) => {
+        document.addEventListener('pjax:error', (e) => {
+            const xhr = (e && e.detail && e.detail.xhr) ? e.detail.xhr : null;
             // 显示错误通知
-            if (xhr.status === 0) {
+            if (xhr && xhr.status === 0) {
                 this.showNotification('网络连接错误，请检查网络设置', 'error');
-            } else if (xhr.status >= 500) {
+            } else if (xhr && xhr.status >= 500) {
                 this.showNotification('服务器错误，请稍后再试', 'error');
             }
             

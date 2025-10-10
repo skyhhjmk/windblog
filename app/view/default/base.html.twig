@@ -554,13 +554,30 @@
                             
                             if (newContent) {
                                 try {
-                                    document.dispatchEvent(new CustomEvent('pjax:beforeReplace', { detail: { url: url } }));
+                                    document.dispatchEvent(new CustomEvent('pjax:beforeReplace', { detail: { url: url, contents: byId } }));
                                     if (window.$) {
-                                        $(document).trigger('pjax:beforeReplace');
+                                        $(document).trigger('pjax:beforeReplace', [byId]);
                                     }
                                 } catch (e) {}
                                 // 更新内容
                                 pjaxConfig.container.innerHTML = newContent;
+                                // 执行片段中的内联脚本（避免外部脚本重复加载）
+                                try {
+                                    const inlineScripts = pjaxConfig.container.querySelectorAll('script:not([src])');
+                                    inlineScripts.forEach(function (oldScript) {
+                                        // 可选控制：data-pjax-eval="false" 跳过
+                                        const attr = oldScript.getAttribute('data-pjax-eval');
+                                        const shouldEval = (attr == null) ? true : (attr !== 'false');
+                                        if (!shouldEval) return;
+
+                                        const newScript = document.createElement('script');
+                                        if (oldScript.type) newScript.type = oldScript.type;
+                                        newScript.textContent = oldScript.textContent || '';
+                                        oldScript.parentNode.replaceChild(newScript, oldScript);
+                                    });
+                                } catch (e) {
+                                    console.warn('PJAX: 执行内联脚本失败', e);
+                                }
 
                                 // 注入侧栏（若存在）
                                 try {
