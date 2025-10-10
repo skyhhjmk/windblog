@@ -160,6 +160,13 @@ class SidebarService
         foreach ($sidebarConfig['widgets'] as $key => &$widget) {
             if (isset($widget['enabled']) && $widget['enabled'] === true) {
                 try {
+                    // 规范化键值：确保每个小工具具有稳定的 id/key，便于前端 data-widget-key 使用
+                    if (empty($widget['id'])) {
+                        $widget['id'] = $widget['type'] ?? (is_string($key) ? $key : ('widget_' . (string)$key));
+                    }
+                    if (empty($widget['key'])) {
+                        $widget['key'] = $widget['id'];
+                    }
                     // 调用重构后的WidgetService渲染小工具为HTML
                     $widget['html'] = WidgetService::renderToHtml($widget);
 

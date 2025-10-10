@@ -6,7 +6,9 @@
     {% if sidebar is defined and sidebar.widgets is defined %}
         {% for widget in sidebar.widgets %}
             {% if widget.enabled and widget.html is defined %}
-                {{ widget.html|raw }}
+                <div class="sidebar-widget" data-widget-key="{{ widget.key ?? widget.id ?? widget.slug ?? widget.name ?? loop.index }}" data-widget-type="{{ widget.type ?? '' }}">
+                    {{ widget.html|raw }}
+                </div>
             {% endif %}
         {% endfor %}
     {% endif %}
@@ -113,7 +115,10 @@
         function injectSidebar() {
             var t = document.getElementById('pjax-sidebar-html');
             var c = document.getElementById('sidebar-container');
-            if (t && c) {
+            if (!t || !c) return;
+            if (window.PJAX || window.jQuery) {
+                try { document.dispatchEvent(new CustomEvent('pjax:sidebarReady')); } catch (_) {}
+            } else {
                 c.innerHTML = t.innerHTML || '';
             }
         }

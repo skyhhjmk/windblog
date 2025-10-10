@@ -353,6 +353,237 @@
                 container: null
             };
 
+            // 动态加载响应中的外部资源（script[src] 与 link[rel=stylesheet]），避免PJAX丢失新依赖
+            function loadExternalAssets(responseHtml, docObj, $respObj) {
+                try {
+                    const scripts = [];
+                    const links = [];
+
+                    if (docObj) {
+                        docObj.querySelectorAll('script[src]').forEach(s => scripts.push(s.getAttribute('src')));
+                        docObj.querySelectorAll('link[rel="stylesheet"][href]').forEach(l => links.push(l.getAttribute('href')));
+                    }
+                    if ($respObj && $respObj.length) {
+                        $respObj.find('script[src]').each(function(){ scripts.push(this.getAttribute('src')); });
+                        $respObj.find('link[rel="stylesheet"][href]').each(function(){ links.push(this.getAttribute('href')); });
+                    }
+
+                    const uniq = (arr) => Array.from(new Set(arr.filter(Boolean)));
+
+                    const needCss = uniq(links).filter(href => {
+                        const exists = Array.from(document.querySelectorAll('link[rel="stylesheet"][href]'))
+                            .some(l => l.getAttribute('href') === href);
+                        return !exists;
+                    });
+
+                    const needJs = uniq(scripts).filter(src => {
+                        const exists = Array.from(document.querySelectorAll('script[src]'))
+                            .some(s => s.getAttribute('src') === src || s.dataset.pjaxLoaded === '1');
+                        return !exists;
+                    });
+
+                    // 先加载CSS
+                    needCss.forEach(href => {
+                        try {
+                            const link = document.createElement('link');
+                            link.rel = 'stylesheet';
+                            link.href = href;
+                            link.dataset.pjaxLoaded = '1';
+                            document.head.appendChild(link);
+                        } catch (_) {}
+                    });
+
+                    // 顺序加载JS，保证依赖顺序
+                    (function loadNext(i){
+                        if (i >= needJs.length) return;
+                        const src = needJs[i];
+                        const s = document.createElement('script');
+                        s.src = src;
+                        s.async = false;
+                        s.dataset.pjaxLoaded = '1';
+                        s.onload = () => loadNext(i+1);
+                        s.onerror = () => loadNext(i+1);
+                        document.head.appendChild(s);
+                    })(0);
+                } catch (e) {
+                    console.warn('PJAX: 资源加载解析失败', e);
+                }
+            }
+
+            // 侧边栏差异合并 + 动画（混合策略：优先 data-widget-key，缺失回退启发式）
+            function applySidebarDiff(sidebarEl, newHtml) {
+                if (!sidebarEl) return;
+                const temp = document.createElement('div');
+                temp.innerHTML = newHtml || '';
+
+                const oldItems = Array.from(sidebarEl.children);
+                const newItems = Array.from(temp.children);
+
+                // 简易字符串哈希
+                function hashString(str) {
+                    let h = 0;
+                    for (let i = 0; i < str.length; i++) {
+                        h = (h * 31 + str.charCodeAt(i)) >>> 0;
+                    }
+                    return h.toString(16);
+                }
+
+                // 键提取：data-widget-key → id → 首个标题文本 → 内容摘要哈希
+                const keyOf = (el) => {
+                    if (!el) return '';
+                    const dk = el.getAttribute && el.getAttribute('data-widget-key');
+                    if (dk) return 'dk:' + dk;
+                    const id = el.id;
+                    if (id) return 'id:' + id;
+                    const h = el.querySelector && el.querySelector('h1,h2,h3,h4,h5,h6');
+                    if (h && h.textContent) {
+                        const t = h.textContent.trim();
+                        if (t) return 'h:' + t.slice(0, 64);
+                    }
+                    const txt = (el.textContent || '').trim().slice(0, 256);
+                    return 'hs:' + hashString(txt);
+                };
+
+                // 建立映射与集合
+                const oldMap = new Map();
+                oldItems.forEach(el => oldMap.set(keyOf(el), el));
+                const newMap = new Map();
+                newItems.forEach(el => newMap.set(keyOf(el), el));
+
+                const oldKeys = new Set(oldMap.keys());
+                const newKeys = new Set(newMap.keys());
+
+                const toRemove = [];
+                oldKeys.forEach(k => { if (!newKeys.has(k)) toRemove.push(k); });
+
+                const toAdd = [];
+                newKeys.forEach(k => { if (!oldKeys.has(k)) toAdd.push(k); });
+
+                const toKeep = [];
+                newKeys.forEach(k => { if (oldKeys.has(k)) toKeep.push(k); });
+
+                // 删除动画（交错 + 同步批量移除 → 右滑出，400ms ease-out）
+                toRemove.forEach((k, idx) => {
+                    const el = oldMap.get(k);
+                    if (!el) return;
+                    const delay = idx * 40;
+                    el.style.transition = 'opacity 400ms ease-out, transform 400ms ease-out';
+                    el.style.willChange = 'opacity, transform';
+                    setTimeout(() => {
+                        el.style.opacity = '0';
+                        el.style.transform = 'translateX(28px)';
+                    }, delay);
+                });
+                if (toRemove.length) {
+                    const totalDelay = (toRemove.length - 1) * 40;
+                    setTimeout(() => {
+                        toRemove.forEach(k => {
+                            const el = oldMap.get(k);
+                            if (el && el.parentNode === sidebarEl) {
+                                el.parentNode.removeChild(el);
+                            }
+                        });
+                    }, totalDelay + 400);
+                }
+
+                // 插入动画（交错 + 方向自适应，400ms ease-out）
+                // 底部插入：从下往上滑入；中间/头部插入：从右向左滑入
+                let reference = null;
+                newItems.forEach((newEl, idx) => {
+                    const k = keyOf(newEl);
+                    const exists = oldMap.get(k);
+                    if (exists) {
+                        reference = exists;
+                    } else {
+                        const delay = idx * 40;
+                        newEl.style.transition = 'opacity 400ms ease-out, transform 400ms ease-out';
+                        newEl.style.willChange = 'opacity, transform';
+                        const isBottomInsert = !!(reference && !reference.nextSibling);
+                        const isHeadInsert = !reference && !!sidebarEl.firstChild;
+                        if (isBottomInsert) {
+                            newEl.style.opacity = '0';
+                            newEl.style.transform = 'translateY(28px)';
+                        } else {
+                            newEl.style.opacity = '0';
+                            newEl.style.transform = 'translateX(28px)';
+                        }
+                        if (reference) {
+                            if (reference.nextSibling) {
+                                sidebarEl.insertBefore(newEl, reference.nextSibling);
+                            } else {
+                                sidebarEl.appendChild(newEl);
+                            }
+                        } else {
+                            if (sidebarEl.firstChild) {
+                                sidebarEl.insertBefore(newEl, sidebarEl.firstChild);
+                            } else {
+                                sidebarEl.appendChild(newEl);
+                            }
+                        }
+                        setTimeout(() => {
+                            requestAnimationFrame(() => {
+                                newEl.style.opacity = '1';
+                                newEl.style.transform = 'translate(0, 0)';
+                            });
+                        }, delay);
+                        oldMap.set(k, newEl);
+                        reference = newEl;
+                    }
+                });
+
+                // 保留项位置过渡（简易FLIP）
+                const finalOrder = newItems.map(el => keyOf(el));
+                const currentChildren = Array.from(sidebarEl.children);
+                const positions = new Map();
+                currentChildren.forEach(el => {
+                    positions.set(el, el.getBoundingClientRect());
+                });
+
+                // 重排到新顺序
+                finalOrder.forEach((k, idx) => {
+                    const el = oldMap.get(k);
+                    if (!el) return;
+                    const targetAt = sidebarEl.children[idx];
+                    if (el !== targetAt) {
+                        sidebarEl.insertBefore(el, targetAt || null);
+                    }
+                });
+
+                // FLIP 动画过渡（缓动/时长优化为 260ms ease-out）+ 容器整体轻微缩放与移动端淡入
+                // 容器轻微缩放与淡入（移动端）
+                try {
+                    sidebarEl.style.transformOrigin = 'top right';
+                    sidebarEl.style.transition = (window.innerWidth < 768)
+                        ? 'transform 200ms ease-out, opacity 200ms ease-out'
+                        : 'transform 200ms ease-out';
+                    if (window.innerWidth < 768) {
+                        sidebarEl.style.opacity = '0.85';
+                    }
+                    sidebarEl.style.transform = 'scale(0.98)';
+                    setTimeout(() => {
+                        sidebarEl.style.transform = 'scale(1)';
+                        if (window.innerWidth < 768) {
+                            sidebarEl.style.opacity = '1';
+                        }
+                    }, 0);
+                } catch (_) {}
+                Array.from(sidebarEl.children).forEach(el => {
+                    const first = positions.get(el);
+                    if (!first) return;
+                    const last = el.getBoundingClientRect();
+                    const dx = first.left - last.left;
+                    const dy = first.top - last.top;
+                    if (dx || dy) {
+                        el.style.transform = `translate(${dx}px, ${dy}px)`;
+                        el.style.transition = 'transform 400ms ease-out';
+                        el.style.willChange = 'transform';
+                        requestAnimationFrame(() => {
+                            el.style.transform = 'translate(0, 0)';
+                        });
+                    }
+                });
+            }
+
                 // 初始化
                 function initPJAX() {
                     console.log('PJAX: 开始初始化');
@@ -561,6 +792,91 @@
                                 } catch (e) {}
                                 // 更新内容
                                 pjaxConfig.container.innerHTML = newContent;
+
+                                // 进入新页面时滚动到顶部（立即滚动，避免首屏元素在平滑期间不可见）
+                                try {
+                                    // 立即滚动到顶部
+                                    window.scrollTo(0, 0);
+                                    document.documentElement.scrollTop = 0;
+                                    document.body.scrollTop = 0;
+                                } catch (_) {}
+
+                                // 动画可见性修复：确保首屏区域标题等元素立即可见
+                                try {
+                                    const vh = window.innerHeight || document.documentElement.clientHeight || 800;
+                                    const threshold = Math.floor(vh * 1.2);
+                                    const elems = pjaxConfig.container.querySelectorAll('.fade-in-on-scroll, h1, h2');
+                                    elems.forEach(function (el) {
+                                        const r = el.getBoundingClientRect();
+                                        if (!r) return;
+                                        // 首屏区域内的元素立即设为可见
+                                        if (r.top < threshold && r.bottom > 0) {
+                                            el.classList.add('visible');
+                                            el.style.opacity = '';
+                                            el.style.transform = '';
+                                        }
+                                    });
+                                    // 连续触发两次滚动事件，确保所有基于scroll的监听被唤醒
+                                    try { window.dispatchEvent(new Event('scroll')); } catch (_) {}
+                                    try { requestAnimationFrame(function(){ window.dispatchEvent(new Event('scroll')); }); } catch (_) {}
+                                    // 重新初始化动画系统
+                                    if (window.AnimationUtils && typeof AnimationUtils.reinit === 'function') {
+                                        AnimationUtils.reinit();
+                                    }
+                                } catch (e) {}
+
+                                // 处理片段容器内的外部脚本与样式（script[src]、link[rel=stylesheet]）
+                                try {
+                                    // 将片段中的样式移动到 head（避免重复）
+                                    const fragLinks = Array.from(pjaxConfig.container.querySelectorAll('link[rel="stylesheet"][href]'));
+                                    const existingLinks = Array.from(document.querySelectorAll('link[rel="stylesheet"][href]')).map(l => l.getAttribute('href'));
+                                    fragLinks.forEach(function (l) {
+                                        const href = l.getAttribute('href') || '';
+                                        if (!href) return;
+                                        if (existingLinks.includes(href)) {
+                                            // 已存在则从片段移除，避免重复
+                                            if (l.parentNode) l.parentNode.removeChild(l);
+                                        } else {
+                                            const link = document.createElement('link');
+                                            link.rel = 'stylesheet';
+                                            link.href = href;
+                                            link.dataset.pjaxLoaded = '1';
+                                            document.head.appendChild(link);
+                                            if (l.parentNode) l.parentNode.removeChild(l);
+                                        }
+                                    });
+
+                                    // 顺序加载片段中的外链脚本，确保依赖顺序
+                                    const fragScripts = Array.from(pjaxConfig.container.querySelectorAll('script[src]'));
+                                    const existingScripts = Array.from(document.querySelectorAll('script[src]')).map(s => s.getAttribute('src'));
+                                    const queue = fragScripts
+                                        .map(function (s) { return s.getAttribute('src') || ''; })
+                                        .filter(function (src) { return !!src && !existingScripts.includes(src); });
+
+                                    (function loadSeq(i) {
+                                        if (i >= queue.length) return;
+                                        const src = queue[i];
+                                        const s = document.createElement('script');
+                                        s.src = src;
+                                        // 保留原 type（支持 module）
+                                        const orig = fragScripts.find(x => (x.getAttribute('src') || '') === src);
+                                        const type = orig && orig.getAttribute('type');
+                                        if (type) s.type = type;
+                                        s.async = false;
+                                        s.dataset.pjaxLoaded = '1';
+                                        s.onload = function () { loadSeq(i + 1); };
+                                        s.onerror = function () { loadSeq(i + 1); };
+                                        document.head.appendChild(s);
+                                    })(0);
+                                } catch (e) {
+                                    console.warn('PJAX: 片段外部资源加载失败', e);
+                                }
+
+                                // 加载外部资源（脚本与样式），确保新页面依赖就绪
+                                try {
+                                    loadExternalAssets(response, doc, $resp);
+                                } catch (e) {}
+
                                 // 执行片段中的内联脚本（避免外部脚本重复加载）
                                 try {
                                     const inlineScripts = pjaxConfig.container.querySelectorAll('script:not([src])');
@@ -584,7 +900,10 @@
                                     const sidebarHtml = $resp.find('#pjax-sidebar-html').html();
                                     if (sidebarHtml != null) {
                                         const sidebar = document.getElementById('sidebar-container');
-                                        if (sidebar) sidebar.innerHTML = sidebarHtml;
+                                        if (sidebar) {
+                                            applySidebarDiff(sidebar, sidebarHtml);
+                                            try { document.dispatchEvent(new Event('sidebar:updated')); } catch (_) {}
+                                        }
                                     }
                                 } catch (e) {}
                                 
