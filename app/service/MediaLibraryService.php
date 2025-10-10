@@ -35,22 +35,23 @@ class MediaLibraryService
             $mimeType = $file->getUploadMimeType();
             $fileExtension = $file->getUploadExtension();
             
-            // 验证文件类型
-            $allowedTypes = [
-                'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
-                'video/mp4', 'video/avi', 'video/mpeg',
-                'audio/mpeg', 'audio/wav',
-                'application/pdf',
-                'text/plain'
-            ];
+            // 获取配置
+            $config = config('media', []);
             
-            if (!in_array($mimeType, $allowedTypes)) {
+            // 检查危险文件类型
+            if ($this->isDangerousFile($mimeType, $fileExtension)) {
+                return ['code' => 400, 'msg' => '禁止上传危险文件类型'];
+            }
+            
+            // 检查允许的文件类型
+            if (!$this->isAllowedFile($mimeType, $fileExtension)) {
                 return ['code' => 400, 'msg' => '不支持的文件类型'];
             }
             
-            // 验证文件大小（最大10MB）
-            if ($fileSize > 10 * 1024 * 1024) {
-                return ['code' => 400, 'msg' => '文件大小不能超过10MB'];
+            // 验证文件大小
+            $maxSize = $config['max_file_size'] ?? (10 * 1024 * 1024);
+            if ($fileSize > $maxSize) {
+                return ['code' => 400, 'msg' => '文件大小超过限制'];
             }
             
             // 创建上传目录
@@ -293,6 +294,83 @@ class MediaLibraryService
             'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'
         ];
         return in_array($mimeType, $imageMimeTypes);
+    }
+    
+    /**
+     * 检查是否为危险文件类型
+     *
+     * @param string $mimeType
+     * @param string $extension
+     * @return bool
+     */
+    private function isDangerousFile(string $mimeType, string $extension): bool
+    {
+        $config = config('media', []);
+        $dangerousTypes = $config['dangerous_types'] ?? [];
+        
+        // 检查MIME类型是否在黑名单中
+        if (isset($dangerousTypes[$mimeType]) && in_array(strtolower($extension), $dangerousTypes[$mimeType])) {
+            return true;
+        }
+        
+        // 检查扩展名是否在黑名单中
+        foreach ($dangerousTypes as $dangerousMime => $dangerousExts) {
+            if (in_array(strtolower($extension), $dangerousExts)) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * 检查是否为允许的文件类型
+     *
+     * @param string $mimeType
+     * @param string $extension
+     * @return bool
+     */
+    private function isAllowedFile(string $mimeType, string $extension): bool
+    {
+        $config = config('media', []);
+        $allowedTypes = $config['allowed_types'] ?? [];
+        
+        // 检查MIME类型是否在白名单中
+        if (isset($allowedTypes[$mimeType]) && in_array(strtolower($extension), $allowedTypes[$mimeType])) {
+            return true;
+        }
+        
+        // 检查扩展名是否在白名单中
+        foreach ($allowedTypes as $allowedMime => $allowedExts) {
+            if (in_array(strtolower($extension), $allowedExts)) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * 获取文件类型分类
+     *
+     * @param string $mimeType
+     * @return string
+     */
+    private function getFileCategory(string $mimeType): string
+    {
+        if (strpos($mimeType, 'image/') === 0) {
+            return 'image';
+        } elseif (strpos($mimeType, 'video/') === 0) {
+            return 'video';
+        } elseif (strpos($mimeType, 'audio/') === 0) {
+            return 'audio';
+        } elseif (strpos($mimeType, 'text/') === 0 || 
+                 strpos($mimeType, 'application/json') === 0 ||
+                 strpos($mimeType, 'application/xml') === 0) {
+            return 'document';
+        } else {
+            return 'other';
+        }
     }
     
     /**

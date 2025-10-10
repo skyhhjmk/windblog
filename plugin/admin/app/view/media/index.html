@@ -16,22 +16,42 @@
         }
     </script>
     <style>
-        .media-item {
-            /* 移除所有transition */
-        }
-        .media-item:hover {
-            /* 移除悬停动画 */
-        }
         .media-item.selected {
-            /* 移除选中动画 */
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.5), 0 8px 10px -6px rgba(59, 130, 246, 0.3);
+            border-color: #3b82f6;
+            position: relative;
+            z-index: 10;
         }
-        .upload-area {
-            /* 移除transition */
+        .media-item.selected::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border: 2px solid #3b82f6;
+            border-radius: 0.5rem;
+            animation: pulse 2s infinite;
+            pointer-events: none;
+        }
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.05);
+                opacity: 0.7;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
         }
         .upload-area.dragover {
             background-color: rgb(239 246 255);
             border-color: rgb(59 130 246);
-            /* 移除transform scale */
         }
         .loading-spinner {
             animation: spin 1s linear infinite;
@@ -39,9 +59,6 @@
         @keyframes spin {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
-        }
-        .toast {
-            /* 移除动画 */
         }
     </style>
 </head>
@@ -263,16 +280,34 @@
         <div class="bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden animate-scale-in">
             <div class="p-4 border-b border-gray-200 flex items-center justify-between">
                 <h3 id="preview-title" class="text-lg font-semibold text-gray-900 truncate"></h3>
-                <button id="close-preview-modal" class="text-gray-400 hover:text-gray-600">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
+                <div class="flex items-center space-x-2">
+                    <button id="edit-text-btn" class="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm hidden">
+                        编辑文本
+                    </button>
+                    <button id="save-text-btn" class="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm hidden">
+                        保存
+                    </button>
+                    <button id="cancel-edit-btn" class="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm hidden">
+                        取消
+                    </button>
+                    <button id="close-preview-modal" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
             </div>
             <div class="flex h-[calc(90vh-120px)]">
-                <div class="flex-1 p-6 flex items-center justify-center bg-gray-50">
-                    <div id="preview-content" class="max-w-full max-h-full">
-                        <!-- 预览内容将在这里显示 -->
+                <div class="flex-1 flex flex-col bg-gray-50">
+                    <!-- 文本编辑器容器 -->
+                    <div id="text-editor-container" class="hidden flex-1">
+                        <div id="monaco-editor" class="w-full h-full"></div>
+                    </div>
+                    <!-- 普通预览容器 -->
+                    <div id="normal-preview-container" class="flex-1 p-6 flex items-center justify-center">
+                        <div id="preview-content" class="max-w-full max-h-full">
+                            <!-- 预览内容将在这里显示 -->
+                        </div>
                     </div>
                 </div>
                 <div class="w-80 p-6 bg-white border-l border-gray-200 overflow-y-auto">
@@ -295,6 +330,32 @@
             </div>
         </div>
     </div>
+    
+    <!-- Monaco Editor CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs/loader.js"></script>
+    <script>
+        // 配置Monaco Editor加载器
+        require.config({ 
+            paths: { 
+                'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs' 
+            },
+            waitSeconds: 30
+        });
+        
+        // 初始化Monaco Editor
+        require(['vs/editor/editor.main'], function() {
+            console.log('Monaco Editor加载完成');
+            window.monaco = monaco;
+            
+            // 设置全局monaco变量
+            window.monacoEditorReady = true;
+        });
+        
+        // 错误处理
+        require.onError = function(err) {
+            console.error('Monaco Editor加载失败:', err);
+        };
+    </script>
 
     <!-- Toast 通知 -->
     <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2">
