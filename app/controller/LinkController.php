@@ -56,17 +56,17 @@ class LinkController
             $links = Link::where('status', 'true')->orderByDesc('id')->forPage($page, $links_per_page)->get();
         }
 
-        $isPjax = ($request->header('X-PJAX') !== null)
-            || (bool)$request->get('_pjax')
-            || strtolower((string)$request->header('X-Requested-With')) === 'xmlhttprequest';
+        $isPjax = \app\service\PJAXHelper::isPJAX($request);
         // 侧边栏（PJAX 与非 PJAX 均获取）
         $sidebar = \app\service\SidebarService::getSidebarContent($request, 'link');
-        return view($isPjax ? 'link/index.content' : 'link/index', [
+        // 统一选择视图并生成响应（包含 X-PJAX 相关头）
+        $viewName = \app\service\PJAXHelper::getViewName('link/index', $isPjax);
+        return \app\service\PJAXHelper::createResponse($request, $viewName, [
             'page_title' => blog_config('title', 'WindBlog', true) . ' - 链接广场',
             'links' => $links,
             'pagination' => $pagination_html,
             'sidebar' => $sidebar
-        ]);
+        ], null, 120, 'page');
     }
 
     /**
@@ -140,16 +140,16 @@ class LinkController
             ]);
         }
 
-        $isPjax = ($request->header('X-PJAX') !== null)
-            || (bool)$request->get('_pjax')
-            || strtolower((string)$request->header('X-Requested-With')) === 'xmlhttprequest';
+        $isPjax = \app\service\PJAXHelper::isPJAX($request);
         // 侧边栏（PJAX 与非 PJAX 均获取）
         $sidebar = \app\service\SidebarService::getSidebarContent($request, 'link');
-        return view($isPjax ? 'link/info.content' : 'link/info', [
+        // 统一选择视图并生成响应
+        $viewName = \app\service\PJAXHelper::getViewName('link/info', $isPjax);
+        return \app\service\PJAXHelper::createResponse($request, $viewName, [
             'link' => $link,
             'page_title' => $link->name . ' - 链接详情',
             'sidebar' => $sidebar
-        ]);
+        ], null, 120, 'page');
     }
 
     /**
@@ -299,17 +299,17 @@ class LinkController
         }
 
         // 显示申请页面
-        $isPjax = ($request->header('X-PJAX') !== null)
-            || (bool)$request->get('_pjax')
-            || strtolower((string)$request->header('X-Requested-With')) === 'xmlhttprequest';
+        $isPjax = \app\service\PJAXHelper::isPJAX($request);
         // 侧边栏（PJAX 与非 PJAX 均获取）
         $sidebar = \app\service\SidebarService::getSidebarContent($request, 'link');
-        return view($isPjax ? 'link/request.content' : 'link/request', [
+        // 统一选择视图并生成响应
+        $viewName = \app\service\PJAXHelper::getViewName('link/request', $isPjax);
+        return \app\service\PJAXHelper::createResponse($request, $viewName, [
             'page_title' => blog_config('title', 'WindBlog', true) . ' - 申请友链',
             'site_info_json_config' => $this->getSiteInfoConfig(),
             'csrf' => CSRFHelper::oneTimeToken($request, '_link_request_token'),
             'sidebar' => $sidebar
-        ]);
+        ], null, 120, 'page');
     }
 
     /**

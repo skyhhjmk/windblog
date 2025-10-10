@@ -107,7 +107,7 @@ class PJAXHelper
         // 添加PJAX相关的响应头
         $headers = [
             'X-PJAX-URL' => $request->url(),
-            'X-PJAX-CONTAINER' => '#content', // 假设默认的PJAX容器是#content
+            'X-PJAX-CONTAINER' => '#pjax-container', // 统一与前端容器选择器一致
             'Vary' => 'X-PJAX,X-Requested-With'
         ];
         

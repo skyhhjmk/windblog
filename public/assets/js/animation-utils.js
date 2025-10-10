@@ -82,7 +82,11 @@ class ScrollAnimationManager {
             );
             
             if (isVisible) {
-                el.classList.add('visible');
+                // 获取动画延迟
+                const animationDelay = el.dataset.animationDelay || 0;
+                setTimeout(() => {
+                    el.classList.add('visible');
+                }, parseInt(animationDelay) * 100);
             }
         });
     }
@@ -120,6 +124,34 @@ class ScrollAnimationManager {
             this.checkVisibility();
         }
     }
+    
+    /**
+     * PJAX页面切换时重新初始化动画管理器
+     */
+    reinit() {
+        // 移除旧的事件监听器（使用命名函数以便正确移除）
+        const scrollHandler = this.throttle(() => {
+            if (this.isActive) {
+                this.checkVisibility();
+            }
+        }, this.throttleDelay);
+        
+        const resizeHandler = this.throttle(() => {
+            if (this.isActive) {
+                this.checkVisibility();
+            }
+        }, this.throttleDelay);
+        
+        window.removeEventListener('scroll', scrollHandler);
+        window.removeEventListener('resize', resizeHandler);
+        
+        // 重置属性
+        this.animatedElements = [];
+        this.throttleTimeout = null;
+        
+        // 重新初始化
+        this.init();
+    }
 }
 
 /**
@@ -150,6 +182,94 @@ const AnimationUtils = {
         
         // 增强触摸设备交互
         this.enhanceTouchInteractions();
+        
+        // 初始化PJAX动画集成
+        this.initPJAXAnimations();
+    },
+    
+    /**
+     * 初始化PJAX动画集成
+     */
+    initPJAXAnimations() {
+        // 监听PJAX内容替换前事件
+        document.addEventListener('pjax:beforeReplace', (e, contents) => {
+            // 为新内容中的区块添加动画类和延迟
+            const sections = contents.querySelectorAll('section, .main-section, .article-section');
+            sections.forEach((section, index) => {
+                // 仅为没有动画类的区块添加
+                if (!section.classList.contains('fade-in-on-scroll') && 
+                    !section.classList.contains('no-animation')) {
+                    section.classList.add('fade-in-on-scroll');
+                    
+                    // 添加动画延迟，创建层次感
+                    if (!section.dataset.animationDelay) {
+                        section.dataset.animationDelay = Math.min(index * 0.1, 0.5);
+                    }
+                }
+            });
+            
+            // 确保新内容中的交互元素也有动画效果
+            const interactiveElements = contents.querySelectorAll('button, a:not([href^="#"]), .card');
+            interactiveElements.forEach(element => {
+                if (!element.classList.contains('no-animation')) {
+                    // 添加硬件加速类提升性能
+                    if (!element.classList.contains('accelerated')) {
+                        element.classList.add('accelerated');
+                    }
+                }
+            });
+        });
+        
+        // 监听PJAX完成事件
+        document.addEventListener('pjax:end', () => {
+            // 重新初始化动画系统
+            this.reinit();
+        });
+        
+        // 监听PJAX错误事件
+        document.addEventListener('pjax:error', (e, xhr) => {
+            // 显示错误通知
+            if (xhr.status === 0) {
+                this.showNotification('网络连接错误，请检查网络设置', 'error');
+            } else if (xhr.status >= 500) {
+                this.showNotification('服务器错误，请稍后再试', 'error');
+            }
+            
+            // 重置动画状态
+            if (this.scrollManager) {
+                this.scrollManager.resume();
+            }
+        });
+        
+        // 监听页面切换动画开始事件
+        document.addEventListener('pjax:start', () => {
+            // 暂停滚动动画以提高性能
+            if (this.scrollManager) {
+                this.scrollManager.pause();
+            }
+        });
+    },
+    
+    /**
+     * 重新初始化所有动画功能（用于PJAX页面切换后）
+     */
+    reinit() {
+        // 重新初始化滚动动画管理器
+        if (this.scrollManager) {
+            this.scrollManager.reinit();
+        } else {
+            this.scrollManager = new ScrollAnimationManager();
+        }
+        
+        // 重新初始化其他动画功能
+        this.enhanceButtonInteractions();
+        this.enhanceCardInteractions();
+        this.optimizeNavigationAnimation();
+        this.initTypewriterEffect();
+        this.enhanceTouchInteractions();
+        
+        // 触发自定义事件，通知动画系统已准备就绪
+        document.dispatchEvent(new CustomEvent('animations:ready'));
     },
     
     /**
@@ -204,18 +324,47 @@ const AnimationUtils = {
      */
     optimizeNavigationAnimation() {
         // 增强PJAX进度条动画
-        if (window.PjaxProgress) {
-            // 重写进度条动画逻辑，使其更流畅
-            const originalStart = window.PjaxProgress.start;
-            window.PjaxProgress.start = function() {
-                originalStart.call(this);
-                // 添加动画平滑过渡
-                const bar = document.getElementById('pjax-progress');
-                if (bar) {
-                    bar.style.transition = 'width 0.3s ease-out, opacity 0.3s ease-out';
-                }
-            };
+        const progressBar = document.getElementById('pjax-progress');
+        if (progressBar) {
+            // 设置进度条基础样式
+            progressBar.style.transition = 'width 0.3s ease-out, opacity 0.3s ease-out';
+            progressBar.style.backgroundImage = 'linear-gradient(to right, #6366f1, #8b5cf6)';
         }
+        
+        // 添加导航栏滚动效果
+        const header = document.querySelector('header');
+        if (header) {
+            let lastScrollTop = 0;
+            
+            window.addEventListener('scroll', this.throttle(() => {
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                
+                if (scrollTop > lastScrollTop && scrollTop > 100) {
+                    // 向下滚动且已滚动一定距离，隐藏导航栏
+                    header.classList.add('nav-hidden');
+                } else if (scrollTop < lastScrollTop - 20) {
+                    // 向上滚动，显示导航栏
+                    header.classList.remove('nav-hidden');
+                }
+                
+                lastScrollTop = scrollTop <= 0 ? 0 : scrollTop; // 避免负值
+            }, 150));
+        }
+    },
+    
+    /**
+     * 节流函数（工具类内部使用）
+     */
+    throttle(func, delay) {
+        let timeoutId;
+        return function(...args) {
+            if (!timeoutId) {
+                timeoutId = setTimeout(() => {
+                    func.apply(this, args);
+                    timeoutId = null;
+                }, delay);
+            }
+        };
     },
     
     /**

@@ -8,6 +8,7 @@
   --animation-duration-slow: 0.6s;
   --animation-timing: cubic-bezier(0.4, 0, 0.2, 1);
   --animation-delay-step: 0.1s;
+  --pjax-transition-duration: 0.3s;
 }
 
 /* 工具类：设置硬件加速 */
@@ -32,6 +33,31 @@
 }
 .delay-500 {
   animation-delay: calc(var(--animation-delay-step) * 5);
+}
+
+/* PJAX加载状态 */
+.pjax-loading {
+  overflow-x: hidden;
+}
+
+/* PJAX页面切换容器动画 */
+#pjax-container {
+  transition: opacity var(--pjax-transition-duration) ease-out;
+}
+
+/* 导航栏滚动效果 */
+header {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+header.nav-hidden {
+  transform: translateY(-100%);
+}
+
+header.scrolled {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
 }
 
 /* 1. 增强版入场动画 */
@@ -131,6 +157,10 @@ article .hover-lift:hover,
 .div .hover-lift:hover {
   transform: translateY(-6px) translateZ(0);
   box-shadow: 0 12px 20px -10px rgba(0, 0, 0, 0.1), 0 4px 8px -2px rgba(0, 0, 0, 0.05);
+}
+
+.hover-lift.touch-active {
+  transform: translateY(-6px) translateZ(0);
 }
 
 /* 悬停缩放效果 */
@@ -304,6 +334,38 @@ article .hover-rotate:hover,
 .fade-in-on-scroll.visible {
   opacity: 1;
   transform: translateY(0);
+}
+
+/* PJAX进度条样式优化 */
+#pjax-progress {
+  height: 3px;
+  background: linear-gradient(90deg, #4f46e5, #7c3aed, #ec4899);
+  background-size: 200% 100%;
+  animation: gradientBackground 1.5s ease infinite;
+  box-shadow: 0 0 10px rgba(79, 70, 229, 0.3);
+}
+
+/* 渐变背景动画 */
+@keyframes gradientBackground {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* 触摸设备反馈 */
+.touch-device button, .touch-device a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.touch-active {
+  opacity: 0.8;
+  transform: scale(0.98);
 }
 
 /* 6. 页面过渡动画 */
@@ -502,6 +564,12 @@ article .hover-rotate:hover,
   :root {
     --animation-duration: 0.3s;
     --animation-duration-slow: 0.5s;
+    --pjax-transition-duration: 0.2s;
+  }
+  
+  /* 移动端导航栏优化 */
+  header.nav-hidden {
+    transform: translateY(-120%);
   }
 }
 
@@ -514,5 +582,15 @@ article .hover-rotate:hover,
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+  
+  /* 禁用PJAX过渡动画 */
+  #pjax-container {
+    transition: none !important;
+  }
+  
+  /* 禁用导航栏滚动效果 */
+  header {
+    transform: translateY(0) !important;
   }
 }
