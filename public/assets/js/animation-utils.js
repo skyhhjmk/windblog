@@ -197,6 +197,10 @@ const AnimationUtils = {
             // 为新内容中的区块添加动画类和延迟
             const sections = contents.querySelectorAll('section, .main-section, .article-section');
             sections.forEach((section, index) => {
+            // 跳过自身或祖先含 no-animation 的区块
+            if (section.classList.contains('no-animation') || section.closest('.no-animation')) {
+                return;
+            }
                 // 仅为没有动画类的区块添加
                 if (!section.classList.contains('fade-in-on-scroll') && 
                     !section.classList.contains('no-animation')) {
@@ -212,11 +216,13 @@ const AnimationUtils = {
             // 确保新内容中的交互元素也有动画效果
             const interactiveElements = contents.querySelectorAll('button, a:not([href^="#"]), .card');
             interactiveElements.forEach(element => {
-                if (!element.classList.contains('no-animation')) {
-                    // 添加硬件加速类提升性能
-                    if (!element.classList.contains('accelerated')) {
-                        element.classList.add('accelerated');
-                    }
+                // 跳过自身或祖先含 no-animation，或正文容器
+                if (element.classList.contains('no-animation') || element.closest('.no-animation') || element.id === 'post-container') {
+                    return;
+                }
+                // 添加硬件加速类提升性能
+                if (!element.classList.contains('accelerated')) {
+                    element.classList.add('accelerated');
                 }
             });
         });
@@ -300,6 +306,10 @@ const AnimationUtils = {
     enhanceCardInteractions() {
         const cards = document.querySelectorAll('.bg-white.rounded-xl, .bg-white.rounded-2xl');
         cards.forEach((card, index) => {
+            // 跳过自身或祖先含 no-animation，或正文容器
+            if (card.classList.contains('no-animation') || card.closest('.no-animation') || card.id === 'post-container') {
+                return;
+            }
             // 检查是否已经有任何悬停效果类
             const hasHoverEffect = card.classList.contains('hover-lift') || 
                                   card.classList.contains('hover-scale') || 

@@ -5,7 +5,7 @@
 {% block content %}
     {# 依赖已全局引入（base.html.twig），此处无需重复加载 #}
     <div class="max-w-full mx-auto">
-        <article class="bg-white rounded-xl shadow-md overflow-hidden hover-lift accelerated fade-in-on-scroll">
+        <article class="bg-white rounded-xl shadow-md overflow-hidden accelerated fade-in-on-scroll no-animation">
             <!-- 文章头部 -->
             <div class="p-6 border-b border-gray-100 fade-in-on-scroll">
                 <h1 class="text-3xl font-bold text-gray-800 mb-4">{{ post.title }}</h1>
@@ -44,7 +44,7 @@
 
             <!-- 文章内容 -->
             <div class="p-6">
-                <div class="prose max-w-none fade-in-on-scroll" id="post-container">加载中...</div>
+                <div class="prose max-w-none fade-in-on-scroll no-animation" id="post-container">加载中...</div>
             </div>
 
             <!-- 文章底部 -->

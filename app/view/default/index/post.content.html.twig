@@ -13,7 +13,7 @@
         {% endfor %}
     {% endif %}
 </div>
-    <article class="bg-white rounded-xl shadow-md overflow-hidden">
+    <article class="bg-white rounded-xl shadow-md overflow-hidden no-animation">
         <!-- 文章头部 -->
         <div class="p-6 border-b border-gray-100">
             <h1 class="text-3xl font-bold text-gray-800 mb-4">{{ post.title }}</h1>
@@ -52,7 +52,7 @@
 
         <!-- 文章内容 -->
         <div class="p-6">
-            <div class="prose max-w-none" id="post-container">加载中...</div>
+            <div class="prose max-w-none fade-in-on-scroll no-animation" id="post-container">加载中...</div>
         </div>
 
         <!-- 文章底部 -->
