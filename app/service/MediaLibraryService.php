@@ -96,8 +96,21 @@ class MediaLibraryService
             $media->description = $data['description'] ?? '';
             $media->save();
             
+            // 如果是图片且不是webp格式，转换为webp
+            if ($this->isImageMimeType($media->mime_type) && $media->mime_type !== 'image/webp') {
+                $webpResult = $this->convertToWebp($media);
+                if ($webpResult['code'] === 0) {
+                    // 更新媒体信息
+                    $media->filename = $webpResult['data']['filename'];
+                    $media->file_path = $webpResult['data']['file_path'];
+                    $media->file_size = $webpResult['data']['file_size'];
+                    $media->mime_type = 'image/webp';
+                    $media->save();
+                }
+            }
+            
             // 为图片生成缩略图
-            if ($media->is_image) {
+            if ($this->isImageMimeType($media->mime_type)) {
                 $this->generateThumbnail($media);
             }
             
@@ -109,6 +122,90 @@ class MediaLibraryService
             return ['code' => 0, 'msg' => '上传成功', 'data' => $media];
         } catch (\Exception $e) {
             return ['code' => 1, 'msg' => '上传失败: ' . $e->getMessage()];
+        }
+    }
+    
+    /**
+     * 将图片转换为webp格式
+     *
+     * @param Media $media
+     * @return array
+     */
+    private function convertToWebp(Media $media): array
+    {
+        try {
+            $originalPath = public_path('uploads/' . $media->file_path);
+            if (!file_exists($originalPath)) {
+                return ['code' => 1, 'msg' => '原始文件不存在'];
+            }
+            
+            // 获取文件名和目录
+            $filename = pathinfo($media->file_path, PATHINFO_FILENAME);
+            $webpFilename = $filename . '.webp';
+            $webpPath = dirname($originalPath) . DIRECTORY_SEPARATOR . $webpFilename;
+            
+            // 检查是否支持webp转换
+            if (extension_loaded('imagick')) {
+                // 使用Imagick转换为webp
+                $imagick = new \Imagick($originalPath);
+                $imagick->setImageFormat('webp');
+                $imagick->setImageCompressionQuality(90); // 设置压缩质量
+                $imagick->writeImage($webpPath);
+                $imagick->clear();
+                $imagick->destroy();
+            } elseif (extension_loaded('gd') && function_exists('imagewebp')) {
+                // 使用GD转换为webp
+                $imageInfo = getimagesize($originalPath);
+                $type = $imageInfo[2];
+                
+                // 根据图片类型创建图像资源
+                switch ($type) {
+                    case IMAGETYPE_JPEG:
+                        $image = imagecreatefromjpeg($originalPath);
+                        break;
+                    case IMAGETYPE_PNG:
+                        $image = imagecreatefrompng($originalPath);
+                        // 处理PNG透明背景
+                        imagealphablending($image, true);
+                        imagesavealpha($image, true);
+                        break;
+                    case IMAGETYPE_GIF:
+                        $image = imagecreatefromgif($originalPath);
+                        break;
+                    default:
+                        return ['code' => 1, 'msg' => '不支持的图片类型'];
+                }
+                
+                if (!$image) {
+                    return ['code' => 1, 'msg' => '创建图像资源失败'];
+                }
+                
+                // 保存为webp格式
+                imagewebp($image, $webpPath, 90);
+                imagedestroy($image);
+            } else {
+                return ['code' => 1, 'msg' => '服务器不支持webp转换'];
+            }
+            
+            // 检查webp文件是否生成成功
+            if (!file_exists($webpPath)) {
+                return ['code' => 1, 'msg' => 'webp文件生成失败'];
+            }
+            
+            // 删除原始文件
+            unlink($originalPath);
+            
+            // 返回webp文件信息
+            return [
+                'code' => 0,
+                'data' => [
+                    'filename' => $webpFilename,
+                    'file_path' => dirname($media->file_path) . '/' . $webpFilename,
+                    'file_size' => filesize($webpPath)
+                ]
+            ];
+        } catch (\Exception $e) {
+            return ['code' => 1, 'msg' => '转换失败: ' . $e->getMessage()];
         }
     }
     
@@ -182,6 +279,20 @@ class MediaLibraryService
         } catch (\Exception $e) {
             return ['code' => 1, 'msg' => '更新失败: ' . $e->getMessage()];
         }
+    }
+    
+    /**
+     * 检查MIME类型是否为图片
+     *
+     * @param string $mimeType
+     * @return bool
+     */
+    private function isImageMimeType(string $mimeType): bool
+    {
+        $imageMimeTypes = [
+            'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'
+        ];
+        return in_array($mimeType, $imageMimeTypes);
     }
     
     /**
@@ -279,7 +390,7 @@ class MediaLibraryService
         }
         
         // 只能为图片生成缩略图
-        if (!$media->is_image) {
+        if (!$this->isImageMimeType($media->mime_type)) {
             return ['code' => 1, 'msg' => '只能为图片文件生成缩略图'];
         }
         
@@ -310,7 +421,7 @@ class MediaLibraryService
     private function generateThumbnail(Media $media)
     {
         // 只为图片生成缩略图
-        if (!$media->is_image) {
+        if (!$this->isImageMimeType($media->mime_type)) {
             return;
         }
 
@@ -348,10 +459,9 @@ class MediaLibraryService
                 mkdir($thumbDir, 0755, true);
             }
             
-            // 生成缩略图文件名
+            // 生成缩略图文件名 - 使用webp格式
             $filename = pathinfo($media->file_path, PATHINFO_FILENAME);
-            $extension = pathinfo($media->file_path, PATHINFO_EXTENSION);
-            $thumbFilename = $filename . '_thumb.' . $extension;
+            $thumbFilename = $filename . '_thumb.webp';
             $thumbPath = $thumbDir . '/' . $thumbFilename;
             
             // 获取原始图片信息
@@ -382,8 +492,8 @@ class MediaLibraryService
             // 创建缩略图资源
             $thumbImage = imagecreatetruecolor(200, 200);
             
-            // 处理透明背景（针对PNG和GIF）
-            if ($type == IMAGETYPE_PNG || $type == IMAGETYPE_GIF) {
+            // 处理透明背景（针对PNG、GIF和WebP）
+            if ($type == IMAGETYPE_PNG || $type == IMAGETYPE_GIF || $type == IMAGETYPE_WEBP) {
                 imagealphablending($thumbImage, false);
                 imagesavealpha($thumbImage, true);
                 $transparent = imagecolorallocatealpha($thumbImage, 255, 255, 255, 127);
@@ -415,21 +525,8 @@ class MediaLibraryService
                 200, 200, $srcWidth, $srcHeight
             );
             
-            // 保存缩略图
-            switch ($type) {
-                case IMAGETYPE_JPEG:
-                    imagejpeg($thumbImage, $thumbPath, 90);
-                    break;
-                case IMAGETYPE_PNG:
-                    imagepng($thumbImage, $thumbPath);
-                    break;
-                case IMAGETYPE_GIF:
-                    imagegif($thumbImage, $thumbPath);
-                    break;
-                case IMAGETYPE_WEBP:
-                    imagewebp($thumbImage, $thumbPath);
-                    break;
-            }
+            // 保存为webp格式
+            imagewebp($thumbImage, $thumbPath, 90);
             
             // 释放图像资源
             imagedestroy($srcImage);
@@ -468,10 +565,9 @@ class MediaLibraryService
                 mkdir($thumbDir, 0755, true);
             }
             
-            // 生成缩略图文件名
+            // 生成缩略图文件名 - 使用webp格式
             $filename = pathinfo($media->file_path, PATHINFO_FILENAME);
-            $extension = pathinfo($media->file_path, PATHINFO_EXTENSION);
-            $thumbFilename = $filename . '_thumb.' . $extension;
+            $thumbFilename = $filename . '_thumb.webp';
             $thumbPath = $thumbDir . '/' . $thumbFilename;
             
             // 使用Imagick创建缩略图
@@ -479,6 +575,10 @@ class MediaLibraryService
             
             // 设置缩略图尺寸
             $imagick->thumbnailImage(200, 200, true); // true表示保持宽高比
+            
+            // 设置为webp格式
+            $imagick->setImageFormat('webp');
+            $imagick->setImageCompressionQuality(90);
             
             // 写入文件
             $imagick->writeImage($thumbPath);
