@@ -37,6 +37,9 @@ Route::group('/app/admin', function () {
     // Link 路由
     Route::group('/link', function () {
         Route::get('', [LinkController::class, 'index']);
+        // 快速连接接口
+        Route::get('/quickConnect', [app\controller\LinkController::class, 'quickConnect']);
+        Route::get('/quickConnect/', [app\controller\LinkController::class, 'quickConnect']);
         Route::get('/', [LinkController::class, 'index']);
         Route::get('/index', [LinkController::class, 'index']);
         Route::get('/list', [LinkController::class, 'list']);
@@ -56,6 +59,41 @@ Route::group('/app/admin', function () {
         Route::post('/batchRestore/{ids}', [LinkController::class, 'batchRestore']);
         Route::delete('/batchForceDelete/{ids}', [LinkController::class, 'batchForceDelete']);
         Route::get('/get/{id}', [LinkController::class, 'get']);
+    });
+
+    // 互联协议路由（保留原 /link/connect）
+    Route::group('/link/connect', function () {
+        Route::get('', [\plugin\admin\app\controller\LinkConnectController::class, 'index']);
+        Route::get('/', [\plugin\admin\app\controller\LinkConnectController::class, 'index']);
+        Route::get('/index', [\plugin\admin\app\controller\LinkConnectController::class, 'index']);
+        Route::get('/getConfig', [\plugin\admin\app\controller\LinkConnectController::class, 'getConfig']);
+        Route::post('/saveConfig', [\plugin\admin\app\controller\LinkConnectController::class, 'saveConfig']);
+        Route::get('/getExample', [\plugin\admin\app\controller\LinkConnectController::class, 'getExample']);
+        Route::post('/testConnection', [\plugin\admin\app\controller\LinkConnectController::class, 'testConnection']);
+        // 兼容新增接口
+        Route::get('/generateLink', [\plugin\admin\app\controller\LinkConnectController::class, 'generateLink']);
+        Route::post('/applyToPeer', [\plugin\admin\app\controller\LinkConnectController::class, 'applyToPeer']);
+        // Token 管理（策略B）
+        Route::get('/tokens', [\plugin\admin\app\controller\LinkConnectController::class, 'tokens']);
+        Route::post('/generateToken', [\plugin\admin\app\controller\LinkConnectController::class, 'generateToken']);
+        Route::post('/invalidateToken', [\plugin\admin\app\controller\LinkConnectController::class, 'invalidateToken']);
+    });
+
+    // 新增 /linkconnect 路由组（前端使用该前缀）
+    Route::group('/linkconnect', function () {
+        Route::get('', [\plugin\admin\app\controller\LinkConnectController::class, 'index']);
+        Route::get('/', [\plugin\admin\app\controller\LinkConnectController::class, 'index']);
+        Route::get('/index', [\plugin\admin\app\controller\LinkConnectController::class, 'index']);
+        Route::get('/getConfig', [\plugin\admin\app\controller\LinkConnectController::class, 'getConfig']);
+        Route::post('/saveConfig', [\plugin\admin\app\controller\LinkConnectController::class, 'saveConfig']);
+        Route::get('/getExample', [\plugin\admin\app\controller\LinkConnectController::class, 'getExample']);
+        Route::post('/testConnection', [\plugin\admin\app\controller\LinkConnectController::class, 'testConnection']);
+        Route::get('/generateLink', [\plugin\admin\app\controller\LinkConnectController::class, 'generateLink']);
+        Route::post('/applyToPeer', [\plugin\admin\app\controller\LinkConnectController::class, 'applyToPeer']);
+        // Token 管理（策略B）
+        Route::get('/tokens', [\plugin\admin\app\controller\LinkConnectController::class, 'tokens']);
+        Route::post('/generateToken', [\plugin\admin\app\controller\LinkConnectController::class, 'generateToken']);
+        Route::post('/invalidateToken', [\plugin\admin\app\controller\LinkConnectController::class, 'invalidateToken']);
     });
 
     // Post 路由
@@ -151,6 +189,7 @@ Route::group('/app/admin', function () {
         Route::get('/redisStatus', [PerformanceController::class, 'redisStatus']);
         Route::get('/opcacheStatus', [PerformanceController::class, 'opcacheStatus']);
         Route::get('/series', [PerformanceController::class, 'series']);
+        Route::get('/cacheStats', [PerformanceController::class, 'cacheStats']);
     });
 
     // 静态缓存 路由（移动到 /app/admin 分组内部）

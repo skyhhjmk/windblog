@@ -9,6 +9,8 @@ use app\service\PaginationService;
 use Webman\RateLimiter\Annotation\RateLimiter;
 use app\model\Tag;
 use support\Redis;
+use app\service\EnhancedCacheService;
+use app\service\PJAXHelper;
 
 class TagController
 {
@@ -25,6 +27,15 @@ class TagController
         // 解析排序
         $sort = $request->get('sort', 'latest');
         $sort = in_array($sort, ['latest','hot']) ? $sort : 'latest';
+        
+        // 使用PJAXHelper检测是否为PJAX请求
+        $isPjax = PJAXHelper::isPJAX($request);
+        
+        // 为PJAX请求生成缓存键
+        $cacheKey = null;
+        if ($isPjax) {
+            $cacheKey = sprintf('tag:%s:page:%d:sort:%s', $slug, $page, $sort);
+        }
 
         // 构建筛选条件
         $filters = [
@@ -38,16 +49,13 @@ class TagController
         // 标题
         $blog_title = BlogService::getBlogTitle();
 
-        // PJAX 检测
-        $isPjax = ($request->header('X-PJAX') !== null)
-            || (bool)$request->get('_pjax')
-            || strtolower((string)$request->header('X-Requested-With')) === 'xmlhttprequest';
+        // 这里不再需要重复的PJAX检测，因为前面已经检测过了
 
         // 侧边栏
         $sidebar = \app\service\SidebarService::getSidebarContent($request, 'tag');
 
-        // 选择模板
-        $viewName = $isPjax ? 'tag/index.content' : 'tag/index';
+        // 动态选择模板：PJAX 返回片段，非 PJAX 返回完整页面
+        $viewName = PJAXHelper::getViewName('tag/index', $isPjax);
 
         // 获取标签名称用于标题展示
         $tagModel = Tag::query()->where('slug', $slug)->first(['name', 'slug']);
@@ -63,16 +71,26 @@ class TagController
             10
         );
 
-        return view($viewName, [
-            'page_title' => "标签: {$tag_name} - {$blog_title}",
-            'tag_slug' => $slug,
-            'tag_name' => $tag_name,
-            'posts' => $result['posts'],
-            'pagination' => $pagination_html,
-            'totalCount' => $result['totalCount'] ?? 0,
-            'sort' => $sort,
-            'sidebar' => $sidebar
-        ]);
+        // 创建带缓存的PJAX响应
+        $resp = PJAXHelper::createResponse(
+            $request,
+            $viewName,
+            [
+                'page_title' => "标签: {$tag_name} - {$blog_title}",
+                'tag_slug' => $slug,
+                'tag_name' => $tag_name,
+                'posts' => $result['posts'],
+                'pagination' => $pagination_html,
+                'totalCount' => $result['totalCount'] ?? 0,
+                'sort' => $sort,
+                'sidebar' => $sidebar
+            ],
+            $cacheKey,
+            120,
+            'tag'
+        );
+        
+        return $resp;
     }
 
     /**
@@ -87,8 +105,9 @@ class TagController
         $sidebar = \app\service\SidebarService::getSidebarContent($request, 'tag');
 
         $cacheKey = 'tag_list_counts_v1';
-        $data = Redis::connection('cache')->get($cacheKey);
-        if ($data) {
+        $enhancedCache = new EnhancedCacheService();
+        $data = $enhancedCache->get($cacheKey, 'tag', null, 300);
+        if ($data !== false) {
             $tags = json_decode($data, true) ?: [];
         } else {
             $tags = Tag::query()
@@ -102,7 +121,7 @@ class TagController
                     'description' => (string)($t->description ?? ''),
                     'count' => (int)($t->posts_count ?? 0)
                 ])->toArray();
-            Redis::connection('cache')->setex($cacheKey, 300, json_encode($tags, JSON_UNESCAPED_UNICODE));
+            $enhancedCache->set($cacheKey, json_encode($tags, JSON_UNESCAPED_UNICODE), 300, 'tag');
         }
 
         $blog_title = BlogService::getBlogTitle();

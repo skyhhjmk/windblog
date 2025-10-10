@@ -4,7 +4,7 @@
 
 {% block content %}
     <div class="max-w-4xl mx-auto px-4">
-        <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden fade-in-on-scroll" data-animation-delay="0">
             <div class="p-8">
                 <div class="text-center mb-8">
                     <h1 class="text-3xl font-bold text-gray-800 mb-2">申请友链</h1>
@@ -13,7 +13,7 @@
 
                 <!-- 友链申请规则卡片 -->
                 <div id="link-rules"
-                     class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8 transition-all duration-300">
+                     class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8 transition-all duration-300 fade-in-on-scroll" data-animation-delay="0.1">
                     <div class="flex items-start">
                         <i class="fas fa-info-circle text-blue-500 text-xl mr-3 mt-1"></i>
                         <div>
@@ -89,7 +89,7 @@
                 </div>
 
                 <!-- 本站信息卡片 -->
-                <div class="bg-gray-50 border border-gray-200 rounded-lg p-6 mb-8">
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-6 mb-8 fade-in-on-scroll" data-animation-delay="0.2">
                     <div class="flex items-start">
                         <i class="fas fa-home text-gray-500 text-xl mr-3 mt-1"></i>
                         <div class="flex-1">
@@ -100,18 +100,18 @@
                                 <p><span class="font-medium">网站描述：</span></p>
                             </div>
                             <button id="toggleConfig"
-                                    class="flex items-center text-blue-600 hover:text-blue-800 font-medium">
+                                    class="flex items-center text-blue-600 hover:text-blue-800 font-medium hover-lift accelerated">
                                 <i class="fas fa-code mr-2"></i>
                                 点击展开JSON配置
                                 <i class="fas fa-chevron-down ml-2 transition-transform duration-300"></i>
                             </button>
                             <div id="configSection" class="hidden mt-4">
-                                <div class="relative">
-                                    <pre class="bg-gray-800 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm"
-                                         style="max-width: 100%;"><code
+                                <div class="relative group">
+                                    <pre class="bg-gray-800 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm" 
+                                         style="max-width: 100%;"><code 
                                                 id="configCode">{{ site_info_json_config|default('{}') }}</code></pre>
                                     <button id="copyConfig"
-                                            class="absolute top-2 right-2 bg-gray-700 hover:bg-gray-600 text-white px-3 py-1 rounded text-sm transition-colors duration-200 opacity-0 group-hover:opacity-100">
+                                            class="absolute top-2 right-2 bg-gray-700 hover:bg-gray-600 text-white px-3 py-1 rounded text-sm transition-colors duration-200 opacity-0 group-hover:opacity-100 hover-lift accelerated">
                                         <i class="fas fa-copy mr-1"></i>复制
                                     </button>
                                 </div>
@@ -121,7 +121,7 @@
                 </div>
 
                 <!-- CAT3* 快速互联 -->
-                <div class="border border-green-200 rounded-lg p-4 mb-8 bg-green-50">
+                <div class="border border-green-200 rounded-lg p-4 mb-8 bg-green-50 fade-in-on-scroll" data-animation-delay="0.3">
                     <div class="flex items-start">
                         <i class="fas fa-plug text-green-500 text-xl mr-3 mt-1"></i>
                         <div class="flex-1">
@@ -132,11 +132,11 @@
                             <div class="flex flex-col sm:flex-row gap-3">
                                 <input type="url"
                                        id="peer_api"
-                                       class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-200"
+                                       class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-200 accelerated"
                                        placeholder="https://peer.example.com/link/connect/receive?key=xxx"
                                        pattern="https?://.+">
                                 <button id="quickConnectBtn"
-                                        class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors duration-200">
+                                        class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors duration-200 hover-lift accelerated">
                                     一键互联
                                 </button>
                             </div>
@@ -146,7 +146,7 @@
                     </div>
                 </div>
 
-                <form id="linkRequestForm" class="space-y-6">
+                <form id="linkRequestForm" class="space-y-6 fade-in-on-scroll" data-animation-delay="0.4">
                     <input type="hidden" name="_link_request_token" value="{{ csrf }}">
                     <div>
                         <label for="name" class="block text-sm font-medium text-gray-700 mb-1">网站名称 <span
@@ -155,7 +155,7 @@
                                id="name"
                                name="name"
                                required
-                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 accelerated"
                                placeholder="请输入网站名称">
                     </div>
 
@@ -166,7 +166,7 @@
                                id="url"
                                name="url"
                                required
-                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 accelerated"
                                placeholder="https://example.com">
                     </div>
 
@@ -175,7 +175,7 @@
                         <input type="url"
                                id="icon"
                                name="icon"
-                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 accelerated"
                                placeholder="https://example.com/favicon.ico">
                     </div>
 
@@ -186,7 +186,7 @@
                                   name="description"
                                   rows="3"
                                   required
-                                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 accelerated"
                                   placeholder="请简单描述您的网站内容"></textarea>
                     </div>
 
@@ -195,7 +195,7 @@
                         <input type="text"
                                id="email"
                                name="email"
-                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 accelerated"
                                placeholder="邮箱联系方式（可选，用于审核结果通知）">
                     </div>
 
@@ -204,7 +204,7 @@
                         <textarea id="full_description"
                                   name="full_description"
                                   rows="3"
-                                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 accelerated"
                                   placeholder="当使用 info 方式跳转时，内容会被渲染在页面上"></textarea>
                     </div>
 
@@ -213,7 +213,7 @@
                         <input type="text"
                                id="contact"
                                name="contact"
-                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 accelerated"
                                placeholder="微信/QQ等联系方式（可选）">
                     </div>
 
@@ -222,7 +222,7 @@
                         <input type="text"
                                id="fullname"
                                name="fullname"
-                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 accelerated"
                                placeholder="Please input your fullname">
                     </div>
 
@@ -234,7 +234,7 @@
                                     <input id="supports_wind_connect"
                                            name="supports_wind_connect"
                                            type="checkbox"
-                                           class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
+                                           class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded accelerated">
                                 </div>
                                 <div class="ml-3 text-sm">
                                     <label for="supports_wind_connect" class="font-medium text-gray-700">支持风屿互联协议</label>
@@ -247,7 +247,7 @@
                                     <input id="allows_crawling"
                                            name="allows_crawling"
                                            type="checkbox"
-                                           class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
+                                           class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded accelerated">
                                 </div>
                                 <div class="ml-3 text-sm">
                                     <label for="allows_crawling" class="font-medium text-gray-700">允许资源爬虫访问</label>
@@ -260,7 +260,7 @@
                                     <input id="hide_url"
                                            name="hide_url"
                                            type="checkbox"
-                                           class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
+                                           class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded accelerated">
                                 </div>
                                 <div class="ml-3 text-sm">
                                     <label for="hide_url" class="font-medium text-gray-700">隐藏链接</label>
@@ -273,7 +273,7 @@
                                 <input type="url"
                                        id="callback_url"
                                        name="callback_url"
-                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 accelerated"
                                        placeholder="https://example.com/callback"
                                        pattern="https?://.+">
                                 <p class="text-gray-500 text-sm mt-2">每当用户访问您的链接时，该地址会被 GET 请求访问一次，可用于统计访问量等（使用消息队列异步处理，可能遗漏，不会多调）</p>
@@ -285,15 +285,15 @@
                         <input id="agreement"
                                type="checkbox"
                                required
-                               class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                               class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 accelerated">
                         <label for="agreement" class="ml-2 text-sm text-gray-700">
-                            我已阅读并同意 <a href="#link-rules" class="text-blue-600 hover:underline">友链申请规则</a>
+                            我已阅读并同意 <a href="#link-rules" class="text-blue-600 hover:underline hover-lift accelerated">友链申请规则</a>
                         </label>
                     </div>
 
                     <div>
                         <button type="submit"
-                                class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                                class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 hover-lift accelerated">
                             提交申请
                         </button>
                     </div>
@@ -392,13 +392,17 @@
 
             // 触发闪烁效果的函数
             function triggerBlinkEffect(element) {
-                // 添加闪烁类
-                element.classList.add('blink-border');
-
-                // 3秒后移除闪烁类
-                setTimeout(() => {
-                    element.classList.remove('blink-border');
-                }, 3000);
+                // 添加闪烁类（使用全局动画系统）
+                if (typeof AnimationUtils !== 'undefined') {
+                    AnimationUtils.showNotification('', '', 'blink', element);
+                } else {
+                    // 降级处理：如果全局动画系统不存在，添加CSS类
+                    element.classList.add('blink-border');
+                    // 3秒后移除闪烁类
+                    setTimeout(() => {
+                        element.classList.remove('blink-border');
+                    }, 3000);
+                }
             }
         });
 
@@ -509,26 +513,6 @@
     </script>
 
     <style>
-        /* 闪烁边框动画 */
-        @keyframes blink {
-            0% {
-                border-color: #3b82f6;
-                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.3);
-            }
-            50% {
-                border-color: #1d4ed8;
-                box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3);
-            }
-            100% {
-                border-color: #3b82f6;
-                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.3);
-            }
-        }
-
-        .blink-border {
-            animation: blink 0.5s ease-in-out 3;
-        }
-
         .rotate-180 {
             transform: rotate(180deg);
         }

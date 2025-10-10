@@ -1,4 +1,5 @@
 <?php
+
 /*
  * 这里面有很多屎山
  */
@@ -12,6 +13,7 @@ use PhpAmqpLib\Message\AMQPMessage;
 use support\Request;
 use app\model\Link;
 use app\service\PaginationService;
+use app\service\LinkConnectService;
 use support\Response;
 use Throwable;
 use Webman\RateLimiter\Annotation\RateLimiter;
@@ -54,17 +56,17 @@ class LinkController
             $links = Link::where('status', 'true')->orderByDesc('id')->forPage($page, $links_per_page)->get();
         }
 
-        $isPjax = ($request->header('X-PJAX') !== null)
-            || (bool)$request->get('_pjax')
-            || strtolower((string)$request->header('X-Requested-With')) === 'xmlhttprequest';
+        $isPjax = \app\service\PJAXHelper::isPJAX($request);
         // 侧边栏（PJAX 与非 PJAX 均获取）
         $sidebar = \app\service\SidebarService::getSidebarContent($request, 'link');
-        return view($isPjax ? 'link/index.content' : 'link/index', [
+        // 统一选择视图并生成响应（包含 X-PJAX 相关头）
+        $viewName = \app\service\PJAXHelper::getViewName('link/index', $isPjax);
+        return \app\service\PJAXHelper::createResponse($request, $viewName, [
             'page_title' => blog_config('title', 'WindBlog', true) . ' - 链接广场',
             'links' => $links,
             'pagination' => $pagination_html,
             'sidebar' => $sidebar
-        ]);
+        ], null, 120, 'page');
     }
 
     /**
@@ -138,16 +140,16 @@ class LinkController
             ]);
         }
 
-        $isPjax = ($request->header('X-PJAX') !== null)
-            || (bool)$request->get('_pjax')
-            || strtolower((string)$request->header('X-Requested-With')) === 'xmlhttprequest';
+        $isPjax = \app\service\PJAXHelper::isPJAX($request);
         // 侧边栏（PJAX 与非 PJAX 均获取）
         $sidebar = \app\service\SidebarService::getSidebarContent($request, 'link');
-        return view($isPjax ? 'link/info.content' : 'link/info', [
+        // 统一选择视图并生成响应
+        $viewName = \app\service\PJAXHelper::getViewName('link/info', $isPjax);
+        return \app\service\PJAXHelper::createResponse($request, $viewName, [
             'link' => $link,
             'page_title' => $link->name . ' - 链接详情',
             'sidebar' => $sidebar
-        ]);
+        ], null, 120, 'page');
     }
 
     /**
@@ -297,17 +299,17 @@ class LinkController
         }
 
         // 显示申请页面
-        $isPjax = ($request->header('X-PJAX') !== null)
-            || (bool)$request->get('_pjax')
-            || strtolower((string)$request->header('X-Requested-With')) === 'xmlhttprequest';
+        $isPjax = \app\service\PJAXHelper::isPJAX($request);
         // 侧边栏（PJAX 与非 PJAX 均获取）
         $sidebar = \app\service\SidebarService::getSidebarContent($request, 'link');
-        return view($isPjax ? 'link/request.content' : 'link/request', [
+        // 统一选择视图并生成响应
+        $viewName = \app\service\PJAXHelper::getViewName('link/request', $isPjax);
+        return \app\service\PJAXHelper::createResponse($request, $viewName, [
             'page_title' => blog_config('title', 'WindBlog', true) . ' - 申请友链',
             'site_info_json_config' => $this->getSiteInfoConfig(),
             'csrf' => CSRFHelper::oneTimeToken($request, '_link_request_token'),
             'sidebar' => $sidebar
-        ]);
+        ], null, 120, 'page');
     }
 
     /**
@@ -391,72 +393,191 @@ class LinkController
             return json(['code' => 1, 'msg' => '仅支持POST']);
         }
 
-        $peerApi = $request->post('peer_api', '');
-        $name = $request->post('name', '');
-        $url = $request->post('url', '');
-        $icon = $request->post('icon', '');
-        $description = $request->post('description', '');
-        $email = $request->post('email', '');
-
-        if (!$peerApi || !$name || !$url) {
-            return json(['code' => 1, 'msg' => '参数不完整']);
-        }
-        if (!filter_var($url, FILTER_VALIDATE_URL)) {
-            return json(['code' => 1, 'msg' => '无效URL']);
+        // 兼容 application/json 与 x-www-form-urlencoded
+        $jsonBody = [];
+        if (stripos((string)$request->header('Content-Type', ''), 'application/json') !== false) {
+            $jsonBody = json_decode((string)$request->rawBody(), true) ?: [];
         }
 
-        // 本地创建对方B站记录，状态为 pending（status=false）
-        $existing = Link::where('url', $url)->first();
-        if ($existing) {
-            return json(['code' => 1, 'msg' => '该链接已存在或审核中']);
+        $peerApi = trim((string)($jsonBody['peer_api'] ?? $request->post('peer_api', '')));
+
+        // 扁平字段
+        $name = trim((string)($jsonBody['name'] ?? $request->post('name', '')));
+        $url = trim((string)($jsonBody['url'] ?? $request->post('url', '')));
+        $icon = trim((string)($jsonBody['icon'] ?? $request->post('icon', '')));
+        $description = trim((string)($jsonBody['description'] ?? $request->post('description', '')));
+        $email = trim((string)($jsonBody['email'] ?? $request->post('email', '')));
+
+        // 兼容前端结构：site{ name,url,icon,description,email }
+        $site = is_array($jsonBody['site'] ?? null) ? $jsonBody['site'] : [];
+        $name = $name ?: trim((string)($site['name'] ?? ''));
+        $url = $url ?: trim((string)($site['url'] ?? ''));
+        $icon = $icon ?: trim((string)($site['icon'] ?? ''));
+        $description = $description ?: trim((string)($site['description'] ?? ''));
+        $email = $email ?: trim((string)($site['email'] ?? ''));
+
+        // 快速互联URL处理：如果peer_api是一个带有token的URL，尝试自动获取对方站点信息
+        if ($peerApi) {
+            \support\Log::info('尝试处理互联URL: ' . $peerApi);
+            try {
+                // 检查是否为快速互联URL（带有token参数）
+                $parsedUrl = parse_url($peerApi);
+                $queryParams = [];
+                if (isset($parsedUrl['query'])) {
+                    parse_str($parsedUrl['query'], $queryParams);
+                }
+                \support\Log::info('解析到的参数: ' . json_encode($queryParams));
+                
+                // 如果是快速互联URL，尝试调用quickConnect接口获取对方信息
+                if (!empty($queryParams['token'])) {
+                    \support\Log::info('检测到快速互联URL，token: ' . substr($queryParams['token'], 0, 8) . '...');
+                    
+                    // 构建请求URL - 确保是调用quickConnect接口
+                    $scheme = $parsedUrl['scheme'] ?? 'http';
+                    $host = $parsedUrl['host'] ?? '';
+                    $port = isset($parsedUrl['port']) ? ':' . $parsedUrl['port'] : '';
+                    $path = $parsedUrl['path'] ?? '';
+                    
+                    // 确保调用的是quickConnect接口
+                    $quickConnectUrl = $scheme . '://' . $host . $port . '/link/quick-connect?token=' . urlencode($queryParams['token']);
+                    \support\Log::info('构建的quickConnectURL: ' . $quickConnectUrl);
+                    
+                    $headersArr = ['Accept: application/json'];
+                    $localToken = (string)blog_config('wind_connect_token', '', true);
+                    if (!empty($localToken)) {
+                        $headers = implode("\r\n", $headersArr) . "\r\n";
+                    } else {
+                        // 确保headers变量始终有定义
+                        $headers = implode("\r\n", $headersArr) . "\r\n";
+                    }
+                    $opts = [
+                        'http' => [
+                            'method'  => 'GET',
+                            'timeout' => 10,
+                            'header'  => $headers,
+                        ],
+                        'ssl' => [
+                            'verify_peer' => false,
+                            'verify_peer_name' => false,
+                        ],
+                    ];
+                    $ctx = stream_context_create($opts);
+                    
+                    \support\Log::info('发送请求到quickConnect接口');
+                    $resp = @file_get_contents($quickConnectUrl, false, $ctx);
+                    
+                    if ($resp === false) {
+                        \support\Log::warning('quickConnect请求失败: ' . ((error_get_last() ?? [])['message'] ?? '未知错误'));
+                    } else {
+                        \support\Log::info('quickConnect请求成功，响应长度: ' . strlen($resp));
+                        
+                        $data = json_decode($resp, true);
+                        if (json_last_error() !== JSON_ERROR_NONE) {
+                            \support\Log::warning('JSON解析失败: ' . json_last_error_msg());
+                        } else {
+                            \support\Log::info('quickConnect响应状态: ' . ($data['code'] ?? '未知'));
+                            
+                            if (is_array($data) && $data['code'] === 0) {
+                                // 从快速互联响应中提取信息
+                                $remoteSite = $data['site'] ?? [];
+                                $remoteLink = $data['link'] ?? [];
+                                
+                                \support\Log::info('从快速互联响应提取信息: ' . json_encode(['site' => array_keys($remoteSite), 'link' => array_keys($remoteLink)]));
+                                
+                                $name = $name ?: (string)($remoteLink['name'] ?? ($remoteSite['name'] ?? $name));
+                                $url  = $url  ?: (string)($remoteLink['url']  ?? ($remoteSite['url']  ?? $url));
+                                $icon = $icon ?: (string)($remoteLink['icon'] ?? ($remoteSite['icon'] ?? $icon));
+                                $description = $description ?: (string)($remoteLink['description'] ?? ($remoteSite['description'] ?? $description));
+                                $email = $email ?: (string)($remoteLink['email'] ?? $email);
+                                
+                                \support\Log::info('提取后的数据: ' . json_encode(['name' => $name, 'url' => $url]));
+                                
+                                // 标记token为已使用
+                                LinkConnectService::markTokenUsed($queryParams['token'], $url);
+                                
+                                // 自动调整peer_api为接收接口
+                                $peerApi = rtrim($url, '/') . '/link/connect/receive';
+                                \support\Log::info('调整后的peer_api: ' . $peerApi);
+                            } else {
+                                \support\Log::warning('quickConnect响应不符合预期: ' . json_encode($data));
+                            }
+                        }
+                    }
+                }
+                // 如果快速互联失败或不是快速互联URL，尝试使用原有的自动补全逻辑
+                else if (empty($name) || empty($url)) {
+                    \support\Log::info('尝试使用原有自动补全逻辑');
+                    $headersArr = ['Accept: application/json'];
+                    $localToken = (string)blog_config('wind_connect_token', '', true);
+                    if (!empty($localToken)) {
+                        $headers = implode("\r\n", $headersArr) . "\r\n";
+                    }
+                    $opts = [
+                        'http' => [
+                            'method'  => 'GET',
+                            'timeout' => 10,
+                            'header'  => $headers,
+                        ],
+                        'ssl' => [
+                            'verify_peer' => false,
+                            'verify_peer_name' => false,
+                        ],
+                    ];
+                    $ctx = stream_context_create($opts);
+                    $resp = @file_get_contents($peerApi, false, $ctx);
+                    if ($resp !== false) {
+                        $data = json_decode($resp, true);
+                        if (is_array($data)) {
+                            $remoteLink = $data['link'] ?? [];
+                            $remoteSite = $data['site'] ?? ($data['site_info'] ?? []);
+                            $name = $name ?: (string)($remoteLink['name'] ?? ($remoteSite['name'] ?? $name));
+                            $url  = $url  ?: (string)($remoteLink['url']  ?? ($remoteSite['url']  ?? $url));
+                            $icon = $icon ?: (string)($remoteLink['icon'] ?? ($remoteSite['logo'] ?? $icon));
+                            $description = $description ?: (string)($remoteLink['description'] ?? ($remoteSite['description'] ?? $description));
+                            $email = $email ?: (string)($remoteLink['email'] ?? $email);
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                \support\Log::warning('connectApply auto-complete failed: ' . $e->getMessage());
+            }
+        }
+        
+        \support\Log::info('快速互联处理后的数据: ' . json_encode(['peerApi' => $peerApi, 'name' => $name, 'url' => $url]));
+
+        // 本地站点默认值回填（避免“参数不完整”）
+        if (empty($name)) { $name = (string)blog_config('title', 'WindBlog', true); }
+        if (empty($url))  {
+            $url = (string)blog_config('site_url', '', true);
+            // 如果配置中没有站点URL，尝试使用默认URL
+            if (empty($url)) {
+                $url = 'https://example.com';
+            }
+        }
+        if (empty($icon)) { $icon = (string)blog_config('favicon', '', true); }
+        if (empty($description)) { $description = (string)blog_config('description', '', true); }
+        if (empty($email)) { $email = (string)blog_config('admin_email', '', true); }
+
+        // 增加参数完整性验证，提供更友好的错误提示
+        if (empty($peerApi)) {
+            return json(['code' => 1, 'msg' => '请填写对方API地址']);
+        }
+        if (empty($name)) {
+            return json(['code' => 1, 'msg' => '请填写站点名称']);
+        }
+        if (empty($url)) {
+            return json(['code' => 1, 'msg' => '请填写站点URL']);
         }
 
-        $link = new Link();
-        $link->name = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
-        $link->url = $url;
-        $link->icon = $icon;
-        $link->description = htmlspecialchars($description, ENT_QUOTES, 'UTF-8');
-        $link->status = false;
-        $link->sort_order = 999;
-        $link->target = '_blank';
-        $link->redirect_type = 'goto';
-        $link->show_url = true;
-        $link->email = $email;
-        $link->setCustomFields([
-            'peer_status' => 'pending',
+        $result = LinkConnectService::applyToPeer([
             'peer_api' => $peerApi,
-            'peer_protocol' => 'CAT3',
-            'source' => 'connect_apply'
+            'name' => $name,
+            'url' => $url,
+            'icon' => $icon,
+            'description' => $description,
+            'email' => $email,
         ]);
-        $link->save();
-
-        // 组织发送给对方的数据（我们的站点信息）
-        $payload = [
-            'type' => 'wind_connect_apply',
-            'site' => [
-                'name' => blog_config('title', 'WindBlog', true),
-                'url' => blog_config('site_url', '', true),
-                'description' => blog_config('description', '', true),
-                'icon' => blog_config('favicon', '', true),
-                'protocol' => 'CAT3',
-                'version' => '1.0'
-            ],
-            'link' => [
-                'name' => blog_config('title', 'WindBlog', true),
-                'url' => blog_config('site_url', '', true),
-                'icon' => blog_config('favicon', '', true),
-                'description' => blog_config('description', '', true),
-                'email' => blog_config('admin_email', '', true)
-            ],
-            'timestamp' => time()
-        ];
-
-        $res = $this->httpPostJson($peerApi, $payload);
-        if (!$res['success']) {
-            return json(['code' => 0, 'msg' => '本地记录创建成功，但未能联系对方：' . $res['error']]);
-        }
-
-        return json(['code' => 0, 'msg' => '申请已发送，对方将自动创建等待记录']);
+        return json($result);
     }
 
     /**
@@ -468,86 +589,116 @@ class LinkController
         if ($request->method() !== 'POST') {
             return json(['code' => 1, 'msg' => '仅支持POST']);
         }
-        // 鉴权：要求 X-WIND-CONNECT-TOKEN 匹配配置
-        $incoming = $request->header('X-WIND-CONNECT-TOKEN', '');
-        $expected = blog_config('wind_connect_token', '', true);
-        if (empty($expected) || $incoming !== $expected) {
-            return json(['code' => 1, 'msg' => '鉴权失败']);
-        }
-
-        $raw = file_get_contents('php://input');
-        $data = json_decode($raw, true);
-        if (!$data || ($data['type'] ?? '') !== 'wind_connect_apply') {
-            return json(['code' => 1, 'msg' => '无效载荷']);
-        }
-
-        $fromSite = $data['site'] ?? [];
-        $fromLink = $data['link'] ?? [];
-        $peerUrl = $fromLink['url'] ?? '';
-        if (!filter_var($peerUrl, FILTER_VALIDATE_URL)) {
-            return json(['code' => 1, 'msg' => '无效对方站点URL']);
-        }
-
-        // 若已存在则跳过创建
-        $exist = Link::where('url', $peerUrl)->first();
-        if (!$exist) {
-            $new = new Link();
-            $new->name = htmlspecialchars($fromLink['name'] ?? ($fromSite['name'] ?? '友链'), ENT_QUOTES, 'UTF-8');
-            $new->url = $peerUrl;
-            $new->icon = $fromLink['icon'] ?? ($fromSite['icon'] ?? '');
-            $new->description = htmlspecialchars($fromLink['description'] ?? '', ENT_QUOTES, 'UTF-8');
-            $new->status = false; // waiting
-            $new->sort_order = 999;
-            $new->target = '_blank';
-            $new->redirect_type = 'goto';
-            $new->show_url = true;
-            $new->email = $fromLink['email'] ?? '';
-            $new->setCustomFields([
-                'peer_status' => 'waiting',
-                'peer_protocol' => $fromSite['protocol'] ?? 'CAT3',
-                'source' => 'connect_receive'
+        $raw = $request->rawBody();
+        $data = json_decode($raw, true) ?: [];
+        $result = LinkConnectService::receiveFromPeer(
+            ['X-WIND-CONNECT-TOKEN' => $request->header('X-WIND-CONNECT-TOKEN', '')],
+            $data
+        );
+        return json($result);
+    }
+    
+    /**
+     * 快速互联API接口
+     * 用于处理其他站点通过token快速连接并获取本站信息
+     * @param Request $request
+     * @return Response
+     */
+    public function quickConnect(Request $request): Response
+    {
+        try {
+            // 获取token参数
+            $token = trim((string)$request->get('token', ''));
+            
+            // 验证token是否有效
+            if (empty($token)) {
+                return json(['code' => 1, 'msg' => 'token不能为空']);
+            }
+            
+            // 获取互联协议配置
+            $config = LinkConnectService::getConfig();
+            
+            // 检查互联协议是否启用
+            if (!$config['enabled']) {
+                return json(['code' => 1, 'msg' => '互联协议未启用']);
+            }
+            
+            // 验证token是否存在且未被使用
+            $tokens = LinkConnectService::listTokens();
+            $validToken = false;
+            foreach ($tokens as $t) {
+                if ($t['token'] === $token && $t['status'] === 'unused') {
+                    $validToken = true;
+                    break;
+                }
+            }
+            
+            if (!$validToken) {
+                return json(['code' => 1, 'msg' => '无效或已使用的token']);
+            }
+            
+            // 构建并返回本站信息
+            $siteInfo = [
+                'name' => blog_config('title', 'WindBlog', true),
+                'url' => blog_config('site_url', '', true),
+                'description' => blog_config('description', '', true),
+                'icon' => blog_config('favicon', '', true),
+                'protocol' => 'CAT3E',
+                'version' => '1.0'
+            ];
+            
+            // 构建友链信息
+            $linkInfo = [
+                'name' => $siteInfo['name'],
+                'url' => $siteInfo['url'],
+                'icon' => $siteInfo['icon'],
+                'description' => $siteInfo['description'],
+                'email' => blog_config('admin_email', '', true)
+            ];
+            
+            return json([
+                'code' => 0,
+                'msg' => 'success',
+                'site' => $siteInfo,
+                'link' => $linkInfo
             ]);
-            $new->save();
+        } catch (\Throwable $e) {
+            \support\Log::error('快速互联API错误: ' . $e->getMessage());
+            return json(['code' => 1, 'msg' => '系统错误: ' . $e->getMessage()]);
         }
-
-        return json(['code' => 0, 'msg' => '已接收，等待审核']);
     }
 
     /**
-     * 简易JSON POST（禁用SSL验证）
+     * 友链互联API接口
+     * 处理来自其他站点的友链互联请求
+     * 
+     * @param Request $request HTTP请求对象
+     * @return Response JSON响应
      */
-    private function httpPostJson(string $url, array $payload): array
+    public function windConnect(Request $request): Response
     {
         try {
-            $token = blog_config('wind_connect_token', '', true);
-            $headers = "Content-Type: application/json
-
-";
-            if (!empty($token)) {
-                $headers .= "X-WIND-CONNECT-TOKEN: {$token}
-
-";
+            // 获取请求头
+            $headers = $request->header();
+            
+            // 获取请求体（JSON格式）
+            $body = $request->rawBody();
+            $payload = json_decode($body, true);
+            
+            // 检查请求体是否为有效JSON
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                return json(['code' => 1, 'msg' => '无效的JSON格式']);
             }
-            $opts = [
-                'http' => [
-                    'method' => 'POST',
-                    'timeout' => 30,
-                    'header' => $headers,
-                    'content' => json_encode($payload, JSON_UNESCAPED_UNICODE)
-                ],
-                'ssl' => [
-                    'verify_peer' => false,
-                    'verify_peer_name' => false
-                ]
-            ];
-            $context = stream_context_create($opts);
-            $result = @file_get_contents($url, false, $context);
-            if ($result === false) {
-                return ['success' => false, 'error' => '请求失败'];
-            }
-            return ['success' => true, 'body' => (string)$result];
-        } catch (\Exception $e) {
-            return ['success' => false, 'error' => $e->getMessage()];
+            
+            // 调用LinkConnectService处理友链互联请求
+            $result = LinkConnectService::receiveFromPeer($headers, $payload);
+            
+            // 返回处理结果
+            return json($result);
+        } catch (Throwable $e) {
+            // 记录异常并返回错误信息
+            \support\Log::error('友链互联处理异常: ' . $e->getMessage());
+            return json(['code' => 1, 'msg' => '处理请求时发生错误: ' . $e->getMessage()]);
         }
     }
 }

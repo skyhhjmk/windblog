@@ -5,7 +5,7 @@
 {% block content %}
     <div class="max-w-full mx-auto px-4">
         <!-- 页面标题区域 -->
-        <div class="text-center mb-12 animate-fade-in-down">
+        <div class="text-center mb-12 fade-in-on-scroll" data-animation-delay="0">
             <h1 class="text-4xl md:text-5xl font-bold text-gray-800 mb-4">{{ page_title|default('风屿雨博客') }}</h1>
             <p class="text-gray-600 text-lg md:text-xl">欢迎来到链接广场，这里汇聚了优质的网站资源</p>
             <div class="mt-4 flex items-center justify-center gap-3">
@@ -107,7 +107,7 @@
                 {{ pagination|raw }}
             </div>
         {% else %}
-            <div class="bg-white rounded-2xl shadow-lg p-12 text-center animate-fade-in">
+            <div class="bg-white rounded-2xl shadow-lg p-12 text-center fade-in-on-scroll" data-animation-delay="0.2">
                 <div class="text-gray-400 mb-4">
                     <svg class="w-24 h-24 mx-auto opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -122,93 +122,93 @@
     </div>
     
     <style>
-        @keyframes fade-in-down {
-            0% {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            100% {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
         
-        .animate-fade-in-down {
-            animation: fade-in-down 0.6s ease-out forwards;
-        }
-        
-        @keyframes fade-in {
-            0% {
-                opacity: 0;
-            }
-            100% {
-                opacity: 1;
-            }
-        }
-        
-        .animate-fade-in {
-            animation: fade-in 0.6s ease-out forwards;
-        }
-        
+        /* 文本截断样式 */
         .line-clamp-3 {
             display: -webkit-box;
             -webkit-line-clamp: 3;
             -webkit-box-orient: vertical;
             overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        /* 文本截断样式 */
+        .line-clamp-3 {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        /* 加载动画样式 */
+        .fa-spinner {
+            animation: fa-spin 1s linear infinite;
         }
     </style>
 
     <script>
-        // 添加悬停效果增强 + 客户端排序
-        document.addEventListener('DOMContentLoaded', function() {
+        // 初始化链接列表功能
+        function initLinkList() {
+            // 为卡片添加鼠标悬浮效果
             const linkCards = document.querySelectorAll('.group');
             linkCards.forEach(card => {
-                card.addEventListener('mouseenter', function() {
-                    this.style.zIndex = '10';
-                });
-                card.addEventListener('mouseleave', function() {
-                    this.style.zIndex = '1';
-                });
+                // 避免重复添加事件监听器
+                const existingHandlers = getEventListeners(card).mouseenter || [];
+                if (existingHandlers.length === 0) {
+                    card.addEventListener('mouseenter', function() { this.style.zIndex = '10'; });
+                    card.addEventListener('mouseleave', function() { this.style.zIndex = '1'; });
+                }
             });
 
+            // 排序功能
             const sortSelect = document.getElementById('linkSortSelect');
             if (sortSelect) {
-                sortSelect.addEventListener('change', function() {
-                    const mode = this.value;
-                    const grid = document.querySelector('.grid');
-                    if (!grid) return;
-                    const items = Array.from(grid.children);
-                    const protocolRank = { 'CAT5': 5, 'CAT4': 4, 'CAT3': 3, 'CAT2': 2, 'CAT1': 1 };
+                // 避免重复添加事件监听器
+                const existingHandlers = getEventListeners(sortSelect).change || [];
+                if (existingHandlers.length === 0) {
+                    sortSelect.addEventListener('change', function() {
+                        const mode = this.value;
+                        const grid = document.querySelector('.grid');
+                        if (!grid) return;
+                        const items = Array.from(grid.children);
+                        const protocolRank = { 'CAT5': 5, 'CAT4': 4, 'CAT3': 3, 'CAT2': 2, 'CAT1': 1 };
 
-                    const getProtocolWeight = (el) => {
-                        const p = (el.getAttribute('data-protocol') || '').toUpperCase();
-                        // 兼容如 "CAT3E" 取前3位
-                        const key = p.startsWith('CAT') ? p.slice(0, 4).replace(/[^A-Z0-9]/g, '').replace(/([A-Z0-9]{4}).*/, '$1').slice(0,4) : p;
-                        return protocolRank[key] || 0;
-                    };
-                    const getScore = (el) => parseInt(el.getAttribute('data-score') || '0', 10) || 0;
+                        const getProtocolWeight = (el) => {
+                            const p = (el.getAttribute('data-protocol') || '').toUpperCase();
+                            // 兼容如 "CAT3E" 取前3位
+                            const key = p.startsWith('CAT') ? p.slice(0, 4).replace(/[^A-Z0-9]/g, '').replace(/([A-Z0-9]{4}).*/, '$1').slice(0,4) : p;
+                            return protocolRank[key] || 0;
+                        };
+                        const getScore = (el) => parseInt(el.getAttribute('data-score') || '0', 10) || 0;
 
-                    let sorted = items.slice();
-                    if (mode === 'protocol') {
-                        sorted.sort((a, b) => getProtocolWeight(b) - getProtocolWeight(a));
-                    } else if (mode === 'score') {
-                        sorted.sort((a, b) => getScore(b) - getScore(a));
-                    } else {
-                        // 默认恢复到原始顺序（按出现顺序）
-                        sorted = items;
-                    }
-
-                    // 重新附加到容器以改变顺序
-                    sorted.forEach(el => grid.appendChild(el));
-                });
+                        let sorted = items.slice();
+                        if (mode === 'protocol') {
+                            sorted.sort((a, b) => getProtocolWeight(b) - getProtocolWeight(a));
+                        } else if (mode === 'score') {
+                            sorted.sort((a, b) => getScore(b) - getScore(a));
+                        } else {
+                            // 默认恢复到原始顺序（按出现顺序）
+                            sorted = items;
+                        }
+                        // 重新附加到容器以改变顺序
+                        sorted.forEach(el => grid.appendChild(el));
+                    });
+                }
                 // 默认按协议级别排序一次
                 sortSelect.value = 'protocol';
-                sortSelect.dispatchEvent(new Event('change'));
+                // 使用setTimeout确保在DOM完全加载后触发排序
+                setTimeout(() => {
+                    sortSelect.dispatchEvent(new Event('change'));
+                }, 100);
             }
-        });
+        }
         
+        // 页码跳转功能
         function jumpToPage(maxPage) {
             const input = document.getElementById('page-input');
+            if (!input) return;
+            
             const page = parseInt(input.value);
 
             if (isNaN(page) || page < 1 || page > maxPage) {
@@ -216,8 +216,29 @@
                 return;
             }
 
-            window.location.href = '/page/' + page;
+            // 优先使用PJAX跳转（如果可用）
+            if (window.PJAX && window.PJAX.loadUrl) {
+                window.PJAX.loadUrl('/page/' + page);
+            } else {
+                window.location.href = '/page/' + page;
+            }
         }
+        
+        // 为了获取事件监听器数量，需要添加这个辅助函数
+        function getEventListeners(element) {
+            const listeners = {};
+            const events = ['click', 'mouseenter', 'mouseleave', 'change'];
+            events.forEach(event => {
+                const listenersCount = element[`_${event}Listeners`]?.length || 0;
+                listeners[event] = Array(listenersCount).fill({});
+            });
+            return listeners;
+        }
+        
+        // 在DOM加载完成时初始化
+        document.addEventListener('DOMContentLoaded', initLinkList);
+        // 支持PJAX页面切换后重新初始化
+        document.addEventListener('page:ready', initLinkList);
     </script>
 
 {% endblock %}

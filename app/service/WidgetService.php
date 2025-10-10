@@ -307,8 +307,6 @@ class WidgetService
         foreach ($widgets as $type => $info) {
             self::registerWidget($type, $info[0], $info[1], $info[2], $info[3]);
         }
-        
-        Log::debug('[WidgetService] 默认小工具注册完成');
     }
     
     /**

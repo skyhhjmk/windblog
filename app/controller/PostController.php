@@ -6,6 +6,8 @@ use support\Request;
 use app\model\Post;
 use support\Response;
 use Webman\RateLimiter\Annotation\RateLimiter;
+use app\service\EnhancedCacheService;
+use app\service\PJAXHelper;
 
 class PostController
 {
@@ -53,10 +55,8 @@ class PostController
                 break;
         }
         
-        // PJAX 优化：检测是否为 PJAX 请求（兼容 header/_pjax 参数/XHR）
-        $isPjax = ($request->header('X-PJAX') !== null)
-            || (bool)$request->get('_pjax')
-            || strtolower((string)$request->header('X-Requested-With')) === 'xmlhttprequest';
+        // 使用PJAXHelper检测是否为PJAX请求
+        $isPjax = PJAXHelper::isPJAX($request);
 
         // 获取侧边栏内容（PJAX 与非 PJAX 均获取）
         $sidebar = \app\service\SidebarService::getSidebarContent($request, 'post');
@@ -67,36 +67,34 @@ class PostController
         $authorName = $primaryAuthor ? $primaryAuthor->nickname : ($post->authors->first() ? $post->authors->first()->nickname : '未知作者');
         
         // 动态选择模板：PJAX 返回片段，非 PJAX 返回完整页面
-        $viewName = $isPjax ? 'index/post.content' : 'index/post';
+        $viewName = PJAXHelper::getViewName('index/post', $isPjax);
 
-        // 非 PJAX 请求启用页面级缓存（TTL=120），键：list:post:index:{hash}:1:{locale}
-        $locale = $request->header('Accept-Language') ?? 'zh-CN';
-        $route = 'post:index';
-        $params = [
-            'keyword' => $keyword,
-            'mode' => blog_config('url_mode', 'mix', true),
-        ];
-        $paramsHash = substr(sha1(json_encode($params, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)), 0, 16);
-        $cacheKey = sprintf('list:%s:%s:%d:%s', $route, $paramsHash, 1, $locale);
-
+        // 非 PJAX 请求启用页面级缓存（TTL=120）
+        $cacheKey = null;
         if (!$isPjax) {
-            $conn = \support\Redis::connection('cache');
-            $cached = $conn->get($cacheKey);
-            if ($cached !== null) {
-                return new Response(200, ['X-Cache' => 'HIT'], $cached);
-            }
+            $locale = $request->header('Accept-Language') ?? 'zh-CN';
+            $route = 'post:index';
+            $params = [
+                'keyword' => $keyword,
+                'mode' => blog_config('url_mode', 'mix', true),
+            ];
+            $cacheKey = PJAXHelper::generateCacheKey($route, $params, 1, $locale);
         }
 
-        $resp = view($viewName, [
-            'page_title' => $post['title'] . ' - ' . blog_config('title', 'WindBlog', true),
-            'post' => $post,
-            'author' => $authorName,
-            'sidebar' => $sidebar
-        ]);
-
-        if (!$isPjax) {
-            \support\Redis::connection('cache')->setex($cacheKey, 120, $resp->rawBody());
-        }
+        // 创建带缓存的PJAX响应
+        $resp = PJAXHelper::createResponse(
+            $request,
+            $viewName,
+            [
+                'page_title' => $post['title'] . ' - ' . blog_config('title', 'WindBlog', true),
+                'post' => $post,
+                'author' => $authorName,
+                'sidebar' => $sidebar
+            ],
+            $cacheKey,
+            120,
+            'page'
+        );
 
         // 动作：文章内容渲染完成（需权限 content:action.post_rendered）
         \app\service\PluginService::do_action('content.post_rendered', [

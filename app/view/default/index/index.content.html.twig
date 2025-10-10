@@ -2,7 +2,7 @@
 <div id="pjax-container">
 <div class="max-w-full mx-auto px-4">
     <!-- 页面标题区域 - 优化响应式字体大小 -->
-    <div class="text-center mb-8 sm:mb-12 animate-fade-in-down">
+    <div class="text-center mb-8 sm:mb-12 fade-in-on-scroll" data-animation-delay="0">
         <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-800 mb-3 sm:mb-4">{{ page_title|default('风屿雨博客') }}</h1>
         <p class="text-gray-600 text-base sm:text-lg md:text-xl">欢迎来到我的博客，这里记录了我的技术分享和生活感悟</p>
     </div>
@@ -82,7 +82,7 @@
         </div>
     {% else %}
         <!-- 无文章提示 - 优化移动端布局 -->
-        <div class="bg-white rounded-2xl shadow-md sm:shadow-lg p-6 sm:p-12 text-center animate-fade-in">
+        <div class="bg-white rounded-2xl shadow-md sm:shadow-lg p-6 sm:p-12 text-center fade-in-on-scroll" data-animation-delay="0.2">
             <div class="text-gray-400 mb-4">
                 <svg class="w-16 h-16 sm:w-24 sm:h-24 mx-auto opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -107,52 +107,9 @@
 </div>
 
 <style>
-    @keyframes fade-in-down {
-        0% {
-            opacity: 0;
-            transform: translateY(-20px);
-        }
-        100% {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-    
-    .animate-fade-in-down {
-        animation: fade-in-down 0.6s ease-out forwards;
-    }
-    
-    @keyframes fade-in {
-        0% {
-            opacity: 0;
-        }
-        100% {
-            opacity: 1;
-        }
-    }
-    
-    .animate-fade-in {
-        animation: fade-in 0.6s ease-out forwards;
-    }
-    
     /* 新增移动端触摸反馈样式 */
     .tap-highlight {
         -webkit-tap-highlight-color: rgba(59, 130, 246, 0.2);
-    }
-    
-    /* 优化移动端文章标题的行高 */
-    @media (max-width: 640px) {
-        h2 {
-            line-height: 1.4;
-        }
-    }
-    
-    /* 为小屏幕设备优化分页输入框的大小和交互 */
-    @media (max-width: 640px) {
-        #page-input {
-            width: 4rem;
-            text-align: center;
-        }
     }
 </style>
 
@@ -164,23 +121,29 @@
             alert('请输入有效的页码 (1-' + maxPage + ')');
             return;
         }
-        window.location.href = '/page/' + page + '.html';
+        window.location.href = '/?page=' + page;
     }
 
-    // PJAX 片段内更新侧栏内容并通知就绪
-    (function () {
-        function injectSidebar() {
-            var t = document.getElementById('pjax-sidebar-html');
-            var c = document.getElementById('sidebar-container');
-            if (t && c) {
-                c.innerHTML = t.innerHTML || '';
+    // 分页输入框事件
+    document.addEventListener('DOMContentLoaded', function() {
+        const input = document.getElementById('page-input');
+        if (input) {
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const maxPage = parseInt(this.getAttribute('max'));
+                    jumpToPage(maxPage);
+                }
+            });
+        }
+
+        // 修复移动端分页输入框样式问题
+        if (window.innerWidth <= 768) {
+            const pageInput = document.getElementById('page-input');
+            if (pageInput) {
+                pageInput.classList.add('w-20', 'text-center');
             }
         }
-        // 立即尝试一次（片段初次替换）
-        injectSidebar();
-        // 在 page:ready 时再确保一次（基页会在 pjax:complete 后触发）
-        document.addEventListener('page:ready', injectSidebar);
-    })();
-
+    });
 </script>
-</div>
+

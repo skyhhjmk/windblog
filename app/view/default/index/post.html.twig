@@ -5,9 +5,9 @@
 {% block content %}
     {# 依赖已全局引入（base.html.twig），此处无需重复加载 #}
     <div class="max-w-full mx-auto">
-        <article class="bg-white rounded-xl shadow-md overflow-hidden">
+        <article class="bg-white rounded-xl shadow-md overflow-hidden hover-lift accelerated fade-in-on-scroll">
             <!-- 文章头部 -->
-            <div class="p-6 border-b border-gray-100">
+            <div class="p-6 border-b border-gray-100 fade-in-on-scroll">
                 <h1 class="text-3xl font-bold text-gray-800 mb-4">{{ post.title }}</h1>
                 <div class="flex items-center text-gray-500 text-sm space-x-4">
                     <span class="flex items-center">
@@ -30,13 +30,13 @@
                     {% if post.categories|length > 0 %}
                         <span class="text-gray-500">分类：</span>
                         {% for c in post.categories %}
-                            <a href="/category/{{ c.slug }}.html" class="inline-flex items-center px-2 py-1 bg-blue-50 text-blue-700 rounded hover:bg-blue-100 mr-2">#{{ c.name }}</a>
+                            <a href="/category/{{ c.slug }}.html" class="inline-flex items-center px-2 py-1 bg-blue-50 text-blue-700 rounded hover:bg-blue-100 mr-2 hover-lift accelerated">#{{ c.name }}</a>
                         {% endfor %}
                     {% endif %}
                     {% if post.tags|length > 0 %}
                         <span class="text-gray-500 ml-3">标签：</span>
                         {% for t in post.tags %}
-                            <a href="/tag/{{ t.slug }}.html" class="inline-flex items-center px-2 py-1 bg-purple-50 text-purple-700 rounded hover:bg-purple-100 mr-2">#{{ t.name }}</a>
+                            <a href="/tag/{{ t.slug }}.html" class="inline-flex items-center px-2 py-1 bg-purple-50 text-purple-700 rounded hover:bg-purple-100 mr-2 hover-lift accelerated">#{{ t.name }}</a>
                         {% endfor %}
                     {% endif %}
                 </div>
@@ -44,14 +44,14 @@
 
             <!-- 文章内容 -->
             <div class="p-6">
-                <div class="prose max-w-none" id="post-container">加载中...</div>
+                <div class="prose max-w-none fade-in-on-scroll" id="post-container">加载中...</div>
             </div>
 
             <!-- 文章底部 -->
-            <div class="p-6 border-t border-gray-100">
+            <div class="p-6 border-t border-gray-100 fade-in-on-scroll">
                 <div class="flex justify-between items-center">
                     <a href="/"
-                       class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium">
+                       class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium hover-lift accelerated">
                         <i class="fas fa-arrow-left mr-1"></i>
                         返回首页
                     </a>

@@ -140,18 +140,79 @@
     </div>
 
     <script>
-        function copyUrl() {
-            const url = "{{ link.url|e('js') }}";
-            navigator.clipboard.writeText(url).then(() => {
-                const button = document.getElementById('copyButton');
-                const originalText = button.innerHTML;
-                button.innerHTML = '<i class="fas fa-check mr-1"></i> 已复制';
-                setTimeout(() => {
-                    button.innerHTML = originalText;
-                }, 2000);
-            }).catch(err => {
-                console.error('复制失败: ', err);
+        /**
+         * 初始化复制URL功能，支持PJAX页面刷新
+         */
+        function initCopyUrlFunctionality() {
+            const copyButton = document.getElementById('copyButton');
+            if (!copyButton) return;
+            
+            // 移除可能存在的事件监听器
+            const newButton = copyButton.cloneNode(true);
+            copyButton.parentNode.replaceChild(newButton, copyButton);
+            
+            // 绑定新的点击事件
+            newButton.addEventListener('click', function() {
+                const url = "{{ link.url|e('js') }}";
+                
+                // 优先使用现代的Clipboard API
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(url).then(() => {
+                        showCopySuccess(newButton);
+                    }).catch(err => {
+                        console.error('复制失败: ', err);
+                        fallbackCopy(url, newButton);
+                    });
+                } else {
+                    // 降级方案
+                    fallbackCopy(url, newButton);
+                }
             });
         }
+        
+        /**
+         * 显示复制成功的反馈
+         */
+        function showCopySuccess(button) {
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-check mr-1"></i> 已复制';
+            
+            // 添加动画效果增强用户体验
+            button.classList.add('bg-green-100', 'text-green-700');
+            
+            setTimeout(() => {
+                button.innerHTML = originalText;
+                button.classList.remove('bg-green-100', 'text-green-700');
+            }, 2000);
+        }
+        
+        /**
+         * 降级复制方案
+         */
+        function fallbackCopy(text, button) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            try {
+                document.execCommand('copy');
+                showCopySuccess(button);
+            } catch (err) {
+                console.error('降级复制也失败了: ', err);
+            }
+            
+            document.body.removeChild(textArea);
+        }
+        
+        // 页面加载完成时初始化
+        document.addEventListener('DOMContentLoaded', initCopyUrlFunctionality);
+        
+        // 支持PJAX页面刷新
+        document.addEventListener('page:ready', initCopyUrlFunctionality);
     </script>
 {% endblock %}

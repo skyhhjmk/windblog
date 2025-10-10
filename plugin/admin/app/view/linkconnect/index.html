@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>互联协议管理</title>
+    <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css"/>
+    <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+    <script src="/app/admin/component/pear/pear.js"></script>
+
+    <style>
+        /* 精简自定义样式，尽量使用 layui 原生组件 */
+        .json-editor {
+            min-height: 300px;
+            border: 1px solid #e6e6e6;
+            border-radius: 4px;
+            padding: 10px;
+            background: #fff;
+            font-family: monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            overflow: auto;
+        }
+    </style>
+</head>
+
+<body class="pear-container layui-bg-gray">
+<div class="layui-card">
+    <div class="layui-card-header">
+        <h3>互联协议管理</h3>
+        <div class="layui-btn-group" style="float:right;">
+            <button class="pear-btn pear-btn-md pear-btn-primary" id="saveBtn">
+                <i class="layui-icon layui-icon-save"></i>
+                保存配置
+            </button>
+            <button class="pear-btn pear-btn-md" id="testBtn">
+                <i class="layui-icon layui-icon-test"></i>
+                测试连接
+            </button>
+            <button class="pear-btn pear-btn-md" id="getExampleBtn">
+                <i class="layui-icon layui-icon-template"></i>
+                查看示例
+            </button>
+        </div>
+    </div>
+    <div class="layui-card-body">
+        <!-- Tab 标题 -->
+        <div class="layui-tab layui-tab-brief" lay-filter="lcTabs" id="lcTabs">
+            <ul class="layui-tab-title">
+                <li class="layui-this" data-key="basic">基础设置</li>
+                <li data-key="site">站点信息</li>
+                <li data-key="exchange">友链交换</li>
+                <li data-key="security">安全设置</li>
+                <li data-key="quick">快速互联</li>
+            </ul>
+        </div>
+
+        <form id="configForm" class="layui-form" lay-filter="configForm" action="">
+            <!-- 基本设置 -->
+            <div class="layui-elem-field" id="section-basic">
+                <legend class="layui-field-title">基本设置</legend>
+                <div class="layui-form-item">
+                    <div class="layui-col-md2">
+                        <label class="layui-form-label">启用互联协议</label>
+                    </div>
+                    <div class="layui-col-md4">
+                        <input type="checkbox" name="enabled" lay-skin="switch" lay-filter="enabled" lay-text="开启|关闭">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <div class="layui-col-md2">
+                        <label class="layui-form-label">协议名称</label>
+                    </div>
+                    <div class="layui-col-md4">
+                        <input type="text" name="protocol_name" placeholder="请输入协议名称" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <div class="layui-col-md2">
+                        <label class="layui-form-label">协议版本</label>
+                    </div>
+                    <div class="layui-col-md4">
+                        <input type="text" name="version" placeholder="请输入协议版本" class="layui-input">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 站点信息设置 -->
+            <div class="layui-elem-field" id="section-site">
+                <legend class="layui-field-title">站点信息</legend>
+                <div class="layui-form-item">
+                    <div class="layui-col-md2">
+                        <label class="layui-form-label">网站名称</label>
+                    </div>
+                    <div class="layui-col-md4">
+                        <input type="text" name="site_info.name" placeholder="请输入网站名称" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <div class="layui-col-md2">
+                        <label class="layui-form-label">网站URL</label>
+                    </div>
+                    <div class="layui-col-md4">
+                        <input type="text" name="site_info.url" placeholder="请输入网站URL" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <div class="layui-col-md2">
+                        <label class="layui-form-label">网站域名</label>
+                    </div>
+                    <div class="layui-col-md4">
+                        <input type="text" name="site_info.domain" placeholder="请输入网站域名" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <div class="layui-col-md2">
+                        <label class="layui-form-label">网站Logo</label>
+                    </div>
+                    <div class="layui-col-md4">
+                        <input type="text" name="site_info.logo" placeholder="请输入网站Logo URL" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <div class="layui-col-md2">
+                        <label class="layui-form-label">网站Banner</label>
+                    </div>
+                    <div class="layui-col-md4">
+                        <input type="text" name="site_info.banner" placeholder="请输入网站Banner URL" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <div class="layui-col-md2">
+                        <label class="layui-form-label">网站描述</label>
+                    </div>
+                    <div class="layui-col-md8">
+                        <textarea name="site_info.description" placeholder="请输入网站描述" class="layui-textarea"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 友链交换设置 -->
+            <div class="layui-elem-field" id="section-exchange">
+                <legend class="layui-field-title">友链交换设置</legend>
+                <div class="layui-form-item">
+                    <div class="layui-col-md2">
+                        <label class="layui-form-label">启用友链交换</label>
+                    </div>
+                    <div class="layui-col-md4">
+                        <input type="checkbox" name="link_exchange.enabled" lay-skin="switch" lay-filter="link_exchange_enabled" lay-text="开启|关闭">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <div class="layui-col-md2">
+                        <label class="layui-form-label">交换要求</label>
+                    </div>
+                    <div class="layui-col-md8">
+                        <textarea name="link_exchange.requirements" placeholder="请输入友链交换要求" class="layui-textarea"></textarea>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <div class="layui-col-md2">
+                        <label class="layui-form-label">联系邮箱</label>
+                    </div>
+                    <div class="layui-col-md4">
+                        <input type="text" name="link_exchange.contact_email" placeholder="请输入联系邮箱" class="layui-input">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 安全设置 -->
+            <div class="layui-elem-field" id="section-security">
+                <legend class="layui-field-title">安全设置</legend>
+                <div class="layui-form-item">
+                    <div class="layui-col-md2">
+                        <label class="layui-form-label">启用校验和</label>
+                    </div>
+                    <div class="layui-col-md4">
+                        <input type="checkbox" name="security.enable_checksum" lay-skin="switch" lay-filter="enable_checksum" lay-text="开启|关闭">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <div class="layui-col-md2">
+                        <label class="layui-form-label">校验和算法</label>
+                    </div>
+                    <div class="layui-col-md4">
+                        <select name="security.checksum_algorithm" class="layui-input">
+                            <option value="sha512">SHA-512</option>
+                            <option value="sha256">SHA-256</option>
+                            <option value="md5">MD5</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <div class="layui-col-md2">
+                        <label class="layui-form-label">启用Token验证</label>
+                    </div>
+                    <div class="layui-col-md4">
+                        <input type="checkbox" name="security.enable_token" lay-skin="switch" lay-filter="enable_token" lay-text="开启|关闭">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <div class="layui-col-md2">
+                        <label class="layui-form-label">访问Token</label>
+                    </div>
+                    <div class="layui-col-md4">
+                        <input type="text" name="security.token" placeholder="请输入访问Token" class="layui-input">
+                    </div>
+                </div>
+            </div>
+        <!-- 快速互联 -->
+        <div class="layui-elem-field" id="section-quick" style="display:none;">
+            <legend class="layui-field-title">快速互联</legend>
+
+            <div class="layui-form-item">
+                <div class="layui-col-md2">
+                    <label class="layui-form-label">本站互联链接</label>
+                </div>
+                <div class="layui-col-md6">
+                    <input type="text" id="generatedLink" readonly class="layui-input" placeholder="点击右侧按钮生成链接">
+                </div>
+                <div class="layui-col-md4" style="padding-left:10px;">
+                    <button type="button" class="pear-btn pear-btn-primary pear-btn-md" id="genLinkBtn">
+                        <i class="layui-icon layui-icon-link"></i> 生成
+                    </button>
+                    <button type="button" class="pear-btn pear-btn-md" id="copyLinkBtn">
+                        <i class="layui-icon layui-icon-file"></i> 复制
+                    </button>
+                </div>
+            </div>
+
+            <div class="form-section-title" style="margin-top:10px;">对等站信息</div>
+            <div class="layui-form-item">
+                <div class="layui-col-md2">
+                    <label class="layui-form-label">对方 API</label>
+                </div>
+                <div class="layui-col-md6">
+                    <input type="text" id="peer_api" placeholder="例如：https://peer.site.com/api/wind-connect" class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <div class="layui-col-md2">
+                    <label class="layui-form-label">站点名称</label>
+                </div>
+                <div class="layui-col-md4">
+                    <input type="text" id="peer_name" placeholder="对方站点名称" class="layui-input">
+                </div>
+                <div class="layui-col-md2">
+                    <label class="layui-form-label">站点 URL</label>
+                </div>
+                <div class="layui-col-md4">
+                    <input type="text" id="peer_url" placeholder="https://peer.site.com" class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <div class="layui-col-md2">
+                    <label class="layui-form-label">站点图标</label>
+                </div>
+                <div class="layui-col-md4">
+                    <input type="text" id="peer_icon" placeholder="图标 URL" class="layui-input">
+                </div>
+                <div class="layui-col-md2">
+                    <label class="layui-form-label">联系邮箱</label>
+                </div>
+                <div class="layui-col-md4">
+                    <input type="text" id="peer_email" placeholder="可选" class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <div class="layui-col-md2">
+                    <label class="layui-form-label">站点描述</label>
+                </div>
+                <div class="layui-col-md8">
+                    <textarea id="peer_description" placeholder="可选" class="layui-textarea"></textarea>
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <div class="layui-input-block">
+                    <button type="button" class="pear-btn pear-btn-primary pear-btn-md" id="applyPeerBtn">
+                        <i class="layui-icon layui-icon-ok"></i> 立即申请
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        </form>
+    </div>
+</div>
+
+<!-- 测试连接弹窗 -->
+<div id="testModal" style="display: none;">
+    <div class="layui-form" style="padding: 20px;">
+        <div class="layui-form-item">
+            <label class="layui-form-label">测试URL</label>
+            <div class="layui-input-block">
+                <input type="text" name="test_url" placeholder="请输入要测试的互联协议URL" class="layui-input" style="width: 100%;">
+            </div>
+        </div>
+        <div class="layui-form-item" style="margin-top: 20px;">
+            <div class="layui-input-block" id="testResult" style="display: none;">
+                <div class="layui-card" style="border: 1px solid #e6e6e6;">
+                    <div class="layui-card-header">测试结果</div>
+                    <div class="layui-card-body">
+                        <pre id="testResultContent"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 示例配置弹窗 -->
+<div id="exampleModal" style="display: none;">
+    <div class="layui-form" style="padding: 20px;">
+        <div class="layui-form-item">
+            <label class="layui-form-label">互联协议示例</label>
+            <div class="layui-input-block">
+                <pre id="exampleContent" class="json-editor"></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    layui.use(['form', 'jquery', 'layer', 'element', 'table'], function() {
+        var form = layui.form;
+        var $ = layui.jquery;
+        var layer = layui.layer;
+        var element = layui.element;
+
+        // 加载配置数据
+        function loadConfig() {
+            $.ajax({
+                url: '/app/admin/linkconnect/getConfig',
+                type: 'GET',
+                dataType: 'json',
+                success: function(res) {
+                    if (res.code === 0) {
+                        var config = res.data;
+                        
+                        // 填充表单数据
+                        form.val('configForm', {
+                            'enabled': config.enabled ? true : false,
+                            'protocol_name': config.protocol_name || '',
+                            'version': config.version || '',
+                            'site_info.name': config.site_info?.name || '',
+                            'site_info.url': config.site_info?.url || '',
+                            'site_info.domain': config.site_info?.domain || '',
+                            'site_info.logo': config.site_info?.logo || '',
+                            'site_info.banner': config.site_info?.banner || '',
+                            'site_info.description': config.site_info?.description || '',
+                            'link_exchange.enabled': config.link_exchange?.enabled ? true : false,
+                            'link_exchange.requirements': config.link_exchange?.requirements || '',
+                            'link_exchange.contact_email': config.link_exchange?.contact_email || '',
+                            'security.enable_checksum': config.security?.enable_checksum ? true : false,
+                            'security.checksum_algorithm': config.security?.checksum_algorithm || 'sha512',
+                            'security.enable_token': config.security?.enable_token ? true : false,
+                            'security.token': config.security?.token || ''
+                        });
+                        
+                        // 重新渲染表单
+                        form.render();
+                    } else {
+                        layer.msg('加载配置失败：' + res.msg, {icon: 5});
+                    }
+                },
+                error: function() {
+                    layer.msg('加载配置失败', {icon: 5});
+                }
+            });
+        }
+
+        // 保存配置
+        $('#saveBtn').click(function() {
+            // 构建配置对象
+            var config = {
+                enabled: $('input[name="enabled"]').is(':checked'),
+                protocol_name: $('input[name="protocol_name"]').val(),
+                version: $('input[name="version"]').val(),
+                site_info: {
+                    name: $('input[name="site_info.name"]').val(),
+                    url: $('input[name="site_info.url"]').val(),
+                    domain: $('input[name="site_info.domain"]').val(),
+                    logo: $('input[name="site_info.logo"]').val(),
+                    banner: $('input[name="site_info.banner"]').val(),
+                    description: $('textarea[name="site_info.description"]').val()
+                },
+                link_exchange: {
+                    enabled: $('input[name="link_exchange.enabled"]').is(':checked'),
+                    requirements: $('textarea[name="link_exchange.requirements"]').val(),
+                    contact_email: $('input[name="link_exchange.contact_email"]').val()
+                },
+                security: {
+                    enable_checksum: $('input[name="security.enable_checksum"]').is(':checked'),
+                    checksum_algorithm: $('select[name="security.checksum_algorithm"]').val(),
+                    enable_token: $('input[name="security.enable_token"]').is(':checked'),
+                    token: $('input[name="security.token"]').val()
+                }
+            };
+
+            $.ajax({
+                url: '/app/admin/linkconnect/saveConfig',
+                type: 'POST',
+                data: {config: config},
+                dataType: 'json',
+                success: function(res) {
+                    if (res.code === 0) {
+                        layer.msg('配置保存成功', {icon: 6});
+                    } else {
+                        layer.msg('配置保存失败：' + res.msg, {icon: 5});
+                    }
+                },
+                error: function() {
+                    layer.msg('配置保存失败', {icon: 5});
+                }
+            });
+        });
+
+        // 测试连接（使用事件委托，确保动态插入按钮可用）
+        $(document).on('click', '#testBtn', function() {
+            // 清空测试结果
+            $('#testResult').hide();
+            $('#testResultContent').text('');
+            
+            layer.open({
+                type: 1,
+                title: '测试互联协议连接',
+                area: ['800px', '500px'],
+                content: $('#testModal'),
+                btn: ['测试', '关闭'],
+                yes: function(index) {
+                    var url = $('input[name="test_url"]').val();
+                    
+                    if (!url) {
+                        layer.msg('请输入测试URL', {icon: 5});
+                        return;
+                    }
+                    
+                    // 显示加载中
+                    var loadingIndex = layer.load();
+                    
+                    $.ajax({
+                        url: '/app/admin/linkconnect/testConnection',
+                        type: 'POST',
+                        data: {url: url},
+                        dataType: 'json',
+                        success: function(res) {
+                            layer.close(loadingIndex);
+                            
+                            if (res.code === 0) {
+                                // 显示测试结果
+                                $('#testResultContent').text(JSON.stringify(res.data, null, 2));
+                                $('#testResult').show();
+                            } else {
+                                layer.msg('测试失败：' + res.msg, {icon: 5});
+                            }
+                        },
+                        error: function() {
+                            layer.close(loadingIndex);
+                            layer.msg('测试请求失败', {icon: 5});
+                        }
+                    });
+                },
+                btn2: function(index) {
+                    layer.close(index);
+                }
+            });
+        });
+
+        // 查看示例（使用事件委托，确保动态插入按钮可用）
+        $(document).on('click', '#getExampleBtn', function() {
+            $.ajax({
+                url: '/app/admin/linkconnect/getExample',
+                type: 'GET',
+                dataType: 'json',
+                success: function(res) {
+                    if (res.code === 0) {
+                        // 格式化JSON
+                        var formattedJson = JSON.stringify(res.data, null, 2);
+                        $('#exampleContent').text(formattedJson);
+                        
+                        layer.open({
+                            type: 1,
+                            title: '互联协议示例配置',
+                            area: ['900px', '600px'],
+                            content: $('#exampleModal'),
+                            btn: ['关闭'],
+                            btn1: function(index) {
+                                layer.close(index);
+                            }
+                        });
+                    } else {
+                        layer.msg('获取示例失败：' + res.msg, {icon: 5});
+                    }
+                },
+                error: function() {
+                    layer.msg('获取示例失败', {icon: 5});
+                }
+            });
+        });
+
+        // Tab 切换显隐分区
+        function showSection(key) {
+            var sections = {
+                basic: '#section-basic',
+                site: '#section-site',
+                exchange: '#section-exchange',
+                security: '#section-security',
+                quick: '#section-quick'
+            };
+            // 先全部隐藏
+            for (var k in sections) {
+                $(sections[k]).hide();
+            }
+            // 显示选中
+            if (sections[key]) {
+                $(sections[key]).show();
+            }
+        }
+
+        // 初始显示基础设置
+        showSection('basic');
+
+        // 移除页头全局按钮（保存/测试/示例），改由各分区与“快速互联”承担
+        $('.layui-card-header .layui-btn-group').empty();
+
+        // 在“快速互联”分区追加“测试连接/查看示例”按钮，复用原有逻辑
+        (function injectQuickTabExtraButtons(){
+            var $row = $('<div class="layui-form-item" style="margin-top:10px;"></div>');
+            var html = ''
+                + '<div class="layui-input-block">'
+                + '  <button type="button" class="pear-btn pear-btn-md" id="testBtn">'
+                + '    <i class="layui-icon layui-icon-test"></i> 测试连接'
+                + '  </button>'
+                + '  <button type="button" class="pear-btn pear-btn-md" id="getExampleBtn" style="margin-left:8px;">'
+                + '    <i class="layui-icon layui-icon-template"></i> 查看示例'
+                + '  </button>'
+                + '</div>';
+            $row.html(html);
+            $('#section-quick').append($row);
+        })();
+
+        // 为各分区注入各自保存按钮
+        (function injectSectionSaveButtons(){
+            var btnTpl = function(id, text){
+                return '<div class="layui-form-item">'
+                     + '  <div class="layui-input-block">'
+                     + '    <button type="button" class="pear-btn pear-btn-primary pear-btn-md" id="'+ id +'">'
+                     + '      <i class="layui-icon layui-icon-save"></i> '+ text +'</button>'
+                     + '  </div>'
+                     + '</div>';
+            };
+            $('#section-basic').append($(btnTpl('saveBasicBtn', '保存基础设置')));
+            $('#section-site').append($(btnTpl('saveSiteBtn', '保存站点信息')));
+            $('#section-exchange').append($(btnTpl('saveExchangeBtn', '保存友链交换设置')));
+            $('#section-security').append($(btnTpl('saveSecurityBtn', '保存安全设置')));
+
+            // Token 操作区（生成/刷新）与表格容器
+            var $tokenOps = $(
+              '<div class="layui-form-item">' +
+              '  <div class="layui-input-block">' +
+              '    <button type="button" class="pear-btn pear-btn-primary pear-btn-md" id="genTokenBtn">' +
+              '      <i class="layui-icon layui-icon-add-circle"></i> 生成 Token' +
+              '    </button>' +
+              '    <button type="button" class="pear-btn pear-btn-md" id="refreshTokenBtn" style="margin-left:8px;">' +
+              '      <i class="layui-icon layui-icon-refresh"></i> 刷新' +
+              '    </button>' +
+              '    <span class="layui-word-aux" style="margin-left:8px;">生成后，“生成互联链接”将使用最近的未使用 Token</span>' +
+              '  </div>' +
+              '</div>'
+            );
+            $('#section-security').append($tokenOps);
+
+            var $tableWrap = $(
+              '<div class="layui-form-item">' +
+              '  <div class="layui-input-block">' +
+              '    <div id="tokenToolbar" class="layui-form">' +
+              '      <div class="layui-form-item">' +
+              '        <div class="layui-inline">' +
+              '          <label class="layui-form-label">状态</label>' +
+              '          <div class="layui-input-inline">' +
+              '            <select id="tokenFilterStatus">' +
+              '              <option value="">全部</option>' +
+              '              <option value="unused">未使用</option>' +
+              '              <option value="used">已使用</option>' +
+              '              <option value="revoked">已作废</option>' +
+              '            </select>' +
+              '          </div>' +
+              '        </div>' +
+              '        <div class="layui-inline">' +
+              '          <label class="layui-form-label">搜索</label>' +
+              '          <div class="layui-input-inline">' +
+              '            <input type="text" id="tokenFilterKeyword" placeholder="按 Token/使用者 关键字" autocomplete="off" class="layui-input">' +
+              '          </div>' +
+              '        </div>' +
+              '        <div class="layui-inline">' +
+              '          <button type="button" class="pear-btn pear-btn-md" id="tokenFilterReset">' +
+              '            <i class="layui-icon layui-icon-refresh-3"></i> 重置' +
+              '          </button>' +
+              '        </div>' +
+              '      </div>' +
+              '    </div>' +
+              '    <table class="layui-hide" id="tokenTable" lay-filter="tokenTable"></table>' +
+              '  </div>' +
+              '</div>'
+            );
+            $('#section-security').append($tableWrap);
+            form.render('select');
+        })();
+
+        // 保存分区的通用方法：先取最新配置，再合并当前分区数据，最后保存
+        function saveSection(section){
+            // 构建当前分区的片段
+            var patch = {};
+            if (section === 'basic') {
+                patch.enabled = $('input[name="enabled"]').is(':checked');
+                patch.protocol_name = $('input[name="protocol_name"]').val();
+                patch.version = $('input[name="version"]').val();
+            } else if (section === 'site') {
+                patch.site_info = {
+                    name: $('input[name="site_info.name"]').val(),
+                    url: $('input[name="site_info.url"]').val(),
+                    domain: $('input[name="site_info.domain"]').val(),
+                    logo: $('input[name="site_info.logo"]').val(),
+                    banner: $('input[name="site_info.banner"]').val(),
+                    description: $('textarea[name="site_info.description"]').val()
+                };
+            } else if (section === 'exchange') {
+                patch.link_exchange = {
+                    enabled: $('input[name="link_exchange.enabled"]').is(':checked'),
+                    requirements: $('textarea[name="link_exchange.requirements"]').val(),
+                    contact_email: $('input[name="link_exchange.contact_email"]').val()
+                };
+            } else if (section === 'security') {
+                patch.security = {
+                    enable_checksum: $('input[name="security.enable_checksum"]').is(':checked'),
+                    checksum_algorithm: $('select[name="security.checksum_algorithm"]').val(),
+                    enable_token: $('input[name="security.enable_token"]').is(':checked'),
+                    token: $('input[name="security.token"]').val()
+                };
+            }
+
+            var loadingIndex = layer.load();
+            $.get('/app/admin/linkconnect/getConfig', function(res){
+                if (res.code !== 0) {
+                    layer.close(loadingIndex);
+                    layer.msg('加载配置失败：' + (res.msg || '未知错误'), {icon: 5});
+                    return;
+                }
+                var cfg = res.data || {};
+                // 浅合并（分区为对象的字段整体覆盖）
+                var finalCfg = $.extend(true, {}, cfg, patch);
+                $.ajax({
+                    url: '/app/admin/linkconnect/saveConfig',
+                    type: 'POST',
+                    dataType: 'json',
+                    data: { config: finalCfg },
+                    success: function(sv){
+                        layer.close(loadingIndex);
+                        if (sv.code === 0) {
+                            layer.msg('保存成功', {icon: 6});
+                            // 保存后刷新回填
+                            loadConfig();
+                        } else {
+                            layer.msg('保存失败：' + (sv.msg || '未知错误'), {icon: 5});
+                        }
+                    },
+                    error: function(){
+                        layer.close(loadingIndex);
+                        layer.msg('保存失败', {icon: 5});
+                    }
+                });
+            });
+        }
+
+        // 绑定各分区保存按钮事件
+        $(document).on('click', '#saveBasicBtn', function(){ saveSection('basic'); });
+        $(document).on('click', '#saveSiteBtn', function(){ saveSection('site'); });
+        $(document).on('click', '#saveExchangeBtn', function(){ saveSection('exchange'); });
+        $(document).on('click', '#saveSecurityBtn', function(){ saveSection('security'); });
+
+        // 生成 Token
+        $(document).on('click', '#genTokenBtn', function(){
+            var loading = layer.load();
+            $.post('/app/admin/linkconnect/generateToken', {}, function(res){
+                layer.close(loading);
+                if (res.code === 0) {
+                    layer.msg('已生成新 Token', {icon: 6});
+                    loadTokens();
+                } else {
+                    layer.msg(res.msg || '生成失败', {icon: 5});
+                }
+            }, 'json');
+        });
+
+        // 刷新 Token 列表
+        $(document).on('click', '#refreshTokenBtn', function(){
+            loadTokens();
+            layer.msg('已刷新', {icon: 6});
+        });
+
+        // Token 表格操作事件
+        layui.table && layui.table.on('tool(tokenTable)', function(obj){
+            var data = obj.data || {};
+            if (obj.event === 'copy') {
+                var val = data.token || '';
+                if (!val) return;
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(val).then(function(){ layer.msg('已复制', {icon: 6}); });
+                } else {
+                    var tmp = $('<input>');
+                    $('body').append(tmp);
+                    tmp.val(val).select();
+                    document.execCommand('copy');
+                    tmp.remove();
+                    layer.msg('已复制', {icon: 6});
+                }
+            } else if (obj.event === 'invalidate') {
+                layer.confirm('确定要作废该 Token 吗？', {icon: 3, title:'提示'}, function(index){
+                    var loading2 = layer.load();
+                    $.post('/app/admin/linkconnect/invalidateToken', {token: data.token}, function(res){
+                        layer.close(loading2);
+                        if (res.code === 0) { layer.msg('已作废', {icon: 6}); loadTokens(); }
+                        else { layer.msg(res.msg || '操作失败', {icon: 5}); }
+                    }, 'json');
+                    layer.close(index);
+                });
+            }
+        });
+
+        // 渲染与加载 Token 列表
+        function renderTokenTable(list){
+            if (!layui.table) return;
+            layui.table.render({
+                elem: '#tokenTable',
+                data: list || [],
+                cellMinWidth: 100,
+                cols: [[
+                    {field:'token', title:'Token', minWidth:300},
+                    {field:'status', title:'状态', width:100, templet: function(d){
+                        var s = d.status || 'unknown';
+                        var color = s==='unused'?'#009688':(s==='used'?'#1E9FFF':'#FF5722');
+                        return '<span style="color:'+color+';">'+ s +'</span>';
+                    }},
+                    {field:'used_by', title:'使用者', minWidth:150},
+                    {field:'used_at', title:'使用时间', width:160},
+                    {field:'created_at', title:'创建时间', width:160},
+                    {title:'操作', width:180, align:'center', templet: function(d){
+                        var html = '<a class="pear-btn pear-btn-sm" lay-event="copy">复制</a>';
+                        if (d.status !== 'revoked') {
+                            html += '<a class="pear-btn pear-btn-sm pear-btn-danger" lay-event="invalidate" style="margin-left:6px;">作废</a>';
+                        }
+                        return html;
+                    }}
+                ]],
+                page: true,
+                limit: 10,
+                limits: [10,20,50,100],
+                height: 360,
+                even: true,
+                text: { none: '暂无 Token，点击“生成 Token”以创建首个令牌；或调整筛选条件重试' }
+            });
+        }
+
+        // 过滤并渲染 Token 列表
+        function applyTokenFilter(){
+            var status = ($('#tokenFilterStatus').val() || '').trim();
+            var kw = ($('#tokenFilterKeyword').val() || '').trim().toLowerCase();
+            var src = Array.isArray(window._allTokens) ? window._allTokens : [];
+            var out = src.filter(function(it){
+                var okStatus = !status || (it.status === status);
+                if (!okStatus) return false;
+                if (!kw) return true;
+                var hay = ((it.token || '') + ' ' + (it.used_by || '')).toLowerCase();
+                return hay.indexOf(kw) !== -1;
+            });
+            renderTokenTable(out);
+        }
+
+        // 简单防抖
+        function debounce(fn, wait){
+            var t = null;
+            return function(){
+                var ctx = this, args = arguments;
+                clearTimeout(t);
+                t = setTimeout(function(){ fn.apply(ctx, args); }, wait || 300);
+            };
+        }
+
+        // 绑定筛选事件
+        $(document).on('change', '#tokenFilterStatus', applyTokenFilter);
+        $(document).on('input', '#tokenFilterKeyword', debounce(applyTokenFilter, 300));
+        $(document).on('click', '#tokenFilterReset', function(){
+            $('#tokenFilterStatus').val('');
+            $('#tokenFilterKeyword').val('');
+            form.render('select');
+            applyTokenFilter();
+        });
+
+        function loadTokens(){
+            $.get('/app/admin/linkconnect/tokens', function(res){
+                if (res.code === 0) {
+                    window._allTokens = Array.isArray(res.data) ? res.data : [];
+                    applyTokenFilter();
+                } else {
+                    layer.msg(res.msg || 'Token 列表加载失败', {icon: 5});
+                }
+            }, 'json');
+        }
+
+        element.on('tab(lcTabs)', function() {
+            var key = $(this).attr('data-key');
+            showSection(key);
+        });
+
+        // 生成本站互联链接（token 放入 URL 查询参数）
+        $('#genLinkBtn').on('click', function() {
+            $.get('/app/admin/linkconnect/generateLink', function(res) {
+                if (res.code === 0 && res.data && res.data.url) {
+                    $('#generatedLink').val(res.data.url);
+                    layer.msg('已生成', {icon: 6});
+                } else {
+                    layer.msg('生成失败：' + (res.msg || '未知错误'), {icon: 5});
+                }
+            });
+        });
+
+        // 复制互联链接
+        $('#copyLinkBtn').on('click', function() {
+            var val = $('#generatedLink').val();
+            if (!val) { layer.msg('请先生成链接', {icon: 3}); return; }
+            navigator.clipboard ? navigator.clipboard.writeText(val).then(function(){ layer.msg('已复制', {icon: 6}); }) :
+            (function(){
+                var tmp = $('<input>');
+                $('body').append(tmp);
+                tmp.val(val).select();
+                document.execCommand('copy');
+                tmp.remove();
+                layer.msg('已复制', {icon: 6});
+            })();
+        });
+
+        // 立即申请对等站
+        $('#applyPeerBtn').on('click', function() {
+            var payload = {
+                peer_api: $('#peer_api').val().trim(),
+                name: $('#peer_name').val().trim(),
+                url: $('#peer_url').val().trim(),
+                icon: $('#peer_icon').val().trim(),
+                description: $('#peer_description').val().trim(),
+                email: $('#peer_email').val().trim()
+            };
+            if (!payload.peer_api || !payload.name || !payload.url) {
+                layer.msg('请填写必填项：对方API / 站点名称 / 站点URL', {icon: 3});
+                return;
+            }
+            var loadingIndex = layer.load();
+            $.ajax({
+                url: '/app/admin/linkconnect/applyToPeer',
+                type: 'POST',
+                dataType: 'json',
+                data: payload,
+                success: function(res) {
+                    layer.close(loadingIndex);
+                    if (res.code === 0) {
+                        layer.msg(res.msg || '申请已发送', {icon: 6});
+                    } else {
+                        layer.msg(res.msg || '申请失败', {icon: 5});
+                    }
+                },
+                error: function() {
+                    layer.close(loadingIndex);
+                    layer.msg('请求失败', {icon: 5});
+                }
+            });
+        });
+
+        // 初始化加载
+        loadConfig();
+        loadTokens();
+    });
+</script>
+</body>
+</html>

@@ -8,6 +8,8 @@ use app\service\BlogService;
 use support\Response;
 use Throwable;
 use Webman\RateLimiter\Annotation\RateLimiter;
+use app\service\EnhancedCacheService;
+use app\service\PJAXHelper;
 
 /**
  * 博客首页控制器
@@ -52,43 +54,40 @@ class IndexController
         // 获取博客标题
         $blog_title = BlogService::getBlogTitle();
 
-        // PJAX 优化：检测是否为 PJAX 请求（兼容 header/_pjax 参数/XHR）
-        $isPjax = ($request->header('X-PJAX') !== null)
-            || (bool)$request->get('_pjax')
-            || strtolower((string)$request->header('X-Requested-With')) === 'xmlhttprequest';
+        // 使用PJAXHelper检测是否为PJAX请求
+        $isPjax = PJAXHelper::isPJAX($request);
 
         // 获取侧边栏内容（PJAX 与非 PJAX 均获取，便于片段携带并在完成后注入右栏）
         $sidebar = \app\service\SidebarService::getSidebarContent($request, 'home');
 
         // 动态选择模板：PJAX 返回片段，非 PJAX 返回完整页面
-        $viewName = $isPjax ? 'index/index.content' : 'index/index';
+        $viewName = PJAXHelper::getViewName('index/index', $isPjax);
 
         // 仅对 PJAX 片段启用HTML缓存（TTL=120秒）
+        $cacheKey = null;
         if ($isPjax) {
             $route = 'home:index.content';
             $params = [
                 'page' => $page,
                 'filters' => $filters,
             ];
-            $paramsHash = substr(sha1(json_encode($params, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)), 0, 16);
-            $cacheKey = sprintf('list:%s:%s:%d', $route, $paramsHash, 1);
-            $conn = \support\Redis::connection('cache');
-            $cached = $conn->get($cacheKey);
-            if ($cached !== null) {
-                return new Response(200, ['X-Cache' => 'HIT'], $cached);
-            }
+            $cacheKey = PJAXHelper::generateCacheKey($route, $params, 1);
         }
 
-        $resp = view($viewName, [
-            'page_title' => $blog_title,
-            'posts' => $result['posts'],
-            'pagination' => $result['pagination'],
-            'sidebar' => $sidebar
-        ]);
-
-        if ($isPjax) {
-            \support\Redis::connection('cache')->setex($cacheKey, 120, $resp->rawBody());
-        }
+        // 创建带缓存的PJAX响应
+        $resp = PJAXHelper::createResponse(
+            $request,
+            $viewName,
+            [
+                'page_title' => $blog_title,
+                'posts' => $result['posts'],
+                'pagination' => $result['pagination'],
+                'sidebar' => $sidebar
+            ],
+            $cacheKey,
+            120,
+            'page'
+        );
 
         return $resp;
     }

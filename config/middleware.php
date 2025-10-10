@@ -12,15 +12,26 @@
  * @license   http://www.opensource.org/licenses/mit-license.php MIT License
  */
 
-return [
-    // 全局中间件
-    '' => [
+$global = [
 //        app\middleware\AuthCheck::class,
-        app\middleware\Lang::class,
-        app\middleware\DebugToolkit::class,
-        app\middleware\IpChecker::class,
+    app\middleware\Lang::class,
+    app\middleware\DebugToolkit::class,
+    app\middleware\IpChecker::class,
+];
+
+if (file_exists(base_path() . '.env')) {
+    $must_installed = [
         app\middleware\StaticCacheRedirect::class,
         app\middleware\CSRFMiddleware::class,
         app\middleware\PluginSupport::class,
-    ],
+    ];
+
+    $global = array_merge($global, $must_installed);
+}
+
+$middleware = [
+    // 全局中间件
+    '' => $global,
 ];
+
+return $middleware;

@@ -14,7 +14,7 @@
 
 use Webman\Route;
 
-//Route::disableDefaultRoute();
+Route::disableDefaultRoute();
 
 //Route::any('/push/{id}', function ($id) {
 //    return view('push/id-test', ['id' => $id]);
@@ -45,9 +45,12 @@ Route::any('/tag', [app\controller\TagController::class, 'list'])->name('tag.lis
 
  // 链接页&分页路由
 Route::any('/link', [app\controller\LinkController::class, 'index'])->name('link.index');
+Route::any('/link/', [app\controller\LinkController::class, 'index']);
 Route::any('/link/goto/{id}', [app\controller\LinkController::class, 'goto'])->name('link.goto');
 Route::any('/link/info/{id}', [app\controller\LinkController::class, 'info'])->name('link.info');
 Route::any('/link/page/{page}', [app\controller\LinkController::class, 'index'])->name('link.page');
+Route::any('/link/request', [app\controller\LinkController::class, 'request'])->name('link.request');
+Route::any('/link/connect/apply', [app\controller\LinkController::class, 'connectApply'])->name('link.connect.apply');
 
  // 分类浏览（兼容旧路由）
 Route::any('/category/{slug}', [app\controller\CategoryController::class, 'index'])->name('category.index');
@@ -89,6 +92,13 @@ Route::group('/api/v1', function () {
     Route::get('/post/{id}', [\app\api\controller\v1\ApiPostController::class, 'get']);
     Route::get('/posts', [\app\api\controller\v1\ApiPostController::class, 'index']);
 });
+
+// 友链互联API
+Route::post('/api/wind-connect', [app\controller\LinkController::class, 'windConnect']);
+
+// 动画演示页面路由
+Route::any('/animation-demo', [app\controller\AnimationDemoController::class, 'index'])->name('animation.demo');
+Route::any('/animation-demo.html', [app\controller\AnimationDemoController::class, 'index'])->name('animation.demo.html');
 
 Route::fallback(function () {
     return view('error/404');

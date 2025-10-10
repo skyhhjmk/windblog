@@ -313,16 +313,17 @@ class MediaLibraryService
         if (!$media->is_image) {
             return;
         }
-        
-        // 检查GD扩展是否已加载
-        if (extension_loaded('gd')) {
-            // 使用GD生成缩略图
-            $this->generateThumbnailWithGD($media);
-        } 
+
+        // 优先使用 imagick
         // 检查Imagick扩展是否已加载
         elseif (extension_loaded('imagick')) {
             // 使用Imagick生成缩略图
             $this->generateThumbnailWithImagick($media);
+        }
+        // 检查GD扩展是否已加载
+        if (extension_loaded('gd')) {
+            // 使用GD生成缩略图
+            $this->generateThumbnailWithGD($media);
         }
         // TODO：如果两个扩展都没有加载，则提示用户缺少扩展
     }

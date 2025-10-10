@@ -5,13 +5,13 @@
 {% block content %}
     <div class="max-w-full mx-auto px-4">
         <!-- 页面标题区域 -->
-        <div class="text-center mb-8 sm:mb-12 animate-fade-in-down">
+        <div class="text-center mb-8 sm:mb-12 fade-in-on-scroll" data-animation-delay="0">
             <h1 class="text-3xl sm:text-4xl font-bold text-gray-800 mb-3">Rainyun API 工具</h1>
             <p class="text-gray-600 text-base sm:text-lg">管理和更新App商店应用信息</p>
         </div>
         
         <!-- 内容区域 -->
-        <div class="bg-white rounded-2xl shadow-md p-6 sm:p-8 animate-fade-in-up">
+        <div class="bg-white rounded-2xl shadow-md p-6 sm:p-8 fade-in-on-scroll" data-animation-delay="0.1">
             {% include 'rainyun/index.content.html.twig' %}
         </div>
     </div>
