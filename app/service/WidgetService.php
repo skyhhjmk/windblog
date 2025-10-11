@@ -722,7 +722,7 @@ class WidgetService
             $html .= '</div>';
             $html .= '</a>';
         }
-        $html = '</div>';
+        $html .= '</div>';
         return $html;
     }
 

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>媒体选择器</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="/public/app/admin/media/css/media-library.css">
+    <link rel="stylesheet" href="/app/admin/admin/css/media-library.css">
     <style>
         .media-item {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -15,6 +15,40 @@
         }
         .media-item.selected {
             transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.5), 0 8px 10px -6px rgba(59, 130, 246, 0.3);
+            border-color: #3b82f6;
+            position: relative;
+            z-index: 10;
+        }
+        .media-item.selected::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border: 2px solid #3b82f6;
+            border-radius: 0.5rem;
+            animation: pulse 2s infinite;
+            pointer-events: none;
+        }
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.05);
+                opacity: 0.7;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        .upload-area.dragover {
+            background-color: rgb(239 246 255);
+            border-color: rgb(59 130 246);
         }
         .loading-spinner {
             animation: spin 1s linear infinite;
@@ -249,15 +283,6 @@
                         <div class="media-item bg-white rounded-lg border border-gray-200 overflow-hidden cursor-pointer hover:shadow-md ${selectedClass}" data-id="${item.id}">
                             <div class="aspect-square relative">
                                 ${thumbnailHtml}
-                                ${isSelected ? `
-                                    <div class="absolute top-2 right-2">
-                                        <div class="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
-                                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                            </svg>
-                                        </div>
-                                    </div>
-                                ` : ''}
                             </div>
                             <div class="p-3">
                                 <p class="text-sm font-medium text-gray-900 truncate" title="${item.original_name}">${item.original_name}</p>

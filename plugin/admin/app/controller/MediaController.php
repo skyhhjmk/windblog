@@ -4,6 +4,7 @@ namespace plugin\admin\app\controller;
 
 use plugin\admin\app\controller\Base;
 use app\service\MediaLibraryService;
+use app\model\Media;
 use support\Request;
 use support\Response;
 
@@ -305,6 +306,129 @@ class MediaController extends Base
             }
         } catch (\Exception $e) {
             return json(['code' => 1, 'msg' => '操作失败: ' . $e->getMessage()]);
+        }
+    }
+    
+    /**
+     * 预览文本文件内容
+     *
+     * @param Request $request
+     * @param int $id
+     * @return Response
+     */
+    public function previewText(Request $request, int $id): Response
+    {
+        try {
+            if (!$id) {
+                return json(['code' => 1, 'msg' => '参数错误']);
+            }
+
+            // 获取媒体文件信息
+            $media = Media::find($id);
+            if (!$media) {
+                return json(['code' => 1, 'msg' => '文件不存在']);
+            }
+            
+            // 检查是否为文本文件
+            $config = config('media', []);
+            $editableTypes = $config['text_preview']['editable_types'] ?? [];
+            
+            if (!in_array($media->mime_type, $editableTypes)) {
+                return json(['code' => 1, 'msg' => '不支持预览此文件类型']);
+            }
+            
+            // 检查文件大小限制
+            $maxPreviewSize = $config['text_preview']['max_preview_size'] ?? (2 * 1024 * 1024);
+            $filePath = public_path('uploads/' . $media->file_path);
+            
+            if (!file_exists($filePath)) {
+                return json(['code' => 1, 'msg' => '文件不存在']);
+            }
+            
+            $fileSize = filesize($filePath);
+            if ($fileSize > $maxPreviewSize) {
+                return json(['code' => 1, 'msg' => '文件过大，无法预览']);
+            }
+            
+            // 读取文件内容
+            $content = file_get_contents($filePath);
+            
+            // 检测文件编码并转换为UTF-8
+            $encoding = mb_detect_encoding($content, ['UTF-8', 'GBK', 'GB2312', 'BIG5', 'ASCII'], true);
+            if ($encoding !== 'UTF-8') {
+                $content = mb_convert_encoding($content, 'UTF-8', $encoding);
+            }
+            
+            return json([
+                'code' => 0, 
+                'msg' => 'success', 
+                'data' => [
+                    'content' => $content,
+                    'encoding' => $encoding,
+                    'size' => $fileSize,
+                    'mime_type' => $media->mime_type
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return json(['code' => 1, 'msg' => '预览失败: ' . $e->getMessage()]);
+        }
+    }
+    
+    /**
+     * 保存文本文件内容
+     *
+     * @param Request $request
+     * @param int $id
+     * @return Response
+     */
+    public function saveText(Request $request, int $id): Response
+    {
+        try {
+            if (!$id) {
+                return json(['code' => 1, 'msg' => '参数错误']);
+            }
+
+            // 获取媒体文件信息
+            $media = Media::find($id);
+            if (!$media) {
+                return json(['code' => 1, 'msg' => '文件不存在']);
+            }
+            
+            // 检查是否为可编辑的文本文件
+            $config = config('media', []);
+            $editableTypes = $config['text_preview']['editable_types'] ?? [];
+            
+            if (!in_array($media->mime_type, $editableTypes)) {
+                return json(['code' => 1, 'msg' => '不支持编辑此文件类型']);
+            }
+            
+            // 获取编辑内容
+            $content = $request->post('content', '');
+            if (empty($content)) {
+                return json(['code' => 1, 'msg' => '内容不能为空']);
+            }
+            
+            // 保存文件内容
+            $filePath = public_path('uploads/' . $media->file_path);
+            if (!file_exists($filePath)) {
+                return json(['code' => 1, 'msg' => '文件不存在']);
+            }
+            
+            // 备份原文件
+            $backupPath = $filePath . '.backup.' . date('YmdHis');
+            copy($filePath, $backupPath);
+            
+            // 写入新内容
+            file_put_contents($filePath, $content);
+            
+            // 更新文件大小
+            $media->file_size = filesize($filePath);
+            $media->updated_at = date('Y-m-d H:i:s');
+            $media->save();
+            
+            return json(['code' => 0, 'msg' => '保存成功']);
+        } catch (\Exception $e) {
+            return json(['code' => 1, 'msg' => '保存失败: ' . $e->getMessage()]);
         }
     }
 }

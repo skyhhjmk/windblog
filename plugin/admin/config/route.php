@@ -131,6 +131,9 @@ Route::group('/app/admin', function () {
         Route::delete('/batchRemove/{ids}', [MediaController::class, 'batchRemove']);
         Route::get('/selector', [MediaController::class, 'selector']);
         Route::post('/regenerateThumbnail/{id}', [MediaController::class, 'regenerateThumbnail']);
+        // 文本文件预览和编辑接口
+        Route::get('/previewText/{id}', [MediaController::class, 'previewText']);
+        Route::post('/saveText/{id}', [MediaController::class, 'saveText']);
     });
 
     // 工具路由

@@ -5,7 +5,9 @@
     {% if sidebar is defined and sidebar.widgets is defined %}
         {% for widget in sidebar.widgets %}
             {% if widget.enabled and widget.html is defined %}
-                {{ widget.html|raw }}
+                <div class="sidebar-widget" data-widget-key="{{ widget.key ?? widget.id ?? widget.slug ?? widget.name ?? loop.index }}" data-widget-type="{{ widget.type ?? '' }}">
+                    {{ widget.html|raw }}
+                </div>
             {% endif %}
         {% endfor %}
     {% endif %}
@@ -38,7 +40,16 @@
     function injectSidebar() {
         var t = document.getElementById('pjax-sidebar-html');
         var c = document.getElementById('sidebar-container');
-        if (t && c) { c.innerHTML = t.innerHTML || ''; }
+        // 若存在PJAX基础设施则交由全局逻辑处理，避免与差异合并冲突
+        if (t && c) {
+            if (window.PJAX || window.jQuery) {
+                // 仅派发事件，实际注入由 base.html.twig 的 applySidebarDiff 完成
+                try { document.dispatchEvent(new CustomEvent('pjax:sidebarReady')); } catch (_) {}
+            } else {
+                // 无PJAX时降级直接注入
+                c.innerHTML = t.innerHTML || '';
+            }
+        }
     }
     injectSidebar();
     document.addEventListener('page:ready', injectSidebar);

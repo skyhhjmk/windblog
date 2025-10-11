@@ -1,4 +1,5 @@
 <?php
+
 namespace app\model;
 
 use Illuminate\Database\Eloquent\Builder;
@@ -10,18 +11,18 @@ use Throwable;
 /**
  * 媒体模型
  *
- * @property string $filename 文件名
- * @property string $original_name 原始文件名
- * @property string $file_path 文件路径
- * @property integer $file_size 文件大小
- * @property string $mime_type 文件类型
- * @property string $alt_text 替代文本
- * @property string $caption 说明文字
- * @property string $description 描述
- * @property integer $author_id 上传用户ID
- * @property string $author_type 上传用户类型
- * @property string $thumb_path 缩略图路径
- * @property string|null $deleted_at 软删除时间
+ * @property string      $filename      文件名
+ * @property string      $original_name 原始文件名
+ * @property string      $file_path     文件路径
+ * @property int         $file_size     文件大小
+ * @property string      $mime_type     文件类型
+ * @property string      $alt_text      替代文本
+ * @property string      $caption       说明文字
+ * @property string      $description   描述
+ * @property int         $author_id     上传用户ID
+ * @property string      $author_type   上传用户类型
+ * @property string      $thumb_path    缩略图路径
+ * @property string|null $deleted_at    软删除时间
  */
 class Media extends Model
 {
@@ -77,7 +78,7 @@ class Media extends Model
         'author_type',
         'thumb_path'
     ];
-    
+
     // -----------------------------------------------------
     // 查询作用域    
     // -----------------------------------------------------
@@ -86,6 +87,7 @@ class Media extends Model
      * 查询作用域：包含软删除的记录。
      *
      * @param Builder $query
+     *
      * @return Builder
      */
     public function scopeWithTrashed(Builder $query): Builder
@@ -97,6 +99,7 @@ class Media extends Model
      * 查询作用域：只查询软删除的记录。
      *
      * @param Builder $query
+     *
      * @return Builder
      */
     public function scopeOnlyTrashed(Builder $query): Builder
@@ -108,6 +111,7 @@ class Media extends Model
      * 软删除方法，根据配置决定是软删除还是硬删除
      *
      * @param bool $forceDelete 是否强制删除（绕过软删除配置）
+     *
      * @return bool|null
      * @throws Throwable
      */
@@ -117,7 +121,7 @@ class Media extends Model
         $useSoftDelete = blog_config('soft_delete', true);
         \support\Log::debug("Soft delete config value: " . var_export($useSoftDelete, true));
         \support\Log::debug("Force delete flag: " . var_export($forceDelete, true));
-        
+
         if (!$forceDelete && $useSoftDelete) {
             // 软删除：设置 deleted_at 字段
             try {
@@ -171,7 +175,7 @@ class Media extends Model
     {
         return '/uploads/' . $this->file_path;
     }
-    
+
     /**
      * 获取附件缩略图的完整URL
      *
@@ -182,11 +186,11 @@ class Media extends Model
         if ($this->thumb_path) {
             return '/uploads/' . $this->thumb_path;
         }
-        
+
         // 如果没有生成缩略图，则返回原图
         return $this->url;
     }
-    
+
     /**
      * 判断是否为图片类型
      *
@@ -197,10 +201,10 @@ class Media extends Model
         $imageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
         return in_array($this->mime_type, $imageTypes);
     }
-    
+
     /**
      * 获取媒体的作者
-     * 
+     *
      * @return \Illuminate\Database\Eloquent\Relations\HasOne
      */
     public function author()
@@ -208,7 +212,7 @@ class Media extends Model
         if ($this->author_type === 'admin') {
             return $this->hasOne(Admin::class, 'id', 'author_id');
         }
-        
+
         return $this->hasOne(User::class, 'id', 'author_id');
     }
 

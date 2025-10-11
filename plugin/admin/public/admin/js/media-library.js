@@ -148,25 +148,54 @@ class MediaLibrary {
 
     bindPreviewModalEvents() {
         const previewModal = document.getElementById('preview-modal');
+        if (!previewModal) {
+            console.warn('预览模态框元素不存在');
+            return;
+        }
+
+        // 辅助函数：安全添加事件监听器
+        const safeAddEventListener = (elementId, event, handler) => {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.addEventListener(event, handler);
+            } else {
+                console.warn(`元素 ${elementId} 不存在，无法绑定事件`);
+            }
+        };
 
         // 关闭模态框
-        document.getElementById('close-preview-modal').addEventListener('click', () => {
+        safeAddEventListener('close-preview-modal', 'click', () => {
             this.hidePreviewModal();
         });
 
         // 下载按钮
-        document.getElementById('download-btn').addEventListener('click', () => {
+        safeAddEventListener('download-btn', 'click', () => {
             this.downloadFile();
         });
 
         // 复制链接按钮
-        document.getElementById('copy-url-btn').addEventListener('click', () => {
+        safeAddEventListener('copy-url-btn', 'click', () => {
             this.copyFileUrl();
         });
 
         // 重新生成缩略图按钮
-        document.getElementById('regenerate-thumb-btn').addEventListener('click', () => {
+        safeAddEventListener('regenerate-thumb-btn', 'click', () => {
             this.regenerateThumbnail();
+        });
+
+        // 编辑文本按钮
+        safeAddEventListener('edit-text-btn', 'click', () => {
+            this.switchToTextEditMode(this.currentPreviewItem);
+        });
+
+        // 保存文本按钮
+        safeAddEventListener('save-text-btn', 'click', () => {
+            this.saveTextEdit();
+        });
+
+        // 取消文本编辑按钮
+        safeAddEventListener('cancel-edit-btn', 'click', () => {
+            this.cancelTextEdit();
         });
 
         // 模态框外点击关闭
@@ -284,16 +313,16 @@ class MediaLibrary {
                     <div class="aspect-square relative group">
                         ${thumbnailHtml}
                         
-                        <!-- 选择指示器 -->
-                        <div class="absolute top-3 left-3">
-                            <div class="w-6 h-6 rounded-full border-2 border-white bg-white bg-opacity-20 backdrop-blur-sm flex items-center justify-center transition-all ${isSelected ? 'bg-blue-600 border-blue-600' : 'hover:bg-opacity-40'}">
-                                ${isSelected ? `
-                                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                    </svg>
-                                ` : ''}
+                        <!-- 选择指示器 - 更显眼的版本 -->
+                        ${isSelected ? `
+                        <div class="absolute top-2 left-2">
+                            <div class="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center shadow-lg border-3 border-white ring-2 ring-green-300">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                                </svg>
                             </div>
                         </div>
+                        ` : ''}
                         
                         <!-- 操作按钮 -->
                         <div class="absolute bottom-3 right-3 flex space-x-1 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
@@ -734,13 +763,59 @@ class MediaLibrary {
         // 设置文件信息
         this.renderPreviewInfo(item);
         
+        // 显示/隐藏文本编辑按钮
+        this.toggleTextEditButtons(item);
+        
         // 显示模态框
         document.getElementById('preview-modal').classList.remove('hidden');
+    }
+
+    /**
+     * 显示/隐藏文本编辑按钮
+     * @param {Object} item - 媒体项
+     */
+    toggleTextEditButtons(item) {
+        const editTextBtn = document.getElementById('edit-text-btn');
+        const saveTextBtn = document.getElementById('save-text-btn');
+        const cancelTextBtn = document.getElementById('cancel-edit-btn');
+        
+        // 检查元素是否存在
+        if (!editTextBtn || !saveTextBtn || !cancelTextBtn) {
+            console.warn('文本编辑按钮元素不存在');
+            return;
+        }
+        
+        // 检查是否为可编辑的文本文件
+        const isEditableText = this.isEditableTextFile(item);
+        
+        if (isEditableText) {
+            editTextBtn.classList.remove('hidden');
+            saveTextBtn.classList.add('hidden');
+            cancelTextBtn.classList.add('hidden');
+        } else {
+            editTextBtn.classList.add('hidden');
+            saveTextBtn.classList.add('hidden');
+            cancelTextBtn.classList.add('hidden');
+        }
+    }
+
+    /**
+     * 检查是否为可编辑的文本文件
+     * @param {Object} item - 媒体项
+     * @returns {boolean}
+     */
+    isEditableTextFile(item) {
+        const editableTypes = ['text/plain', 'application/json', 'text/css', 'text/javascript', 'text/xml', 'text/html', 'text/markdown'];
+        return editableTypes.some(type => item.mime_type && item.mime_type.includes(type));
     }
 
     renderPreviewContent(item) {
         const previewContent = document.getElementById('preview-content');
         const fileUrl = `/uploads/${item.file_path}`;
+
+        // 隐藏文本编辑器容器，显示普通预览容器
+        document.getElementById('text-editor-container').classList.add('hidden');
+        document.getElementById('normal-preview-container').classList.remove('hidden');
 
         if (item.mime_type && item.mime_type.startsWith('image/')) {
             previewContent.innerHTML = `
@@ -771,6 +846,9 @@ class MediaLibrary {
             previewContent.innerHTML = `
                 <embed src="${fileUrl}" type="application/pdf" class="w-full h-full min-h-[500px] rounded-lg">
             `;
+        } else if (this.isEditableTextFile(item)) {
+            // 文本文件预览
+            this.previewTextFile(item);
         } else {
             previewContent.innerHTML = `
                 <div class="text-center py-16">
@@ -784,6 +862,271 @@ class MediaLibrary {
                 </div>
             `;
         }
+    }
+
+    /**
+     * 预览文本文件
+     * @param {Object} item - 媒体项
+     */
+    async previewTextFile(item) {
+        const previewContent = document.getElementById('preview-content');
+        
+        try {
+            const response = await fetch(`/app/admin/media/previewText/${item.id}`);
+            const result = await response.json();
+            
+            if (result.code === 0) {
+                previewContent.innerHTML = `
+                    <div class="h-full flex flex-col">
+                        <div class="flex-1 overflow-auto">
+                            <pre class="whitespace-pre-wrap break-words font-mono text-sm p-4 bg-gray-50 rounded-lg max-h-full">${this.escapeHtml(result.data.content)}</pre>
+                        </div>
+                        <div class="mt-4 text-xs text-gray-500">
+                            文件大小: ${this.formatFileSize(item.file_size)} | 字符数: ${result.data.content.length}
+                        </div>
+                    </div>
+                `;
+            } else {
+                previewContent.innerHTML = `
+                    <div class="text-center py-16">
+                        <p class="text-gray-500">无法读取文件内容</p>
+                        <p class="text-sm text-gray-400 mt-2">${result.msg || '文件可能过大或格式不支持'}</p>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            previewContent.innerHTML = `
+                <div class="text-center py-16">
+                    <p class="text-gray-500">加载文件内容失败</p>
+                    <p class="text-sm text-gray-400 mt-2">${error.message}</p>
+                </div>
+            `;
+        }
+    }
+
+    /**
+     * HTML转义
+     * @param {string} text - 要转义的文本
+     * @returns {string}
+     */
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    /**
+     * 初始化Monaco Editor
+     * @param {string} content - 编辑器初始内容
+     * @param {string} language - 编辑器语言模式
+     */
+    initMonacoEditor(content = '', language = 'plaintext') {
+        // 检查Monaco Editor是否已加载
+        if (!window.monaco) {
+            console.error('Monaco Editor未加载，请检查CDN资源是否正确引入');
+            this.showToast('代码编辑器加载失败，请刷新页面重试', 'error');
+            return;
+        }
+
+        const editorContainer = document.getElementById('monaco-editor');
+        if (!editorContainer) {
+            console.error('Monaco Editor容器未找到');
+            return;
+        }
+
+        // 清空容器
+        editorContainer.innerHTML = '';
+        
+        // 确保容器有正确的尺寸样式
+        editorContainer.style.width = '100%';
+        editorContainer.style.height = '100%';
+
+        try {
+            // 创建编辑器实例
+            this.monacoEditor = monaco.editor.create(editorContainer, {
+                value: content,
+                language: language,
+                theme: 'vs-light',
+                fontSize: 14,
+                wordWrap: 'on',
+                minimap: { enabled: false },
+                automaticLayout: true,
+                scrollBeyondLastLine: false,
+                renderLineHighlight: 'all',
+                lineNumbers: 'on',
+                folding: true,
+                lineDecorationsWidth: 10,
+                lineNumbersMinChars: 3,
+                scrollbar: {
+                    vertical: 'visible',
+                    horizontal: 'visible',
+                    useShadows: false
+                }
+            });
+
+            // 监听编辑器内容变化
+            this.monacoEditor.onDidChangeModelContent(() => {
+                this.isContentModified = true;
+            });
+            
+            console.log('Monaco Editor初始化成功');
+        } catch (error) {
+            console.error('Monaco Editor初始化失败:', error);
+            this.showToast('代码编辑器初始化失败: ' + error.message, 'error');
+        }
+    }
+
+    /**
+     * 销毁Monaco Editor实例
+     */
+    destroyMonacoEditor() {
+        if (this.monacoEditor) {
+            this.monacoEditor.dispose();
+            this.monacoEditor = null;
+        }
+        this.isContentModified = false;
+        this.currentEditingItem = null;
+    }
+
+    /**
+     * 切换到文本编辑模式
+     * @param {Object} item - 媒体项
+     */
+    async switchToTextEditMode(item) {
+        try {
+            const response = await fetch(`/app/admin/media/previewText/${item.id}`);
+            const result = await response.json();
+            
+            if (result.code === 0) {
+                // 隐藏普通预览容器，显示文本编辑器容器
+                document.getElementById('normal-preview-container').classList.add('hidden');
+                document.getElementById('text-editor-container').classList.remove('hidden');
+                
+                // 设置编辑器语言
+                const language = this.getLanguageByFileType(item.original_name);
+                
+                // 初始化Monaco Editor
+                this.initMonacoEditor(result.data.content, language);
+                
+                // 保存当前编辑项
+                this.currentEditingItem = item;
+                
+                // 显示保存和取消按钮
+                document.getElementById('save-text-btn').classList.remove('hidden');
+                document.getElementById('cancel-edit-btn').classList.remove('hidden');
+                document.getElementById('edit-text-btn').classList.add('hidden');
+                
+            } else {
+                this.showToast(result.msg || '无法读取文件内容', 'error');
+            }
+        } catch (error) {
+            this.showToast('加载文件内容失败: ' + error.message, 'error');
+        }
+    }
+
+    /**
+     * 根据文件名获取语言模式
+     * @param {string} filename - 文件名
+     * @returns {string}
+     */
+    getLanguageByFileType(filename) {
+        const ext = filename.split('.').pop().toLowerCase();
+        const languageMap = {
+            'js': 'javascript',
+            'jsx': 'javascript',
+            'ts': 'typescript',
+            'tsx': 'typescript',
+            'html': 'html',
+            'htm': 'html',
+            'css': 'css',
+            'scss': 'scss',
+            'less': 'less',
+            'json': 'json',
+            'xml': 'xml',
+            'md': 'markdown',
+            'markdown': 'markdown',
+            'php': 'php',
+            'py': 'python',
+            'java': 'java',
+            'c': 'c',
+            'cpp': 'cpp',
+            'cs': 'csharp',
+            'go': 'go',
+            'rs': 'rust',
+            'sql': 'sql',
+            'sh': 'shell',
+            'bat': 'bat',
+            'yaml': 'yaml',
+            'yml': 'yaml',
+            'txt': 'plaintext'
+        };
+        
+        return languageMap[ext] || 'plaintext';
+    }
+
+    /**
+     * 保存文本编辑内容
+     */
+    async saveTextEdit() {
+        if (!this.monacoEditor || !this.currentEditingItem) {
+            this.showToast('没有可保存的内容', 'error');
+            return;
+        }
+
+        const content = this.monacoEditor.getValue();
+        
+        try {
+            this.showLoading(true);
+            
+            const response = await fetch(`/app/admin/media/saveText/${this.currentEditingItem.id}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                },
+                body: JSON.stringify({ content: content })
+            });
+            
+            const result = await response.json();
+            
+            if (result.code === 0) {
+                this.showToast('文件保存成功', 'success');
+                this.isContentModified = false;
+                
+                // 保存当前编辑项引用
+                const savedItem = this.currentEditingItem;
+                
+                // 切换回预览模式
+                this.cancelTextEdit();
+                
+                // 重新加载预览内容
+                this.previewTextFile(savedItem);
+                
+            } else {
+                this.showToast(result.msg || '保存失败', 'error');
+            }
+        } catch (error) {
+            this.showToast('保存失败: ' + error.message, 'error');
+        } finally {
+            this.showLoading(false);
+        }
+    }
+
+    /**
+     * 取消文本编辑
+     */
+    cancelTextEdit() {
+        // 销毁编辑器
+        this.destroyMonacoEditor();
+        
+        // 显示普通预览容器，隐藏文本编辑器容器
+        document.getElementById('text-editor-container').classList.add('hidden');
+        document.getElementById('normal-preview-container').classList.remove('hidden');
+        
+        // 显示编辑按钮，隐藏保存和取消按钮
+        document.getElementById('edit-text-btn').classList.remove('hidden');
+        document.getElementById('save-text-btn').classList.add('hidden');
+        document.getElementById('cancel-edit-btn').classList.add('hidden');
     }
 
     renderPreviewInfo(item) {
