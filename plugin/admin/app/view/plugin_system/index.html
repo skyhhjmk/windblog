@@ -20,6 +20,42 @@
     .layui-table-view .layui-table td .layui-table-cell .op-actions .pear-btn {
         vertical-align: middle;
     }
+    
+    /* 权限弹窗样式 */
+    .perm-section {
+        margin-bottom: 15px;
+        padding: 10px;
+        border: 1px solid #e6e6e6;
+        border-radius: 4px;
+    }
+    .perm-section-title {
+        font-weight: bold;
+        margin-bottom: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .perm-badge {
+        display: inline-block;
+        padding: 2px 6px;
+        margin: 2px;
+        background-color: #f0f0f0;
+        border-radius: 3px;
+        font-size: 12px;
+    }
+    .perm-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+    }
+    .perm-table th, .perm-table td {
+        padding: 6px;
+        border: 1px solid #e6e6e6;
+        text-align: center;
+    }
+    .perm-table th {
+        background-color: #f8f8f8;
+    }
     </style>
 </head>
 <body class="bg-gray-100 pear-container">
@@ -226,95 +262,279 @@ layui.use(['table', 'form', 'jquery', 'layer'], function () {
                 .then(function (res) {
                     if (res.code !== 0) { layer.msg('获取权限信息失败', {icon:2}); return; }
                     var info = res.data || {};
-                    var html = renderPermDialog(data.slug, info);
+                    var html = renderPermMainDialog(data.slug, info);
                     layer.open({
                         type: 1,
                         title: '权限管理',
-                        area: ['600px', '460px'],
+                        area: ['500px', '300px'],
                         content: html
                     });
                 });
         }
     });
 
-    function renderPermDialog(slug, info) {
+    // 主权限弹窗（显示数量和打开子窗口的按钮）
+    function renderPermMainDialog(slug, info) {
         var declared = info.declared || [];
         var granted = info.granted || [];
         var pending = info.pending || [];
-        var stats = info.stats || {};
-        function badge(list) { return list.map(function(p){ return '<span class="px-2 py-1 text-xs rounded bg-gray-100 mr-2">'+p+'</span>'; }).join(''); }
-        function statRows(list) {
-            return list.map(function(p){
-                var s = stats[p] || {calls:0, denied:0};
-                var isGranted = granted.indexOf(p) !== -1;
-                var btn = isGranted
-                    ? '<button class="pear-btn pear-btn-danger pear-btn-xs perm-revoke-one" data-perm="'+p+'">撤销</button>'
-                    : '<button class="pear-btn pear-btn-primary pear-btn-xs perm-grant-one" data-perm="'+p+'">授权</button>';
-                return '<tr><td class="py-1">'+p+'</td><td class="py-1 text-center">'+s.calls+'</td><td class="py-1 text-center">'+s.denied+'</td><td class="py-1 text-center">'+btn+'</td></tr>';
-            }).join('');
-        }
+        
         var html =
-            '<div id="perm-popup-body" class="p-4 space-y-3">'+
-                '<div><div class="font-medium mb-1">声明权限</div>'+badge(declared)+'</div>'+
-                '<div><div class="font-medium mb-1">已授权</div>'+badge(granted)+'</div>'+
-                '<div><div class="font-medium mb-1">待授权</div>'+badge(pending)+'</div>'+
-                '<div class="mt-2"><div class="font-medium mb-1">统计（调用/拒绝）</div>'+
-                    '<table class="w-full text-sm"><thead><tr><th class="text-left">权限</th><th class="text-center">calls</th><th class="text-center">denied</th><th class="text-center">操作</th></tr></thead>'+
-                    '<tbody>'+statRows(declared)+'</tbody></table>'+
-                '</div>'+
-                '<div class="flex gap-2 mt-3">'+
-                    '<button class="pear-btn pear-btn-primary pear-btn-sm" id="perm-grant">批量授权待授权</button>'+
-                    '<button class="pear-btn pear-btn-danger pear-btn-sm" id="perm-revoke">批量撤销全部</button>'+
-                '</div>'+
+            '<div id="perm-main-popup" class="p-4">' +
+                '<div class="perm-section">' +
+                    '<div class="perm-section-title">' +
+                        '<span>声明权限</span>' +
+                        '<span>' + declared.length + ' 项</span>' +
+                    '</div>' +
+                    '<button class="pear-btn pear-btn-primary pear-btn-sm" onclick="openDeclaredPermDialog(\'' + slug + '\')">查看详细</button>' +
+                '</div>' +
+                '<div class="perm-section">' +
+                    '<div class="perm-section-title">' +
+                        '<span>已授权</span>' +
+                        '<span>' + granted.length + ' 项</span>' +
+                    '</div>' +
+                    '<button class="pear-btn pear-btn-primary pear-btn-sm" onclick="openGrantedPermDialog(\'' + slug + '\')">查看详细</button>' +
+                '</div>' +
+                '<div class="perm-section">' +
+                    '<div class="perm-section-title">' +
+                        '<span>待授权</span>' +
+                        '<span>' + pending.length + ' 项</span>' +
+                    '</div>' +
+                    '<button class="pear-btn pear-btn-primary pear-btn-sm" onclick="openPendingPermDialog(\'' + slug + '\')">查看详细</button>' +
+                '</div>' +
             '</div>';
-        setTimeout(function(){
-            var grantBtn = document.getElementById('perm-grant');
-            var revokeBtn = document.getElementById('perm-revoke');
-            if (grantBtn) grantBtn.onclick = function(){
-                post(MODULE_PATH + 'grantPermissions', { slug: slug, permissions: pending })
-                    .then(function(r){
-                        layer.msg(r.code===0?'授权成功':'授权失败',{icon:r.code===0?1:2});
-                        renderTable();
-                        refreshPermPopup(slug);
-                    });
-            };
-            if (revokeBtn) revokeBtn.onclick = function(){
-                post(MODULE_PATH + 'revokePermissions', { slug: slug, permissions: declared })
-                    .then(function(r){
-                        layer.msg(r.code===0?'撤销成功':'撤销失败',{icon:r.code===0?1:2});
-                        renderTable();
-                        refreshPermPopup(slug);
-                    });
-            };
-
-            // 单项授权
-            var grantOnes = document.querySelectorAll('.perm-grant-one');
-            grantOnes.forEach(function(el){
-                el.onclick = function(){
-                    var perm = el.getAttribute('data-perm');
-                    post(MODULE_PATH + 'grantPermission', { slug: slug, permission: perm })
-                        .then(function(r){
-                            layer.msg(r.code===0?('已授权 '+perm):'授权失败',{icon:r.code===0?1:2});
-                            renderTable();
-                            refreshPermPopup(slug);
-                        });
-                };
-            });
-            // 单项撤销
-            var revokeOnes = document.querySelectorAll('.perm-revoke-one');
-            revokeOnes.forEach(function(el){
-                el.onclick = function(){
-                    var perm = el.getAttribute('data-perm');
-                    post(MODULE_PATH + 'revokePermission', { slug: slug, permission: perm })
-                        .then(function(r){
-                            layer.msg(r.code===0?('已撤销 '+perm):'撤销失败',{icon:r.code===0?1:2});
-                            renderTable();
-                            refreshPermPopup(slug);
-                        });
-                };
-            });
-        }, 0);
+            
+        // 将slug存储到全局变量，供子窗口使用
+        window.currentSlug = slug;
+        window.currentPermInfo = info;
+        
         return html;
+    }
+
+    // 声明权限弹窗
+    function renderDeclaredPermDialog(slug, info) {
+        var declared = info.declared || [];
+        var granted = info.granted || [];
+        var stats = info.stats || {};
+        
+        var rows = declared.map(function(p) {
+            var s = stats[p] || {calls:0, denied:0};
+            var isGranted = granted.indexOf(p) !== -1;
+            var status = isGranted ? '已授权' : '未授权';
+            var btn = isGranted
+                ? '<button class="pear-btn pear-btn-danger pear-btn-xs perm-revoke-one" data-perm="'+p+'">撤销</button>'
+                : '<button class="pear-btn pear-btn-primary pear-btn-xs perm-grant-one" data-perm="'+p+'">授权</button>';
+            return '<tr><td>'+p+'</td><td>'+status+'</td><td>'+s.calls+'</td><td>'+s.denied+'</td><td>'+btn+'</td></tr>';
+        }).join('');
+        
+        var html =
+            '<div id="declared-perm-popup" class="p-4">' +
+                '<table class="perm-table">' +
+                    '<thead>' +
+                        '<tr><th>权限</th><th>状态</th><th>调用</th><th>拒绝</th><th>操作</th></tr>' +
+                    '</thead>' +
+                    '<tbody>' + rows + '</tbody>' +
+                '</table>' +
+                '<div class="flex gap-2 mt-3">' +
+                    '<button class="pear-btn pear-btn-primary pear-btn-sm" id="perm-grant-all">全部授权</button>' +
+                    '<button class="pear-btn pear-btn-danger pear-btn-sm" id="perm-revoke-all">全部撤销</button>' +
+                '</div>' +
+            '</div>';
+            
+        setTimeout(function() {
+            bindDeclaredPermEvents(slug, info);
+        }, 0);
+        
+        return html;
+    }
+
+    // 已授权权限弹窗
+    function renderGrantedPermDialog(slug, info) {
+        var granted = info.granted || [];
+        var stats = info.stats || {};
+        
+        var rows = granted.map(function(p) {
+            var s = stats[p] || {calls:0, denied:0};
+            return '<tr><td>'+p+'</td><td>'+s.calls+'</td><td>'+s.denied+'</td><td><button class="pear-btn pear-btn-danger pear-btn-xs perm-revoke-one" data-perm="'+p+'">撤销</button></td></tr>';
+        }).join('');
+        
+        var html =
+            '<div id="granted-perm-popup" class="p-4">' +
+                '<table class="perm-table">' +
+                    '<thead>' +
+                        '<tr><th>权限</th><th>调用</th><th>拒绝</th><th>操作</th></tr>' +
+                    '</thead>' +
+                    '<tbody>' + rows + '</tbody>' +
+                '</table>' +
+                '<div class="flex gap-2 mt-3">' +
+                    '<button class="pear-btn pear-btn-danger pear-btn-sm" id="perm-revoke-all">全部撤销</button>' +
+                '</div>' +
+            '</div>';
+            
+        setTimeout(function() {
+            bindGrantedPermEvents(slug, info);
+        }, 0);
+        
+        return html;
+    }
+
+    // 待授权权限弹窗
+    function renderPendingPermDialog(slug, info) {
+        var pending = info.pending || [];
+        var stats = info.stats || {};
+        
+        var rows = pending.map(function(p) {
+            var s = stats[p] || {calls:0, denied:0};
+            return '<tr><td>'+p+'</td><td>'+s.calls+'</td><td>'+s.denied+'</td><td><button class="pear-btn pear-btn-primary pear-btn-xs perm-grant-one" data-perm="'+p+'">授权</button></td></tr>';
+        }).join('');
+        
+        var html =
+            '<div id="pending-perm-popup" class="p-4">' +
+                '<table class="perm-table">' +
+                    '<thead>' +
+                        '<tr><th>权限</th><th>调用</th><th>拒绝</th><th>操作</th></tr>' +
+                    '</thead>' +
+                    '<tbody>' + rows + '</tbody>' +
+                '</table>' +
+                '<div class="flex gap-2 mt-3">' +
+                    '<button class="pear-btn pear-btn-primary pear-btn-sm" id="perm-grant-all">全部授权</button>' +
+                '</div>' +
+            '</div>';
+            
+        setTimeout(function() {
+            bindPendingPermEvents(slug, info);
+        }, 0);
+        
+        return html;
+    }
+
+    // 绑定声明权限弹窗事件
+    function bindDeclaredPermEvents(slug, info) {
+        // 全部授权
+        document.getElementById('perm-grant-all') && (document.getElementById('perm-grant-all').onclick = function() {
+            var declared = info.declared || [];
+            // 确保权限列表是字符串数组
+            var permissions = declared.map(function(p) { return String(p); });
+            post(MODULE_PATH + 'grantPermissions', { slug: slug, permissions: permissions })
+                .then(function(r) {
+                    layer.msg(r.code===0?'全部授权成功':'授权失败',{icon:r.code===0?1:2});
+                    // 重新加载权限信息
+                    if (r.code === 0) {
+                        refreshAllPermDialogs(slug);
+                    }
+                });
+        });
+        
+        // 全部撤销
+        document.getElementById('perm-revoke-all') && (document.getElementById('perm-revoke-all').onclick = function() {
+            var declared = info.declared || [];
+            // 确保权限列表是字符串数组
+            var permissions = declared.map(function(p) { return String(p); });
+            post(MODULE_PATH + 'revokePermissions', { slug: slug, permissions: permissions })
+                .then(function(r) {
+                    layer.msg(r.code===0?'全部撤销成功':'撤销失败',{icon:r.code===0?1:2});
+                    // 重新加载权限信息
+                    if (r.code === 0) {
+                        refreshAllPermDialogs(slug);
+                    }
+                });
+        });
+        
+        // 单项授权
+        document.querySelectorAll('.perm-grant-one').forEach(function(el) {
+            el.onclick = function() {
+                var perm = el.getAttribute('data-perm');
+                post(MODULE_PATH + 'grantPermission', { slug: slug, permission: perm })
+                    .then(function(r) {
+                        layer.msg(r.code===0?('已授权 '+perm):'授权失败',{icon:r.code===0?1:2});
+                        // 重新加载权限信息
+                        if (r.code === 0) {
+                            refreshAllPermDialogs(slug);
+                        }
+                    });
+            };
+        });
+        
+        // 单项撤销
+        document.querySelectorAll('.perm-revoke-one').forEach(function(el) {
+            el.onclick = function() {
+                var perm = el.getAttribute('data-perm');
+                post(MODULE_PATH + 'revokePermission', { slug: slug, permission: perm })
+                    .then(function(r) {
+                        layer.msg(r.code===0?('已撤销 '+perm):'撤销失败',{icon:r.code===0?1:2});
+                        // 重新加载权限信息
+                        if (r.code === 0) {
+                            refreshAllPermDialogs(slug);
+                        }
+                    });
+            };
+        });
+    }
+
+    // 绑定已授权权限弹窗事件
+    function bindGrantedPermEvents(slug, info) {
+        // 全部撤销
+        document.getElementById('perm-revoke-all') && (document.getElementById('perm-revoke-all').onclick = function() {
+            var granted = info.granted || [];
+            // 确保权限列表是字符串数组
+            var permissions = granted.map(function(p) { return String(p); });
+            post(MODULE_PATH + 'revokePermissions', { slug: slug, permissions: permissions })
+                .then(function(r) {
+                    layer.msg(r.code===0?'全部撤销成功':'撤销失败',{icon:r.code===0?1:2});
+                    // 重新加载权限信息
+                    if (r.code === 0) {
+                        refreshAllPermDialogs(slug);
+                    }
+                });
+        });
+        
+        // 单项撤销
+        document.querySelectorAll('.perm-revoke-one').forEach(function(el) {
+            el.onclick = function() {
+                var perm = el.getAttribute('data-perm');
+                post(MODULE_PATH + 'revokePermission', { slug: slug, permission: perm })
+                    .then(function(r) {
+                        layer.msg(r.code===0?('已撤销 '+perm):'撤销失败',{icon:r.code===0?1:2});
+                        // 重新加载权限信息
+                        if (r.code === 0) {
+                            refreshAllPermDialogs(slug);
+                        }
+                    });
+            };
+        });
+    }
+
+    // 绑定待授权权限弹窗事件
+    function bindPendingPermEvents(slug, info) {
+        // 全部授权
+        document.getElementById('perm-grant-all') && (document.getElementById('perm-grant-all').onclick = function() {
+            var pending = info.pending || [];
+            // 确保权限列表是字符串数组
+            var permissions = pending.map(function(p) { return String(p); });
+            post(MODULE_PATH + 'grantPermissions', { slug: slug, permissions: permissions })
+                .then(function(r) {
+                    layer.msg(r.code===0?'全部授权成功':'授权失败',{icon:r.code===0?1:2});
+                    // 重新加载权限信息
+                    if (r.code === 0) {
+                        refreshAllPermDialogs(slug);
+                    }
+                });
+        });
+        
+        // 单项授权
+        document.querySelectorAll('.perm-grant-one').forEach(function(el) {
+            el.onclick = function() {
+                var perm = el.getAttribute('data-perm');
+                post(MODULE_PATH + 'grantPermission', { slug: slug, permission: perm })
+                    .then(function(r) {
+                        layer.msg(r.code===0?('已授权 '+perm):'授权失败',{icon:r.code===0?1:2});
+                        // 重新加载权限信息
+                        if (r.code === 0) {
+                            refreshAllPermDialogs(slug);
+                        }
+                    });
+            };
+        });
     }
 
     function doneReload(successText, failText) {
@@ -362,37 +582,115 @@ layui.use(['table', 'form', 'jquery', 'layer'], function () {
     }
 
     function post(url, data) {
+        // 处理权限数组参数
+        var formData = new FormData();
+        for (var key in data) {
+            if (data.hasOwnProperty(key)) {
+                if (key === 'permissions' && Array.isArray(data[key])) {
+                    // 对于权限数组，添加多个同名参数
+                    data[key].forEach(function(perm) {
+                        formData.append('permissions[]', perm);
+                    });
+                } else {
+                    formData.append(key, data[key]);
+                }
+            }
+        }
+        
         return fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams(data || {}).toString()
+            body: formData
         }).then(function (r) { return r.json(); });
     }
 
-    // 刷新权限弹窗内容（原地更新，找不到容器时回退为关闭并重开）
-    function refreshPermPopup(slug) {
+    // 刷新所有权限弹窗
+    function refreshAllPermDialogs(slug) {
         fetch(MODULE_PATH + 'permissions?slug=' + encodeURIComponent(slug))
             .then(function (r) { return r.json(); })
             .then(function (res) {
-                if (res.code !== 0) { layer.msg('刷新失败',{icon:2}); return; }
-                var info = res.data || {};
-                var html = renderPermDialog(slug, info);
-                var container = document.getElementById('perm-popup-body');
-                if (container && container.outerHTML !== undefined) {
-                    // 直接替换整块内容，触发 renderPermDialog 内部绑定
-                    container.outerHTML = html;
-                } else {
-                    // 回退：关闭并重开
-                    try { layer.closeAll('page'); } catch (e) {}
-                    layer.open({
-                        type: 1,
-                        title: '权限管理',
-                        area: ['600px', '460px'],
-                        content: html
-                    });
+                if (res.code !== 0) { 
+                    layer.msg('刷新权限信息失败', {icon:2}); 
+                    return; 
                 }
+                window.currentPermInfo = res.data || {};
+                
+                // 更新主弹窗
+                var mainPopup = document.getElementById('perm-main-popup');
+                if (mainPopup) {
+                    var newMainHtml = renderPermMainDialog(slug, window.currentPermInfo);
+                    // 提取内容部分（去除外层div标签）
+                    var content = newMainHtml.replace(/<div id="perm-main-popup"[^>]*>/, '').replace('</div>', '');
+                    mainPopup.innerHTML = content;
+                }
+                
+                // 更新声明权限弹窗
+                var declaredPopup = document.getElementById('declared-perm-popup');
+                if (declaredPopup) {
+                    var newDeclaredHtml = renderDeclaredPermDialog(slug, window.currentPermInfo);
+                    var content = newDeclaredHtml.replace(/<div id="declared-perm-popup"[^>]*>/, '').replace('</div>', '');
+                    declaredPopup.innerHTML = content;
+                    bindDeclaredPermEvents(slug, window.currentPermInfo);
+                }
+                
+                // 更新已授权权限弹窗
+                var grantedPopup = document.getElementById('granted-perm-popup');
+                if (grantedPopup) {
+                    var newGrantedHtml = renderGrantedPermDialog(slug, window.currentPermInfo);
+                    var content = newGrantedHtml.replace(/<div id="granted-perm-popup"[^>]*>/, '').replace('</div>', '');
+                    grantedPopup.innerHTML = content;
+                    bindGrantedPermEvents(slug, window.currentPermInfo);
+                }
+                
+                // 更新待授权权限弹窗
+                var pendingPopup = document.getElementById('pending-perm-popup');
+                if (pendingPopup) {
+                    var newPendingHtml = renderPendingPermDialog(slug, window.currentPermInfo);
+                    var content = newPendingHtml.replace(/<div id="pending-perm-popup"[^>]*>/, '').replace('</div>', '');
+                    pendingPopup.innerHTML = content;
+                    bindPendingPermEvents(slug, window.currentPermInfo);
+                }
+                
+                // 重新渲染表格
+                renderTable();
             });
     }
+
+    // 全局函数，供弹窗按钮调用
+    window.openDeclaredPermDialog = function(slug) {
+        var info = window.currentPermInfo || {};
+        var html = renderDeclaredPermDialog(slug, info);
+        var index = layer.open({
+            type: 1,
+            title: '声明权限',
+            area: ['700px', '500px'],
+            content: html
+        });
+        window.declaredPermDialogIndex = index;
+    };
+
+    window.openGrantedPermDialog = function(slug) {
+        var info = window.currentPermInfo || {};
+        var html = renderGrantedPermDialog(slug, info);
+        var index = layer.open({
+            type: 1,
+            title: '已授权权限',
+            area: ['600px', '400px'],
+            content: html
+        });
+        window.grantedPermDialogIndex = index;
+    };
+
+    window.openPendingPermDialog = function(slug) {
+        var info = window.currentPermInfo || {};
+        var html = renderPendingPermDialog(slug, info);
+        var index = layer.open({
+            type: 1,
+            title: '待授权权限',
+            area: ['600px', '400px'],
+            content: html
+        });
+        window.pendingPermDialogIndex = index;
+    };
 
     // 初始化渲染
     form.render();

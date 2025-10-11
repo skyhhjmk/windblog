@@ -8,7 +8,10 @@
     "php": ">=8.2"
   },
   "permissions": [
-    "request:action"
+    "request:action",
+    "plugin:sample:route:dashboard",
+    "plugin:sample:route:settings",
+    "plugin:sample:route:index"
   ],
   "capabilities": []
 }

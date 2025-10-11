@@ -12,6 +12,22 @@
         <link rel="stylesheet" href="/app/admin/admin/css/admin.css" />
         <!-- 重置样式 -->
         <link rel="stylesheet" href="/app/admin/admin/css/reset.css" />
+        <style>
+            /* 插件菜单样式 */
+            .plugin-menu-dropdown .layui-nav-child {
+                top: 50px;
+                left: 0;
+                min-width: 120px;
+            }
+            .plugin-menu-dropdown .layui-nav-child .layui-nav-child {
+                left: 120px;
+                top: 0;
+            }
+            /* 修正插件菜单显示样式 */
+            .plugin-menu-dropdown {
+                position: relative;
+            }
+        </style>
     </head>
     <!-- 结 构 代 码 -->
     <body class="layui-layout-body pear-admin">
@@ -35,6 +51,13 @@
                 <div id="control" class="layui-layout-control"></div>
                 <!-- 顶 部 右 侧 菜 单 -->
                 <ul class="layui-nav layui-layout-right">
+                    <!-- 插件菜单区域 -->
+                    <li class="layui-nav-item plugin-menu-dropdown">
+                        <a href="javascript:void(0);" class="layui-icon layui-icon-app">插件菜单</a>
+                        <dl class="layui-nav-child" id="plugin-menu-content">
+                            <!-- 插件菜单项将通过 JS 动态加载 -->
+                        </dl>
+                    </li>
                     <li class="layui-nav-item layui-hide-xs"><a href="#" class="menuSearch layui-icon layui-icon-search"></a></li>
                     <li class="layui-nav-item layui-hide-xs"><a href="#" class="fullScreen layui-icon layui-icon-screen-full"></a></li>
                     <li class="layui-nav-item layui-hide-xs message"></li>
@@ -153,6 +176,51 @@
 
                 // 消息点击回调
                 //admin.message(function(id, title, context, form) {});
+                
+                // 加载插件菜单
+                $.ajax({
+                    url: "/app/admin/plugin-system/plugin-menus",
+                    type: "GET",
+                    dataType: "json",
+                    success: function(res) {
+                        if (res.code === 0 && res.data && res.data.length > 0) {
+                            var menuHtml = '';
+                            res.data.forEach(function(menuGroup) {
+                                menuGroup.forEach(function(menuItem) {
+                                    if (menuItem.type === 0) {
+                                        // 分组菜单
+                                        menuHtml += '<dd>';
+                                        menuHtml += '<a href="javascript:;">' + menuItem.title + '</a>';
+                                        if (menuItem.children && menuItem.children.length > 0) {
+                                            menuHtml += '<dl class="layui-nav-child">';
+                                            menuItem.children.forEach(function(subItem) {
+                                                if (subItem.type === 1) {
+                                                    menuHtml += '<dd><a href="' + subItem.href + '" target="_self">' + subItem.title + '</a></dd>';
+                                                }
+                                            });
+                                            menuHtml += '</dl>';
+                                        }
+                                        menuHtml += '</dd>';
+                                    } else if (menuItem.type === 1) {
+                                        // 链接菜单
+                                        menuHtml += '<dd><a href="' + menuItem.href + '" target="_self">' + menuItem.title + '</a></dd>';
+                                    }
+                                });
+                            });
+                            $('#plugin-menu-content').html(menuHtml);
+                            
+                            // 重新渲染导航菜单以应用layui样式
+                            layui.element.render('nav');
+                        } else {
+                            // 如果没有插件菜单，隐藏插件菜单项
+                            $('.plugin-menu-dropdown').hide();
+                        }
+                    },
+                    error: function() {
+                        // 出错时隐藏插件菜单项
+                        $('.plugin-menu-dropdown').hide();
+                    }
+                });
             });
 
         </script>

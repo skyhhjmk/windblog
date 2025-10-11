@@ -241,4 +241,119 @@ class PluginSystemController extends Base
         PluginService::revokePermission($slug, $perm);
         return json(['code' => 0, 'msg' => 'ok']);
     }
+    
+    /**
+     * 获取插件注册的后台菜单
+     */
+    public function pluginMenus(Request $request): Response
+    {
+        // 通过反射获取 PluginService 中的 manager 实例
+        $pluginServiceRef = new \ReflectionClass(\app\service\PluginService::class);
+        $managerProp = $pluginServiceRef->getProperty('manager');
+        $managerProp->setAccessible(true);
+        $manager = $managerProp->getValue(null);
+        
+        if ($manager) {
+            $adminMenus = $manager->getAdminMenus();
+            $formattedMenus = [];
+            
+            foreach ($adminMenus as $pluginSlug => $menus) {
+                // 确保菜单格式正确
+                if (is_array($menus) && !empty($menus)) {
+                    $formattedMenus[] = $menus;
+                }
+            }
+            
+            return json(['code' => 0, 'msg' => 'ok', 'data' => array_values($formattedMenus)]);
+        }
+        
+        return json(['code' => 0, 'msg' => 'ok', 'data' => []]);
+    }
+    
+    /**
+     * 处理插件请求
+     */
+    public function handlePluginRequest(Request $request, string $slug = '', string $action = ''): Response
+    {
+        if (!$slug || !$action) {
+            return new Response(400, [], 'Missing plugin slug or action');
+        }
+        
+        // 检查插件是否启用
+        $enabled = (array)(blog_config('plugins.enabled', [], true) ?: []);
+        if (!in_array($slug, $enabled, true)) {
+            return new Response(404, [], "Plugin {$slug} not found or not enabled");
+        }
+        
+        // 获取插件管理器
+        $pluginServiceRef = new \ReflectionClass(\app\service\PluginService::class);
+        $managerProp = $pluginServiceRef->getProperty('manager');
+        $managerProp->setAccessible(true);
+        $manager = $managerProp->getValue(null);
+        
+        if (!$manager) {
+            return new Response(500, [], 'Plugin manager not available');
+        }
+        
+        // 强制注册插件路由
+        $manager->forceRegisterRoutes($slug);
+        
+        // 构造原始请求路径 - 使用实际的插件路由路径
+        $originalPath = "/app/admin/plugin/{$slug}/{$action}";
+        
+        // 直接调用插件的路由处理器，而不是通过Webman路由调度器
+        $plugins = $manager->allMetadata();
+        if (!isset($plugins[$slug])) {
+            return new Response(404, [], "Plugin {$slug} not found");
+        }
+        
+        // 获取插件实例
+        $pluginEntry = null;
+        $pluginsProperty = new \ReflectionProperty($manager, 'plugins');
+        $pluginsProperty->setAccessible(true);
+        $pluginData = $pluginsProperty->getValue($manager);
+        
+        if (isset($pluginData[$slug])) {
+            $pluginEntry = $pluginData[$slug];
+        }
+        
+        if (!$pluginEntry || !isset($pluginEntry['instance'])) {
+            return new Response(500, [], 'Plugin instance not available');
+        }
+        
+        $pluginInstance = $pluginEntry['instance'];
+        $routes = $pluginInstance->registerRoutes($slug);
+        
+        // 查找匹配的路由
+        foreach ($routes as $route) {
+            if (!isset($route['method']) || !isset($route['route']) || !isset($route['handler'])) {
+                continue;
+            }
+            
+            $method = strtolower($route['method']);
+            $routePath = $route['route'];
+            $handler = $route['handler'];
+            
+            // 检查方法是否匹配
+            if ($method !== strtolower($request->method())) {
+                continue;
+            }
+            
+            // 检查路径是否匹配
+            if ($routePath === $originalPath) {
+                // 执行处理器
+                try {
+                    $response = call_user_func($handler, $request);
+                    if ($response instanceof Response) {
+                        return $response;
+                    }
+                    return new Response(200, [], (string)$response);
+                } catch (\Throwable $e) {
+                    return new Response(500, [], 'Internal Server Error: ' . $e->getMessage());
+                }
+            }
+        }
+        
+        return new Response(404, [], "Plugin route {$originalPath} not found");
+    }
 }
