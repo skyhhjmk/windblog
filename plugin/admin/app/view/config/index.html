@@ -12,6 +12,9 @@
             .layui-input-block input {
                 width: 300px;
             }
+            .layui-form-item .layui-input-inline {
+                width: 300px;
+            }
         </style>
 
         <div class="layui-card">
@@ -19,58 +22,80 @@
 
                 <div class="layui-tab layui-tab-brief">
                 <ul class="layui-tab-title">
-                    <li class="layui-this">基本信息</li>
+                    <li class="layui-this">网站信息</li>
                     <li>菜单配置</li>
                     <li>页面配置</li>
                     <li>扩展设置</li>
                 </ul>
                 <div class="layui-tab-content">
 
-                    <!-- 基本信息 -->
+                    <!-- 网站信息 -->
                     <div class="layui-tab-item layui-show">
 
-                        <form class="layui-form" lay-filter="baseInfo">
+                        <form class="layui-form" lay-filter="siteInfo">
                             <div class="layui-form-item">
                                 <label class="layui-form-label">网站名称</label>
-                                <div class="layui-input-block">
-                                    <input type="text" name="title" required  lay-verify="required" placeholder="请输入网站名称" autocomplete="off" class="layui-input">
+                                <div class="layui-input-inline">
+                                    <input type="text" name="title" required lay-verify="required" placeholder="请输入网站名称" autocomplete="off" class="layui-input">
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">网站地址</label>
+                                <div class="layui-input-inline">
+                                    <input type="text" name="site_url" placeholder="请输入网站地址" autocomplete="off" class="layui-input">
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">网站描述</label>
+                                <div class="layui-input-inline">
+                                    <input type="text" name="description" placeholder="请输入网站描述" autocomplete="off" class="layui-input">
                                 </div>
                             </div>
                             <div class="layui-form-item">
                                 <label class="layui-form-label">网站Logo</label>
-                                <div class="layui-input-block">
-                                    <img class="img-3" src=""/>
-                                    <input type="text" style="display:none" name="image" value="/app/admin/avatar.png" />
-                                    <button type="button" class="pear-btn pear-btn-primary pear-btn-sm" id="image" permission="app.admin.upload.avatar">
+                                <div class="layui-input-inline">
+                                    <input type="text" name="favicon" placeholder="请输入网站Logo地址" autocomplete="off" class="layui-input">
+                                </div>
+                                <div class="layui-input-inline">
+                                    <button type="button" class="pear-btn pear-btn-primary pear-btn-sm" id="favicon-upload" permission="app.admin.upload.avatar">
                                         <i class="layui-icon layui-icon-upload"></i>上传图片
                                     </button>
-                                    <button type="button" class="pear-btn pear-btn-primary pear-btn-sm" id="attachment-choose-image" permission="app.admin.upload.attachment">
+                                    <button type="button" class="pear-btn pear-btn-primary pear-btn-sm" id="favicon-choose" permission="app.admin.upload.attachment">
                                         <i class="layui-icon layui-icon-align-left"></i>选择图片
                                     </button>
                                 </div>
                             </div>
                             <div class="layui-form-item">
+                                <label class="layui-form-label">Logo预览</label>
+                                <div class="layui-input-inline">
+                                    <div id="favicon-preview" style="width: 100px; height: 100px; border: 1px dashed #ccc; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                                        <span id="favicon-preview-text">暂无图片</span>
+                                        <img id="favicon-preview-img" src="" style="max-width: 100%; max-height: 100%; display: none;">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
                                 <label class="layui-form-label">ICP备案号</label>
-                                <div class="layui-input-block">
-                                    <input type="text" name="icp"  placeholder="请输入ICP备案号" autocomplete="off" class="layui-input">
+                                <div class="layui-input-inline">
+                                    <input type="text" name="icp" placeholder="请输入ICP备案号" autocomplete="off" class="layui-input">
                                 </div>
                             </div>
                             <div class="layui-form-item">
                                 <label class="layui-form-label">公安网备</label>
-                                <div class="layui-input-block">
+                                <div class="layui-input-inline">
                                     <input type="text" name="beian" placeholder="请输入公安网备号" autocomplete="off" class="layui-input">
                                 </div>
                             </div>
                             <div class="layui-form-item">
-                                <label class="layui-form-label">其它</label>
-                                <div class="layui-input-block">
+                                <label class="layui-form-label">页脚信息</label>
+                                <div class="layui-input-inline">
                                     <input type="text" name="footer_txt" placeholder="其它展示在页面底部的内容" autocomplete="off" class="layui-input">
                                 </div>
                             </div>
 
                             <div class="layui-form-item">
                                 <div class="layui-input-block">
-                                    <button type="submit" class="pear-btn pear-btn-primary pear-btn-md" lay-submit="" lay-filter="saveBaseInfo">
+                                    <button type="submit" class="pear-btn pear-btn-primary pear-btn-md" lay-submit="" lay-filter="saveSiteInfo">
                                         提交
                                     </button>
                                 </div>
@@ -200,6 +225,56 @@
                                     </div>
                                 </div>
                             </div>
+                            
+                            <!-- 主题设置 -->
+                            <fieldset class="layui-elem-field">
+                                <legend>主题设置</legend>
+                                <div class="layui-field-box">
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">默认颜色</label>
+                                        <div class="layui-input-inline">
+                                            <select name="theme.defaultColor" class="layui-select">
+                                                <option value="1">绿色</option>
+                                                <option value="2">蓝色</option>
+                                                <option value="3">橙色</option>
+                                                <option value="4">红色</option>
+                                                <option value="5">深蓝</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">菜单主题</label>
+                                        <div class="layui-input-inline">
+                                            <select name="theme.defaultMenu" class="layui-select">
+                                                <option value="light-theme">亮色主题</option>
+                                                <option value="dark-theme">暗色主题</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">顶部主题</label>
+                                        <div class="layui-input-inline">
+                                            <select name="theme.defaultHeader" class="layui-select">
+                                                <option value="light-theme">亮色主题</option>
+                                                <option value="dark-theme">暗色主题</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">允许自定义</label>
+                                        <div class="layui-input-inline">
+                                            <input type="checkbox" name="theme.allowCustom" lay-skin="switch" />
+                                        </div>
+                                    </div>
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">横幅模式</label>
+                                        <div class="layui-input-inline">
+                                            <input type="checkbox" name="theme.banner" lay-skin="switch" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </fieldset>
+
                             <div class="layui-form-item">
                                 <div class="layui-input-block">
                                     <button type="submit" class="pear-btn pear-btn-primary pear-btn-md" lay-submit="" lay-filter="saveExtInfo">
@@ -225,13 +300,33 @@
             // 全局变量，用于存储当前正在操作的输入框
             let currentMediaInput;
             
+            // 全局函数：更新favicon预览
+            function updateFaviconPreview(url) {
+                // 确保在layui加载后再执行DOM操作
+                layui.use('jquery', function(){
+                    let $ = layui.$;
+                    let previewText = $("#favicon-preview-text");
+                    let previewImg = $("#favicon-preview-img");
+                    
+                    if (url && url.trim() !== "") {
+                        previewText.hide();
+                        previewImg.attr("src", url).show();
+                    } else {
+                        previewText.show();
+                        previewImg.hide();
+                    }
+                });
+            }
+            
             // 为新的媒体选择器添加全局回调函数，定义在全局作用域
             window.selectMedia = function(data) {
                 // 新的媒体选择器返回的数据结构是完整的媒体项目对象
                 // 从中提取url属性
                 let url = data.file_path ? "/uploads/" + data.file_path : data.url;
                 if (currentMediaInput) {
-                    currentMediaInput.val(url).prev().attr("src", url);
+                    currentMediaInput.val(url);
+                    // 更新预览
+                    updateFaviconPreview(url);
                 }
                 // 关闭弹窗
                 parent.layer.closeAll();
@@ -241,51 +336,53 @@
                 parent.layer.closeAll();
             };
 
-            // 基础设置
-            layui.use(["upload", "layer", "popup"], function() {
+            // 网站信息设置
+            layui.use(["upload", "layer", "popup", "form", "jquery"], function() {
                 let $ = layui.$;
                 let form = layui.form;
 
-                // image
-                let input = $("#image").prev();
-                input.prev().attr("src", input.val());
-                layui.$("#attachment-choose-image").on("click", function() {
-                    // 存储当前正在操作的输入框
-                    currentMediaInput = input;
-                    
+                // favicon上传和选择
+                layui.$("#favicon-upload").on("click", function() {
+                    currentMediaInput = $("[name='favicon']");
                     parent.layer.open({
-                            type: 2,
-                            title: "选择媒体",
-                            content: "/app/admin/media/selector?multiple=false&targetType=iframe",
-                            area: ["95%", "90%"],
-                            success: function(layero, index) {
-                                // 旧的回调方式仍然保留以兼容
-                                parent.layui.$("#layui-layer" + index).data("callback", function(data) {
-                                    let url = data.file_path ? "/uploads/" + data.file_path : data.url;
-                                    input.val(url).prev().attr("src", url);
-                                });
-                            }
+                        type: 2,
+                        title: "上传图片",
+                        content: "/app/admin/media/upload?targetType=iframe",
+                        area: ["95%", "90%"]
                     });
                 });
-                layui.upload.render({
-                    elem: "#image",
-                    url: "/app/admin/media/upload",
-                    acceptMime: "image/gif,image/jpeg,image/jpg,image/png",
-                    done: function (res) {
-                        if (res.code) {
-                            return layui.popup.failure(res.msg);
+                
+                layui.$("#favicon-choose").on("click", function() {
+                    currentMediaInput = $("[name='favicon']");
+                    parent.layer.open({
+                        type: 2,
+                        title: "选择媒体",
+                        content: "/app/admin/media/selector?multiple=false&targetType=iframe",
+                        area: ["95%", "90%"],
+                        success: function(layero, index) {
+                            // 旧的回调方式仍然保留以兼容
+                            parent.layui.$("#layui-layer" + index).data("callback", function(data) {
+                                let url = data.file_path ? "/uploads/" + data.file_path : data.url;
+                                currentMediaInput.val(url);
+                                // 更新预览
+                                updateFaviconPreview(url);
+                            });
                         }
-                        this.item.prev().val(res.data.url).prev().attr("src", res.data.url);
-                    }
+                    });
                 });
 
-                // 提交
-                form.on("submit(saveBaseInfo)", function(data){
+                // 监听favicon输入框变化，更新预览
+                $("[name='favicon']").on("input propertychange", function() {
+                    updateFaviconPreview($(this).val());
+                });
+
+                // 提交网站信息
+                form.on("submit(saveSiteInfo)", function(data){
                     $.ajax({
-                        url: "/app/admin/config/update",
+                        url: "/app/admin/config/set_site_info",
                         dataType: "json",
                         type: "POST",
-                        data: {logo: data.field},
+                        data: data.field,
                         success: function (res) {
                             if (res.code) {
                                 return layui.popup.failure(res.msg);
@@ -314,7 +411,7 @@
                             }
                             return layui.popup.success("操作成功");
                         }
-                    });
+                        });
                     return false;
                 });
             });
@@ -404,12 +501,30 @@
                 });
             });
 
-            layui.use(["form"], function () {
+            layui.use(["form", "jquery"], function () {
                 let form = layui.form;
                 let $ = layui.$;
                 
                 // 获取配置数据
                 function loadConfig() {
+                    // 获取网站信息
+                    $.ajax({
+                        url: "/app/admin/config/get_site_info",
+                        dataType: "json",
+                        success: function (res) {
+                            // 填充网站信息表单
+                            form.val("siteInfo", res);
+                            
+                            // 更新favicon预览
+                            updateFaviconPreview(res.favicon);
+                        },
+                        error: function (xhr, status, error) {
+                            console.error("获取网站信息失败:", error);
+                            layui.popup.failure("获取网站信息失败: " + error);
+                        }
+                    });
+                    
+                    // 获取系统配置
                     $.ajax({
                         url: "/app/admin/config/get",
                         dataType: "json",
@@ -417,10 +532,6 @@
                             if (res.code) {
                                 return layui.popup.failure(res.msg);
                             }
-                            
-                            // 填充基本信息表单
-                            form.val("baseInfo", res.logo);
-                            $("#image").prev().val(res.logo.image).prev().attr("src", res.logo.image);
                             
                             // 填充菜单设置表单
                             form.val("menuInfo", res.menu);

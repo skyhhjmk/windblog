@@ -109,6 +109,22 @@
                 admin.setConfigPath("/app/admin/config/get");
 
                 admin.render();
+                
+                // 获取网站信息并设置标题和Logo
+                $.ajax({
+                    url: "/app/admin/index/get_site_info",
+                    type: "GET",
+                    dataType: "json",
+                    success: function(res) {
+                        $(".layui-logo .title").text(res.title);
+                        $(".layui-logo .logo").attr("src", res.logo);
+                    },
+                    error: function() {
+                        // 使用默认值
+                        $(".layui-logo .title").text("风屿岛管理页");
+                        $(".layui-logo .logo").attr("src", "/app/admin/admin/images/logo.png");
+                    }
+                });
 
                 // 登出逻辑
                 admin.logout(function(){

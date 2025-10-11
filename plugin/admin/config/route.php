@@ -110,6 +110,11 @@ Route::group('/app/admin', function () {
         Route::delete('/batchForceDelete/{ids}', [PostsController::class, 'batchForceDelete']);
     });
 
+    // Index 路由
+    Route::group('/index', function () {
+        Route::get('/get_site_info', [plugin\admin\app\controller\IndexController::class, 'getSiteInfo']);
+    });
+
     // Editor 路由
     Route::group('/editor', function () {
         Route::get('/vditor', [EditorController::class, 'vditor']);
@@ -251,6 +256,11 @@ Route::group('/app/admin', function () {
         Route::get('/providers', [MailController::class, 'providersGet']);
         Route::post('/providers-save', [MailController::class, 'providersSave']);
         Route::post('/provider-test', [MailController::class, 'providerTest']);
+    });
+    
+    // 配置路由
+    Route::group('/config', function () {
+        Route::get('/get_site_info', [plugin\admin\app\controller\ConfigController::class, 'get_site_info']);
     });
 });
 

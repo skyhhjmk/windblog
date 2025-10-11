@@ -8,6 +8,8 @@ use support\exception\BusinessException;
 use support\Request;
 use support\Response;
 use Throwable;
+use Intervention\Image\ImageManager;
+use Imagick;
 
 /**
  * 系统设置
@@ -19,7 +21,7 @@ class ConfigController extends Base
      *
      * @var string[]
      */
-    protected $noNeedAuth = ['get', 'get_url_mode'];
+    protected $noNeedAuth = ['get', 'get_url_mode', 'get_site_info'];
 
     /**
      * 账户设置
@@ -256,6 +258,118 @@ EOF;;
             return $this->json(0);
         } catch (Throwable $e) {
             return $this->json(1, $e->getMessage());
+        }
+    }
+
+    /**
+     * 获取网站基本信息配置
+     *
+     * @return Response
+     */
+    public function get_site_info(): Response
+    {
+        try {
+            $siteInfo = [
+                'title' => blog_config('title', 'WindBlog', true),
+                'site_url' => blog_config('site_url', '', true),
+                'description' => blog_config('description', '', true),
+                'favicon' => blog_config('favicon', '', true),
+                'icp' => blog_config('icp', '', true),
+                'beian' => blog_config('beian', '', true),
+                'footer_txt' => blog_config('footer_txt', '', true),
+            ];
+            return json($siteInfo);
+        } catch (Throwable $e) {
+            return $this->json(1, $e->getMessage());
+        }
+    }
+
+    /**
+     * 设置网站基本信息配置
+     *
+     * @param Request $request
+     *
+     * @return Response
+     */
+    public function set_site_info(Request $request): Response
+    {
+        try {
+            // 获取表单数据
+            $siteInfo = $request->post();
+            
+            // 保存网站基本信息到blog_config
+            blog_config('title', $siteInfo['title'] ?? 'WindBlog', true, true, true);
+            blog_config('site_url', $siteInfo['site_url'] ?? '', true, true, true);
+            blog_config('description', $siteInfo['description'] ?? '', true, true, true);
+            blog_config('favicon', $siteInfo['favicon'] ?? '', true, true, true);
+            blog_config('icp', $siteInfo['icp'] ?? '', true, true, true);
+            blog_config('beian', $siteInfo['beian'] ?? '', true, true, true);
+            blog_config('footer_txt', $siteInfo['footer_txt'] ?? '', true, true, true);
+            
+            // 如果favicon有更新，则生成新的favicon.ico文件
+            if (isset($siteInfo['favicon']) && !empty($siteInfo['favicon'])) {
+                $this->generateFavicon($siteInfo['favicon']);
+            }
+            
+            return $this->json(0);
+        } catch (Throwable $e) {
+            return $this->json(1, $e->getMessage());
+        }
+    }
+
+    /**
+     * 生成favicon.ico文件
+     *
+     * @param string $faviconUrl favicon图片URL
+     * @return void
+     */
+    private function generateFavicon(string $faviconUrl): void
+    {
+        try {
+            // 获取public目录路径
+            $publicPath = base_path() . DIRECTORY_SEPARATOR . 'public';
+            $faviconPath = $publicPath . DIRECTORY_SEPARATOR . 'favicon.ico';
+            
+            // 如果已存在favicon.ico文件，则重命名为带时间戳的备份文件
+            if (file_exists($faviconPath)) {
+                $backupPath = $publicPath . DIRECTORY_SEPARATOR . 'favicon_' . time() . '.ico.bak';
+                rename($faviconPath, $backupPath);
+            }
+            
+            // 获取图片内容
+            $imageUrl = $faviconUrl;
+            if (strpos($imageUrl, '/uploads/') === 0) {
+                // 如果是相对路径，转换为绝对路径
+                $imageUrl = base_path() . DIRECTORY_SEPARATOR . 'public' . $imageUrl;
+            }
+            
+            if (!file_exists($imageUrl)) {
+                // 如果文件不存在，尝试作为URL处理
+                $imageContent = @file_get_contents($faviconUrl);
+                if ($imageContent === false) {
+                    return; // 无法获取图片内容
+                }
+                
+                // 将内容保存到临时文件
+                $tempPath = tempnam(sys_get_temp_dir(), 'favicon');
+                file_put_contents($tempPath, $imageContent);
+                $imageUrl = $tempPath;
+                $isTemp = true;
+            } else {
+                $isTemp = false;
+            }
+            
+            // 使用媒体库服务生成 favicon
+            $mediaService = new \app\service\MediaLibraryService();
+            $result = $mediaService->generateFavicon($imageUrl, $faviconPath);
+            
+            // 如果使用了临时文件，删除它
+            if (isset($isTemp) && $isTemp) {
+                unlink($imageUrl);
+            }
+        } catch (Throwable $e) {
+            // 静默处理错误，不中断主流程
+            // 可以记录日志以便调试
         }
     }
 

@@ -57,6 +57,52 @@
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
+        
+        /* 新增动画类 */
+        .fade-enter {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        
+        .fade-enter-active {
+            opacity: 1;
+            transform: translateY(0);
+            transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+        }
+        
+        .scale-in {
+            animation: scaleIn 0.3s ease-out forwards;
+        }
+        
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        .pulse-once {
+            animation: pulseOnce 0.5s ease-out;
+        }
+        
+        @keyframes pulseOnce {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.05);
+                opacity: 0.7;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-50 h-screen flex flex-col">
@@ -90,7 +136,7 @@
             </div>
             <div class="w-40">
                 <label class="block text-sm font-medium text-gray-700 mb-1">文件类型</label>
-                <select id="type-filter" class="w-full py-2 px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <select id="type-filter" class="w-full py-2 px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
                     <option value="">全部类型</option>
                     <option value="image">图片</option>
                     <option value="video">视频</option>
@@ -128,11 +174,72 @@
                 已选择 <span id="selected-count" class="font-medium text-gray-900">0</span> 个文件
             </div>
             <div class="flex space-x-3">
+                <button id="upload-btn" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all">
+                    上传文件
+                </button>
                 <button id="cancel-btn" class="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all">
                     取消
                 </button>
                 <button id="confirm-btn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all opacity-50 cursor-not-allowed" disabled>
                     确定选择
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 上传模态框 -->
+    <div id="upload-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-semibold text-gray-900">上传文件</h3>
+                    <button id="close-upload-modal" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="p-6">
+                <form id="upload-form">
+                    <!-- 拖拽上传区域 -->
+                    <div id="upload-area" class="upload-area border-2 border-dashed border-gray-300 rounded-lg p-8 text-center mb-6 cursor-pointer hover:border-blue-400 hover:bg-blue-50">
+                        <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                        </svg>
+                        <p class="text-lg font-medium text-gray-900 mb-2">拖拽文件到这里或点击选择</p>
+                        <p class="text-sm text-gray-500">支持 JPG、PNG、GIF、WebP、MP4、PDF 等格式，最大 10MB</p>
+                        <input type="file" id="file-input" class="hidden" multiple accept="image/*,video/*,audio/*,.pdf,.txt">
+                    </div>
+
+                    <!-- 文件列表 -->
+                    <div id="file-list" class="space-y-3 mb-6 hidden">
+                        <!-- 选中的文件将在这里显示 -->
+                    </div>
+
+                    <!-- 文件信息 -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">替代文本</label>
+                            <input type="text" id="alt-text" placeholder="图片的替代文本" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">说明文字</label>
+                            <input type="text" id="caption" placeholder="文件说明" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">描述</label>
+                        <textarea id="description" rows="3" placeholder="详细描述" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3 rounded-b-xl">
+                <button id="cancel-upload" class="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
+                    取消
+                </button>
+                <button id="confirm-upload" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                    开始上传
                 </button>
             </div>
         </div>
@@ -188,6 +295,11 @@
                     this.loadMediaList();
                 });
 
+                // 上传按钮
+                document.getElementById('upload-btn').addEventListener('click', () => {
+                    this.showUploadModal();
+                });
+
                 // 确定按钮
                 document.getElementById('confirm-btn').addEventListener('click', () => {
                     this.confirmSelection();
@@ -196,6 +308,64 @@
                 // 取消按钮
                 document.getElementById('cancel-btn').addEventListener('click', () => {
                     this.cancelSelection();
+                });
+
+                // 上传模态框事件
+                this.bindUploadModalEvents();
+            }
+
+            bindUploadModalEvents() {
+                const uploadModal = document.getElementById('upload-modal');
+                const uploadArea = document.getElementById('upload-area');
+                const fileInput = document.getElementById('file-input');
+                const fileList = document.getElementById('file-list');
+
+                // 关闭模态框
+                document.getElementById('close-upload-modal').addEventListener('click', () => {
+                    this.hideUploadModal();
+                });
+
+                document.getElementById('cancel-upload').addEventListener('click', () => {
+                    this.hideUploadModal();
+                });
+
+                // 点击上传区域选择文件
+                uploadArea.addEventListener('click', () => {
+                    fileInput.click();
+                });
+
+                // 文件选择
+                fileInput.addEventListener('change', (e) => {
+                    this.handleFileSelect(e.target.files);
+                });
+
+                // 拖拽上传
+                uploadArea.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.add('dragover');
+                });
+
+                uploadArea.addEventListener('dragleave', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.remove('dragover');
+                });
+
+                uploadArea.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.remove('dragover');
+                    this.handleFileSelect(e.dataTransfer.files);
+                });
+
+                // 确认上传
+                document.getElementById('confirm-upload').addEventListener('click', () => {
+                    this.uploadFiles();
+                });
+
+                // 模态框外点击关闭
+                uploadModal.addEventListener('click', (e) => {
+                    if (e.target === uploadModal) {
+                        this.hideUploadModal();
+                    }
                 });
             }
 
@@ -241,18 +411,26 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                             </svg>
                             <p>暂无媒体文件</p>
+                            <button class="mt-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all" onclick="mediaSelector.showUploadModal()">
+                                上传文件
+                            </button>
                         </div>
                     `;
                     return;
                 }
 
-                const html = this.mediaList.map(item => {
-                    const isSelected = this.selectedItems.some(selected => selected.id === item.id);
+                // 保存当前选中的项目ID列表
+                const selectedIds = this.selectedItems.map(item => item.id);
+
+                const html = this.mediaList.map((item, index) => {
+                    // 检查该项目是否之前被选中
+                    const isSelected = selectedIds.includes(item.id);
                     const selectedClass = isSelected ? 'selected ring-2 ring-blue-500 bg-blue-50' : '';
                     
                     let thumbnailHtml = '';
                     if (item.mime_type && item.mime_type.startsWith('image/')) {
-                        thumbnailHtml = `<img src="/uploads/${item.file_path}" alt="${item.original_name}" class="w-full h-full object-cover">`;
+                        const imageSrc = item.thumb_path ? `/uploads/${item.thumb_path}` : `/uploads/${item.file_path}`;
+                        thumbnailHtml = `<img src="${imageSrc}" alt="${item.original_name}" class="w-full h-full object-cover">`;
                     } else if (item.mime_type && item.mime_type.startsWith('video/')) {
                         thumbnailHtml = `
                             <div class="w-full h-full flex items-center justify-center bg-gray-100">
@@ -280,7 +458,8 @@
                     }
 
                     return `
-                        <div class="media-item bg-white rounded-lg border border-gray-200 overflow-hidden cursor-pointer hover:shadow-md ${selectedClass}" data-id="${item.id}">
+                        <div class="media-item bg-white rounded-lg border border-gray-200 overflow-hidden cursor-pointer hover:shadow-md ${selectedClass} fade-enter" 
+                             data-id="${item.id}">
                             <div class="aspect-square relative">
                                 ${thumbnailHtml}
                             </div>
@@ -293,6 +472,16 @@
                 }).join('');
 
                 grid.innerHTML = html;
+
+                // 触发进入动画，但仅对新添加的元素
+                requestAnimationFrame(() => {
+                    grid.querySelectorAll('.media-item.fade-enter').forEach((item, index) => {
+                        setTimeout(() => {
+                            item.classList.add('fade-enter-active');
+                            item.classList.remove('fade-enter');
+                        }, index * 50); // 逐个添加延迟，营造渐进效果
+                    });
+                });
 
                 // 绑定点击事件
                 grid.querySelectorAll('.media-item').forEach(item => {
@@ -307,22 +496,56 @@
                 const item = this.mediaList.find(media => media.id === id);
                 if (!item) return;
 
+                const grid = document.getElementById('media-grid');
+                const itemElement = grid.querySelector(`[data-id="${id}"]`);
+                
                 if (this.multiple) {
                     const index = this.selectedItems.findIndex(selected => selected.id === id);
                     if (index > -1) {
+                        // 取消选中
                         this.selectedItems.splice(index, 1);
+                        if (itemElement) {
+                            itemElement.classList.remove('selected', 'ring-2', 'ring-blue-500', 'bg-blue-50');
+                        }
                     } else {
+                        // 选中
                         this.selectedItems.push(item);
+                        if (itemElement) {
+                            itemElement.classList.add('selected', 'ring-2', 'ring-blue-500', 'bg-blue-50');
+                            // 添加选中动画
+                            itemElement.classList.add('pulse-once');
+                            setTimeout(() => {
+                                itemElement.classList.remove('pulse-once');
+                            }, 500);
+                        }
                     }
                 } else {
-                    if (this.selectedItems.length > 0 && this.selectedItems[0].id === id) {
+                    // 单选模式
+                    const previouslySelectedItem = this.selectedItems.length > 0 ? this.selectedItems[0] : null;
+                    const previouslySelectedItemElement = previouslySelectedItem ? 
+                        grid.querySelector(`[data-id="${previouslySelectedItem.id}"]`) : null;
+                    
+                    if (previouslySelectedItemElement) {
+                        previouslySelectedItemElement.classList.remove('selected', 'ring-2', 'ring-blue-500', 'bg-blue-50');
+                    }
+                    
+                    if (previouslySelectedItem && previouslySelectedItem.id === id) {
+                        // 取消选中当前选中的项
                         this.selectedItems = [];
                     } else {
+                        // 选中新项
                         this.selectedItems = [item];
+                        if (itemElement) {
+                            itemElement.classList.add('selected', 'ring-2', 'ring-blue-500', 'bg-blue-50');
+                            // 添加选中动画
+                            itemElement.classList.add('pulse-once');
+                            setTimeout(() => {
+                                itemElement.classList.remove('pulse-once');
+                            }, 500);
+                        }
                     }
                 }
 
-                this.renderMediaGrid();
                 this.updateSelectionInfo();
             }
 
@@ -397,6 +620,164 @@
                 this.loadMediaList();
             }
 
+            showUploadModal() {
+                document.getElementById('upload-modal').classList.remove('hidden');
+                this.resetUploadForm();
+            }
+
+            hideUploadModal() {
+                document.getElementById('upload-modal').classList.add('hidden');
+                this.resetUploadForm();
+            }
+
+            resetUploadForm() {
+                document.getElementById('upload-form').reset();
+                document.getElementById('file-list').classList.add('hidden');
+                document.getElementById('file-list').innerHTML = '';
+                document.getElementById('file-input').value = '';
+            }
+
+            handleFileSelect(files) {
+                if (!files || files.length === 0) return;
+
+                const fileList = document.getElementById('file-list');
+                fileList.classList.remove('hidden');
+                
+                let html = '';
+                Array.from(files).forEach((file, index) => {
+                    const fileType = this.getFileTypeIcon(file.type);
+                    html += `
+                        <div class="flex items-center p-3 bg-gray-50 rounded-lg" data-index="${index}">
+                            <div class="flex-shrink-0 mr-3">
+                                ${fileType.icon}
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-gray-900 truncate">${file.name}</p>
+                                <p class="text-sm text-gray-500">${this.formatFileSize(file.size)} • ${fileType.type}</p>
+                            </div>
+                            <button type="button" class="flex-shrink-0 ml-3 text-gray-400 hover:text-red-600 transition-colors" onclick="this.parentElement.remove()">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    `;
+                });
+
+                fileList.innerHTML = html;
+
+                // 更新文件输入框
+                const dataTransfer = new DataTransfer();
+                Array.from(files).forEach(file => dataTransfer.items.add(file));
+                document.getElementById('file-input').files = dataTransfer.files;
+            }
+
+            getFileTypeIcon(mimeType) {
+                if (mimeType.startsWith('image/')) {
+                    return {
+                        icon: `<div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                        </div>`,
+                        type: '图片'
+                    };
+                } else if (mimeType.startsWith('video/')) {
+                    return {
+                        icon: `<div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                            <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                            </svg>
+                        </div>`,
+                        type: '视频'
+                    };
+                } else if (mimeType.startsWith('audio/')) {
+                    return {
+                        icon: `<div class="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center">
+                            <svg class="w-6 h-6 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path>
+                            </svg>
+                        </div>`,
+                        type: '音频'
+                    };
+                } else {
+                    return {
+                        icon: `<div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                            <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                        </div>`,
+                        type: '文档'
+                    };
+                }
+            }
+
+            async uploadFiles() {
+                const fileInput = document.getElementById('file-input');
+                const files = fileInput.files;
+                
+                if (!files || files.length === 0) {
+                    this.showError('请选择文件');
+                    return;
+                }
+
+                const altText = document.getElementById('alt-text').value;
+                const caption = document.getElementById('caption').value;
+                const description = document.getElementById('description').value;
+
+                this.showLoading(true);
+
+                try {
+                    const uploadPromises = Array.from(files).map(file => this.uploadSingleFile(file, {
+                        alt_text: altText,
+                        caption: caption,
+                        description: description
+                    }));
+
+                    const results = await Promise.all(uploadPromises);
+                    const successCount = results.filter(result => result.success).length;
+                    const failCount = results.length - successCount;
+
+                    if (successCount > 0) {
+                        this.hideUploadModal();
+                        this.loadMediaList(); // 重新加载媒体列表以显示新上传的文件
+                        
+                        if (failCount > 0) {
+                            this.showError(`成功上传 ${successCount} 个文件，${failCount} 个失败`);
+                        } else {
+                            // 上传成功后显示提示
+                            console.log('文件上传成功');
+                        }
+                    } else {
+                        this.showError('上传失败');
+                    }
+                } catch (error) {
+                    this.showError('上传失败：' + error.message);
+                } finally {
+                    this.showLoading(false);
+                }
+            }
+
+            async uploadSingleFile(file, metadata) {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('alt_text', metadata.alt_text);
+                formData.append('caption', metadata.caption);
+                formData.append('description', metadata.description);
+
+                try {
+                    const response = await fetch('/app/admin/media/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+                    return { success: result.code === 0, result };
+                } catch (error) {
+                    return { success: false, error: error.message };
+                }
+            }
+
             confirmSelection() {
                 if (this.selectedItems.length === 0) {
                     this.showError('请选择文件');
@@ -419,58 +800,58 @@
 
                 try {
                     // 尝试获取最顶层的window对象
-                let topWindow = null;
-                try {
-                    topWindow = window.top; // 尝试获取最顶层窗口
-                } catch (e) {
-                    console.log('MediaSelector: 无法直接访问window.top，使用备用方法');
-                }
+                    let topWindow = null;
+                    try {
+                        topWindow = window.top; // 尝试获取最顶层窗口
+                    } catch (e) {
+                        console.log('MediaSelector: 无法直接访问window.top，使用备用方法');
+                    }
 
-                // 1. 尝试使用window.top（最顶层窗口）
-                if (topWindow && typeof topWindow.selectMedia === 'function') {
-                    console.log('MediaSelector: 调用window.top.selectMedia');
-                    topWindow.selectMedia(result);
-                    selectionSuccess = true;
-                }
-                // 2. 尝试使用window.parent.window（父窗口的顶层对象）
-                else if (window.parent && window.parent.window && typeof window.parent.window.selectMedia === 'function') {
-                    console.log('MediaSelector: 调用window.parent.window.selectMedia');
-                    window.parent.window.selectMedia(result);
-                    selectionSuccess = true;
-                }
-                // 3. 尝试使用window.parent
-                else if (window.parent && window.parent !== window && typeof window.parent.selectMedia === 'function') {
-                    console.log('MediaSelector: 调用window.parent.selectMedia');
-                    window.parent.selectMedia(result);
-                    selectionSuccess = true;
-                }
-                // 4. 检查layer弹窗的回调方式
-                else if (window.parent && window.parent.layui && window.parent.layui.layer) {
-                    console.log('MediaSelector: 尝试通过layer弹窗回调方式');
-                    // 获取当前窗口的layer索引
-                    const getLayerIndex = () => {
-                        const iframeId = window.frameElement ? window.frameElement.id : '';
-                        const match = iframeId.match(/layui-layer-iframe(\d+)/);
-                        return match ? match[1] : null;
-                    };
-                    
-                    const layerIndex = getLayerIndex();
-                    if (layerIndex) {
-                        const layerElem = window.parent.layui.$(`#layui-layer${layerIndex}`);
-                        if (layerElem && layerElem.data('callback')) {
-                            console.log('MediaSelector: 调用layer弹窗存储的callback');
-                            layerElem.data('callback')(result);
-                            selectionSuccess = true;
+                    // 1. 尝试使用window.top（最顶层窗口）
+                    if (topWindow && typeof topWindow.selectMedia === 'function') {
+                        console.log('MediaSelector: 调用window.top.selectMedia');
+                        topWindow.selectMedia(result);
+                        selectionSuccess = true;
+                    }
+                    // 2. 尝试使用window.parent.window（父窗口的顶层对象）
+                    else if (window.parent && window.parent.window && typeof window.parent.window.selectMedia === 'function') {
+                        console.log('MediaSelector: 调用window.parent.window.selectMedia');
+                        window.parent.window.selectMedia(result);
+                        selectionSuccess = true;
+                    }
+                    // 3. 尝试使用window.parent
+                    else if (window.parent && window.parent !== window && typeof window.parent.selectMedia === 'function') {
+                        console.log('MediaSelector: 调用window.parent.selectMedia');
+                        window.parent.selectMedia(result);
+                        selectionSuccess = true;
+                    }
+                    // 4. 检查layer弹窗的回调方式
+                    else if (window.parent && window.parent.layui && window.parent.layui.layer) {
+                        console.log('MediaSelector: 尝试通过layer弹窗回调方式');
+                        // 获取当前窗口的layer索引
+                        const getLayerIndex = () => {
+                            const iframeId = window.frameElement ? window.frameElement.id : '';
+                            const match = iframeId.match(/layui-layer-iframe(\d+)/);
+                            return match ? match[1] : null;
+                        };
+                        
+                        const layerIndex = getLayerIndex();
+                        if (layerIndex) {
+                            const layerElem = window.parent.layui.$(`#layui-layer${layerIndex}`);
+                            if (layerElem && layerElem.data('callback')) {
+                                console.log('MediaSelector: 调用layer弹窗存储的callback');
+                                layerElem.data('callback')(result);
+                                selectionSuccess = true;
+                            }
                         }
                     }
-                }
-                // 5. 窗口模式下，尝试调用opener的selectMedia
-                else if (this.targetType === 'window' && window.opener && typeof window.opener.selectMedia === 'function') {
-                    console.log('MediaSelector: 调用window.opener.selectMedia');
-                    window.opener.selectMedia(result);
-                    selectionSuccess = true;
-                    setTimeout(() => window.close(), 100);
-                }
+                    // 5. 窗口模式下，尝试调用opener的selectMedia
+                    else if (this.targetType === 'window' && window.opener && typeof window.opener.selectMedia === 'function') {
+                        console.log('MediaSelector: 调用window.opener.selectMedia');
+                        window.opener.selectMedia(result);
+                        selectionSuccess = true;
+                        setTimeout(() => window.close(), 100);
+                    }
                     
                     // 6. 如果上述方法都失败，尝试使用postMessage，增加更多信息
                     if (!selectionSuccess) {
@@ -497,12 +878,23 @@
                     if (selectionSuccess && this.targetType !== 'window') {
                         setTimeout(() => {
                             try {
+                                // 尝试多种关闭方式
                                 if (window.parent && window.parent.layui && window.parent.layui.layer) {
                                     console.log('MediaSelector: 尝试关闭layer弹窗');
                                     window.parent.layui.layer.closeAll();
+                                } else if (window.parent && typeof window.parent.closeMediaSelector === 'function') {
+                                    console.log('MediaSelector: 调用window.parent.closeMediaSelector');
+                                    window.parent.closeMediaSelector();
+                                } else if (window.frameElement) {
+                                    console.log('MediaSelector: 尝试移除iframe元素');
+                                    window.frameElement.remove();
                                 }
                             } catch (e) {
                                 console.log('MediaSelector: 尝试关闭layer弹窗失败', e);
+                                // 最后的备选方案
+                                if (window.parent && window.parent !== window) {
+                                    window.parent.postMessage({type: 'mediaSelectorClose'}, '*');
+                                }
                             }
                         }, 100);
                     }
@@ -526,9 +918,19 @@
                 if (this.targetType === 'window') {
                     window.close();
                 } else {
-                    if (window.parent && typeof window.parent.closeMediaSelector === 'function') {
-                        window.parent.closeMediaSelector();
-                    } else {
+                    // 尝试多种关闭方式
+                    try {
+                        if (window.parent && window.parent.layui && window.parent.layui.layer) {
+                            window.parent.layui.layer.closeAll();
+                        } else if (window.parent && typeof window.parent.closeMediaSelector === 'function') {
+                            window.parent.closeMediaSelector();
+                        } else if (window.frameElement) {
+                            window.frameElement.remove();
+                        } else {
+                            this.showError('无法关闭选择器，请重试');
+                        }
+                    } catch (e) {
+                        console.error('关闭选择器时出错:', e);
                         this.showError('无法关闭选择器，请重试');
                     }
                 }
@@ -552,9 +954,29 @@
             }
 
             showError(message) {
-                // 简单的错误提示，可以根据需要扩展
-                console.error(message);
-                alert(message);
+                // 创建错误提示元素
+                const errorToast = document.createElement('div');
+                errorToast.className = 'fixed top-4 right-4 z-50 bg-red-500 text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-2 mb-2';
+                errorToast.innerHTML = `
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                    <span>${message}</span>
+                    <button class="ml-2 hover:bg-white hover:bg-opacity-20 rounded p-1 transition-colors" onclick="this.parentElement.remove()">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                `;
+                
+                document.body.appendChild(errorToast);
+                
+                // 5秒后自动移除
+                setTimeout(() => {
+                    if (errorToast.parentElement) {
+                        errorToast.remove();
+                    }
+                }, 5000);
             }
         }
 

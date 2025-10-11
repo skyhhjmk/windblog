@@ -28,7 +28,7 @@ class IndexController
      *
      * @var string[]
      */
-    protected $noNeedAuth = ['dashboard'];
+    protected $noNeedAuth = ['dashboard', 'getSiteInfo'];
 
     /**
      * 后台主页
@@ -108,6 +108,27 @@ class IndexController
             'os' => PHP_OS,
             'day7_detail' => array_reverse($day7_detail),
         ]);
+    }
+    
+    /**
+     * 获取网站标题和Logo用于后台显示
+     *
+     * @return Response
+     */
+    public function getSiteInfo(): Response
+    {
+        // 从blog_config获取网站信息
+        $siteInfo = [
+            'title' => blog_config('title', 'WindBlog', true),
+            'site_url' => blog_config('site_url', '', true),
+            'description' => blog_config('description', '', true),
+            'favicon' => blog_config('favicon', '', true),
+            'icp' => blog_config('icp', '', true),
+            'beian' => blog_config('beian', '', true),
+            'footer_txt' => blog_config('footer_txt', '', true),
+        ];
+        
+        return json($siteInfo);
     }
 
 }

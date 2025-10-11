@@ -5,6 +5,7 @@ namespace app\service;
 use app\model\Media;
 use support\Request;
 use Webman\Http\UploadFile;
+use Imagick;
 
 class MediaLibraryService
 {
@@ -135,6 +136,30 @@ class MediaLibraryService
     private function convertToWebp(Media $media): array
     {
         try {
+            // 优先使用Imagick扩展
+            if (extension_loaded('imagick')) {
+                return $this->convertToWebpImagick($media);
+            }
+            // 使用GD扩展
+            elseif (extension_loaded('gd') && function_exists('imagewebp')) {
+                return $this->convertToWebpGD($media);
+            } else {
+                return ['code' => 1, 'msg' => '服务器不支持webp转换'];
+            }
+        } catch (\Exception $e) {
+            return ['code' => 1, 'msg' => '转换失败: ' . $e->getMessage()];
+        }
+    }
+    
+    /**
+     * 使用Imagick库将图片转换为webp格式
+     *
+     * @param Media $media
+     * @return array
+     */
+    private function convertToWebpImagick(Media $media): array
+    {
+        try {
             $originalPath = public_path('uploads/' . $media->file_path);
             if (!file_exists($originalPath)) {
                 return ['code' => 1, 'msg' => '原始文件不存在'];
@@ -145,48 +170,85 @@ class MediaLibraryService
             $webpFilename = $filename . '.webp';
             $webpPath = dirname($originalPath) . DIRECTORY_SEPARATOR . $webpFilename;
             
-            // 检查是否支持webp转换
-            if (extension_loaded('imagick')) {
-                // 使用Imagick转换为webp
-                $imagick = new \Imagick($originalPath);
-                $imagick->setImageFormat('webp');
-                $imagick->setImageCompressionQuality(90); // 设置压缩质量
-                $imagick->writeImage($webpPath);
-                $imagick->clear();
-                $imagick->destroy();
-            } elseif (extension_loaded('gd') && function_exists('imagewebp')) {
-                // 使用GD转换为webp
-                $imageInfo = getimagesize($originalPath);
-                $type = $imageInfo[2];
-                
-                // 根据图片类型创建图像资源
-                switch ($type) {
-                    case IMAGETYPE_JPEG:
-                        $image = imagecreatefromjpeg($originalPath);
-                        break;
-                    case IMAGETYPE_PNG:
-                        $image = imagecreatefrompng($originalPath);
-                        // 处理PNG透明背景
-                        imagealphablending($image, true);
-                        imagesavealpha($image, true);
-                        break;
-                    case IMAGETYPE_GIF:
-                        $image = imagecreatefromgif($originalPath);
-                        break;
-                    default:
-                        return ['code' => 1, 'msg' => '不支持的图片类型'];
-                }
-                
-                if (!$image) {
-                    return ['code' => 1, 'msg' => '创建图像资源失败'];
-                }
-                
-                // 保存为webp格式
-                imagewebp($image, $webpPath, 90);
-                imagedestroy($image);
-            } else {
-                return ['code' => 1, 'msg' => '服务器不支持webp转换'];
+            // 使用Imagick转换为webp
+            $imagickClass = 'Imagick';
+            $imagick = new $imagickClass();
+            $imagick->readImage($originalPath);
+            $imagick->setImageFormat('webp');
+            $imagick->setImageCompressionQuality(90); // 设置压缩质量
+            $imagick->writeImage($webpPath);
+            $imagick->destroy();
+            
+            // 检查webp文件是否生成成功
+            if (!file_exists($webpPath)) {
+                return ['code' => 1, 'msg' => 'webp文件生成失败'];
             }
+            
+            // 删除原始文件
+            unlink($originalPath);
+            
+            // 返回webp文件信息
+            return [
+                'code' => 0,
+                'data' => [
+                    'filename' => $webpFilename,
+                    'file_path' => dirname($media->file_path) . '/' . $webpFilename,
+                    'file_size' => filesize($webpPath)
+                ]
+            ];
+        } catch (\Exception $e) {
+            return ['code' => 1, 'msg' => '转换失败: ' . $e->getMessage()];
+        }
+    }
+    
+    /**
+     * 使用GD库将图片转换为webp格式
+     *
+     * @param Media $media
+     * @return array
+     */
+    private function convertToWebpGD(Media $media): array
+    {
+        try {
+            $originalPath = public_path('uploads/' . $media->file_path);
+            if (!file_exists($originalPath)) {
+                return ['code' => 1, 'msg' => '原始文件不存在'];
+            }
+            
+            // 获取文件名和目录
+            $filename = pathinfo($media->file_path, PATHINFO_FILENAME);
+            $webpFilename = $filename . '.webp';
+            $webpPath = dirname($originalPath) . DIRECTORY_SEPARATOR . $webpFilename;
+            
+            // 获取图片信息
+            $imageInfo = getimagesize($originalPath);
+            $type = $imageInfo[2];
+            
+            // 根据图片类型创建图像资源
+            switch ($type) {
+                case IMAGETYPE_JPEG:
+                    $image = imagecreatefromjpeg($originalPath);
+                    break;
+                case IMAGETYPE_PNG:
+                    $image = imagecreatefrompng($originalPath);
+                    // 处理PNG透明背景
+                    imagealphablending($image, true);
+                    imagesavealpha($image, true);
+                    break;
+                case IMAGETYPE_GIF:
+                    $image = imagecreatefromgif($originalPath);
+                    break;
+                default:
+                    return ['code' => 1, 'msg' => '不支持的图片类型'];
+            }
+            
+            if (!$image) {
+                return ['code' => 1, 'msg' => '创建图像资源失败'];
+            }
+            
+            // 保存为webp格式
+            imagewebp($image, $webpPath, 90);
+            imagedestroy($image);
             
             // 检查webp文件是否生成成功
             if (!file_exists($webpPath)) {
@@ -505,12 +567,12 @@ class MediaLibraryService
 
         // 优先使用 imagick
         // 检查Imagick扩展是否已加载
-        elseif (extension_loaded('imagick')) {
+        if (extension_loaded('imagick')) {
             // 使用Imagick生成缩略图
             $this->generateThumbnailWithImagick($media);
         }
         // 检查GD扩展是否已加载
-        if (extension_loaded('gd')) {
+        elseif (extension_loaded('gd')) {
             // 使用GD生成缩略图
             $this->generateThumbnailWithGD($media);
         }
@@ -632,6 +694,11 @@ class MediaLibraryService
     private function generateThumbnailWithImagick(Media $media)
     {
         try {
+            // 检查Imagick扩展是否已加载
+            if (!extension_loaded('imagick')) {
+                return;
+            }
+            
             $originalPath = public_path('uploads/' . $media->file_path);
             if (!file_exists($originalPath)) {
                 return;
@@ -649,7 +716,9 @@ class MediaLibraryService
             $thumbPath = $thumbDir . '/' . $thumbFilename;
             
             // 使用Imagick创建缩略图
-            $imagick = new \Imagick($originalPath);
+            $imagickClass = 'Imagick';
+            $imagick = new $imagickClass();
+            $imagick->readImage($originalPath);
             
             // 设置缩略图尺寸
             $imagick->thumbnailImage(200, 200, true); // true表示保持宽高比
@@ -662,7 +731,6 @@ class MediaLibraryService
             $imagick->writeImage($thumbPath);
             
             // 清理资源
-            $imagick->clear();
             $imagick->destroy();
             
             // 更新数据库记录（仅在字段存在时）
@@ -829,6 +897,249 @@ class MediaLibraryService
             return ['code' => 0, 'msg' => '文件下载成功', 'data' => $media];
         } catch (\Exception $e) {
             return ['code' => 1, 'msg' => '下载失败: ' . $e->getMessage()];
+        }
+    }
+
+    /**
+     * 将图片转换为 favicon.ico 格式
+     *
+     * @param string $sourceImagePath 源图片路径
+     * @param string $outputPath 输出路径
+     * @return bool 是否成功
+     */
+    public function generateFavicon(string $sourceImagePath, string $outputPath): bool
+    {
+        try {
+            // 检查源文件是否存在
+            if (!file_exists($sourceImagePath)) {
+                return false;
+            }
+
+            // 优先使用 Imagick（如果可用）
+            if (extension_loaded('imagick')) {
+                return $this->generateFaviconWithImagick($sourceImagePath, $outputPath);
+            }
+            
+            // 否则使用 GD
+            return $this->generateFaviconWithGD($sourceImagePath, $outputPath);
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+    
+    /**
+     * 使用 Imagick 生成 favicon.ico
+     *
+     * @param string $sourceImagePath 源图片路径
+     * @param string $outputPath 输出路径
+     * @return bool 是否成功
+     */
+    private function generateFaviconWithImagick(string $sourceImagePath, string $outputPath): bool
+    {
+        try {
+            // 创建 Imagick 实例
+            $imagickClass = 'Imagick';
+            $imagick = new $imagickClass();
+            $imagick->readImage($sourceImagePath);
+            
+            // 设置格式为 ICO
+            $imagick->setImageFormat('ico');
+            
+            // 设置多尺寸
+            $faviconSizes = [16, 32, 48];
+            $imagick->setImageCompressionQuality(90);
+            
+            // 写入文件
+            $result = $imagick->writeImages($outputPath, true);
+            $imagick->destroy();
+            
+            return $result;
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+    
+    /**
+     * 使用 GD 生成 favicon.ico
+     *
+     * @param string $sourceImagePath 源图片路径
+     * @param string $outputPath 输出路径
+     * @return bool 是否成功
+     */
+    private function generateFaviconWithGD(string $sourceImagePath, string $outputPath): bool
+    {
+        try {
+            // 获取图片信息
+            $imageInfo = getimagesize($sourceImagePath);
+            if (!$imageInfo) {
+                return false;
+            }
+
+            // 根据 MIME 类型创建图像资源
+            $srcImage = null;
+            switch ($imageInfo[2]) {
+                case IMAGETYPE_JPEG:
+                    $srcImage = imagecreatefromjpeg($sourceImagePath);
+                    break;
+                case IMAGETYPE_PNG:
+                    $srcImage = imagecreatefrompng($sourceImagePath);
+                    break;
+                case IMAGETYPE_GIF:
+                    $srcImage = imagecreatefromgif($sourceImagePath);
+                    break;
+                case IMAGETYPE_WEBP:
+                    if (function_exists('imagecreatefromwebp')) {
+                        $srcImage = imagecreatefromwebp($sourceImagePath);
+                    }
+                    break;
+                default:
+                    return false;
+            }
+
+            if (!$srcImage) {
+                return false;
+            }
+
+            // 创建 favicon 图像（通常为 16x16 和 32x32）
+            $faviconSizes = [16, 32];
+            $faviconImages = [];
+            
+            foreach ($faviconSizes as $size) {
+                $faviconImage = imagecreatetruecolor($size, $size);
+
+                // 处理透明背景
+                if ($imageInfo[2] == IMAGETYPE_PNG || $imageInfo[2] == IMAGETYPE_GIF) {
+                    imagealphablending($faviconImage, false);
+                    imagesavealpha($faviconImage, true);
+                    $transparent = imagecolorallocatealpha($faviconImage, 0, 0, 0, 127);
+                    imagefilledrectangle($faviconImage, 0, 0, $size, $size, $transparent);
+                }
+
+                // 调整图像大小
+                imagecopyresampled(
+                    $faviconImage, 
+                    $srcImage, 
+                    0, 0, 0, 0, 
+                    $size, $size, 
+                    $imageInfo[0], $imageInfo[1]
+                );
+                
+                $faviconImages[] = $faviconImage;
+            }
+
+            // 保存为 ICO 格式
+            $result = $this->saveAsIco($faviconImages, $outputPath);
+
+            // 释放资源
+            imagedestroy($srcImage);
+            foreach ($faviconImages as $faviconImage) {
+                imagedestroy($faviconImage);
+            }
+
+            return $result;
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * 将图像保存为 ICO 格式
+     *
+     * @param array $images 图像资源数组
+     * @param string $filename 保存路径
+     * @return bool 是否成功
+     */
+    private function saveAsIco(array $images, string $filename): bool
+    {
+        try {
+            // 创建 ICO 文件
+            $icoData = '';
+            
+            // ICONDIR 头部 (6 bytes)
+            $icoData .= pack('v', 0);          // 保留字段，必须为0
+            $icoData .= pack('v', 1);          // 图标类型，1表示图标
+            $icoData .= pack('v', count($images)); // 图标数量
+            
+            $imageDataOffset = 6 + count($images) * 16; // ICONDIR + 所有 ICONDIRENTRY 的大小
+            $imageDataParts = [];
+            
+            // 为每个图像创建 ICONDIRENTRY
+            foreach ($images as $index => $image) {
+                $width = imagesx($image);
+                $height = imagesy($image);
+                
+                // BITMAPINFOHEADER (40 bytes)
+                $bmpHeader = pack('V3v2V6', 
+                    40,                     // biSize
+                    $width,                 // biWidth
+                    $height * 2,            // biHeight (ICO要求高度翻倍)
+                    1,                      // biPlanes
+                    32,                     // biBitCount
+                    0,                      // biCompression
+                    0,                      // biSizeImage
+                    0,                      // biXPelsPerMeter
+                    0,                      // biYPelsPerMeter
+                    0,                      // biClrUsed
+                    0                       // biClrImportant
+                );
+                
+                // 图像数据 (BGRA 格式)
+                $imageData = '';
+                for ($y = $height - 1; $y >= 0; $y--) {
+                    for ($x = 0; $x < $width; $x++) {
+                        $rgb = imagecolorat($image, $x, $y);
+                        $alpha = ($rgb >> 24) & 0x7F;
+                        $r = ($rgb >> 16) & 0xFF;
+                        $g = ($rgb >> 8) & 0xFF;
+                        $b = $rgb & 0xFF;
+                        
+                        // ICO 使用 0 表示不透明，255 表示完全透明
+                        $alpha = $alpha == 127 ? 255 : (127 - $alpha) * 2;
+                        
+                        $imageData .= pack('C4', $b, $g, $r, $alpha);
+                    }
+                    
+                    // 行对齐到 4 字节边界
+                    $padding = (4 - (strlen($imageData) % 4)) % 4;
+                    if ($padding > 0) {
+                        $imageData .= str_repeat("\x00", $padding);
+                    }
+                }
+                
+                // XOR 掩码（全为 0）
+                $maskSize = ((($width + 31) >> 5) << 2) * $height;
+                $maskData = str_repeat("\x00", $maskSize);
+                
+                // AND 掩码（全为 0）
+                $andMaskSize = ((($width + 31) >> 5) << 2) * $height;
+                $andMaskData = str_repeat("\x00", $andMaskSize);
+                
+                // 组合图像数据
+                $imageDataPart = $bmpHeader . $imageData . $maskData . $andMaskData;
+                $imageDataParts[] = $imageDataPart;
+                
+                // ICONDIRENTRY 目录项 (16 bytes)
+                $icoData .= pack('C', $width ?: 256);   // 宽度 (0表示256)
+                $icoData .= pack('C', $height ?: 256);  // 高度 (0表示256)
+                $icoData .= pack('C', 0);          // 调色板颜色数
+                $icoData .= pack('C', 0);          // 保留字段
+                $icoData .= pack('v', 1);          // 颜色平面数
+                $icoData .= pack('v', 32);         // 每像素位数
+                $icoData .= pack('V', strlen($imageDataPart)); // 图像大小
+                $icoData .= pack('V', $imageDataOffset); // 图像数据偏移
+                
+                $imageDataOffset += strlen($imageDataPart);
+            }
+            
+            // 添加所有图像数据
+            foreach ($imageDataParts as $imageDataPart) {
+                $icoData .= $imageDataPart;
+            }
+            
+            // 写入文件
+            return file_put_contents($filename, $icoData) !== false;
+        } catch (\Exception $e) {
+            return false;
         }
     }
 }
