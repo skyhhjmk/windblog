@@ -166,7 +166,7 @@ class WpImportController extends Base
                 }
             }
 
-            // 构造并投递导入任务到 MQ（不写数据库）
+            // 构造导入任务选项
             $options = [
                 'convert_to' => $request->post('convert_to', 'markdown'),
                 'create_users' => (bool)$request->post('create_users', 0),
@@ -176,6 +176,19 @@ class WpImportController extends Base
                 'author_action' => $request->post('author_action','map_to_system'),
             ];
 
+            // 创建导入任务记录到数据库
+            $job = new ImportJob();
+            $job->name = $file->getUploadName();
+            $job->type = 'wordpress_xml';
+            $job->file_path = $filePath;
+            $job->author_id = $defaultAuthorId;
+            $job->options = json_encode($options, JSON_UNESCAPED_UNICODE);
+            $job->status = 'pending';
+            $job->progress = 0;
+            $job->message = '任务已创建，等待处理';
+            $job->save();
+
+            // 同时发送消息队列通知，确保实时性
             $payload = [
                 'type' => 'wordpress_xml',
                 'name' => $file->getUploadName(),
@@ -183,6 +196,7 @@ class WpImportController extends Base
                 'author_id' => $defaultAuthorId,
                 'options' => $options,
                 'force' => (bool)$force,
+                'job_id' => $job->id, // 添加任务ID用于关联
             ];
 
             $exchange   = (string)blog_config('rabbitmq_import_exchange', 'import_exchange', true);

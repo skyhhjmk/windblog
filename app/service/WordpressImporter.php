@@ -9,6 +9,7 @@ use app\model\ImportJob;
 use app\model\Post;
 use app\model\Media;
 use app\model\Setting;
+use app\service\MediaLibraryService;
 use DOMNode;
 use DOMXPath;
 use League\HTMLToMarkdown\HtmlConverter;
@@ -49,6 +50,20 @@ class WordpressImporter
     protected mixed $defaultAuthorId;
 
     /**
+     * 媒体库服务实例
+     *
+     * @var MediaLibraryService
+     */
+    protected MediaLibraryService $mediaLibraryService;
+
+    /**
+     * 附件映射关系 [原始URL => 媒体信息]
+     *
+     * @var array
+     */
+    protected array $attachmentMap = [];
+
+    /**
      * 构造函数
      *
      * @param ImportJob $importJob
@@ -58,6 +73,7 @@ class WordpressImporter
         $this->importJob = $importJob;
         $this->options = json_decode($importJob->options ?? '{}', true);
         $this->defaultAuthorId = $importJob->author_id ?: $this->resolveDefaultAuthorId();
+        $this->mediaLibraryService = new MediaLibraryService();
 
         Log::info('初始化WordPress导入器，任务ID: ' . $importJob->id);
     }
@@ -67,124 +83,46 @@ class WordpressImporter
      *
      * @return bool
      */
-    public function execute()
+    public function execute(): bool
     {
-        Log::info("开始执行导入任务: " . $this->importJob->name);
-
         try {
-            // 确保任务状态是processing
-            if ($this->importJob->status !== 'processing') {
-                $this->importJob->update([
-                    'status' => 'processing',
-                    'progress' => 0,
-                    'message' => '开始导入...'
-                ]);
+            Log::info("开始执行WordPress导入任务: " . $this->importJob->name);
+
+            // 修复XML文件命名空间问题
+            $fixedXmlFile = $this->fixXmlNamespaces($this->importJob->file_path);
+            if (!$fixedXmlFile) {
+                throw new \Exception("XML文件修复失败");
             }
 
-            $xmlFile = $this->importJob->file_path;
-
-            Log::info('检查导入文件: ' . $xmlFile);
-
-            if (!file_exists($xmlFile)) {
-                throw new \Exception('导入文件不存在: ' . $xmlFile);
-            }
-
-            // 先尝试修复XML中的命名空间问题
-            Log::info("修复XML命名空间");
-            $fixedXmlFile = $this->fixXmlNamespaces($xmlFile);
-
-            $reader = new XMLReader();
-            Log::info("打开XML文件: " . $fixedXmlFile);
-            if (!$reader->open($fixedXmlFile)) {
-                throw new \Exception('无法打开XML文件: ' . $fixedXmlFile);
-            }
-
-            // 计算总项目数用于进度显示
-            Log::info("计算XML项目总数");
+            // 计算项目总数
             $totalItems = $this->countItems($fixedXmlFile);
-            Log::info("XML项目总数: " . $totalItems);
-
-            // 如果没有项目，直接完成任务
-            if ($totalItems == 0) {
-                $reader->close();
-                if ($fixedXmlFile !== $xmlFile && file_exists($fixedXmlFile)) {
-                    unlink($fixedXmlFile);
-                }
-
-                $this->importJob->update([
-                    'status' => 'completed',
-                    'progress' => 100,
-                    'message' => '导入完成 (无项目需要导入)',
-                    'completed_at' => date('Y-m-d H:i:s')
-                ]);
-
-                Log::info("导入任务完成 (无项目): " . $this->importJob->name);
-                return true;
+            if ($totalItems === 0) {
+                throw new \Exception("XML文件中没有找到任何项目");
             }
 
-            $processedItems = 0;
+            Log::info("开始处理XML项目，总数: " . $totalItems);
 
-            // 解析XML并导入
-            Log::info("开始解析XML并导入");
-            while ($reader->read()) {
-                if ($reader->nodeType == XMLReader::ELEMENT) {
-                    switch ($reader->localName) {
-                        case 'item':
-                            try {
-                                $this->processItem($reader);
-                            } catch (\Exception $e) {
-                                // 重新抛出错误
-                                Log::error('处理项目时出错: ' . $e->getMessage(), ['exception' => $e]);
-                                throw $e;
-                            }
-                            $processedItems++;
+            // 第一阶段：处理所有附件，建立完整的附件映射关系
+            $this->processAllAttachments($fixedXmlFile, $totalItems);
 
-                            // 更新进度
-                            $progress = intval(($processedItems / max(1, $totalItems)) * 100);
-                            $this->importJob->update([
-                                'progress' => $progress,
-                                'message' => "已处理 {$processedItems}/{$totalItems} 个项目"
-                            ]);
+            // 第二阶段：处理所有文章和页面，使用完整的附件映射关系
+            $this->processAllPosts($fixedXmlFile, $totalItems);
 
-                            Log::debug("处理项目进度: {$processedItems}/{$totalItems} ({$progress}%)");
-                            break;
-                    }
-                }
-            }
-
-            $reader->close();
-
-            // 删除临时修复的文件
-            if ($fixedXmlFile !== $xmlFile && file_exists($fixedXmlFile)) {
+            // 清理临时文件
+            if ($fixedXmlFile !== $this->importJob->file_path && file_exists($fixedXmlFile)) {
                 unlink($fixedXmlFile);
                 Log::info("删除临时修复文件: " . $fixedXmlFile);
             }
 
-            $this->importJob->update([
-                'status' => 'completed',
-                'progress' => 100,
-                'message' => '导入完成',
-                'completed_at' => date('Y-m-d H:i:s')
-            ]);
+            // 清空附件映射关系
+            $this->attachmentMap = [];
+            Log::debug("清空附件映射关系");
 
-
-            Log::info("导入任务完成: " . $this->importJob->name);
+            Log::info("WordPress XML导入任务处理完成: " . $this->importJob->name);
             return true;
+
         } catch (\Exception $e) {
-            Log::error('导入执行错误: ' . $e->getMessage(), ['exception' => $e]);
-
-            // 删除临时修复的文件
-            $fixedXmlFile = runtime_path('imports') . '/fixed_' . basename($this->importJob->file_path);
-            if (isset($fixedXmlFile) && $fixedXmlFile !== $this->importJob->file_path && file_exists($fixedXmlFile)) {
-                unlink($fixedXmlFile);
-                Log::info("删除临时修复文件: " . $fixedXmlFile);
-            }
-
-            $this->importJob->update([
-                'status' => 'failed',
-                'message' => '导入失败: ' . $e->getMessage()
-            ]);
-
+            Log::error("导入任务执行错误: " . $e->getMessage(), ['exception' => $e]);
             return false;
         }
     }
@@ -283,6 +221,137 @@ class WordpressImporter
     }
 
     /**
+     * 第一阶段：处理所有附件，建立完整的附件映射关系
+     *
+     * @param string $xmlFile    XML文件路径
+     * @param int    $totalItems 总项目数
+     *
+     * @return void
+     */
+    protected function processAllAttachments(string $xmlFile, int $totalItems): void
+    {
+        Log::info("开始处理所有附件");
+
+        $reader = new XMLReader();
+        if (!$reader->open($xmlFile)) {
+            throw new \Exception("无法打开XML文件: " . $xmlFile);
+        }
+
+        $processedItems = 0;
+        $attachmentCount = 0;
+
+        while ($reader->read()) {
+            if ($reader->nodeType == XMLReader::ELEMENT && $reader->localName == 'item') {
+                $processedItems++;
+
+                try {
+                    $doc = new \DOMDocument();
+                    $libxmlErrors = libxml_use_internal_errors(true);
+                    $node = $doc->importNode($reader->expand(), true);
+                    $doc->appendChild($node);
+
+                    $xpath = new DOMXPath($doc);
+                    $xpath->registerNamespace('wp', 'http://wordpress.org/export/1.2/');
+
+                    // 恢复错误报告设置
+                    libxml_use_internal_errors($libxmlErrors);
+
+                    $postType = $xpath->evaluate('string(wp:post_type)', $node);
+
+                    // 只处理附件类型
+                    if ($postType === 'attachment' && !empty($this->options['import_attachments'])) {
+                        $attachmentInfo = $this->processAttachment($xpath, $node);
+                        if ($attachmentInfo && $attachmentInfo['media_id']) {
+                            // 保存附件映射关系
+                            $this->attachmentMap[$attachmentInfo['url']] = $attachmentInfo;
+                            $attachmentCount++;
+                            Log::debug("保存附件映射: " . $attachmentInfo['url'] . " => 媒体ID: " . $attachmentInfo['media_id']);
+                        }
+                    }
+                } catch (\Exception $e) {
+                    Log::error('处理附件项目时出错: ' . $e->getMessage(), ['exception' => $e]);
+                }
+
+                // 更新进度（第一阶段占50%进度）
+                $progress = intval(($processedItems / max(1, $totalItems)) * 50);
+                $this->importJob->update([
+                    'progress' => $progress,
+                    'message' => "第一阶段：处理附件 ({$processedItems}/{$totalItems})"
+                ]);
+            }
+        }
+
+        $reader->close();
+        Log::info("附件处理完成，共处理附件: " . $attachmentCount . " 个");
+    }
+
+    /**
+     * 第二阶段：处理所有文章和页面，使用完整的附件映射关系
+     *
+     * @param string $xmlFile    XML文件路径
+     * @param int    $totalItems 总项目数
+     *
+     * @return void
+     */
+    protected function processAllPosts(string $xmlFile, int $totalItems): void
+    {
+        Log::info("开始处理所有文章和页面");
+
+        $reader = new XMLReader();
+        if (!$reader->open($xmlFile)) {
+            throw new \Exception("无法打开XML文件: " . $xmlFile);
+        }
+
+        $processedItems = 0;
+        $postCount = 0;
+        $pageCount = 0;
+
+        while ($reader->read()) {
+            if ($reader->nodeType == XMLReader::ELEMENT && $reader->localName == 'item') {
+                $processedItems++;
+
+                try {
+                    $doc = new \DOMDocument();
+                    $libxmlErrors = libxml_use_internal_errors(true);
+                    $node = $doc->importNode($reader->expand(), true);
+                    $doc->appendChild($node);
+
+                    $xpath = new DOMXPath($doc);
+                    $xpath->registerNamespace('wp', 'http://wordpress.org/export/1.2/');
+
+                    // 恢复错误报告设置
+                    libxml_use_internal_errors($libxmlErrors);
+
+                    $postType = $xpath->evaluate('string(wp:post_type)', $node);
+
+                    // 只处理文章和页面类型
+                    if ($postType === 'post' || $postType === 'page') {
+                        $this->processPost($xpath, $node, $postType);
+
+                        if ($postType === 'post') {
+                            $postCount++;
+                        } else {
+                            $pageCount++;
+                        }
+                    }
+                } catch (\Exception $e) {
+                    Log::error('处理文章/页面项目时出错: ' . $e->getMessage(), ['exception' => $e]);
+                }
+
+                // 更新进度（第二阶段占50%进度，从50%开始）
+                $progress = 50 + intval(($processedItems / max(1, $totalItems)) * 50);
+                $this->importJob->update([
+                    'progress' => $progress,
+                    'message' => "第二阶段：处理文章和页面 ({$processedItems}/{$totalItems})"
+                ]);
+            }
+        }
+
+        $reader->close();
+        Log::info("文章和页面处理完成，共处理文章: " . $postCount . " 篇，页面: " . $pageCount . " 个");
+    }
+
+    /**
      * 处理单个项目
      *
      * @param XMLReader $reader
@@ -319,7 +388,12 @@ class WordpressImporter
                 break;
             case 'attachment':
                 if (!empty($this->options['import_attachments'])) {
-                    $this->processAttachment($xpath, $node);
+                    $attachmentInfo = $this->processAttachment($xpath, $node);
+                    if ($attachmentInfo && $attachmentInfo['media_id']) {
+                        // 保存附件映射关系
+                        $this->attachmentMap[$attachmentInfo['url']] = $attachmentInfo;
+                        Log::debug("保存附件映射: " . $attachmentInfo['url'] . " => 媒体ID: " . $attachmentInfo['media_id']);
+                    }
                 }
                 break;
             default:
@@ -353,7 +427,7 @@ class WordpressImporter
         $content = $this->convertToUtf8($content);
         $excerpt = $this->convertToUtf8($excerpt);
 
-        Log::debug("文章信息 - 标题: " . $title . ", 状态: " . $status . ", 类型: " . $postType);
+        Log::debug('文章信息 - 标题: ' . $title . ', 状态: ' . $status . ', 类型: ' . $postType);
 
         switch ($this->options['convert_to']) {
             case 'markdown':
@@ -370,6 +444,14 @@ class WordpressImporter
             case 'html':
                 $content_type = 'html';
                 break;
+        }
+
+        // 替换内容中的附件链接
+        if (!empty($content) && !empty($this->attachmentMap)) {
+            $content = $this->replaceAttachmentLinks($content, $content_type);
+        }
+        if (!empty($excerpt) && !empty($this->attachmentMap)) {
+            $excerpt = $this->replaceAttachmentLinks($excerpt, $content_type);
         }
 
         // 处理作者
@@ -856,9 +938,9 @@ class WordpressImporter
      * @param DOMXPath $xpath
      * @param DOMNode  $node
      *
-     * @return void
+     * @return array|null 返回附件信息，包含url、title和media_id（如果下载成功）
      */
-    protected function processAttachment(DOMXPath $xpath, DOMNode $node): void
+    protected function processAttachment(DOMXPath $xpath, DOMNode $node): ?array
     {
         $title = $xpath->evaluate('string(title)', $node);
         $url = $xpath->evaluate('string(wp:attachment_url)', $node);
@@ -867,13 +949,25 @@ class WordpressImporter
 
         if (empty($url)) {
             Log::debug("附件URL为空，跳过");
-            return;
+            return null;
         }
+
+        $attachmentInfo = [
+            'url' => $url,
+            'title' => $title,
+            'media_id' => null
+        ];
 
         // 如果需要下载附件
         if (!empty($this->options['download_attachments'])) {
-            $this->downloadAttachment($url, $title);
+            $mediaData = $this->downloadAttachment($url, $title);
+            if ($mediaData) {
+                $attachmentInfo['media_id'] = $mediaData['id'] ?? null;
+                $attachmentInfo['media_path'] = $mediaData['file_path'] ?? null;
+            }
         }
+
+        return $attachmentInfo;
     }
 
     /**
@@ -882,63 +976,50 @@ class WordpressImporter
      * @param string $url
      * @param string $title
      *
-     * @return void
+     * @return array|null 返回下载的媒体信息，失败返回null
      */
-    protected function downloadAttachment(string $url, string $title): void
+    protected function downloadAttachment(string $url, string $title): ?array
     {
-        /*try {
-            \support\Log::debug("下载附件: " . $url);
-            
-            // 创建上传目录
-            $uploadDir = public_path('uploads');
-            if (!is_dir($uploadDir)) {
-                mkdir($uploadDir, 0755, true);
+        try {
+            Log::debug("下载附件: " . $url);
+
+            // 使用MediaLibraryService下载远程文件
+            $result = $this->mediaLibraryService->downloadRemoteFile(
+                $url,
+                $title,
+                $this->defaultAuthorId,
+                'admin'
+            );
+
+            if ($result['code'] === 0) {
+                $media = $result['data'];
+                Log::debug("附件下载成功，媒体ID: " . ($media->id ?? '未知'));
+
+                // 将Media对象转换为数组格式返回
+                return [
+                    'id' => $media->id ?? null,
+                    'file_path' => $media->file_path ?? null,
+                    'file_name' => $media->filename ?? null,
+                    'file_size' => $media->file_size ?? null,
+                    'mime_type' => $media->mime_type ?? null,
+                    'title' => $media->original_name ?? $title,
+                    'url' => '/uploads/' . ($media->file_path ?? '')
+                ];
+            } else {
+                Log::warning("附件下载失败: " . $result['msg']);
+                return null;
             }
-            
-            // 生成文件路径
-            $filename = basename($url);
-            // 清理文件名
-            $filename = preg_replace('/[^a-zA-Z0-9._-]/', '-', $filename);
-            $relativePath = date('Y/m') . '/' . $filename;
-            $filePath = $uploadDir . '/' . $relativePath;
-            $fileDir = dirname($filePath);
-            
-            if (!is_dir($fileDir)) {
-                mkdir($fileDir, 0755, true);
-            }
-            
-            // 下载文件
-            $fileContent = @file_get_contents($url);
-            if ($fileContent === false) {
-                \support\Log::warning("无法下载附件: " . $url);
-                return; // 下载失败
-            }
-            
-            file_put_contents($filePath, $fileContent);
-            
-            // 保存到媒体表
-            $media = new Media();
-            $media->filename = $filename;
-            $media->original_name = $title ?: $filename;
-            $media->file_path = $relativePath;
-            $media->file_size = strlen($fileContent);
-            $media->mime_type = mime_content_type($filePath) ?: 'application/octet-stream';
-            $media->author_id = $this->defaultAuthorId; // 可能为null
-            $media->created_at = date('Y-m-d H:i:s');
-            $media->updated_at = date('Y-m-d H:i:s');
-            
-            \support\Log::debug("保存媒体文件记录");
-            $media->save();
-            \support\Log::debug("媒体文件保存完成，ID: " . $media->id);
         } catch (\Exception $e) {
-            \support\Log::error('下载附件时出错: ' . $e->getMessage(), ['exception' => $e]);
-        }*/
+            Log::error('下载附件时出错: ' . $e->getMessage(), ['exception' => $e]);
+            return null;
+        }
     }
 
     /**
      * 将HTML转换为Markdown
      *
      * @param string $html
+     * @param array  $config
      *
      * @return string
      */
@@ -1066,6 +1147,307 @@ class WordpressImporter
 
         // 截取前200个字符作为摘要
         return mb_substr($excerpt, 0, 200, 'UTF-8');
+    }
+
+    /**
+     * 替换内容中的附件链接
+     *
+     * @param string $content     原始内容
+     * @param string $contentType 内容类型（html/markdown）
+     *
+     * @return string 替换后的内容
+     */
+    protected function replaceAttachmentLinks(string $content, string $contentType): string
+    {
+        if (empty($content) || empty($this->attachmentMap)) {
+            return $content;
+        }
+
+        Log::debug('开始替换附件链接，内容类型: ' . $contentType . ', 附件数量: ' . count($this->attachmentMap));
+
+        // 首先，创建基础URL到新URL的映射表
+        $baseUrlToNewUrl = [];
+        foreach ($this->attachmentMap as $originalUrl => $attachmentInfo) {
+            if (!empty($attachmentInfo['media_id']) && !empty($attachmentInfo['media_path'])) {
+                $baseUrl = $originalUrl;
+
+                // 获取基础URL（去除尺寸参数）
+                $extractedBaseUrl = $this->getBaseAttachmentUrl($originalUrl);
+                if ($extractedBaseUrl) {
+                    $baseUrl = $extractedBaseUrl;
+                }
+
+                $baseUrlToNewUrl[$baseUrl] = '/uploads/' . $attachmentInfo['media_path'];
+            }
+        }
+
+        // 先处理所有带尺寸参数的URL变体
+        if ($contentType === 'html') {
+            $content = $this->replaceSizeVariantUrlsInHtml($content, $baseUrlToNewUrl);
+        } else {
+            $content = $this->replaceSizeVariantUrlsInMarkdown($content, $baseUrlToNewUrl);
+        }
+
+        // 然后处理标准URL
+        foreach ($this->attachmentMap as $originalUrl => $attachmentInfo) {
+            if (empty($attachmentInfo['media_id']) || empty($attachmentInfo['media_path'])) {
+                continue;
+            }
+
+            // 生成新的媒体URL
+            $newUrl = '/uploads/' . $attachmentInfo['media_path'];
+
+            // 根据内容类型进行不同的替换策略
+            if ($contentType === 'html') {
+                // HTML内容替换
+                $patterns = [
+                    // 替换img标签的src属性
+                    '/(<img[^>]*src=["\'])' . preg_quote($originalUrl, '/') . '(["\'][^>]*>)/i',
+                    // 替换a标签的href属性
+                    '/(<a[^>]*href=["\'])' . preg_quote($originalUrl, '/') . '(["\'][^>]*>)/i',
+                    // 替换其他可能的属性
+                    '/(src=["\'])' . preg_quote($originalUrl, '/') . '(["\'])/i',
+                    '/(href=["\'])' . preg_quote($originalUrl, '/') . '(["\'])/i'
+                ];
+
+                foreach ($patterns as $pattern) {
+                    $replacement = '${1}' . $newUrl . '${2}';
+                    $content = preg_replace($pattern, $replacement, $content);
+                }
+            } else {
+                // Markdown内容替换
+                $patterns = [
+                    // 替换Markdown图片链接
+                    '/!\[([^\]]*)\]\(' . preg_quote($originalUrl, '/') . '\)/i',
+                    // 替换Markdown普通链接
+                    '/\[([^\]]*)\]\(' . preg_quote($originalUrl, '/') . '\)/i',
+                    // 替换直接URL
+                    '/\b' . preg_quote($originalUrl, '/') . '\b/i'
+                ];
+
+                foreach ($patterns as $pattern) {
+                    if (str_contains($pattern, '!\[')) {
+                        // 图片链接替换
+                        $replacement = '![${1}](' . $newUrl . ')';
+                    } else if (str_contains($pattern, '\[')) {
+                        // 普通链接替换
+                        $replacement = '[${1}](' . $newUrl . ')';
+                    } else {
+                        // 直接URL替换
+                        $replacement = $newUrl;
+                    }
+                    $content = preg_replace($pattern, $replacement, $content);
+                }
+            }
+
+            Log::debug('替换附件链接: ' . $originalUrl . ' => ' . $newUrl);
+        }
+
+        return $content;
+    }
+
+    /**
+     * 在HTML内容中替换带尺寸参数的URL变体
+     *
+     * @param string $content         HTML内容
+     * @param array  $baseUrlToNewUrl 基础URL到新URL的映射
+     *
+     * @return string 替换后的HTML内容
+     */
+    protected function replaceSizeVariantUrlsInHtml(string $content, array $baseUrlToNewUrl): string
+    {
+        // 匹配带尺寸参数的URL模式
+        $sizePattern = '/(-\d+x\d+)(\.\w+)/i';
+
+        // 提取内容中所有可能的URL
+        preg_match_all('/src=["\']([^"\']*)["\']|href=["\']([^"\']*)["\']/', $content, $matches, PREG_SET_ORDER);
+
+        // 处理每个匹配到的URL
+        foreach ($matches as $match) {
+            $url = $match[1] ?? ($match[2] ?? '');
+            if (empty($url)) continue;
+
+            // 检查URL是否带有尺寸参数
+            if (preg_match($sizePattern, $url)) {
+                // 获取基础URL
+                $baseUrl = $this->getBaseAttachmentUrl($url);
+                if ($baseUrl && isset($baseUrlToNewUrl[$baseUrl])) {
+                    $newUrl = $baseUrlToNewUrl[$baseUrl];
+
+                    // 构建替换模式
+                    $pattern = '/(src=["\']|href=["\'])' . preg_quote($url, '/') . '(["\'])/i';
+                    $replacement = '${1}' . $newUrl . '${2}';
+
+                    // 执行替换
+                    $content = preg_replace($pattern, $replacement, $content);
+                    Log::debug('替换带尺寸参数的URL: ' . $url . ' => ' . $newUrl);
+                }
+            }
+        }
+
+        return $content;
+    }
+
+    /**
+     * 在Markdown内容中替换带尺寸参数的URL变体
+     *
+     * @param string $content         Markdown内容
+     * @param array  $baseUrlToNewUrl 基础URL到新URL的映射
+     *
+     * @return string 替换后的Markdown内容
+     */
+    protected function replaceSizeVariantUrlsInMarkdown(string $content, array $baseUrlToNewUrl): string
+    {
+        // 匹配带尺寸参数的URL模式 - 优化匹配逻辑，确保能捕获所有变体
+        $sizePattern = '/-\d+x\d+\.\w+$/i';
+
+        Log::debug('进入replaceSizeVariantUrlsInMarkdown方法，baseUrlToNewUrl映射数: ' . count($baseUrlToNewUrl));
+        // 使用正则表达式检测内容中是否包含任意带尺寸参数的URL
+        preg_match('/-\d+x\d+\.\w+/i', $content, $matches);
+        Log::debug('内容中是否包含带尺寸参数的URL: ' . (!empty($matches) ? '是' : '否'));
+        if (!empty($matches)) {
+            Log::debug('匹配到的第一个带尺寸参数的URL片段: ' . $matches[0]);
+        }
+
+        // 提取内容中所有可能的URL（图片链接、普通链接和直接URL）
+        // 匹配图片链接 ![alt](url)
+        preg_match_all('/!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/i', $content, $imageMatches, PREG_SET_ORDER);
+        // 匹配普通链接 [text](url)
+        preg_match_all('/\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/i', $content, $linkMatches, PREG_SET_ORDER);
+        
+        Log::debug('图片链接数量: ' . count($imageMatches) . ', 普通链接数量: ' . count($linkMatches));
+
+        // 处理图片链接
+        foreach ($imageMatches as $match) {
+            $fullMatch = $match[0];
+            $altText = $match[1];
+            $url = $match[2];
+
+            Log::debug('检查图片URL: ' . $url);
+            // 检查URL是否带有尺寸参数
+            if (preg_match($sizePattern, $url)) {
+                Log::debug('发现带尺寸参数的图片URL: ' . $url);
+                // 获取基础URL
+                $baseUrl = $this->getBaseAttachmentUrl($url);
+                Log::debug('提取的基础URL: ' . ($baseUrl ?: 'null'));
+                if ($baseUrl) {
+                    Log::debug('基础URL是否在映射表中: ' . (isset($baseUrlToNewUrl[$baseUrl]) ? '是' : '否'));
+                    if (isset($baseUrlToNewUrl[$baseUrl])) {
+                        $newUrl = $baseUrlToNewUrl[$baseUrl];
+
+                        // 构建替换后的内容
+                        $replacement = '![' . $altText . '](' . $newUrl . ')';
+
+                        // 执行替换
+                        $content = str_replace($fullMatch, $replacement, $content);
+                        Log::debug('替换带尺寸参数的图片链接: ' . $url . ' => ' . $newUrl);
+                    }
+                }
+            }
+        }
+
+        // 处理普通链接
+        foreach ($linkMatches as $match) {
+            $fullMatch = $match[0];
+            $linkText = $match[1];
+            $url = $match[2];
+
+            Log::debug('检查普通链接URL: ' . $url);
+            // 检查URL是否带有尺寸参数
+            if (preg_match($sizePattern, $url)) {
+                Log::debug('发现带尺寸参数的普通链接URL: ' . $url);
+                // 获取基础URL
+                $baseUrl = $this->getBaseAttachmentUrl($url);
+                Log::debug('提取的基础URL: ' . ($baseUrl ?: 'null'));
+                if ($baseUrl && isset($baseUrlToNewUrl[$baseUrl])) {
+                    $newUrl = $baseUrlToNewUrl[$baseUrl];
+
+                    // 构建替换后的内容
+                    $replacement = '[' . $linkText . '](' . $newUrl . ')';
+
+                    // 执行替换
+                    $content = str_replace($fullMatch, $replacement, $content);
+                    Log::debug('替换带尺寸参数的链接: ' . $url . ' => ' . $newUrl);
+                }
+            }
+        }
+
+        // 处理独立的URL（不包含在Markdown语法中的直接URL）
+        // 使用更简单的正则表达式匹配独立URL
+        $urlPattern = '/https?:\/\/[^\s\)]+\.(?:jpe?g|png|gif|bmp|webp|svg|ico|tiff|tif)(-\d+x\d+)/i';
+        if (preg_match_all($urlPattern, $content, $directUrlMatches)) {
+            Log::debug('发现独立URL数量: ' . count($directUrlMatches[0]));
+            foreach ($directUrlMatches[0] as $matchedUrl) {
+                Log::debug('检查独立URL: ' . $matchedUrl);
+                // 获取基础URL
+                $baseUrl = $this->getBaseAttachmentUrl($matchedUrl);
+                Log::debug('提取的基础URL: ' . ($baseUrl ?: 'null'));
+                if ($baseUrl && isset($baseUrlToNewUrl[$baseUrl])) {
+                    $newUrl = $baseUrlToNewUrl[$baseUrl];
+
+                    // 执行替换
+                    $content = str_replace($matchedUrl, $newUrl, $content);
+                    Log::debug('替换带尺寸参数的直接URL: ' . $matchedUrl . ' => ' . $newUrl);
+                }
+            }
+        }
+
+        return $content;
+    }
+
+
+    /**
+     * 获取附件的基础URL（移除尺寸参数）
+     *
+     * @param string $url 原始URL
+     *
+     * @return string|null 基础URL，如果无法提取则返回null
+     */
+    protected function getBaseAttachmentUrl(string $url): ?string
+    {
+        // 匹配WordPress带尺寸参数的图片URL模式
+        // 支持完整URL和相对路径两种格式
+        // 完整URL：https://www.biliwind.com/wp-content/uploads/2025/05/image-1746177998-1024x526.png
+        // 相对路径：/wp-content/uploads/2025/05/image-1746177998-1024x526.png
+
+        // 简化的模式，专注于匹配URL末尾的-数字x数字.扩展名格式
+        $simplePattern = '/-\d+x\d+(\.\w+)$/';
+
+        // 首先尝试在完整URL上应用简单替换模式（优先返回完整URL）
+        if (preg_match($simplePattern, $url, $simpleMatches)) {
+            $baseUrl = preg_replace($simplePattern, $simpleMatches[1], $url);
+            Log::debug("使用简单替换提取完整URL基础URL: $url => $baseUrl");
+            return $baseUrl;
+        }
+
+        // 如果完整URL匹配失败，检查是否是带域名的URL
+        $parsedUrl = parse_url($url);
+        if (isset($parsedUrl['scheme']) && isset($parsedUrl['host']) && isset($parsedUrl['path'])) {
+            // 提取路径部分
+            $path = $parsedUrl['path'];
+            // 尝试在路径部分应用简单替换模式
+            if (preg_match($simplePattern, $path, $simpleMatches)) {
+                $basePath = preg_replace($simplePattern, $simpleMatches[1], $path);
+                // 构建完整的基础URL
+                $baseUrl = $parsedUrl['scheme'] . '://' . $parsedUrl['host'] . $basePath;
+                Log::debug("使用路径部分替换构建完整基础URL: $url => $baseUrl");
+                return $baseUrl;
+            }
+        }
+
+        // 最后，尝试处理相对路径或其他情况
+        $path = parse_url($url, PHP_URL_PATH);
+        if ($path === null) {
+            $path = $url;
+        }
+        if (preg_match($simplePattern, $path, $simpleMatches)) {
+            $basePath = preg_replace($simplePattern, $simpleMatches[1], $path);
+            Log::debug("使用简单替换提取路径部分基础URL: $path => $basePath");
+            return $basePath;
+        }
+
+        Log::debug("无法提取基础URL: $url");
+        return null;
     }
 
 

@@ -677,4 +677,158 @@ class MediaLibraryService
             // 可以添加日志记录
         }
     }
+
+    /**
+     * 下载远程文件并保存到媒体库
+     *
+     * @param string $url 远程文件URL
+     * @param string $title 文件标题
+     * @param int|null $authorId 作者ID
+     * @param string $authorType 作者类型
+     * @return array
+     */
+    public function downloadRemoteFile(string $url, string $title = '', ?int $authorId = null, string $authorType = 'admin'): array
+    {
+        try {
+            \app\service\PluginService::do_action('media.download_start', [
+                'url' => $url,
+                'title' => $title
+            ]);
+            
+            // 验证URL
+            if (empty($url) || !filter_var($url, FILTER_VALIDATE_URL)) {
+                return ['code' => 400, 'msg' => '无效的URL地址'];
+            }
+            
+            // 获取文件名和扩展名
+            $parsedUrl = parse_url($url);
+            $path = $parsedUrl['path'] ?? '';
+            $originalName = basename($path);
+            
+            if (empty($originalName)) {
+                $originalName = 'downloaded_file';
+            }
+            
+            // 清理文件名
+            $filename = preg_replace('/[^a-zA-Z0-9._-]/', '-', $originalName);
+            $fileExtension = pathinfo($filename, PATHINFO_EXTENSION);
+            
+            // 如果没有扩展名，尝试从Content-Type获取
+            if (empty($fileExtension)) {
+                $headers = get_headers($url, 1);
+                $contentType = $headers['Content-Type'] ?? '';
+                if ($contentType) {
+                    $mimeToExtension = [
+                        'image/jpeg' => 'jpg',
+                        'image/png' => 'png',
+                        'image/gif' => 'gif',
+                        'image/webp' => 'webp',
+                        'application/pdf' => 'pdf',
+                        'application/msword' => 'doc',
+                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'docx',
+                    ];
+                    $fileExtension = $mimeToExtension[$contentType] ?? '';
+                }
+            }
+            
+            // 创建上传目录
+            $uploadDir = public_path('uploads');
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0755, true);
+            }
+            
+            // 按年月创建子目录
+            $subDir = date('Y/m');
+            $fullUploadDir = $uploadDir . '/' . $subDir;
+            if (!is_dir($fullUploadDir)) {
+                mkdir($fullUploadDir, 0755, true);
+            }
+            
+            // 生成唯一文件名
+            $uniqueFilename = time() . '_' . uniqid() . '.' . ($fileExtension ?: 'bin');
+            $filePath = $fullUploadDir . DIRECTORY_SEPARATOR . $uniqueFilename;
+            
+            // 下载文件
+            $context = stream_context_create([
+                'http' => [
+                    'timeout' => 30, // 30秒超时
+                    'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                ],
+                'ssl' => [
+                    'verify_peer' => false,
+                    'verify_peer_name' => false
+                ]
+            ]);
+            
+            $fileContent = @file_get_contents($url, false, $context);
+            if ($fileContent === false) {
+                return ['code' => 400, 'msg' => '文件下载失败'];
+            }
+            
+            // 保存文件
+            if (file_put_contents($filePath, $fileContent) === false) {
+                return ['code' => 500, 'msg' => '文件保存失败'];
+            }
+            
+            // 获取文件信息
+            $fileSize = filesize($filePath);
+            $mimeType = mime_content_type($filePath) ?: 'application/octet-stream';
+            
+            // 检查文件类型是否允许
+            if (!$this->isAllowedFile($mimeType, $fileExtension)) {
+                unlink($filePath); // 删除不允许的文件
+                return ['code' => 400, 'msg' => '不支持的文件类型'];
+            }
+            
+            // 检查文件大小
+            $config = config('media', []);
+            $maxSize = $config['max_file_size'] ?? (10 * 1024 * 1024);
+            if ($fileSize > $maxSize) {
+                unlink($filePath); // 删除过大的文件
+                return ['code' => 400, 'msg' => '文件大小超过限制'];
+            }
+            
+            // 保存到媒体表
+            $media = new Media();
+            $media->filename = $uniqueFilename;
+            $media->original_name = $title ?: $originalName;
+            $media->file_path = $subDir . '/' . $uniqueFilename;
+            $media->file_size = $fileSize;
+            $media->mime_type = $mimeType;
+            $media->author_id = $authorId;
+            $media->author_type = $authorType;
+            $media->alt_text = '';
+            $media->caption = '';
+            $media->description = '';
+            $media->save();
+            
+            // 如果是图片且不是webp格式，转换为webp
+            if ($this->isImageMimeType($media->mime_type) && $media->mime_type !== 'image/webp') {
+                $webpResult = $this->convertToWebp($media);
+                if ($webpResult['code'] === 0) {
+                    // 更新媒体信息
+                    $media->filename = $webpResult['data']['filename'];
+                    $media->file_path = $webpResult['data']['file_path'];
+                    $media->file_size = $webpResult['data']['file_size'];
+                    $media->mime_type = 'image/webp';
+                    $media->save();
+                }
+            }
+            
+            // 为图片生成缩略图
+            if ($this->isImageMimeType($media->mime_type)) {
+                $this->generateThumbnail($media);
+            }
+            
+            \app\service\PluginService::do_action('media.download_done', [
+                'id' => $media->id ?? null,
+                'url' => $url,
+                'path' => $media->file_path ?? null
+            ]);
+            
+            return ['code' => 0, 'msg' => '文件下载成功', 'data' => $media];
+        } catch (\Exception $e) {
+            return ['code' => 1, 'msg' => '下载失败: ' . $e->getMessage()];
+        }
+    }
 }
