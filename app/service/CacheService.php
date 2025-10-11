@@ -16,6 +16,8 @@ class CacheService
 
     /**
      * 获取缓存处理器
+     *
+     * @throws Exception
      */
     public static function getHandler()
     {

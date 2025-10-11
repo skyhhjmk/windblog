@@ -3,6 +3,7 @@
 namespace app\service\plugin;
 
 use app\service\CacheService;
+use Webman\Route;
 
 /**
  * 插件管理器：扫描、加载、启用/停用/卸载，记录状态到 blog_config
@@ -15,9 +16,18 @@ class PluginManager
 {
     private string $pluginRoot;
     private HookManager $hooks;
-
+    
     /** @var array<string, array{meta: PluginMetadata, file: string, instance: ?PluginInterface}> */
     private array $plugins = [];
+    
+    /** @var array<string, array> 后台菜单缓存 */
+    private array $adminMenus = [];
+    
+    /** @var array<string, array> 前台菜单缓存 */
+    private array $appMenus = [];
+    
+    /** @var array<string, bool> 路由注册状态 */
+    private array $routesRegistered = [];
 
     public function __construct(string $pluginRoot, HookManager $hooks)
     {
@@ -93,9 +103,9 @@ class PluginManager
         $prevVersion = (string)(blog_config("plugins.version.$slug", '', true) ?: '');
         $curVersion  = $entry['meta']->version;
         try {
-            if ($prevVersion === '' && \method_exists($entry['instance'], 'onInstall')) {
+            if ($prevVersion === '' && method_exists($entry['instance'], 'onInstall')) {
                 $entry['instance']->onInstall($this->hooks);
-            } elseif ($prevVersion !== '' && $curVersion !== '' && $prevVersion !== $curVersion && \method_exists($entry['instance'], 'onUpgrade')) {
+            } elseif ($prevVersion !== '' && $curVersion !== '' && $prevVersion !== $curVersion && method_exists($entry['instance'], 'onUpgrade')) {
                 $entry['instance']->onUpgrade($prevVersion, $curVersion, $this->hooks);
             }
         } catch (\Throwable $e) {
@@ -125,6 +135,85 @@ class PluginManager
             return false;
         } finally {
             $this->hooks->endRegistering();
+        }
+        
+        // 注册插件菜单和路由
+        try {
+            // 注册后台菜单
+            $adminMenu = $entry['instance']->registerMenu('admin');
+            if (!empty($adminMenu)) {
+                $this->adminMenus[$slug] = $adminMenu;
+            }
+            
+            // 注册前台菜单
+            $appMenu = $entry['instance']->registerMenu('app');
+            if (!empty($appMenu)) {
+                $this->appMenus[$slug] = $appMenu;
+            }
+            
+            // 注册路由（确保只注册一次）
+            if (!isset($this->routesRegistered[$slug]) || !$this->routesRegistered[$slug]) {
+                $routes = $entry['instance']->registerRoutes($slug);
+                if (is_array($routes) && !empty($routes)) {
+                    foreach ($routes as $route) {
+                        if (!isset($route['method']) || !isset($route['route']) || !isset($route['handler'])) {
+                            continue;
+                        }
+                        
+                        $method = strtolower($route['method']);
+                        $routePath = $route['route'];
+                        $handler = $route['handler'];
+                        $permission = $route['permission'] ?? '';
+                        
+                        // 如果定义了权限，则检查权限
+                        if ($permission && !$this->hasPermission($slug, $permission)) {
+                            // 权限未批准，添加到待授权列表
+                            $pending = (array)(blog_config("plugins.permissions.$slug.pending", [], true) ?: []);
+                            if (!in_array($permission, $pending)) {
+                                $pending[] = $permission;
+                                blog_config("plugins.permissions.$slug.pending", $pending, true, true, true);
+                                CacheService::clearCache("blog_config_plugins.permissions.$slug*");
+                            }
+                            // 即使权限未批准，也要注册路由，但指向拒绝访问页面
+                            $originalHandler = $handler;
+                            $deniedHandler = function() use ($slug, $permission, $originalHandler) {
+                                // 尝试执行原始处理器，如果失败则返回拒绝访问页面
+                                try {
+                                    return call_user_func($originalHandler);
+                                } catch (\Throwable $e) {
+                                    return new \support\Response(403, [], 'Access denied to plugin route. Plugin: ' . $slug . ', Permission: ' . $permission);
+                                }
+                            };
+                            $handler = $deniedHandler;
+                        }
+                        
+                        // 注册路由
+                        switch ($method) {
+                            case 'get':
+                                Route::get($routePath, $handler);
+                                break;
+                            case 'post':
+                                Route::post($routePath, $handler);
+                                break;
+                            case 'put':
+                                Route::put($routePath, $handler);
+                                break;
+                            case 'delete':
+                                Route::delete($routePath, $handler);
+                                break;
+                            case 'any':
+                                Route::any($routePath, $handler);
+                                break;
+                            default:
+                                Route::any($routePath, $handler);
+                        }
+                    }
+                }
+                $this->routesRegistered[$slug] = true;
+            }
+        } catch (\Throwable $e) {
+            // 插件菜单或路由注册异常不影响启用
+            // 可以记录日志但不中断流程
         }
 
         $enabled = (array)(blog_config('plugins.enabled', [], true) ?: []);
@@ -406,6 +495,14 @@ class PluginManager
         $enabled = array_values(array_filter($enabled, fn($s) => $s !== $slug));
         blog_config('plugins.enabled', $enabled, true, true, true);
         CacheService::clearCache('blog_config_plugins.enabled*');
+        
+        // 清除插件菜单缓存
+        unset($this->adminMenus[$slug]);
+        unset($this->appMenus[$slug]);
+        
+        // 重置路由注册状态
+        $this->routesRegistered[$slug] = false;
+        
         return true;
     }
 
@@ -496,5 +593,41 @@ class PluginManager
         }
 
         return null;
+    }
+    
+    /**
+     * 获取所有插件注册的后台菜单
+     *
+     * @return array
+     */
+    public function getAdminMenus(): array
+    {
+        return $this->adminMenus;
+    }
+    
+    /**
+     * 获取所有插件注册的前台菜单
+     *
+     * @return array
+     */
+    public function getAppMenus(): array
+    {
+        return $this->appMenus;
+    }
+    
+    /**
+     * 强制重新注册插件路由（用于中间件）
+     */
+    public function forceRegisterRoutes(string $slug): bool
+    {
+        if (!isset($this->plugins[$slug])) {
+            return false;
+        }
+        
+        // 重置路由注册状态
+        $this->routesRegistered[$slug] = false;
+        
+        // 重新启用插件以注册路由
+        return $this->enable($slug);
     }
 }

@@ -11,6 +11,8 @@
 
 use app\service\plugin\PluginInterface;
 use app\service\plugin\HookManager;
+use Webman\Route;
+use support\Response;
 
 return new class implements PluginInterface {
     public function activate(HookManager $hooks): void
@@ -39,7 +41,7 @@ return new class implements PluginInterface {
             }
         }, 10, 1);
 
-        // 响应过滤器：未声明“request:filter”权限，默认拒绝
+        // 响应过滤器：未声明"request:filter"权限，默认拒绝
         \app\service\PluginService::add_filter('response_filter', function ($resp) {
             // 过滤器调用前强制权限检查：未授权则拒绝修改，返回原对象
             if (!\app\service\PluginService::ensurePermission('sample', 'request:filter')) {
@@ -63,5 +65,92 @@ return new class implements PluginInterface {
     public function uninstall(HookManager $hooks): void
     {
         // 演示：彻底清理插件自身数据（此处省略）
+    }
+    
+    /**
+     * 注册插件菜单
+     * 
+     * @param string $type 菜单类型: 'admin' 后台, 'app' 前台
+     * @return array 菜单配置数组
+     */
+    public function registerMenu(string $type): array
+    {
+        if ($type === 'admin') {
+            // 注册后台菜单
+            return [
+                [
+                    'title' => '示例插件',
+                    'key' => 'plugin_sample',
+                    'icon' => 'layui-icon-app',
+                    'type' => 0, // 0: 分组 1: 链接
+                    'href' => '', // 当type=1时有效
+                    'children' => [
+                        [
+                            'title' => '仪表板',
+                            'key' => 'plugin_sample_dashboard',
+                            'icon' => 'layui-icon-console',
+                            'type' => 1,
+                            'href' => '/app/admin/pluginsandbox/sample/dashboard'
+                        ],
+                        [
+                            'title' => '设置',
+                            'key' => 'plugin_sample_settings',
+                            'icon' => 'layui-icon-set',
+                            'type' => 1,
+                            'href' => '/app/admin/pluginsandbox/sample/settings'
+                        ]
+                    ]
+                ]
+            ];
+        } else if ($type === 'app') {
+            // 注册前台菜单
+            return [
+                [
+                    'title' => '示例插件',
+                    'key' => 'plugin_sample_app',
+                    'icon' => '',
+                    'type' => 1,
+                    'href' => '/plugin/sample/index'
+                ]
+            ];
+        }
+        
+        return [];
+    }
+    
+    /**
+     * 注册插件路由
+     * 
+     * @param string $pluginSlug 插件标识
+     * @return array 路由配置数组
+     */
+    public function registerRoutes(string $pluginSlug): array
+    {
+        return [
+            [
+                'method' => 'get',
+                'route' => "/app/admin/plugin/{$pluginSlug}/dashboard",
+                'handler' => function () {
+                    return new Response(200, ['Content-Type' => 'text/html; charset=utf-8'], '<h1>示例插件仪表板页面</h1>');
+                },
+                'permission' => "plugin:{$pluginSlug}:route:dashboard"
+            ],
+            [
+                'method' => 'get',
+                'route' => "/app/admin/plugin/{$pluginSlug}/settings",
+                'handler' => function () {
+                    return new Response(200, ['Content-Type' => 'text/html; charset=utf-8'], '<h1>示例插件设置页面</h1>');
+                },
+                'permission' => "plugin:{$pluginSlug}:route:settings"
+            ],
+            [
+                'method' => 'get',
+                'route' => "/plugin/{$pluginSlug}/index",
+                'handler' => function () {
+                    return new Response(200, ['Content-Type' => 'text/html; charset=utf-8'], '<h1>示例插件前台页面</h1>');
+                },
+                'permission' => "plugin:{$pluginSlug}:route:index"
+            ]
+        ];
     }
 };

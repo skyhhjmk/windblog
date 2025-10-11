@@ -4,6 +4,8 @@ namespace app\service;
 
 use app\service\plugin\HookManager;
 use app\service\plugin\PluginManager;
+use Webman\Http\Request;
+use Webman\Http\Response;
 
 /**
  * 插件系统服务入口（独立于 webman），提供 WordPress 风格钩子与插件管理
