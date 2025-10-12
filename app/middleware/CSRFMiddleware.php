@@ -31,10 +31,8 @@ class CSRFMiddleware implements MiddlewareInterface
     {
         // 首先检查是否为跨域请求
         if ($this->isCrossOriginRequest($request)) {
-            // 检查是否携带Access Token
-            if (!$this->hasValidAccessToken($request)) {
-                return response('跨域请求必须携带Access Token', 403);
-            }
+            // 禁用Access Token功能
+            return response('跨域请求不被支持', 403);
         }
 
         // 如果没有控制器或方法，直接跳过
@@ -233,57 +231,5 @@ class CSRFMiddleware implements MiddlewareInterface
         $currentPort = $hostParts['port'] ?? ($hostParts['scheme'] === 'https' ? 443 : 80);
 
         return $originHost !== $currentHost || $originPort !== $currentPort;
-    }
-
-    /**
-     * 检查是否携带有效的Access Token
-     *
-     * @param Request $request 请求对象
-     * @return bool
-     */
-    private function hasValidAccessToken(Request $request): bool
-    {
-        // 从Authorization头获取token
-        $authHeader = $request->header('Authorization');
-        if ($authHeader && preg_match('/Bearer\s+(.+)$/i', $authHeader, $matches)) {
-            $token = $matches[1];
-            return $this->validateAccessToken($token);
-        }
-
-        // 从查询参数获取token
-        $token = $request->get('access_token');
-        if ($token) {
-            return $this->validateAccessToken($token);
-        }
-
-        // 从POST数据获取token
-        $token = $request->post('access_token');
-        if ($token) {
-            return $this->validateAccessToken($token);
-        }
-
-        return false;
-    }
-
-    /**
-     * 验证Access Token的有效性
-     *
-     * @param string $token Access Token
-     * @return bool
-     */
-    private function validateAccessToken(string $token): bool
-    {
-        // 这里实现简单的token验证逻辑
-        // 在实际项目中，应该连接到认证服务或数据库验证token
-        
-        // 示例：简单的格式验证（至少32字符的hex字符串）
-        if (strlen($token) < 32 || !ctype_xdigit($token)) {
-            return false;
-        }
-
-        // 示例：检查token是否在有效期内（这里简化处理）
-        // 实际项目中应该检查token的过期时间
-        
-        return true;
     }
 }

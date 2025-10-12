@@ -103,9 +103,9 @@ class PluginManager
         $prevVersion = (string)(blog_config("plugins.version.$slug", '', true) ?: '');
         $curVersion  = $entry['meta']->version;
         try {
-            if ($prevVersion === '' && is_callable([$entry['instance'], 'onInstall'])) {
+            if ($prevVersion === '' && method_exists($entry['instance'], 'onInstall') && is_callable([$entry['instance'], 'onInstall'])) {
                 $entry['instance']->onInstall($this->hooks);
-            } elseif ($prevVersion !== '' && $curVersion !== '' && $prevVersion !== $curVersion && is_callable([$entry['instance'], 'onUpgrade'])) {
+            } elseif ($prevVersion !== '' && $curVersion !== '' && $prevVersion !== $curVersion && method_exists($entry['instance'], 'onUpgrade') && is_callable([$entry['instance'], 'onUpgrade'])) {
                 $entry['instance']->onUpgrade($prevVersion, $curVersion, $this->hooks);
             }
         } catch (\Throwable $e) {
@@ -114,14 +114,19 @@ class PluginManager
 
         // 权限：检测声明的权限并收集待授权
         $declared = (array)($entry['meta']->permissions ?? []);
+        $pending = (array)(blog_config("plugins.permissions.$slug.pending", [], true) ?: []);
+        $existingPending = $pending; // 保存现有的待授权列表
+        
         if ($declared) {
-            $pending = [];
             foreach ($declared as $perm) {
-                if (!$this->hasPermission($slug, (string)$perm)) {
+                // 如果权限未被授权且不在待授权列表中，则添加到待授权列表
+                if (!$this->hasPermission($slug, (string)$perm) && !in_array((string)$perm, $pending)) {
                     $pending[] = (string)$perm;
                 }
             }
-            if ($pending) {
+            
+            // 如果待授权列表有变化，则更新配置
+            if ($pending !== $existingPending) {
                 blog_config("plugins.permissions.$slug.pending", $pending, true, true, true);
                 CacheService::clearCache("blog_config_plugins.permissions.$slug*");
             }
@@ -154,9 +159,12 @@ class PluginManager
                         blog_config("plugins.permissions.$slug.pending", $pending, true, true, true);
                         CacheService::clearCache("blog_config_plugins.permissions.$slug*");
                     }
-                    // 即使没有权限，也先注册菜单，权限检查在显示时进行
-                    $this->adminMenus[$slug] = $adminMenu;
+                    // 不注册没有权限的菜单
+                    unset($this->adminMenus[$slug]);
                 }
+            } else {
+                // 如果没有菜单，确保从缓存中移除
+                unset($this->adminMenus[$slug]);
             }
             
             // 注册前台菜单
@@ -174,9 +182,12 @@ class PluginManager
                         blog_config("plugins.permissions.$slug.pending", $pending, true, true, true);
                         CacheService::clearCache("blog_config_plugins.permissions.$slug*");
                     }
-                    // 即使没有权限，也先注册菜单，权限检查在显示时进行
-                    $this->appMenus[$slug] = $appMenu;
+                    // 不注册没有权限的菜单
+                    unset($this->appMenus[$slug]);
                 }
+            } else {
+                // 如果没有菜单，确保从缓存中移除
+                unset($this->appMenus[$slug]);
             }
             
             // 注册路由（确保只注册一次）
@@ -265,11 +276,19 @@ class PluginManager
     public function grantPermission(string $slug, string $permission): void
     {
         $granted = (array)(blog_config("plugins.permissions.$slug.granted", [], true) ?: []);
+        $needReRegisterMenu = false;
+        
         if (!in_array($permission, $granted, true)) {
             $granted[] = $permission;
             blog_config("plugins.permissions.$slug.granted", $granted, true, true, true);
             CacheService::clearCache("blog_config_plugins.permissions.$slug*");
+            
+            // 如果是菜单权限，则需要重新注册菜单
+            if (str_starts_with($permission, "plugin:{$slug}:menu:")) {
+                $needReRegisterMenu = true;
+            }
         }
+        
         // 从待授权中移除
         $pending = (array)(blog_config("plugins.permissions.$slug.pending", [], true) ?: []);
         $pending = array_values(array_filter($pending, fn($p) => $p !== $permission));
@@ -277,6 +296,11 @@ class PluginManager
 
         // 权限变更后重置计数器（calls/denied）
         $this->resetCounts($slug, $permission);
+        
+        // 如果需要重新注册菜单，则重新启用插件
+        if ($needReRegisterMenu) {
+            $this->enable($slug);
+        }
     }
 
     public function revokePermission(string $slug, string $permission): void
@@ -285,6 +309,15 @@ class PluginManager
         $granted = array_values(array_filter($granted, fn($p) => $p !== $permission));
         blog_config("plugins.permissions.$slug.granted", $granted, true, true, true);
         CacheService::clearCache("blog_config_plugins.permissions.$slug*");
+
+        // 如果是菜单权限，需要从菜单缓存中移除
+        if (str_starts_with($permission, "plugin:{$slug}:menu:")) {
+            if ($permission === "plugin:{$slug}:menu:admin") {
+                unset($this->adminMenus[$slug]);
+            } elseif ($permission === "plugin:{$slug}:menu:app") {
+                unset($this->appMenus[$slug]);
+            }
+        }
 
         // 权限变更后重置计数器（calls/denied）
         $this->resetCounts($slug, $permission);
@@ -511,9 +544,13 @@ class PluginManager
         
         // 检查是否有通配符权限
         foreach ($granted as $grantedPerm) {
+            // 支持 :* 和 .* 两种通配符形式
             if (str_ends_with($grantedPerm, ':*') || str_ends_with($grantedPerm, '.*')) {
                 $prefix = rtrim($grantedPerm, ':*.*');
-                if (str_starts_with($permission, $prefix)) {
+                // 确保精确匹配前缀，避免部分匹配问题
+                if (str_starts_with($permission, $prefix) && 
+                    (strlen($permission) == strlen($prefix) || 
+                     $permission[strlen($prefix)] == ':')) {
                     return true;
                 }
             }
