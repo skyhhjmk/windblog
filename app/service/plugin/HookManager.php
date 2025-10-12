@@ -197,56 +197,54 @@ class HookManager
     /** 将钩子名解析为权限字符串（动作） */
     private function resolveActionPermission(string $hook): string
     {
-        // 通配符：如 "post_*" -> "post:action.*"
+        // 通配符：如 "post_*" -> "post:action:*"
         if (str_ends_with($hook, '*')) {
-            $prefix = $hook;
-            // 取星号前的域前缀，尝试按下划线或点分隔
-            $prefix = rtrim($prefix, '*');
+            $prefix = rtrim($hook, '*');
             $domain = $prefix;
-            if (str_contains($prefix, '.')) {
-                $domain = explode('.', $prefix, 2)[0];
+            if (str_contains($prefix, ':')) {
+                $domain = explode(':', $prefix, 2)[0];
             } elseif (str_contains($prefix, '_')) {
                 $domain = explode('_', $prefix, 2)[0];
             }
             $domain = $domain !== '' ? $domain : 'system';
-            return "{$domain}:action.*";
+            return "{$domain}:action:*";
         }
-        // 规范：domain.name -> domain:action.name
-        if (str_contains($hook, '.')) {
-            [$domain, $name] = explode('.', $hook, 2);
-            return "{$domain}:action.{$name}";
+        // 规范：domain:name -> domain:action:name
+        if (str_contains($hook, ':')) {
+            [$domain, $name] = explode(':', $hook, 2);
+            return "{$domain}:action:{$name}";
         }
         // 特例映射
         return match ($hook) {
-            'request_enter' => 'request:action.enter',
-            'response_exit' => 'response:action.exit',
-            default => "system:action.{$hook}",
+            'request_enter' => 'request:action:enter',
+            'response_exit' => 'response:action:exit',
+            default => "system:action:{$hook}",
         };
     }
 
     /** 将钩子名解析为权限字符串（过滤器） */
     private function resolveFilterPermission(string $hook): string
     {
-        // 通配符：如 "post_*" -> "post:filter.*"
+        // 通配符：如 "post_*" -> "post:filter:*"
         if (str_ends_with($hook, '*')) {
             $prefix = rtrim($hook, '*');
             $domain = $prefix;
-            if (str_contains($prefix, '.')) {
-                $domain = explode('.', $prefix, 2)[0];
+            if (str_contains($prefix, ':')) {
+                $domain = explode(':', $prefix, 2)[0];
             } elseif (str_contains($prefix, '_')) {
                 $domain = explode('_', $prefix, 2)[0];
             }
             $domain = $domain !== '' ? $domain : 'system';
-            return "{$domain}:filter.*";
+            return "{$domain}:filter:*";
         }
-        if (str_contains($hook, '.')) {
-            [$domain, $name] = explode('.', $hook, 2);
-            return "{$domain}:filter.{$name}";
+        if (str_contains($hook, ':')) {
+            [$domain, $name] = explode(':', $hook, 2);
+            return "{$domain}:filter:{$name}";
         }
         // 特例：response_filter 属于请求过滤权限
         return match ($hook) {
             'response_filter' => 'request:filter',
-            default => "system:filter.{$hook}",
+            default => "system:filter:{$hook}",
         };
     }
 

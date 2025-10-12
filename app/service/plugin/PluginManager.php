@@ -103,9 +103,9 @@ class PluginManager
         $prevVersion = (string)(blog_config("plugins.version.$slug", '', true) ?: '');
         $curVersion  = $entry['meta']->version;
         try {
-            if ($prevVersion === '' && method_exists($entry['instance'], 'onInstall')) {
+            if ($prevVersion === '' && is_callable([$entry['instance'], 'onInstall'])) {
                 $entry['instance']->onInstall($this->hooks);
-            } elseif ($prevVersion !== '' && $curVersion !== '' && $prevVersion !== $curVersion && method_exists($entry['instance'], 'onUpgrade')) {
+            } elseif ($prevVersion !== '' && $curVersion !== '' && $prevVersion !== $curVersion && is_callable([$entry['instance'], 'onUpgrade'])) {
                 $entry['instance']->onUpgrade($prevVersion, $curVersion, $this->hooks);
             }
         } catch (\Throwable $e) {
@@ -142,13 +142,41 @@ class PluginManager
             // 注册后台菜单
             $adminMenu = $entry['instance']->registerMenu('admin');
             if (!empty($adminMenu)) {
-                $this->adminMenus[$slug] = $adminMenu;
+                // 检查插件是否有菜单权限
+                $menuPermission = "plugin:{$slug}:menu:admin";
+                if ($this->hasPermission($slug, $menuPermission)) {
+                    $this->adminMenus[$slug] = $adminMenu;
+                } else {
+                    // 权限未批准，添加到待授权列表
+                    $pending = (array)(blog_config("plugins.permissions.$slug.pending", [], true) ?: []);
+                    if (!in_array($menuPermission, $pending)) {
+                        $pending[] = $menuPermission;
+                        blog_config("plugins.permissions.$slug.pending", $pending, true, true, true);
+                        CacheService::clearCache("blog_config_plugins.permissions.$slug*");
+                    }
+                    // 即使没有权限，也先注册菜单，权限检查在显示时进行
+                    $this->adminMenus[$slug] = $adminMenu;
+                }
             }
             
             // 注册前台菜单
             $appMenu = $entry['instance']->registerMenu('app');
             if (!empty($appMenu)) {
-                $this->appMenus[$slug] = $appMenu;
+                // 检查插件是否有菜单权限
+                $menuPermission = "plugin:{$slug}:menu:app";
+                if ($this->hasPermission($slug, $menuPermission)) {
+                    $this->appMenus[$slug] = $appMenu;
+                } else {
+                    // 权限未批准，添加到待授权列表
+                    $pending = (array)(blog_config("plugins.permissions.$slug.pending", [], true) ?: []);
+                    if (!in_array($menuPermission, $pending)) {
+                        $pending[] = $menuPermission;
+                        blog_config("plugins.permissions.$slug.pending", $pending, true, true, true);
+                        CacheService::clearCache("blog_config_plugins.permissions.$slug*");
+                    }
+                    // 即使没有权限，也先注册菜单，权限检查在显示时进行
+                    $this->appMenus[$slug] = $appMenu;
+                }
             }
             
             // 注册路由（确保只注册一次）
@@ -174,17 +202,11 @@ class PluginManager
                                 blog_config("plugins.permissions.$slug.pending", $pending, true, true, true);
                                 CacheService::clearCache("blog_config_plugins.permissions.$slug*");
                             }
-                            // 即使权限未批准，也要注册路由，但指向拒绝访问页面
-                            $originalHandler = $handler;
-                            $deniedHandler = function() use ($slug, $permission, $originalHandler) {
-                                // 尝试执行原始处理器，如果失败则返回拒绝访问页面
-                                try {
-                                    return call_user_func($originalHandler);
-                                } catch (\Throwable $e) {
-                                    return new \support\Response(403, [], 'Access denied to plugin route. Plugin: ' . $slug . ', Permission: ' . $permission);
-                                }
+                            
+                            // 不执行原始处理器，直接返回拒绝访问响应
+                            $handler = function() use ($slug, $permission) {
+                                return new \support\Response(403, [], 'Access denied to plugin route. Plugin: ' . $slug . ', Permission: ' . $permission);
                             };
-                            $handler = $deniedHandler;
                         }
                         
                         // 注册路由
@@ -461,6 +483,11 @@ class PluginManager
             return true;
         }
 
+        // 检查是否有通配符权限
+        if ($this->hasWildcardPermission($slug, $permission)) {
+            return true;
+        }
+
         // 记录拒绝次数（Redis），并获取最新拒绝计数
         $denied = $this->incDenied($slug, $permission);
 
@@ -471,6 +498,27 @@ class PluginManager
             // 忽略日志异常，保持主流程
         }
 
+        return false;
+    }
+
+    /**
+     * 检查通配符权限
+     * 支持使用 plugin:* 这样的通配符权限
+     */
+    private function hasWildcardPermission(string $slug, string $permission): bool
+    {
+        $granted = (array)(blog_config("plugins.permissions.$slug.granted", [], true) ?: []);
+        
+        // 检查是否有通配符权限
+        foreach ($granted as $grantedPerm) {
+            if (str_ends_with($grantedPerm, ':*') || str_ends_with($grantedPerm, '.*')) {
+                $prefix = rtrim($grantedPerm, ':*.*');
+                if (str_starts_with($permission, $prefix)) {
+                    return true;
+                }
+            }
+        }
+        
         return false;
     }
 
