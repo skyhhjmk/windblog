@@ -2,13 +2,19 @@
 
 namespace plugin\admin\app\common;
 
-use app\process\Monitor;
-use Throwable;
+use DateTime;
+use Exception;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Schema\Builder;
-use app\model\Setting;
-use support\exception\BusinessException;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Str;
+use InvalidArgumentException;
+use plugin\admin\app\model\Setting;
+use RuntimeException;
 use support\Db;
+use support\exception\BusinessException;
+use support\Log;
+use Throwable;
 use Workerman\Timer;
 use Workerman\Worker;
 
@@ -47,17 +53,34 @@ class Util
      */
     public static function db(): Connection
     {
-        return Db::connection('pgsql');
+        $defaultConnection = config('database.default');
+        
+        // 如果是 SQLite 数据库且文件不存在，则先创建一个空文件
+        if ($defaultConnection === 'sqlite') {
+            $dbPath = config('database.connections.sqlite.database');
+            if ($dbPath !== ':memory:' && !file_exists($dbPath)) {
+                $dir = dirname($dbPath);
+                if (!is_dir($dir)) {
+                    mkdir($dir, 0777, true);
+                }
+                // 创建空的 SQLite 数据库文件
+                $pdo = new \PDO("sqlite:" . $dbPath);
+                $pdo = null; // 关闭连接
+            }
+        }
+        
+        return Db::connection($defaultConnection);
     }
 
     /**
      * 获取SchemaBuilder
      *
-     * @return Builder
+     * @return \Illuminate\Database\Schema\Builder
      */
-    public static function schema(): Builder
+    public static function schema(): \Illuminate\Database\Schema\Builder
     {
-        return Db::schema('pgsql');
+        $defaultConnection = config('database.default', 'pgsql');
+        return Db::schema($defaultConnection);
     }
 
     /**
@@ -517,6 +540,107 @@ class Util
                     $keys[$key_name]['columns'][] = $index->column_name;
                 }
             }
+        } else if ($driver === 'mysql') {
+            // MySQL查询
+            $schema_raw = $section !== 'table' ? Util::db()->select("SELECT * FROM information_schema.columns WHERE table_schema = ? AND table_name = ? ORDER BY ordinal_position", [$database, $table]) : [];
+
+            foreach ($schema_raw as $item) {
+                $field = $item->COLUMN_NAME;
+                $columns[$field] = [
+                    'field' => $field,
+                    'type' => Util::typeToMethod($item->DATA_TYPE),
+                    'comment' => $item->COLUMN_COMMENT ?: $field,
+                    'default' => $item->COLUMN_DEFAULT,
+                    'length' => static::getLengthValue($item),
+                    'nullable' => $item->IS_NULLABLE !== 'NO',
+                    'primary_key' => $item->COLUMN_KEY === 'PRI',
+                    'auto_increment' => $item->EXTRA === 'auto_increment'
+                ];
+
+                $forms[$field] = [
+                    'field' => $field,
+                    'comment' => $item->COLUMN_COMMENT ?: $field,
+                    'control' => static::typeToControl($item->DATA_TYPE),
+                    'form_show' => true,
+                    'list_show' => true,
+                    'enable_sort' => false,
+                    'searchable' => false,
+                    'search_type' => 'normal',
+                    'control_args' => '',
+                ];
+            }
+
+            // 查询表注释
+            $table_schema = $section == 'table' || !$section ? [] : [];
+
+            if ($section == 'table' || !$section) {
+                // 根据数据库类型使用不同的查询方式
+                $driver = config('database.default');
+                if ($driver === 'mysql') {
+                    $table_schema = Util::db()->select(
+                        "SELECT TABLE_COMMENT AS table_comment FROM information_schema.tables WHERE table_schema = ? AND table_name = ?",
+                        [$database, $table]
+                    );
+                } else if ($driver === 'pgsql') {
+                    $table_schema = Util::db()->select(
+                        "SELECT description AS table_comment FROM pg_description " .
+                        "WHERE objoid = (SELECT oid FROM pg_class WHERE relname = ?) AND objsubid = 0",
+                        [$table]
+                    );
+                } else {
+                    // SQLite不支持表注释，返回空数组
+                    $table_schema = [];
+                }
+            }
+
+            // 查询索引信息
+            $keys = [];
+            $primary_key = [];
+            if (!$section || in_array($section, ['keys', 'table'])) {
+                // 根据数据库类型使用不同的查询方式
+                $driver = config('database.default');
+                if ($driver === 'mysql') {
+                    $indexes = Util::db()->select(
+                        "SELECT INDEX_NAME as index_name, COLUMN_NAME as column_name, NON_UNIQUE as is_unique " .
+                        "FROM information_schema.statistics " .
+                        "WHERE table_schema = ? AND table_name = ?",
+                        [$database, $table]
+                    );
+                } else if ($driver === 'pgsql') {
+                    $indexes = Util::db()->select(
+                        "SELECT ix.relname as index_name, a.attname as column_name, " .
+                        "CASE WHEN ix.indisunique THEN 0 ELSE 1 END as is_unique " .
+                        "FROM pg_class t, pg_class ix, pg_index i, pg_attribute a " .
+                        "WHERE t.oid = i.indrelid and ix.oid = i.indexrelid " .
+                        "AND a.attrelid = t.oid AND a.attnum = ANY(i.indkey) " .
+                        "AND t.relname = ?",
+                        [$table]
+                    );
+                } else {
+                    // SQLite查询索引信息
+                    $indexes = Util::db()->select(
+                        "SELECT name as index_name, sql as column_name, '1' as is_unique " .
+                        "FROM sqlite_master WHERE type = 'index' AND tbl_name = ?",
+                        [$table]
+                    );
+                }
+
+                foreach ($indexes as $index) {
+                    $key_name = $index->index_name;
+                    if ($key_name === 'PRIMARY' || strpos($key_name, '_pkey') !== false) {
+                        $primary_key[] = $index->column_name;
+                        continue;
+                    }
+                    if (!isset($keys[$key_name])) {
+                        $keys[$key_name] = [
+                            'name' => $key_name,
+                            'columns' => [],
+                            'type' => !$index->is_unique ? 'unique' : 'normal'
+                        ];
+                    }
+                    $keys[$key_name]['columns'][] = $index->column_name;
+                }
+            }
         }
 
         $data = [
@@ -679,8 +803,8 @@ class Util
      */
     public static function pauseFileMonitor()
     {
-        if (method_exists(Monitor::class, 'pause')) {
-            Monitor::pause();
+        if (class_exists('Webman\FileMonitor') && method_exists('Webman\FileMonitor', 'pause')) {
+            call_user_func(['Webman\FileMonitor', 'pause']);
         }
     }
 
@@ -691,9 +815,8 @@ class Util
      */
     public static function resumeFileMonitor()
     {
-        if (method_exists(Monitor::class, 'resume')) {
-            Monitor::resume();
+        if (class_exists('Webman\FileMonitor') && method_exists('Webman\FileMonitor', 'resume')) {
+            call_user_func(['Webman\FileMonitor', 'resume']);
         }
     }
-
 }

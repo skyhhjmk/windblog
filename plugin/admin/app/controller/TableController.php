@@ -9,6 +9,7 @@ use plugin\admin\app\common\Util;
 use plugin\admin\app\model\Role;
 use plugin\admin\app\model\Rule;
 use app\model\Setting;
+use plugin\admin\app\model\Option;
 use support\exception\BusinessException;
 use support\Request;
 use support\Response;
@@ -212,9 +213,22 @@ class TableController extends Base
                 }
                 $this->createColumn($column, $table);
             }
-            $table->charset = 'utf8mb4';
-            $table->collation = 'utf8mb4_general_ci';
-            $table->engine = 'InnoDB';
+            
+            // 根据数据库类型设置相应的表属性
+            $driver = config('database.default');
+            switch ($driver) {
+                case 'mysql':
+                    $table->charset = 'utf8mb4';
+                    $table->collation = 'utf8mb4_general_ci';
+                    $table->engine = 'InnoDB';
+                    break;
+                case 'pgsql':
+                    // PostgreSQL 不需要特殊设置
+                    break;
+                case 'sqlite':
+                    // SQLite 不需要特殊设置
+                    break;
+            }
         });
 
         // PostgreSQL 使用 COMMENT ON TABLE 语法设置表注释
@@ -1329,7 +1343,14 @@ EOF;
         $format = $request->get('format', 'normal');
         $limit = $request->get('limit', $format === 'tree' ? 5000 : 10);
 
-        $allow_column = Util::db()->select("SELECT column_name AS Field, data_type AS Type, is_nullable AS Null, column_default AS Default FROM information_schema.columns WHERE table_name = '$table' AND table_schema = 'public'");
+        // 根据数据库类型使用不同的查询方式
+        $driver = config('database.default');
+        if ($driver === 'pgsql') {
+            $allow_column = Util::db()->select("SELECT column_name AS Field, data_type AS Type, is_nullable AS Null, column_default AS Default FROM information_schema.columns WHERE table_name = '$table' AND table_schema = 'public'");
+        } else {
+            $allow_column = Util::db()->select("SELECT column_name AS Field, data_type AS Type, is_nullable AS Null, column_default AS Default FROM information_schema.columns WHERE table_name = '$table'");
+        }
+        
         if (!$allow_column) {
             return $this->json(2, '表不存在');
         }
@@ -1404,7 +1425,15 @@ EOF;
         }
         $table = Util::filterAlphaNum($request->input('table', ''));
         $data = $request->post();
-        $allow_column = Util::db()->select("SELECT column_name AS Field, data_type AS Type, is_nullable AS Null, column_default AS Default FROM information_schema.columns WHERE table_name = '$table' AND table_schema = 'public'");
+        
+        // 根据数据库类型使用不同的查询方式
+        $driver = config('database.default');
+        if ($driver === 'pgsql') {
+            $allow_column = Util::db()->select("SELECT column_name AS Field, data_type AS Type, is_nullable AS Null, column_default AS Default FROM information_schema.columns WHERE table_name = '$table' AND table_schema = 'public'");
+        } else {
+            $allow_column = Util::db()->select("SELECT column_name AS Field, data_type AS Type, is_nullable AS Null, column_default AS Default FROM information_schema.columns WHERE table_name = '$table'");
+        }
+        
         if (!$allow_column) {
             throw new BusinessException('表不存在', 2);
         }
@@ -1472,7 +1501,15 @@ EOF;
         $primary_key = $primary_keys[0];
         $value = $request->post($primary_key);
         $data = $request->post();
-        $allow_column = Util::db()->select("SELECT column_name AS Field, data_type AS Type, is_nullable AS Null, column_default AS Default FROM information_schema.columns WHERE table_name = '$table' AND table_schema = 'public'");
+        
+        // 根据数据库类型使用不同的查询方式
+        $driver = config('database.default');
+        if ($driver === 'pgsql') {
+            $allow_column = Util::db()->select("SELECT column_name AS Field, data_type AS Type, is_nullable AS Null, column_default AS Default FROM information_schema.columns WHERE table_name = '$table' AND table_schema = 'public'");
+        } else {
+            $allow_column = Util::db()->select("SELECT column_name AS Field, data_type AS Type, is_nullable AS Null, column_default AS Default FROM information_schema.columns WHERE table_name = '$table'");
+        }
+        
         if (!$allow_column) {
             throw new BusinessException('表不存在', 2);
         }

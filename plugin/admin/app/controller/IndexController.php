@@ -48,9 +48,9 @@ class IndexController
         if (!$admin) {
             $name = 'system_config';
             $config = Setting::where('key', $name)->value('value');
-            $config = json_decode($config, true);
-            $title = $config['logo']['title'] ?? 'webman admin';
-            $logo = $config['logo']['image'] ?? '/app/admin/admin/images/logo.png';
+            $config = $config ? json_decode($config, true) : null;
+            $title = ($config && isset($config['logo']['title'])) ? $config['logo']['title'] : 'webman admin';
+            $logo = ($config && isset($config['logo']['image'])) ? $config['logo']['image'] : '/app/admin/admin/images/logo.png';
             return raw_view('account/login', ['logo' => $logo, 'title' => $title]);
         }
         return raw_view('index/index');
@@ -80,9 +80,28 @@ class IndexController
         $draft_count = Post::where('status', 'draft')->count();
         // 总媒体数
         $media_count = Media::count();
-        // mysql版本
-        $version = Util::db()->select('select VERSION() as version');
-        $mysql_version = $version[0]->version ?? 'unknown';
+        
+        // 根据当前数据库类型获取版本信息
+        $driver = config('database.default');
+        $version_info = 'unknown';
+        try {
+            switch ($driver) {
+                case 'mysql':
+                    $version = Util::db()->select('select VERSION() as version');
+                    $version_info = $version[0]->version ?? 'unknown';
+                    break;
+                case 'pgsql':
+                    $version = Util::db()->select('select version() as version');
+                    $version_info = $version[0]->version ?? 'unknown';
+                    break;
+                case 'sqlite':
+                    $version = Util::db()->select('select sqlite_version() as version');
+                    $version_info = 'SQLite ' . ($version[0]->version ?? 'unknown');
+                    break;
+            }
+        } catch (Throwable $e) {
+            $version_info = 'unknown';
+        }
 
         $day7_detail = [];
         $now = time();
@@ -104,7 +123,7 @@ class IndexController
             'workerman_version' => Worker::VERSION,
             'webman_version' => Util::getPackageVersion('workerman/webman-framework'),
             'admin_version' => Util::getPackageVersion('webman/admin'),
-            'mysql_version' => $mysql_version,
+            'mysql_version' => $version_info,
             'os' => PHP_OS,
             'day7_detail' => array_reverse($day7_detail),
         ]);

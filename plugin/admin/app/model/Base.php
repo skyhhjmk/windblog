@@ -9,11 +9,6 @@ use support\Model;
 class Base extends Model
 {
     /**
-     * @var string
-     */
-    protected $connection = 'pgsql';
-
-    /**
      * 格式化日期
      *
      * @param DateTimeInterface $date

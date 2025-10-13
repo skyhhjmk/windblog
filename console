@@ -1,5 +1,6 @@
 #!/usr/bin/env php
 <?php
+declare(strict_types=1);
 
 use Webman\Config;
 use Webman\Console\Command;
@@ -34,17 +35,21 @@ if ($errorReporting = $appConfig['error_reporting'] ?? '') {
 }
 
 if (!in_array($argv[1] ?? '', ['start', 'restart', 'stop', 'status', 'reload', 'connections'])) {
-    require_once __DIR__ . '/support/bootstrap.php';
-} else {
-    if (class_exists('Support\App')) {
-        Support\App::loadAllConfig(['route']);
-    } else {
-        Config::reload(config_path(), ['route', 'container']);
+    try {
+        require_once __DIR__ . '/support/bootstrap.php';
+    } catch (Throwable $t) {
+        echo 'Some errors detected. Please check. Proceeding to the next step in 3 seconds...' . PHP_EOL;
+        sleep(3);
     }
+} elseif (class_exists('Support\App')) {
+    Support\App::loadAllConfig(['route']);
+} else {
+    Config::load(config_path(), ['route', 'container']);
 }
 
+
 $cli = new Command();
-$cli->setName('webman cli');
+$cli->setName('WindBlog cli [Build with webman]');
 $cli->installInternalCommands();
 if (is_dir($command_path = Util::guessPath(app_path(), '/command', true))) {
     $cli->installCommands($command_path);
@@ -68,4 +73,8 @@ foreach (config('plugin', []) as $firm => $projects) {
     }
 }
 
-$cli->run();
+try {
+    $cli->run();
+} catch (Throwable $t) {
+    echo 'Application error detected. Please check the relevant logs for details. Now trying to log error (s).' . PHP_EOL;
+}

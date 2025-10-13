@@ -34,6 +34,25 @@ class Admin extends Base
      */
     protected $primaryKey = 'id';
     
+    /**
+     * 可以被批量赋值的属性。
+     *
+     * @var array
+     */
+    protected $fillable = [
+        'username',
+        'nickname',
+        'password',
+        'avatar',
+        'email',
+        'mobile',
+        'created_at',
+        'updated_at',
+        'login_at',
+        'roles',
+        'status'
+    ];
+    
     
     
     

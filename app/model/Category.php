@@ -38,7 +38,6 @@ class Category extends Model
      * 如果你的表名不是 'categories'，请在这里修改。
      * 例如：protected $table = 'my_categories';
      */
-    protected $connection = 'pgsql';
     protected $table = 'categories';
 
     /**
