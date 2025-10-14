@@ -424,17 +424,17 @@ class InstallController extends Base
                 return $this->json(1, '请先完成第一步数据库配置');
             }
             $config = include $config_file;
-            
+
             // 获取当前配置的数据库类型
             $db_type = config('database.default', 'pgsql');
             $connection = $config['connections'][$db_type];
-            
+
             $pdo = $this->getPdo(
-                $connection['host'] ?? '', 
-                $connection['username'] ?? '', 
-                $connection['password'] ?? '', 
-                $connection['port'] ?? 5432, 
-                $connection['database'] ?? '', 
+                $connection['host'] ?? '',
+                $connection['username'] ?? '',
+                $connection['password'] ?? '',
+                $connection['port'] ?? 5432,
+                $connection['database'] ?? '',
                 $db_type
             );
 
@@ -450,7 +450,7 @@ class InstallController extends Base
                     $existsStmt = $pdo->query("SELECT name FROM sqlite_master WHERE type='table'");
                     break;
             }
-            
+
             $existingTables = array_map(static function($row){ return current($row); }, $existsStmt->fetchAll());
             $requiredTables = ['wa_admins', 'wa_admin_roles', 'wa_rules', 'wa_users'];
             $missing = array_diff($requiredTables, $existingTables);
@@ -536,7 +536,7 @@ class InstallController extends Base
             $values[] = ":$k";
         }
         $columns = array_keys($data);
-        
+
         // 根据数据库类型确定表名和字段引用方式
         $quoteChar = match($type) {
             'mysql' => '`',
@@ -576,7 +576,7 @@ class InstallController extends Base
         }
         $children = $menu_tree['children'] ?? [];
         unset($menu_tree['children']);
-        
+
         // 根据数据库类型确定表名和字段引用方式
         $quoteChar = match($type) {
             'mysql' => '`',
@@ -688,7 +688,7 @@ class InstallController extends Base
             \PDO::ATTR_TIMEOUT => 5,
             \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
         ];
-        
+
         switch ($type) {
             case 'mysql':
                 $dsn = "mysql:host=$host;port=$port;";
@@ -697,13 +697,13 @@ class InstallController extends Base
                 }
                 $params[\PDO::MYSQL_ATTR_INIT_COMMAND] = "SET NAMES utf8mb4";
                 break;
-                
+
             case 'sqlite':
                 // SQLite使用文件路径作为数据库名
                 $dsn = "sqlite:" . ($database ?: ':memory:');
                 // SQLite不需要用户名和密码
                 return new \PDO($dsn, null, null, $params);
-                
+
             case 'pgsql':
             default:
                 $dsn = "pgsql:host=$host;port=$port;";
@@ -712,10 +712,10 @@ class InstallController extends Base
                 }
                 break;
         }
-        
+
         return new \PDO($dsn, $username, $password, $params);
     }
-    
+
     /**
      * 获取 PostgreSQL 配置内容
      */
@@ -773,7 +773,7 @@ return [
 ];
 EOF;
     }
-    
+
     /**
      * 获取 MySQL 配置内容
      */
@@ -781,7 +781,7 @@ EOF;
     {
         return $this->getPgsqlConfigContent(); // 使用相同的配置内容
     }
-    
+
     /**
      * 获取 SQLite 配置内容
      */
@@ -789,7 +789,7 @@ EOF;
     {
         return $this->getPgsqlConfigContent(); // 使用相同的配置内容
     }
-    
+
     /**
      * 获取 PostgreSQL 环境配置
      */
@@ -871,7 +871,7 @@ CACHE_STRICT_MODE=false
 # - 缓存目录默认为 runtime/twig_cache，可用 TWIG_CACHE_PATH 覆盖
 EOF;
     }
-    
+
     /**
      * 获取 MySQL 环境配置
      */
@@ -953,7 +953,7 @@ CACHE_STRICT_MODE=false
 # - 缓存目录默认为 runtime/twig_cache，可用 TWIG_CACHE_PATH 覆盖
 EOF;
     }
-    
+
     /**
      * 获取 SQLite 环境配置
      */
@@ -965,7 +965,7 @@ EOF;
             // 如果不是绝对路径或特殊路径（如 :memory:），则使用 runtime_path
             $sqlitePath = runtime_path($database);
         }
-        
+
         return <<<EOF
 # 实例部署类型
 DEPLOYMENT_TYPE=datacenter
