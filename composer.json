@@ -1,5 +1,5 @@
 {
-  "name": "skyhhjmk/wind-cms",
+  "name": "skyhhjmk/windblog",
   "type": "project",
   "keywords": [
     "windblog",
@@ -20,8 +20,8 @@
   ],
   "support": {
     "email": "admin@biliwind.com",
-    "issues": "https://github.com/skyhhjmk/wind-cms/issues",
-    "source": "https://github.com/skyhhjmk/wind-cms"
+    "issues": "https://github.com/skyhhjmk/windblog/issues",
+    "source": "https://github.com/skyhhjmk/windblog"
   },
   "require": {
     "php": ">=8.2",
