@@ -1,0 +1,105 @@
+name: Static Analysis
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+
+jobs:
+  phpstan:
+    runs-on: ubuntu-latest
+    name: PHPStan Static Analysis
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, pdo_pgsql, pgsql, bcmath, intl, gd, exif, iconv
+        tools: composer:v2
+
+    - name: Get composer cache directory
+      id: composer-cache
+      run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+    - name: Cache composer dependencies
+      uses: actions/cache@v3
+      with:
+        path: ${{ steps.composer-cache.outputs.dir }}
+        key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-composer-
+
+    - name: Install dependencies
+      run: composer install --prefer-dist --no-interaction --no-progress
+
+    - name: Run PHPStan
+      run: vendor/bin/phpstan analyze --error-format=github --no-progress
+
+  php-cs-fixer:
+    runs-on: ubuntu-latest
+    name: PHP CS Fixer
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        tools: php-cs-fixer, composer:v2
+
+    - name: Get composer cache directory
+      id: composer-cache
+      run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+    - name: Cache composer dependencies
+      uses: actions/cache@v3
+      with:
+        path: ${{ steps.composer-cache.outputs.dir }}
+        key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-composer-
+
+    - name: Install dependencies
+      run: composer install --prefer-dist --no-interaction --no-progress
+
+    - name: Run PHP CS Fixer
+      run: vendor/bin/php-cs-fixer fix --dry-run --diff --verbose
+
+  security:
+    runs-on: ubuntu-latest
+    name: Security Check
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        tools: composer:v2
+
+    - name: Get composer cache directory
+      id: composer-cache
+      run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+    - name: Cache composer dependencies
+      uses: actions/cache@v3
+      with:
+        path: ${{ steps.composer-cache.outputs.dir }}
+        key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-composer-
+
+    - name: Install dependencies
+      run: composer install --prefer-dist --no-interaction --no-progress
+
+    - name: Security Check
+      uses: symfonycorp/security-checker-action@v5

@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        php: ['8.2', '8.3']
+        dependency-version: [prefer-lowest, prefer-stable]
+
+    name: PHP ${{ matrix.php }} - ${{ matrix.dependency-version }} - ${{ matrix.os }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ matrix.php }}
+        extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, pdo_pgsql, pgsql, bcmath, intl, gd, exif, iconv
+        coverage: xdebug
+        tools: composer:v2
+
+    - name: Get composer cache directory
+      id: composer-cache
+      run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+    - name: Cache composer dependencies
+      uses: actions/cache@v3
+      with:
+        path: ${{ steps.composer-cache.outputs.dir }}
+        key: ${{ runner.os }}-composer-${{ matrix.dependency-version }}-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-composer-${{ matrix.dependency-version }}-
+          ${{ runner.os }}-composer-
+
+    - name: Install dependencies
+      run: |
+        composer update --${{ matrix.dependency-version }} --prefer-dist --no-interaction --no-progress
+
+    - name: Copy .env
+      run: |
+        cp .env.example .env
+        # 设置测试环境变量
+        echo "APP_DEBUG=true" >> .env
+        echo "CACHE_DRIVER=memory" >> .env
+
+    - name: Execute tests
+      run: vendor/bin/phpunit --coverage-clover coverage.xml
+
+    - name: Upload coverage to Codecov
+      if: matrix.php == '8.2' && matrix.dependency-version == 'prefer-stable'
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./coverage.xml
+        fail_ci_if_error: false

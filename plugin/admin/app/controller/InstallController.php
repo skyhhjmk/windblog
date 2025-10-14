@@ -336,11 +336,14 @@ class InstallController extends Base
 
             foreach ($dropOrder as $table) {
                 if (in_array($table, $tables_exist)) {
-                    if ($type === 'sqlite') {
-                        $db->exec("DROP TABLE IF EXISTS \"$table\"");
-                    } else {
-                        $db->exec("DROP TABLE IF EXISTS `$table`");
-                    }
+                    // 根据数据库类型使用正确的引号语法
+                    $dropSql = match($type) {
+                        'mysql' => "DROP TABLE IF EXISTS `$table`",
+                        'sqlite' => "DROP TABLE IF EXISTS \"$table\"",
+                        'pgsql' => "DROP TABLE IF EXISTS \"$table\"",
+                        default => "DROP TABLE IF EXISTS \"$table\""
+                    };
+                    $db->exec($dropSql);
                 }
             }
         }
@@ -455,11 +458,19 @@ class InstallController extends Base
                 return $this->json(1, '请先完成第一步（SQL未导入成功或安装未完成），缺少表：' . implode(',', $missing));
             }
 
-            if ($pdo->query('select * from wa_admins')->fetchAll()) {
+            // 根据数据库类型确定引号字符
+            $quoteChar = match($db_type) {
+                'mysql' => '`',
+                'sqlite' => '"',
+                'pgsql' => '"',
+                default => '"'
+            };
+
+            if ($pdo->query("select * from {$quoteChar}wa_admins{$quoteChar}")->fetchAll()) {
                 return $this->json(1, '后台已经安装完毕，无法通过此页面创建管理员');
             }
 
-            $smt = $pdo->prepare("insert into wa_admins (username, password, nickname, created_at, updated_at) values (:username, :password, :nickname, :created_at, :updated_at)");
+            $smt = $pdo->prepare("insert into {$quoteChar}wa_admins{$quoteChar} ({$quoteChar}username{$quoteChar}, {$quoteChar}password{$quoteChar}, {$quoteChar}nickname{$quoteChar}, {$quoteChar}created_at{$quoteChar}, {$quoteChar}updated_at{$quoteChar}) values (:username, :password, :nickname, :created_at, :updated_at)");
             $time = date('Y-m-d H:i:s');
             $data = [
                 'username' => $username,
@@ -474,12 +485,12 @@ class InstallController extends Base
             $smt->execute();
             $admin_id = $pdo->lastInsertId();
 
-            $smt = $pdo->prepare("insert into wa_admin_roles (role_id, admin_id) values (:role_id, :admin_id)");
+            $smt = $pdo->prepare("insert into {$quoteChar}wa_admin_roles{$quoteChar} ({$quoteChar}role_id{$quoteChar}, {$quoteChar}admin_id{$quoteChar}) values (:role_id, :admin_id)");
             $smt->bindValue('role_id', 1);
             $smt->bindValue('admin_id', $admin_id);
             $smt->execute();
 
-            $smt = $pdo->prepare("insert into wa_users (username, password, nickname, created_at, updated_at) values (:username, :password, :nickname, :created_at, :updated_at)");
+            $smt = $pdo->prepare("insert into {$quoteChar}wa_users{$quoteChar} ({$quoteChar}username{$quoteChar}, {$quoteChar}password{$quoteChar}, {$quoteChar}nickname{$quoteChar}, {$quoteChar}created_at{$quoteChar}, {$quoteChar}updated_at{$quoteChar}) values (:username, :password, :nickname, :created_at, :updated_at)");
             $time = date('Y-m-d H:i:s');
             $data = [
                 'username' => $username,
@@ -526,13 +537,18 @@ class InstallController extends Base
         }
         $columns = array_keys($data);
         
-        // 根据数据库类型确定表名引用方式
-        $table_name = match($type) {
-            'sqlite' => '"wa_rules"',
-            default => '`wa_rules`'
+        // 根据数据库类型确定表名和字段引用方式
+        $quoteChar = match($type) {
+            'mysql' => '`',
+            'sqlite' => '"',
+            'pgsql' => '"',
+            default => '"'
         };
-        
-        $sql = "insert into $table_name (" . implode(',', $columns) . ") values (" . implode(',', $values) . ")";
+
+        $table_name = "{$quoteChar}wa_rules{$quoteChar}";
+        $quoted_columns = array_map(fn($col) => "{$quoteChar}{$col}{$quoteChar}", $columns);
+
+        $sql = "insert into $table_name (" . implode(',', $quoted_columns) . ") values (" . implode(',', $values) . ")";
         $smt = $pdo->prepare($sql);
         foreach ($data as $key => $value) {
             $smt->bindValue($key, $value);
@@ -561,13 +577,18 @@ class InstallController extends Base
         $children = $menu_tree['children'] ?? [];
         unset($menu_tree['children']);
         
-        // 根据数据库类型确定表名引用方式
-        $table_name = match($type) {
-            'sqlite' => '"wa_rules"',
-            default => '`wa_rules`'
+        // 根据数据库类型确定表名和字段引用方式
+        $quoteChar = match($type) {
+            'mysql' => '`',
+            'sqlite' => '"',
+            'pgsql' => '"',
+            default => '"'
         };
-        
-        $smt = $pdo->prepare("select * from $table_name where `key`=:key limit 1");
+
+        $table_name = "{$quoteChar}wa_rules{$quoteChar}";
+        $key_field = "{$quoteChar}key{$quoteChar}";
+
+        $smt = $pdo->prepare("select * from $table_name where $key_field=:key limit 1");
         $smt->execute(['key' => $menu_tree['key']]);
         $old_menu = $smt->fetch();
         if ($old_menu) {
@@ -577,7 +598,7 @@ class InstallController extends Base
                 'icon' => $menu_tree['icon'] ?? '',
                 'key' => $menu_tree['key'],
             ];
-            $sql = "update $table_name set title=:title, icon=:icon where `key`=:key";
+            $sql = "update $table_name set title=:title, icon=:icon where $key_field=:key";
             $smt = $pdo->prepare($sql);
             $smt->execute($params);
         } else {
