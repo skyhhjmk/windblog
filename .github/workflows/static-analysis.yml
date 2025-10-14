@@ -167,19 +167,14 @@ jobs:
               });
             }
 
-            const comment = `## 🎨 PHP CS Fixer Report
-
-            **发现代码风格问题**: ${issueCount} 个问题，涉及 ${fileCount} 个文件
-
-            ### 如何修复
-
-            在本地运行以下命令自动修复：
-            \`\`\`bash
-            vendor/bin/php-cs-fixer fix
-            \`\`\`
-
-            📥 详细报告已保存为 Artifact，可在 Actions 页面下载查看。
-            `;
+            const comment = '## 🎨 PHP CS Fixer Report\n\n' +
+              '**发现代码风格问题**: ' + issueCount + ' 个问题，涉及 ' + fileCount + ' 个文件\n\n' +
+              '### 如何修复\n\n' +
+              '在本地运行以下命令自动修复：\n' +
+              '```bash\n' +
+              'vendor/bin/php-cs-fixer fix\n' +
+              '```\n\n' +
+              '📥 详细报告已保存为 Artifact，可在 Actions 页面下载查看。';
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,
