@@ -21,9 +21,22 @@ class CacheService
      */
     public static function getHandler()
     {
-        // 统一初始化前缀，确保fallback模式也生效
+        // 每次都重新获取环境变量，确保测试环境的正确性
+        $rawDriver = getenv('CACHE_DRIVER') ?: 'null';
+        $cacheDriver = is_string($rawDriver) ? strtolower(trim($rawDriver)) : '';
+        if ($cacheDriver === '' || $cacheDriver === 'null' || $cacheDriver === 'none' || $rawDriver === false) {
+            $cacheDriver = 'none';
+        } elseif ($cacheDriver === 'array') {
+            // 将 array 作为 memory 的别名
+            $cacheDriver = 'memory';
+        }
+
+        // 统一初始化前缀
         self::$prefix = getenv('CACHE_PREFIX') ?: '';
-        if (self::$handler !== null && !self::$fallbackMode) {
+
+        // 如果不是在回退模式，且驱动没有失败，则返回现有处理器
+        if (self::$handler !== null && !self::$fallbackMode &&
+            !(self::$failedDrivers[$cacheDriver] ?? false)) {
             return self::$handler;
         }
 
@@ -39,21 +52,12 @@ class CacheService
             }
         }
 
-        $rawDriver = getenv('CACHE_DRIVER') ?: 'null';
-        $cacheDriver = is_string($rawDriver) ? strtolower(trim($rawDriver)) : '';
-        if ($cacheDriver === '' || $cacheDriver === 'null' || $cacheDriver === 'none' || $rawDriver === false) {
-            $cacheDriver = 'none';
-        } elseif ($cacheDriver === 'array') {
-            // 将 array 作为 memory 的别名
-            $cacheDriver = 'memory';
-        }
         $strictMode = filter_var(getenv('CACHE_STRICT_MODE') ?: 'false', FILTER_VALIDATE_BOOLEAN);
 
         // 显式禁用缓存时直接返回无缓存处理器，避免进入连接测试/回退模式
         if ($cacheDriver === 'none') {
             self::$handler = self::createNoneHandler();
             self::$fallbackMode = false;
-            self::$prefix = getenv('CACHE_PREFIX') ?: '';
             return self::$handler;
         }
 
@@ -65,7 +69,6 @@ class CacheService
             }
 
             self::$fallbackMode = false;
-            self::$prefix = getenv('CACHE_PREFIX') ?: '';
             return self::$handler;
 
         } catch (Exception $e) {
@@ -119,11 +122,17 @@ class CacheService
                         }
                     }
 
-                    public function set(string $key, string $value): bool
+                    public function set(string $key, mixed $value, int $ttl = 0): bool
                     {
                         try {
-                            // 无过期时间的写入
-                            return $this->redis->set($key, $value);
+                            // 序列化非字符串值
+                            $serialized = is_string($value) ? $value : serialize($value);
+
+                            if ($ttl > 0) {
+                                return $this->redis->setex($key, $ttl, $serialized);
+                            } else {
+                                return $this->redis->set($key, $serialized);
+                            }
                         } catch (Exception $e) {
                             Log::error("[cache] Redis set error: {$e->getMessage()}");
                             return false;
@@ -136,6 +145,16 @@ class CacheService
                             return $this->redis->del($key) > 0;
                         } catch (Exception $e) {
                             Log::error("[cache] Redis del error: {$e->getMessage()}");
+                            return false;
+                        }
+                    }
+
+                    public function has(string $key): bool
+                    {
+                        try {
+                            return $this->redis->exists($key) > 0;
+                        } catch (Exception $e) {
+                            Log::error("[cache] Redis has error: {$e->getMessage()}");
                             return false;
                         }
                     }
@@ -158,15 +177,22 @@ class CacheService
                         return apcu_store($key, $value, $ttl);
                     }
 
-                    public function set(string $key, string $value): bool
+                    public function set(string $key, mixed $value, int $ttl = 0): bool
                     {
+                        // 序列化非字符串值
+                        $serialized = is_string($value) ? $value : serialize($value);
                         // ttl=0 表示永久
-                        return apcu_store($key, $value, 0);
+                        return apcu_store($key, $serialized, $ttl);
                     }
 
                     public function del(string $key): bool
                     {
                         return apcu_delete($key);
+                    }
+
+                    public function has(string $key): bool
+                    {
+                        return apcu_exists($key);
                     }
                 };
 
@@ -198,15 +224,23 @@ class CacheService
                         return $this->memcached->set($key, $value, $ttl);
                     }
 
-                    public function set(string $key, string $value): bool
+                    public function set(string $key, mixed $value, int $ttl = 0): bool
                     {
+                        // 序列化非字符串值
+                        $serialized = is_string($value) ? $value : serialize($value);
                         // Memcached 的 ttl=0 表示不过期
-                        return $this->memcached->set($key, $value, 0);
+                        return $this->memcached->set($key, $serialized, $ttl);
                     }
 
                     public function del(string $key): bool
                     {
                         return $this->memcached->delete($key);
+                    }
+
+                    public function has(string $key): bool
+                    {
+                        $result = $this->memcached->get($key);
+                        return $this->memcached->getResultCode() === \Memcached::RES_SUCCESS;
                     }
                 };
 
@@ -226,7 +260,17 @@ class CacheService
                             unset($this->data[$key]);
                             return false;
                         }
-                        return $item['value'];
+
+                        // 反序列化存储的值
+                        $value = $item['value'];
+                        if (is_string($value) && !is_numeric($value) && $value !== '') {
+                            // 尝试反序列化，如果是序列化数据
+                            $unserialized = @unserialize($value);
+                            if ($unserialized !== false || $value === serialize(false)) {
+                                return $unserialized;
+                            }
+                        }
+                        return $value;
                     }
 
                     public function setex(string $key, int $ttl, string $value): bool
@@ -238,18 +282,36 @@ class CacheService
                         return true;
                     }
 
-                    public function set(string $key, string $value): bool
+                    public function set(string $key, mixed $value, int $ttl = 0): bool
                     {
+                        // 序列化非字符串值
+                        $serialized = is_string($value) ? $value : serialize($value);
+
                         $this->data[$key] = [
-                            'value' => $value,
-                            'expire' => null
+                            'value' => $serialized,
+                            'expire' => $ttl > 0 ? time() + $ttl : null
                         ];
                         return true;
                     }
 
                     public function del(string $key): bool
                     {
+                        $exists = isset($this->data[$key]);
                         unset($this->data[$key]);
+                        return $exists;
+                    }
+
+                    public function has(string $key): bool
+                    {
+                        $now = time();
+                        if (!isset($this->data[$key])) {
+                            return false;
+                        }
+                        $item = $this->data[$key];
+                        if ($item['expire'] !== null && $item['expire'] < $now) {
+                            unset($this->data[$key]);
+                            return false;
+                        }
                         return true;
                     }
                 };
@@ -278,7 +340,7 @@ class CacheService
                 return true;
             }
 
-            public function set(string $key, string $value): bool
+            public function set(string $key, mixed $value, int $ttl = 0): bool
             {
                 return true;
             }
@@ -286,6 +348,11 @@ class CacheService
             public function del(string $key): bool
             {
                 return true;
+            }
+
+            public function has(string $key): bool
+            {
+                return false;
             }
         };
     }
@@ -736,6 +803,10 @@ class CacheService
      */
     public static function prefixKey(string $key): string
     {
+        // 如果静态前缀为空，尝试从环境变量获取
+        if (self::$prefix === '' && getenv('CACHE_PREFIX')) {
+            self::$prefix = getenv('CACHE_PREFIX');
+        }
         return self::$prefix . $key;
     }
 
@@ -818,5 +889,17 @@ class CacheService
                 return max(0, (int)($end->getTimestamp() - $ref->getTimestamp()));
             }
         };
+    }
+
+    /**
+     * 重置缓存服务状态（仅用于测试）
+     */
+    public static function reset(): void
+    {
+        self::$handler = null;
+        self::$fallbackMode = false;
+        self::$lastFallbackTime = 0;
+        self::$failedDrivers = [];
+        self::$prefix = '';
     }
 }

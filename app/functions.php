@@ -75,10 +75,11 @@ function blog_config(string $key, mixed $default = null, bool $init = false, boo
 function blog_config_write(string $cache_key, string $fullCacheKey, mixed $value, bool $use_cache): mixed
 {
     try {
-        // 原子操作：查找或创建记录
-        $setting = app\model\Setting::firstOrNew(['key' => $cache_key]);
-        $setting->value = blog_config_convert_to_storage($value);
-        $setting->save();
+        // 使用 updateOrCreate 确保原子性操作
+        $setting = app\model\Setting::updateOrCreate(
+            ['key' => $cache_key],
+            ['value' => blog_config_convert_to_storage($value)]
+        );
 
         // 更新缓存（不缓存 null，避免后续读到 null）
         if ($use_cache && $value !== null) {
@@ -178,7 +179,7 @@ function blog_config_handle_init(string $cache_key, string $fullCacheKey, mixed 
     if ($cache_key === 'url_mode' && $default === null) {
         $default = 'slug'; // 默认使用slug模式
     }
-    
+
     if (!$init) {
         return blog_config_normalize_default($default); // 不初始化，直接返回默认值
     }
@@ -186,10 +187,11 @@ function blog_config_handle_init(string $cache_key, string $fullCacheKey, mixed 
     $default = blog_config_normalize_default($default);
 
     try {
-        // 写入默认值到数据库（幂等：若已存在则更新）
-        $setting = app\model\Setting::firstOrNew(['key' => $cache_key]);
-        $setting->value = blog_config_convert_to_storage($default);
-        $setting->save();
+        // 使用 updateOrCreate 确保原子性，避免并发冲突
+        $setting = app\model\Setting::updateOrCreate(
+            ['key' => $cache_key],
+            ['value' => blog_config_convert_to_storage($default)]
+        );
 
         // 写入缓存（不缓存 null）
         if ($use_cache && $default !== null) {
@@ -197,7 +199,22 @@ function blog_config_handle_init(string $cache_key, string $fullCacheKey, mixed 
         }
         return $default;
     } catch (Exception|Error $e) {
+        // 如果仍然失败（极少情况），记录日志并返回默认值
         Log::error("[blog_config] 初始化失败 (key: {$cache_key}): " . $e->getMessage());
+
+        // 尝试重新从数据库读取（可能其他进程已成功创建）
+        try {
+            $dbValue = blog_config_get_from_db($cache_key);
+            if ($dbValue !== null) {
+                if ($use_cache) {
+                    cache($fullCacheKey, $dbValue, true);
+                }
+                return $dbValue;
+            }
+        } catch (Exception $e2) {
+            Log::error("[blog_config] 重新读取也失败 (key: {$cache_key}): " . $e2->getMessage());
+        }
+
         return $default;
     }
 }
@@ -350,13 +367,33 @@ function publish_static(array $data): bool
         $args = new \PhpAmqpLib\Wire\AMQPTable([
             'x-dead-letter-exchange'    => $dlxExchange,
             'x-dead-letter-routing-key' => $dlxQueue,
+            'x-max-priority'            => 10, // 开启队列优先级（0-9）
         ]);
         try {
             $ch->queue_declare($queueName, false, true, false, false, false, $args);
         } catch (\Throwable $e) {
             // 兼容不支持参数的场景，回退无参声明
             \support\Log::warning('publish_static 队列声明失败，尝试无参重建: ' . $e->getMessage());
-            $ch->queue_declare($queueName, false, true, false, false, false);
+            // 如果是因为参数不匹配导致的错误，则删除队列后重新声明
+            if (strpos($e->getMessage(), 'inequivalent arg') !== false) {
+                try {
+                    // 删除已存在的队列
+                    $ch->queue_delete($queueName);
+                    // 重新声明队列
+                    $ch->queue_declare($queueName, false, true, false, false, false, $args);
+                } catch (\Throwable $e2) {
+                    \support\Log::error('publish_static 队列重建失败: ' . $e2->getMessage());
+                    throw $e2;
+                }
+            } else {
+                // 其他错误则尝试无参声明
+                try {
+                    $ch->queue_declare($queueName, false, true, false, false, false);
+                } catch (\Throwable $e3) {
+                    \support\Log::error('publish_static 队列无参重建失败: ' . $e3->getMessage());
+                    throw $e3;
+                }
+            }
         }
         $ch->queue_bind($queueName, $exchange, $routingKey);
 

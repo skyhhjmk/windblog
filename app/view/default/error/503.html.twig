@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>503 - 服务暂时不可用</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <meta http-equiv="refresh" content="60">
+</head>
+<body class="min-h-screen bg-gray-100 flex flex-col justify-center items-center">
+    <div class="text-center p-10 bg-white rounded-lg shadow-lg max-w-md w-full">
+        <h1 class="text-6xl font-bold text-yellow-500 m-0">503</h1>
+        <h2 class="text-2xl font-semibold text-gray-800 my-5">服务暂时不可用</h2>
+        <p class="text-gray-600 mb-4">很抱歉，网站正在维护中，请稍后再试。</p>
+        <p class="text-gray-500 text-sm mb-8">页面将在60秒后自动刷新</p>
+
+        {% if maintenance_message %}
+        <div class="bg-yellow-50 border border-yellow-200 rounded p-4 mb-4 text-sm">
+            <p class="text-yellow-800">{{ maintenance_message }}</p>
+        </div>
+        {% endif %}
+
+        {% if estimated_time %}
+        <div class="bg-blue-50 border border-blue-200 rounded p-4 mb-4 text-sm">
+            <p class="text-blue-800">预计恢复时间：{{ estimated_time }}</p>
+        </div>
+        {% endif %}
+
+        <div class="flex gap-4 justify-center">
+            <button onclick="location.reload()" class="inline-block px-5 py-2.5 bg-blue-500 text-white no-underline rounded hover:bg-blue-600 transition duration-300">
+                <svg class="inline-block w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                刷新页面
+            </button>
+        </div>
+
+        <div class="mt-8 text-sm text-gray-500">
+            <p>如有紧急问题，请联系：<a href="mailto:admin@example.com" class="text-blue-500 hover:underline">admin@example.com</a></p>
+        </div>
+    </div>
+</body>
+</html>
