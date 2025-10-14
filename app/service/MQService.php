@@ -191,7 +191,26 @@ class MQService
             $channel->queue_declare($queueName, false, true, false, false, false, $args);
         } catch (\Throwable $e) {
             \support\Log::warning("队列声明失败，尝试无参重建({$queueName}): " . $e->getMessage());
-            $channel->queue_declare($queueName, false, true, false, false, false);
+            // 如果是因为参数不匹配导致的错误，则删除队列后重新声明
+            if (strpos($e->getMessage(), 'inequivalent arg') !== false) {
+                try {
+                    // 删除已存在的队列
+                    $channel->queue_delete($queueName);
+                    // 重新声明队列
+                    $channel->queue_declare($queueName, false, true, false, false, false, $args);
+                } catch (\Throwable $e2) {
+                    \support\Log::error("队列重建失败({$queueName}): " . $e2->getMessage());
+                    throw $e2;
+                }
+            } else {
+                // 其他错误则尝试无参声明
+                try {
+                    $channel->queue_declare($queueName, false, true, false, false, false);
+                } catch (\Throwable $e3) {
+                    \support\Log::error("队列无参重建失败({$queueName}): " . $e3->getMessage());
+                    throw $e3;
+                }
+            }
         }
         $channel->queue_bind($queueName, $exchange, $routingKey);
     }

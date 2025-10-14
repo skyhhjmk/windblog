@@ -367,13 +367,33 @@ function publish_static(array $data): bool
         $args = new \PhpAmqpLib\Wire\AMQPTable([
             'x-dead-letter-exchange'    => $dlxExchange,
             'x-dead-letter-routing-key' => $dlxQueue,
+            'x-max-priority'            => 10, // 开启队列优先级（0-9）
         ]);
         try {
             $ch->queue_declare($queueName, false, true, false, false, false, $args);
         } catch (\Throwable $e) {
             // 兼容不支持参数的场景，回退无参声明
             \support\Log::warning('publish_static 队列声明失败，尝试无参重建: ' . $e->getMessage());
-            $ch->queue_declare($queueName, false, true, false, false, false);
+            // 如果是因为参数不匹配导致的错误，则删除队列后重新声明
+            if (strpos($e->getMessage(), 'inequivalent arg') !== false) {
+                try {
+                    // 删除已存在的队列
+                    $ch->queue_delete($queueName);
+                    // 重新声明队列
+                    $ch->queue_declare($queueName, false, true, false, false, false, $args);
+                } catch (\Throwable $e2) {
+                    \support\Log::error('publish_static 队列重建失败: ' . $e2->getMessage());
+                    throw $e2;
+                }
+            } else {
+                // 其他错误则尝试无参声明
+                try {
+                    $ch->queue_declare($queueName, false, true, false, false, false);
+                } catch (\Throwable $e3) {
+                    \support\Log::error('publish_static 队列无参重建失败: ' . $e3->getMessage());
+                    throw $e3;
+                }
+            }
         }
         $ch->queue_bind($queueName, $exchange, $routingKey);
 
