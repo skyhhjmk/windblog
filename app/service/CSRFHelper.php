@@ -27,7 +27,8 @@ class CSRFHelper
         $csrfService = new CSRFService();
         $token = $csrfService->generateToken($request, $tokenName, $options);
 
-        return sprintf('<input type="hidden" name="%s" value="%s">',
+        return sprintf(
+            '<input type="hidden" name="%s" value="%s">',
             htmlspecialchars($tokenName),
             htmlspecialchars($token)
         );
@@ -46,6 +47,7 @@ class CSRFHelper
     public static function generateValue(Request $request, string $tokenName = '_token', array $options = []): string
     {
         $csrfService = new CSRFService();
+
         return $csrfService->generateToken($request, $tokenName, $options);
     }
 
@@ -62,6 +64,7 @@ class CSRFHelper
     public static function validate(Request $request, string $tokenName = '_token', array $options = []): bool
     {
         $csrfService = new CSRFService();
+
         return $csrfService->validateToken($request, $tokenName, $options);
     }
 
@@ -79,7 +82,7 @@ class CSRFHelper
     {
         return self::generateValue($request, $tokenName, [
             'one_time' => true,
-            'expire' => $expire
+            'expire' => $expire,
         ]);
     }
 
@@ -98,7 +101,7 @@ class CSRFHelper
     {
         return self::generateValue($request, $tokenName, [
             'bind_value' => $request->session()->get($bindField),
-            'expire' => $expire
+            'expire' => $expire,
         ]);
     }
 
@@ -118,7 +121,7 @@ class CSRFHelper
         return self::generateValue($request, $tokenName, [
             'one_time' => true,
             'bind_value' => $request->session()->get($bindField),
-            'expire' => $expire
+            'expire' => $expire,
         ]);
     }
 }

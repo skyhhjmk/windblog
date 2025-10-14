@@ -2,16 +2,19 @@
 
 namespace app\service;
 
-use support\Log;
 use Exception;
-use Throwable;
+use support\Log;
 
 class CacheService
 {
     private static $handler = null;
+
     private static bool $fallbackMode = false;
+
     private static int $lastFallbackTime = 0;
+
     private static $failedDrivers = [];
+
     private static string $prefix = '';
 
     /**
@@ -58,6 +61,7 @@ class CacheService
         if ($cacheDriver === 'none') {
             self::$handler = self::createNoneHandler();
             self::$fallbackMode = false;
+
             return self::$handler;
         }
 
@@ -69,6 +73,7 @@ class CacheService
             }
 
             self::$fallbackMode = false;
+
             return self::$handler;
 
         } catch (Exception $e) {
@@ -94,7 +99,7 @@ class CacheService
     {
         switch ($driver) {
             case 'redis':
-                return new class {
+                return new class () {
                     private $redis;
 
                     public function __construct()
@@ -108,6 +113,7 @@ class CacheService
                             return $this->redis->get($key);
                         } catch (Exception $e) {
                             Log::error("[cache] Redis get error: {$e->getMessage()}");
+
                             return false;
                         }
                     }
@@ -118,6 +124,7 @@ class CacheService
                             return $this->redis->setex($key, $ttl, $value);
                         } catch (Exception $e) {
                             Log::error("[cache] Redis setex error: {$e->getMessage()}");
+
                             return false;
                         }
                     }
@@ -135,6 +142,7 @@ class CacheService
                             }
                         } catch (Exception $e) {
                             Log::error("[cache] Redis set error: {$e->getMessage()}");
+
                             return false;
                         }
                     }
@@ -145,6 +153,7 @@ class CacheService
                             return $this->redis->del($key) > 0;
                         } catch (Exception $e) {
                             Log::error("[cache] Redis del error: {$e->getMessage()}");
+
                             return false;
                         }
                     }
@@ -155,6 +164,7 @@ class CacheService
                             return $this->redis->exists($key) > 0;
                         } catch (Exception $e) {
                             Log::error("[cache] Redis has error: {$e->getMessage()}");
+
                             return false;
                         }
                     }
@@ -165,10 +175,11 @@ class CacheService
                     throw new Exception('APCu extension is not loaded or not enabled');
                 }
 
-                return new class {
+                return new class () {
                     public function get(string $key)
                     {
                         $result = apcu_fetch($key, $success);
+
                         return $success ? $result : false;
                     }
 
@@ -181,6 +192,7 @@ class CacheService
                     {
                         // 序列化非字符串值
                         $serialized = is_string($value) ? $value : serialize($value);
+
                         // ttl=0 表示永久
                         return apcu_store($key, $serialized, $ttl);
                     }
@@ -201,7 +213,7 @@ class CacheService
                     throw new Exception('Memcached extension is not loaded');
                 }
 
-                return new class {
+                return new class () {
                     private $memcached;
 
                     public function __construct()
@@ -209,13 +221,14 @@ class CacheService
                         $this->memcached = new \Memcached();
                         $this->memcached->addServer(
                             getenv('MEMCACHED_HOST') ?: '127.0.0.1',
-                            (int)(getenv('MEMCACHED_PORT') ?: 11211)
+                            (int) (getenv('MEMCACHED_PORT') ?: 11211)
                         );
                     }
 
                     public function get(string $key)
                     {
                         $result = $this->memcached->get($key);
+
                         return $this->memcached->getResultCode() === \Memcached::RES_SUCCESS ? $result : false;
                     }
 
@@ -228,6 +241,7 @@ class CacheService
                     {
                         // 序列化非字符串值
                         $serialized = is_string($value) ? $value : serialize($value);
+
                         // Memcached 的 ttl=0 表示不过期
                         return $this->memcached->set($key, $serialized, $ttl);
                     }
@@ -240,13 +254,14 @@ class CacheService
                     public function has(string $key): bool
                     {
                         $result = $this->memcached->get($key);
+
                         return $this->memcached->getResultCode() === \Memcached::RES_SUCCESS;
                     }
                 };
 
             case 'memory':
                 // 进程内内存缓存（仅在当前进程有效），支持 TTL
-                return new class {
+                return new class () {
                     private array $data = [];
 
                     public function get(string $key)
@@ -258,6 +273,7 @@ class CacheService
                         $item = $this->data[$key];
                         if ($item['expire'] !== null && $item['expire'] < $now) {
                             unset($this->data[$key]);
+
                             return false;
                         }
 
@@ -270,6 +286,7 @@ class CacheService
                                 return $unserialized;
                             }
                         }
+
                         return $value;
                     }
 
@@ -277,8 +294,9 @@ class CacheService
                     {
                         $this->data[$key] = [
                             'value' => $value,
-                            'expire' => $ttl > 0 ? time() + $ttl : null
+                            'expire' => $ttl > 0 ? time() + $ttl : null,
                         ];
+
                         return true;
                     }
 
@@ -289,8 +307,9 @@ class CacheService
 
                         $this->data[$key] = [
                             'value' => $serialized,
-                            'expire' => $ttl > 0 ? time() + $ttl : null
+                            'expire' => $ttl > 0 ? time() + $ttl : null,
                         ];
+
                         return true;
                     }
 
@@ -298,6 +317,7 @@ class CacheService
                     {
                         $exists = isset($this->data[$key]);
                         unset($this->data[$key]);
+
                         return $exists;
                     }
 
@@ -310,8 +330,10 @@ class CacheService
                         $item = $this->data[$key];
                         if ($item['expire'] !== null && $item['expire'] < $now) {
                             unset($this->data[$key]);
+
                             return false;
                         }
+
                         return true;
                     }
                 };
@@ -329,7 +351,7 @@ class CacheService
      */
     private static function createNoneHandler()
     {
-        return new class {
+        return new class () {
             public function get(string $key)
             {
                 return false;
@@ -379,10 +401,12 @@ class CacheService
             }
 
             $getResult = $handler->get($testKey);
+
             return $getResult === $testValue;
 
         } catch (Exception $e) {
             Log::error("[cache] connection test failed: {$e->getMessage()}");
+
             return false;
         }
     }
@@ -395,6 +419,7 @@ class CacheService
         try {
             if (empty($key)) {
                 Log::warning('[cache] empty key provided');
+
                 return false;
             }
 
@@ -426,12 +451,13 @@ class CacheService
                 }
                 if ($serialized_value === null) {
                     Log::error('[cache] failed to serialize value');
+
                     return false;
                 }
 
                 // 默认TTL + 负缓存TTL + 随机抖动
-                $default_ttl = (int)(getenv('CACHE_DEFAULT_TTL') ?: 86400);
-                $expire_time = is_numeric($ttl) ? (int)$ttl : $default_ttl;
+                $default_ttl = (int) (getenv('CACHE_DEFAULT_TTL') ?: 86400);
+                $expire_time = is_numeric($ttl) ? (int) $ttl : $default_ttl;
                 if ($expire_time < 0) {
                     $expire_time = $default_ttl;
                 }
@@ -439,11 +465,11 @@ class CacheService
                 // blog_config_* 键禁用负缓存
                 $isConfigKey = str_starts_with($key, 'blog_config_');
                 if ($is_negative && !$isConfigKey) {
-                    $neg_ttl = (int)(getenv('CACHE_NEGATIVE_TTL') ?: 30);
+                    $neg_ttl = (int) (getenv('CACHE_NEGATIVE_TTL') ?: 30);
                     $expire_time = max(1, $neg_ttl);
                 }
                 // 抖动，避免同时过期雪崩
-                $jitter_sec = (int)(getenv('CACHE_JITTER_SECONDS') ?: 0);
+                $jitter_sec = (int) (getenv('CACHE_JITTER_SECONDS') ?: 0);
                 if ($jitter_sec > 0 && $expire_time > 1) {
                     $expire_time += random_int(0, $jitter_sec);
                 }
@@ -469,6 +495,7 @@ class CacheService
                     } catch (Exception $e) {
                         Log::warning('[cache] unlock warn: ' . $e->getMessage());
                     }
+
                     return $value;
                 }
                 // 设置存储键：负缓存追加 ::neg 后缀（blog_config_* 不使用负缓存）
@@ -478,11 +505,12 @@ class CacheService
                 if ($expire_time === 0 && method_exists($cache_handler, 'set')) {
                     $result = $cache_handler->set($storeKey, $serialized_value);
                 } else {
-                    $cache_ttl = (int)max(1, $expire_time);
+                    $cache_ttl = (int) max(1, $expire_time);
                     $result = $cache_handler->setex($storeKey, $cache_ttl, $serialized_value);
                 }
                 if ($result === false) {
                     Log::error('[cache] failed to set cache key: ' . $storeKey);
+
                     return false;
                 }
                 // 结束计算，清理锁
@@ -514,16 +542,16 @@ class CacheService
                     }
 
                     // 防缓存击穿：在计算锁存在期间进行可配置的多次退避重试
-                    $busyWaitMs = (int)(getenv('CACHE_BUSY_WAIT_MS') ?: 50);
-                    $maxRetries = (int)(getenv('CACHE_BUSY_MAX_RETRIES') ?: 3);
-                    $lockTtlMs = (int)(getenv('CACHE_LOCK_TTL_MS') ?: 3000);
+                    $busyWaitMs = (int) (getenv('CACHE_BUSY_WAIT_MS') ?: 50);
+                    $maxRetries = (int) (getenv('CACHE_BUSY_MAX_RETRIES') ?: 3);
+                    $lockTtlMs = (int) (getenv('CACHE_LOCK_TTL_MS') ?: 3000);
                     $lockKey = self::prefixKey('__cache_lock:' . $key);
                     try {
                         $acquired = false;
                         if ($cache_driver === 'redis') {
                             $redis = \support\Redis::connection('cache');
                             // 尝试设置计算锁，若失败说明已有计算者
-                            $acquired = (bool)$redis->set($lockKey, '1', ['nx', 'px' => $lockTtlMs]);
+                            $acquired = (bool) $redis->set($lockKey, '1', ['nx', 'px' => $lockTtlMs]);
                             if (!$acquired) {
                                 for ($i = 0; $i < $maxRetries; $i++) {
                                     usleep(max(0, $busyWaitMs) * 1000);
@@ -541,14 +569,14 @@ class CacheService
                                     // 简单指数退避，并参考锁剩余时间进行上限控制
                                     $pttl = method_exists($redis, 'pttl') ? $redis->pttl($lockKey) : -1;
                                     if ($pttl > 0) {
-                                        $busyWaitMs = min($busyWaitMs * 2, max(50, (int)($pttl / 2)));
+                                        $busyWaitMs = min($busyWaitMs * 2, max(50, (int) ($pttl / 2)));
                                     } else {
                                         $busyWaitMs = min($busyWaitMs * 2, 500);
                                     }
                                 }
                             }
                         } elseif (function_exists('apcu_add') && apcu_enabled()) {
-                            $acquired = apcu_add($lockKey, 1, (int)ceil($lockTtlMs / 1000));
+                            $acquired = apcu_add($lockKey, 1, (int) ceil($lockTtlMs / 1000));
                             if (!$acquired) {
                                 for ($i = 0; $i < $maxRetries; $i++) {
                                     usleep(max(0, $busyWaitMs) * 1000);
@@ -576,7 +604,7 @@ class CacheService
                 }
 
                 // 新版标记解码，兼容旧数据
-                $raw = (string)$cached;
+                $raw = (string) $cached;
                 // blog_config_* 空值防护：命中到 json:"" 或 json:null 则视为未命中，并删除问题键
                 if (str_starts_with($key, 'blog_config_')) {
                     if ($raw === 'json:""' || $raw === 'json:null') {
@@ -585,6 +613,7 @@ class CacheService
                         } catch (Exception $e) {
                             Log::warning('[cache] blog_config empty value cleanup warn: ' . $e->getMessage());
                         }
+
                         return false;
                     }
                 }
@@ -654,6 +683,7 @@ class CacheService
                     $allowAll = filter_var(getenv('CACHE_ALLOW_CLEAR_ALL') ?: 'false', FILTER_VALIDATE_BOOLEAN);
                     if (!$allowAll) {
                         Log::warning('[clear_cache] prefix is empty and pattern contains *, refused without explicit confirmation (set CACHE_ALLOW_CLEAR_ALL=true to proceed)');
+
                         return false;
                     }
                 }
@@ -676,6 +706,7 @@ class CacheService
                                 }
                             }
                         } while ($cursor !== 0);
+
                         return $deleted >= 0;
 
                     case 'apcu':
@@ -687,10 +718,12 @@ class CacheService
                                 $success = false;
                             }
                         }
+
                         return $success;
 
                     case 'memcached':
                         Log::warning('[clear_cache] Memcached does not support pattern-based cache clearing');
+
                         return false;
 
                     case 'memory':
@@ -702,6 +735,7 @@ class CacheService
 
                     default:
                         Log::warning("[clear_cache] Pattern-based clearing not supported for driver: {$cache_driver}");
+
                         return false;
                 }
             } else {
@@ -709,6 +743,7 @@ class CacheService
             }
         } catch (Exception $e) {
             Log::error('[clear_cache] exception: ' . $e->getMessage());
+
             return false;
         }
     }
@@ -727,6 +762,7 @@ class CacheService
                 $allowAll = filter_var(getenv('CACHE_ALLOW_CLEAR_ALL') ?: 'false', FILTER_VALIDATE_BOOLEAN);
                 if (!$allowAll) {
                     Log::warning('[clear_cache_all] prefix is empty and pattern contains *, refused (set CACHE_ALLOW_CLEAR_ALL=true)');
+
                     return false;
                 }
             }
@@ -774,7 +810,7 @@ class CacheService
             try {
                 if (extension_loaded('memcached')) {
                     $memcached = new \Memcached();
-                    $memcached->addServer(getenv('MEMCACHED_HOST') ?: '127.0.0.1', (int)(getenv('MEMCACHED_PORT') ?: 11211));
+                    $memcached->addServer(getenv('MEMCACHED_HOST') ?: '127.0.0.1', (int) (getenv('MEMCACHED_PORT') ?: 11211));
                     // Memcached不支持模式删除，只能选择flush（风险较大）；这里按前缀无法精准删除，选择跳过
                     Log::warning('[clear_cache_all] Memcached pattern clearing not supported; consider flush if needed');
                 }
@@ -786,6 +822,7 @@ class CacheService
             return $ok;
         } catch (Exception $e) {
             Log::error('[clear_cache_all] exception: ' . $e->getMessage());
+
             return false;
         }
     }
@@ -807,6 +844,7 @@ class CacheService
         if (self::$prefix === '' && getenv('CACHE_PREFIX')) {
             self::$prefix = getenv('CACHE_PREFIX');
         }
+
         return self::$prefix . $key;
     }
 
@@ -815,10 +853,11 @@ class CacheService
      */
     public static function getPsr16Adapter(): object
     {
-        return new class {
+        return new class () {
             public function get(string $key, mixed $default = null): mixed
             {
                 $val = CacheService::cache($key);
+
                 return $val !== false ? $val : $default;
             }
 
@@ -826,16 +865,18 @@ class CacheService
             {
                 $seconds = null;
                 if ($ttl instanceof \DateInterval) {
-                    $seconds = (int)$this->intervalToSeconds($ttl);
+                    $seconds = (int) $this->intervalToSeconds($ttl);
                 } elseif (is_int($ttl)) {
                     $seconds = $ttl;
                 }
+
                 return CacheService::cache($key, $value, true, $seconds) !== false;
             }
 
             public function delete(string $key): bool
             {
                 $handler = CacheService::getCacheHandler();
+
                 return $handler && $handler->del(CacheService::prefixKey($key));
             }
 
@@ -851,6 +892,7 @@ class CacheService
                 foreach ($keys as $key) {
                     $results[$key] = $this->get($key, $default);
                 }
+
                 return $results;
             }
 
@@ -860,6 +902,7 @@ class CacheService
                 foreach ($values as $key => $value) {
                     $ok = $ok && $this->set($key, $value, $ttl);
                 }
+
                 return $ok;
             }
 
@@ -869,6 +912,7 @@ class CacheService
                 foreach ($keys as $key) {
                     $ok = $ok && $this->delete($key);
                 }
+
                 return $ok;
             }
 
@@ -879,6 +923,7 @@ class CacheService
                     return false;
                 }
                 $val = $handler->get(CacheService::prefixKey($key));
+
                 return $val !== false;
             }
 
@@ -886,7 +931,8 @@ class CacheService
             {
                 $ref = new \DateTimeImmutable();
                 $end = $ref->add($interval);
-                return max(0, (int)($end->getTimestamp() - $ref->getTimestamp()));
+
+                return max(0, (int) ($end->getTimestamp() - $ref->getTimestamp()));
             }
         };
     }

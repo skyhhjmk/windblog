@@ -1,14 +1,15 @@
 <?php
+
 namespace app\middleware;
 
 use ReflectionClass;
-use Webman\MiddlewareInterface;
-use Webman\Http\Response;
 use Webman\Http\Request;
+use Webman\Http\Response;
+use Webman\MiddlewareInterface;
 
 class AuthCheck implements MiddlewareInterface
 {
-    public function process(Request $request, callable $handler) : Response
+    public function process(Request $request, callable $handler): Response
     {
         if (session('admin')) {
             // 已经登录

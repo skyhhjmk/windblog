@@ -19,7 +19,8 @@ class Install
         // 找到通用菜单
         $commonMenu = Menu::get('common');
         if (!$commonMenu) {
-            echo "未找到通用设置菜单" . PHP_EOL;
+            echo '未找到通用设置菜单' . PHP_EOL;
+
             return;
         }
         // 以通用菜单为上级菜单插入菜单

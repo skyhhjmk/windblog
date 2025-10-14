@@ -1,8 +1,8 @@
 <?php
+
 namespace app\debug_toolkit\controller;
 
 use support\Request;
-use app\model\Post;
 
 class IndexController
 {
@@ -11,7 +11,7 @@ class IndexController
      */
     protected array $noNeedLogin = ['index'];
 
-    public function index(Request $request,int $page = 1)
+    public function index(Request $request, int $page = 1)
     {
     }
 }

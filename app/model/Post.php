@@ -1,17 +1,15 @@
 <?php
 
 namespace app\model;
-use app\service\ElasticSyncService;
-use app\service\BlogService;
 
+use app\service\BlogService;
+use app\service\ElasticSyncService;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use support\Model;
 use Throwable;
-use support\Db;
 
 /**
  * 文章模型
@@ -55,7 +53,7 @@ class Post extends Model
             try {
                 // 如果是软删除（deleted_at 已设置），确保从 ES 移除
                 if (!empty($post->deleted_at)) {
-                    ElasticSyncService::deletePost((int)$post->id);
+                    ElasticSyncService::deletePost((int) $post->id);
                 } else {
                     ElasticSyncService::indexPost($post);
                 }
@@ -72,13 +70,14 @@ class Post extends Model
             }
             try {
                 // 硬删除或软删除后的 delete 事件都确保 ES 文档移除
-                ElasticSyncService::deletePost((int)$post->id);
+                ElasticSyncService::deletePost((int) $post->id);
             } catch (\Throwable $e) {
                 \support\Log::warning('[Post.deleted] ES delete failed: ' . $e->getMessage());
             }
         });
 
     }
+
     /**
      * 与模型关联的表名
      * Eloquent 会自动推断为 'posts'，显式声明以增加代码可读性。
@@ -155,9 +154,9 @@ class Post extends Model
      */
     public $timestamps = true;
 
-    // -----------------------------------------------------    
-    // 模型关系定义    
-    // -----------------------------------------------------    
+    // -----------------------------------------------------
+    // 模型关系定义
+    // -----------------------------------------------------
 
     /**
      * 获取文章的所有作者关联记录。
@@ -248,8 +247,8 @@ class Post extends Model
         return $this->hasMany(Comment::class, 'post_id', 'id');
     }
 
-    // -----------------------------------------------------    
-    // 查询作用域    
+    // -----------------------------------------------------
+    // 查询作用域
     // -----------------------------------------------------
 
     /**
@@ -340,6 +339,7 @@ class Post extends Model
                     return $this->delete();
                 } catch (\Exception $e) {
                     \support\Log::error('Hard delete failed for post ID ' . $this->id . ': ' . $e->getMessage());
+
                     return false;
                 }
             } else {
@@ -351,9 +351,11 @@ class Post extends Model
                     $result = $this->save();
                     \support\Log::debug('Soft delete result: ' . var_export($result, true));
                     \support\Log::debug('Post deleted_at value after save: ' . var_export($this->deleted_at, true));
+
                     return $result !== false; // 确保返回布尔值
                 } catch (\Exception $e) {
                     \support\Log::error('Soft delete failed for post ID ' . $this->id . ': ' . $e->getMessage());
+
                     return false;
                 }
             }
@@ -364,6 +366,7 @@ class Post extends Model
                 return $this->delete();
             } catch (\Exception $e) {
                 \support\Log::error('Hard delete failed for post ID ' . $this->id . ': ' . $e->getMessage());
+
                 return false;
             }
         }
@@ -380,9 +383,11 @@ class Post extends Model
             // 使用save方法而不是update方法，确保模型状态同步
             $this->deleted_at = null;
             $result = $this->save();
+
             return $result !== false;
         } catch (\Exception $e) {
             \support\Log::error('Restore failed for post ID ' . $this->id . ': ' . $e->getMessage());
+
             return false;
         }
     }

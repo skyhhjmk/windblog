@@ -2,13 +2,13 @@
 
 namespace app\controller;
 
+use app\service\BlogService;
+use app\service\ElasticService;
 use app\service\SidebarService;
+use League\CommonMark\Exception\CommonMarkException;
 use support\Request;
 use support\Response;
-use app\service\BlogService;
 use Throwable;
-use League\CommonMark\Exception\CommonMarkException;
-use app\service\ElasticService;
 
 /**
  * 搜索控制器
@@ -30,16 +30,16 @@ class SearchController
     public function index(Request $request, int $page = 1): Response
     {
         $keyword = $request->get('q', '');
-        $type = strtolower((string)$request->get('type', 'all'));
-        $sort = (string)$request->get('sort', '');
-        $date = (string)$request->get('date', '');
+        $type = strtolower((string) $request->get('type', 'all'));
+        $sort = (string) $request->get('sort', '');
+        $date = (string) $request->get('date', '');
 
         // 构建筛选条件
         $filters = [];
         if (!empty($keyword)) {
             $filters['search'] = $keyword;
         }
-        if (in_array($type, ['post','tag','category'], true)) {
+        if (in_array($type, ['post', 'tag', 'category'], true)) {
             $filters['type'] = $type;
         } else {
             $type = 'all';
@@ -54,9 +54,9 @@ class SearchController
 
         // ES启用且指定类型时：在ES命中集合基础上按标签/分类名称进行二次过滤
         try {
-            $esEnabled = (bool)\app\service\BlogService::getConfig('es.enabled', false);
+            $esEnabled = (bool) \app\service\BlogService::getConfig('es.enabled', false);
             $degraded = !empty(($result['esMeta']['signals']['degraded'] ?? false));
-            if ($esEnabled && !empty($keyword) && in_array($type, ['tag','category'], true)) {
+            if ($esEnabled && !empty($keyword) && in_array($type, ['tag', 'category'], true)) {
                 $posts = $result['posts'];
 
                 if (!$degraded) {
@@ -70,15 +70,21 @@ class SearchController
                     $names = [];
                     $slugs = [];
                     foreach ($targets as $t) {
-                        $id = (int)($t['id'] ?? 0);
-                        if ($id > 0) { $idsSet[$id] = true; }
-                        $n = mb_strtolower((string)($t['name'] ?? ''));
-                        $s = mb_strtolower((string)($t['slug'] ?? ''));
-                        if ($n !== '') { $names[$n] = true; }
-                        if ($s !== '') { $slugs[$s] = true; }
+                        $id = (int) ($t['id'] ?? 0);
+                        if ($id > 0) {
+                            $idsSet[$id] = true;
+                        }
+                        $n = mb_strtolower((string) ($t['name'] ?? ''));
+                        $s = mb_strtolower((string) ($t['slug'] ?? ''));
+                        if ($n !== '') {
+                            $names[$n] = true;
+                        }
+                        if ($s !== '') {
+                            $slugs[$s] = true;
+                        }
                     }
 
-                    $filtered = $posts->filter(function($post) use ($type, $idsSet, $names, $slugs) {
+                    $filtered = $posts->filter(function ($post) use ($type, $idsSet, $names, $slugs) {
                         // 兼容模型对象与数组
                         $list = [];
                         if ($type === 'tag') {
@@ -86,25 +92,28 @@ class SearchController
                         } else {
                             $list = is_object($post) ? ($post->categories ?? []) : ($post['categories'] ?? []);
                         }
-                        if (!is_iterable($list)) return false;
+                        if (!is_iterable($list)) {
+                            return false;
+                        }
                         foreach ($list as $item) {
                             // 关系项也可能是模型对象
-                            $id = is_object($item) ? (int)($item->id ?? 0) : (int)($item['id'] ?? 0);
+                            $id = is_object($item) ? (int) ($item->id ?? 0) : (int) ($item['id'] ?? 0);
                             if ($id > 0 && isset($idsSet[$id])) {
                                 return true;
                             }
-                            $n = is_object($item) ? mb_strtolower((string)($item->name ?? '')) : mb_strtolower((string)($item['name'] ?? ''));
-                            $s = is_object($item) ? mb_strtolower((string)($item->slug ?? '')) : mb_strtolower((string)($item['slug'] ?? ''));
+                            $n = is_object($item) ? mb_strtolower((string) ($item->name ?? '')) : mb_strtolower((string) ($item['name'] ?? ''));
+                            $s = is_object($item) ? mb_strtolower((string) ($item->slug ?? '')) : mb_strtolower((string) ($item['slug'] ?? ''));
                             if (($n !== '' && isset($names[$n])) || ($s !== '' && isset($slugs[$s]))) {
                                 return true;
                             }
                         }
+
                         return false;
                     })->values();
                 } else {
                     // 服务降级：回退到数据库匹配（名称/slug包含关键词）
                     $kwLower = mb_strtolower($keyword);
-                    $filtered = $posts->filter(function($post) use ($type, $kwLower) {
+                    $filtered = $posts->filter(function ($post) use ($type, $kwLower) {
                         // 兼容模型对象与数组
                         $list = [];
                         if ($type === 'tag') {
@@ -112,16 +121,19 @@ class SearchController
                         } else {
                             $list = is_object($post) ? ($post->categories ?? []) : ($post['categories'] ?? []);
                         }
-                        if (!is_iterable($list)) return false;
+                        if (!is_iterable($list)) {
+                            return false;
+                        }
                         foreach ($list as $item) {
                             // 关系项也可能是模型对象
-                            $name = is_object($item) ? mb_strtolower((string)($item->name ?? '')) : mb_strtolower((string)($item['name'] ?? ''));
-                            $slug = is_object($item) ? mb_strtolower((string)($item->slug ?? '')) : mb_strtolower((string)($item['slug'] ?? ''));
+                            $name = is_object($item) ? mb_strtolower((string) ($item->name ?? '')) : mb_strtolower((string) ($item['name'] ?? ''));
+                            $slug = is_object($item) ? mb_strtolower((string) ($item->slug ?? '')) : mb_strtolower((string) ($item['slug'] ?? ''));
                             if (($name !== '' && mb_strpos($name, $kwLower) !== false) ||
                                 ($slug !== '' && mb_strpos($slug, $kwLower) !== false)) {
                                 return true;
                             }
                         }
+
                         return false;
                     })->values();
                 }
@@ -131,14 +143,14 @@ class SearchController
                 $result['totalCount'] = count($filtered);
                 $result['pagination'] = \app\service\PaginationService::generatePagination(
                     $page,
-                    (int)$result['totalCount'],
-                    (int)($result['postsPerPage'] ?? \app\service\BlogService::getPostsPerPage()),
+                    (int) $result['totalCount'],
+                    (int) ($result['postsPerPage'] ?? \app\service\BlogService::getPostsPerPage()),
                     'search.page',
                     [
                         'q' => $keyword,
                         'type' => $type,
                         'sort' => $sort,
-                        'date' => $date
+                        'date' => $date,
                     ]
                 );
             }
@@ -151,9 +163,8 @@ class SearchController
 
         // PJAX 优化：检测是否为 PJAX 请求（兼容 header/_pjax 参数/XHR）
         $isPjax = ($request->header('X-PJAX') !== null)
-            || (bool)$request->get('_pjax')
-            || strtolower((string)$request->header('X-Requested-With')) === 'xmlhttprequest';
-
+            || (bool) $request->get('_pjax')
+            || strtolower((string) $request->header('X-Requested-With')) === 'xmlhttprequest';
 
         // 获取侧边栏内容（PJAX 与非 PJAX 均获取）
         $sidebar = SidebarService::getSidebarContent($request, 'search');
@@ -165,19 +176,20 @@ class SearchController
         // 为搜索页生成正确的分页HTML，携带查询参数，避免跳转到首页分页
         $pagination_html = \app\service\PaginationService::generatePagination(
             $page,
-            (int)($result['totalCount'] ?? 0),
-            (int)($result['postsPerPage'] ?? \app\service\BlogService::getPostsPerPage()),
+            (int) ($result['totalCount'] ?? 0),
+            (int) ($result['postsPerPage'] ?? \app\service\BlogService::getPostsPerPage()),
             'search.page',
             [
                 'q' => $keyword,
                 'type' => $type,
                 'sort' => $sort,
-                'date' => $date
+                'date' => $date,
             ]
         );
 
         // 动态选择模板：PJAX 返回片段，非 PJAX 返回完整页面
         $viewName = $isPjax ? 'search/index.content' : 'search/index';
+
         return view($viewName, [
             'page_title' => "搜索: {$keyword} - {$blog_title}",
             'posts' => $result['posts'],
@@ -189,7 +201,7 @@ class SearchController
             'search_date' => $date,
             'esMeta' => $result['esMeta'] ?? [],
             'suggest_titles' => $suggestTitles,
-            'totalCount' => $result['totalCount'] ?? 0
+            'totalCount' => $result['totalCount'] ?? 0,
         ]);
     }
 
@@ -205,8 +217,8 @@ class SearchController
     public function ajax(Request $request): Response
     {
         $keyword = $request->get('q', '');
-        $type = strtolower((string)$request->get('type', 'all'));
-        if (!in_array($type, ['all','post','tag','category'], true)) {
+        $type = strtolower((string) $request->get('type', 'all'));
+        if (!in_array($type, ['all', 'post', 'tag', 'category'], true)) {
             $type = 'all';
         }
 
@@ -230,7 +242,7 @@ class SearchController
 
             // 构造文章类条目（不返回长摘要详情，仅附带类型与分类/标签）
             $postItems = array_map(function ($post) use ($hlMap) {
-                $pid = (int)$post['id'];
+                $pid = (int) $post['id'];
                 $titleHl = $hlMap[$pid]['title'][0] ?? null;
                 // 分类与标签（如存在）
                 $categories = [];
@@ -245,6 +257,7 @@ class SearchController
                         $tags[] = ['name' => $t['name'] ?? '', 'slug' => $t['slug'] ?? ''];
                     }
                 }
+
                 return [
                     'type' => 'post',
                     'id' => $post['id'],
@@ -258,7 +271,7 @@ class SearchController
 
             // 标签与分类匹配：ES启用时调用 ElasticService 专用方法，未启用时回退DB模糊匹配
             $mixedItems = $postItems;
-            $esEnabled = (bool)\app\service\BlogService::getConfig('es.enabled', false);
+            $esEnabled = (bool) \app\service\BlogService::getConfig('es.enabled', false);
             if ($esEnabled) {
                 // 仅在 ES 服务降级时才对标签进行数据库回退；空结果不视为失败
                 if ($type === 'all' || $type === 'tag') {
@@ -268,18 +281,19 @@ class SearchController
                         try {
                             $tagModel = \app\model\Tag::where('name', 'like', '%' . $keyword . '%')
                                 ->orWhere('slug', 'like', '%' . $keyword . '%')
-                                ->limit(10)->get(['id','name','slug']);
+                                ->limit(10)->get(['id', 'name', 'slug']);
                             foreach ($tagModel as $t) {
-                                $tags[] = ['id' => (int)$t->id, 'name' => (string)$t->name, 'slug' => (string)$t->slug];
+                                $tags[] = ['id' => (int) $t->id, 'name' => (string) $t->name, 'slug' => (string) $t->slug];
                             }
-                        } catch (\Throwable $e) {}
+                        } catch (\Throwable $e) {
+                        }
                     }
                     foreach ($tags as $t) {
                         $mixedItems[] = [
                             'type' => 'tag',
-                            'id' => (int)($t['id'] ?? 0),
-                            'title' => (string)($t['name'] ?? ''),
-                            'url' => '/tag/' . (string)($t['slug'] ?? '') . '.html',
+                            'id' => (int) ($t['id'] ?? 0),
+                            'title' => (string) ($t['name'] ?? ''),
+                            'url' => '/tag/' . (string) ($t['slug'] ?? '') . '.html',
                         ];
                     }
                 }
@@ -291,18 +305,19 @@ class SearchController
                         try {
                             $catModel = \app\model\Category::where('name', 'like', '%' . $keyword . '%')
                                 ->orWhere('slug', 'like', '%' . $keyword . '%')
-                                ->limit(10)->get(['id','name','slug']);
+                                ->limit(10)->get(['id', 'name', 'slug']);
                             foreach ($catModel as $c) {
-                                $cats[] = ['id' => (int)$c->id, 'name' => (string)$c->name, 'slug' => (string)$c->slug];
+                                $cats[] = ['id' => (int) $c->id, 'name' => (string) $c->name, 'slug' => (string) $c->slug];
                             }
-                        } catch (\Throwable $e) {}
+                        } catch (\Throwable $e) {
+                        }
                     }
                     foreach ($cats as $c) {
                         $mixedItems[] = [
                             'type' => 'category',
-                            'id' => (int)($c['id'] ?? 0),
-                            'title' => (string)($c['name'] ?? ''),
-                            'url' => '/category/' . (string)($c['slug'] ?? '') . '.html',
+                            'id' => (int) ($c['id'] ?? 0),
+                            'title' => (string) ($c['name'] ?? ''),
+                            'url' => '/category/' . (string) ($c['slug'] ?? '') . '.html',
                         ];
                     }
                 }
@@ -312,37 +327,39 @@ class SearchController
                     try {
                         $tagModel = \app\model\Tag::where('name', 'like', '%' . $keyword . '%')
                             ->orWhere('slug', 'like', '%' . $keyword . '%')
-                            ->limit(10)->get(['id','name','slug']);
+                            ->limit(10)->get(['id', 'name', 'slug']);
                         foreach ($tagModel as $t) {
                             $mixedItems[] = [
                                 'type' => 'tag',
-                                'id' => (int)$t->id,
-                                'title' => (string)$t->name,
-                                'url' => '/tag/' . (string)$t->slug . '.html',
+                                'id' => (int) $t->id,
+                                'title' => (string) $t->name,
+                                'url' => '/tag/' . (string) $t->slug . '.html',
                             ];
                         }
-                    } catch (\Throwable $e) {}
+                    } catch (\Throwable $e) {
+                    }
                 }
                 if ($type === 'all' || $type === 'category') {
                     try {
                         $catModel = \app\model\Category::where('name', 'like', '%' . $keyword . '%')
                             ->orWhere('slug', 'like', '%' . $keyword . '%')
-                            ->limit(10)->get(['id','name','slug']);
+                            ->limit(10)->get(['id', 'name', 'slug']);
                         foreach ($catModel as $c) {
                             $mixedItems[] = [
                                 'type' => 'category',
-                                'id' => (int)$c->id,
-                                'title' => (string)$c->name,
-                                'url' => '/category/' . (string)$c->slug . '.html',
+                                'id' => (int) $c->id,
+                                'title' => (string) $c->name,
+                                'url' => '/category/' . (string) $c->slug . '.html',
                             ];
                         }
-                    } catch (\Throwable $e) {}
+                    } catch (\Throwable $e) {
+                    }
                 }
             }
 
             // 若指定了单一类型，则按类型过滤
             if ($type !== 'all') {
-                $mixedItems = array_values(array_filter($mixedItems, function($it) use ($type) {
+                $mixedItems = array_values(array_filter($mixedItems, function ($it) use ($type) {
                     return $it['type'] === $type;
                 }));
             }
@@ -368,6 +385,7 @@ class SearchController
 
         } catch (\Exception $e) {
             error_log('SearchController ajax error: ' . $e->getMessage());
+
             return response(json_encode(['success' => false, 'message' => '搜索失败: ' . $e->getMessage()]), 500)
                 ->withHeader('Content-Type', 'application/json');
         }

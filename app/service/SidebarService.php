@@ -3,8 +3,8 @@
 namespace app\service;
 
 use app\model\Setting;
-use support\Request;
 use support\Log;
+use support\Request;
 use Throwable;
 
 /**
@@ -16,7 +16,7 @@ class SidebarService
     /**
      * 设置键名
      */
-    const SETTING_KEY = 'sidebar';
+    public const SETTING_KEY = 'sidebar';
 
     /**
      * 获取当前页面的侧边栏内容
@@ -36,6 +36,7 @@ class SidebarService
             return self::getSidebarByPage($pageKey);
         } catch (Throwable $e) {
             Log::error('[SidebarService] Failed to get sidebar content: ' . $e->getMessage());
+
             return self::getDefaultSidebar($pageKey);
         }
     }
@@ -52,10 +53,11 @@ class SidebarService
         try {
             $path = $request->path();
             $pageKey = str_replace(['/', '\\'], '_', trim($path, '/'));
-            
+
             return empty($pageKey) ? 'home' : $pageKey;
         } catch (Throwable $e) {
             Log::error('[SidebarService] Failed to detect page key: ' . $e->getMessage());
+
             return 'home';
         }
     }
@@ -72,9 +74,9 @@ class SidebarService
         try {
             // 获取侧边栏配置
             $setting = Setting::where('key', self::SETTING_KEY)->first();
-            
+
             $sidebarConfig = [];
-            
+
             // 如果存在配置，尝试加载
             if ($setting && !empty($setting->value)) {
                 $allConfigs = json_decode($setting->value, true);
@@ -82,19 +84,20 @@ class SidebarService
                     $sidebarConfig = $allConfigs[$pageKey] ?? $allConfigs['default'] ?? [];
                 }
             }
-            
+
             // 如果没有配置或配置无效，返回默认配置
             if (empty($sidebarConfig) || !is_array($sidebarConfig)) {
                 return self::getDefaultSidebar($pageKey);
             }
-            
+
             // 添加页面标识
             $sidebarConfig['page_key'] = $pageKey;
-            
+
             // 渲染侧边栏小工具
             return self::renderSidebarWidgets($sidebarConfig);
         } catch (Throwable $e) {
             Log::error('[SidebarService] Failed to get sidebar by page: ' . $e->getMessage());
+
             return self::getDefaultSidebar($pageKey);
         }
     }
@@ -116,29 +119,29 @@ class SidebarService
                     'title' => '关于博主',
                     'type' => 'about',
                     'content' => '欢迎访问我的博客，这里记录了我的技术分享和生活感悟。',
-                    'enabled' => true
+                    'enabled' => true,
                 ],
                 [
                     'id' => 'recent_posts',
                     'title' => '最新文章',
                     'type' => 'recent_posts',
                     'enabled' => true,
-                    'limit' => 5
+                    'limit' => 5,
                 ],
                 [
                     'id' => 'categories',
                     'title' => '文章分类',
                     'type' => 'categories',
-                    'enabled' => true
+                    'enabled' => true,
                 ],
                 [
                     'id' => 'tags',
                     'title' => '标签云',
                     'type' => 'tags',
                     'enabled' => true,
-                    'params' => ['count' => 50, 'visible' => 30]
-                ]
-            ]
+                    'params' => ['count' => 50, 'visible' => 30],
+                ],
+            ],
         ];
     }
 
@@ -155,14 +158,14 @@ class SidebarService
         if (!isset($sidebarConfig['widgets']) || !is_array($sidebarConfig['widgets'])) {
             $sidebarConfig['widgets'] = [];
         }
-        
+
         // 渲染每个启用的小工具为HTML
         foreach ($sidebarConfig['widgets'] as $key => &$widget) {
             if (isset($widget['enabled']) && $widget['enabled'] === true) {
                 try {
                     // 规范化键值：确保每个小工具具有稳定的 id/key，便于前端 data-widget-key 使用
                     if (empty($widget['id'])) {
-                        $widget['id'] = $widget['type'] ?? (is_string($key) ? $key : ('widget_' . (string)$key));
+                        $widget['id'] = $widget['type'] ?? (is_string($key) ? $key : ('widget_' . (string) $key));
                     }
                     if (empty($widget['key'])) {
                         $widget['key'] = $widget['id'];
@@ -174,7 +177,7 @@ class SidebarService
                     $widget['html'] = \app\service\PluginService::apply_filters('sidebar.widget_html_filter', [
                         'page_key' => $sidebarConfig['page_key'] ?? 'default',
                         'widget' => $widget,
-                        'html' => $widget['html']
+                        'html' => $widget['html'],
                     ])['html'] ?? $widget['html'];
                 } catch (Throwable $e) {
                     Log::error('[SidebarService] Failed to render widget: ' . $e->getMessage());
@@ -184,7 +187,7 @@ class SidebarService
                 $widget['html'] = '';
             }
         }
-        
+
         return $sidebarConfig;
     }
 
@@ -204,51 +207,52 @@ class SidebarService
             if (empty($pageKey)) {
                 throw new \InvalidArgumentException('Page key cannot be empty');
             }
-            
+
             // 确保sidebarConfig是数组
             if (!is_array($sidebarConfig)) {
                 throw new \InvalidArgumentException('Sidebar config must be an array');
             }
-            
+
             // 清理不必要的字段
             unset($sidebarConfig['html']);
             unset($sidebarConfig['page_key']);
-            
+
             // 获取现有配置
             $setting = Setting::where('key', self::SETTING_KEY)->first();
-            
+
             // 初始化或获取所有配置
             $allConfigs = [];
             if ($setting && !empty($setting->value)) {
                 $allConfigs = json_decode($setting->value, true);
                 if (!is_array($allConfigs)) {
-                    Log::warning("[SidebarService] Invalid existing config format, initializing new array");
+                    Log::warning('[SidebarService] Invalid existing config format, initializing new array');
                     $allConfigs = [];
                 }
-                Log::debug("[SidebarService] Loaded existing config for pages: " . implode(', ', array_keys($allConfigs)));
+                Log::debug('[SidebarService] Loaded existing config for pages: ' . implode(', ', array_keys($allConfigs)));
             }
-            
+
             // 验证小工具配置
             if (isset($sidebarConfig['widgets']) && !is_array($sidebarConfig['widgets'])) {
                 $sidebarConfig['widgets'] = [];
                 Log::warning("[SidebarService] Invalid widgets format for page {$pageKey}");
             }
-            
+
             // 更新特定页面的配置，保留其他页面配置
             $allConfigs[$pageKey] = $sidebarConfig;
             Log::debug("[SidebarService] Updating config for page: {$pageKey}");
-            
+
             // 转换为JSON
             $jsonConfig = json_encode($allConfigs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             if ($jsonConfig === false) {
                 throw new \RuntimeException('Failed to encode sidebar config to JSON: ' . json_last_error_msg());
             }
-            
+
             if ($setting) {
                 // 更新现有配置
                 $setting->value = $jsonConfig;
                 $result = $setting->save();
                 Log::debug("[SidebarService] Sidebar config saved for page: {$pageKey}, total pages: " . count($allConfigs));
+
                 return $result;
             } else {
                 // 创建新配置
@@ -257,6 +261,7 @@ class SidebarService
                 $setting->value = $jsonConfig;
                 $result = $setting->save();
                 Log::info("[SidebarService] Initial sidebar config created for page: {$pageKey}");
+
                 return $result;
             }
         } catch (Throwable $e) {
@@ -275,7 +280,7 @@ class SidebarService
         try {
             // 获取所有已配置的页面
             $setting = Setting::where('key', self::SETTING_KEY)->first();
-            
+
             $pages = [];
             if ($setting && !empty($setting->value)) {
                 $allConfigs = json_decode($setting->value, true);
@@ -283,12 +288,12 @@ class SidebarService
                     foreach (array_keys($allConfigs) as $pageKey) {
                         $pages[] = [
                             'key' => $pageKey,
-                            'name' => ucfirst(str_replace('_', ' ', $pageKey))
+                            'name' => ucfirst(str_replace('_', ' ', $pageKey)),
                         ];
                     }
                 }
             }
-            
+
             // 添加常用页面
             $commonPages = [
                 ['key' => 'home', 'name' => '首页'],
@@ -297,27 +302,28 @@ class SidebarService
                 ['key' => 'post', 'name' => '文章详情页'],
                 ['key' => 'page', 'name' => '单页'],
                 ['key' => 'search', 'name' => '搜索页'],
-                ['key' => 'default', 'name' => '默认']
+                ['key' => 'default', 'name' => '默认'],
             ];
-            
+
             // 合并并去重
             $allPages = array_merge($pages, $commonPages);
             $uniquePages = [];
             $seenKeys = [];
-            
+
             foreach ($allPages as $page) {
                 if (!in_array($page['key'], $seenKeys)) {
                     $uniquePages[] = [
                         'key' => $page['key'],
-                        'name' => $page['name'] ?? ucfirst(str_replace('_', ' ', $page['key']))
+                        'name' => $page['name'] ?? ucfirst(str_replace('_', ' ', $page['key'])),
                     ];
                     $seenKeys[] = $page['key'];
                 }
             }
-            
+
             return $uniquePages;
         } catch (Throwable $e) {
             Log::error('[SidebarService] Failed to get sidebar pages: ' . $e->getMessage());
+
             return [];
         }
     }
@@ -338,10 +344,11 @@ class SidebarService
             } else {
                 $sidebarConfig = self::getSidebarByPage($pageKey);
             }
-            
+
             return $sidebarConfig;
         } catch (Throwable $e) {
             Log::error('[SidebarService] Failed to render sidebar: ' . $e->getMessage());
+
             return self::getDefaultSidebar($pageKey);
         }
     }
@@ -357,6 +364,7 @@ class SidebarService
             return WidgetService::getRegisteredWidgets();
         } catch (Throwable $e) {
             Log::error('[SidebarService] Failed to get available widgets: ' . $e->getMessage());
+
             return [];
         }
     }

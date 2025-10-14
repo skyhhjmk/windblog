@@ -125,13 +125,13 @@ class PaginationService
             'totalItems' => $totalItems,
             'itemsPerPage' => $itemsPerPage,
             'routeName' => $routeName,
-            'totalPages' => $totalPages
+            'totalPages' => $totalPages,
         ]);
 
         // 过滤器：分页HTML（需权限 pagination:filter.html）
         $paginationHtml = \app\service\PluginService::apply_filters('pagination.html_filter', [
             'routeName' => $routeName,
-            'html' => $paginationHtml
+            'html' => $paginationHtml,
         ])['html'] ?? $paginationHtml;
 
         return $paginationHtml;

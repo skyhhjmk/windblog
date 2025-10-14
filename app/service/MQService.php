@@ -4,7 +4,6 @@ namespace app\service;
 
 use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
-use PhpAmqpLib\Message\AMQPMessage;
 use support\Log;
 use Throwable;
 
@@ -32,20 +31,20 @@ class MQService
     private static function getConnection(): AMQPStreamConnection
     {
         if (self::$connection === null) {
-            $host   = (string)blog_config('rabbitmq_host', '127.0.0.1', true);
-            $port   = (int)blog_config('rabbitmq_port', 5672, true);
-            $user   = (string)blog_config('rabbitmq_user', 'guest', true);
-            $pass   = (string)blog_config('rabbitmq_password', 'guest', true);
-            $vhost  = (string)blog_config('rabbitmq_vhost', '/', true);
+            $host = (string) blog_config('rabbitmq_host', '127.0.0.1', true);
+            $port = (int) blog_config('rabbitmq_port', 5672, true);
+            $user = (string) blog_config('rabbitmq_user', 'guest', true);
+            $pass = (string) blog_config('rabbitmq_password', 'guest', true);
+            $vhost = (string) blog_config('rabbitmq_vhost', '/', true);
 
             // 超时与心跳（可根据需要在配置中添加对应键）
-            $connTimeout       = 3.0;   // 连接超时秒
-            $readWriteTimeout  = 3.0;   // 读写超时秒
-            $heartbeat         = 60;    // 心跳秒
-            $keepalive         = true;  // TCP keepalive
+            $connTimeout = 3.0;   // 连接超时秒
+            $readWriteTimeout = 3.0;   // 读写超时秒
+            $heartbeat = 60;    // 心跳秒
+            $keepalive = true;  // TCP keepalive
 
             $attempts = 3;
-            $delayMs  = [300, 600, 1200];
+            $delayMs = [300, 600, 1200];
 
             $lastError = '';
             for ($i = 0; $i < $attempts; $i++) {
@@ -71,7 +70,7 @@ class MQService
                     break;
                 } catch (\Throwable $e) {
                     $lastError = $e->getMessage();
-                    Log::error("RabbitMQ 连接失败(第 ".($i+1)." 次): " . $lastError);
+                    Log::error('RabbitMQ 连接失败(第 ' . ($i + 1) . ' 次): ' . $lastError);
                     if ($i < $attempts - 1) {
                         usleep($delayMs[$i] * 1000);
                     }
@@ -119,6 +118,7 @@ class MQService
                 self::$channel->basic_qos(0, 1, false);
             }
         }
+
         return self::$channel;
     }
 
@@ -138,14 +138,22 @@ class MQService
         } catch (\Throwable $e) {
             Log::warning("DLX 交换机声明失败({$dlxExchange}): " . $e->getMessage());
             // 再次尝试非持久/自动删除以避免阻塞
-            try { $channel->exchange_declare($dlxExchange, 'direct', false, false, false); } catch (\Throwable $e2) { Log::error("DLX 交换机重试失败({$dlxExchange}): " . $e2->getMessage()); }
+            try {
+                $channel->exchange_declare($dlxExchange, 'direct', false, false, false);
+            } catch (\Throwable $e2) {
+                Log::error("DLX 交换机重试失败({$dlxExchange}): " . $e2->getMessage());
+            }
         }
 
         try {
             $channel->queue_declare($dlxQueue, false, true, false, false);
         } catch (\Throwable $e) {
             Log::warning("DLQ 队列声明失败({$dlxQueue}): " . $e->getMessage());
-            try { $channel->queue_declare($dlxQueue, false, true, false, false); } catch (\Throwable $e2) { Log::error("DLQ 队列重试失败({$dlxQueue}): " . $e2->getMessage()); }
+            try {
+                $channel->queue_declare($dlxQueue, false, true, false, false);
+            } catch (\Throwable $e2) {
+                Log::error("DLQ 队列重试失败({$dlxQueue}): " . $e2->getMessage());
+            }
         }
 
         try {
@@ -169,18 +177,21 @@ class MQService
      */
     public static function setupQueueWithDlx(
         AMQPChannel $channel,
-        string      $exchange,
-        string      $routingKey,
-        string      $queueName,
-        string      $dlxExchange,
-        string      $dlxQueue
-    ): void
-    {
+        string $exchange,
+        string $routingKey,
+        string $queueName,
+        string $dlxExchange,
+        string $dlxQueue
+    ): void {
         try {
             $channel->exchange_declare($exchange, 'direct', false, true, false);
         } catch (\Throwable $e) {
             \support\Log::warning("主交换机声明失败({$exchange}): " . $e->getMessage());
-            try { $channel->exchange_declare($exchange, 'direct', false, false, false); } catch (\Throwable $e2) { \support\Log::error("主交换机重试失败({$exchange}): " . $e2->getMessage()); }
+            try {
+                $channel->exchange_declare($exchange, 'direct', false, false, false);
+            } catch (\Throwable $e2) {
+                \support\Log::error("主交换机重试失败({$exchange}): " . $e2->getMessage());
+            }
         }
         $args = [
             'x-dead-letter-exchange' => ['S', $dlxExchange],
@@ -223,7 +234,6 @@ class MQService
      * @return bool
      */
 
-
     /**
      * 发送消息到HTTP回调队列
      *
@@ -231,7 +241,6 @@ class MQService
      *
      * @return bool
      */
-
 
     /**
      * 健康检查与自愈：尝试轻量操作检测连接/通道状态，失败则自动重建
@@ -243,6 +252,7 @@ class MQService
             $conn = self::getConnection();
             $tmp = $conn->channel();
             $tmp->close();
+
             return true;
         } catch (\Throwable $e) {
             Log::warning('MQ 健康检查失败，执行自愈: ' . $e->getMessage());
@@ -257,9 +267,11 @@ class MQService
                 $conn = self::getConnection();
                 self::$channel = $conn->channel();
                 self::$channel->basic_qos(0, 1, false);
+
                 return true;
             } catch (\Throwable $re) {
                 Log::error('MQ 自愈重建失败: ' . $re->getMessage());
+
                 return false;
             }
         }

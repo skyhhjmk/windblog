@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Plugin Name: Sample Demo
  * Plugin Slug: sample
@@ -9,15 +10,14 @@
  * Requires at least: 8.2
  */
 
-use app\service\plugin\PluginInterface;
 use app\service\plugin\HookManager;
-use Webman\Route;
+use app\service\plugin\PluginInterface;
 use support\Response;
 
-return new class implements PluginInterface {
+return new class () implements PluginInterface {
     /**
      * 插件安装时调用
-     * 
+     *
      * @param HookManager $hooks 钩子管理器
      */
     public function onInstall(HookManager $hooks): void
@@ -28,14 +28,14 @@ return new class implements PluginInterface {
         } catch (\Throwable $e) {
             // 忽略日志异常
         }
-        
+
         // 示例：初始化插件所需数据表或配置
         // 这里可以创建数据库表、初始化配置等操作
     }
-    
+
     /**
      * 插件升级时调用
-     * 
+     *
      * @param string $prevVersion 之前版本
      * @param string $curVersion 当前版本
      * @param HookManager $hooks 钩子管理器
@@ -48,12 +48,13 @@ return new class implements PluginInterface {
         } catch (\Throwable $e) {
             // 忽略日志异常
         }
-        
+
         // 示例：根据版本差异执行不同的升级逻辑
         // if (version_compare($prevVersion, '1.1.0', '<')) {
         //     // 执行从1.1.0版本以下升级所需的特定操作
         // }
     }
+
     public function activate(HookManager $hooks): void
     {
         // 请求进入动作：依授权决定是否执行
@@ -92,6 +93,7 @@ return new class implements PluginInterface {
             } catch (\Throwable $e) {
                 // 忽略异常
             }
+
             return $resp;
         }, 10, 1);
     }
@@ -105,10 +107,10 @@ return new class implements PluginInterface {
     {
         // 演示：彻底清理插件自身数据（此处省略）
     }
-    
+
     /**
      * 注册插件菜单
-     * 
+     *
      * @param string $type 菜单类型: 'admin' 后台, 'app' 前台
      * @return array 菜单配置数组
      */
@@ -129,19 +131,19 @@ return new class implements PluginInterface {
                             'key' => 'plugin_sample_dashboard',
                             'icon' => 'layui-icon-console',
                             'type' => 1,
-                            'href' => '/app/admin/pluginsandbox/sample/dashboard'
+                            'href' => '/app/admin/pluginsandbox/sample/dashboard',
                         ],
                         [
                             'title' => '设置',
                             'key' => 'plugin_sample_settings',
                             'icon' => 'layui-icon-set',
                             'type' => 1,
-                            'href' => '/app/admin/pluginsandbox/sample/settings'
-                        ]
-                    ]
-                ]
+                            'href' => '/app/admin/pluginsandbox/sample/settings',
+                        ],
+                    ],
+                ],
             ];
-        } else if ($type === 'app') {
+        } elseif ($type === 'app') {
             // 注册前台菜单
             return [
                 [
@@ -149,17 +151,17 @@ return new class implements PluginInterface {
                     'key' => 'plugin_sample_app',
                     'icon' => '',
                     'type' => 1,
-                    'href' => '/plugin/sample/index'
-                ]
+                    'href' => '/plugin/sample/index',
+                ],
             ];
         }
-        
+
         return [];
     }
-    
+
     /**
      * 注册插件路由
-     * 
+     *
      * @param string $pluginSlug 插件标识
      * @return array 路由配置数组
      */
@@ -172,7 +174,7 @@ return new class implements PluginInterface {
                 'handler' => function () {
                     return new Response(200, ['Content-Type' => 'text/html; charset=utf-8'], '<h1>示例插件仪表板页面</h1>');
                 },
-                'permission' => "plugin:{$pluginSlug}:route:dashboard"
+                'permission' => "plugin:{$pluginSlug}:route:dashboard",
             ],
             [
                 'method' => 'get',
@@ -180,7 +182,7 @@ return new class implements PluginInterface {
                 'handler' => function () {
                     return new Response(200, ['Content-Type' => 'text/html; charset=utf-8'], '<h1>示例插件设置页面</h1>');
                 },
-                'permission' => "plugin:{$pluginSlug}:route:settings"
+                'permission' => "plugin:{$pluginSlug}:route:settings",
             ],
             [
                 'method' => 'get',
@@ -188,8 +190,8 @@ return new class implements PluginInterface {
                 'handler' => function () {
                     return new Response(200, ['Content-Type' => 'text/html; charset=utf-8'], '<h1>示例插件前台页面</h1>');
                 },
-                'permission' => "plugin:{$pluginSlug}:route:index"
-            ]
+                'permission' => "plugin:{$pluginSlug}:route:index",
+            ],
         ];
     }
 };

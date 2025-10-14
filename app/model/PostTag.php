@@ -16,7 +16,6 @@ use support\Model;
  */
 class PostTag extends Model
 {
-
     /**
      * The table associated with the model.
      *

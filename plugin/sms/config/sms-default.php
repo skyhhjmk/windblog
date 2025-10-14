@@ -10,7 +10,7 @@ return [
         'strategy' => \Overtrue\EasySms\Strategies\OrderStrategy::class,
         // 默认可用的发送网关
         'gateways' => [
-            'aliyun'
+            'aliyun',
         ],
     ],
     // 可用的网关配置

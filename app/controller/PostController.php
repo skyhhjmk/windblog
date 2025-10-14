@@ -2,25 +2,24 @@
 
 namespace app\controller;
 
-use support\Request;
 use app\model\Post;
+use app\service\PJAXHelper;
+use support\Request;
 use support\Response;
 use Webman\RateLimiter\Annotation\RateLimiter;
-use app\service\EnhancedCacheService;
-use app\service\PJAXHelper;
 
 class PostController
 {
     protected array $noNeedLogin = ['index'];
 
-    #[RateLimiter(limit: 3,ttl: 3)]
+    #[RateLimiter(limit: 3, ttl: 3)]
     public function index(Request $request, mixed $keyword = null): Response
     {
         // 移除URL参数中的 .html 后缀
         if (is_string($keyword) && str_ends_with($keyword, '.html')) {
             $keyword = substr($keyword, 0, -5);
         }
-        
+
         switch (blog_config('url_mode', 'mix', true)) {
             case 'slug':
                 // slug模式
@@ -54,18 +53,18 @@ class PostController
                 return view('error/404');
                 break;
         }
-        
+
         // 使用PJAXHelper检测是否为PJAX请求
         $isPjax = PJAXHelper::isPJAX($request);
 
         // 获取侧边栏内容（PJAX 与非 PJAX 均获取）
         $sidebar = \app\service\SidebarService::getSidebarContent($request, 'post');
-        
+
         // 加载作者信息与分类、标签
         $post->load(['authors', 'primaryAuthor', 'categories', 'tags']);
         $primaryAuthor = $post->primaryAuthor->first();
         $authorName = $primaryAuthor ? $primaryAuthor->nickname : ($post->authors->first() ? $post->authors->first()->nickname : '未知作者');
-        
+
         // 动态选择模板：PJAX 返回片段，非 PJAX 返回完整页面
         $viewName = PJAXHelper::getViewName('index/post', $isPjax);
 
@@ -89,7 +88,7 @@ class PostController
                 'page_title' => $post['title'] . ' - ' . blog_config('title', 'WindBlog', true),
                 'post' => $post,
                 'author' => $authorName,
-                'sidebar' => $sidebar
+                'sidebar' => $sidebar,
             ],
             $cacheKey,
             120,
@@ -99,7 +98,7 @@ class PostController
         // 动作：文章内容渲染完成（需权限 content:action.post_rendered）
         \app\service\PluginService::do_action('content.post_rendered', [
             'slug' => is_string($keyword) ? $keyword : null,
-            'id' => is_numeric($keyword) ? (int)$keyword : null
+            'id' => is_numeric($keyword) ? (int) $keyword : null,
         ]);
 
         // 过滤器：文章响应（需权限 content:filter.post_response）

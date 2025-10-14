@@ -2,17 +2,17 @@
 
 namespace app\model;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use support\Model;
-use Illuminate\Database\Eloquent\Builder;
 use Throwable;
 
 /**
  * comments 评论表
- * @property integer $id 评论ID，主键(主键)
- * @property integer $post_id 文章ID
- * @property integer $user_id 用户ID
- * @property integer $parent_id 父评论ID
+ * @property int $id 评论ID，主键(主键)
+ * @property int $post_id 文章ID
+ * @property int $user_id 用户ID
+ * @property int $parent_id 父评论ID
  * @property string $guest_name 访客姓名
  * @property string $guest_email 访客邮箱
  * @property string $content 评论内容
@@ -27,7 +27,6 @@ use Throwable;
  */
 class Comment extends Model
 {
-    
     /**
      * The table associated with the model.
      *
@@ -48,7 +47,7 @@ class Comment extends Model
      * @var bool
      */
     public $timestamps = true;
-    
+
     /**
      * 属性类型转换
      * 在从数据库中获取属性时，自动将其转换为指定的类型。
@@ -64,7 +63,7 @@ class Comment extends Model
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',
     ];
-    
+
     /**
      * 模型的"启动"方法。
      * 用于注册模型事件，如创建、更新时自动执行某些操作。
@@ -76,11 +75,11 @@ class Comment extends Model
             $builder->whereNull('deleted_at');
         });
     }
-    
-    // -----------------------------------------------------    
-    // 查询作用域    
+
     // -----------------------------------------------------
-    
+    // 查询作用域
+    // -----------------------------------------------------
+
     /**
      * 查询作用域：包含软删除的记录。
      *
@@ -102,7 +101,7 @@ class Comment extends Model
     {
         return $query->withoutGlobalScope('notDeleted')->whereNotNull('deleted_at');
     }
-    
+
     /**
      * 软删除方法，根据配置决定是软删除还是硬删除
      *
@@ -114,42 +113,46 @@ class Comment extends Model
     {
         // 判断是否启用软删除，除非强制硬删除
         $useSoftDelete = blog_config('soft_delete', true);
-        \support\Log::debug("Soft delete config value: " . var_export($useSoftDelete, true));
-        \support\Log::debug("Force delete flag: " . var_export($forceDelete, true));
-        
+        \support\Log::debug('Soft delete config value: ' . var_export($useSoftDelete, true));
+        \support\Log::debug('Force delete flag: ' . var_export($forceDelete, true));
+
         // 修复逻辑：当$forceDelete为true时，无论配置如何都应该执行硬删除
         if ($forceDelete || ($useSoftDelete && !$forceDelete)) {
             if ($forceDelete) {
                 // 硬删除：直接从数据库中删除记录
-                \support\Log::debug("Executing hard delete for comment ID: " . $this->id);
+                \support\Log::debug('Executing hard delete for comment ID: ' . $this->id);
                 try {
                     return $this->delete();
                 } catch (\Exception $e) {
                     \support\Log::error('Hard delete failed for comment ID ' . $this->id . ': ' . $e->getMessage());
+
                     return false;
                 }
             } else {
                 // 软删除：设置 deleted_at 字段
                 try {
-                    \support\Log::debug("Executing soft delete for comment ID: " . $this->id);
+                    \support\Log::debug('Executing soft delete for comment ID: ' . $this->id);
                     // 使用save方法而不是update方法，确保模型状态同步
                     $this->deleted_at = date('Y-m-d H:i:s');
                     $result = $this->save();
-                    \support\Log::debug("Soft delete result: " . var_export($result, true));
-                    \support\Log::debug("Comment deleted_at value after save: " . var_export($this->deleted_at, true));
+                    \support\Log::debug('Soft delete result: ' . var_export($result, true));
+                    \support\Log::debug('Comment deleted_at value after save: ' . var_export($this->deleted_at, true));
+
                     return $result !== false; // 确保返回布尔值
                 } catch (\Exception $e) {
                     \support\Log::error('Soft delete failed for comment ID ' . $this->id . ': ' . $e->getMessage());
+
                     return false;
                 }
             }
         } else {
             // 硬删除：直接从数据库中删除记录
-            \support\Log::debug("Executing hard delete for comment ID: " . $this->id);
+            \support\Log::debug('Executing hard delete for comment ID: ' . $this->id);
             try {
                 return $this->delete();
             } catch (\Exception $e) {
                 \support\Log::error('Hard delete failed for comment ID ' . $this->id . ': ' . $e->getMessage());
+
                 return false;
             }
         }
@@ -166,9 +169,11 @@ class Comment extends Model
             // 使用save方法而不是update方法，确保模型状态同步
             $this->deleted_at = null;
             $result = $this->save();
+
             return $result !== false;
         } catch (\Exception $e) {
             \support\Log::error('Restore failed for comment ID ' . $this->id . ': ' . $e->getMessage());
+
             return false;
         }
     }

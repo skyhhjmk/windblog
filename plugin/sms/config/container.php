@@ -1,2 +1,3 @@
 <?php
-return new Webman\Container;
+
+return new Webman\Container();

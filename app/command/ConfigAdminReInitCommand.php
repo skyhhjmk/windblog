@@ -4,7 +4,6 @@ namespace app\command;
 
 use plugin\admin\app\common\Util;
 use plugin\admin\app\model\Admin;
-use support\Console;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\QuestionHelper;
 use Symfony\Component\Console\Input\InputInterface;
@@ -15,6 +14,7 @@ use Symfony\Component\Console\Question\Question;
 class ConfigAdminReInitCommand extends Command
 {
     protected static $defaultName = 'config:admin:re-init';
+
     protected static $defaultDescription = '重新初始化管理员账户信息';
 
     /**
@@ -25,11 +25,12 @@ class ConfigAdminReInitCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $output->writeln('重新初始化管理员账户信息');
-        
+
         try {
             // 检查数据库连接
             if (!config('database.connections')) {
                 $output->writeln('<error>数据库未配置，请先完成安装步骤</error>');
+
                 return Command::FAILURE;
             }
 
@@ -54,6 +55,7 @@ class ConfigAdminReInitCommand extends Command
 
             if ($password !== $confirmPassword) {
                 $output->writeln('<error>两次输入的密码不一致</error>');
+
                 return Command::FAILURE;
             }
 
@@ -63,12 +65,13 @@ class ConfigAdminReInitCommand extends Command
 
             // 确认操作
             $confirmQuestion = new ConfirmationQuestion(
-                "确认要重新初始化ID为1的管理员信息吗？这将会覆盖现有信息 [y/N]: ",
+                '确认要重新初始化ID为1的管理员信息吗？这将会覆盖现有信息 [y/N]: ',
                 false
             );
-            
+
             if (!$helper->ask($input, $output, $confirmQuestion)) {
                 $output->writeln('操作已取消');
+
                 return Command::SUCCESS;
             }
 
@@ -76,9 +79,11 @@ class ConfigAdminReInitCommand extends Command
             $this->reInitAdmin($username, $password, $nickname, $output);
 
             $output->writeln('<info>管理员账户信息重新初始化成功!</info>');
+
             return Command::SUCCESS;
         } catch (\Throwable $e) {
             $output->writeln('<error>发生错误: ' . $e->getMessage() . '</error>');
+
             return Command::FAILURE;
         }
     }
@@ -95,17 +100,17 @@ class ConfigAdminReInitCommand extends Command
     private function reInitAdmin(string $username, string $password, string $nickname, OutputInterface $output)
     {
         $now = date('Y-m-d H:i:s');
-        
+
         $adminData = [
             'username' => $username,
             'password' => Util::passwordHash($password),
             'nickname' => $nickname,
-            'updated_at' => $now
+            'updated_at' => $now,
         ];
 
         // 检查ID为1的管理员是否存在
         $admin = Admin::find(1);
-        
+
         if ($admin) {
             // 更新现有管理员
             $output->writeln('更新现有的管理员账户...');
@@ -119,7 +124,7 @@ class ConfigAdminReInitCommand extends Command
             $admin->fill($adminData);
             $admin->id = 1; // 强制设置ID为1
             $admin->save();
-            
+
             // 确保ID为1
             if ($admin->id != 1) {
                 Admin::where('id', $admin->id)->update(['id' => 1]);
@@ -129,15 +134,15 @@ class ConfigAdminReInitCommand extends Command
         // 确保管理员拥有角色ID为1的角色
         // 使用原生数据库查询而不是Laravel Facade
         $pdo = Util::db()->getPdo();
-        
+
         // 检查是否已存在角色关联
-        $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM wa_admin_roles WHERE admin_id = ? AND role_id = ?");
+        $stmt = $pdo->prepare('SELECT COUNT(*) as count FROM wa_admin_roles WHERE admin_id = ? AND role_id = ?');
         $stmt->execute([1, 1]);
         $result = $stmt->fetch();
-        
+
         // 如果不存在角色关联，则添加
         if ($result['count'] == 0) {
-            $stmt = $pdo->prepare("INSERT INTO wa_admin_roles (admin_id, role_id) VALUES (?, ?)");
+            $stmt = $pdo->prepare('INSERT INTO wa_admin_roles (admin_id, role_id) VALUES (?, ?)');
             $stmt->execute([1, 1]);
         }
     }

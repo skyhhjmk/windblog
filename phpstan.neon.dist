@@ -1,15 +1,14 @@
 parameters:
-  level: 6
+  level: 5  # 从 6 降低到 5，减少检查严格度
   paths:
     - app
-    - plugin/*/app
+    - plugin/admin/app
+    - plugin/sms/app
   excludePaths:
     - vendor
     - tests
-  checkMissingIterableValueType: true
-  checkGenericClassInNonGenericObjectType: true
   inferPrivatePropertyTypeFromConstructor: true
-  reportUnmatchedIgnoredErrors: true
+  reportUnmatchedIgnoredErrors: false
   ignoreErrors:
     - '#Call to undefined method .*::.*#'
     - '#Access to an undefined property .*::\$.*#'

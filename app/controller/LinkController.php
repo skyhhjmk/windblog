@@ -7,13 +7,13 @@
 namespace app\controller;
 
 use app\annotation\CSRFVerify;
+use app\model\Link;
 use app\service\CSRFHelper;
+use app\service\LinkConnectService;
 use app\service\MQService;
+use app\service\PaginationService;
 use PhpAmqpLib\Message\AMQPMessage;
 use support\Request;
-use app\model\Link;
-use app\service\PaginationService;
-use app\service\LinkConnectService;
 use support\Response;
 use Throwable;
 use Webman\RateLimiter\Annotation\RateLimiter;
@@ -61,11 +61,12 @@ class LinkController
         $sidebar = \app\service\SidebarService::getSidebarContent($request, 'link');
         // 统一选择视图并生成响应（包含 X-PJAX 相关头）
         $viewName = \app\service\PJAXHelper::getViewName('link/index', $isPjax);
+
         return \app\service\PJAXHelper::createResponse($request, $viewName, [
             'page_title' => blog_config('title', 'WindBlog', true) . ' - 链接广场',
             'links' => $links,
             'pagination' => $pagination_html,
-            'sidebar' => $sidebar
+            'sidebar' => $sidebar,
         ], null, 120, 'page');
     }
 
@@ -86,14 +87,14 @@ class LinkController
         // 检查链接是否存在
         if (!$link) {
             return view('error/404', [
-                'message' => '链接不存在'
+                'message' => '链接不存在',
             ]);
         }
 
         // 检查链接是否启用
         if (!$link->status) {
             return view('error/404', [
-                'message' => '链接已被禁用'
+                'message' => '链接已被禁用',
             ]);
         }
 
@@ -108,7 +109,7 @@ class LinkController
             'iframe' => redirect($link->url),
             default => view('link/goto', [
                 'link' => $link,
-                'page_title' => blog_config('title', 'WindBlog', true) . ' - 外链跳转确认'
+                'page_title' => blog_config('title', 'WindBlog', true) . ' - 外链跳转确认',
             ]),
         };
     }
@@ -129,14 +130,14 @@ class LinkController
         // 检查链接是否存在
         if (!$link) {
             return view('error/404', [
-                'message' => '链接不存在'
+                'message' => '链接不存在',
             ]);
         }
 
         // 检查链接是否启用
         if (!$link->status) {
             return view('error/404', [
-                'message' => '链接已被禁用'
+                'message' => '链接已被禁用',
             ]);
         }
 
@@ -145,10 +146,11 @@ class LinkController
         $sidebar = \app\service\SidebarService::getSidebarContent($request, 'link');
         // 统一选择视图并生成响应
         $viewName = \app\service\PJAXHelper::getViewName('link/info', $isPjax);
+
         return \app\service\PJAXHelper::createResponse($request, $viewName, [
             'link' => $link,
             'page_title' => htmlspecialchars($link->name, ENT_QUOTES, 'UTF-8') . ' - 链接详情',
-            'sidebar' => $sidebar
+            'sidebar' => $sidebar,
         ], null, 120, 'page');
     }
 
@@ -169,8 +171,8 @@ class LinkController
             'response_code' => 403,
             'response_body' => [
                 'code' => 1,
-                'msg' => '请求验证失败，请刷新页面重试'
-            ]
+                'msg' => '请求验证失败，请刷新页面重试',
+            ],
         ],
         methods: ['POST'],
         expire: 3600,
@@ -185,8 +187,9 @@ class LinkController
             if (!empty($honeypot)) {
                 \support\Log::warning('友链申请蜜罐验证失败，可能为机器人提交', [
                     'ip' => $request->getRealIp(),
-                    'user_agent' => $request->header('User-Agent')
+                    'user_agent' => $request->header('User-Agent'),
                 ]);
+
                 return json(['code' => 1, 'msg' => '人机验证不通过']);
             }
 
@@ -203,9 +206,8 @@ class LinkController
             $email = trim($request->post('email', ''));
             $full_description = trim($request->post('full_description', ''));
 
-
             $ipAddress = $request->getRealIp();
-            $show_url = !(bool)$hide_url; // 取反值，即将是否隐藏 url 转为是否显示 url
+            $show_url = !(bool) $hide_url; // 取反值，即将是否隐藏 url 转为是否显示 url
 
             // 增强验证
             if (empty($name) || empty($url) || empty($description)) {
@@ -216,23 +218,23 @@ class LinkController
             if (strlen($name) > 100) {
                 return json(['code' => 1, 'msg' => '网站名称过长']);
             }
-            
+
             if (strlen($url) > 500) {
                 return json(['code' => 1, 'msg' => '网站链接过长']);
             }
-            
+
             if (strlen($description) > 500) {
                 return json(['code' => 1, 'msg' => '网站描述过长']);
             }
-            
+
             if (strlen($contact) > 200) {
                 return json(['code' => 1, 'msg' => '联系方式过长']);
             }
-            
+
             if (strlen($email) > 100) {
                 return json(['code' => 1, 'msg' => '邮箱地址过长']);
             }
-            
+
             if (strlen($full_description) > 2000) {
                 return json(['code' => 1, 'msg' => '详细描述过长']);
             }
@@ -248,7 +250,7 @@ class LinkController
                 if (strlen($icon) > 500) {
                     return json(['code' => 1, 'msg' => '网站图标地址过长']);
                 }
-                
+
                 if (!filter_var($icon, FILTER_VALIDATE_URL) ||
                     !preg_match('/^https?:\/\/[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+(:[0-9]{1,5})?(\/[-a-zA-Z0-9()@:%_+.~#?&\/=]*)?$/', $icon)) {
                     return json(['code' => 1, 'msg' => '请输入有效的网站图标地址']);
@@ -260,7 +262,7 @@ class LinkController
                 if (strlen($callback_url) > 500) {
                     return json(['code' => 1, 'msg' => '回调地址过长']);
                 }
-                
+
                 if (!filter_var($callback_url, FILTER_VALIDATE_URL) ||
                     !preg_match('/^https?:\/\/[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+(:[0-9]{1,5})?(\/[-a-zA-Z0-9()@:%_+.~#?&\/=]*)?$/', $callback_url)) {
                     return json(['code' => 1, 'msg' => '请输入有效的回调地址']);
@@ -282,8 +284,9 @@ class LinkController
             if ($existingLink) {
                 \support\Log::info('友链申请重复提交', [
                     'url' => $url,
-                    'ip' => $ipAddress
+                    'ip' => $ipAddress,
                 ]);
+
                 return json(['code' => 1, 'msg' => '该链接已存在或正在审核中']);
             }
 
@@ -323,7 +326,7 @@ class LinkController
                     '',
                     '### 审核记录',
                     '',
-                    '> 待审核'
+                    '> 待审核',
                 ];
 
                 $link->note = implode("\n", $note);
@@ -334,14 +337,15 @@ class LinkController
 
                 \support\Log::info('友链申请提交成功', [
                     'link_id' => $link->id,
-                    'ip' => $ipAddress
+                    'ip' => $ipAddress,
                 ]);
-                
+
                 return json(['code' => 0, 'msg' => '申请成功，等待管理员审核']);
             } catch (\Exception $e) {
                 \support\Log::error('友链申请失败: ' . $e->getMessage(), [
-                    'trace' => $e->getTraceAsString()
+                    'trace' => $e->getTraceAsString(),
                 ]);
+
                 return json(['code' => 1, 'msg' => '系统错误，请稍后再试']);
             }
         }
@@ -352,11 +356,12 @@ class LinkController
         $sidebar = \app\service\SidebarService::getSidebarContent($request, 'link');
         // 统一选择视图并生成响应
         $viewName = \app\service\PJAXHelper::getViewName('link/request', $isPjax);
+
         return \app\service\PJAXHelper::createResponse($request, $viewName, [
             'page_title' => blog_config('title', 'WindBlog', true) . ' - 申请友链',
             'site_info_json_config' => $this->getSiteInfoConfig(),
             'csrf' => CSRFHelper::oneTimeToken($request, '_link_request_token'),
-            'sidebar' => $sidebar
+            'sidebar' => $sidebar,
         ], null, 120, 'page');
     }
 
@@ -374,7 +379,7 @@ class LinkController
             'description' => blog_config('description', '', true),
             'icon' => blog_config('favicon', '', true),
             'protocol' => 'CAT3E',
-            'version' => '1.0'
+            'version' => '1.0',
         ];
 
         return json_encode($config, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
@@ -413,12 +418,12 @@ class LinkController
                 'callback_url' => $link->callback_url,
                 'access_time' => date('Y-m-d H:i:s'),
                 'access_ip' => request()->getRealIp(),
-                'user_agent' => htmlspecialchars(request()->header('User-Agent', ''), ENT_QUOTES, 'UTF-8')
+                'user_agent' => htmlspecialchars(request()->header('User-Agent', ''), ENT_QUOTES, 'UTF-8'),
             ];
 
             // 发布到 http_callback 队列
-            $exchange   = (string)blog_config('rabbitmq_http_callback_exchange', 'http_callback_exchange', true);
-            $routingKey = (string)blog_config('rabbitmq_http_callback_routing_key', 'http_callback', true);
+            $exchange = (string) blog_config('rabbitmq_http_callback_exchange', 'http_callback_exchange', true);
+            $routingKey = (string) blog_config('rabbitmq_http_callback_routing_key', 'http_callback', true);
             $channel = MQService::getChannel();
             $message = new AMQPMessage(json_encode($callbackData, JSON_UNESCAPED_UNICODE), [
                 'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT,
@@ -443,44 +448,44 @@ class LinkController
 
         // 兼容 application/json 与 x-www-form-urlencoded
         $jsonBody = [];
-        if (stripos((string)$request->header('Content-Type', ''), 'application/json') !== false) {
-            $jsonBody = json_decode((string)$request->rawBody(), true) ?: [];
+        if (stripos((string) $request->header('Content-Type', ''), 'application/json') !== false) {
+            $jsonBody = json_decode((string) $request->rawBody(), true) ?: [];
         }
 
-        $peerApi = trim((string)($jsonBody['peer_api'] ?? $request->post('peer_api', '')));
+        $peerApi = trim((string) ($jsonBody['peer_api'] ?? $request->post('peer_api', '')));
 
         // 扁平字段
-        $name = trim((string)($jsonBody['name'] ?? $request->post('name', '')));
-        $url = trim((string)($jsonBody['url'] ?? $request->post('url', '')));
-        $icon = trim((string)($jsonBody['icon'] ?? $request->post('icon', '')));
-        $description = trim((string)($jsonBody['description'] ?? $request->post('description', '')));
-        $email = trim((string)($jsonBody['email'] ?? $request->post('email', '')));
+        $name = trim((string) ($jsonBody['name'] ?? $request->post('name', '')));
+        $url = trim((string) ($jsonBody['url'] ?? $request->post('url', '')));
+        $icon = trim((string) ($jsonBody['icon'] ?? $request->post('icon', '')));
+        $description = trim((string) ($jsonBody['description'] ?? $request->post('description', '')));
+        $email = trim((string) ($jsonBody['email'] ?? $request->post('email', '')));
 
         // 兼容前端结构：site{ name,url,icon,description,email }
         $site = is_array($jsonBody['site'] ?? null) ? $jsonBody['site'] : [];
-        $name = $name ?: trim((string)($site['name'] ?? ''));
-        $url = $url ?: trim((string)($site['url'] ?? ''));
-        $icon = $icon ?: trim((string)($site['icon'] ?? ''));
-        $description = $description ?: trim((string)($site['description'] ?? ''));
-        $email = $email ?: trim((string)($site['email'] ?? ''));
+        $name = $name ?: trim((string) ($site['name'] ?? ''));
+        $url = $url ?: trim((string) ($site['url'] ?? ''));
+        $icon = $icon ?: trim((string) ($site['icon'] ?? ''));
+        $description = $description ?: trim((string) ($site['description'] ?? ''));
+        $email = $email ?: trim((string) ($site['email'] ?? ''));
 
         // 限制字段长度
         if (strlen($name) > 100) {
             return json(['code' => 1, 'msg' => '站点名称过长']);
         }
-        
+
         if (strlen($url) > 500) {
             return json(['code' => 1, 'msg' => '站点链接过长']);
         }
-        
+
         if (strlen($icon) > 500) {
             return json(['code' => 1, 'msg' => '图标地址过长']);
         }
-        
+
         if (strlen($description) > 500) {
             return json(['code' => 1, 'msg' => '站点描述过长']);
         }
-        
+
         if (strlen($email) > 100) {
             return json(['code' => 1, 'msg' => '邮箱地址过长']);
         }
@@ -496,23 +501,23 @@ class LinkController
                     parse_str($parsedUrl['query'], $queryParams);
                 }
                 \support\Log::info('解析到的参数: ' . json_encode($queryParams));
-                
+
                 // 如果是快速互联URL，尝试调用quickConnect接口获取对方信息
                 if (!empty($queryParams['token'])) {
                     \support\Log::info('检测到快速互联URL，token: ' . substr($queryParams['token'], 0, 8) . '...');
-                    
+
                     // 构建请求URL - 确保是调用quickConnect接口
                     $scheme = $parsedUrl['scheme'] ?? 'http';
                     $host = $parsedUrl['host'] ?? '';
                     $port = isset($parsedUrl['port']) ? ':' . $parsedUrl['port'] : '';
                     $path = $parsedUrl['path'] ?? '';
-                    
+
                     // 确保调用的是quickConnect接口
                     $quickConnectUrl = $scheme . '://' . $host . $port . '/link/quick-connect?token=' . urlencode($queryParams['token']);
                     \support\Log::info('构建的quickConnectURL: ' . $quickConnectUrl);
-                    
+
                     $headersArr = ['Accept: application/json'];
-                    $localToken = (string)blog_config('wind_connect_token', '', true);
+                    $localToken = (string) blog_config('wind_connect_token', '', true);
                     if (!empty($localToken)) {
                         $headers = implode("\r\n", $headersArr) . "\r\nX-WIND-CONNECT-TOKEN: " . $localToken . "\r\n";
                     } else {
@@ -531,39 +536,39 @@ class LinkController
                         ],
                     ];
                     $ctx = stream_context_create($opts);
-                    
+
                     \support\Log::info('发送请求到quickConnect接口');
                     $resp = @file_get_contents($quickConnectUrl, false, $ctx);
-                    
+
                     if ($resp === false) {
                         \support\Log::warning('quickConnect请求失败: ' . ((error_get_last() ?? [])['message'] ?? '未知错误'));
                     } else {
                         \support\Log::info('quickConnect请求成功，响应长度: ' . strlen($resp));
-                        
+
                         $data = json_decode($resp, true);
                         if (json_last_error() !== JSON_ERROR_NONE) {
                             \support\Log::warning('JSON解析失败: ' . json_last_error_msg());
                         } else {
                             \support\Log::info('quickConnect响应状态: ' . ($data['code'] ?? '未知'));
-                            
+
                             if (is_array($data) && $data['code'] === 0) {
                                 // 从快速互联响应中提取信息
                                 $remoteSite = $data['site'] ?? [];
                                 $remoteLink = $data['link'] ?? [];
-                                
+
                                 \support\Log::info('从快速互联响应提取信息: ' . json_encode(['site' => array_keys($remoteSite), 'link' => array_keys($remoteLink)]));
-                                
-                                $name = $name ?: (string)($remoteLink['name'] ?? ($remoteSite['name'] ?? $name));
-                                $url  = $url  ?: (string)($remoteLink['url']  ?? ($remoteSite['url']  ?? $url));
-                                $icon = $icon ?: (string)($remoteLink['icon'] ?? ($remoteSite['icon'] ?? $icon));
-                                $description = $description ?: (string)($remoteLink['description'] ?? ($remoteSite['description'] ?? $description));
-                                $email = $email ?: (string)($remoteLink['email'] ?? $email);
-                                
+
+                                $name = $name ?: (string) ($remoteLink['name'] ?? ($remoteSite['name'] ?? $name));
+                                $url = $url ?: (string) ($remoteLink['url'] ?? ($remoteSite['url'] ?? $url));
+                                $icon = $icon ?: (string) ($remoteLink['icon'] ?? ($remoteSite['icon'] ?? $icon));
+                                $description = $description ?: (string) ($remoteLink['description'] ?? ($remoteSite['description'] ?? $description));
+                                $email = $email ?: (string) ($remoteLink['email'] ?? $email);
+
                                 \support\Log::info('提取后的数据: ' . json_encode(['name' => $name, 'url' => $url]));
-                                
+
                                 // 标记token为已使用
                                 LinkConnectService::markTokenUsed($queryParams['token'], $url);
-                                
+
                                 // 自动调整peer_api为接收接口
                                 $peerApi = rtrim($url, '/') . '/link/connect/receive';
                                 \support\Log::info('调整后的peer_api: ' . $peerApi);
@@ -574,13 +579,13 @@ class LinkController
                     }
                 }
                 // 如果快速互联失败或不是快速互联URL，尝试使用原有的自动补全逻辑
-                else if (empty($name) || empty($url)) {
+                elseif (empty($name) || empty($url)) {
                     \support\Log::info('尝试使用原有自动补全逻辑');
                     $headersArr = ['Accept: application/json'];
-                    $localToken = (string)blog_config('wind_connect_token', '', true);
+                    $localToken = (string) blog_config('wind_connect_token', '', true);
                     $headers = implode("\r\n", $headersArr) . "\r\n";
                     if (!empty($localToken)) {
-                        $headers .= "X-WIND-CONNECT-TOKEN: " . $localToken . "\r\n";
+                        $headers .= 'X-WIND-CONNECT-TOKEN: ' . $localToken . "\r\n";
                     }
                     $opts = [
                         'http' => [
@@ -600,11 +605,11 @@ class LinkController
                         if (is_array($data)) {
                             $remoteLink = $data['link'] ?? [];
                             $remoteSite = $data['site'] ?? ($data['site_info'] ?? []);
-                            $name = $name ?: (string)($remoteLink['name'] ?? ($remoteSite['name'] ?? $name));
-                            $url  = $url  ?: (string)($remoteLink['url']  ?? ($remoteSite['url']  ?? $url));
-                            $icon = $icon ?: (string)($remoteLink['icon'] ?? ($remoteSite['logo'] ?? $icon));
-                            $description = $description ?: (string)($remoteLink['description'] ?? ($remoteSite['description'] ?? $description));
-                            $email = $email ?: (string)($remoteLink['email'] ?? $email);
+                            $name = $name ?: (string) ($remoteLink['name'] ?? ($remoteSite['name'] ?? $name));
+                            $url = $url ?: (string) ($remoteLink['url'] ?? ($remoteSite['url'] ?? $url));
+                            $icon = $icon ?: (string) ($remoteLink['icon'] ?? ($remoteSite['logo'] ?? $icon));
+                            $description = $description ?: (string) ($remoteLink['description'] ?? ($remoteSite['description'] ?? $description));
+                            $email = $email ?: (string) ($remoteLink['email'] ?? $email);
                         }
                     }
                 }
@@ -612,21 +617,29 @@ class LinkController
                 \support\Log::warning('connectApply auto-complete failed: ' . $e->getMessage());
             }
         }
-        
+
         \support\Log::info('快速互联处理后的数据: ' . json_encode(['peerApi' => $peerApi, 'name' => $name, 'url' => $url]));
 
         // 本地站点默认值回填（避免"参数不完整"）
-        if (empty($name)) { $name = (string)blog_config('title', 'WindBlog', true); }
-        if (empty($url))  {
-            $url = (string)blog_config('site_url', '', true);
+        if (empty($name)) {
+            $name = (string) blog_config('title', 'WindBlog', true);
+        }
+        if (empty($url)) {
+            $url = (string) blog_config('site_url', '', true);
             // 如果配置中没有站点URL，尝试使用默认URL
             if (empty($url)) {
                 $url = 'https://example.com';
             }
         }
-        if (empty($icon)) { $icon = (string)blog_config('favicon', '', true); }
-        if (empty($description)) { $description = (string)blog_config('description', '', true); }
-        if (empty($email)) { $email = (string)blog_config('admin_email', '', true); }
+        if (empty($icon)) {
+            $icon = (string) blog_config('favicon', '', true);
+        }
+        if (empty($description)) {
+            $description = (string) blog_config('description', '', true);
+        }
+        if (empty($email)) {
+            $email = (string) blog_config('admin_email', '', true);
+        }
 
         // 增加参数完整性验证，提供更友好的错误提示
         if (empty($peerApi)) {
@@ -643,7 +656,7 @@ class LinkController
         if (!filter_var($peerApi, FILTER_VALIDATE_URL)) {
             return json(['code' => 1, 'msg' => '对方API地址格式不正确']);
         }
-        
+
         if (!filter_var($url, FILTER_VALIDATE_URL)) {
             return json(['code' => 1, 'msg' => '站点URL格式不正确']);
         }
@@ -656,6 +669,7 @@ class LinkController
             'description' => $description,
             'email' => $email,
         ]);
+
         return json($result);
     }
 
@@ -674,9 +688,10 @@ class LinkController
             ['X-WIND-CONNECT-TOKEN' => $request->header('X-WIND-CONNECT-TOKEN', '')],
             $data
         );
+
         return json($result);
     }
-    
+
     /**
      * 快速互联API接口
      * 用于处理其他站点通过token快速连接并获取本站信息
@@ -687,21 +702,21 @@ class LinkController
     {
         try {
             // 获取token参数
-            $token = trim((string)$request->get('token', ''));
-            
+            $token = trim((string) $request->get('token', ''));
+
             // 验证token是否有效
             if (empty($token)) {
                 return json(['code' => 1, 'msg' => 'token不能为空']);
             }
-            
+
             // 获取互联协议配置
             $config = LinkConnectService::getConfig();
-            
+
             // 检查互联协议是否启用
             if (!$config['enabled']) {
                 return json(['code' => 1, 'msg' => '互联协议未启用']);
             }
-            
+
             // 验证token是否存在且未被使用
             $tokens = LinkConnectService::listTokens();
             $validToken = false;
@@ -711,11 +726,11 @@ class LinkController
                     break;
                 }
             }
-            
+
             if (!$validToken) {
                 return json(['code' => 1, 'msg' => '无效或已使用的token']);
             }
-            
+
             // 构建并返回本站信息
             $siteInfo = [
                 'name' => htmlspecialchars(blog_config('title', 'WindBlog', true), ENT_QUOTES, 'UTF-8'),
@@ -723,26 +738,27 @@ class LinkController
                 'description' => htmlspecialchars(blog_config('description', '', true), ENT_QUOTES, 'UTF-8'),
                 'icon' => htmlspecialchars(blog_config('favicon', '', true), ENT_QUOTES, 'UTF-8'),
                 'protocol' => 'CAT3E',
-                'version' => '1.0'
+                'version' => '1.0',
             ];
-            
+
             // 构建友链信息
             $linkInfo = [
                 'name' => $siteInfo['name'],
                 'url' => $siteInfo['url'],
                 'icon' => $siteInfo['icon'],
                 'description' => $siteInfo['description'],
-                'email' => htmlspecialchars(blog_config('admin_email', '', true), ENT_QUOTES, 'UTF-8')
+                'email' => htmlspecialchars(blog_config('admin_email', '', true), ENT_QUOTES, 'UTF-8'),
             ];
-            
+
             return json([
                 'code' => 0,
                 'msg' => 'success',
                 'site' => $siteInfo,
-                'link' => $linkInfo
+                'link' => $linkInfo,
             ]);
         } catch (\Throwable $e) {
             \support\Log::error('快速互联API错误: ' . $e->getMessage());
+
             return json(['code' => 1, 'msg' => '系统错误']);
         }
     }
@@ -750,7 +766,7 @@ class LinkController
     /**
      * 友链互联API接口
      * 处理来自其他站点的友链互联请求
-     * 
+     *
      * @param Request $request HTTP请求对象
      * @return Response JSON响应
      */
@@ -759,24 +775,25 @@ class LinkController
         try {
             // 获取请求头
             $headers = $request->header();
-            
+
             // 获取请求体（JSON格式）
             $body = $request->rawBody();
             $payload = json_decode($body, true);
-            
+
             // 检查请求体是否为有效JSON
             if (json_last_error() !== JSON_ERROR_NONE) {
                 return json(['code' => 1, 'msg' => '无效的JSON格式']);
             }
-            
+
             // 调用LinkConnectService处理友链互联请求
             $result = LinkConnectService::receiveFromPeer($headers, $payload);
-            
+
             // 返回处理结果
             return json($result);
         } catch (Throwable $e) {
             // 记录异常并返回错误信息
             \support\Log::error('友链互联处理异常: ' . $e->getMessage());
+
             return json(['code' => 1, 'msg' => '处理请求时发生错误']);
         }
     }

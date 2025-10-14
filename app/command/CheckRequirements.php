@@ -3,9 +3,9 @@
 namespace app\command;
 
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
@@ -16,6 +16,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 class CheckRequirements extends Command
 {
     protected static $defaultName = 'check:requirements';
+
     protected static $defaultDescription = 'Check system requirements for running WindBlog';
 
     /**
@@ -93,9 +94,11 @@ class CheckRequirements extends Command
         $io->newLine();
         if ($allPassed) {
             $io->success('All required checks passed! Your system is ready to run WindBlog.');
+
             return self::SUCCESS;
         } else {
             $io->error('Some required checks failed. Please fix the issues above before running WindBlog.');
+
             return self::FAILURE;
         }
     }
@@ -112,9 +115,11 @@ class CheckRequirements extends Command
 
         if (version_compare($currentVersion, $requiredVersion, '>=')) {
             $io->success("PHP version $currentVersion (>= $requiredVersion required) ✓");
+
             return true;
         } else {
             $io->error("PHP version $currentVersion is too old. Minimum required: $requiredVersion ✗");
+
             return false;
         }
     }
@@ -138,16 +143,18 @@ class CheckRequirements extends Command
         }
 
         if (!empty($installed)) {
-            $io->listing(array_map(fn($ext) => "$ext ✓", $installed));
+            $io->listing(array_map(fn ($ext) => "$ext ✓", $installed));
         }
 
         if (!empty($missing)) {
             $io->error('Missing required extensions:');
-            $io->listing(array_map(fn($ext) => "$ext ✗", $missing));
+            $io->listing(array_map(fn ($ext) => "$ext ✗", $missing));
+
             return false;
         }
 
         $io->success('All required extensions are installed ✓');
+
         return true;
     }
 
@@ -185,7 +192,7 @@ class CheckRequirements extends Command
 
             // 创建目录（如果不存在）
             if (!is_dir($fullPath)) {
-                if (@mkdir($fullPath, 0755, true)) {
+                if (@mkdir($fullPath, 0o755, true)) {
                     $success[] = "$dir (created) ✓";
                 } else {
                     $errors[] = "$dir (failed to create) ✗";
@@ -209,10 +216,12 @@ class CheckRequirements extends Command
             $io->error('The following directories are not writable:');
             $io->listing($errors);
             $io->note('Run: chmod -R 755 runtime public/uploads public/cache');
+
             return false;
         }
 
         $io->success('All required directories are writable ✓');
+
         return true;
     }
 
@@ -254,6 +263,7 @@ class CheckRequirements extends Command
         } else {
             $io->error('.env file not found ✗');
             $io->note('Copy .env.example to .env and configure your environment');
+
             return false;
         }
     }
@@ -330,13 +340,14 @@ class CheckRequirements extends Command
             $password = getenv('REDIS_PASSWORD') ?: null;
 
             $redis = new \Redis();
-            $redis->connect($host, (int)$port, 3);
+            $redis->connect($host, (int) $port, 3);
 
             if ($password) {
                 $redis->auth($password);
             }
 
             $redis->ping();
+
             return '<info>✓ Connected</info>';
         } catch (\Exception $e) {
             return '<comment>○ Not available</comment>';
@@ -428,13 +439,15 @@ class CheckRequirements extends Command
     {
         $size = trim($size);
         $last = strtolower($size[strlen($size) - 1]);
-        $value = (int)$size;
+        $value = (int) $size;
 
         switch ($last) {
             case 'g':
                 $value *= 1024;
+                // no break
             case 'm':
                 $value *= 1024;
+                // no break
             case 'k':
                 $value *= 1024;
         }

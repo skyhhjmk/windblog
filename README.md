@@ -1,5 +1,8 @@
 ![windblog](https://socialify.git.ci/skyhhjmk/windblog/image?custom_description=%E4%B8%80%E4%B8%AA%E5%BC%82%E5%B8%B8%E7%B2%BE%E8%87%B4%E7%9A%84%E5%8D%9A%E5%AE%A2%E7%B3%BB%E7%BB%9F&custom_language=PHP&description=1&font=JetBrains+Mono&language=1&name=1&owner=1&pattern=Circuit+Board&theme=Auto)
 
+[![Docker](https://github.com/skyhhjmk/windblog/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/skyhhjmk/windblog/actions/workflows/docker-publish.yml)
+[![Static Analysis](https://github.com/skyhhjmk/windblog/actions/workflows/static-analysis.yml/badge.svg)](https://github.com/skyhhjmk/windblog/actions/workflows/static-analysis.yml)
+
 # Table of Contents
 
 - [Table of Contents](#table-of-contents)
@@ -96,7 +99,7 @@ ES 仅仅被用于搜索优化，这也许说得过去
 基本依赖：
 
 - PostgreSQL
-- PHP >= 8.2
+- PHP >= 8.3
 - PHP PDO 扩展
 - PHP pdo_pgsql 扩展
 

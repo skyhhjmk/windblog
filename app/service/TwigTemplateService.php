@@ -1,7 +1,15 @@
 <?php
+
 declare(strict_types=1);
 
 namespace app\service;
+
+use function app_path;
+use function array_merge;
+use function base_path;
+use function config;
+use function is_array;
+use function request;
 
 use Twig\Environment;
 use Twig\Error\LoaderError;
@@ -9,12 +17,6 @@ use Twig\Error\RuntimeError;
 use Twig\Error\SyntaxError;
 use Twig\Loader\FilesystemLoader;
 use Webman\View;
-use function app_path;
-use function array_merge;
-use function base_path;
-use function config;
-use function is_array;
-use function request;
 
 /**
  * Class TwigTemplateService
@@ -31,9 +33,8 @@ class TwigTemplateService implements View
     public static function assign(string|array $name, mixed $value = null): void
     {
         $request = request();
-        $request->_view_vars = array_merge((array)$request->_view_vars, is_array($name) ? $name : [$name => $value]);
+        $request->_view_vars = array_merge((array) $request->_view_vars, is_array($name) ? $name : [$name => $value]);
     }
-
 
     /**
      * Render.
@@ -92,7 +93,7 @@ class TwigTemplateService implements View
             }
         }
         if (isset($request->_view_vars)) {
-            $vars = array_merge((array)$request->_view_vars, $vars);
+            $vars = array_merge((array) $request->_view_vars, $vars);
         }
 
         // 过滤器：模板变量（需权限 template:filter.vars）
@@ -100,7 +101,7 @@ class TwigTemplateService implements View
             'template' => $template,
             'vars' => $vars,
             'app' => $app,
-            'plugin' => $plugin
+            'plugin' => $plugin,
         ])['vars'] ?? $vars;
 
         // 动作：渲染开始（需权限 template:action.render_start）
@@ -108,7 +109,7 @@ class TwigTemplateService implements View
             'template' => $template,
             'app' => $app,
             'plugin' => $plugin,
-            'paths' => $loaderPaths
+            'paths' => $loaderPaths,
         ]);
 
         // 使用多路径缓存键进行渲染
@@ -119,7 +120,7 @@ class TwigTemplateService implements View
             'template' => $template,
             'app' => $app,
             'plugin' => $plugin,
-            'html_len' => strlen($html)
+            'html_len' => strlen($html),
         ]);
 
         // 过滤器：HTML输出（需权限 template:filter.html）
@@ -127,7 +128,7 @@ class TwigTemplateService implements View
             'template' => $template,
             'html' => $html,
             'app' => $app,
-            'plugin' => $plugin
+            'plugin' => $plugin,
         ])['html'] ?? $html;
 
         return $html;

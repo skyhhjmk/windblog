@@ -3,12 +3,12 @@
 namespace app\process;
 
 use app\model\Link;
+use app\service\MQService;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
 use support\Log;
 use Workerman\Timer;
 use Workerman\Worker;
-use app\service\MQService;
 
 /**
  * 友链监控消费进程
@@ -19,15 +19,19 @@ use app\service\MQService;
 class LinkMonitor
 {
     protected int $interval = 5;
+
     protected int $timerId;
+
     protected int $timerId2;
 
     // 请求限制
     protected int $requestTimeout = 30;
+
     protected int $maxResponseSize = 8 * 1024 * 1024; // 8MB
 
     // MQ
     protected ?AMQPStreamConnection $mqConnection = null;
+
     protected $mqChannel = null;
 
     // 失败统计（URL维度，辅助DLX策略）
@@ -43,6 +47,7 @@ class LinkMonitor
                 blog_config('rabbitmq_password', 'guest', true)
             );
         }
+
         return $this->mqConnection;
     }
 
@@ -53,6 +58,7 @@ class LinkMonitor
             $this->mqChannel = $conn->channel();
             $this->mqChannel->basic_qos(0, 1, false);
         }
+
         return $this->mqChannel;
     }
 
@@ -62,29 +68,30 @@ class LinkMonitor
         $envPath = base_path() . '/.env';
         if (!file_exists($envPath)) {
             Log::warning("LinkMonitor 检测到缺少 .env，已跳过启动：{$envPath}");
+
             return;
         }
 
-        Log::info("LinkMonitor 进程已启动 - PID: " . getmypid());
+        Log::info('LinkMonitor 进程已启动 - PID: ' . getmypid());
         try {
             // 使用 MQService 通道与通用方法初始化本进程专属的交换机/队列/死信
             $channel = MQService::getChannel();
 
-            $exchange   = (string)blog_config('rabbitmq_link_monitor_exchange', 'link_monitor_exchange', true);
-            $routingKey = (string)blog_config('rabbitmq_link_monitor_routing_key', 'link_monitor', true);
-            $queueName  = (string)blog_config('rabbitmq_link_monitor_queue', 'link_monitor_queue', true);
+            $exchange = (string) blog_config('rabbitmq_link_monitor_exchange', 'link_monitor_exchange', true);
+            $routingKey = (string) blog_config('rabbitmq_link_monitor_routing_key', 'link_monitor', true);
+            $queueName = (string) blog_config('rabbitmq_link_monitor_queue', 'link_monitor_queue', true);
 
             // 为 LinkMonitor 使用专属 DLX/DLQ，不共用
-            $dlxExchange = (string)blog_config('rabbitmq_link_monitor_dlx_exchange', 'link_monitor_dlx_exchange', true);
-            $dlxQueue    = (string)blog_config('rabbitmq_link_monitor_dlx_queue', 'link_monitor_dlx_queue', true);
+            $dlxExchange = (string) blog_config('rabbitmq_link_monitor_dlx_exchange', 'link_monitor_dlx_exchange', true);
+            $dlxQueue = (string) blog_config('rabbitmq_link_monitor_dlx_queue', 'link_monitor_dlx_queue', true);
 
             MQService::declareDlx($channel, $dlxExchange, $dlxQueue);
             MQService::setupQueueWithDlx($channel, $exchange, $routingKey, $queueName, $dlxExchange, $dlxQueue);
 
             $this->mqChannel = $channel;
-            Log::info("RabbitMQ连接初始化成功(LinkMonitor)");
+            Log::info('RabbitMQ连接初始化成功(LinkMonitor)');
         } catch (\Exception $e) {
-            Log::error("RabbitMQ连接初始化失败(LinkMonitor): " . $e->getMessage());
+            Log::error('RabbitMQ连接初始化失败(LinkMonitor): ' . $e->getMessage());
         }
 
         $this->timerId = Timer::add(60, function () {
@@ -94,7 +101,11 @@ class LinkMonitor
         });
         // 每60秒进行一次 MQ 健康检查
         Timer::add(60, function () {
-            try { \app\service\MQService::checkAndHeal(); } catch (\Throwable $e) { Log::warning('MQ 健康检查异常(LinkMonitor): ' . $e->getMessage()); }
+            try {
+                \app\service\MQService::checkAndHeal();
+            } catch (\Throwable $e) {
+                Log::warning('MQ 健康检查异常(LinkMonitor): ' . $e->getMessage());
+            }
         });
 
         $this->processMessages();
@@ -140,6 +151,7 @@ class LinkMonitor
             if (!$data || empty($data['url'])) {
                 Log::warning('LinkMonitor 收到无效消息: ' . $message->body);
                 $message->ack();
+
                 return;
             }
 
@@ -150,6 +162,7 @@ class LinkMonitor
             if ($this->shouldSendToDeadLetter($url)) {
                 Log::error('URL连续失败超限，进入DLX: ' . $url);
                 $message->nack(false);
+
                 return;
             }
 
@@ -157,6 +170,7 @@ class LinkMonitor
             if (!$fetch['success']) {
                 $this->recordFailure($url, $fetch['error']);
                 $this->handleFailedMessage($message, $url);
+
                 return;
             }
 
@@ -168,20 +182,20 @@ class LinkMonitor
                 'ok' => true,
                 'load_time' => $loadTime . 'ms',
                 'backlink' => ['found' => false, 'count' => 0],
-                'errors' => []
+                'errors' => [],
             ];
 
             if ($myDomain) {
                 $back = $this->checkBacklink($html, $myDomain);
                 $summary['backlink'] = [
                     'found' => $back['found'] ?? false,
-                    'count' => $back['link_count'] ?? 0
+                    'count' => $back['link_count'] ?? 0,
                 ];
             }
 
             if ($linkId) {
                 try {
-                    $model = Link::find((int)$linkId);
+                    $model = Link::find((int) $linkId);
                     if ($model) {
                         $model->setCustomField('monitor', $summary);
                         $model->save();
@@ -225,6 +239,7 @@ class LinkMonitor
                         return 1; // abort
                     }
                     $responseSize = $dlnow;
+
                     return 0;
                 },
             ]);
@@ -270,6 +285,7 @@ class LinkMonitor
                 }
             }
         }
+
         return $result;
     }
 
@@ -311,6 +327,7 @@ class LinkMonitor
         if ($stats['count'] >= 3 && (time() - $stats['first_failure']) < 3600) {
             return true;
         }
+
         return false;
     }
 
@@ -320,13 +337,14 @@ class LinkMonitor
             $retry = 0;
             $headers = $message->has('application_headers') ? $message->get('application_headers') : null;
             if ($headers instanceof \PhpAmqpLib\Wire\AMQPTable) {
-                $native = method_exists($headers, 'getNativeData') ? $headers->getNativeData() : (array)$headers;
-                $retry = (int)($native['x-retry-count'] ?? 0);
+                $native = method_exists($headers, 'getNativeData') ? $headers->getNativeData() : (array) $headers;
+                $retry = (int) ($native['x-retry-count'] ?? 0);
             }
 
             if ($this->shouldSendToDeadLetter($url)) {
                 $message->nack(false);
                 Log::error('LinkMonitor URL超限，直接DLX: ' . $url);
+
                 return;
             }
 
@@ -357,7 +375,7 @@ class LinkMonitor
                 $this->mqConnection->close();
                 $this->mqConnection = null;
             }
-            Log::info("RabbitMQ连接已关闭(LinkMonitor)");
+            Log::info('RabbitMQ连接已关闭(LinkMonitor)');
         } catch (\Exception $e) {
             Log::error('关闭MQ连接异常(LinkMonitor): ' . $e->getMessage());
         }

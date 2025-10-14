@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of webman.
  *
@@ -14,13 +15,12 @@
 
 namespace app\middleware;
 
-use Webman\MiddlewareInterface;
-use Webman\Http\Response;
 use Webman\Http\Request;
+use Webman\Http\Response;
+use Webman\MiddlewareInterface;
 
 /**
  * Class DebugToolkit
- * @package app\middleware
  */
 class DebugToolkit implements MiddlewareInterface
 {
@@ -33,12 +33,12 @@ class DebugToolkit implements MiddlewareInterface
 
         // 权限策略：必须存在 Header X-Debug-Toolkit=1
         $hasHeader = $request->header('x-debug-toolkit') === '1' || $request->header('X-Debug-Toolkit') === '1';
-        $hasQuery  = !empty($request->get('debug'));
+        $hasQuery = !empty($request->get('debug'));
         $hasCookie = $request->cookie('debug_toolkit') === '1';
 
-//        if (!$hasHeader) {
-//            return $response;
-//        }
+        //        if (!$hasHeader) {
+        //            return $response;
+        //        }
 
         // 安全注入：仅当响应体可用且包含 </body>，且未已注入
         $content = $response->rawBody();
@@ -102,6 +102,7 @@ class DebugToolkit implements MiddlewareInterface
         $debugContent = $this->getDebugToolkit($data);
 
         $content = str_replace('</body>', $debugContent . '</body>', $content);
+
         return $response->withBody($content);
     }
 
@@ -110,14 +111,14 @@ class DebugToolkit implements MiddlewareInterface
         $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
         return <<<HTML
-<!-- Debug Toolkit Start -->
-<link rel="stylesheet" href="/assets/css/debug.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha512-DxV+EoADOkOygM4IR9yXP8Sb2qwgidEmeqAEmDKIOfPRQZOWbXCzLC6vjbZyy0vPisbH2SyW27+ddLVCN+OMzQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-<!-- Tailwind CDN（按你的选择加载） -->
-<script src="https://cdn.tailwindcss.com"></script>
-<script>window.__DEBUG_TOOLKIT_DATA = {$json};</script>
-<script src="/assets/js/debug.js"></script>
-<!-- Debug Toolkit End -->
-HTML;
+            <!-- Debug Toolkit Start -->
+            <link rel="stylesheet" href="/assets/css/debug.css">
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha512-DxV+EoADOkOygM4IR9yXP8Sb2qwgidEmeqAEmDKIOfPRQZOWbXCzLC6vjbZyy0vPisbH2SyW27+ddLVCN+OMzQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <!-- Tailwind CDN（按你的选择加载） -->
+            <script src="https://cdn.tailwindcss.com"></script>
+            <script>window.__DEBUG_TOOLKIT_DATA = {$json};</script>
+            <script src="/assets/js/debug.js"></script>
+            <!-- Debug Toolkit End -->
+            HTML;
     }
 }

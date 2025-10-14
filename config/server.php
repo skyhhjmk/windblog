@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of webman.
  *
@@ -19,5 +20,5 @@ return [
     'status_file' => runtime_path() . '/webman.status',
     'stdout_file' => runtime_path() . '/logs/stdout.log',
     'log_file' => runtime_path() . '/logs/workerman.log',
-    'max_package_size' => 100 * 1024 * 1024 // 100M
+    'max_package_size' => 100 * 1024 * 1024, // 100M
 ];

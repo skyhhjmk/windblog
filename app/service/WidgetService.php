@@ -2,13 +2,12 @@
 
 namespace app\service;
 
-use app\model\Post;
 use app\model\Category;
-use app\model\Tag;
+use app\model\Post;
 use app\model\Setting;
+use app\model\Tag;
 use support\Log;
 use Throwable;
-use app\service\URLHelper;
 
 /**
  * 小工具服务
@@ -46,12 +45,12 @@ class WidgetService
         'recent_posts' => '最新文章',
         'popular_posts' => '热门文章',
         'random_posts' => '随机文章',
-        'html' => '自定义HTML'
+        'html' => '自定义HTML',
     ];
 
     /**
      * 注册小工具类型
-     * 
+     *
      * @param string $type 小工具类型
      * @param string $name 小工具名称
      * @param string $description 小工具描述
@@ -69,7 +68,7 @@ class WidgetService
             self::$registeredWidgets[$type] = [
                 'type' => $type,
                 'name' => $name,
-                'description' => $description
+                'description' => $description,
             ];
 
             // 注册自定义渲染器
@@ -82,17 +81,18 @@ class WidgetService
                 self::$widgetHtmlRenderers[$type] = $htmlRenderer;
             }
 
-//            Log::debug("[WidgetService] 小工具类型 '{$type}' 注册成功");
+            //            Log::debug("[WidgetService] 小工具类型 '{$type}' 注册成功");
             return true;
         } catch (Throwable $e) {
             Log::error('[WidgetService] 注册小工具失败: ' . $e->getMessage());
+
             return false;
         }
     }
 
     /**
      * 获取所有已注册的小工具类型
-     * 
+     *
      * @return array 小工具类型列表
      */
     public static function getRegisteredWidgets(): array
@@ -102,7 +102,7 @@ class WidgetService
 
     /**
      * 渲染小工具数据
-     * 
+     *
      * @param array $widget 小工具配置
      * @param string $pageType 页面类型
      * @return array 渲染后的小工具数据
@@ -110,22 +110,23 @@ class WidgetService
     public static function renderWidget(array $widget, string $pageType = 'default'): array
     {
         $widgetType = $widget['type'] ?? '';
-        
+
         if (!isset(self::$registeredWidgets[$widgetType])) {
             Log::warning("[WidgetService] 未知小工具类型: {$widgetType}");
+
             return array_merge($widget, ['enabled' => false]);
         }
 
         try {
             $config = self::getWidgetConfig($widgetType, $pageType);
-            
+
             if (isset($config['enabled']) && !$config['enabled']) {
                 return ['enabled' => false];
             }
 
             $widget = array_merge($config, $widget);
             $widget['params'] = array_merge($config['params'] ?? [], $widget['params'] ?? []);
-            
+
             // 优先使用自定义渲染器
             if (isset(self::$widgetRenderers[$widgetType]) && is_callable(self::$widgetRenderers[$widgetType])) {
                 try {
@@ -134,25 +135,27 @@ class WidgetService
                     Log::error("[WidgetService] 自定义渲染器执行失败: {$widgetType} - " . $e->getMessage());
                 }
             }
-            
+
             // 使用内置渲染器
             $renderMethod = 'render' . str_replace('_', '', ucwords($widgetType, '_'));
-            
+
             if (method_exists(__CLASS__, $renderMethod)) {
                 return self::{$renderMethod}($widget);
             }
-            
+
             Log::warning("[WidgetService] 未知小工具类型: {$widgetType}");
+
             return array_merge($widget, ['enabled' => false]);
         } catch (Throwable $e) {
             Log::error("[WidgetService] 渲染小工具失败: {$widgetType} - " . $e->getMessage());
+
             return array_merge($widget, ['enabled' => false, 'error' => $e->getMessage()]);
         }
     }
 
     /**
      * 获取小工具配置
-     * 
+     *
      * @param string $widgetType 小工具类型
      * @param string $pageType 页面类型
      * @return array 小工具配置
@@ -168,12 +171,12 @@ class WidgetService
             'random_posts' => ['count' => 5],
             'archive' => ['count' => 5],
             'about' => [],
-            'html' => []
+            'html' => [],
         ];
         $defaultConfig = [
             'enabled' => true,
             'title' => self::$defaultTitles[$widgetType] ?? ucfirst($widgetType),
-            'params' => $defaultParamsMap[$widgetType] ?? ['count' => 5]
+            'params' => $defaultParamsMap[$widgetType] ?? ['count' => 5],
         ];
 
         try {
@@ -186,6 +189,7 @@ class WidgetService
 
             if ($setting) {
                 $config = json_decode($setting->value, true);
+
                 return array_merge($defaultConfig, $config);
             }
         } catch (Throwable $e) {
@@ -197,7 +201,7 @@ class WidgetService
 
     /**
      * 渲染小工具为HTML
-     * 
+     *
      * @param array $widget 小工具数据
      * @return string 渲染后的HTML
      */
@@ -207,10 +211,10 @@ class WidgetService
             if (isset($widget['enabled']) && !$widget['enabled']) {
                 return '';
             }
-            
+
             $widgetType = $widget['type'] ?? '';
             $title = $widget['title'] ?? '';
-            
+
             // 获取渲染后的小工具数据
             // 动作：小工具渲染开始（需权限 widget:action.render_start）
             \app\service\PluginService::do_action('widget.render_start', $widget);
@@ -219,27 +223,29 @@ class WidgetService
 
             // 动作：小工具渲染结束（需权限 widget:action.render_end）
             \app\service\PluginService::do_action('widget.render_end', $widgetData);
-            
+
             // 优先使用自定义HTML渲染器
             if (isset(self::$widgetHtmlRenderers[$widgetType]) && is_callable(self::$widgetHtmlRenderers[$widgetType])) {
                 try {
                     $content = call_user_func(self::$widgetHtmlRenderers[$widgetType], $widgetData);
+
                     return self::wrapWidgetHtml($title, $content);
                 } catch (Throwable $e) {
                     Log::error("[WidgetService] 自定义HTML渲染器执行失败: {$widgetType} - " . $e->getMessage());
                 }
             }
-            
+
             // 使用内置HTML渲染器
             $htmlMethod = 'render' . str_replace('_', '', ucwords($widgetType, '_')) . 'Html';
-            
+
             if (method_exists(__CLASS__, $htmlMethod)) {
                 $content = self::{$htmlMethod}($widgetData);
                 $content = \app\service\PluginService::apply_filters('widget.output_filter', [
                     'type' => $widgetType,
                     'content' => $content,
-                    'title' => $title
+                    'title' => $title,
                 ])['content'] ?? $content;
+
                 return self::wrapWidgetHtml($title, $content);
             }
 
@@ -247,19 +253,21 @@ class WidgetService
             $unknown = \app\service\PluginService::apply_filters('widget.output_filter', [
                 'type' => $widgetType,
                 'content' => $unknown,
-                'title' => $title
+                'title' => $title,
             ])['content'] ?? $unknown;
+
             return $unknown;
 
         } catch (Throwable $e) {
             Log::error('[WidgetService] 渲染小工具HTML失败: ' . $e->getMessage());
+
             return '<div class="bg-white rounded-lg shadow-md p-6 mb-6 text-red-500">小工具渲染失败</div>';
         }
     }
-    
+
     /**
      * 包装小工具HTML内容
-     * 
+     *
      * @param string $title 小工具标题
      * @param string $content 小工具内容
      * @return string 包装后的HTML
@@ -274,7 +282,7 @@ class WidgetService
 
     /**
      * 批量渲染小工具
-     * 
+     *
      * @param array $widgets 小工具配置列表
      * @param string $pageType 页面类型
      * @return array 渲染后的小工具数据列表
@@ -285,6 +293,7 @@ class WidgetService
         foreach ($widgets as $widget) {
             $results[] = self::renderWidget($widget, $pageType);
         }
+
         return $results;
     }
 
@@ -301,17 +310,17 @@ class WidgetService
             'recent_posts' => ['最新文章', '显示最新发布的文章列表', null, [__CLASS__, 'renderRecentPostsHtml']],
             'html' => ['自定义HTML', '自定义HTML内容', null, [__CLASS__, 'renderHtmlHtml']],
             'popular_posts' => ['热门文章', '显示最受欢迎的文章列表', null, [__CLASS__, 'renderPopularPostsHtml']],
-            'random_posts' => ['随机文章', '随机显示博客中的文章', null, [__CLASS__, 'renderRandomPostsHtml']]
+            'random_posts' => ['随机文章', '随机显示博客中的文章', null, [__CLASS__, 'renderRandomPostsHtml']],
         ];
-        
+
         foreach ($widgets as $type => $info) {
             self::registerWidget($type, $info[0], $info[1], $info[2], $info[3]);
         }
     }
-    
+
     /**
      * 批量注册小工具（插件使用）
-     * 
+     *
      * @param array $widgets 小工具配置列表
      */
     public static function registerBatchWidgets(array $widgets): void
@@ -321,7 +330,7 @@ class WidgetService
             $description = $config['description'] ?? '';
             $renderer = $config['renderer'] ?? null;
             $htmlRenderer = $config['html_renderer'] ?? null;
-            
+
             self::registerWidget($widgetType, $name, $description, $renderer, $htmlRenderer);
         }
     }
@@ -339,34 +348,35 @@ class WidgetService
         try {
             $widgetType = $widget['type'] ?? '';
             $widgetId = $widget['id'] ?? md5(serialize($widget));
-            
+
             // 生成缓存键
             $cacheKey = "widget_{$widgetType}_{$widgetId}_{$pageType}";
-            
+
             // 如果禁用缓存，直接渲染
             if ($cacheMinutes === 0) {
                 return self::renderToHtml($widget);
             }
-            
+
             // 使用默认缓存时间（60分钟）
-            $cacheMinutes = $cacheMinutes ?? 60;
-            
+            $cacheMinutes ??= 60;
+
             // 尝试从缓存获取
             $cachedHtml = cache($cacheKey);
             if ($cachedHtml !== false) {
                 return $cachedHtml;
             }
-            
+
             // 渲染HTML
             $html = self::renderToHtml($widget);
-            
+
             // 缓存结果
             cache($cacheKey, $html, true, $cacheMinutes * 60);
-            
+
             return $html;
-            
+
         } catch (Throwable $e) {
             Log::error('[WidgetService] 渲染小工具HTML缓存失败: ' . $e->getMessage());
+
             return '<div class="bg-white rounded-lg shadow-md p-6 mb-6 text-red-500">小工具渲染失败</div>';
         }
     }
@@ -374,7 +384,7 @@ class WidgetService
     /**
      * 渲染数据方法 - 已合并到主渲染逻辑中
      */
-    
+
     /**
      * 渲染关于博主小工具
      */
@@ -383,6 +393,7 @@ class WidgetService
         if (!isset($widget['content']) || empty($widget['content'])) {
             $widget['content'] = '欢迎访问我的博客，这里记录了我的技术分享和生活感悟。';
         }
+
         return $widget;
     }
 
@@ -391,17 +402,18 @@ class WidgetService
      */
     protected static function renderCategories(array $widget): array
     {
-        return self::getDataWrapper(function() use ($widget) {
+        return self::getDataWrapper(function () use ($widget) {
             $count = $widget['params']['count'] ?? 5;
-            $query = Category::withCount(['posts' => function($q) {
+            $query = Category::withCount(['posts' => function ($q) {
                 $q->where('status', 'published');
             }])->orderBy('posts_count', 'desc');
-            
+
             if ($count > 0) {
                 $query->take($count);
             }
-            
+
             $widget['categories'] = $query->get(['id', 'name', 'slug', 'posts_count']);
+
             return $widget;
         }, $widget, 'categories', []);
     }
@@ -411,17 +423,18 @@ class WidgetService
      */
     protected static function renderTags(array $widget): array
     {
-        return self::getDataWrapper(function() use ($widget) {
+        return self::getDataWrapper(function () use ($widget) {
             $count = $widget['params']['count'] ?? 50;
-            $query = Tag::withCount(['posts' => function($q) {
+            $query = Tag::withCount(['posts' => function ($q) {
                 $q->where('status', 'published');
             }])->orderBy('posts_count', 'desc');
-            
+
             if ($count > 0) {
                 $query->take($count);
             }
-            
+
             $widget['tags'] = $query->get(['id', 'name', 'slug', 'posts_count']);
+
             return $widget;
         }, $widget, 'tags', []);
     }
@@ -431,19 +444,20 @@ class WidgetService
      */
     protected static function renderArchive(array $widget): array
     {
-        return self::getDataWrapper(function() use ($widget) {
+        return self::getDataWrapper(function () use ($widget) {
             $count = $widget['params']['count'] ?? 5;
             // 使用PostgreSQL兼容的日期格式化函数
             $query = Post::selectRaw("TO_CHAR(created_at, 'YYYY-MM') as year_month, COUNT(*) as count")
                 ->where('status', 'published')
                 ->groupBy('year_month')
                 ->orderBy('year_month', 'desc');
-            
+
             if ($count > 0) {
                 $query->take($count);
             }
-            
+
             $widget['archive'] = $query->get();
+
             return $widget;
         }, $widget, 'archive', []);
     }
@@ -453,12 +467,13 @@ class WidgetService
      */
     protected static function renderRecentPosts(array $widget): array
     {
-        return self::getDataWrapper(function() use ($widget) {
+        return self::getDataWrapper(function () use ($widget) {
             $limit = $widget['params']['count'] ?? 5;
             $widget['recent_posts'] = Post::where('status', 'published')
                 ->orderBy('created_at', 'desc')
                 ->take($limit)
                 ->get(['id', 'title', 'slug', 'created_at']);
+
             return $widget;
         }, $widget, 'recent_posts', []);
     }
@@ -470,12 +485,12 @@ class WidgetService
     {
         try {
             $widgetId = $widget['widget_id'] ?? 'default';
-            
+
             if (empty($widget['content'])) {
                 try {
                     $settingKey = "custom_widget_html_{$widgetId}";
                     $setting = Setting::where('key', $settingKey)->first();
-                    
+
                     if ($setting) {
                         $widget['content'] = $setting->value;
                     } else {
@@ -491,7 +506,7 @@ class WidgetService
         } catch (Throwable $e) {
             Log::error('[WidgetService] 渲染HTML小工具失败: ' . $e->getMessage());
         }
-        
+
         return $widget;
     }
 
@@ -500,12 +515,13 @@ class WidgetService
      */
     protected static function renderPopularPosts(array $widget): array
     {
-        return self::getDataWrapper(function() use ($widget) {
+        return self::getDataWrapper(function () use ($widget) {
             $limit = $widget['params']['count'] ?? 5;
             $widget['popular_posts'] = Post::where('status', 'published')
                 ->orderBy('views', 'desc')
                 ->take($limit)
                 ->get(['id', 'title', 'slug', 'created_at', 'views']);
+
             return $widget;
         }, $widget, 'popular_posts', []);
     }
@@ -515,19 +531,19 @@ class WidgetService
      */
     protected static function renderRandomPosts(array $widget): array
     {
-        return self::getDataWrapper(function() use ($widget) {
+        return self::getDataWrapper(function () use ($widget) {
             $limit = $widget['params']['count'] ?? 5;
             // 只获取已发布的文章，使用PostgreSQL兼容的随机排序
             $widget['random_posts'] = Post::where('status', 'published')
                 ->orderByRaw('RANDOM()')
                 ->take($limit)
                 ->get(['id', 'title', 'slug', 'created_at']);
-            
+
             // 调试信息
             if ($widget['random_posts']->isEmpty()) {
                 Log::info('[WidgetService] 随机文章小工具：数据库中没有已发布的文章');
             }
-            
+
             return $widget;
         }, $widget, 'random_posts', []);
     }
@@ -538,6 +554,7 @@ class WidgetService
     protected static function renderAboutHtml(array $widget): string
     {
         $content = $widget['content'] ?? '欢迎访问我的博客，这里记录了我的技术分享和生活感悟。';
+
         return '<div class="text-gray-600 leading-relaxed">' . nl2br(htmlspecialchars($content)) . '</div>';
     }
 
@@ -547,7 +564,7 @@ class WidgetService
         if (empty($categories)) {
             return '<div class="text-gray-500 text-sm italic">暂无分类</div>';
         }
-        
+
         $html = '<div class="space-y-2">';
         foreach ($categories as $category) {
             $html .= '<a href="' . URLHelper::generateCategoryUrl($category['slug']) . '" class="flex justify-between items-center text-gray-800 hover:text-blue-600 transition-colors">';
@@ -556,6 +573,7 @@ class WidgetService
             $html .= '</a>';
         }
         $html .= '</div>';
+
         return $html;
     }
 
@@ -570,8 +588,10 @@ class WidgetService
         }
 
         // 按用户配置的首屏直显数量展示，其余折叠
-        $visible = (int)($widget['params']['visible'] ?? 30);
-        if ($visible < 0) { $visible = 0; }
+        $visible = (int) ($widget['params']['visible'] ?? 30);
+        if ($visible < 0) {
+            $visible = 0;
+        }
         $primary = array_slice($tags, 0, $visible);
         $extra = array_slice($tags, $visible);
 
@@ -586,12 +606,12 @@ class WidgetService
         ];
 
         // 生成稳定的旋转角与透明度
-        $computeStyle = function($tag) use ($gradients) {
+        $computeStyle = function ($tag) use ($gradients) {
             // 同时兼容数组与Eloquent模型对象
             if (is_array($tag)) {
-                $key = (string)($tag['slug'] ?? $tag['id'] ?? $tag['name'] ?? '');
+                $key = (string) ($tag['slug'] ?? $tag['id'] ?? $tag['name'] ?? '');
             } else {
-                $key = (string)($tag->slug ?? $tag->id ?? $tag->name ?? '');
+                $key = (string) ($tag->slug ?? $tag->id ?? $tag->name ?? '');
             }
             $seed = crc32($key);
             $angle = (($seed % 11) - 5); // -5 ~ +5 度
@@ -602,20 +622,22 @@ class WidgetService
             // 初始旋转 + 半透明；hover通过内联事件修改transform以回正并放大
             $style = 'transform: rotate(' . $angle . 'deg); opacity: ' . number_format($opacity, 2) . '; will-change: transform, opacity;';
             $classes = 'text-sm px-3 py-1 rounded-full border border-white/60 shadow-sm transition-all duration-150 ' . $gradient . ' hover:shadow-md';
+
             return [$style, $classes, $angle];
         };
 
-        $renderTag = function($tag) use ($computeStyle) {
+        $renderTag = function ($tag) use ($computeStyle) {
             [$style, $classes, $angle] = $computeStyle($tag);
             $name = is_array($tag) ? ($tag['name'] ?? '') : ($tag->name ?? '');
             $count = is_array($tag) ? ($tag['posts_count'] ?? 0) : ($tag->posts_count ?? 0);
             $slug = is_array($tag) ? ($tag['slug'] ?? '') : ($tag->slug ?? '');
             $label = htmlspecialchars($name) . ' (' . htmlspecialchars($count) . ')';
+
             return '<a href="' . URLHelper::generateTagUrl($slug) . '"'
                 . ' class="' . $classes . '"'
                 . ' style="' . $style . '"'
                 . ' onmouseover="this.style.transform=\'rotate(0deg) scale(1.05)\'"'
-                . ' onmouseout="this.style.transform=\'rotate(' . (int)$angle . 'deg) scale(1)\'">'
+                . ' onmouseout="this.style.transform=\'rotate(' . (int) $angle . 'deg) scale(1)\'">'
                 . $label . '</a>';
         };
 
@@ -645,7 +667,7 @@ class WidgetService
         if (empty($archive)) {
             return '<div class="text-gray-500 text-sm italic">暂无归档</div>';
         }
-        
+
         $html = '<div class="space-y-2">';
         foreach ($archive as $item) {
             $html .= '<a href="/archive/' . htmlspecialchars($item['year_month']) . '" class="flex justify-between items-center text-gray-700 hover:text-blue-600 transition-colors">';
@@ -654,6 +676,7 @@ class WidgetService
             $html .= '</a>';
         }
         $html .= '</div>';
+
         return $html;
     }
 
@@ -663,7 +686,7 @@ class WidgetService
         if (empty($recentPosts)) {
             return '<div class="text-gray-500 text-sm italic">暂无文章</div>';
         }
-        
+
         $html = '<div class="space-y-3">';
         foreach ($recentPosts as $post) {
             $html .= '<a href="' . URLHelper::generatePostUrl($post['slug']) . '" class="block group">';
@@ -676,12 +699,14 @@ class WidgetService
             $html .= '</a>';
         }
         $html .= '</div>';
+
         return $html;
     }
 
     protected static function renderHtmlHtml(array $widget): string
     {
         $content = $widget['content'] ?? '';
+
         return '<div class="prose prose-sm max-w-none">' . $content . '</div>';
     }
 
@@ -691,7 +716,7 @@ class WidgetService
         if (empty($popularPosts)) {
             return '<div class="text-gray-500 text-sm italic">暂无热门文章</div>';
         }
-        
+
         $html = '<div class="space-y-3">';
         foreach ($popularPosts as $post) {
             $html .= '<a href="' . URLHelper::generatePostUrl($post['slug']) . '" class="block group">';
@@ -704,6 +729,7 @@ class WidgetService
             $html .= '</a>';
         }
         $html .= '</div>';
+
         return $html;
     }
 
@@ -713,7 +739,7 @@ class WidgetService
         if (empty($randomPosts)) {
             return '<div class="text-gray-500 text-sm italic">暂无文章</div>';
         }
-        
+
         $html = '<div class="space-y-3">';
         foreach ($randomPosts as $post) {
             $html .= '<a href="' . URLHelper::generatePostUrl($post['slug']) . '" class="block group">';
@@ -723,12 +749,13 @@ class WidgetService
             $html .= '</a>';
         }
         $html .= '</div>';
+
         return $html;
     }
 
     /**
      * 数据获取包装器 - 统一错误处理和数据设置
-     * 
+     *
      * @param callable $callback 数据获取回调函数
      * @param array $widget 小工具配置
      * @param string $dataKey 数据键名
@@ -742,6 +769,7 @@ class WidgetService
         } catch (Throwable $e) {
             Log::error("[WidgetService] 渲染小工具失败 ({$dataKey}): " . $e->getMessage());
             $widget[$dataKey] = $defaultValue;
+
             return $widget;
         }
     }

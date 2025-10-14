@@ -23,6 +23,7 @@ class URLHelper
         }
         // 过滤器：文章URL（需权限 url:filter.post）
         $url = \app\service\PluginService::apply_filters('url.post_filter', ['url' => $url])['url'] ?? $url;
+
         return $url;
     }
 
@@ -41,6 +42,7 @@ class URLHelper
         }
         // 过滤器：页面URL（需权限 url:filter.page）
         $url = \app\service\PluginService::apply_filters('url.page_filter', ['url' => $url])['url'] ?? $url;
+
         return $url;
     }
 
@@ -61,6 +63,7 @@ class URLHelper
         }
         // 过滤器：分类URL（需权限 url:filter.category）
         $url = \app\service\PluginService::apply_filters('url.category_filter', ['url' => $url])['url'] ?? $url;
+
         return $url;
     }
 
@@ -81,6 +84,7 @@ class URLHelper
         }
         // 过滤器：标签URL（需权限 url:filter.tag）
         $url = \app\service\PluginService::apply_filters('url.tag_filter', ['url' => $url])['url'] ?? $url;
+
         return $url;
     }
 
@@ -99,6 +103,7 @@ class URLHelper
         }
         // 过滤器：搜索URL（需权限 url:filter.search）
         $url = \app\service\PluginService::apply_filters('url.search_filter', ['url' => $url])['url'] ?? $url;
+
         return $url;
     }
 
@@ -113,6 +118,7 @@ class URLHelper
         if (str_ends_with($url, '.html')) {
             return substr($url, 0, -5);
         }
+
         return $url;
     }
 
@@ -138,6 +144,7 @@ class URLHelper
         if (!str_ends_with($url, '.html')) {
             $url .= '.html';
         }
+
         return $url;
     }
 }

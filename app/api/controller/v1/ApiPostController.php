@@ -22,29 +22,29 @@ class ApiPostController
         ]);
     }
 
-    #[RateLimiter(limit: 3,ttl: 3)]
+    #[RateLimiter(limit: 3, ttl: 3)]
     public function get(Request $request, ?int $id = null): Response
     {
         // 验证ID
         if (empty($id) || !is_numeric($id) || $id < 1 || $id > 2147483646/* int最大值-1 */) {
             return json([
                 'code' => 400,
-                'message' => trans('Missing input parameter :parameter', ['parameter' => 'id']) // 缺少输入参数 id
+                'message' => trans('Missing input parameter :parameter', ['parameter' => 'id']), // 缺少输入参数 id
             ]);
         }
-        
+
         // 查询文章及作者信息
-        $post = Post::with(['authors' => function($query) {
+        $post = Post::with(['authors' => function ($query) {
             $query->select('wa_users.id', 'username', 'nickname', 'email', 'avatar');
         }])->find($id);
-        
+
         if (!$post) {
             return json([
                 'code' => 404,
-                'message' => trans('Post not found')
+                'message' => trans('Post not found'),
             ]);
         }
-        
+
         // 返回文章详情
         return json([
             'code' => 200,
@@ -59,8 +59,8 @@ class ApiPostController
                 'status' => $post->status,
                 'created_at' => $post->created_at,
                 'updated_at' => $post->updated_at,
-                'authors' => $post->authors ? $post->authors->toArray() : []
-            ]
+                'authors' => $post->authors ? $post->authors->toArray() : [],
+            ],
         ]);
     }
 }

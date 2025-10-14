@@ -4,8 +4,6 @@ namespace app\service;
 
 use app\service\plugin\HookManager;
 use app\service\plugin\PluginManager;
-use Webman\Http\Request;
-use Webman\Http\Response;
 
 /**
  * 插件系统服务入口（独立于 webman），提供 WordPress 风格钩子与插件管理
@@ -19,6 +17,7 @@ use Webman\Http\Response;
 class PluginService
 {
     private static ?HookManager $hooks = null;
+
     private static ?PluginManager $manager = null;
 
     public static function init(?string $pluginRoot = null): void
@@ -69,6 +68,7 @@ class PluginService
     public static function apply_filters(string $hook, mixed $value, mixed ...$args): mixed
     {
         self::ensureInit();
+
         return self::$hooks->applyFilters($hook, $value, ...$args);
     }
 
@@ -76,24 +76,28 @@ class PluginService
     public static function enable(string $slug): bool
     {
         self::ensureInit();
+
         return self::$manager->enable($slug);
     }
 
     public static function disable(string $slug): bool
     {
         self::ensureInit();
+
         return self::$manager->disable($slug);
     }
 
     public static function uninstall(string $slug): bool
     {
         self::ensureInit();
+
         return self::$manager->uninstall($slug);
     }
 
     public static function all_plugins(): array
     {
         self::ensureInit();
+
         return self::$manager->allMetadata();
     }
 
@@ -101,18 +105,21 @@ class PluginService
     public static function getDeclaredPermissions(string $slug): array
     {
         self::ensureInit();
+
         return self::$manager->getDeclaredPermissions($slug);
     }
 
     public static function getGrantedPermissions(string $slug): array
     {
         self::ensureInit();
+
         return self::$manager->getGrantedPermissions($slug);
     }
 
     public static function getPendingPermissions(string $slug): array
     {
         self::ensureInit();
+
         return self::$manager->getPendingPermissions($slug);
     }
 
@@ -120,12 +127,14 @@ class PluginService
     public static function getCounts(string $slug, string $permission): array
     {
         self::ensureInit();
+
         return self::$manager->getCounts($slug, $permission);
     }
 
     public static function getWindowCounts(string $slug, string $permission): array
     {
         self::ensureInit();
+
         return self::$manager->getWindowCounts($slug, $permission);
     }
 
@@ -158,6 +167,7 @@ class PluginService
     public static function ensurePermission(string $slug, string $permission): bool
     {
         self::ensureInit();
+
         return self::$manager->ensurePermission($slug, $permission);
     }
 

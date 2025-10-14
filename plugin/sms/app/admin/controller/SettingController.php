@@ -2,16 +2,16 @@
 
 namespace plugin\sms\app\admin\controller;
 
+use app\model\Setting;
 use Overtrue\EasySms\Exceptions\InvalidArgumentException;
 use Overtrue\EasySms\Exceptions\NoGatewayAvailableException;
-use Overtrue\EasySms\Strategies\OrderStrategy;
-use app\model\Setting;
 use plugin\sms\api\Sms;
 use plugin\sms\app\admin\model\Tag;
 use support\exception\BusinessException;
 use support\Request;
 use support\Response;
 use Throwable;
+
 use function view;
 
 /**
@@ -19,7 +19,6 @@ use function view;
  */
 class SettingController
 {
-
     /**
      * 短信设置页
      *
@@ -28,6 +27,7 @@ class SettingController
     public function index()
     {
         $defaultConfig = config('plugin.sms.sms-default');
+
         return view('setting/index', [
             'defaultConfig' => $defaultConfig,
         ]);
@@ -48,6 +48,7 @@ class SettingController
                 }
             }
         }
+
         return json(['code' => 0, 'msg' => 'ok', 'data' => $config]);
     }
 
@@ -69,7 +70,9 @@ class SettingController
         $gateway = $defaultConfig['gateways'][$gatewayName];
         $gatewayConfig = $config['gateways'][$gatewayName] ?? $defaultConfig['gateways'][$gatewayName];
         foreach ($gateway as $field => $value) {
-            if ($field === 'name') continue;
+            if ($field === 'name') {
+                continue;
+            }
             $gatewayConfig[$field] = $request->post($field, '');
         }
         $enable = !empty($request->post('enable'));
@@ -90,6 +93,7 @@ class SettingController
             $option->value = $value;
             $option->save();
         }
+
         return json(['code' => 0, 'msg' => 'ok']);
     }
 
@@ -123,6 +127,7 @@ class SettingController
             }
             throw $e;
         }
+
         return json(['code' => 0, 'msg' => 'ok']);
     }
 
@@ -145,6 +150,7 @@ class SettingController
             $sign = $request->post('sign');
             Tag::save($gateway, $name, ['template_id' => $templateId, 'sign' => $sign]);
         }
+
         return view('tag/insert');
     }
 
@@ -170,8 +176,10 @@ class SettingController
             $templateId = $request->post('template_id');
             $sign = $request->post('sign');
             Tag::save($gateway, $newName, ['template_id' => $templateId, 'sign' => $sign]);
+
             return json(['code' => 0, 'msg' => 'ok']);
         }
+
         return view('tag/update');
     }
 
@@ -185,8 +193,9 @@ class SettingController
     public function deleteTag(Request $request): Response
     {
         $gateway = $request->post('gateway');
-        $names = (array)$request->post('name');
+        $names = (array) $request->post('name');
         Tag::delete($gateway, $names);
+
         return json(['code' => 0, 'msg' => 'ok']);
     }
 
@@ -201,7 +210,7 @@ class SettingController
     {
         $gateway = $request->get('gateway');
         $name = $request->get('name');
+
         return json(['code' => 0, 'msg' => 'ok', 'data' => Tag::get($gateway, $name)]);
     }
-
 }

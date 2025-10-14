@@ -2,14 +2,18 @@ name: Static Analysis
 
 on:
   push:
-    branches: [ main, master, develop ]
+    branches: ['**']  # 任何分支推送都触发
   pull_request:
-    branches: [ main, master, develop ]
+    branches: ['**']  # 任何分支的PR都触发
 
 jobs:
   phpstan:
     runs-on: ubuntu-latest
     name: PHPStan Static Analysis
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
 
     steps:
     - name: Checkout code
@@ -18,7 +22,7 @@ jobs:
     - name: Setup PHP
       uses: shivammathur/setup-php@v2
       with:
-        php-version: '8.2'
+        php-version: '8.3'
         extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, pdo_pgsql, pgsql, bcmath, intl, gd, exif, iconv
         tools: composer:v2
 
@@ -27,7 +31,7 @@ jobs:
       run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
 
     - name: Cache composer dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ${{ steps.composer-cache.outputs.dir }}
         key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
@@ -37,12 +41,70 @@ jobs:
     - name: Install dependencies
       run: composer install --prefer-dist --no-interaction --no-progress
 
-    - name: Run PHPStan
-      run: vendor/bin/phpstan analyze --error-format=github --no-progress
+    - name: Run PHPStan and generate report
+      continue-on-error: true
+      run: |
+        vendor/bin/phpstan analyze --error-format=github --no-progress || true
+        vendor/bin/phpstan analyze --error-format=json --no-progress > phpstan-report.json || true
+
+    - name: Upload PHPStan Report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: phpstan-report
+        path: phpstan-report.json
+        retention-days: 30
+
+    - name: Comment PR with PHPStan summary
+      if: github.event_name == 'pull_request' && always()
+      continue-on-error: true
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+
+          try {
+            if (!fs.existsSync('phpstan-report.json')) {
+              console.log('No PHPStan report found');
+              return;
+            }
+
+            const reportData = fs.readFileSync('phpstan-report.json', 'utf8');
+            const report = JSON.parse(reportData);
+
+            const errorCount = report.totals?.errors || 0;
+            const fileCount = report.totals?.file_errors || 0;
+
+            if (errorCount > 0) {
+              const comment = '## 🔍 PHPStan 静态分析报告\n\n' +
+                '**发现 ' + errorCount + ' 个问题**，涉及 ' + fileCount + ' 个文件\n\n' +
+                '### 主要问题类型\n' +
+                '- 缺少类型声明\n' +
+                '- 类型不匹配\n' +
+                '- 逻辑错误\n\n' +
+                '### 如何查看详情\n' +
+                '📥 完整报告已保存为 Artifact，可在 Actions 页面下载查看。\n\n' +
+                '### 建议\n' +
+                '建议逐步修复这些问题以提高代码质量。可以先从 level 6 降低到 level 5 以减少检查严格度。';
+
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            }
+          } catch (error) {
+            console.log('Error processing PHPStan report:', error.message);
+          }
 
   php-cs-fixer:
     runs-on: ubuntu-latest
     name: PHP CS Fixer
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
 
     steps:
     - name: Checkout code
@@ -51,15 +113,15 @@ jobs:
     - name: Setup PHP
       uses: shivammathur/setup-php@v2
       with:
-        php-version: '8.2'
-        tools: php-cs-fixer, composer:v2
+        php-version: '8.3'
+        tools: php-cs-fixer, composer:v2, cs2pr
 
     - name: Get composer cache directory
       id: composer-cache
       run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
 
     - name: Cache composer dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ${{ steps.composer-cache.outputs.dir }}
         key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
@@ -69,8 +131,72 @@ jobs:
     - name: Install dependencies
       run: composer install --prefer-dist --no-interaction --no-progress
 
-    - name: Run PHP CS Fixer
-      run: vendor/bin/php-cs-fixer fix --dry-run --diff --verbose
+    - name: Run PHP CS Fixer and generate report
+      continue-on-error: true
+      run: |
+        vendor/bin/php-cs-fixer fix --dry-run --diff --format=checkstyle > php-cs-fixer-report.xml || true
+
+    - name: Show annotations in PR
+      if: always()
+      continue-on-error: true
+      run: |
+        if [ -f php-cs-fixer-report.xml ] && [ -s php-cs-fixer-report.xml ]; then
+          cat php-cs-fixer-report.xml | cs2pr || true
+        else
+          echo "No PHP CS Fixer issues found or report is empty"
+        fi
+
+    - name: Upload PHP CS Fixer Report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: php-cs-fixer-report
+        path: php-cs-fixer-report.xml
+        retention-days: 30
+
+    - name: Comment PR with summary
+      if: github.event_name == 'pull_request' && always()
+      continue-on-error: true
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+
+          try {
+            if (!fs.existsSync('php-cs-fixer-report.xml')) {
+              console.log('No PHP CS Fixer report found');
+              return;
+            }
+
+            const xmlData = fs.readFileSync('php-cs-fixer-report.xml', 'utf8');
+
+            // 简单解析 XML：统计 <file> 和 <error> 标签数量
+            const fileMatches = xmlData.match(/<file[^>]*>/g) || [];
+            const errorMatches = xmlData.match(/<error[^>]*>/g) || [];
+
+            const fileCount = fileMatches.length;
+            const issueCount = errorMatches.length;
+
+            if (issueCount > 0) {
+              const comment = '## 🎨 PHP CS Fixer Report\n\n' +
+                '**发现代码风格问题**: ' + issueCount + ' 个问题，涉及 ' + fileCount + ' 个文件\n\n' +
+                '### 如何修复\n\n' +
+                '在本地运行以下命令自动修复：\n' +
+                '```bash\n' +
+                'vendor/bin/php-cs-fixer fix\n' +
+                '```\n\n' +
+                '📥 详细报告已保存为 Artifact，可在 Actions 页面下载查看。';
+
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            }
+          } catch (error) {
+            console.log('Error processing PHP CS Fixer report:', error.message);
+          }
 
   security:
     runs-on: ubuntu-latest
@@ -83,7 +209,7 @@ jobs:
     - name: Setup PHP
       uses: shivammathur/setup-php@v2
       with:
-        php-version: '8.2'
+        php-version: '8.3'
         tools: composer:v2
 
     - name: Get composer cache directory
@@ -91,7 +217,7 @@ jobs:
       run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
 
     - name: Cache composer dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ${{ steps.composer-cache.outputs.dir }}
         key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}

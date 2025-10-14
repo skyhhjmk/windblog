@@ -4,7 +4,6 @@ namespace app\model;
 
 use Illuminate\Database\Eloquent\Builder;
 use support\Model;
-use Throwable;
 
 /**
  * 页面模型

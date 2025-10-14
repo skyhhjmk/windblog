@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of webman.
  *
@@ -15,9 +16,9 @@
 namespace app\middleware;
 
 use support\Log;
-use Webman\MiddlewareInterface;
-use Webman\Http\Response;
 use Webman\Http\Request;
+use Webman\Http\Response;
+use Webman\MiddlewareInterface;
 
 /**
  * 静态文件中间件
@@ -75,7 +76,6 @@ class StaticFile implements MiddlewareInterface
             Log::error('[StaticFile Middleware] Error: ' . $e->getMessage());
         }*/
 
-
         // 处理缓存控制
         $this->handleCacheControl($request, $response);
 
@@ -122,6 +122,7 @@ class StaticFile implements MiddlewareInterface
             if ($request->header('If-None-Match') === $fileInfo['etag']) {
                 $response->withStatus(304);
                 $response->withBody('');
+
                 return;
             }
         }
@@ -134,6 +135,7 @@ class StaticFile implements MiddlewareInterface
             if ($request->header('If-Modified-Since') === $fileInfo['last_modified']) {
                 $response->withStatus(304);
                 $response->withBody('');
+
                 return;
             }
         }
@@ -147,6 +149,7 @@ class StaticFile implements MiddlewareInterface
     protected function getFileExtension(string $path): string
     {
         $ext = pathinfo($path, PATHINFO_EXTENSION);
+
         return strtolower($ext);
     }
 
@@ -176,6 +179,7 @@ class StaticFile implements MiddlewareInterface
 
         // 检查文件名中是否包含哈希值(8位以上字母数字组合)
         $filename = pathinfo($path, PATHINFO_FILENAME);
+
         return preg_match('/[a-f0-9]{8,}/i', $filename) === 1;
     }
 
@@ -197,7 +201,7 @@ class StaticFile implements MiddlewareInterface
             // ETag基于文件修改时间和大小生成
             'etag' => sprintf('W/"%s-%s"', $size, $mtime),
             // Last-Modified使用GMT格式
-            'last_modified' => gmdate('D, d M Y H:i:s', $mtime) . ' GMT'
+            'last_modified' => gmdate('D, d M Y H:i:s', $mtime) . ' GMT',
         ];
     }
 }

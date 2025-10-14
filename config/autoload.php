@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of webman.
  *
@@ -19,5 +20,5 @@ return [
         base_path() . '/support/Response.php',
         base_path() . '/app/bootstrap/widgets.php',
         base_path() . '/app/bootstrap/PluginBootstrap.php',
-    ]
+    ],
 ];

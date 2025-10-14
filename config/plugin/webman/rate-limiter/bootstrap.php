@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of webman.
  *
@@ -13,5 +14,5 @@
  */
 
 return [
-    Webman\RateLimiter\Bootstrap::class
+    Webman\RateLimiter\Bootstrap::class,
 ];

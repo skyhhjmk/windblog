@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of webman.
  *
@@ -14,13 +15,12 @@
 
 namespace app\middleware;
 
-use Webman\MiddlewareInterface;
-use Webman\Http\Response;
 use Webman\Http\Request;
+use Webman\Http\Response;
+use Webman\MiddlewareInterface;
 
 /**
  * Class IpChecker
- * @package app\middleware
  */
 class IpChecker implements MiddlewareInterface
 {
@@ -29,12 +29,13 @@ class IpChecker implements MiddlewareInterface
         /** @var Response $response */
         $response = $handler($request);
 
-        if (blog_config('add_your_ip_header', true, true)){
+        if (blog_config('add_your_ip_header', true, true)) {
             // Add cross domain HTTP header
             $response->withHeaders([
                 'X-Your-IP'      => $request->getRealIp(),
             ]);
         }
+
         return $response;
     }
 }
