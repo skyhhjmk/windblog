@@ -715,6 +715,264 @@ class InstallController extends Base
 
         return new \PDO($dsn, $username, $password, $params);
     }
+    
+    /**
+     * 获取 PostgreSQL 配置内容
+     */
+    protected function getPgsqlConfigContent(): string
+    {
+        return <<<EOF
+<?php
+return [
+    // 默认数据库
+    'default' => getenv('DB_DEFAULT') ?: 'pgsql',
+    // 各种数据库配置
+    'connections' => [
+        'pgsql' => [
+            'driver' => 'pgsql',
+            'host' => getenv('DB_PGSQL_HOST') ?: 'localhost',
+            'port' => getenv('DB_PGSQL_PORT') ?: '5432',
+            'database' => getenv('DB_PGSQL_DATABASE') ?: 'windblog',
+            'username' => getenv('DB_PGSQL_USERNAME') ?: 'root',
+            'password' => getenv('DB_PGSQL_PASSWORD') ?: 'root',
+            'charset' => 'utf8',
+            'prefix' => '',
+            'schema' => 'public',
+            'sslmode' => 'prefer',
+            'options' => [
+                PDO::ATTR_PERSISTENT => false,
+                PDO::ATTR_EMULATE_PREPARES => false,
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            ],
+        ],
+        'mysql' => [
+            'driver' => 'mysql',
+            'host' => getenv('DB_MYSQL_HOST') ?: 'localhost',
+            'port' => getenv('DB_MYSQL_PORT') ?: '3306',
+            'database' => getenv('DB_MYSQL_DATABASE') ?: 'windblog',
+            'username' => getenv('DB_MYSQL_USERNAME') ?: 'root',
+            'password' => getenv('DB_MYSQL_PASSWORD') ?: 'root',
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'strict' => true,
+            'engine' => null,
+            'options' => [
+                PDO::ATTR_PERSISTENT => false,
+                PDO::ATTR_EMULATE_PREPARES => false,
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            ],
+        ],
+        'sqlite' => [
+            'driver' => 'sqlite',
+            'database' => getenv('DB_SQLITE_DATABASE') ?: runtime_path('windblog.db'),
+            'prefix' => '',
+            'foreign_key_constraints' => getenv('DB_SQLITE_FOREIGN_KEYS') ?: true,
+        ],
+    ]
+];
+EOF;
+    }
+    
+    /**
+     * 获取 MySQL 配置内容
+     */
+    protected function getMysqlConfigContent(): string
+    {
+        return $this->getPgsqlConfigContent(); // 使用相同的配置内容
+    }
+    
+    /**
+     * 获取 SQLite 配置内容
+     */
+    protected function getSqliteConfigContent(): string
+    {
+        return $this->getPgsqlConfigContent(); // 使用相同的配置内容
+    }
+    
+    /**
+     * 获取 PostgreSQL 环境配置
+     */
+    protected function getPgsqlEnvConfig($host, $port, $database, $user, $password): string
+    {
+        return <<<EOF
+# 实例部署类型
+DEPLOYMENT_TYPE=datacenter
+DB_DEFAULT=pgsql
+
+# 数据库配置 - PostgreSQL
+DB_PGSQL_HOST=$host
+DB_PGSQL_PORT=$port
+DB_PGSQL_DATABASE=$database
+DB_PGSQL_USERNAME=$user
+DB_PGSQL_PASSWORD=$password
+
+# 缓存配置
+# CACHE_DRIVER 可选：none | memory | array | apcu | memcached | redis
+# - none: 完全禁用缓存
+# - memory/array: 进程内内存缓存（仅当前PHP进程/worker内有效，适合开发/单机）
+# - apcu: 需开启 APCu 扩展；如在 CLI/常驻进程下需确保 php.ini 中 apc.enable_cli=1
+# - memcached: 需安装 Memcached 扩展，使用 MEMCACHED_HOST/MEMCACHED_PORT
+# - redis: 使用 REDIS_* 配置
+CACHE_DRIVER=null
+
+# 缓存键前缀，用于避免缓存键冲突，可为空或自定义字符串
+CACHE_PREFIX=
+
+# 默认缓存过期时间（秒），默认为86400秒（24小时）
+CACHE_DEFAULT_TTL=86400
+
+# 负面缓存过期时间（秒），用于缓存不存在的数据结果，防止缓存穿透，默认30秒
+CACHE_NEGATIVE_TTL=30
+
+# 缓存抖动时间（秒），用于给缓存过期时间添加随机值，防止缓存雪崩，默认0秒
+CACHE_JITTER_SECONDS=0
+
+# 缓存忙等待时间（毫秒），当缓存正在重建时，其他请求等待的时间，默认50毫秒
+CACHE_BUSY_WAIT_MS=50
+
+# 缓存忙等待最大重试次数，当缓存正在重建时，最多重试次数，默认3次
+CACHE_BUSY_MAX_RETRIES=3
+
+# 缓存锁过期时间（毫秒），用于防止缓存击穿，默认3000毫秒（3秒）
+CACHE_LOCK_TTL_MS=3000
+
+# Redis服务器主机地址
+REDIS_HOST=127.0.0.1
+
+# Redis服务器端口
+REDIS_PORT=6379
+
+# Redis密码，如果未设置密码则留空
+REDIS_PASSWORD=
+
+# Redis数据库索引，项目使用多库架构（DB0+DB1），此选项不可用
+#REDIS_DATABASE=1
+
+# Memcached服务器主机地址
+MEMCACHED_HOST=127.0.0.1
+
+# Memcached服务器端口
+MEMCACHED_PORT=11211
+
+# 缓存严格模式，设为true时会抛出异常而非尝试切换缓存器自愈
+CACHE_STRICT_MODE=false
+
+# APP_DEBUG=false
+# TWIG_CACHE_ENABLE=true
+# TWIG_CACHE_PATH=runtime/twig_cache
+# TWIG_AUTO_RELOAD=false
+#
+# 默认策略说明：
+# - 当 APP_DEBUG=false（生产环境），默认：启用缓存、禁用 debug、禁用 auto_reload
+# - 当 APP_DEBUG=true（开发环境），默认：关闭缓存、启用 debug、启用 auto_reload
+# - 若设置 TWIG_CACHE_ENABLE，则优先生效（true 启用缓存，false 关闭缓存）
+# - 若设置 TWIG_AUTO_RELOAD，则优先生效（true 开启自动重载，false 关闭）
+# - 缓存目录默认为 runtime/twig_cache，可用 TWIG_CACHE_PATH 覆盖
+EOF;
+    }
+    
+    /**
+     * 获取 MySQL 环境配置
+     */
+    protected function getMysqlEnvConfig($host, $port, $database, $user, $password): string
+    {
+        return <<<EOF
+# 实例部署类型
+DEPLOYMENT_TYPE=datacenter
+DB_DEFAULT=mysql
+
+# 数据库配置 - MySQL
+DB_MYSQL_HOST=$host
+DB_MYSQL_PORT=$port
+DB_MYSQL_DATABASE=$database
+DB_MYSQL_USERNAME=$user
+DB_MYSQL_PASSWORD=$password
+
+# 缓存配置
+# CACHE_DRIVER 可选：none | memory | array | apcu | memcached | redis
+# - none: 完全禁用缓存
+# - memory/array: 进程内内存缓存（仅当前PHP进程/worker内有效，适合开发/单机）
+# - apcu: 需开启 APCu 扩展；如在 CLI/常驻进程下需确保 php.ini 中 apc.enable_cli=1
+# - memcached: 需安装 Memcached 扩展，使用 MEMCACHED_HOST/MEMCACHED_PORT
+# - redis: 使用 REDIS_* 配置
+CACHE_DRIVER=null
+
+# 缓存键前缀，用于避免缓存键冲突，可为空或自定义字符串
+CACHE_PREFIX=
+
+# 默认缓存过期时间（秒），默认为86400秒（24小时）
+CACHE_DEFAULT_TTL=86400
+
+# 负面缓存过期时间（秒），用于缓存不存在的数据结果，防止缓存穿透，默认30秒
+CACHE_NEGATIVE_TTL=30
+
+# 缓存抖动时间（秒），用于给缓存过期时间添加随机值，防止缓存雪崩，默认0秒
+CACHE_JITTER_SECONDS=0
+
+# 缓存忙等待时间（毫秒），当缓存正在重建时，其他请求等待的时间，默认50毫秒
+CACHE_BUSY_WAIT_MS=50
+
+# 缓存忙等待最大重试次数，当缓存正在重建时，最多重试次数，默认3次
+CACHE_BUSY_MAX_RETRIES=3
+
+# 缓存锁过期时间（毫秒），用于防止缓存击穿，默认3000毫秒（3秒）
+CACHE_LOCK_TTL_MS=3000
+
+# Redis服务器主机地址
+REDIS_HOST=127.0.0.1
+
+# Redis服务器端口
+REDIS_PORT=6379
+
+# Redis密码，如果未设置密码则留空
+REDIS_PASSWORD=
+
+# Redis数据库索引，项目使用多库架构（DB0+DB1），此选项不可用
+#REDIS_DATABASE=1
+
+# Memcached服务器主机地址
+MEMCACHED_HOST=127.0.0.1
+
+# Memcached服务器端口
+MEMCACHED_PORT=11211
+
+# 缓存严格模式，设为true时会抛出异常而非尝试切换缓存器自愈
+CACHE_STRICT_MODE=false
+
+# APP_DEBUG=false
+# TWIG_CACHE_ENABLE=true
+# TWIG_CACHE_PATH=runtime/twig_cache
+# TWIG_AUTO_RELOAD=false
+#
+# 默认策略说明：
+# - 当 APP_DEBUG=false（生产环境），默认：启用缓存、禁用 debug、禁用 auto_reload
+# - 当 APP_DEBUG=true（开发环境），默认：关闭缓存、启用 debug、启用 auto_reload
+# - 若设置 TWIG_CACHE_ENABLE，则优先生效（true 启用缓存，false 关闭缓存）
+# - 若设置 TWIG_AUTO_RELOAD，则优先生效（true 开启自动重载，false 关闭）
+# - 缓存目录默认为 runtime/twig_cache，可用 TWIG_CACHE_PATH 覆盖
+EOF;
+    }
+    
+    /**
+     * 获取 SQLite 环境配置
+     */
+    protected function getSqliteEnvConfig($database): string
+    {
+        // 对于SQLite，我们只需要数据库路径
+        $sqlitePath = $database;
+        if (!str_starts_with($database, '/') && !str_starts_with($database, ':')) {
+            // 如果不是绝对路径或特殊路径（如 :memory:），则使用 runtime_path
+            $sqlitePath = runtime_path($database);
+        }
+        
+        return <<<EOF
+# 实例部署类型
+DEPLOYMENT_TYPE=datacenter
+DB_DEFAULT=sqlite
+
+# 数据库配置 - SQLite
+DB_SQLITE_DATABASE=$sqlitePath
 
     /**
      * 获取 PostgreSQL 配置内容
