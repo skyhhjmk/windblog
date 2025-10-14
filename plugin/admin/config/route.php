@@ -17,6 +17,7 @@ use plugin\admin\app\controller\AccountController;
 use plugin\admin\app\controller\DictController;
 use plugin\admin\app\controller\EditorController;
 use plugin\admin\app\controller\LinkController;
+use plugin\admin\app\controller\FloLinkController;
 use plugin\admin\app\controller\MediaController;
 use plugin\admin\app\controller\PostsController;
 use plugin\admin\app\controller\WpImportController;
@@ -59,6 +60,27 @@ Route::group('/app/admin', function () {
         Route::post('/batchRestore/{ids}', [LinkController::class, 'batchRestore']);
         Route::delete('/batchForceDelete/{ids}', [LinkController::class, 'batchForceDelete']);
         Route::get('/get/{id}', [LinkController::class, 'get']);
+    });
+
+    // FloLink 浮动链接路由
+    Route::group('/flolink', function () {
+        Route::get('', [FloLinkController::class, 'index']);
+        Route::get('/', [FloLinkController::class, 'index']);
+        Route::get('/index', [FloLinkController::class, 'index']);
+        Route::get('/list', [FloLinkController::class, 'list']);
+        Route::get('/add', [FloLinkController::class, 'add']);
+        Route::post('/add', [FloLinkController::class, 'add']);
+        Route::get('/edit/{id}', [FloLinkController::class, 'edit']);
+        Route::post('/edit/{id}', [FloLinkController::class, 'edit']);
+        Route::post('/remove/{id}', [FloLinkController::class, 'remove']);
+        Route::post('/restore/{id}', [FloLinkController::class, 'restore']);
+        Route::post('/forceDelete/{id}', [FloLinkController::class, 'forceDelete']);
+        Route::post('/batchRemove/{ids}', [FloLinkController::class, 'batchRemove']);
+        Route::post('/batchRestore/{ids}', [FloLinkController::class, 'batchRestore']);
+        Route::post('/batchForceDelete/{ids}', [FloLinkController::class, 'batchForceDelete']);
+        Route::get('/get/{id}', [FloLinkController::class, 'get']);
+        Route::post('/toggleStatus/{id}', [FloLinkController::class, 'toggleStatus']);
+        Route::post('/clearCache', [FloLinkController::class, 'clearCache']);
     });
 
     // 互联协议路由（保留原 /link/connect）

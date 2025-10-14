@@ -3,6 +3,7 @@
 namespace app\controller;
 
 use app\model\Post;
+use app\service\FloLinkService;
 use app\service\PJAXHelper;
 use support\Request;
 use support\Response;
@@ -64,6 +65,16 @@ class PostController
         $post->load(['authors', 'primaryAuthor', 'categories', 'tags']);
         $primaryAuthor = $post->primaryAuthor->first();
         $authorName = $primaryAuthor ? $primaryAuthor->nickname : ($post->authors->first() ? $post->authors->first()->nickname : '未知作者');
+
+        // 使用FloLink处理文章内容
+        if (blog_config('flolink_enabled', true)) {
+            try {
+                $post->content = FloLinkService::processContent($post->content);
+            } catch (\Exception $e) {
+                \support\Log::error('FloLink处理失败: ' . $e->getMessage());
+                // 处理失败时使用原始内容
+            }
+        }
 
         // 动态选择模板：PJAX 返回片段，非 PJAX 返回完整页面
         $viewName = PJAXHelper::getViewName('index/post', $isPjax);

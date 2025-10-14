@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>FloLink 浮动链接管理</title>
+    <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css"/>
+    <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+    <script src="/app/admin/component/pear/pear.js"></script>
+    <style>
+        /* 统一使用 layui 风格，尽量减少自定义样式，避免冲突 */
+        .layui-card-body { overflow-x: auto; }
+        .layui-form-label { width: 90px; }
+        .layui-input-inline { width: 200px; }
+        .feature-badge { display: inline-block; padding: 2px 8px; font-size: 12px; border-radius: 4px; margin-right: 4px; }
+        .priority-badge { background-color: #f0f9ff; color: #0284c7; }
+    </style>
+</head>
+
+<body class="pear-container">
+<div class="layui-card">
+    <div class="layui-card-header">
+        <div class="layui-row">
+            <div class="layui-col-md8 layui-col-sm8">
+                <i class="layui-icon layui-icon-link" style="margin-right:6px;"></i>FloLink - 浮动链接管理
+            </div>
+            <div class="layui-col-md4 layui-col-sm4" style="text-align:right;">
+                <button type="button" class="pear-btn pear-btn-success pear-btn-sm" id="clearCache">
+                    <i class="layui-icon layui-icon-refresh"></i> 清除缓存
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="layui-card-body">
+        <!-- 切换选项卡（layui 原生） -->
+        <div class="layui-tab" lay-filter="flolink-tab" style="margin-bottom: 10px;">
+            <ul class="layui-tab-title">
+                <li class="layui-this" lay-id="normal">浮动链接列表</li>
+                <li lay-id="trash">垃圾箱</li>
+            </ul>
+        </div>
+
+        <form id="floLinkForm" class="layui-form" action="">
+            <div class="layui-form-item">
+                <div class="layui-inline">
+                    <label class="layui-form-label">关键词</label>
+                    <div class="layui-input-inline">
+                        <input type="text" name="keyword" placeholder="请输入关键词" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <label class="layui-form-label">链接地址</label>
+                    <div class="layui-input-inline">
+                        <input type="text" name="url" placeholder="请输入链接地址" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-inline" id="statusFilter">
+                    <label class="layui-form-label">状态</label>
+                    <div class="layui-input-inline">
+                        <select name="status">
+                            <option value="">全部状态</option>
+                            <option value="1">已启用</option>
+                            <option value="0">已禁用</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <button class="pear-btn pear-btn-md pear-btn-primary" lay-submit lay-filter="flolink-query">
+                        <i class="layui-icon layui-icon-search"></i>
+                        查询
+                    </button>
+                    <button type="reset" class="pear-btn pear-btn-md">
+                        <i class="layui-icon layui-icon-refresh"></i>
+                        重置
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        <!-- 隐藏的输入字段 -->
+        <input type="hidden" id="isTrashed" name="isTrashed" value="false">
+
+        <!-- 数据表格 -->
+        <table id="flolink-table" lay-filter="flolink-table"></table>
+    </div>
+</div>
+
+<!-- 工具栏模板 -->
+<script type="text/html" id="flolink-toolbar">
+    <div class="layui-btn-container">
+        <button class="layui-btn layui-btn-normal layui-btn-sm" lay-event="add">
+            <i class="layui-icon layui-icon-add-1"></i>
+            新增
+        </button>
+        <button class="layui-btn layui-btn-danger layui-btn-sm" lay-event="batchRemove">
+            <i class="layui-icon layui-icon-delete"></i>
+            批量删除
+        </button>
+    </div>
+</script>
+
+<!-- 垃圾箱工具栏模板 -->
+<script type="text/html" id="flolink-toolbar-trash">
+    <div class="layui-btn-container">
+        <button class="layui-btn layui-btn-normal layui-btn-sm" lay-event="batchRestore">
+            <i class="layui-icon layui-icon-refresh"></i>
+            批量恢复
+        </button>
+        <button class="layui-btn layui-btn-danger layui-btn-sm" lay-event="batchForceDelete">
+            <i class="layui-icon layui-icon-delete"></i>
+            批量永久删除
+        </button>
+    </div>
+</script>
+
+<!-- 操作列模板 -->
+<script type="text/html" id="flolink-bar">
+    <button class="layui-btn layui-btn-primary layui-btn-xs" lay-event="edit">
+        <i class="layui-icon layui-icon-edit"></i>编辑
+    </button>
+    <button class="layui-btn layui-btn-danger layui-btn-xs" lay-event="remove">
+        <i class="layui-icon layui-icon-delete"></i>删除
+    </button>
+</script>
+
+<!-- 垃圾箱操作列模板 -->
+<script type="text/html" id="flolink-bar-trash">
+    <button class="layui-btn layui-btn-primary layui-btn-xs" lay-event="restore">
+        <i class="layui-icon layui-icon-refresh"></i>恢复
+    </button>
+    <button class="layui-btn layui-btn-danger layui-btn-xs" lay-event="forceDelete">
+        <i class="layui-icon layui-icon-delete"></i>永久删除
+    </button>
+</script>
+
+<!-- 状态模板 -->
+<script type="text/html" id="flolink-status">
+    {{# if (d.status == true || d.status == 1) { }}
+    <span class="layui-badge layui-bg-green">已启用</span>
+    {{# } else { }}
+    <span class="layui-badge layui-bg-gray">已禁用</span>
+    {{# } }}
+</script>
+
+<!-- 关键词显示模板 -->
+<script type="text/html" id="flolink-keyword">
+    <span style="font-weight: 600; color: #1E9FFF;">{{ d.keyword }}</span>
+    {{# if (d.case_sensitive == true || d.case_sensitive == 1) { }}
+    <span class="feature-badge" style="background-color: #fef3c7; color: #d97706;">区分大小写</span>
+    {{# } }}
+</script>
+
+<!-- 匹配模式模板 -->
+<script type="text/html" id="flolink-mode">
+    {{# if (d.match_mode == 'first') { }}
+    <span class="layui-badge layui-bg-blue">首次匹配</span>
+    {{# } else { }}
+    <span class="layui-badge layui-bg-orange">全部匹配</span>
+    {{# } }}
+</script>
+
+<!-- 功能特性模板 -->
+<script type="text/html" id="flolink-features">
+    <div style="font-size: 12px;">
+        {{# if (d.enable_hover == true || d.enable_hover == 1) { }}
+        <div class="feature-badge" style="background-color: #dcfce7; color: #16a34a;">悬浮窗</div>
+        {{# } }}
+        {{# if (d.replace_existing == true || d.replace_existing == 1) { }}
+        <div class="feature-badge" style="background-color: #dbeafe; color: #2563eb;">智能替换</div>
+        {{# } }}
+        <div class="feature-badge priority-badge">优先级: {{ d.priority }}</div>
+    </div>
+</script>
+
+<script>
+layui.use(['table', 'form', 'jquery', 'element'], function () {
+    var table = layui.table;
+    var form = layui.form;
+    var $ = layui.jquery;
+    var element = layui.element;
+
+    var currentView = 'normal'; // 当前视图状态
+
+    // 渲染表格
+    function renderTable(isTrashed = false) {
+        var toolbar = isTrashed ? '#flolink-toolbar-trash' : '#flolink-toolbar';
+        var barTpl = isTrashed ? '#flolink-bar-trash' : '#flolink-bar';
+
+        table.render({
+            elem: '#flolink-table',
+            url: '/app/admin/flolink/list',
+            toolbar: toolbar,
+            defaultToolbar: [{
+                title: '刷新',
+                layEvent: 'refresh',
+                icon: 'layui-icon-refresh'
+            }, 'filter', 'print', 'exports'],
+            cols: [[
+                {type: 'checkbox', fixed: 'left'},
+                {field: 'id', title: 'ID', width: 80, sort: true},
+                {field: 'keyword', title: '关键词', width: 200, templet: '#flolink-keyword'},
+                {field: 'url', title: '链接地址', minWidth: 250},
+                {field: 'title', title: '标题', width: 150},
+                {field: 'match_mode', title: '匹配模式', width: 100, align: 'center', templet: '#flolink-mode'},
+                {field: 'status', title: '状态', width: 90, align: 'center', templet: '#flolink-status'},
+                {title: '功能特性', width: 300, templet: '#flolink-features'},
+                {title: '操作', width: 180, align: 'center', fixed: 'right', toolbar: barTpl}
+            ]],
+            where: {
+                isTrashed: isTrashed ? 'true' : 'false'
+            },
+            page: true,
+            limits: [15, 30, 50, 100],
+            limit: 15,
+            skin: 'line'
+        });
+    }
+
+    // 初始化表格
+    renderTable(false);
+
+    // 监听 layui 原生选项卡
+    element.on('tab(flolink-tab)', function(){
+        var type = $(this).attr('lay-id') || 'normal';
+        currentView = type;
+        if (type === 'trash') {
+            $('#isTrashed').val('true');
+            $('#statusFilter').hide();
+        } else {
+            $('#isTrashed').val('false');
+            $('#statusFilter').show();
+        }
+        renderTable(type === 'trash');
+    });
+
+    // 搜索表单提交
+    form.on('submit(flolink-query)', function (data) {
+        table.reload('flolink-table', {
+            where: Object.assign(data.field, {
+                isTrashed: $('#isTrashed').val()
+            }),
+            page: {curr: 1}
+        });
+        return false;
+    });
+
+    // 工具栏事件
+    table.on('toolbar(flolink-table)', function (obj) {
+        var checkStatus = table.checkStatus(obj.config.id);
+
+        switch (obj.event) {
+            case 'add':
+                layer.open({
+                    type: 2,
+                    title: '新增浮动链接',
+                    shadeClose: true,
+                    shade: 0.3,
+                    maxmin: true,
+                    area: ['90%', '90%'],
+                    content: '/app/admin/flolink/add',
+                    end: function () {
+                        table.reload('flolink-table');
+                    }
+                });
+                break;
+            case 'batchRemove':
+                var data = checkStatus.data;
+                if (data.length === 0) {
+                    layer.msg('请选择要删除的数据');
+                    return;
+                }
+                layer.confirm('确定要删除选中的 ' + data.length + ' 条数据吗？', function (index) {
+                    var ids = data.map(function (item) {
+                        return item.id;
+                    }).join(',');
+                    $.post('/app/admin/flolink/batchRemove/' + ids, function (result) {
+                        if (result.code === 0) {
+                            layer.msg(result.msg, {icon: 1});
+                            table.reload('flolink-table');
+                        } else {
+                            layer.msg(result.msg, {icon: 2});
+                        }
+                    });
+                    layer.close(index);
+                });
+                break;
+            case 'batchRestore':
+                var data = checkStatus.data;
+                if (data.length === 0) {
+                    layer.msg('请选择要恢复的数据');
+                    return;
+                }
+                layer.confirm('确定要恢复选中的 ' + data.length + ' 条数据吗？', function (index) {
+                    var ids = data.map(function (item) {
+                        return item.id;
+                    }).join(',');
+                    $.post('/app/admin/flolink/batchRestore/' + ids, function (result) {
+                        if (result.code === 0) {
+                            layer.msg(result.msg, {icon: 1});
+                            table.reload('flolink-table');
+                        } else {
+                            layer.msg(result.msg, {icon: 2});
+                        }
+                    });
+                    layer.close(index);
+                });
+                break;
+            case 'batchForceDelete':
+                var data = checkStatus.data;
+                if (data.length === 0) {
+                    layer.msg('请选择要永久删除的数据');
+                    return;
+                }
+                layer.confirm('警告：此操作不可恢复！确定要永久删除选中的 ' + data.length + ' 条数据吗？', function (index) {
+                    var ids = data.map(function (item) {
+                        return item.id;
+                    }).join(',');
+                    $.post('/app/admin/flolink/batchForceDelete/' + ids, function (result) {
+                        if (result.code === 0) {
+                            layer.msg(result.msg, {icon: 1});
+                            table.reload('flolink-table');
+                        } else {
+                            layer.msg(result.msg, {icon: 2});
+                        }
+                    });
+                    layer.close(index);
+                });
+                break;
+            case 'refresh':
+                table.reload('flolink-table');
+                break;
+        }
+    });
+
+    // 行内工具事件
+    table.on('tool(flolink-table)', function (obj) {
+        var data = obj.data;
+
+        switch (obj.event) {
+            case 'edit':
+                layer.open({
+                    type: 2,
+                    title: '编辑浮动链接',
+                    shadeClose: true,
+                    shade: 0.3,
+                    maxmin: true,
+                    area: ['90%', '90%'],
+                    content: '/app/admin/flolink/edit/' + data.id,
+                    end: function () {
+                        table.reload('flolink-table');
+                    }
+                });
+                break;
+            case 'remove':
+                layer.confirm('确定要删除此浮动链接吗？', function (index) {
+                    $.post('/app/admin/flolink/remove/' + data.id, function (result) {
+                        if (result.code === 0) {
+                            layer.msg(result.msg, {icon: 1});
+                            obj.del();
+                        } else {
+                            layer.msg(result.msg, {icon: 2});
+                        }
+                    });
+                    layer.close(index);
+                });
+                break;
+            case 'restore':
+                layer.confirm('确定要恢复此浮动链接吗？', function (index) {
+                    $.post('/app/admin/flolink/restore/' + data.id, function (result) {
+                        if (result.code === 0) {
+                            layer.msg(result.msg, {icon: 1});
+                            table.reload('flolink-table');
+                        } else {
+                            layer.msg(result.msg, {icon: 2});
+                        }
+                    });
+                    layer.close(index);
+                });
+                break;
+            case 'forceDelete':
+                layer.confirm('警告：此操作不可恢复！确定要永久删除此浮动链接吗？', function (index) {
+                    $.post('/app/admin/flolink/forceDelete/' + data.id, function (result) {
+                        if (result.code === 0) {
+                            layer.msg(result.msg, {icon: 1});
+                            obj.del();
+                        } else {
+                            layer.msg(result.msg, {icon: 2});
+                        }
+                    });
+                    layer.close(index);
+                });
+                break;
+        }
+    });
+
+    // 清除缓存按钮
+    $('#clearCache').on('click', function () {
+        $.post('/app/admin/flolink/clearCache', function (result) {
+            if (result.code === 0) {
+                layer.msg('缓存清除成功', {icon: 1});
+            } else {
+                layer.msg('缓存清除失败', {icon: 2});
+            }
+        });
+    });
+});
+</script>
+</body>
+</html>

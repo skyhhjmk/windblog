@@ -110,6 +110,36 @@ CREATE TABLE IF NOT EXISTS links (
   deleted_at DATETIME DEFAULT NULL
 );
 
+-- 创建浮动链接表（FloLink）
+CREATE TABLE IF NOT EXISTS flo_links (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  keyword TEXT NOT NULL,
+  url TEXT NOT NULL,
+  title TEXT DEFAULT NULL,
+  description TEXT DEFAULT NULL,
+  image TEXT DEFAULT NULL,
+  priority INTEGER DEFAULT 100,
+  match_mode TEXT DEFAULT 'first' CHECK (match_mode IN ('first', 'all')),
+  case_sensitive INTEGER DEFAULT 0,
+  replace_existing INTEGER DEFAULT 1,
+  target TEXT DEFAULT '_blank',
+  rel TEXT DEFAULT 'noopener noreferrer',
+  css_class TEXT DEFAULT 'flo-link',
+  enable_hover INTEGER DEFAULT 1,
+  hover_delay INTEGER DEFAULT 200,
+  status INTEGER DEFAULT 1,
+  sort_order INTEGER DEFAULT 999,
+  custom_fields TEXT DEFAULT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  deleted_at DATETIME DEFAULT NULL
+);
+
+CREATE INDEX idx_flo_links_keyword ON flo_links(keyword);
+CREATE INDEX idx_flo_links_status ON flo_links(status);
+CREATE INDEX idx_flo_links_priority ON flo_links(priority);
+CREATE INDEX idx_flo_links_sort_order ON flo_links(sort_order);
+
 -- 创建页面表
 CREATE TABLE IF NOT EXISTS pages (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

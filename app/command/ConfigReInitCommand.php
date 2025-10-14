@@ -519,10 +519,11 @@ class ConfigReInitCommand extends Command
         $columns = array_keys($data);
 
         // 根据数据库类型确定表名引用方式
-        $table_name = match ($type) {
-            'sqlite' => '"wa_rules"',
-            default => '`wa_rules`'
+        $quoteChar = match ($type) {
+            'sqlite', 'pgsql' => '"',
+            default => '`'
         };
+        $table_name = "{$quoteChar}wa_rules{$quoteChar}";
 
         $sql = "insert into $table_name (" . implode(',', $columns) . ') values (' . implode(',', $values) . ')';
         $smt = $pdo->prepare($sql);
@@ -593,14 +594,15 @@ class ConfigReInitCommand extends Command
         // 设置父ID
         $menu_tree['pid'] = $parent_id;
 
-        // 根据数据库类型确定表名引用方式
-        $table_name = match ($type) {
-            'sqlite' => '"wa_rules"',
-            default => '`wa_rules`'
+        // 根据数据库类型确定表名和字段引用方式
+        $quoteChar = match ($type) {
+            'sqlite', 'pgsql' => '"',
+            default => '`'
         };
+        $table_name = "{$quoteChar}wa_rules{$quoteChar}";
 
         // 检查菜单是否已存在
-        $stmt = $pdo->prepare("SELECT * FROM $table_name WHERE `key`=:key LIMIT 1");
+        $stmt = $pdo->prepare("SELECT * FROM $table_name WHERE {$quoteChar}key{$quoteChar}=:key LIMIT 1");
         $stmt->execute(['key' => $menu_tree['key']]);
         $old_menu = $stmt->fetch();
 
@@ -612,7 +614,7 @@ class ConfigReInitCommand extends Command
                 'icon' => $menu_tree['icon'] ?? '',
                 'key' => $menu_tree['key'],
             ];
-            $sql = "UPDATE $table_name SET title=:title, icon=:icon WHERE `key`=:key";
+            $sql = "UPDATE $table_name SET title=:title, icon=:icon WHERE {$quoteChar}key{$quoteChar}=:key";
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
         } else {

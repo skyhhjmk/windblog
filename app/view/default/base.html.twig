@@ -16,11 +16,16 @@
     <link rel="stylesheet" href="{{ asset('/assets/vditor/content-theme/ant-design.min.css') }}">
     <!-- 高级动画样式 -->
     <link rel="stylesheet" href="{{ asset('/assets/css/animations.css') }}">
+    <!-- FloLink 悬浮链接样式 -->
+    <link rel="preload" as="style" href="{{ asset('/assets/flolink/flolink.css') }}">
+    <link rel="stylesheet" href="{{ asset('/assets/flolink/flolink.css') }}">
     {# 可选：如需本地脚本，使用 defer 并指纹化（存在时再启用） #}
     {# <script src="{{ asset('/assets/js/common.js') }}" defer></script> #}
     <!-- 动画工具库 -->
     <script src="{{ asset('/assets/js/animation-utils.js') }}" defer></script>
     <script src="{{ asset('/assets/vditor/method.min.js') }}" defer></script>
+    <!-- FloLink 悬浮链接脚本 -->
+    <script src="{{ asset('/assets/flolink/flolink.js') }}" defer></script>
 
     <script async src="https://cdnjs.cloudflare.com/ajax/libs/pangu/7.2.0/pangu.umd.js"
             integrity="sha512-er1ryC6I6mvQLB6cEcyDj9MYKdSXwuvdqFuir5fzcPlzqagv3Swng87sIPcib8Spm4BTIT5PNTmRaMSdM1QVxQ=="

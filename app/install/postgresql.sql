@@ -207,6 +207,60 @@ COMMENT ON COLUMN links.created_at IS '创建时间';
 COMMENT ON COLUMN links.updated_at IS '更新时间';
 COMMENT ON COLUMN links.deleted_at IS '删除时间';
 
+-- 创建浮动链接表（FloLink）
+CREATE TABLE IF NOT EXISTS flo_links
+(
+    id               BIGSERIAL PRIMARY KEY,
+    keyword          VARCHAR(255)             NOT NULL,
+    url              VARCHAR(500)             NOT NULL,
+    title            VARCHAR(255)             DEFAULT NULL,
+    description      TEXT                     DEFAULT NULL,
+    image            VARCHAR(500)             DEFAULT NULL,
+    priority         INTEGER                  DEFAULT 100,
+    match_mode       VARCHAR(10)              DEFAULT 'first' CHECK (match_mode IN ('first', 'all')),
+    case_sensitive   BOOLEAN                  DEFAULT false,
+    replace_existing BOOLEAN                  DEFAULT true,
+    "target"         VARCHAR(20)              DEFAULT '_blank',
+    rel              VARCHAR(100)             DEFAULT 'noopener noreferrer',
+    css_class        VARCHAR(100)             DEFAULT 'flo-link',
+    enable_hover     BOOLEAN                  DEFAULT true,
+    hover_delay      INTEGER                  DEFAULT 200,
+    status           BOOLEAN                  DEFAULT true,
+    sort_order       INTEGER                  DEFAULT 999,
+    custom_fields    jsonb                    DEFAULT NULL,
+    created_at       TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at       TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    deleted_at       TIMESTAMP WITH TIME ZONE DEFAULT NULL
+);
+
+CREATE INDEX idx_flo_links_keyword ON flo_links (keyword);
+CREATE INDEX idx_flo_links_status ON flo_links (status);
+CREATE INDEX idx_flo_links_priority ON flo_links (priority);
+CREATE INDEX idx_flo_links_sort_order ON flo_links (sort_order);
+
+COMMENT ON TABLE flo_links IS 'FloLink浮动链接表';
+COMMENT ON COLUMN flo_links.id IS '浮动链接ID';
+COMMENT ON COLUMN flo_links.keyword IS '关键词';
+COMMENT ON COLUMN flo_links.url IS '目标链接地址';
+COMMENT ON COLUMN flo_links.title IS '链接标题(用于悬浮窗显示)';
+COMMENT ON COLUMN flo_links.description IS '链接描述(用于悬浮窗显示)';
+COMMENT ON COLUMN flo_links.image IS '图片URL(用于悬浮窗显示)';
+COMMENT ON COLUMN flo_links.priority IS '优先级(数字越小优先级越高)';
+COMMENT ON COLUMN flo_links.match_mode IS '匹配模式: first=仅替换首次出现, all=替换所有';
+COMMENT ON COLUMN flo_links.case_sensitive IS '是否区分大小写';
+COMMENT ON COLUMN flo_links.replace_existing IS '是否替换已有链接(智能替换aff等)';
+COMMENT ON COLUMN flo_links.target IS '打开方式';
+COMMENT ON COLUMN flo_links.rel IS 'rel属性';
+COMMENT ON COLUMN flo_links.css_class IS 'CSS类名';
+COMMENT ON COLUMN flo_links.enable_hover IS '是否启用悬浮窗';
+COMMENT ON COLUMN flo_links.hover_delay IS '悬浮窗延迟显示时间(毫秒)';
+COMMENT ON COLUMN flo_links.status IS '状态: true=启用, false=禁用';
+COMMENT ON COLUMN flo_links.sort_order IS '排序权重';
+COMMENT ON COLUMN flo_links.custom_fields IS '自定义字段(JSON格式)';
+COMMENT ON COLUMN flo_links.created_at IS '创建时间';
+COMMENT ON COLUMN flo_links.updated_at IS '更新时间';
+COMMENT ON COLUMN flo_links.deleted_at IS '软删除时间';
+
 -- 创建页面表
 CREATE TABLE IF NOT EXISTS pages
 (

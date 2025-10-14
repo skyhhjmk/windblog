@@ -219,6 +219,13 @@ return [
                 'weight' => 800,
             ],
             [
+                'title' => 'FloLink',
+                'key' => 'plugin\\admin\\app\\controller\\FloLinkController',
+                'href' => '/app/admin/flolink/index',
+                'type' => 1,
+                'weight' => 750,
+            ],
+            [
                 'title' => '互联协议',
                 'key' => 'plugin\\windconnect\\app\\controller\\LinkConnectController',
                 'href' => '/app/admin/linkconnect/index',
