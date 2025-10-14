@@ -24,7 +24,7 @@
     "source": "https://github.com/skyhhjmk/windblog"
   },
   "require": {
-    "php": ">=8.2",
+    "php": ">=8.3",
     "workerman/webman-framework": "^2.1",
     "monolog/monolog": "^2.0",
     "twig/twig": "^3.21",

@@ -96,7 +96,7 @@ ES 仅仅被用于搜索优化，这也许说得过去
 基本依赖：
 
 - PostgreSQL
-- PHP >= 8.2
+- PHP >= 8.3
 - PHP PDO 扩展
 - PHP pdo_pgsql 扩展
 
