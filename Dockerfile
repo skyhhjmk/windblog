@@ -94,7 +94,7 @@ RUN if [ "$MIRROR" = "tsinghua" ]; then \
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg && \
     docker-php-ext-install -j"$(nproc)" \
       sockets intl gd mbstring opcache fileinfo exif xml xsl zip pcntl && \
-    docker-php-ext-install -j"$(nproc)" pdo_pgsql pdo_sqlite curl && \
+    docker-php-ext-install -j"$(nproc)" pdo_pgsql pdo_mysql pdo_sqlite curl && \
     pecl install redis imagick && docker-php-ext-enable redis imagick && \
     rm -rf /tmp/* /var/tmp/*
 

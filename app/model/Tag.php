@@ -19,12 +19,6 @@ use Throwable;
  */
 class Tag extends Model
 {
-    /**
-     * The connection name for the model.
-     *
-     * @var string|null
-     */
-    protected $connection = 'pgsql';
     
     /**
      * The table associated with the model.

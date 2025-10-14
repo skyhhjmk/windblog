@@ -11,7 +11,9 @@
     "request:action",
     "plugin:sample:route:dashboard",
     "plugin:sample:route:settings",
-    "plugin:sample:route:index"
+    "plugin:sample:route:index",
+    "plugin:sample:menu:admin",
+    "plugin:sample:menu:app"
   ],
   "capabilities": []
 }

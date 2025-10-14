@@ -5,6 +5,10 @@ namespace app\service\plugin;
 /**
  * 插件接口（要求：必须实现 activate / deactivate / uninstall）
  * 插件可在 activate/deactivate 内注册/移除钩子或执行初始化/清理逻辑
+ * 
+ * 可选方法（插件可选择实现）：
+ * - onInstall(HookManager $hooks): void - 插件首次安装时调用
+ * - onUpgrade(string $prevVersion, string $curVersion, HookManager $hooks): void - 插件升级时调用
  */
 interface PluginInterface
 {

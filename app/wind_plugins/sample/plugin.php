@@ -15,6 +15,45 @@ use Webman\Route;
 use support\Response;
 
 return new class implements PluginInterface {
+    /**
+     * 插件安装时调用
+     * 
+     * @param HookManager $hooks 钩子管理器
+     */
+    public function onInstall(HookManager $hooks): void
+    {
+        // 示例：记录插件安装日志
+        try {
+            \support\Log::info('[sample-plugin] 插件已安装');
+        } catch (\Throwable $e) {
+            // 忽略日志异常
+        }
+        
+        // 示例：初始化插件所需数据表或配置
+        // 这里可以创建数据库表、初始化配置等操作
+    }
+    
+    /**
+     * 插件升级时调用
+     * 
+     * @param string $prevVersion 之前版本
+     * @param string $curVersion 当前版本
+     * @param HookManager $hooks 钩子管理器
+     */
+    public function onUpgrade(string $prevVersion, string $curVersion, HookManager $hooks): void
+    {
+        // 示例：记录插件升级日志
+        try {
+            \support\Log::info("[sample-plugin] 插件已从版本 {$prevVersion} 升级到 {$curVersion}");
+        } catch (\Throwable $e) {
+            // 忽略日志异常
+        }
+        
+        // 示例：根据版本差异执行不同的升级逻辑
+        // if (version_compare($prevVersion, '1.1.0', '<')) {
+        //     // 执行从1.1.0版本以下升级所需的特定操作
+        // }
+    }
     public function activate(HookManager $hooks): void
     {
         // 请求进入动作：依授权决定是否执行

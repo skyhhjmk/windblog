@@ -233,7 +233,7 @@ layui.use(['table', 'form', 'jquery', 'layer'], function () {
                 .then(function (res) {
                     if (res.code !== 0) { layer.msg('获取权限信息失败', {icon:2}); return; }
                     var info = res.data || {};
-                    var html = renderPermDialog(data.slug, info);
+                    var html = renderEnablePermDialog(data.slug, info);
                     layer.open({
                         type: 1,
                         title: '启用插件并确认权限',
@@ -242,7 +242,13 @@ layui.use(['table', 'form', 'jquery', 'layer'], function () {
                         btn: ['启用', '取消'],
                         yes: function (index) {
                             layer.close(index);
-                            post(MODULE_PATH + 'enable', { slug: data.slug }).then(doneReload('已启用', '启用失败'));
+                            post(MODULE_PATH + 'enable', { slug: data.slug }).then(function(res) {
+                                if (res.code === 0 && typeof window.parent.loadPluginMenus === 'function') {
+                                    // 插件启用成功后，重新加载插件菜单
+                                    window.parent.loadPluginMenus();
+                                }
+                                doneReload('已启用', '启用失败')(res);
+                            });
                         }
                     });
                 });
@@ -272,6 +278,52 @@ layui.use(['table', 'form', 'jquery', 'layer'], function () {
                 });
         }
     });
+
+    // 启用插件时的权限确认弹窗
+    function renderEnablePermDialog(slug, info) {
+        var declared = info.declared || [];
+        var granted = info.granted || [];
+        var pending = info.pending || [];
+        
+        // 合并所有权限并去重
+        var allPerms = [...new Set([...declared, ...granted, ...pending])];
+        
+        // 生成权限列表
+        var permList = '';
+        if (allPerms.length > 0) {
+            permList = '<div class="perm-section">' +
+                '<div class="perm-section-title">' +
+                '<span>插件声明的权限</span>' +
+                '</div>' +
+                '<div>';
+            
+            allPerms.forEach(function(perm) {
+                var isGranted = granted.indexOf(perm) !== -1;
+                var badgeClass = isGranted ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+                var badgeText = isGranted ? '已授权' : '未授权';
+                
+                permList += '<span class="perm-badge ' + badgeClass + '">' + perm + ' (' + badgeText + ')</span>';
+            });
+            
+            permList += '</div></div>';
+        } else {
+            permList = '<div class="perm-section">' +
+                '<div class="perm-section-title">' +
+                '<span>插件未声明任何权限</span>' +
+                '</div>' +
+                '</div>';
+        }
+        
+        var html = 
+            '<div class="p-4">' +
+            '<div class="mb-4 text-sm text-gray-600">' +
+            '启用插件前请确认其权限。未授权的权限将被拒绝执行。' +
+            '</div>' +
+            permList +
+            '</div>';
+            
+        return html;
+    }
 
     // 主权限弹窗（显示数量和打开子窗口的按钮）
     function renderPermMainDialog(slug, info) {
@@ -543,6 +595,10 @@ layui.use(['table', 'form', 'jquery', 'layer'], function () {
                 if (currentTable) {
                     currentTable.reload({ where: lastParams });
                 }
+                // 如果操作成功且是启用操作，重新加载插件菜单
+                if (res.code === 0 && successText === '已启用' && typeof window.parent.loadPluginMenus === 'function') {
+                    window.parent.loadPluginMenus();
+                }
             });
         };
     }
@@ -570,12 +626,20 @@ layui.use(['table', 'form', 'jquery', 'layer'], function () {
                     if (currentTable) {
                         currentTable.reload({ where: lastParams });
                     }
+                    // 如果有启用操作，重新加载插件菜单
+                    if (op === 'enable' && typeof window.parent.loadPluginMenus === 'function') {
+                        window.parent.loadPluginMenus();
+                    }
                 });
             }).catch(function (e) {
                 layer.close(loading);
                 layer.msg('部分操作失败', { icon: 2, time: 1200 });
                 if (currentTable) {
                     currentTable.reload({ where: lastParams });
+                }
+                // 如果有启用操作，重新加载插件菜单
+                if (op === 'enable' && typeof window.parent.loadPluginMenus === 'function') {
+                    window.parent.loadPluginMenus();
                 }
             });
         });

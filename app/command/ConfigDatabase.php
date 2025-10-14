@@ -7,14 +7,14 @@ use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class ConfigPGSQL extends Command
+class ConfigDatabase extends Command
 {
-    protected static $defaultName = 'config:pgsql';
-    protected static $defaultDescription = 'Show PGSQL config';
+    protected static $defaultName = 'config:db';
+    protected static $defaultDescription = 'Show database config';
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $output->writeln('PGSQL配置信息如下：');
+        $output->writeln('Using database connection: ' . config('database.default'));
         $config = config('database');
         $headers = ['name', 'default', 'driver', 'host', 'port', 'database', 'username', 'password', 'unix_socket', 'charset', 'collation', 'prefix', 'strict', 'engine', 'schema', 'sslmode'];
         $rows = [];

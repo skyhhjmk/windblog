@@ -333,6 +333,7 @@ class PluginSystemController extends Base
             $method = strtolower($route['method']);
             $routePath = $route['route'];
             $handler = $route['handler'];
+            $permission = $route['permission'] ?? '';
             
             // 检查方法是否匹配
             if ($method !== strtolower($request->method())) {
@@ -341,6 +342,11 @@ class PluginSystemController extends Base
             
             // 检查路径是否匹配
             if ($routePath === $originalPath) {
+                // 检查权限
+                if ($permission && !\app\service\PluginService::ensurePermission($slug, $permission)) {
+                    return new Response(403, [], 'Access denied to plugin route. Plugin: ' . $slug . ', Permission: ' . $permission);
+                }
+                
                 // 执行处理器
                 try {
                     $response = call_user_func($handler, $request);
