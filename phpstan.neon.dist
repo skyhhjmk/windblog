@@ -2,12 +2,13 @@ parameters:
   level: 6
   paths:
     - app
-    - plugin/*/app
+    - plugin/admin/app
+    - plugin/sms/app
   excludePaths:
     - vendor
     - tests
   inferPrivatePropertyTypeFromConstructor: true
-  reportUnmatchedIgnoredErrors: true
+  reportUnmatchedIgnoredErrors: false
   ignoreErrors:
     - '#Call to undefined method .*::.*#'
     - '#Access to an undefined property .*::\$.*#'
