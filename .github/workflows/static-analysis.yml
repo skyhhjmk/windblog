@@ -43,6 +43,10 @@ jobs:
   php-cs-fixer:
     runs-on: ubuntu-latest
     name: PHP CS Fixer
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
 
     steps:
     - name: Checkout code
@@ -52,7 +56,7 @@ jobs:
       uses: shivammathur/setup-php@v2
       with:
         php-version: '8.3'
-        tools: php-cs-fixer, composer:v2
+        tools: php-cs-fixer, composer:v2, cs2pr
 
     - name: Get composer cache directory
       id: composer-cache
@@ -69,8 +73,71 @@ jobs:
     - name: Install dependencies
       run: composer install --prefer-dist --no-interaction --no-progress
 
-    - name: Run PHP CS Fixer
-      run: vendor/bin/php-cs-fixer fix --dry-run --diff --verbose
+    - name: Run PHP CS Fixer and generate report
+      continue-on-error: true
+      run: |
+        vendor/bin/php-cs-fixer fix --dry-run --diff --format=checkstyle > php-cs-fixer-report.xml || true
+
+    - name: Show annotations in PR
+      if: always()
+      run: |
+        cat php-cs-fixer-report.xml | cs2pr
+
+    - name: Upload PHP CS Fixer Report
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: php-cs-fixer-report
+        path: php-cs-fixer-report.xml
+        retention-days: 30
+
+    - name: Comment PR with summary
+      if: github.event_name == 'pull_request' && always()
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const xml2js = require('xml2js');
+
+          try {
+            const xmlData = fs.readFileSync('php-cs-fixer-report.xml', 'utf8');
+            const parser = new xml2js.Parser();
+            const result = await parser.parseStringPromise(xmlData);
+
+            let issueCount = 0;
+            let fileCount = 0;
+            if (result.checkstyle && result.checkstyle.file) {
+              fileCount = result.checkstyle.file.length;
+              result.checkstyle.file.forEach(file => {
+                if (file.error) {
+                  issueCount += file.error.length;
+                }
+              });
+            }
+
+            const comment = `## 🎨 PHP CS Fixer Report
+
+            **发现代码风格问题**: ${issueCount} 个问题，涉及 ${fileCount} 个文件
+
+            ### 如何修复
+
+            在本地运行以下命令自动修复：
+            \`\`\`bash
+            vendor/bin/php-cs-fixer fix
+            \`\`\`
+
+            📥 详细报告已保存为 Artifact，可在 Actions 页面下载查看。
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+          } catch (error) {
+            console.log('No issues found or report file missing');
+          }
 
   security:
     runs-on: ubuntu-latest

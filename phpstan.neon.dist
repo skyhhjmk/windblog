@@ -6,8 +6,6 @@ parameters:
   excludePaths:
     - vendor
     - tests
-  checkMissingIterableValueType: true
-  checkGenericClassInNonGenericObjectType: true
   inferPrivatePropertyTypeFromConstructor: true
   reportUnmatchedIgnoredErrors: true
   ignoreErrors:
