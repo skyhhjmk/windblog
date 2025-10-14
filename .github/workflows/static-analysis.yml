@@ -132,8 +132,13 @@ jobs:
 
     - name: Show annotations in PR
       if: always()
+      continue-on-error: true
       run: |
-        cat php-cs-fixer-report.xml | cs2pr
+        if [ -f php-cs-fixer-report.xml ] && [ -s php-cs-fixer-report.xml ]; then
+          cat php-cs-fixer-report.xml | cs2pr || true
+        else
+          echo "No PHP CS Fixer issues found or report is empty"
+        fi
 
     - name: Upload PHP CS Fixer Report
       if: always()
