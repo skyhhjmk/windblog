@@ -32,21 +32,43 @@ class InstallController extends Base
     {
         $checks = [];
         $missing = [];
+        $critical_missing = []; // 致命错误
 
-        $add = function(string $name, bool $ok, string $message = '') use (&$checks, &$missing) {
+        $add = function(string $name, bool $ok, string $message = '', bool $critical = false) use (&$checks, &$missing, &$critical_missing) {
             $checks[] = ['name' => $name, 'ok' => $ok, 'message' => $message];
-            if (!$ok) { $missing[] = $name; }
+            if (!$ok) {
+                $missing[] = $name;
+                if ($critical) {
+                    $critical_missing[] = $name;
+                }
+            }
         };
 
         // PHP 版本
         $php_ok = version_compare(PHP_VERSION, '8.2.0', '>=');
-        $add('php>=8.2', $php_ok, $php_ok ? '' : ('当前PHP版本为 ' . PHP_VERSION));
+        $add('php>=8.2', $php_ok, $php_ok ? '当前版本: ' . PHP_VERSION : ('当前PHP版本为 ' . PHP_VERSION . '，需要 >= 8.2'), true);
 
-        // 扩展（必需）
-        $exts = ['pdo','pdo_pgsql','pdo_mysql','pdo_sqlite','openssl','json','mbstring','curl','fileinfo','gd','xmlreader','dom','libxml'];
-        foreach ($exts as $ext) {
+        // 必需扩展（不包括数据库驱动）
+        $required_exts = ['pdo','openssl','json','mbstring','curl','fileinfo','gd','xmlreader','dom','libxml'];
+        foreach ($required_exts as $ext) {
             $ok = extension_loaded($ext);
-            $add($ext, $ok, $ok ? '' : '未启用/未安装');
+            $add($ext, $ok, $ok ? '' : '未启用/未安装', $ext === 'pdo'); // PDO是致命的
+        }
+
+        // 数据库驱动（至少需要一个）
+        $db_drivers = ['pdo_pgsql', 'pdo_mysql', 'pdo_sqlite'];
+        $has_any_driver = false;
+        foreach ($db_drivers as $driver) {
+            $ok = extension_loaded($driver);
+            if ($ok) {
+                $has_any_driver = true;
+            }
+            $add($driver, $ok, $ok ? '' : '未启用/未安装', false); // 数据库驱动不单独标记为致命
+        }
+
+        // 如果没有任何数据库驱动，则标记为致命错误
+        if (!$has_any_driver) {
+            $critical_missing[] = 'database_driver';
         }
 
         // 扩展（可选）：从 composer.json 动态解析 ext-*
@@ -80,20 +102,20 @@ class InstallController extends Base
         $optional_exts = array_values(array_unique($optional_exts));
         foreach ($optional_exts as $ext) {
             $ok = extension_loaded($ext);
-            $add($ext, $ok, $ok ? '' : '未启用/未安装（可选）');
+            $add($ext, $ok, $ok ? '' : '未启用/未安装（可选）', false);
         }
 
         // 关键函数
         $disabled = array_map('trim', explode(',', (string)ini_get('disable_functions')));
         foreach (['proc_open','exec'] as $fn) {
             $ok = function_exists($fn) && !in_array($fn, $disabled, true);
-            $add($fn, $ok, $ok ? '' : '函数不可用（可能被禁用）');
+            $add($fn, $ok, $ok ? '' : '函数不可用（可能被禁用）', false);
         }
 
         // 目录写权限
         $upload_dir = base_path() . '/public/uploads';
         $ok = is_dir($upload_dir) ? is_writable($upload_dir) : is_writable(dirname($upload_dir));
-        $add('public/uploads writable', $ok, $ok ? '' : ('目录不可写：' . $upload_dir));
+        $add('public/uploads writable', $ok, $ok ? '' : ('目录不可写：' . $upload_dir), true);
 
         // 追加目录权限检查：runtime、logs、public/assets
         $dirs = [
@@ -103,22 +125,31 @@ class InstallController extends Base
         ];
         foreach ($dirs as $label => $dir) {
             $ok = is_dir($dir) ? is_writable($dir) : is_writable(dirname($dir));
-            $add($label . ' writable', $ok, $ok ? '' : ('目录不可写：' . $dir));
+            $add($label . ' writable', $ok, $ok ? '' : ('目录不可写：' . $dir), true);
         }
 
-        // 汇总
-        $ok_all = true;
-        foreach ($checks as $c) { if (!$c['ok']) { $ok_all = false; break; } }
+        // 汇总：只有致命错误才阻止安装
+        $ok_all = empty($critical_missing);
 
-        $driverTip = '';
-        if (!extension_loaded('pdo') || (!extension_loaded('pdo_pgsql') && !extension_loaded('pdo_mysql') && !extension_loaded('pdo_sqlite'))) {
-            $driverTip = '检测到数据库驱动未启用（pdo/pdo_pgsql/pdo_mysql/pdo_sqlite），这会导致"could not find driver"。请安装并启用后重试。';
+        $message = '';
+        if (!$ok_all) {
+            if (!extension_loaded('pdo')) {
+                $message = '缺少 PDO 扩展，这是必需的数据库扩展。请安装并启用后重试。';
+            } elseif (!$has_any_driver) {
+                $message = '未检测到任何可用的数据库驱动（pdo_pgsql/pdo_mysql/pdo_sqlite）。请至少安装一个数据库驱动后重试。';
+            } elseif (!$php_ok) {
+                $message = 'PHP 版本不满足要求，需要 >= 8.2.0，当前版本：' . PHP_VERSION;
+            } else {
+                $message = '存在未满足的关键依赖项，请检查并修复后重试。';
+            }
         }
 
-        return $this->json($ok_all ? 0 : 1, $driverTip ?: ($ok_all ? '' : '存在未满足的依赖项'), [
+        return $this->json($ok_all ? 0 : 1, $message, [
             'ok' => $ok_all,
             'checks' => $checks,
             'missing' => $missing,
+            'critical_missing' => $critical_missing,
+            'has_any_driver' => $has_any_driver,
             'php_version' => PHP_VERSION,
             'optional_exts' => $optional_exts,
         ]);
@@ -134,9 +165,30 @@ class InstallController extends Base
      */
     public function step1(Request $request): Response
     {
-        if (!(extension_loaded('pdo') && (extension_loaded('pdo_pgsql') || extension_loaded('pdo_mysql') || extension_loaded('pdo_sqlite')))) {
-            return $this->json(1, '缺少数据库驱动（pdo/pdo_pgsql/pdo_mysql/pdo_sqlite）。请安装并启用后重试安装。');
+        $type = $request->post('type', 'pgsql');
+
+        // 根据选择的数据库类型验证对应的驱动
+        $driver_map = [
+            'pgsql' => 'pdo_pgsql',
+            'mysql' => 'pdo_mysql',
+            'sqlite' => 'pdo_sqlite'
+        ];
+
+        if (!extension_loaded('pdo')) {
+            return $this->json(1, '缺少 PDO 扩展。请安装并启用后重试安装。');
         }
+
+        $required_driver = $driver_map[$type] ?? 'pdo_pgsql';
+        if (!extension_loaded($required_driver)) {
+            $db_names = [
+                'pgsql' => 'PostgreSQL',
+                'mysql' => 'MySQL',
+                'sqlite' => 'SQLite'
+            ];
+            $db_name = $db_names[$type] ?? $type;
+            return $this->json(1, "缺少 {$db_name} 数据库驱动（{$required_driver}）。请安装并启用后重试安装。");
+        }
+
         $database_config_file = base_path() . '/.env';
         clearstatcache();
         if (is_file($database_config_file)) {
@@ -152,7 +204,6 @@ class InstallController extends Base
         $database = $request->post('database');
         $host = $request->post('host');
         $port = (int)$request->post('port');
-        $type = $request->post('type', 'pgsql');
         $overwrite = $request->post('overwrite');
 
         // 根据数据库类型设置默认端口
@@ -166,7 +217,7 @@ class InstallController extends Base
 
         try {
             $db = $this->getPdo($host, $user, $password, $port, null, $type);
-            
+
             // 检查数据库是否存在，不存在则创建
             switch ($type) {
                 case 'pgsql':
@@ -182,7 +233,7 @@ class InstallController extends Base
                     $smt = $db->query("SELECT tablename FROM pg_tables WHERE schemaname = 'public'");
                     $tables = $smt->fetchAll();
                     break;
-                    
+
                 case 'mysql':
                     // MySQL中检查数据库是否存在
                     $smt = $db->prepare("SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = ?");
@@ -196,7 +247,7 @@ class InstallController extends Base
                     $smt = $db->query("SHOW TABLES");
                     $tables = $smt->fetchAll();
                     break;
-                    
+
                 case 'sqlite':
                     // SQLite使用文件路径作为数据库名
                     $db = $this->getPdo($host, $user, $password, $port, $database, $type);
@@ -262,7 +313,7 @@ class InstallController extends Base
             // 按照外键依赖顺序删除表
             $dropOrder = [
                 'post_author',
-                'post_category', 
+                'post_category',
                 'post_tag',
                 'post_ext',
                 'comments',
@@ -282,7 +333,7 @@ class InstallController extends Base
                 'wa_rules',
                 'wa_roles'
             ];
-            
+
             foreach ($dropOrder as $table) {
                 if (in_array($table, $tables_exist)) {
                     if ($type === 'sqlite') {
@@ -300,7 +351,7 @@ class InstallController extends Base
             'sqlite' => base_path() . '/app/install/sqlite.sql',
             default => base_path() . '/app/install/postgresql.sql'
         };
-        
+
         if (!is_file($sql_file)) {
             return $this->json(1, '数据库SQL文件不存在: ' . $sql_file);
         }

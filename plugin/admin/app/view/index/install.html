@@ -2,325 +2,634 @@
 <html lang="zh-cn">
 <head>
     <meta charset="utf-8">
-    <title>WindBlog 安装</title>
-    <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css" />
-    <link rel="stylesheet" href="/app/admin/admin/css/reset.css" />
+    <title>WindBlog 安装向导</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+        .step-item { transition: all 0.3s ease; }
+        .step-line { transition: all 0.3s ease; }
+    </style>
 </head>
-<body class="pear-container">
-<div class="layui-row layui-col-space10">
-    <div class="layui-col-md12">
-        <div class="layui-card">
-            <div class="layui-card">
-                <div class="layui-card-body" style="padding-top: 40px;">
-                    <h1 style="text-align:center;margin: 20px 0 40px">WindBlog 安装</h1>
+<body class="bg-gray-50 min-h-screen">
+    <div class="max-w-4xl mx-auto px-4 py-8">
+        <!-- 头部 -->
+        <div class="text-center mb-12">
+            <h1 class="text-3xl font-light text-gray-800 mb-2">WindBlog 安装向导</h1>
+            <p class="text-gray-500">请按照步骤完成系统安装</p>
+        </div>
 
-                    <!-- 环境依赖检查 -->
-                    <div class="layui-card" style="max-width: 860px;margin: 0 auto 20px;">
-                        <div class="layui-card-header">环境依赖检查</div>
-                        <div class="layui-card-body">
-                            <div id="dep-check">
-                                <div style="margin-bottom:10px;">
-                                    <button type="button" class="pear-btn pear-btn-primary" id="dep-reload">重新检测</button>
-                                </div>
-                                <ul id="dep-list" class="layui-timeline" style="padding-left:10px;"></ul>
-                                <div id="dep-tip" class="layui-text" style="margin-top:8px;color:#ff4d4f;"></div>
-                            </div>
+        <!-- 步骤指示器 -->
+        <div class="mb-12">
+            <div class="flex items-center justify-center">
+                <div class="flex items-center w-full max-w-2xl">
+                    <!-- 步骤 1 -->
+                    <div class="flex-1 flex flex-col items-center">
+                        <div id="step1-indicator" class="w-10 h-10 rounded-full flex items-center justify-center text-white bg-blue-500 mb-2">
+                            <span>1</span>
                         </div>
+                        <div class="text-sm text-gray-600">环境检查</div>
                     </div>
+                    <div id="step1-line" class="flex-1 h-0.5 bg-gray-300 -mx-2 mb-6"></div>
 
-                    <div class="layui-carousel" id="stepForm" lay-filter="stepForm" style="margin: 0 auto;">
-                        <div carousel-item>
-                            <div>
-                                <form class="layui-form" action="javascript:void(0);" style="margin: 0 auto;max-width: 460px;padding-top: 40px;">
-                                    <div class="layui-form-item">
-                                        <label class="layui-form-label">用户名</label>
-                                        <div class="layui-input-block">
-                                            <input type="text" placeholder="请填写入用户名" name="user" class="layui-input" lay-verify="required" required value="postgres" autocomplete="off"/>
-                                        </div>
-                                    </div>
-                                    <div class="layui-form-item">
-                                        <label class="layui-form-label">密码</label>
-                                        <div class="layui-input-block">
-                                            <input type="password" placeholder="请填写入密码" name="password" class="layui-input" autocomplete="off"/>
-                                        </div>
-                                    </div>
-                                    <div class="layui-form-item">
-                                        <label class="layui-form-label">数据库</label>
-                                        <div class="layui-input-block">
-                                            <input type="text" placeholder="请填写入数据库" name="database" class="layui-input" lay-verify="required" required value="windblog"/>
-                                        </div>
-                                    </div>
-                                    <div class="layui-form-item">
-                                        <label class="layui-form-label">host</label>
-                                        <div class="layui-input-block">
-                                            <input type="text" placeholder="请填写入数据库host" name="host" class="layui-input" lay-verify="required" required value="127.0.0.1"/>
-                                        </div>
-                                    </div>
-                                    <div class="layui-form-item">
-                                        <label class="layui-form-label">端口</label>
-                                        <div class="layui-input-block">
-                                            <input type="number" placeholder="请填写入数据库端口" name="port" class="layui-input" required value="5432" />
-                                        </div>
-                                    </div>
-                                    <div class="layui-form-item">
-                                        <label class="layui-form-label">强制覆盖</label>
-                                        <div class="layui-input-block">
-                                            <input type="checkbox" name="overwrite" lay-skin="primary">
-                                        </div>
-                                    </div>
-
-                                    <div class="layui-form-item">
-                                        <div class="layui-input-block">
-                                            <button type="button" class="pear-btn next">跳过此步骤</button>
-                                            <button class="pear-btn pear-btn-primary" lay-submit lay-filter="formStep">
-                                                &emsp;下一步&emsp;
-                                            </button>
-                                        </div>
-                                    </div>
-                                </form>
-                            </div>
-                            <div>
-                                <form class="layui-form"  action="javascript:void(0);" style="margin: 0 auto;max-width: 460px;padding-top: 40px;">
-                                    <div class="layui-form-item">
-                                        <label class="layui-form-label">用户名</label>
-                                        <div class="layui-input-block">
-                                            <input type="text" placeholder="请填写入用户名" name="username" class="layui-input" lay-verify="required" required />
-                                        </div>
-                                    </div>
-                                    <div class="layui-form-item">
-                                        <label class="layui-form-label">密码</label>
-                                        <div class="layui-input-block">
-                                            <input type="password" placeholder="请填写入密码" name="password" class="layui-input"/>
-                                        </div>
-                                    </div>
-                                    <div class="layui-form-item">
-                                        <label class="layui-form-label">确认密码</label>
-                                        <div class="layui-input-block">
-                                            <input type="password" placeholder="请填再次写入密码" name="password_confirm" class="layui-input"/>
-                                        </div>
-                                    </div>
-                                    <div class="layui-form-item">
-                                        <div class="layui-input-block">
-                                            <button type="button" class="pear-btn pre">上一步</button>
-                                            <button class="pear-btn pear-btn-primary" lay-submit lay-filter="formStep2">
-                                                &emsp;提交&emsp;
-                                            </button>
-                                        </div>
-                                    </div>
-                                </form>
-                            </div>
-                            <div>
-                                <div style="text-align: center;margin-top: 90px;">
-                                    <i class="layui-icon layui-circle pear-back" style="color: white;font-size:30px;font-weight:bold;background: #52C41A;padding: 20px;line-height: 80px;">&#xe605;</i>
-                                    <div style="font-size: 24px;color: #333;font-weight: 500;margin-top: 30px;">
-                                        安装成功
-                                    </div>
-                                    <div style="font-size: 14px;color: #666;margin-top: 20px;">需要重启才能生效</div>
-                                </div>
-                                <div style="text-align: center;margin-top: 50px;">
-                                    <button class="pear-btn pear-btn-primary finish">进入后台</button>
-                                </div>
-                            </div>
+                    <!-- 步骤 2 -->
+                    <div class="flex-1 flex flex-col items-center">
+                        <div id="step2-indicator" class="w-10 h-10 rounded-full flex items-center justify-center text-gray-400 bg-gray-200 mb-2">
+                            <span>2</span>
                         </div>
+                        <div class="text-sm text-gray-600">数据库配置</div>
+                    </div>
+                    <div id="step2-line" class="flex-1 h-0.5 bg-gray-300 -mx-2 mb-6"></div>
+
+                    <!-- 步骤 3 -->
+                    <div class="flex-1 flex flex-col items-center">
+                        <div id="step3-indicator" class="w-10 h-10 rounded-full flex items-center justify-center text-gray-400 bg-gray-200 mb-2">
+                            <span>3</span>
+                        </div>
+                        <div class="text-sm text-gray-600">管理员账户</div>
+                    </div>
+                    <div id="step3-line" class="flex-1 h-0.5 bg-gray-300 -mx-2 mb-6"></div>
+
+                    <!-- 步骤 4 -->
+                    <div class="flex-1 flex flex-col items-center">
+                        <div id="step4-indicator" class="w-10 h-10 rounded-full flex items-center justify-center text-gray-400 bg-gray-200 mb-2">
+                            <span>4</span>
+                        </div>
+                        <div class="text-sm text-gray-600">完成</div>
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- 内容区域 -->
+        <div class="bg-white rounded-lg shadow-sm">
+            <!-- 步骤 1: 环境检查 -->
+            <div id="step1-content" class="p-8">
+                <h2 class="text-xl font-light text-gray-800 mb-6">环境依赖检查</h2>
+
+                <div id="dep-loading" class="text-center py-12">
+                    <div class="inline-block w-8 h-8 border-4 border-gray-200 border-t-blue-500 rounded-full animate-spin"></div>
+                    <p class="text-gray-500 mt-4">正在检测环境...</p>
+                </div>
+
+                <div id="dep-results" class="hidden space-y-6">
+                    <!-- 检查结果将动态插入这里 -->
+                </div>
+
+                <div id="dep-error" class="hidden">
+                    <div class="bg-red-50 border border-red-200 rounded p-4 mb-6">
+                        <p class="text-red-700" id="dep-error-message"></p>
+                    </div>
+                </div>
+
+                <div id="dep-actions" class="hidden mt-8 flex justify-between items-center">
+                    <button type="button" onclick="checkDependencies()" class="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50">
+                        重新检测
+                    </button>
+                    <button type="button" id="step1-next" class="px-6 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                        下一步
+                    </button>
+                </div>
+            </div>
+
+            <!-- 步骤 2: 数据库配置 -->
+            <div id="step2-content" class="p-8 hidden">
+                <h2 class="text-xl font-light text-gray-800 mb-6">数据库配置</h2>
+
+                <form id="db-form" class="space-y-6">
+                    <!-- 数据库类型 -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">数据库类型</label>
+                        <div class="grid grid-cols-3 gap-4">
+                            <label id="db-pgsql-option" class="relative flex items-center p-4 border-2 border-gray-200 rounded cursor-pointer hover:border-blue-500">
+                                <input type="radio" name="type" value="pgsql" class="mr-3" checked>
+                                <div>
+                                    <div class="font-medium text-gray-800">PostgreSQL</div>
+                                    <div class="text-xs text-gray-500">推荐使用</div>
+                                </div>
+                            </label>
+                            <label id="db-mysql-option" class="relative flex items-center p-4 border-2 border-gray-200 rounded cursor-pointer hover:border-blue-500">
+                                <input type="radio" name="type" value="mysql" class="mr-3">
+                                <div>
+                                    <div class="font-medium text-gray-800">MySQL</div>
+                                    <div class="text-xs text-gray-500">广泛使用</div>
+                                </div>
+                            </label>
+                            <label id="db-sqlite-option" class="relative flex items-center p-4 border-2 border-gray-200 rounded cursor-pointer hover:border-blue-500">
+                                <input type="radio" name="type" value="sqlite" class="mr-3">
+                                <div>
+                                    <div class="font-medium text-gray-800">SQLite</div>
+                                    <div class="text-xs text-gray-500">轻量级</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 数据库名称/路径 -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <span id="db-name-label">数据库名称</span>
+                        </label>
+                        <input type="text" name="database" id="db-database" value="windblog"
+                               class="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                               required>
+                    </div>
+
+                    <!-- 连接信息 (PostgreSQL/MySQL) -->
+                    <div id="db-connection-fields">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">主机地址</label>
+                                <input type="text" name="host" value="127.0.0.1"
+                                       class="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                                       required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">端口</label>
+                                <input type="number" name="port" id="db-port" value="5432"
+                                       class="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                                       required>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4 mt-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">用户名</label>
+                                <input type="text" name="user" id="db-user" value="postgres"
+                                       class="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                                       required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">密码</label>
+                                <input type="password" name="password"
+                                       class="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 强制覆盖 -->
+                    <div class="flex items-center">
+                        <input type="checkbox" name="overwrite" id="db-overwrite" class="mr-2">
+                        <label for="db-overwrite" class="text-sm text-gray-600">强制覆盖已存在的数据（谨慎使用）</label>
+                    </div>
+                </form>
+
+                <div id="db-error" class="hidden mt-4">
+                    <div class="bg-red-50 border border-red-200 rounded p-4">
+                        <p class="text-red-700" id="db-error-message"></p>
+                    </div>
+                </div>
+
+                <div class="mt-8 flex justify-between items-center">
+                    <button type="button" id="step2-prev" class="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50">
+                        上一步
+                    </button>
+                    <div class="flex gap-2">
+                        <button type="button" id="step2-skip" class="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50">
+                            跳过此步骤
+                        </button>
+                        <button type="button" id="step2-next" class="px-6 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                            下一步
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 步骤 3: 管理员账户 -->
+            <div id="step3-content" class="p-8 hidden">
+                <h2 class="text-xl font-light text-gray-800 mb-6">创建管理员账户</h2>
+
+                <form id="admin-form" class="space-y-6 max-w-md">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">用户名</label>
+                        <input type="text" name="username"
+                               class="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                               required>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">密码</label>
+                        <input type="password" name="password"
+                               class="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                               required>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">确认密码</label>
+                        <input type="password" name="password_confirm"
+                               class="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                               required>
+                    </div>
+                </form>
+
+                <div id="admin-error" class="hidden mt-4">
+                    <div class="bg-red-50 border border-red-200 rounded p-4">
+                        <p class="text-red-700" id="admin-error-message"></p>
+                    </div>
+                </div>
+
+                <div class="mt-8 flex justify-between items-center">
+                    <button type="button" id="step3-prev" class="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50">
+                        上一步
+                    </button>
+                    <button type="button" id="step3-next" class="px-6 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                        完成安装
+                    </button>
+                </div>
+            </div>
+
+            <!-- 步骤 4: 完成 -->
+            <div id="step4-content" class="p-8 hidden text-center">
+                <div class="py-12">
+                    <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <svg class="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                    </div>
+                    <h2 class="text-2xl font-light text-gray-800 mb-2">安装成功</h2>
+                    <p class="text-gray-500 mb-8">系统需要重启才能生效</p>
+                    <button type="button" onclick="location.reload()" class="px-8 py-3 bg-blue-500 text-white rounded hover:bg-blue-600">
+                        进入后台
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 加载提示 -->
+        <div id="loading-overlay" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg p-6 flex items-center space-x-4">
+                <div class="w-6 h-6 border-4 border-gray-200 border-t-blue-500 rounded-full animate-spin"></div>
+                <span class="text-gray-700">处理中，请稍候...</span>
+            </div>
+        </div>
     </div>
 
-</div>
+    <script>
+        let currentStep = 1;
+        let availableDrivers = {
+            pgsql: false,
+            mysql: false,
+            sqlite: false
+        };
+        let depCheckData = null;
 
-<script>
-    var color = localStorage.getItem("theme-color-color");
-    var second = localStorage.getItem("theme-color-second");
-    if (!color || !second) {
-        localStorage.setItem("theme-color-color", "#2d8cf0");
-        localStorage.setItem("theme-color-second", "#ecf5ff");
-    }
-</script>
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            checkDependencies();
+            setupEventListeners();
+            setupDatabaseTypeSwitch();
+        });
 
-<script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
-<script src="/app/admin/component/pear/pear.js"></script>
+        // 依赖检查
+        function checkDependencies() {
+            document.getElementById('dep-loading').classList.remove('hidden');
+            document.getElementById('dep-results').classList.add('hidden');
+            document.getElementById('dep-error').classList.add('hidden');
+            document.getElementById('dep-actions').classList.add('hidden');
 
-<script>
-    layui.use(["form", "step","code","element", "popup"], function() {
-        var $ = layui.$,
-                form = layui.form,
-                step = layui.step;
+            fetch('/app/admin/install/step0')
+                .then(res => res.json())
+                .then(data => {
+                    depCheckData = data;
+                    renderDependencies(data);
+                })
+                .catch(err => {
+                    document.getElementById('dep-loading').classList.add('hidden');
+                    document.getElementById('dep-error').classList.remove('hidden');
+                    document.getElementById('dep-error-message').textContent = '检测失败：' + err.message;
+                    document.getElementById('dep-actions').classList.remove('hidden');
+                });
+        }
 
-        layui.code();
+        // 渲染依赖检查结果
+        function renderDependencies(data) {
+            document.getElementById('dep-loading').classList.add('hidden');
+            document.getElementById('dep-actions').classList.remove('hidden');
 
-        // 依赖检测渲染（平铺卡片样式）
-        var __depMissing = [];
-        function renderDeps(res) {
-            __depMissing = Array.isArray(res.data?.missing) ? res.data.missing : [];
-            var checks = res.data?.checks || [];
-
-            // 分组：版本、必需扩展、可选扩展、关键函数、目录权限
-            var requiredExts = ['pdo','pdo_pgsql','openssl','json','mbstring','curl','fileinfo','gd','xmlreader','dom','libxml'];
-            var optionalExts = (res.data && Array.isArray(res.data.optional_exts)) ? res.data.optional_exts : ['redis'];
-            var fnNames = ['proc_open','exec'];
-
-            var groups = {
-                '版本': [],
-                '必需扩展': [],
-                '可选扩展': [],
-                '关键函数': [],
-                '目录权限': []
+            const checks = data.data?.checks || [];
+            const groups = {
+                'version': { title: 'PHP 版本', items: [] },
+                'required': { title: '必需扩展', items: [] },
+                'database': { title: '数据库驱动（至少一个可用）', items: [] },
+                'optional': { title: '可选扩展', items: [] },
+                'functions': { title: '关键函数', items: [] },
+                'permissions': { title: '目录权限', items: [] }
             };
 
-            for (var i = 0; i < checks.length; i++) {
-                var c = checks[i], name = c.name;
-                if (name.indexOf('php>=') === 0) {
-                    groups['版本'].push(c);
-                } else if (requiredExts.indexOf(name) >= 0) {
-                    groups['必需扩展'].push(c);
-                } else if (optionalExts.indexOf(name) >= 0) {
-                    groups['可选扩展'].push(c);
-                } else if (fnNames.indexOf(name) >= 0) {
-                    groups['关键函数'].push(c);
-                } else if (name.indexOf('writable') >= 0) {
-                    groups['目录权限'].push(c);
+            const dbDrivers = ['pdo_pgsql', 'pdo_mysql', 'pdo_sqlite'];
+            const requiredExts = ['pdo', 'openssl', 'json', 'mbstring', 'curl', 'fileinfo', 'gd', 'xmlreader', 'dom', 'libxml'];
+            const optionalExts = data.data?.optional_exts || ['redis'];
+            const functions = ['proc_open', 'exec'];
+
+            // 记录可用的数据库驱动
+            availableDrivers.pgsql = false;
+            availableDrivers.mysql = false;
+            availableDrivers.sqlite = false;
+
+            checks.forEach(check => {
+                const name = check.name;
+                if (name.startsWith('php>=')) {
+                    groups.version.items.push(check);
+                } else if (dbDrivers.includes(name)) {
+                    groups.database.items.push(check);
+                    if (check.ok) {
+                        if (name === 'pdo_pgsql') availableDrivers.pgsql = true;
+                        if (name === 'pdo_mysql') availableDrivers.mysql = true;
+                        if (name === 'pdo_sqlite') availableDrivers.sqlite = true;
+                    }
+                } else if (requiredExts.includes(name)) {
+                    groups.required.items.push(check);
+                } else if (optionalExts.includes(name)) {
+                    groups.optional.items.push(check);
+                } else if (functions.includes(name)) {
+                    groups.functions.items.push(check);
+                } else if (name.includes('writable')) {
+                    groups.permissions.items.push(check);
+                }
+            });
+
+            let html = '';
+            Object.values(groups).forEach(group => {
+                if (group.items.length > 0) {
+                    html += renderGroup(group.title, group.items);
+                }
+            });
+
+            document.getElementById('dep-results').innerHTML = html;
+            document.getElementById('dep-results').classList.remove('hidden');
+
+            // 检查是否有致命错误
+            const hasAnyDbDriver = availableDrivers.pgsql || availableDrivers.mysql || availableDrivers.sqlite;
+            const hasPdo = checks.find(c => c.name === 'pdo')?.ok;
+
+            if (!hasAnyDbDriver || !hasPdo) {
+                document.getElementById('dep-error').classList.remove('hidden');
+                let errorMsg = '';
+                if (!hasPdo) {
+                    errorMsg = '缺少 PDO 扩展，这是必需的数据库扩展。请安装并启用后重试。';
                 } else {
-                    groups['必需扩展'].push(c);
+                    errorMsg = '未检测到任何可用的数据库驱动（pdo_pgsql/pdo_mysql/pdo_sqlite）。请至少安装一个数据库驱动后重试。';
                 }
+                document.getElementById('dep-error-message').textContent = errorMsg;
+                document.getElementById('step1-next').disabled = true;
+                document.getElementById('step1-next').classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                document.getElementById('dep-error').classList.add('hidden');
+                document.getElementById('step1-next').disabled = false;
+                document.getElementById('step1-next').classList.remove('opacity-50', 'cursor-not-allowed');
             }
 
-            function tileCard(it) {
-                var ok = !!it.ok;
-                var bg = ok ? '#52C41A' : '#ff4d4f';
-                var bgSoft = ok ? '#f6ffed' : '#fff2f0';
-                var msg = it.message ? (' - ' + it.message) : '';
-                return (
-                    '<div class="layui-col-xs12 layui-col-sm6 layui-col-md4">' +
-                        '<div class="layui-card" style="border: 1px solid '+bg+'; background: '+bgSoft+';">' +
-                            '<div class="layui-card-body" style="display:flex;align-items:center;gap:14px;">' +
-                                '<span class="layui-badge" style="background:'+bg+';color:#fff;min-width:92px;height:28px;line-height:28px;font-size:14px;text-align:center;">' + (ok ? '通过' : '缺失') + '</span>' +
-                                '<div>' +
-                                    '<div style="font-weight:600;font-size:14px;margin-bottom:4px;color:#333;">'+ it.name +'</div>' +
-                                    '<div style="color:'+bg+';font-size:13px;">'+ (ok ? '已满足' : '不可用') + msg +'</div>' +
-                                '</div>' +
-                            '</div>' +
-                        '</div>' +
-                    '</div>'
-                );
-            }
-
-            function section(title, items) {
-                var html = '';
-                html += '<div class="layui-card" style="margin-bottom:12px;">';
-                html += '<div class="layui-card-header">'+ title +'</div>';
-                html += '<div class="layui-card-body">';
-                html += '<div class="layui-row layui-col-space10">';
-                for (var j = 0; j < items.length; j++) {
-                    html += tileCard(items[j]);
-                }
-                html += '</div></div></div>';
-                return html;
-            }
-
-            var html = '';
-            html += section('版本', groups['版本']);
-            html += section('必需扩展', groups['必需扩展']);
-            html += section('可选扩展', groups['可选扩展']);
-            html += section('关键函数', groups['关键函数']);
-            html += section('目录权限', groups['目录权限']);
-
-            $('#dep-list').html(html);
-
-            // 额外提示 could not find driver 根因
-            var tip = '';
-            if (__depMissing.includes('pdo') || __depMissing.includes('pdo_pgsql')) {
-                tip = '检测到数据库驱动未启用（pdo/pdo_pgsql），将导致“could not find driver”。请安装并启用后重试。';
-            }
-            $('#dep-tip').text(tip);
+            // 更新数据库选项可用性
+            updateDatabaseOptions();
         }
-        function loadDeps() {
-            $.getJSON('/app/admin/install/step0', function(res) {
-                renderDeps(res);
+
+        // 渲染检查组
+        function renderGroup(title, items) {
+            let html = `<div><h3 class="text-sm font-medium text-gray-700 mb-3">${title}</h3><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">`;
+
+            items.forEach(item => {
+                const ok = item.ok;
+                const bgColor = ok ? 'bg-green-50' : 'bg-red-50';
+                const borderColor = ok ? 'border-green-200' : 'border-red-200';
+                const textColor = ok ? 'text-green-700' : 'text-red-700';
+                const status = ok ? '[Y]' : '[N]';
+
+                html += `
+                    <div class="${bgColor} ${borderColor} border rounded p-3">
+                        <div class="flex items-start">
+                            <span class="${textColor} font-bold mr-2">${status}</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="text-sm font-medium text-gray-800 truncate">${item.name}</div>
+                                ${item.message ? `<div class="text-xs text-gray-500 mt-1">${item.message}</div>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div></div>';
+            return html;
+        }
+
+        // 更新数据库选项可用性
+        function updateDatabaseOptions() {
+            const options = [
+                { id: 'db-pgsql-option', driver: 'pgsql', name: 'PostgreSQL' },
+                { id: 'db-mysql-option', driver: 'mysql', name: 'MySQL' },
+                { id: 'db-sqlite-option', driver: 'sqlite', name: 'SQLite' }
+            ];
+
+            let hasSelected = false;
+            options.forEach(opt => {
+                const element = document.getElementById(opt.id);
+                const radio = element.querySelector('input[type="radio"]');
+
+                if (!availableDrivers[opt.driver]) {
+                    element.classList.add('opacity-50', 'cursor-not-allowed', 'bg-gray-50');
+                    element.classList.remove('hover:border-blue-500');
+                    radio.disabled = true;
+
+                    // 添加不可用提示
+                    if (!element.querySelector('.unavailable-badge')) {
+                        const badge = document.createElement('div');
+                        badge.className = 'unavailable-badge absolute top-2 right-2 text-xs bg-red-100 text-red-600 px-2 py-1 rounded';
+                        badge.textContent = '不可用';
+                        element.appendChild(badge);
+                    }
+                } else {
+                    element.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-gray-50');
+                    element.classList.add('hover:border-blue-500');
+                    radio.disabled = false;
+
+                    // 选择第一个可用的
+                    if (!hasSelected) {
+                        radio.checked = true;
+                        hasSelected = true;
+                        updateDatabaseFields(opt.driver);
+                    }
+                }
             });
         }
-        $('#dep-reload').on('click', function(){ loadDeps(); });
-        loadDeps();
 
-        step.render({
-            elem: "#stepForm",
-            filter: "stepForm",
-            width: "100%",
-            stepWidth: "70%",
-            height: "500px",
-            stepItems: [{
-                title: "填写数据库信息"
-            }, {
-                title: "填写管理员账户"
-            }, {
-                title: "完成"
-            }]
-        });
+        // 设置事件监听器
+        function setupEventListeners() {
+            // 步骤 1
+            document.getElementById('step1-next').addEventListener('click', () => goToStep(2));
 
-        form.on("submit(formStep)", function(data) {
-            // 前置关键驱动校验（前端阻断）
-            if (__depMissing && (__depMissing.includes('pdo') || __depMissing.includes('pdo_pgsql'))) {
-                layui.popup.failure('缺少数据库驱动（pdo/pdo_pgsql）。请安装并启用后重试。');
-                return false;
+            // 步骤 2
+            document.getElementById('step2-prev').addEventListener('click', () => goToStep(1));
+            document.getElementById('step2-skip').addEventListener('click', () => goToStep(3));
+            document.getElementById('step2-next').addEventListener('click', submitDatabase);
+
+            // 步骤 3
+            document.getElementById('step3-prev').addEventListener('click', () => goToStep(2));
+            document.getElementById('step3-next').addEventListener('click', submitAdmin);
+        }
+
+        // 数据库类型切换
+        function setupDatabaseTypeSwitch() {
+            document.querySelectorAll('input[name="type"]').forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    updateDatabaseFields(e.target.value);
+                });
+            });
+        }
+
+        // 更新数据库字段
+        function updateDatabaseFields(type) {
+            const connectionFields = document.getElementById('db-connection-fields');
+            const dbNameLabel = document.getElementById('db-name-label');
+            const dbDatabase = document.getElementById('db-database');
+            const dbPort = document.getElementById('db-port');
+            const dbUser = document.getElementById('db-user');
+
+            if (type === 'sqlite') {
+                connectionFields.classList.add('hidden');
+                dbNameLabel.textContent = '数据库文件路径';
+                dbDatabase.value = 'runtime/windblog.db';
+                dbDatabase.placeholder = '例如：runtime/windblog.db';
+            } else {
+                connectionFields.classList.remove('hidden');
+                dbNameLabel.textContent = '数据库名称';
+                dbDatabase.value = 'windblog';
+                dbDatabase.placeholder = '请输入数据库名称';
+
+                if (type === 'mysql') {
+                    dbPort.value = '3306';
+                    dbUser.value = 'root';
+                } else if (type === 'pgsql') {
+                    dbPort.value = '5432';
+                    dbUser.value = 'postgres';
+                }
             }
-            let loading = layer.load();
-            $.ajax({
-                url: "/app/admin/install/step1",
-                type: "POST",
-                dataType: "json",
-                data: data.field,
-                success: function (res) {
-                    if (res.code) {
-                        return layui.popup.failure(res.msg);
-                    }
-                    layui.popup.success("操作成功", function () {
-                        step.next("#stepForm");
-                    });
-                },
-                complete: function () {
-                    layer.close(loading);
+        }
+
+        // 切换步骤
+        function goToStep(step) {
+            // 隐藏当前步骤
+            document.getElementById(`step${currentStep}-content`).classList.add('hidden');
+
+            // 显示新步骤
+            document.getElementById(`step${step}-content`).classList.remove('hidden');
+
+            // 更新步骤指示器
+            updateStepIndicator(step);
+
+            currentStep = step;
+
+            // 滚动到顶部
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // 更新步骤指示器
+        function updateStepIndicator(step) {
+            for (let i = 1; i <= 4; i++) {
+                const indicator = document.getElementById(`step${i}-indicator`);
+                const line = document.getElementById(`step${i}-line`);
+
+                if (i < step) {
+                    // 已完成
+                    indicator.classList.remove('bg-gray-200', 'text-gray-400', 'bg-blue-500');
+                    indicator.classList.add('bg-green-500', 'text-white');
+                    if (line) line.classList.replace('bg-gray-300', 'bg-green-500');
+                } else if (i === step) {
+                    // 当前步骤
+                    indicator.classList.remove('bg-gray-200', 'text-gray-400', 'bg-green-500');
+                    indicator.classList.add('bg-blue-500', 'text-white');
+                    if (line) line.classList.replace('bg-green-500', 'bg-gray-300');
+                } else {
+                    // 未完成
+                    indicator.classList.remove('bg-blue-500', 'bg-green-500', 'text-white');
+                    indicator.classList.add('bg-gray-200', 'text-gray-400');
+                    if (line) line.classList.replace('bg-green-500', 'bg-gray-300');
+                }
+            }
+        }
+
+        // 提交数据库配置
+        function submitDatabase() {
+            const form = document.getElementById('db-form');
+            const formData = new FormData(form);
+
+            showLoading();
+            hideError('db-error');
+
+            fetch('/app/admin/install/step1', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                hideLoading();
+                if (data.code === 0) {
+                    goToStep(3);
+                } else {
+                    showError('db-error', data.msg);
                 }
             })
-            return false;
-        });
+            .catch(err => {
+                hideLoading();
+                showError('db-error', '请求失败：' + err.message);
+            });
+        }
 
-        form.on("submit(formStep2)", function(data) {
-            let loading = layer.load();
-            $.ajax({
-                url: "/app/admin/install/step2",
-                type: "POST",
-                dataType: "json",
-                data: data.field,
-                success: function (res) {
-                    if (res.code) {
-                        return layui.popup.failure(res.msg);
-                    }
-                    //layui.popup.success("安装成功");
-                    step.next("#stepForm");
-                    layer.close(loading);
-                },
-                complete: function () {
-                    layer.close(loading);
+        // 提交管理员账户
+        function submitAdmin() {
+            const form = document.getElementById('admin-form');
+            const formData = new FormData(form);
+
+            // 验证密码
+            const password = formData.get('password');
+            const passwordConfirm = formData.get('password_confirm');
+
+            if (password !== passwordConfirm) {
+                showError('admin-error', '两次密码输入不一致');
+                return;
+            }
+
+            showLoading();
+            hideError('admin-error');
+
+            fetch('/app/admin/install/step2', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                hideLoading();
+                if (data.code === 0) {
+                    goToStep(4);
+                } else {
+                    showError('admin-error', data.msg);
                 }
             })
-            return false;
-        });
+            .catch(err => {
+                hideLoading();
+                showError('admin-error', '请求失败：' + err.message);
+            });
+        }
 
-        $(".pre").click(function() {
-            step.pre("#stepForm");
-            return false;
-        });
+        // 显示错误
+        function showError(id, message) {
+            const errorDiv = document.getElementById(id);
+            const messageDiv = document.getElementById(id + '-message');
+            messageDiv.textContent = message;
+            errorDiv.classList.remove('hidden');
+        }
 
-        $(".next").click(function() {
-            step.next("#stepForm");
-            return false;
-        });
+        // 隐藏错误
+        function hideError(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
 
-        $(".finish").click(function() {
-            location.reload();
-        });
-    })
-</script>
+        // 显示加载
+        function showLoading() {
+            document.getElementById('loading-overlay').classList.remove('hidden');
+        }
+
+        // 隐藏加载
+        function hideLoading() {
+            document.getElementById('loading-overlay').classList.add('hidden');
+        }
+    </script>
 </body>
 </html>

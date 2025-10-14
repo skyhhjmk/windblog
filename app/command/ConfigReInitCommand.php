@@ -282,6 +282,9 @@ class ConfigReInitCommand extends Command
                 }
             }
             
+            // 导入菜单
+            $this->importMenu($pdo, $dbType, $output);
+            
             $pdo = null; // 关闭连接
             $output->writeln("<info>✓ 数据库初始化完成，成功执行 {$successCount} 条语句");
             if ($errorCount > 0) {
@@ -483,5 +486,136 @@ EOF;
 
         // 写入 .env 配置文件
         file_put_contents(base_path('.env'), $envConfig);
+    }
+
+    /**
+     * 添加菜单
+     *
+     * @param \PDO $pdo
+     * @param string $type 数据库类型
+     * @param OutputInterface $output
+     *
+     * @return int
+     */
+    private function addMenu(array $menu, \PDO $pdo, string $type, OutputInterface $output): int
+    {
+        $allow_columns = ['title', 'key', 'icon', 'href', 'pid', 'weight', 'type'];
+        $data = [];
+        foreach ($allow_columns as $column) {
+            if (isset($menu[$column])) {
+                $data[$column] = $menu[$column];
+            }
+        }
+        $time = date('Y-m-d H:i:s');
+        $data['created_at'] = $data['updated_at'] = $time;
+        $values = [];
+        foreach ($data as $k => $v) {
+            $values[] = ":$k";
+        }
+        $columns = array_keys($data);
+        
+        // 根据数据库类型确定表名引用方式
+        $table_name = match($type) {
+            'sqlite' => '"wa_rules"',
+            default => '`wa_rules`'
+        };
+        
+        $sql = "insert into $table_name (" . implode(',', $columns) . ") values (" . implode(',', $values) . ")";
+        $smt = $pdo->prepare($sql);
+        foreach ($data as $key => $value) {
+            $smt->bindValue($key, $value);
+        }
+        $smt->execute();
+        return $pdo->lastInsertId();
+    }
+
+    /**
+     * 导入菜单
+     *
+     * @param \PDO $pdo
+     * @param string $type 数据库类型
+     * @param OutputInterface $output
+     *
+     * @return void
+     */
+    private function importMenu(\PDO $pdo, string $type, OutputInterface $output): void
+    {
+        $output->writeln('<comment>正在导入菜单...</comment>');
+        
+        // 获取菜单配置
+        $menuFile = base_path('plugin/admin/config/menu.php');
+        if (!file_exists($menuFile)) {
+            $output->writeln('<error>菜单配置文件不存在: ' . $menuFile . '</error>');
+            return;
+        }
+        
+        $menu_tree = include $menuFile;
+        $this->importMenuRecursive($menu_tree, $pdo, $type, 0, $output);
+        
+        $output->writeln('<info>✓ 菜单导入完成</info>');
+    }
+
+    /**
+     * 递归导入菜单
+     *
+     * @param array $menu_tree
+     * @param \PDO $pdo
+     * @param string $type
+     * @param int $parent_id
+     * @param OutputInterface $output
+     *
+     * @return void
+     */
+    private function importMenuRecursive(array $menu_tree, \PDO $pdo, string $type, int $parent_id, OutputInterface $output): void
+    {
+        if (empty($menu_tree)) {
+            return;
+        }
+
+        // 如果是索引数组且没有key字段，则遍历每个元素
+        if (is_numeric(key($menu_tree)) && !isset($menu_tree['key'])) {
+            foreach ($menu_tree as $item) {
+                $this->importMenuRecursive($item, $pdo, $type, $parent_id, $output);
+            }
+            return;
+        }
+
+        $children = $menu_tree['children'] ?? [];
+        unset($menu_tree['children']);
+
+        // 设置父ID
+        $menu_tree['pid'] = $parent_id;
+
+        // 根据数据库类型确定表名引用方式
+        $table_name = match($type) {
+            'sqlite' => '"wa_rules"',
+            default => '`wa_rules`'
+        };
+
+        // 检查菜单是否已存在
+        $stmt = $pdo->prepare("SELECT * FROM $table_name WHERE `key`=:key LIMIT 1");
+        $stmt->execute(['key' => $menu_tree['key']]);
+        $old_menu = $stmt->fetch();
+
+        if ($old_menu) {
+            // 更新现有菜单
+            $pid = $old_menu['id'];
+            $params = [
+                'title' => $menu_tree['title'],
+                'icon' => $menu_tree['icon'] ?? '',
+                'key' => $menu_tree['key'],
+            ];
+            $sql = "UPDATE $table_name SET title=:title, icon=:icon WHERE `key`=:key";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+        } else {
+            // 创建新菜单
+            $pid = $this->addMenu($menu_tree, $pdo, $type, $output);
+        }
+
+        // 递归处理子菜单
+        foreach ($children as $menu) {
+            $this->importMenuRecursive($menu, $pdo, $type, $pid, $output);
+        }
     }
 }
