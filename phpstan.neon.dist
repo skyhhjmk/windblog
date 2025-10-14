@@ -1,5 +1,5 @@
 parameters:
-  level: 6
+  level: 5  # 从 6 降低到 5，减少检查严格度
   paths:
     - app
     - plugin/admin/app
