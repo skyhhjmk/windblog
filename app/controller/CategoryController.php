@@ -2,15 +2,14 @@
 
 namespace app\controller;
 
+use app\model\Category;
+use app\service\BlogService;
+use app\service\EnhancedCacheService;
+use app\service\PaginationService;
+use app\service\PJAXHelper;
 use support\Request;
 use support\Response;
-use app\service\BlogService;
-use app\service\PaginationService;
 use Webman\RateLimiter\Annotation\RateLimiter;
-use app\model\Category;
-use support\Redis;
-use app\service\EnhancedCacheService;
-use app\service\PJAXHelper;
 
 class CategoryController
 {
@@ -26,7 +25,7 @@ class CategoryController
 
         // 解析排序
         $sort = $request->get('sort', 'latest');
-        $sort = in_array($sort, ['latest','hot']) ? $sort : 'latest';
+        $sort = in_array($sort, ['latest', 'hot']) ? $sort : 'latest';
 
         // 使用PJAXHelper检测是否为PJAX请求
         $isPjax = PJAXHelper::isPJAX($request);
@@ -40,7 +39,7 @@ class CategoryController
         // 构建筛选条件：传递 slug，由服务层适配
         $filters = [
             'category' => $this->sanitize($slug),
-            'sort' => $sort
+            'sort' => $sort,
         ];
 
         // 获取文章列表
@@ -57,13 +56,13 @@ class CategoryController
 
         // 获取分类名称用于标题展示
         $categoryModel = Category::query()->where('slug', $slug)->first(['name', 'slug']);
-        $category_name = $categoryModel ? (string)$categoryModel->name : $slug;
+        $category_name = $categoryModel ? (string) $categoryModel->name : $slug;
 
         // 使用项目统一的分页渲染，保证路由正确
         $pagination_html = PaginationService::generatePagination(
             $page,
-            (int)($result['totalCount'] ?? 0),
-            (int)($result['postsPerPage'] ?? BlogService::getPostsPerPage()),
+            (int) ($result['totalCount'] ?? 0),
+            (int) ($result['postsPerPage'] ?? BlogService::getPostsPerPage()),
             'c.page',
             ['slug' => $slug, 'sort' => $sort],
             10
@@ -81,7 +80,7 @@ class CategoryController
                 'pagination' => $pagination_html,
                 'totalCount' => $result['totalCount'] ?? 0,
                 'sort' => $sort,
-                'sidebar' => $sidebar
+                'sidebar' => $sidebar,
             ],
             $cacheKey,
             120,
@@ -97,8 +96,8 @@ class CategoryController
     public function list(Request $request): Response
     {
         $isPjax = ($request->header('X-PJAX') !== null)
-            || (bool)$request->get('_pjax')
-            || strtolower((string)$request->header('X-Requested-With')) === 'xmlhttprequest';
+            || (bool) $request->get('_pjax')
+            || strtolower((string) $request->header('X-Requested-With')) === 'xmlhttprequest';
 
         $sidebar = \app\service\SidebarService::getSidebarContent($request, 'category');
 
@@ -111,23 +110,24 @@ class CategoryController
             $categories = Category::query()
                 ->withCount('posts')
                 ->ordered()
-                ->get(['id','name','slug','description','sort_order'])
-                ->map(fn($c) => [
-                    'id' => (int)$c->id,
-                    'name' => (string)$c->name,
-                    'slug' => (string)$c->slug,
-                    'description' => (string)($c->description ?? ''),
-                    'count' => (int)($c->posts_count ?? 0)
+                ->get(['id', 'name', 'slug', 'description', 'sort_order'])
+                ->map(fn ($c) => [
+                    'id' => (int) $c->id,
+                    'name' => (string) $c->name,
+                    'slug' => (string) $c->slug,
+                    'description' => (string) ($c->description ?? ''),
+                    'count' => (int) ($c->posts_count ?? 0),
                 ])->toArray();
             $enhancedCache->set($cacheKey, json_encode($categories, JSON_UNESCAPED_UNICODE), 300, 'category');
         }
 
         $blog_title = BlogService::getBlogTitle();
         $viewName = $isPjax ? 'category/list.content' : 'category/list';
+
         return view($viewName, [
             'page_title' => "全部分类 - {$blog_title}",
             'categories' => $categories,
-            'sidebar' => $sidebar
+            'sidebar' => $sidebar,
         ]);
     }
 
@@ -135,6 +135,7 @@ class CategoryController
     {
         $value = strip_tags($value);
         $value = trim($value);
+
         return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
     }
 }

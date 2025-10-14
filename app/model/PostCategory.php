@@ -7,8 +7,8 @@ use support\Model;
 
 /**
  * post_category 文章-分类关联表
- * @property integer $post_id 文章ID(主键)
- * @property integer $category_id 分类ID(主键)
+ * @property int $post_id 文章ID(主键)
+ * @property int $category_id 分类ID(主键)
  * @property string $created_at 创建时间
  * @property string $updated_at 更新时间
  * @property-read \app\model\Post $post 关联的文章
@@ -16,7 +16,6 @@ use support\Model;
  */
 class PostCategory extends Model
 {
-    
     /**
      * The table associated with the model.
      *

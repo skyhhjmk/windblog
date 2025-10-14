@@ -30,8 +30,8 @@ class RainyunController
 
         // PJAX 优化：检测是否为 PJAX 请求（兼容 header/_pjax 参数/XHR）
         $isPjax = ($request->header('X-PJAX') !== null)
-            || (bool)$request->get('_pjax')
-            || strtolower((string)$request->header('X-Requested-With')) === 'xmlhttprequest';
+            || (bool) $request->get('_pjax')
+            || strtolower((string) $request->header('X-Requested-With')) === 'xmlhttprequest';
 
         // 获取侧边栏内容（PJAX 与非 PJAX 均获取）
         $sidebar = \app\service\SidebarService::getSidebarContent($request, 'rainyun');
@@ -41,7 +41,7 @@ class RainyunController
 
         return view($viewName, [
             'page_title' => $page_title,
-            'sidebar' => $sidebar
+            'sidebar' => $sidebar,
         ]);
     }
 }

@@ -1,10 +1,11 @@
 <?php
+
 namespace app\middleware;
 
 use app\service\PluginService;
-use Webman\MiddlewareInterface;
 use Webman\Http\Request;
 use Webman\Http\Response;
+use Webman\MiddlewareInterface;
 
 class PluginSupport implements MiddlewareInterface
 {

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of webman.
  *
@@ -23,7 +24,6 @@ use Workerman\Worker;
 
 /**
  * Class FileMonitor
- * @package process
  */
 class Monitor
 {
@@ -75,6 +75,7 @@ class Monitor
     public static function isPaused(): bool
     {
         clearstatcache();
+
         return file_exists(static::lockFile());
     }
 
@@ -97,7 +98,7 @@ class Monitor
     {
         $this->ppid = function_exists('posix_getppid') ? posix_getppid() : 0;
         static::resume();
-        $this->paths = (array)$monitorDir;
+        $this->paths = (array) $monitorDir;
         $this->extensions = $monitorExtensions;
         foreach (get_included_files() as $index => $file) {
             $this->loadedFiles[$file] = $index;
@@ -148,7 +149,7 @@ class Monitor
         }
         $count = 0;
         foreach ($iterator as $file) {
-            $count ++;
+            $count++;
             /** var SplFileInfo $file */
             if (is_dir($file->getRealPath())) {
                 continue;
@@ -161,7 +162,7 @@ class Monitor
                     continue;
                 }
                 $var = 0;
-                exec('"'.PHP_BINARY . '" -l ' . $file, $out, $var);
+                exec('"' . PHP_BINARY . '" -l ' . $file, $out, $var);
                 if ($var) {
                     continue;
                 }
@@ -173,9 +174,11 @@ class Monitor
                     } else {
                         echo "Master process has gone away and can not reload\n";
                     }
+
                     return true;
                 }
                 echo $file . " updated and reload\n";
+
                 return true;
             }
         }
@@ -183,6 +186,7 @@ class Monitor
             echo "Monitor: There are too many files ($count files) in $monitorDir which makes file monitoring very slow\n";
             $tooManyFilesCheck = 1;
         }
+
         return false;
     }
 
@@ -196,6 +200,7 @@ class Monitor
         }
         if (function_exists('posix_kill') && !posix_kill($this->ppid, 0)) {
             echo "Master process has gone away\n";
+
             return $this->ppid = 0;
         }
         if (PHP_OS_FAMILY !== 'Linux') {
@@ -206,6 +211,7 @@ class Monitor
             // Process not exist
             $this->ppid = 0;
         }
+
         return $this->ppid;
     }
 
@@ -222,6 +228,7 @@ class Monitor
                 return true;
             }
         }
+
         return false;
     }
 
@@ -237,6 +244,7 @@ class Monitor
         $masterPid = $this->getMasterPid();
         if ($masterPid <= 0) {
             echo "Master process has gone away\n";
+
             return;
         }
 
@@ -245,7 +253,7 @@ class Monitor
             return;
         }
         foreach (explode(' ', $children) as $pid) {
-            $pid = (int)$pid;
+            $pid = (int) $pid;
             $statusFile = "/proc/$pid/status";
             if (!is_file($statusFile) || !($status = file_get_contents($statusFile))) {
                 continue;
@@ -254,7 +262,7 @@ class Monitor
             if (preg_match('/VmRSS\s*?:\s*?(\d+?)\s*?kB/', $status, $match)) {
                 $mem = $match[1];
             }
-            $mem = (int)($mem / 1024);
+            $mem = (int) ($mem / 1024);
             if ($mem >= $memoryLimit) {
                 posix_kill($pid, SIGINT);
             }
@@ -281,14 +289,14 @@ class Monitor
             return 0;
         }
         $unit = strtolower($memoryLimit[strlen($memoryLimit) - 1]);
-        $memoryLimit = (int)$memoryLimit;
+        $memoryLimit = (int) $memoryLimit;
         if ($unit === 'g') {
             $memoryLimit = 1024 * $memoryLimit;
-        } else if ($unit === 'k') {
+        } elseif ($unit === 'k') {
             $memoryLimit = ($memoryLimit / 1024);
-        } else if ($unit === 'm') {
-            $memoryLimit = (int)($memoryLimit);
-        } else if ($unit === 't') {
+        } elseif ($unit === 'm') {
+            $memoryLimit = (int) ($memoryLimit);
+        } elseif ($unit === 't') {
             $memoryLimit = (1024 * 1024 * $memoryLimit);
         } else {
             $memoryLimit = ($memoryLimit / (1024 * 1024));
@@ -299,7 +307,7 @@ class Monitor
         if ($usePhpIni) {
             $memoryLimit = (0.8 * $memoryLimit);
         }
-        return (int)$memoryLimit;
-    }
 
+        return (int) $memoryLimit;
+    }
 }

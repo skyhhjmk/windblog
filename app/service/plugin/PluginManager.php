@@ -15,17 +15,18 @@ use Webman\Route;
 class PluginManager
 {
     private string $pluginRoot;
+
     private HookManager $hooks;
-    
+
     /** @var array<string, array{meta: PluginMetadata, file: string, instance: ?PluginInterface}> */
     private array $plugins = [];
-    
+
     /** @var array<string, array> 后台菜单缓存 */
     private array $adminMenus = [];
-    
+
     /** @var array<string, array> 前台菜单缓存 */
     private array $appMenus = [];
-    
+
     /** @var array<string, bool> 路由注册状态 */
     private array $routesRegistered = [];
 
@@ -50,15 +51,23 @@ class PluginManager
         }
 
         foreach ($dirs as $dir) {
-            if ($dir === '.' || $dir === '..') continue;
+            if ($dir === '.' || $dir === '..') {
+                continue;
+            }
             $full = $root . DIRECTORY_SEPARATOR . $dir;
-            if (!is_dir($full)) continue;
+            if (!is_dir($full)) {
+                continue;
+            }
 
             $mainFile = $this->locateMainFile($full);
-            if (!$mainFile) continue;
+            if (!$mainFile) {
+                continue;
+            }
 
             $meta = PluginMetadata::parseFromFile($mainFile);
-            if (!$meta) continue;
+            if (!$meta) {
+                continue;
+            }
 
             // 使用目录名作为默认 slug，若解析到 slug 则以解析值为准
             if ($meta->slug === '') {
@@ -77,7 +86,7 @@ class PluginManager
      */
     public function loadEnabled(): void
     {
-        $enabled = (array)(blog_config('plugins.enabled', [], true) ?: []);
+        $enabled = (array) (blog_config('plugins.enabled', [], true) ?: []);
         foreach ($enabled as $slug) {
             $this->enable($slug);
         }
@@ -100,8 +109,8 @@ class PluginManager
             $entry['instance'] = $instance;
         }
         // 生命周期：安装/升级检测（不强制接口，动态调用）
-        $prevVersion = (string)(blog_config("plugins.version.$slug", '', true) ?: '');
-        $curVersion  = $entry['meta']->version;
+        $prevVersion = (string) (blog_config("plugins.version.$slug", '', true) ?: '');
+        $curVersion = $entry['meta']->version;
         try {
             if ($prevVersion === '' && method_exists($entry['instance'], 'onInstall') && is_callable([$entry['instance'], 'onInstall'])) {
                 $entry['instance']->onInstall($this->hooks);
@@ -113,18 +122,18 @@ class PluginManager
         }
 
         // 权限：检测声明的权限并收集待授权
-        $declared = (array)($entry['meta']->permissions ?? []);
-        $pending = (array)(blog_config("plugins.permissions.$slug.pending", [], true) ?: []);
+        $declared = (array) ($entry['meta']->permissions ?? []);
+        $pending = (array) (blog_config("plugins.permissions.$slug.pending", [], true) ?: []);
         $existingPending = $pending; // 保存现有的待授权列表
-        
+
         if ($declared) {
             foreach ($declared as $perm) {
                 // 如果权限未被授权且不在待授权列表中，则添加到待授权列表
-                if (!$this->hasPermission($slug, (string)$perm) && !in_array((string)$perm, $pending)) {
-                    $pending[] = (string)$perm;
+                if (!$this->hasPermission($slug, (string) $perm) && !in_array((string) $perm, $pending)) {
+                    $pending[] = (string) $perm;
                 }
             }
-            
+
             // 如果待授权列表有变化，则更新配置
             if ($pending !== $existingPending) {
                 blog_config("plugins.permissions.$slug.pending", $pending, true, true, true);
@@ -141,7 +150,7 @@ class PluginManager
         } finally {
             $this->hooks->endRegistering();
         }
-        
+
         // 注册插件菜单和路由
         try {
             // 注册后台菜单
@@ -153,7 +162,7 @@ class PluginManager
                     $this->adminMenus[$slug] = $adminMenu;
                 } else {
                     // 权限未批准，添加到待授权列表
-                    $pending = (array)(blog_config("plugins.permissions.$slug.pending", [], true) ?: []);
+                    $pending = (array) (blog_config("plugins.permissions.$slug.pending", [], true) ?: []);
                     if (!in_array($menuPermission, $pending)) {
                         $pending[] = $menuPermission;
                         blog_config("plugins.permissions.$slug.pending", $pending, true, true, true);
@@ -166,7 +175,7 @@ class PluginManager
                 // 如果没有菜单，确保从缓存中移除
                 unset($this->adminMenus[$slug]);
             }
-            
+
             // 注册前台菜单
             $appMenu = $entry['instance']->registerMenu('app');
             if (!empty($appMenu)) {
@@ -176,7 +185,7 @@ class PluginManager
                     $this->appMenus[$slug] = $appMenu;
                 } else {
                     // 权限未批准，添加到待授权列表
-                    $pending = (array)(blog_config("plugins.permissions.$slug.pending", [], true) ?: []);
+                    $pending = (array) (blog_config("plugins.permissions.$slug.pending", [], true) ?: []);
                     if (!in_array($menuPermission, $pending)) {
                         $pending[] = $menuPermission;
                         blog_config("plugins.permissions.$slug.pending", $pending, true, true, true);
@@ -189,7 +198,7 @@ class PluginManager
                 // 如果没有菜单，确保从缓存中移除
                 unset($this->appMenus[$slug]);
             }
-            
+
             // 注册路由（确保只注册一次）
             if (!isset($this->routesRegistered[$slug]) || !$this->routesRegistered[$slug]) {
                 $routes = $entry['instance']->registerRoutes($slug);
@@ -198,28 +207,28 @@ class PluginManager
                         if (!isset($route['method']) || !isset($route['route']) || !isset($route['handler'])) {
                             continue;
                         }
-                        
+
                         $method = strtolower($route['method']);
                         $routePath = $route['route'];
                         $handler = $route['handler'];
                         $permission = $route['permission'] ?? '';
-                        
+
                         // 如果定义了权限，则检查权限
                         if ($permission && !$this->hasPermission($slug, $permission)) {
                             // 权限未批准，添加到待授权列表
-                            $pending = (array)(blog_config("plugins.permissions.$slug.pending", [], true) ?: []);
+                            $pending = (array) (blog_config("plugins.permissions.$slug.pending", [], true) ?: []);
                             if (!in_array($permission, $pending)) {
                                 $pending[] = $permission;
                                 blog_config("plugins.permissions.$slug.pending", $pending, true, true, true);
                                 CacheService::clearCache("blog_config_plugins.permissions.$slug*");
                             }
-                            
+
                             // 不执行原始处理器，直接返回拒绝访问响应
-                            $handler = function() use ($slug, $permission) {
+                            $handler = function () use ($slug, $permission) {
                                 return new \support\Response(403, [], 'Access denied to plugin route. Plugin: ' . $slug . ', Permission: ' . $permission);
                             };
                         }
-                        
+
                         // 注册路由
                         switch ($method) {
                             case 'get':
@@ -249,7 +258,7 @@ class PluginManager
             // 可以记录日志但不中断流程
         }
 
-        $enabled = (array)(blog_config('plugins.enabled', [], true) ?: []);
+        $enabled = (array) (blog_config('plugins.enabled', [], true) ?: []);
         if (!in_array($slug, $enabled, true)) {
             $enabled[] = $slug;
             blog_config('plugins.enabled', $enabled, true, true, true);
@@ -261,6 +270,7 @@ class PluginManager
             blog_config("plugins.version.$slug", $curVersion, true, true, true);
             CacheService::clearCache("blog_config_plugins.version.$slug*");
         }
+
         return true;
     }
 
@@ -269,34 +279,35 @@ class PluginManager
      */
     public function hasPermission(string $slug, string $permission): bool
     {
-        $granted = (array)(blog_config("plugins.permissions.$slug.granted", [], true) ?: []);
+        $granted = (array) (blog_config("plugins.permissions.$slug.granted", [], true) ?: []);
+
         return in_array($permission, $granted, true);
     }
 
     public function grantPermission(string $slug, string $permission): void
     {
-        $granted = (array)(blog_config("plugins.permissions.$slug.granted", [], true) ?: []);
+        $granted = (array) (blog_config("plugins.permissions.$slug.granted", [], true) ?: []);
         $needReRegisterMenu = false;
-        
+
         if (!in_array($permission, $granted, true)) {
             $granted[] = $permission;
             blog_config("plugins.permissions.$slug.granted", $granted, true, true, true);
             CacheService::clearCache("blog_config_plugins.permissions.$slug*");
-            
+
             // 如果是菜单权限，则需要重新注册菜单
             if (str_starts_with($permission, "plugin:{$slug}:menu:")) {
                 $needReRegisterMenu = true;
             }
         }
-        
+
         // 从待授权中移除
-        $pending = (array)(blog_config("plugins.permissions.$slug.pending", [], true) ?: []);
-        $pending = array_values(array_filter($pending, fn($p) => $p !== $permission));
+        $pending = (array) (blog_config("plugins.permissions.$slug.pending", [], true) ?: []);
+        $pending = array_values(array_filter($pending, fn ($p) => $p !== $permission));
         blog_config("plugins.permissions.$slug.pending", $pending, true, true, true);
 
         // 权限变更后重置计数器（calls/denied）
         $this->resetCounts($slug, $permission);
-        
+
         // 如果需要重新注册菜单，则重新启用插件
         if ($needReRegisterMenu) {
             $this->enable($slug);
@@ -305,8 +316,8 @@ class PluginManager
 
     public function revokePermission(string $slug, string $permission): void
     {
-        $granted = (array)(blog_config("plugins.permissions.$slug.granted", [], true) ?: []);
-        $granted = array_values(array_filter($granted, fn($p) => $p !== $permission));
+        $granted = (array) (blog_config("plugins.permissions.$slug.granted", [], true) ?: []);
+        $granted = array_values(array_filter($granted, fn ($p) => $p !== $permission));
         blog_config("plugins.permissions.$slug.granted", $granted, true, true, true);
         CacheService::clearCache("blog_config_plugins.permissions.$slug*");
 
@@ -329,17 +340,18 @@ class PluginManager
     public function getDeclaredPermissions(string $slug): array
     {
         $entry = $this->plugins[$slug] ?? null;
-        return $entry ? (array)($entry['meta']->permissions ?? []) : [];
+
+        return $entry ? (array) ($entry['meta']->permissions ?? []) : [];
     }
 
     public function getGrantedPermissions(string $slug): array
     {
-        return (array)(blog_config("plugins.permissions.$slug.granted", [], true) ?: []);
+        return (array) (blog_config("plugins.permissions.$slug.granted", [], true) ?: []);
     }
 
     public function getPendingPermissions(string $slug): array
     {
-        return (array)(blog_config("plugins.permissions.$slug.pending", [], true) ?: []);
+        return (array) (blog_config("plugins.permissions.$slug.pending", [], true) ?: []);
     }
 
     /**
@@ -353,9 +365,10 @@ class PluginManager
             $this->keyFor($slug, $permission, 'denied'),
         ];
         $vals = $r->mGet($keys);
+
         return [
-            'calls' => (int)($vals[0] ?? 0),
-            'denied' => (int)($vals[1] ?? 0),
+            'calls' => (int) ($vals[0] ?? 0),
+            'denied' => (int) ($vals[1] ?? 0),
         ];
     }
 
@@ -365,14 +378,14 @@ class PluginManager
     public function grantPermissions(string $slug, array $permissions): void
     {
         foreach ($permissions as $perm) {
-            $this->grantPermission($slug, (string)$perm);
+            $this->grantPermission($slug, (string) $perm);
         }
     }
 
     public function revokePermissions(string $slug, array $permissions): void
     {
         foreach ($permissions as $perm) {
-            $this->revokePermission($slug, (string)$perm);
+            $this->revokePermission($slug, (string) $perm);
         }
     }
 
@@ -387,13 +400,30 @@ class PluginManager
             // 回退：使用内存式简易对象（Redis不可用时，统计不持久）
             static $dummy = null;
             if ($dummy === null) {
-                $dummy = new class {
+                $dummy = new class () {
                     private array $store = [];
-                    public function incrBy($key, $by) { $this->store[$key] = ($this->store[$key] ?? 0) + $by; return $this->store[$key]; }
-                    public function mGet($keys) { return array_map(fn($k) => $this->store[$k] ?? null, $keys); }
-                    public function del($keys) { foreach ((array)$keys as $k) { unset($this->store[$k]); } }
+
+                    public function incrBy($key, $by)
+                    {
+                        $this->store[$key] = ($this->store[$key] ?? 0) + $by;
+
+                        return $this->store[$key];
+                    }
+
+                    public function mGet($keys)
+                    {
+                        return array_map(fn ($k) => $this->store[$k] ?? null, $keys);
+                    }
+
+                    public function del($keys)
+                    {
+                        foreach ((array) $keys as $k) {
+                            unset($this->store[$k]);
+                        }
+                    }
                 };
             }
+
             return $dummy;
         }
     }
@@ -408,7 +438,7 @@ class PluginManager
         $r = $this->redis();
         $now = time();
         $hourKey = $this->keyFor($slug, $permission, 'calls') . ':hour:' . date('YmdH', $now);
-        $dayKey  = $this->keyFor($slug, $permission, 'calls') . ':day:'  . date('Ymd', $now);
+        $dayKey = $this->keyFor($slug, $permission, 'calls') . ':day:' . date('Ymd', $now);
         $r->incrBy($hourKey, 1);
         $r->incrBy($dayKey, 1);
         if (method_exists($r, 'expire')) {
@@ -422,7 +452,7 @@ class PluginManager
         $r = $this->redis();
         $now = time();
         $hourKey = $this->keyFor($slug, $permission, 'denied') . ':hour:' . date('YmdH', $now);
-        $dayKey  = $this->keyFor($slug, $permission, 'denied') . ':day:'  . date('Ymd', $now);
+        $dayKey = $this->keyFor($slug, $permission, 'denied') . ':day:' . date('Ymd', $now);
         $r->incrBy($hourKey, 1);
         $r->incrBy($dayKey, 1);
         if (method_exists($r, 'expire')) {
@@ -438,22 +468,25 @@ class PluginManager
     {
         $r = $this->redis();
         $now = time();
-        $calls24 = 0; $denied24 = 0;
+        $calls24 = 0;
+        $denied24 = 0;
         for ($h = 0; $h < 24; $h++) {
             $ts = $now - $h * 3600;
             $hk = $this->keyFor($slug, $permission, 'calls') . ':hour:' . date('YmdH', $ts);
             $dk = $this->keyFor($slug, $permission, 'denied') . ':hour:' . date('YmdH', $ts);
-            $calls24 += (int)($r->mGet([$hk])[0] ?? 0);
-            $denied24 += (int)($r->mGet([$dk])[0] ?? 0);
+            $calls24 += (int) ($r->mGet([$hk])[0] ?? 0);
+            $denied24 += (int) ($r->mGet([$dk])[0] ?? 0);
         }
-        $calls7d = 0; $denied7d = 0;
+        $calls7d = 0;
+        $denied7d = 0;
         for ($d = 0; $d < 7; $d++) {
             $ts = $now - $d * 86400;
             $hk = $this->keyFor($slug, $permission, 'calls') . ':day:' . date('Ymd', $ts);
             $dk = $this->keyFor($slug, $permission, 'denied') . ':day:' . date('Ymd', $ts);
-            $calls7d += (int)($r->mGet([$hk])[0] ?? 0);
-            $denied7d += (int)($r->mGet([$dk])[0] ?? 0);
+            $calls7d += (int) ($r->mGet([$hk])[0] ?? 0);
+            $denied7d += (int) ($r->mGet([$dk])[0] ?? 0);
         }
+
         return [
             'calls_24h' => $calls24,
             'denied_24h' => $denied24,
@@ -465,16 +498,18 @@ class PluginManager
     private function incCall(string $slug, string $permission): int
     {
         $r = $this->redis();
-        $v = (int)$r->incrBy($this->keyFor($slug, $permission, 'calls'), 1);
+        $v = (int) $r->incrBy($this->keyFor($slug, $permission, 'calls'), 1);
         $this->incCallWindow($slug, $permission);
+
         return $v;
     }
 
     private function incDenied(string $slug, string $permission): int
     {
         $r = $this->redis();
-        $v = (int)$r->incrBy($this->keyFor($slug, $permission, 'denied'), 1);
+        $v = (int) $r->incrBy($this->keyFor($slug, $permission, 'denied'), 1);
         $this->incDeniedWindow($slug, $permission);
+
         return $v;
     }
 
@@ -540,22 +575,22 @@ class PluginManager
      */
     private function hasWildcardPermission(string $slug, string $permission): bool
     {
-        $granted = (array)(blog_config("plugins.permissions.$slug.granted", [], true) ?: []);
-        
+        $granted = (array) (blog_config("plugins.permissions.$slug.granted", [], true) ?: []);
+
         // 检查是否有通配符权限
         foreach ($granted as $grantedPerm) {
             // 支持 :* 和 .* 两种通配符形式
             if (str_ends_with($grantedPerm, ':*') || str_ends_with($grantedPerm, '.*')) {
                 $prefix = rtrim($grantedPerm, ':*.*');
                 // 确保精确匹配前缀，避免部分匹配问题
-                if (str_starts_with($permission, $prefix) && 
-                    (strlen($permission) == strlen($prefix) || 
+                if (str_starts_with($permission, $prefix) &&
+                    (strlen($permission) == strlen($prefix) ||
                      $permission[strlen($prefix)] == ':')) {
                     return true;
                 }
             }
         }
-        
+
         return false;
     }
 
@@ -576,18 +611,18 @@ class PluginManager
             }
         }
 
-        $enabled = (array)(blog_config('plugins.enabled', [], true) ?: []);
-        $enabled = array_values(array_filter($enabled, fn($s) => $s !== $slug));
+        $enabled = (array) (blog_config('plugins.enabled', [], true) ?: []);
+        $enabled = array_values(array_filter($enabled, fn ($s) => $s !== $slug));
         blog_config('plugins.enabled', $enabled, true, true, true);
         CacheService::clearCache('blog_config_plugins.enabled*');
-        
+
         // 清除插件菜单缓存
         unset($this->adminMenus[$slug]);
         unset($this->appMenus[$slug]);
-        
+
         // 重置路由注册状态
         $this->routesRegistered[$slug] = false;
-        
+
         return true;
     }
 
@@ -609,6 +644,7 @@ class PluginManager
         }
         // 停用并持久化
         $this->disable($slug);
+
         return true;
     }
 
@@ -622,6 +658,7 @@ class PluginManager
         foreach ($this->plugins as $slug => $entry) {
             $out[$slug] = $entry['meta'];
         }
+
         return $out;
     }
 
@@ -645,6 +682,7 @@ class PluginManager
                 }
             }
         }
+
         return null;
     }
 
@@ -679,7 +717,7 @@ class PluginManager
 
         return null;
     }
-    
+
     /**
      * 获取所有插件注册的后台菜单
      *
@@ -689,7 +727,7 @@ class PluginManager
     {
         return $this->adminMenus;
     }
-    
+
     /**
      * 获取所有插件注册的前台菜单
      *
@@ -699,7 +737,7 @@ class PluginManager
     {
         return $this->appMenus;
     }
-    
+
     /**
      * 强制重新注册插件路由（用于中间件）
      */
@@ -708,10 +746,10 @@ class PluginManager
         if (!isset($this->plugins[$slug])) {
             return false;
         }
-        
+
         // 重置路由注册状态
         $this->routesRegistered[$slug] = false;
-        
+
         // 重新启用插件以注册路由
         return $this->enable($slug);
     }

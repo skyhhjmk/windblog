@@ -3,7 +3,6 @@
 namespace app\service;
 
 use app\model\Page;
-use support\Log;
 use Throwable;
 
 /**
@@ -77,7 +76,7 @@ class PageService
             'created_at' => $page->created_at,
             'updated_at' => $page->updated_at,
             'meta_title' => $page->title . ' - ' . blog_config('title', 'WindBlog', true),
-            'meta_description' => self::generateMetaDescription($page->content)
+            'meta_description' => self::generateMetaDescription($page->content),
         ];
     }
 
@@ -90,6 +89,7 @@ class PageService
     protected static function generateMetaDescription(string $content): string
     {
         $plainText = strip_tags($content);
+
         return mb_substr($plainText, 0, 160, 'UTF-8') . '...';
     }
 
@@ -104,7 +104,7 @@ class PageService
         $templateData = [
             'page_title' => $pageData['meta_title'],
             'page' => $pageData,
-            'meta_description' => $pageData['meta_description']
+            'meta_description' => $pageData['meta_description'],
         ];
 
         // 使用页面指定的模板，如果没有则使用默认模板
@@ -123,7 +123,7 @@ class PageService
     public static function getAndRenderPage(string $keyword): ?string
     {
         $pageData = self::getPageByKeyword($keyword);
-        
+
         if (!$pageData) {
             return null;
         }
@@ -141,7 +141,7 @@ class PageService
     public static function getAndRenderPageById(int $id): ?string
     {
         $pageData = self::getPageById($id);
-        
+
         if (!$pageData) {
             return null;
         }

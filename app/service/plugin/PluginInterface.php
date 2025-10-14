@@ -5,7 +5,7 @@ namespace app\service\plugin;
 /**
  * 插件接口（要求：必须实现 activate / deactivate / uninstall）
  * 插件可在 activate/deactivate 内注册/移除钩子或执行初始化/清理逻辑
- * 
+ *
  * 可选方法（插件可选择实现）：
  * - onInstall(HookManager $hooks): void - 插件首次安装时调用
  * - onUpgrade(string $prevVersion, string $curVersion, HookManager $hooks): void - 插件升级时调用
@@ -26,13 +26,13 @@ interface PluginInterface
      * 插件卸载（进行彻底清理，通常删除自身持久化数据）
      */
     public function uninstall(HookManager $hooks): void;
-    
+
     /**
      * 注册插件菜单
-     * 
+     *
      * @param string $type 菜单类型: 'admin' 后台, 'app' 前台
      * @return array 菜单配置数组
-     * 
+     *
      * 示例返回值:
      * [
      *     [
@@ -54,13 +54,13 @@ interface PluginInterface
      * ]
      */
     public function registerMenu(string $type): array;
-    
+
     /**
      * 注册插件路由
-     * 
+     *
      * @param string $pluginSlug 插件标识
      * @return array 路由配置数组
-     * 
+     *
      * 示例返回值:
      * [
      *     [

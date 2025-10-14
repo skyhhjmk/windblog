@@ -3,21 +3,17 @@
 namespace app\service;
 
 use app\model\Post;
-use app\service\PaginationService;
 use Illuminate\Support\Collection;
-use League\CommonMark\CommonMarkConverter;
 use League\CommonMark\Environment\Environment;
 use League\CommonMark\Exception\CommonMarkException;
-use League\CommonMark\Extension\CommonMark\CommonMarkCoreExtension;
 use League\CommonMark\Extension\Autolink\AutolinkExtension;
+use League\CommonMark\Extension\CommonMark\CommonMarkCoreExtension;
 use League\CommonMark\Extension\Strikethrough\StrikethroughExtension;
 use League\CommonMark\Extension\Table\TableExtension;
 use League\CommonMark\Extension\TaskList\TaskListExtension;
 use League\CommonMark\MarkdownConverter;
 use support\Log;
-use support\Redis;
 use Throwable;
-use app\service\ElasticService;
 
 /**
  * 博客服务类
@@ -58,10 +54,11 @@ class BlogService
     public static function getPostsPerPage(): int
     {
         $val = self::getConfig('posts_per_page', 10);
-        $per = is_numeric($val) ? (int)$val : 10;
+        $per = is_numeric($val) ? (int) $val : 10;
         if ($per <= 0) {
             $per = 10;
         }
+
         return $per;
     }
 
@@ -77,7 +74,7 @@ class BlogService
     public static function getBlogPosts(int $page = 1, array $filters = []): array
     {
         $posts_per_page = self::getPostsPerPage();
-        
+
         // 生成缓存键，包含筛选条件
         $filter_key = empty($filters) ? '' : '_' . md5(serialize($filters));
         $cache_key = 'blog_posts_page_' . $page . '_per_' . $posts_per_page . $filter_key;
@@ -99,7 +96,7 @@ class BlogService
                 switch ($key) {
                     case 'search':
                         if (!empty($value)) {
-                            $query->where(function($q) use ($value) {
+                            $query->where(function ($q) use ($value) {
                                 $q->where('title', 'like', "%{$value}%")
                                   ->orWhere('content', 'like', "%{$value}%")
                                   ->orWhere('excerpt', 'like', "%{$value}%");
@@ -109,31 +106,31 @@ class BlogService
                     case 'category':
                         if (!empty($value)) {
                             // 支持按分类ID或slug过滤（多对多关系）
-                            $query->whereHas('categories', function($q) use ($value) {
+                            $query->whereHas('categories', function ($q) use ($value) {
                                 if (is_numeric($value)) {
-                                    $q->where('categories.id', (int)$value);
+                                    $q->where('categories.id', (int) $value);
                                 } else {
-                                    $q->where('categories.slug', (string)$value)
-                                      ->orWhere('categories.name', (string)$value);
+                                    $q->where('categories.slug', (string) $value)
+                                      ->orWhere('categories.name', (string) $value);
                                 }
                             });
                         }
                         break;
                     case 'tag':
                         if (!empty($value)) {
-                            $query->whereHas('tags', function($q) use ($value) {
+                            $query->whereHas('tags', function ($q) use ($value) {
                                 if (is_numeric($value)) {
-                                    $q->where('tags.id', (int)$value);
+                                    $q->where('tags.id', (int) $value);
                                 } else {
-                                    $q->where('tags.slug', (string)$value)
-                                      ->orWhere('tags.name', (string)$value);
+                                    $q->where('tags.slug', (string) $value)
+                                      ->orWhere('tags.name', (string) $value);
                                 }
                             });
                         }
                         break;
                     case 'author':
                         if (!empty($value)) {
-                            $query->whereHas('author', function($q) use ($value) {
+                            $query->whereHas('author', function ($q) use ($value) {
                                 $q->where('name', $value);
                             });
                         }
@@ -144,13 +141,13 @@ class BlogService
 
         // 如果开启了 ES 并且存在搜索关键字，则优先走 ES
         $esSearch = null;
-        if (!empty($filters['search']) && (bool)self::getConfig('es.enabled', false)) {
-            $esSearch = ElasticService::searchPosts((string)$filters['search'], $page, $posts_per_page);
+        if (!empty($filters['search']) && (bool) self::getConfig('es.enabled', false)) {
+            $esSearch = ElasticService::searchPosts((string) $filters['search'], $page, $posts_per_page);
         }
 
         if (is_array($esSearch) && ($esSearch['used'] ?? false) && !empty($esSearch['ids'])) {
             // 使用 ES 返回的顺序与总数
-            $total_count = (int)$esSearch['total'];
+            $total_count = (int) $esSearch['total'];
             $ids = $esSearch['ids'];
 
             // 拉取文章并根据 ES 命中顺序排序
@@ -160,7 +157,8 @@ class BlogService
 
             $orderMap = array_flip($ids);
             $posts = $posts->sortBy(function ($post) use ($orderMap) {
-                $pid = (int)$post->id;
+                $pid = (int) $post->id;
+
                 return $orderMap[$pid] ?? PHP_INT_MAX;
             })->values();
 
@@ -216,7 +214,7 @@ class BlogService
             ];
         } else {
             // ES 已启用但搜索未使用（回退到数据库），提供降级信号供前端提示
-            if (!empty($filters['search']) && (bool)self::getConfig('es.enabled', false)) {
+            if (!empty($filters['search']) && (bool) self::getConfig('es.enabled', false)) {
                 $esMeta = [
                     'signals' => ['degraded' => true],
                 ];
@@ -264,7 +262,7 @@ class BlogService
                         'use_asterisk' => true,
                         'use_underscore' => true,
                         'unordered_list_markers' => ['-', '+', '*'],
-                    ]
+                    ],
                 ];
 
                 $environment = new Environment($config);
@@ -277,7 +275,7 @@ class BlogService
                 $converter = new MarkdownConverter($environment);
 
                 $html = $converter->convert($post->content);
-                $excerpt = mb_substr(strip_tags((string)$html), 0, 200, 'UTF-8');
+                $excerpt = mb_substr(strip_tags((string) $html), 0, 200, 'UTF-8');
 
                 // 自动生成文章摘要并保存
                 $post->excerpt = $excerpt;
@@ -301,6 +299,7 @@ class BlogService
             if (is_array($cached)) {
                 return $cached;
             }
+
             return false;
         } catch (Throwable $e) {
             // 缓存获取失败时静默返回false

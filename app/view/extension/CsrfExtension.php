@@ -1,9 +1,9 @@
 <?php
+
 namespace app\view\extension;
 
 use app\service\CSRFHelper;
 use Exception;
-use support\Request;
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFunction;
 

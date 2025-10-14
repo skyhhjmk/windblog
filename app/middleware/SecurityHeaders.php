@@ -2,9 +2,9 @@
 
 namespace app\middleware;
 
-use Webman\MiddlewareInterface;
-use Webman\Http\Response;
 use Webman\Http\Request;
+use Webman\Http\Response;
+use Webman\MiddlewareInterface;
 
 /**
  * 安全响应头中间件
@@ -49,7 +49,7 @@ class SecurityHeaders implements MiddlewareInterface
         ]);
         if (!empty($permissionsPolicy)) {
             $policyString = implode(', ', array_map(
-                fn($key, $value) => "$key=$value",
+                fn ($key, $value) => "$key=$value",
                 array_keys($permissionsPolicy),
                 $permissionsPolicy
             ));
@@ -62,7 +62,7 @@ class SecurityHeaders implements MiddlewareInterface
         if ($csp) {
             if (is_array($csp)) {
                 $cspString = implode('; ', array_map(
-                    fn($key, $value) => "$key $value",
+                    fn ($key, $value) => "$key $value",
                     array_keys($csp),
                     $csp
                 ));

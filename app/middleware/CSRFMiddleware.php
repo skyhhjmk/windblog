@@ -8,9 +8,9 @@ use ReflectionClass;
 use ReflectionMethod;
 use support\view\Raw;
 use support\view\Twig;
-use Webman\MiddlewareInterface;
-use Webman\Http\Response;
 use Webman\Http\Request;
+use Webman\Http\Response;
+use Webman\MiddlewareInterface;
 
 /**
  * CSRF验证中间件
@@ -143,21 +143,33 @@ class CSRFMiddleware implements MiddlewareInterface
                     switch ($responseType ?? 'json') {
                         default:
                         case 'json':
-                            return response(json_encode($responseBody ?? 'CSRF Token validate failed.'),
-                                $responseCode ?? 403, ['Content-Type' => 'application/json; charset=utf-8']);
+                            return response(
+                                json_encode($responseBody ?? 'CSRF Token validate failed.'),
+                                $responseCode ?? 403,
+                                ['Content-Type' => 'application/json; charset=utf-8']
+                            );
                             break;
                         case 'view':
                             [$template, $vars, $app, $plugin] = template_inputs($responseBody ?? 'error/403', $args ?? [], null, null);
                             $handler = \config($plugin ? "plugin.$plugin.view.handler" : 'view.handler');
+
                             return new Response(200, [], $handler::render($template, $vars, $app, $plugin));
                             break;
                         case 'raw_view':
                             return new Response(200, [], Raw::render(...template_inputs(
-                                $responseBody ?? 'error/403', $args ?? [], null, null)));
+                                $responseBody ?? 'error/403',
+                                $args ?? [],
+                                null,
+                                null
+                            )));
                             break;
                         case 'twig_view':
                             return new Response(200, [], Twig::render(...template_inputs(
-                                $responseBody ?? 'error/403', $args ?? [], null, null)));
+                                $responseBody ?? 'error/403',
+                                $args ?? [],
+                                null,
+                                null
+                            )));
                             break;
                         case 'text':
                             return new Response(403, ['Content-Type' => 'text/plain; charset=utf-8']);
@@ -171,6 +183,7 @@ class CSRFMiddleware implements MiddlewareInterface
                     if (is_array($annotation->if_failed_config) && count($annotation->if_failed_config) === 2) {
                         return call_user_func($annotation->if_failed_config, $request, $annotation);
                     }
+
                     return call_user_func($annotation->if_failed_config, $request);
                 }
 
@@ -212,7 +225,7 @@ class CSRFMiddleware implements MiddlewareInterface
     {
         $origin = $request->header('Origin');
         $host = $request->header('Host');
-        
+
         // 如果没有Origin头，不是跨域请求
         if (!$origin) {
             return false;

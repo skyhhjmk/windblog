@@ -21,6 +21,7 @@ class Tag
     public static function get($gateway, $name)
     {
         $config = Sms::getConfig();
+
         return $config['gateways'][$gateway]['tags'][$name] ?? null;
     }
 
@@ -68,5 +69,4 @@ class Tag
         $option->value = json_encode($config, JSON_UNESCAPED_UNICODE);
         $option->save();
     }
-
 }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of webman.
  *
@@ -13,8 +14,8 @@
  */
 
 use Webman\Session\FileSessionHandler;
-use Webman\Session\RedisSessionHandler;
 use Webman\Session\RedisClusterSessionHandler;
+use Webman\Session\RedisSessionHandler;
 
 return [
     // FileSessionHandler::class 或者 RedisSessionHandler::class 或者 RedisClusterSessionHandler::class
@@ -45,7 +46,7 @@ return [
             'timeout' => 2,
             'auth' => '',
             'prefix' => 'redis_session_',
-        ]
+        ],
 
     ],
 

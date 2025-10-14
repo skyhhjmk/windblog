@@ -7,7 +7,6 @@ use app\model\Post;
 use app\model\Setting;
 use support\Log;
 use Throwable;
-use think\Collection;
 
 /**
  * 友链互联服务
@@ -44,30 +43,31 @@ class LinkConnectService
     public static function getDefaultConfig(): array
     {
         // 从系统配置填充默认值，保证页面初次可见合理默认
-        $siteUrl = (string)blog_config('site_url', '', true);
+        $siteUrl = (string) blog_config('site_url', '', true);
         $domain = parse_url($siteUrl, PHP_URL_HOST) ?: '';
+
         return [
             'enabled' => true,
             'protocol_name' => 'wind_connect',
             'version' => '1.0.0',
             'site_info' => [
-                'name' => (string)blog_config('title', 'WindBlog', true),
+                'name' => (string) blog_config('title', 'WindBlog', true),
                 'url' => $siteUrl,
                 'domain' => $domain,
-                'logo' => (string)blog_config('favicon', '', true),
-                'banner' => (string)blog_config('banner', '', true),
-                'description' => (string)blog_config('description', '', true),
+                'logo' => (string) blog_config('favicon', '', true),
+                'banner' => (string) blog_config('banner', '', true),
+                'description' => (string) blog_config('description', '', true),
             ],
             'link_exchange' => [
-                'enabled' => (bool)blog_config('link_exchange_enabled', true, true),
-                'requirements' => (string)blog_config('link_exchange_requirements', '网站内容健康', true),
-                'contact_email' => (string)blog_config('admin_email', '', true),
+                'enabled' => (bool) blog_config('link_exchange_enabled', true, true),
+                'requirements' => (string) blog_config('link_exchange_requirements', '网站内容健康', true),
+                'contact_email' => (string) blog_config('admin_email', '', true),
             ],
             'security' => [
                 'enable_checksum' => true,
                 'checksum_algorithm' => 'sha512',
                 'enable_token' => false,
-                'token' => (string)blog_config('wind_connect_token', '', true),
+                'token' => (string) blog_config('wind_connect_token', '', true),
             ],
         ];
     }
@@ -81,8 +81,11 @@ class LinkConnectService
     public static function listTokens(): array
     {
         $row = \app\model\Setting::where('key', 'link_connect_tokens')->first();
-        if (!$row) return [];
-        $val = json_decode((string)$row->value, true);
+        if (!$row) {
+            return [];
+        }
+        $val = json_decode((string) $row->value, true);
+
         return is_array($val) ? $val : [];
     }
 
@@ -94,7 +97,8 @@ class LinkConnectService
             $row->key = 'link_connect_tokens';
         }
         $row->value = json_encode(array_values($tokens), JSON_UNESCAPED_UNICODE);
-        return (bool)$row->save();
+
+        return (bool) $row->save();
     }
 
     public static function generateToken(): array
@@ -110,6 +114,7 @@ class LinkConnectService
         ];
         array_unshift($tokens, $record); // 最近生成的在最前
         self::saveTokens($tokens);
+
         return $record;
     }
 
@@ -124,6 +129,7 @@ class LinkConnectService
                 break;
             }
         }
+
         return $changed ? self::saveTokens($tokens) : true;
     }
 
@@ -134,6 +140,7 @@ class LinkConnectService
                 return $t['token'];
             }
         }
+
         return null;
     }
 
@@ -150,6 +157,7 @@ class LinkConnectService
                 break;
             }
         }
+
         return $changed ? self::saveTokens($tokens) : false;
     }
 
@@ -170,11 +178,13 @@ class LinkConnectService
 
             if ($existing) {
                 $existing->value = $configJson;
+
                 return $existing->save();
             } else {
                 $setting = new Setting();
                 $setting->key = 'link_connect_config';
                 $setting->value = $configJson;
+
                 return $setting->save();
             }
         } catch (\Exception $e) {
@@ -202,14 +212,14 @@ class LinkConnectService
 
         foreach ($links as $link) {
             $formattedLinks[] = [
-                'id' => (string)$link['id'],
+                'id' => (string) $link['id'],
                 'name' => $link['name'],
                 'url' => $link['url'],
                 'icon' => $link['icon'],
                 'description' => $link['description'],
                 'status' => $link['status'],
                 'sort_order' => $link['sort_order'],
-                'created_at' => $link['created_at']
+                'created_at' => $link['created_at'],
             ];
         }
 
@@ -222,17 +232,17 @@ class LinkConnectService
             'statistics' => [
                 'article_count' => 0, // 实际应用中可以统计文章数量
                 'comment_count' => 0, // 实际应用中可以统计评论数量
-                'link_count' => count($formattedLinks)
+                'link_count' => count($formattedLinks),
             ],
             'apis' => [
                 'link' => [
                     'url' => $siteInfo['url'] . '/api/link',
-                    'methods' => ['GET']
-                ]
+                    'methods' => ['GET'],
+                ],
             ],
             'link_exchange' => $config['link_exchange'],
             'links' => $formattedLinks,
-            'checksum' => '' // 留空，实际使用时会计算
+            'checksum' => '', // 留空，实际使用时会计算
         ];
 
         // 计算校验和
@@ -272,7 +282,7 @@ class LinkConnectService
             $data = json_decode($response, true);
 
             if (json_last_error() !== JSON_ERROR_NONE) {
-                return ['success' => false, 'message' => "无效的JSON响应"];
+                return ['success' => false, 'message' => '无效的JSON响应'];
             }
 
             // 验证数据结构
@@ -288,8 +298,8 @@ class LinkConnectService
             if (!empty($missingFields)) {
                 return [
                     'success' => false,
-                    'message' => "缺少必要字段：" . implode(', ', $missingFields),
-                    'data' => $data
+                    'message' => '缺少必要字段：' . implode(', ', $missingFields),
+                    'data' => $data,
                 ];
             }
 
@@ -302,27 +312,27 @@ class LinkConnectService
                 if ($calculatedChecksum !== $data['checksum']) {
                     return [
                         'success' => false,
-                        'message' => "校验和验证失败",
+                        'message' => '校验和验证失败',
                         'data' => $data,
-                        'checksum_valid' => false
+                        'checksum_valid' => false,
                     ];
                 }
 
                 return [
                     'success' => true,
-                    'message' => "连接测试成功，校验和验证通过",
+                    'message' => '连接测试成功，校验和验证通过',
                     'data' => $data,
-                    'checksum_valid' => true
+                    'checksum_valid' => true,
                 ];
             }
 
             return [
                 'success' => true,
-                'message' => "连接测试成功",
-                'data' => $data
+                'message' => '连接测试成功',
+                'data' => $data,
             ];
         } catch (\Exception $e) {
-            return ['success' => false, 'message' => "测试失败：" . $e->getMessage()];
+            return ['success' => false, 'message' => '测试失败：' . $e->getMessage()];
         }
     }
 
@@ -341,29 +351,30 @@ class LinkConnectService
         // 记录接收到的请求参数
         $debugId = uniqid('link_apply_', true);
         Log::debug("友链申请开始 [{$debugId}] - 参数: " . json_encode([
-            'peerApi' => substr((string)($input['peer_api'] ?? ''), 0, 50) . (strlen((string)($input['peer_api'] ?? '')) > 50 ? '...' : ''),
-            'name' => (string)($input['name'] ?? ''),
-            'url' => (string)($input['url'] ?? ''),
-            'icon' => substr((string)($input['icon'] ?? ''), 0, 50) . (strlen((string)($input['icon'] ?? '')) > 50 ? '...' : ''),
-            'hasEmail' => !empty((string)($input['email'] ?? ''))
+            'peerApi' => substr((string) ($input['peer_api'] ?? ''), 0, 50) . (strlen((string) ($input['peer_api'] ?? '')) > 50 ? '...' : ''),
+            'name' => (string) ($input['name'] ?? ''),
+            'url' => (string) ($input['url'] ?? ''),
+            'icon' => substr((string) ($input['icon'] ?? ''), 0, 50) . (strlen((string) ($input['icon'] ?? '')) > 50 ? '...' : ''),
+            'hasEmail' => !empty((string) ($input['email'] ?? '')),
         ]));
-        
+
         // 获取配置
         $config = self::getConfig();
 
         // 检查互联协议是否启用
         if (!$config['enabled']) {
             Log::debug("友链申请失败 [{$debugId}] - 原因: 互联协议未启用");
+
             return ['code' => 1, 'msg' => '互联协议未启用'];
         }
 
-        $peerApi = (string)($input['peer_api'] ?? '');
-        $name = (string)($input['name'] ?? '');
-        $url = (string)($input['url'] ?? '');
-        $icon = (string)($input['icon'] ?? '');
-        $description = (string)($input['description'] ?? '');
-        $email = (string)($input['email'] ?? '');
-        
+        $peerApi = (string) ($input['peer_api'] ?? '');
+        $name = (string) ($input['name'] ?? '');
+        $url = (string) ($input['url'] ?? '');
+        $icon = (string) ($input['icon'] ?? '');
+        $description = (string) ($input['description'] ?? '');
+        $email = (string) ($input['email'] ?? '');
+
         $peerApi = trim($peerApi);
         $name = trim($name);
         $url = trim($url);
@@ -374,23 +385,26 @@ class LinkConnectService
         // 参数验证
         if (!$peerApi || !$name || !$url) {
             Log::debug("友链申请失败 [{$debugId}] - 原因: 参数不完整");
+
             return ['code' => 1, 'msg' => '参数不完整'];
         }
-        
+
         if (!self::validateUrl($url)) {
             Log::debug("友链申请失败 [{$debugId}] - 原因: 无效URL ({$url})");
+
             return ['code' => 1, 'msg' => '无效URL'];
         }
-        
+
         Log::debug("友链申请 [{$debugId}] - 参数验证通过");
 
         // 去重检查
         $existingLink = Link::where('url', $url)->first();
         if ($existingLink) {
             Log::debug("友链申请失败 [{$debugId}] - 原因: 该链接已存在或审核中 (ID: {$existingLink->id})");
+
             return ['code' => 1, 'msg' => '该链接已存在或审核中'];
         }
-        
+
         Log::debug("友链申请 [{$debugId}] - 去重检查通过，链接不存在");
 
         try {
@@ -403,7 +417,7 @@ class LinkConnectService
                 'email' => $email,
                 'peer_api' => $peerApi,
             ]);
-            
+
             $link->save();
             Log::debug("友链申请 [{$debugId}] - 本地pending记录创建成功 (ID: {$link->id})");
 
@@ -416,23 +430,25 @@ class LinkConnectService
             $res = self::httpPostJson($peerApi, $payload);
             $endTime = microtime(true);
             $responseTime = round(($endTime - $startTime) * 1000, 2);
-            
-            Log::debug("友链申请 [{$debugId}] - 对外请求完成 (耗时: {$responseTime}ms, 成功: " . ($res['success'] ? '是' : '否') . ", 响应: " . json_encode([
+
+            Log::debug("友链申请 [{$debugId}] - 对外请求完成 (耗时: {$responseTime}ms, 成功: " . ($res['success'] ? '是' : '否') . ', 响应: ' . json_encode([
                 'code' => $res['code'] ?? null,
                 'hasData' => isset($res['data']),
-                'error' => $res['error'] ?? null
+                'error' => $res['error'] ?? null,
             ]));
 
             // 根据请求结果返回相应消息
             if (!$res['success']) {
                 Log::debug("友链申请 [{$debugId}] - 完成，状态: 本地记录成功，对方站点连接失败");
+
                 return ['code' => 0, 'msg' => '友链申请已提交，请等待对方站点审核'];
             }
-            
+
             Log::debug("友链申请 [{$debugId}] - 完成，状态: 成功发送到对方站点");
+
             return ['code' => 0, 'msg' => '申请已发送，对方将自动创建等待记录'];
         } catch (\Exception $e) {
-            Log::error("友链申请异常 [{$debugId}] - 错误: " . $e->getMessage() . ", 堆栈: " . $e->getTraceAsString());
+            Log::error("友链申请异常 [{$debugId}] - 错误: " . $e->getMessage() . ', 堆栈: ' . $e->getTraceAsString());
             throw $e;
         }
     }
@@ -459,8 +475,8 @@ class LinkConnectService
             return ['code' => 1, 'msg' => '互联协议未启用'];
         }
 
-        $incoming = (string)($headers['X-WIND-CONNECT-TOKEN'] ?? '');
-        $expected = (string)blog_config('wind_connect_token', '', true);
+        $incoming = (string) ($headers['X-WIND-CONNECT-TOKEN'] ?? '');
+        $expected = (string) blog_config('wind_connect_token', '', true);
 
         if (empty($expected) || $incoming !== $expected) {
             return ['code' => 1, 'msg' => '鉴权失败'];
@@ -479,7 +495,7 @@ class LinkConnectService
             } else {
                 return ['code' => 1, 'msg' => '缺少校验和'];
             }
-        } else if (isset($payload['checksum'])) {
+        } elseif (isset($payload['checksum'])) {
             // 配置未启用校验和，但收到了校验和，仍然进行验证
             if (!self::verifyChecksum($payload)) {
                 return ['code' => 1, 'msg' => '校验和验证失败'];
@@ -489,7 +505,7 @@ class LinkConnectService
         $fromSite = $payload['site'] ?? [];
         $fromLink = $payload['link'] ?? [];
 
-        $peerUrl = (string)($fromLink['url'] ?? '');
+        $peerUrl = (string) ($fromLink['url'] ?? '');
         if (!self::validateUrl($peerUrl)) {
             return ['code' => 1, 'msg' => '无效对方站点URL'];
         }
@@ -516,7 +532,7 @@ class LinkConnectService
             'domain' => parse_url(blog_config('site_url', '', true), PHP_URL_HOST) ?: '',
             'logo' => blog_config('favicon', '', true),
             'banner' => blog_config('banner', '', true),
-            'description' => blog_config('description', '', true)
+            'description' => blog_config('description', '', true),
         ];
 
         // 获取统计数据
@@ -524,7 +540,7 @@ class LinkConnectService
             'article_count' => Post::where('status', 'published')->count(),
             'link_count' => Link::where('status', true)->count(),
             'total_visits' => blog_config('total_visits', 0, true),
-            'start_date' => blog_config('start_date', date('Y-m-d'), true)
+            'start_date' => blog_config('start_date', date('Y-m-d'), true),
         ];
 
         // API地址信息
@@ -532,14 +548,14 @@ class LinkConnectService
             'wind_connect' => blog_config('site_url', '', true) . '/api/wind-connect',
             'latest_articles' => blog_config('site_url', '', true) . '/api/articles/latest',
             'all_links' => blog_config('site_url', '', true) . '/api/links',
-            'rss_feed' => blog_config('site_url', '', true) . '/feed.xml'
+            'rss_feed' => blog_config('site_url', '', true) . '/feed.xml',
         ];
 
         // 友链交换配置
         $linkExchange = [
-            'enabled' => (bool)blog_config('link_exchange_enabled', true, true),
+            'enabled' => (bool) blog_config('link_exchange_enabled', true, true),
             'requirements' => blog_config('link_exchange_requirements', '网站内容健康', true),
-            'contact_email' => blog_config('admin_email', '', true)
+            'contact_email' => blog_config('admin_email', '', true),
         ];
 
         // 构建基本载荷
@@ -557,8 +573,8 @@ class LinkConnectService
                 'url' => blog_config('site_url', '', true),
                 'icon' => blog_config('favicon', '', true),
                 'description' => blog_config('description', '', true),
-                'email' => blog_config('admin_email', '', true)
-            ]
+                'email' => blog_config('admin_email', '', true),
+            ],
         ];
 
         // 计算并添加SHA512校验和用于防伪
@@ -577,22 +593,23 @@ class LinkConnectService
     public static function buildLocalPendingLink(array $input): Link
     {
         $link = new Link();
-        $link->name = htmlspecialchars((string)$input['name'], ENT_QUOTES, 'UTF-8');
-        $link->url = (string)$input['url'];
-        $link->icon = (string)($input['icon'] ?? '');
-        $link->description = htmlspecialchars((string)($input['description'] ?? ''), ENT_QUOTES, 'UTF-8');
+        $link->name = htmlspecialchars((string) $input['name'], ENT_QUOTES, 'UTF-8');
+        $link->url = (string) $input['url'];
+        $link->icon = (string) ($input['icon'] ?? '');
+        $link->description = htmlspecialchars((string) ($input['description'] ?? ''), ENT_QUOTES, 'UTF-8');
         $link->status = false; // pending
         $link->sort_order = 999;
         $link->target = '_blank';
         $link->redirect_type = 'goto';
         $link->show_url = true;
-        $link->email = (string)($input['email'] ?? '');
+        $link->email = (string) ($input['email'] ?? '');
         $link->setCustomFields([
             'peer_status' => 'pending',
-            'peer_api' => (string)($input['peer_api'] ?? ''),
+            'peer_api' => (string) ($input['peer_api'] ?? ''),
             'peer_protocol' => 'wind_connect',
-            'source' => 'connect_apply'
+            'source' => 'connect_apply',
         ]);
+
         return $link;
     }
 
@@ -607,21 +624,22 @@ class LinkConnectService
     public static function buildLocalWaitingLink(array $site, array $fromLink): Link
     {
         $link = new Link();
-        $link->name = htmlspecialchars((string)($fromLink['name'] ?? ($site['name'] ?? '友链')), ENT_QUOTES, 'UTF-8');
-        $link->url = (string)($fromLink['url'] ?? '');
-        $link->icon = (string)($fromLink['icon'] ?? ($site['icon'] ?? ''));
-        $link->description = htmlspecialchars((string)($fromLink['description'] ?? ''), ENT_QUOTES, 'UTF-8');
+        $link->name = htmlspecialchars((string) ($fromLink['name'] ?? ($site['name'] ?? '友链')), ENT_QUOTES, 'UTF-8');
+        $link->url = (string) ($fromLink['url'] ?? '');
+        $link->icon = (string) ($fromLink['icon'] ?? ($site['icon'] ?? ''));
+        $link->description = htmlspecialchars((string) ($fromLink['description'] ?? ''), ENT_QUOTES, 'UTF-8');
         $link->status = false; // waiting
         $link->sort_order = 999;
         $link->target = '_blank';
         $link->redirect_type = 'goto';
         $link->show_url = true;
-        $link->email = (string)($fromLink['email'] ?? '');
+        $link->email = (string) ($fromLink['email'] ?? '');
         $link->setCustomFields([
             'peer_status' => 'waiting',
-            'peer_protocol' => (string)($site['protocol'] ?? 'wind_connect'),
-            'source' => 'connect_receive'
+            'peer_protocol' => (string) ($site['protocol'] ?? 'wind_connect'),
+            'source' => 'connect_receive',
         ]);
+
         return $link;
     }
 
@@ -634,7 +652,7 @@ class LinkConnectService
      */
     public static function validateUrl(string $url): bool
     {
-        return (bool)filter_var($url, FILTER_VALIDATE_URL);
+        return (bool) filter_var($url, FILTER_VALIDATE_URL);
     }
 
     /**
@@ -648,7 +666,7 @@ class LinkConnectService
     public static function httpPostJson(string $url, array $payload): array
     {
         try {
-            $token = (string)blog_config('wind_connect_token', '', true);
+            $token = (string) blog_config('wind_connect_token', '', true);
             $headers = "Content-Type: application/json\r\n";
             if (!empty($token)) {
                 $headers .= "X-WIND-CONNECT-TOKEN: {$token}\r\n";
@@ -658,19 +676,20 @@ class LinkConnectService
                     'method' => 'POST',
                     'timeout' => 30,
                     'header' => $headers,
-                    'content' => json_encode($payload, JSON_UNESCAPED_UNICODE)
+                    'content' => json_encode($payload, JSON_UNESCAPED_UNICODE),
                 ],
                 'ssl' => [
                     'verify_peer' => false,
-                    'verify_peer_name' => false
-                ]
+                    'verify_peer_name' => false,
+                ],
             ];
             $context = stream_context_create($opts);
             $result = @file_get_contents($url, false, $context);
             if ($result === false) {
                 return ['success' => false, 'error' => '请求失败'];
             }
-            return ['success' => true, 'body' => (string)$result];
+
+            return ['success' => true, 'body' => (string) $result];
         } catch (Throwable $e) {
             return ['success' => false, 'error' => $e->getMessage()];
         }
@@ -691,6 +710,7 @@ class LinkConnectService
 
         // 将数据转换为JSON并计算SHA512校验和
         $jsonData = json_encode($cleanData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_NUMERIC_CHECK);
+
         return hash('sha512', $jsonData);
     }
 

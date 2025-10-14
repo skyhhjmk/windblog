@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace app\service;
@@ -6,8 +7,8 @@ namespace app\service;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
 use PhpAmqpLib\Wire\AMQPTable;
-use Throwable;
 use support\Log;
+use Throwable;
 use Twig\Environment;
 use Twig\Loader\ArrayLoader;
 
@@ -15,8 +16,10 @@ class MailService
 {
     /** @var AMQPStreamConnection|null */
     private static ?AMQPStreamConnection $connection = null;
+
     /** @var \PhpAmqpLib\Channel\AMQPChannel|null */
     private static $channel = null;
+
     /** @var bool */
     private static bool $initialized = false;
 
@@ -42,6 +45,7 @@ class MailService
         if ($extension) {
             $extension($env);
         }
+
         return $env->render('__inline__', $vars);
     }
 
@@ -68,16 +72,16 @@ class MailService
             // 如果未提供 html，但提供了 view 或 inline_template，则进行渲染
             if (empty($payload['html'])) {
                 if (!empty($payload['view'])) {
-                    $vars = (array)($payload['view_vars'] ?? []);
-                    $payload['html'] = self::renderView((string)$payload['view'], $vars);
+                    $vars = (array) ($payload['view_vars'] ?? []);
+                    $payload['html'] = self::renderView((string) $payload['view'], $vars);
                 } elseif (!empty($payload['inline_template'])) {
-                    $vars = (array)($payload['inline_vars'] ?? []);
-                    $payload['html'] = self::renderInline((string)$payload['inline_template'], $vars);
+                    $vars = (array) ($payload['inline_vars'] ?? []);
+                    $payload['html'] = self::renderInline((string) $payload['inline_template'], $vars);
                 }
             }
 
-            $exchange   = (string)blog_config('rabbitmq_mail_exchange', 'mail_exchange', true);
-            $routingKey = (string)blog_config('rabbitmq_mail_routing_key', 'mail_send', true);
+            $exchange = (string) blog_config('rabbitmq_mail_exchange', 'mail_exchange', true);
+            $routingKey = (string) blog_config('rabbitmq_mail_routing_key', 'mail_send', true);
 
             // 计算优先级（0-9），支持字符串映射 high/normal/low
             $priority = 0;
@@ -91,7 +95,7 @@ class MailService
                     ];
                     $priority = $map[strtolower($p)] ?? 0;
                 } elseif (is_numeric($p)) {
-                    $priority = max(0, min(9, (int)$p));
+                    $priority = max(0, min(9, (int) $p));
                 }
             }
             // 过滤器：允许插件调整邮件payload（需权限 mail:filter.payload）
@@ -111,17 +115,19 @@ class MailService
                 'payload' => $payload,
                 'priority' => $priority,
                 'exchange' => $exchange,
-                'routingKey' => $routingKey
+                'routingKey' => $routingKey,
             ]);
 
             Log::debug('Mail enqueued: ' . json_encode([
                 'to' => $payload['to'] ?? null,
                 'subject' => $payload['subject'] ?? null,
-                'priority' => $priority
+                'priority' => $priority,
             ], JSON_UNESCAPED_UNICODE));
+
             return true;
         } catch (Throwable $e) {
             Log::error('Enqueue mail failed: ' . $e->getMessage());
+
             return false;
         }
     }
@@ -130,13 +136,14 @@ class MailService
     {
         if (!self::$connection) {
             self::$connection = new AMQPStreamConnection(
-                (string)blog_config('rabbitmq_host', '127.0.0.1', true),
-                (int)blog_config('rabbitmq_port', 5672, true),
-                (string)blog_config('rabbitmq_user', 'guest', true),
-                (string)blog_config('rabbitmq_password', 'guest', true),
-                (string)blog_config('rabbitmq_vhost', '/', true),
+                (string) blog_config('rabbitmq_host', '127.0.0.1', true),
+                (int) blog_config('rabbitmq_port', 5672, true),
+                (string) blog_config('rabbitmq_user', 'guest', true),
+                (string) blog_config('rabbitmq_password', 'guest', true),
+                (string) blog_config('rabbitmq_vhost', '/', true),
             );
         }
+
         return self::$connection;
     }
 
@@ -146,6 +153,7 @@ class MailService
             self::$channel = self::getConnection()->channel();
             self::$channel->basic_qos(0, 1, false);
         }
+
         return self::$channel;
     }
 
@@ -158,12 +166,12 @@ class MailService
             self::ensureMailDefaults();
             $ch = self::getChannel();
 
-            $exchange   = (string)blog_config('rabbitmq_mail_exchange', 'mail_exchange', true);
-            $routingKey = (string)blog_config('rabbitmq_mail_routing_key', 'mail_send', true);
-            $queueName  = (string)blog_config('rabbitmq_mail_queue', 'mail_queue', true);
+            $exchange = (string) blog_config('rabbitmq_mail_exchange', 'mail_exchange', true);
+            $routingKey = (string) blog_config('rabbitmq_mail_routing_key', 'mail_send', true);
+            $queueName = (string) blog_config('rabbitmq_mail_queue', 'mail_queue', true);
 
-            $dlxExchange = (string)blog_config('rabbitmq_mail_dlx_exchange', 'mail_dlx_exchange', true);
-            $mailDlxQueue = (string)blog_config('rabbitmq_mail_dlx_queue', 'mail_dlx_queue', true);
+            $dlxExchange = (string) blog_config('rabbitmq_mail_dlx_exchange', 'mail_dlx_exchange', true);
+            $mailDlxQueue = (string) blog_config('rabbitmq_mail_dlx_queue', 'mail_dlx_queue', true);
 
             // 声明 DLX 及 mail 专属 DLQ（使用 mail_dlx_exchange，routing key 绑定到 mail_dlx_queue）
             $ch->exchange_declare($dlxExchange, 'direct', false, true, false);

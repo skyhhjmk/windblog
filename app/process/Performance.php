@@ -17,7 +17,9 @@ use Workerman\Worker;
 class Performance
 {
     protected int $interval = 60;
+
     protected int $maxSeries = 500;
+
     protected ?int $timerId = null;
 
     /**
@@ -32,21 +34,22 @@ class Performance
             $arr = $interval;
             $ival = $arr['interval'] ?? 60;
             $mseries = $arr['max_series'] ?? 500;
-            if (is_numeric($ival) && (int)$ival > 0) {
-                $this->interval = (int)$ival;
+            if (is_numeric($ival) && (int) $ival > 0) {
+                $this->interval = (int) $ival;
             }
-            if (is_numeric($mseries) && (int)$mseries > 0) {
-                $this->maxSeries = (int)$mseries;
+            if (is_numeric($mseries) && (int) $mseries > 0) {
+                $this->maxSeries = (int) $mseries;
             }
+
             return;
         }
 
         // 位置参数形式
-        if (is_numeric($interval) && (int)$interval > 0) {
-            $this->interval = (int)$interval;
+        if (is_numeric($interval) && (int) $interval > 0) {
+            $this->interval = (int) $interval;
         }
-        if (is_numeric($maxSeries) && (int)$maxSeries > 0) {
-            $this->maxSeries = (int)$maxSeries;
+        if (is_numeric($maxSeries) && (int) $maxSeries > 0) {
+            $this->maxSeries = (int) $maxSeries;
         }
     }
 
@@ -56,6 +59,7 @@ class Performance
         $envPath = base_path() . '/.env';
         if (!file_exists($envPath)) {
             Log::warning("Performance 进程检测到缺少 .env，已跳过启动：{$envPath}");
+
             return;
         }
 
@@ -63,10 +67,11 @@ class Performance
         $driver = getenv('CACHE_DRIVER');
         if (!$driver || strtolower(trim($driver)) !== 'redis') {
             Log::info("Performance 进程未启用：CACHE_DRIVER={$driver}，仅在 redis 时启用");
+
             return;
         }
 
-        Log::info("Performance 进程启动 - PID: " . getmypid());
+        Log::info('Performance 进程启动 - PID: ' . getmypid());
         $this->collect(); // 立即采集一次
         $this->timerId = Timer::add($this->interval, [$this, 'collect']);
     }
@@ -102,7 +107,7 @@ class Performance
 
                 // 调试日志：标注哪个连接采集到了什么
                 Log::debug(sprintf(
-                    "Redis采集: conn=%s used_memory_mb=%s keys=%s clients=%s ops=%s",
+                    'Redis采集: conn=%s used_memory_mb=%s keys=%s clients=%s ops=%s',
                     $conn,
                     $stats['used_memory_mb'] ?? 'null',
                     $stats['keys'] ?? 'null',
@@ -125,7 +130,7 @@ class Performance
 
             Log::debug("Performance 采集完成: {$t}");
         } catch (\Throwable $e) {
-            Log::error("Performance 采集失败: " . $e->getMessage());
+            Log::error('Performance 采集失败: ' . $e->getMessage());
         }
     }
 
@@ -140,17 +145,39 @@ class Performance
                 // 优先尝试 PhpRedis 的 rawCommand
                 if (method_exists($r, 'rawCommand')) {
                     $res = $r->rawCommand('DBSIZE');
-                    if (is_numeric($res)) { $keys = (int)$res; $method = 'rawCommand(DBSIZE)'; }
+                    if (is_numeric($res)) {
+                        $keys = (int) $res;
+                        $method = 'rawCommand(DBSIZE)';
+                    }
                 }
                 // 其次尝试 Predis 的 executeRaw
                 if ($keys === null && method_exists($r, 'executeRaw')) {
                     $res = $r->executeRaw(['DBSIZE']);
-                    if (is_numeric($res)) { $keys = (int)$res; $method = 'executeRaw([DBSIZE])'; }
+                    if (is_numeric($res)) {
+                        $keys = (int) $res;
+                        $method = 'executeRaw([DBSIZE])';
+                    }
                 }
                 // 再尝试常规方法调用（Predis 魔术方法、PhpRedis 显式方法）
                 if ($keys === null) {
-                    try { $res = $r->dbSize(); if (is_numeric($res)) { $keys = (int)$res; $method = 'dbSize()'; } } catch (\Throwable $e) {}
-                    try { if ($keys === null) { $res = $r->dbsize(); if (is_numeric($res)) { $keys = (int)$res; $method = 'dbsize()'; } } } catch (\Throwable $e) {}
+                    try {
+                        $res = $r->dbSize();
+                        if (is_numeric($res)) {
+                            $keys = (int) $res;
+                            $method = 'dbSize()';
+                        }
+                    } catch (\Throwable $e) {
+                    }
+                    try {
+                        if ($keys === null) {
+                            $res = $r->dbsize();
+                            if (is_numeric($res)) {
+                                $keys = (int) $res;
+                                $method = 'dbsize()';
+                            }
+                        }
+                    } catch (\Throwable $e) {
+                    }
                 }
             } catch (\Throwable $e) {
                 // 忽略，进入兜底
@@ -186,6 +213,7 @@ class Performance
             $freeMb = isset($mem['free_memory']) ? round($mem['free_memory'] / 1024 / 1024, 2) : null;
             $usedMb = isset($mem['used_memory']) ? round($mem['used_memory'] / 1024 / 1024, 2) : null;
             $hitRate = $stats['opcache_hit_rate'] ?? null;
+
             return [
                 't' => date('Y-m-d H:i:s'),
                 'enabled' => $status['opcache_enabled'] ?? null,
@@ -204,7 +232,7 @@ class Performance
     protected function trimList($redis, string $key, int $max): void
     {
         try {
-            $len = (int)$redis->lLen($key);
+            $len = (int) $redis->lLen($key);
             if ($len > $max) {
                 $redis->lTrim($key, $len - $max, -1);
             }

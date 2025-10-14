@@ -24,19 +24,19 @@ class WindConnectController
         try {
             // 获取请求头
             $headers = $request->header();
-            
+
             // 获取请求体（JSON格式）
             $body = $request->rawBody();
             $payload = json_decode($body, true);
-            
+
             // 检查请求体是否为有效JSON
             if (json_last_error() !== JSON_ERROR_NONE) {
                 return json(['code' => 1, 'msg' => '无效的JSON格式']);
             }
-            
+
             // 调用LinkConnectService处理友链互联请求
             $result = LinkConnectService::receiveFromPeer($headers, $payload);
-            
+
             // 返回处理结果
             return json($result);
         } catch (Throwable $e) {

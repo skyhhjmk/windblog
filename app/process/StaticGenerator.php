@@ -1,4 +1,5 @@
 <?php
+
 namespace app\process;
 
 use app\model\Post;
@@ -22,9 +23,13 @@ class StaticGenerator
 
     // MQ 命名
     private string $exchange = 'windblog_static_gen';
+
     private string $routingKey = 'static_gen';
+
     private string $queueName = 'windblog_static_queue';
+
     private string $dlxExchange = 'windblog_static_dlx';
+
     private string $dlxQueue = 'windblog_static_dlq';
 
     public function onWorkerStart(): void
@@ -33,6 +38,7 @@ class StaticGenerator
         $envPath = base_path() . '/.env';
         if (!file_exists($envPath)) {
             Log::warning("StaticGenerator 检测到缺少 .env，已跳过启动：{$envPath}");
+
             return;
         }
 
@@ -46,7 +52,11 @@ class StaticGenerator
             });
             // 每60秒进行一次 MQ 健康检查
             \Workerman\Timer::add(60, function () {
-                try { \app\service\MQService::checkAndHeal(); } catch (\Throwable $e) { \support\Log::warning('MQ 健康检查异常(StaticGenerator): ' . $e->getMessage()); }
+                try {
+                    \app\service\MQService::checkAndHeal();
+                } catch (\Throwable $e) {
+                    \support\Log::warning('MQ 健康检查异常(StaticGenerator): ' . $e->getMessage());
+                }
             });
         }
     }
@@ -58,11 +68,11 @@ class StaticGenerator
             $this->mqChannel = \app\service\MQService::getChannel();
 
             // 允许通过配置覆盖命名
-            $this->exchange    = (string)blog_config('rabbitmq_static_exchange', $this->exchange, true) ?: $this->exchange;
-            $this->routingKey  = (string)blog_config('rabbitmq_static_routing_key', $this->routingKey, true) ?: $this->routingKey;
-            $this->queueName   = (string)blog_config('rabbitmq_static_queue', $this->queueName, true) ?: $this->queueName;
-            $this->dlxExchange = (string)blog_config('rabbitmq_static_dlx_exchange', $this->dlxExchange, true) ?: $this->dlxExchange;
-            $this->dlxQueue    = (string)blog_config('rabbitmq_static_dlx_queue', $this->dlxQueue, true) ?: $this->dlxQueue;
+            $this->exchange = (string) blog_config('rabbitmq_static_exchange', $this->exchange, true) ?: $this->exchange;
+            $this->routingKey = (string) blog_config('rabbitmq_static_routing_key', $this->routingKey, true) ?: $this->routingKey;
+            $this->queueName = (string) blog_config('rabbitmq_static_queue', $this->queueName, true) ?: $this->queueName;
+            $this->dlxExchange = (string) blog_config('rabbitmq_static_dlx_exchange', $this->dlxExchange, true) ?: $this->dlxExchange;
+            $this->dlxQueue = (string) blog_config('rabbitmq_static_dlx_queue', $this->dlxQueue, true) ?: $this->dlxQueue;
 
             // 使用 MQService 的通用初始化（专属 DLX/DLQ）
             \app\service\MQService::declareDlx($this->mqChannel, $this->dlxExchange, $this->dlxQueue);
@@ -109,15 +119,15 @@ class StaticGenerator
             }
             $type = $payload['type'] ?? 'url';
             $options = $payload['options'] ?? [];
-            $force = (bool)($options['force'] ?? false);
-            $jobId = (string)($options['job_id'] ?? ('auto_' . date('Ymd_His')));
+            $force = (bool) ($options['force'] ?? false);
+            $jobId = (string) ($options['job_id'] ?? ('auto_' . date('Ymd_His')));
 
             if ($type === 'url') {
-                $url = (string)$payload['value'];
+                $url = (string) $payload['value'];
                 $this->generateByUrl($url, $force, $jobId);
             } elseif ($type === 'scope') {
-                $scope = (string)$payload['value'];
-                $pages = (int)($options['pages'] ?? 1);
+                $scope = (string) $payload['value'];
+                $pages = (int) ($options['pages'] ?? 1);
                 $this->generateByScope($scope, $pages, $force, $jobId);
             } else {
                 throw new \RuntimeException('未知消息类型: ' . $type);
@@ -135,15 +145,15 @@ class StaticGenerator
         $headers = $message->has('application_headers') ? $message->get('application_headers') : null;
         $retry = 0;
         if ($headers instanceof \PhpAmqpLib\Wire\AMQPTable) {
-            $native = method_exists($headers, 'getNativeData') ? $headers->getNativeData() : (array)$headers;
-            $retry = (int)($native['x-retry-count'] ?? 0);
+            $native = method_exists($headers, 'getNativeData') ? $headers->getNativeData() : (array) $headers;
+            $retry = (int) ($native['x-retry-count'] ?? 0);
         }
         if ($retry < 2) { // 第1、2次失败重试；第3次进入死信
             $newHeaders = $headers ? clone $headers : new \PhpAmqpLib\Wire\AMQPTable();
             $newHeaders->set('x-retry-count', $retry + 1);
             $newMsg = new AMQPMessage($message->getBody(), [
                 'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT,
-                'application_headers' => $newHeaders
+                'application_headers' => $newHeaders,
             ]);
             $this->mqChannel->basic_publish($newMsg, $this->exchange, $this->routingKey);
             $message->ack();
@@ -180,11 +190,11 @@ class StaticGenerator
         } elseif ($scope === 'list') {
             $total = max(1, $pages) + 1; // /link/page/1..N + /link
         } elseif ($scope === 'post') {
-            $total = (int)Post::where('status', 'published')->count('*');
+            $total = (int) Post::where('status', 'published')->count('*');
         } elseif ($scope === 'all') {
             $total = (max(1, $pages) + 1) // index
                    + (max(1, $pages) + 1) // list
-                   + (int)Post::where('status', 'published')->count('*')
+                   + (int) Post::where('status', 'published')->count('*')
                    + 1; // /search
         }
         if ($jobId) {
@@ -198,24 +208,36 @@ class StaticGenerator
                     $path = "/page/$p";
                     [$code, $body] = $this->httpFetch($path);
                     $this->writeHtml($path, $code, $body, $force);
-                    $done++; if ($jobId) $this->progressTick($jobId, $done, $path);
+                    $done++;
+                    if ($jobId) {
+                        $this->progressTick($jobId, $done, $path);
+                    }
                 }
                 $path = '/';
                 [$code, $body] = $this->httpFetch($path);
                 $this->writeHtml($path, $code, $body, $force);
-                $done++; if ($jobId) $this->progressTick($jobId, $done, $path);
+                $done++;
+                if ($jobId) {
+                    $this->progressTick($jobId, $done, $path);
+                }
                 break;
             case 'list':
                 for ($p = 1; $p <= $pages; $p++) {
                     $path = "/link/page/$p";
                     [$code, $body] = $this->httpFetch($path);
                     $this->writeHtml($path, $code, $body, $force);
-                    $done++; if ($jobId) $this->progressTick($jobId, $done, $path);
+                    $done++;
+                    if ($jobId) {
+                        $this->progressTick($jobId, $done, $path);
+                    }
                 }
                 $path = '/link';
                 [$code, $body] = $this->httpFetch($path);
                 $this->writeHtml($path, $code, $body, $force);
-                $done++; if ($jobId) $this->progressTick($jobId, $done, $path);
+                $done++;
+                if ($jobId) {
+                    $this->progressTick($jobId, $done, $path);
+                }
                 break;
             case 'post':
                 $posts = Post::where('status', 'published')->select(['slug', 'id'])->get();
@@ -224,7 +246,10 @@ class StaticGenerator
                     $path = "/post/$keyword";
                     [$code, $body] = $this->httpFetch($path);
                     $this->writeHtml($path, $code, $body, $force);
-                    $done++; if ($jobId) $this->progressTick($jobId, $done, $path);
+                    $done++;
+                    if ($jobId) {
+                        $this->progressTick($jobId, $done, $path);
+                    }
                 }
                 break;
             case 'all':
@@ -234,7 +259,10 @@ class StaticGenerator
                 $path = '/search';
                 [$code, $body] = $this->httpFetch($path);
                 $this->writeHtml($path, $code, $body, $force);
-                $done++; if ($jobId) $this->progressTick($jobId, $done, $path);
+                $done++;
+                if ($jobId) {
+                    $this->progressTick($jobId, $done, $path);
+                }
                 break;
             default:
                 Log::warning('未知静态化范围: ' . $scope);
@@ -245,20 +273,11 @@ class StaticGenerator
         }
     }
 
-
-
-
-
-
-
-
-
-
-
     protected function writeHtml(string $urlPath, int $code, string $body, bool $force = false): void
     {
         if ($code !== 200) {
             Log::warning("渲染非200，跳过: {$urlPath}, code={$code}");
+
             return;
         }
 
@@ -275,10 +294,10 @@ class StaticGenerator
         $finalDir = dirname($final);
         $stageDir = dirname($stage);
         if (!is_dir($finalDir)) {
-            @mkdir($finalDir, 0775, true);
+            @mkdir($finalDir, 0o775, true);
         }
         if (!is_dir($stageDir)) {
-            @mkdir($stageDir, 0775, true);
+            @mkdir($stageDir, 0o775, true);
         }
 
         // 1) 将页面写入临时目录文件
@@ -290,6 +309,7 @@ class StaticGenerator
         // 2) 若非强制且正式文件已存在，则保留旧缓存，丢弃临时文件
         if (!$force && file_exists($final)) {
             @unlink($stage);
+
             return;
         }
 
@@ -310,12 +330,14 @@ class StaticGenerator
     protected function maybeMinifyHtml(string $urlPath, string $html): string
     {
         try {
-            $strategies = (array)(blog_config('static_url_strategies', [], true) ?: []);
+            $strategies = (array) (blog_config('static_url_strategies', [], true) ?: []);
             $needMinify = false;
             $pathVariants = [$urlPath, rtrim($urlPath, '/'), $this->mapPath($urlPath)];
             foreach ($strategies as $it) {
-                $u = (string)($it['url'] ?? '');
-                if (!$u) continue;
+                $u = (string) ($it['url'] ?? '');
+                if (!$u) {
+                    continue;
+                }
                 // 允许匹配 /path 与 /path.html 两种写法
                 if (in_array($u, $pathVariants, true) || $u === $urlPath) {
                     if (!empty($it['enabled']) && !empty($it['minify'])) {
@@ -330,15 +352,16 @@ class StaticGenerator
 
             if (!class_exists(\MatthiasMullie\Minify\JS::class) || !class_exists(\MatthiasMullie\Minify\CSS::class)) {
                 Log::warning('minify库未安装，已跳过JS/CSS压缩（composer require matthiasmullie/minify）');
+
                 return $html;
             }
 
             // 仅处理本地资源：/ 开头的 src/href
-            $public = rtrim((string)public_path(), DIRECTORY_SEPARATOR);
+            $public = rtrim((string) public_path(), DIRECTORY_SEPARATOR);
             $minBaseUrl = '/assets/min';
             $minBaseDir = $public . DIRECTORY_SEPARATOR . 'assets' . DIRECTORY_SEPARATOR . 'min';
             if (!is_dir($minBaseDir)) {
-                @mkdir($minBaseDir, 0775, true);
+                @mkdir($minBaseDir, 0o775, true);
             }
 
             // 替换 <script src="..."> 与 <link rel="stylesheet" href="...">
@@ -348,9 +371,11 @@ class StaticGenerator
             $replaced = preg_replace_callback('#(<script[^>]+src=["\'])(/[^"\']+?\.js)(["\'][^>]*>\s*</script>)#i', function ($m) use ($public, $minBaseDir, $minBaseUrl) {
                 $src = $m[2];
                 $srcPath = $public . str_replace('/', DIRECTORY_SEPARATOR, $src);
-                if (!is_file($srcPath)) return $m[0];
+                if (!is_file($srcPath)) {
+                    return $m[0];
+                }
 
-                $hash = md5($srcPath . '|' . (string)@filemtime($srcPath));
+                $hash = md5($srcPath . '|' . (string) @filemtime($srcPath));
                 $outRel = $minBaseUrl . '/' . $hash . '.js';
                 $outPath = $minBaseDir . DIRECTORY_SEPARATOR . $hash . '.js';
 
@@ -360,9 +385,11 @@ class StaticGenerator
                         $minifier->minify($outPath);
                     } catch (\Throwable $e) {
                         Log::warning('JS压缩失败，回退原始: ' . $e->getMessage());
+
                         return $m[0];
                     }
                 }
+
                 return $m[1] . $outRel . $m[3];
             }, $replaced);
 
@@ -370,9 +397,11 @@ class StaticGenerator
             $replaced = preg_replace_callback('#(<link[^>]+href=["\'])(/[^"\']+?\.css)(["\'][^>]*>)#i', function ($m) use ($public, $minBaseDir, $minBaseUrl) {
                 $href = $m[2];
                 $hrefPath = $public . str_replace('/', DIRECTORY_SEPARATOR, $href);
-                if (!is_file($hrefPath)) return $m[0];
+                if (!is_file($hrefPath)) {
+                    return $m[0];
+                }
 
-                $hash = md5($hrefPath . '|' . (string)@filemtime($hrefPath));
+                $hash = md5($hrefPath . '|' . (string) @filemtime($hrefPath));
                 $outRel = $minBaseUrl . '/' . $hash . '.css';
                 $outPath = $minBaseDir . DIRECTORY_SEPARATOR . $hash . '.css';
 
@@ -382,15 +411,18 @@ class StaticGenerator
                         $minifier->minify($outPath);
                     } catch (\Throwable $e) {
                         Log::warning('CSS压缩失败，回退原始: ' . $e->getMessage());
+
                         return $m[0];
                     }
                 }
+
                 return $m[1] . $outRel . $m[3];
             }, $replaced);
 
             return $replaced;
         } catch (\Throwable $e) {
             Log::warning('HTML压缩替换异常，已回退原始: ' . $e->getMessage());
+
             return $html;
         }
     }
@@ -404,6 +436,7 @@ class StaticGenerator
         }
         // 去除可能的 .html 后缀
         $path = preg_replace('#\.html$#', '', $path);
+
         // 归一化
         return $path . '.html';
     }
@@ -411,15 +444,16 @@ class StaticGenerator
     // 计算基础访问地址：优先 static_base_url，其次 scheme://host[:port]
     protected function getBaseUrl(): string
     {
-        $base = (string)blog_config('static_base_url', '', true);
+        $base = (string) blog_config('static_base_url', '', true);
         if ($base !== '') {
             return rtrim($base, '/');
         }
-        $scheme = (string)blog_config('site_scheme', 'http', true);
-        $host = (string)blog_config('site_host', '127.0.0.1', true);
-        $port = (int)blog_config('site_port', 8787, true);
+        $scheme = (string) blog_config('site_scheme', 'http', true);
+        $host = (string) blog_config('site_host', '127.0.0.1', true);
+        $port = (int) blog_config('site_port', 8787, true);
         // 常见端口省略
         $portPart = ($port === 80 && $scheme === 'http') || ($port === 443 && $scheme === 'https') ? '' : ':' . $port;
+
         return $scheme . '://' . $host . $portPart;
     }
 
@@ -447,11 +481,13 @@ class StaticGenerator
             $err = curl_error($ch);
             curl_close($ch);
             Log::warning("HTTP 获取失败: {$url}, error={$err}");
+
             return [0, ''];
         }
-        $code = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+        $code = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
         curl_close($ch);
-        return [$code, (string)$body];
+
+        return [$code, (string) $body];
     }
 
     // 每小时增量：最近 N 小时更新的文章
@@ -499,7 +535,7 @@ class StaticGenerator
             return;
         }
         $msg = new AMQPMessage(json_encode($data, JSON_UNESCAPED_UNICODE), [
-            'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT
+            'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT,
         ]);
         $this->mqChannel->basic_publish($msg, $this->exchange, $this->routingKey);
     }
@@ -515,7 +551,7 @@ class StaticGenerator
             'status' => 'running',
             'started_at' => time(),
             'updated_at' => time(),
-            'current_path' => ''
+            'current_path' => '',
         ];
         // 将最新任务ID与详情写入缓存，延长TTL以便短任务仍可被查询到
         cache('static_progress_latest', $jobId, true, 3600);
@@ -554,7 +590,7 @@ class StaticGenerator
             'total' => $data['total'] ?? 0,
             'finished_at' => $data['finished_at'] ?? time(),
             'duration' => isset($data['started_at']) ? (($data['finished_at'] ?? time()) - $data['started_at']) : null,
-            'status' => $data['status'] ?? 'finished'
+            'status' => $data['status'] ?? 'finished',
         ];
         // 将最新记录插入列表头部
         array_unshift($history, $summary);

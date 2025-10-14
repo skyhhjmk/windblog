@@ -38,7 +38,7 @@ class PluginServiceTest extends TestCase
         PluginService::init();
 
         $executed = false;
-        $callback = function() use (&$executed) {
+        $callback = function () use (&$executed) {
             $executed = true;
         };
 
@@ -56,7 +56,7 @@ class PluginServiceTest extends TestCase
         PluginService::init();
 
         $receivedArg = null;
-        $callback = function($arg) use (&$receivedArg) {
+        $callback = function ($arg) use (&$receivedArg) {
             $receivedArg = $arg;
         };
 
@@ -75,11 +75,11 @@ class PluginServiceTest extends TestCase
 
         $order = [];
 
-        $callback1 = function() use (&$order) {
+        $callback1 = function () use (&$order) {
             $order[] = 'first';
         };
 
-        $callback2 = function() use (&$order) {
+        $callback2 = function () use (&$order) {
             $order[] = 'second';
         };
 
@@ -98,7 +98,7 @@ class PluginServiceTest extends TestCase
     {
         PluginService::init();
 
-        $callback = function($value) {
+        $callback = function ($value) {
             return $value . '_filtered';
         };
 
@@ -115,11 +115,11 @@ class PluginServiceTest extends TestCase
     {
         PluginService::init();
 
-        $callback1 = function($value) {
+        $callback1 = function ($value) {
             return $value . '_first';
         };
 
-        $callback2 = function($value) {
+        $callback2 = function ($value) {
             return $value . '_second';
         };
 
@@ -137,7 +137,7 @@ class PluginServiceTest extends TestCase
     {
         PluginService::init();
 
-        $callback = function($value, $arg1, $arg2) {
+        $callback = function ($value, $arg1, $arg2) {
             return $value . $arg1 . $arg2;
         };
 
@@ -155,7 +155,7 @@ class PluginServiceTest extends TestCase
         PluginService::init();
 
         $executed = false;
-        $callback = function() use (&$executed) {
+        $callback = function () use (&$executed) {
             $executed = true;
         };
 
@@ -173,7 +173,7 @@ class PluginServiceTest extends TestCase
     {
         PluginService::init();
 
-        $callback = function($value) {
+        $callback = function ($value) {
             return $value . '_filtered';
         };
 
@@ -228,9 +228,9 @@ class PluginServiceTest extends TestCase
 
         $value = 0;
 
-        $add10 = function() use (&$value) { $value += 10; };
-        $multiply2 = function() use (&$value) { $value *= 2; };
-        $add5 = function() use (&$value) { $value += 5; };
+        $add10 = function () use (&$value) { $value += 10; };
+        $multiply2 = function () use (&$value) { $value *= 2; };
+        $add5 = function () use (&$value) { $value += 5; };
 
         // 执行顺序应该是：add10 (priority 10), multiply2 (priority 20), add5 (priority 30)
         PluginService::add_action('test_multi', $multiply2, 20);
@@ -252,9 +252,9 @@ class PluginServiceTest extends TestCase
 
         $order = [];
 
-        $callback1 = function() use (&$order) { $order[] = 1; };
-        $callback2 = function() use (&$order) { $order[] = 2; };
-        $callback3 = function() use (&$order) { $order[] = 3; };
+        $callback1 = function () use (&$order) { $order[] = 1; };
+        $callback2 = function () use (&$order) { $order[] = 2; };
+        $callback3 = function () use (&$order) { $order[] = 3; };
 
         PluginService::add_action('test_order', $callback1, 10);
         PluginService::add_action('test_order', $callback2, 10);

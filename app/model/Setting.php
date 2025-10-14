@@ -1,9 +1,8 @@
 <?php
+
 namespace app\model;
 
-use Illuminate\Database\Eloquent\Builder;
 use support\Model;
-use Throwable;
 
 /**
  * 设置模型
@@ -46,7 +45,7 @@ class Setting extends Model
     {
         // 设置模型启动时的逻辑
     }
-    
+
     /**
      * 允许批量赋值的字段
      *
@@ -63,6 +62,4 @@ class Setting extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
-    
-
 }

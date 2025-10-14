@@ -2,11 +2,11 @@
 
 namespace plugin\sms\api;
 
+use app\model\Setting;
+use Overtrue\EasySms\EasySms;
 use Overtrue\EasySms\Exceptions\InvalidArgumentException;
 use Overtrue\EasySms\Exceptions\NoGatewayAvailableException;
 use Overtrue\EasySms\Strategies\OrderStrategy;
-use app\model\Setting;
-use Overtrue\EasySms\EasySms;
 use RuntimeException;
 use support\exception\BusinessException;
 
@@ -15,11 +15,10 @@ use support\exception\BusinessException;
  */
 class Sms
 {
-
     /**
      * Option 表的name字段值
      */
-    const OPTION_NAME = 'sms_setting';
+    public const OPTION_NAME = 'sms_setting';
 
     /**
      * 发送短信
@@ -36,6 +35,7 @@ class Sms
     public static function send($to, array $message, array $gateways = []): array
     {
         $sms = static::getSender();
+
         return $sms->send($to, $message, $gateways);
     }
 
@@ -77,10 +77,12 @@ class Sms
             $newConfig['gateways'][$gatewayName] = $tmp;
         }
         $sms = new EasySms($newConfig);
+
         return $sms->send($to, [
             // 不同的厂商有不同的模版id
             'template' => function ($gateway) use ($templates) {
                 $gatewayName = $gateway->getName();
+
                 return $templates[$gatewayName]['template_id'];
             },
             'data' => function ($gateway) use ($data) {
@@ -106,6 +108,7 @@ class Sms
         if (!$config) {
             throw new BusinessException('未设置SMS配置');
         }
+
         return new EasySms($config);
     }
 
@@ -132,7 +135,7 @@ class Sms
             $option->key = $optionName;
             $option->value = json_encode($config, JSON_UNESCAPED_UNICODE);
         }
+
         return $config;
     }
-
 }

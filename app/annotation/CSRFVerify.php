@@ -32,15 +32,14 @@ class CSRFVerify
      */
     public function __construct(
         public string $tokenName = '_token',
-        public mixed  $if_failed_config = 'CSRF token验证失败',
-        public array  $methods = ['POST', 'PUT', 'PATCH', 'DELETE'],
-        public int    $expire = 3600,
-        public bool   $oneTime = false,
-        public bool   $bindToValue = false,
+        public mixed $if_failed_config = 'CSRF token验证失败',
+        public array $methods = ['POST', 'PUT', 'PATCH', 'DELETE'],
+        public int $expire = 3600,
+        public bool $oneTime = false,
+        public bool $bindToValue = false,
         public string $bindField = 'user_id',
-        public mixed  $responseHandler = null,
-        public bool   $jsonResponse = false
-    )
-    {
+        public mixed $responseHandler = null,
+        public bool $jsonResponse = false
+    ) {
     }
 }

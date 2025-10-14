@@ -3,8 +3,6 @@
 namespace app\service;
 
 use app\model\Post;
-use app\model\Tag;
-use app\model\Category;
 use support\Log;
 
 class ElasticRebuildService
@@ -21,7 +19,7 @@ class ElasticRebuildService
             // 先重建全部标签
             $tpage = 1;
             while (true) {
-                $tBatch = \app\model\Tag::orderBy('id')->forPage($tpage, $pageSize)->get(['id','name','slug','description']);
+                $tBatch = \app\model\Tag::orderBy('id')->forPage($tpage, $pageSize)->get(['id', 'name', 'slug', 'description']);
                 if ($tBatch->isEmpty()) {
                     break;
                 }
@@ -34,7 +32,7 @@ class ElasticRebuildService
             // 再重建全部分类
             $cpage = 1;
             while (true) {
-                $cBatch = \app\model\Category::orderBy('id')->forPage($cpage, $pageSize)->get(['id','name','slug','description']);
+                $cBatch = \app\model\Category::orderBy('id')->forPage($cpage, $pageSize)->get(['id', 'name', 'slug', 'description']);
                 if ($cBatch->isEmpty()) {
                     break;
                 }
@@ -58,9 +56,11 @@ class ElasticRebuildService
             }
             // 动作：全量重建结束（需权限 search:action.rebuild_end）
             \app\service\PluginService::do_action('elastic.rebuild_end', ['pageSize' => $pageSize]);
+
             return true;
         } catch (\Throwable $e) {
             Log::error('[ElasticRebuildService] rebuildAll error: ' . $e->getMessage());
+
             return false;
         }
     }

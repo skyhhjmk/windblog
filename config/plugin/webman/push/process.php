@@ -15,7 +15,7 @@ return [
                     'channel_hook' => config('plugin.webman.push.app.channel_hook'),
                     'app_secret'   => config('plugin.webman.push.app.app_secret'),
                 ],
-            ]
-        ]
-    ]
+            ],
+        ],
+    ],
 ];

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of webman.
  *
@@ -16,9 +17,7 @@ namespace support;
 
 /**
  * Class Request
- * @package support
  */
 class Request extends \Webman\Http\Request
 {
-
 }

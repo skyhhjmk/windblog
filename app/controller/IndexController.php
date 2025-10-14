@@ -2,14 +2,13 @@
 
 namespace app\controller;
 
+use app\service\BlogService;
+use app\service\PJAXHelper;
 use League\CommonMark\Exception\CommonMarkException;
 use support\Request;
-use app\service\BlogService;
 use support\Response;
 use Throwable;
 use Webman\RateLimiter\Annotation\RateLimiter;
-use app\service\EnhancedCacheService;
-use app\service\PJAXHelper;
 
 /**
  * 博客首页控制器
@@ -28,7 +27,7 @@ class IndexController
         'category',
         'tag',
         'author',
-        'search'
+        'search',
     ];
 
     /**
@@ -82,7 +81,7 @@ class IndexController
                 'page_title' => $blog_title,
                 'posts' => $result['posts'],
                 'pagination' => $result['pagination'],
-                'sidebar' => $sidebar
+                'sidebar' => $sidebar,
             ],
             $cacheKey,
             120,
@@ -169,7 +168,7 @@ class IndexController
             $result = [
                 'session_id' => $sessionId,
                 'session_data' => $all,
-                'session_class' => get_class($session)
+                'session_class' => get_class($session),
             ];
 
             return response(json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), 200)

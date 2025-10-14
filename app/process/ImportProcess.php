@@ -3,8 +3,8 @@
 namespace app\process;
 
 use app\model\ImportJob;
-use app\service\WordpressImporter;
 use app\service\MQService;
+use app\service\WordpressImporter;
 use PhpAmqpLib\Message\AMQPMessage;
 use support\Log;
 use Workerman\Timer;
@@ -35,10 +35,15 @@ class ImportProcess
 
     // MQ
     protected $mqChannel = null;
+
     protected string $exchange = 'import_exchange';
+
     protected string $routingKey = 'import_job';
+
     protected string $queueName = 'import_queue';
+
     protected string $dlxExchange = 'import_dlx_exchange';
+
     protected string $dlxQueue = 'import_dlx_queue';
 
     /**
@@ -61,17 +66,18 @@ class ImportProcess
         // 检查 .env 是否存在
         $config_file = base_path() . '/.env';
         if (!is_file($config_file)) {
-            \support\Log::info("缺少 .env，跳过导入队列消费");
+            \support\Log::info('缺少 .env，跳过导入队列消费');
+
             return;
         }
 
         try {
             // 覆盖命名（可通过配置）
-            $this->exchange    = (string)blog_config('rabbitmq_import_exchange', $this->exchange, true) ?: $this->exchange;
-            $this->routingKey  = (string)blog_config('rabbitmq_import_routing_key', $this->routingKey, true) ?: $this->routingKey;
-            $this->queueName   = (string)blog_config('rabbitmq_import_queue', $this->queueName, true) ?: $this->queueName;
-            $this->dlxExchange = (string)blog_config('rabbitmq_import_dlx_exchange', $this->dlxExchange, true) ?: $this->dlxExchange;
-            $this->dlxQueue    = (string)blog_config('rabbitmq_import_dlx_queue', $this->dlxQueue, true) ?: $this->dlxQueue;
+            $this->exchange = (string) blog_config('rabbitmq_import_exchange', $this->exchange, true) ?: $this->exchange;
+            $this->routingKey = (string) blog_config('rabbitmq_import_routing_key', $this->routingKey, true) ?: $this->routingKey;
+            $this->queueName = (string) blog_config('rabbitmq_import_queue', $this->queueName, true) ?: $this->queueName;
+            $this->dlxExchange = (string) blog_config('rabbitmq_import_dlx_exchange', $this->dlxExchange, true) ?: $this->dlxExchange;
+            $this->dlxQueue = (string) blog_config('rabbitmq_import_dlx_queue', $this->dlxQueue, true) ?: $this->dlxQueue;
 
             // 使用 MQService 初始化本进程专属交换机/队列/死信
             $this->mqChannel = MQService::getChannel();
@@ -118,13 +124,17 @@ class ImportProcess
             // 每60秒进行一次 MQ 健康检查
             if (class_exists(\Workerman\Timer::class)) {
                 \Workerman\Timer::add(60, function () {
-                    try { \app\service\MQService::checkAndHeal(); } catch (\Throwable $e) { \support\Log::warning('MQ 健康检查异常(ImportProcess): ' . $e->getMessage()); }
+                    try {
+                        \app\service\MQService::checkAndHeal();
+                    } catch (\Throwable $e) {
+                        \support\Log::warning('MQ 健康检查异常(ImportProcess): ' . $e->getMessage());
+                    }
                 });
             }
 
-            \support\Log::info("ImportProcess 队列初始化成功，数据库轮询已启动");
+            \support\Log::info('ImportProcess 队列初始化成功，数据库轮询已启动');
         } catch (\Throwable $e) {
-            \support\Log::error("ImportProcess 队列初始化失败: " . $e->getMessage());
+            \support\Log::error('ImportProcess 队列初始化失败: ' . $e->getMessage());
         }
 
         // 保留历史卡住任务检查
@@ -143,12 +153,12 @@ class ImportProcess
             $stuckJobs = ImportJob::where('status', 'processing')
                 ->where('updated_at', '<', date('Y-m-d H:i:s', strtotime('-1 hour')))
                 ->get();
-                
+
             foreach ($stuckJobs as $job) {
-                \support\Log::warning("发现卡住的导入任务，重置状态为pending: ID=" . $job->id . ", 文件=" . $job->name);
+                \support\Log::warning('发现卡住的导入任务，重置状态为pending: ID=' . $job->id . ', 文件=' . $job->name);
                 $job->update([
                     'status' => 'pending',
-                    'message' => '长时间处于processing状态，任务被重置'
+                    'message' => '长时间处于processing状态，任务被重置',
                 ]);
             }
         } catch (\Exception $e) {
@@ -164,62 +174,61 @@ class ImportProcess
     protected function pollDatabaseForPendingJobs(): void
     {
         try {
-            \support\Log::info("开始数据库轮询检查待处理导入任务");
-            
+            \support\Log::info('开始数据库轮询检查待处理导入任务');
+
             // 查找所有pending状态的任务
             $pendingJobs = ImportJob::where('status', 'pending')
                 ->orderBy('created_at', 'asc')
                 ->get();
-            
+
             if ($pendingJobs->isEmpty()) {
-                \support\Log::info("数据库轮询：未发现待处理任务");
+                \support\Log::info('数据库轮询：未发现待处理任务');
+
                 return;
             }
-            
-            \support\Log::info("数据库轮询：发现 " . $pendingJobs->count() . " 个待处理任务");
-            
+
+            \support\Log::info('数据库轮询：发现 ' . $pendingJobs->count() . ' 个待处理任务');
+
             foreach ($pendingJobs as $job) {
                 try {
                     // 检查任务是否正在被处理（避免重复处理）
                     $currentProcessing = ImportJob::where('id', $job->id)
                         ->where('status', 'pending')
                         ->first();
-                        
+
                     if (!$currentProcessing) {
                         \support\Log::info("任务 {$job->id} 已被其他进程处理，跳过");
                         continue;
                     }
-                    
+
                     // 更新任务状态为processing
                     $job->update([
                         'status' => 'processing',
-                        'message' => '数据库轮询开始处理'
+                        'message' => '数据库轮询开始处理',
                     ]);
-                    
-                    \support\Log::info("数据库轮询开始处理任务: ID=" . $job->id . ", 文件=" . $job->name);
-                    
+
+                    \support\Log::info('数据库轮询开始处理任务: ID=' . $job->id . ', 文件=' . $job->name);
+
                     // 执行导入任务
                     $this->executeImportJob($job);
-                    
+
                 } catch (\Throwable $e) {
-                    \support\Log::error("数据库轮询处理任务失败: ID=" . $job->id . ", 错误: " . $e->getMessage());
-                    
+                    \support\Log::error('数据库轮询处理任务失败: ID=' . $job->id . ', 错误: ' . $e->getMessage());
+
                     // 更新任务状态为failed
                     $job->update([
                         'status' => 'failed',
-                        'message' => '数据库轮询处理失败: ' . $e->getMessage()
+                        'message' => '数据库轮询处理失败: ' . $e->getMessage(),
                     ]);
                 }
             }
-            
-            \support\Log::info("数据库轮询处理完成");
-            
+
+            \support\Log::info('数据库轮询处理完成');
+
         } catch (\Throwable $e) {
-            \support\Log::error("数据库轮询异常: " . $e->getMessage());
+            \support\Log::error('数据库轮询异常: ' . $e->getMessage());
         }
     }
-
-
 
     /**
      * 执行导入任务
@@ -235,39 +244,41 @@ class ImportProcess
             // 执行导入
             switch ($job->type) {
                 case 'wordpress_xml':
-                    Log::info("开始处理WordPress XML导入任务: " . $job->name);
+                    Log::info('开始处理WordPress XML导入任务: ' . $job->name);
                     $importer = new WordpressImporter($job);
                     $result = $importer->execute();
                     $job->update([
                         'status' => $result ? 'completed' : 'failed',
                         'progress' => 100,
-                        'message' => $result ? '导入完成' : '导入失败'
+                        'message' => $result ? '导入完成' : '导入失败',
                     ]);
-                    Log::info("WordPress XML导入任务处理完成: " . $job->name);
+                    Log::info('WordPress XML导入任务处理完成: ' . $job->name);
                     break;
                 default:
                     $errorMessage = '未知的导入类型: ' . $job->type;
                     Log::error($errorMessage);
                     $job->update([
                         'status' => 'failed',
-                        'message' => $errorMessage
+                        'message' => $errorMessage,
                     ]);
                     $result = false;
                     break;
             }
 
             $this->currentJob = null;
+
             return $result;
         } catch (\Throwable $e) {
             Log::error('导入任务执行错误: ' . $e->getMessage());
-            
+
             // 更新任务状态为failed
             $job->update([
                 'status' => 'failed',
-                'message' => '导入执行错误: ' . $e->getMessage()
+                'message' => '导入执行错误: ' . $e->getMessage(),
             ]);
-            
+
             $this->currentJob = null;
+
             return false;
         }
     }
@@ -282,6 +293,7 @@ class ImportProcess
             if (empty($data['type']) || empty($data['file_path']) || empty($data['name'])) {
                 Log::warning('ImportProcess 收到无效消息: ' . $message->getBody());
                 $message->ack();
+
                 return;
             }
 
@@ -294,10 +306,10 @@ class ImportProcess
             // 如果没有找到对应的数据库记录，则创建新的记录
             if (!$job) {
                 $job = new ImportJob();
-                $job->name = (string)$data['name'];
-                $job->type = (string)$data['type'];
-                $job->file_path = (string)$data['file_path'];
-                $job->author_id = isset($data['author_id']) ? (int)$data['author_id'] : null;
+                $job->name = (string) $data['name'];
+                $job->type = (string) $data['type'];
+                $job->file_path = (string) $data['file_path'];
+                $job->author_id = isset($data['author_id']) ? (int) $data['author_id'] : null;
                 $job->options = json_encode($data['options'] ?? [], JSON_UNESCAPED_UNICODE);
                 $job->status = 'processing';
                 $job->progress = 0;
@@ -307,13 +319,13 @@ class ImportProcess
                 // 如果已有记录，更新状态为processing
                 $job->update([
                     'status' => 'processing',
-                    'message' => '消息队列开始处理'
+                    'message' => '消息队列开始处理',
                 ]);
             }
 
             // 执行导入任务
             $this->executeImportJob($job);
-            
+
             $message->ack();
         } catch (\Throwable $e) {
             Log::error('导入任务执行错误: ' . $e->getMessage());

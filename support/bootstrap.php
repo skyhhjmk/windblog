@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of webman.
  *
@@ -22,7 +23,7 @@ use Webman\Util;
 use Workerman\Events\Select;
 use Workerman\Worker;
 
-$worker = $worker ?? null;
+$worker ??= null;
 
 if (empty(Worker::$eventLoopClass)) {
     Worker::$eventLoopClass = Select::class;
@@ -62,10 +63,10 @@ if ($defaultConnection === 'sqlite') {
     if ($dbPath !== ':memory:' && !file_exists($dbPath)) {
         $dir = dirname($dbPath);
         if (!is_dir($dir)) {
-            mkdir($dir, 0777, true);
+            mkdir($dir, 0o777, true);
         }
         // 创建空的 SQLite 数据库文件
-        $pdo = new \PDO("sqlite:" . $dbPath);
+        $pdo = new \PDO('sqlite:' . $dbPath);
         $pdo = null; // 关闭连接
     }
 }
@@ -150,4 +151,3 @@ foreach (Util::scanDir($directory) as $path) {
     }
 }
 Route::load($paths);
-

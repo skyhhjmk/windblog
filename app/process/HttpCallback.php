@@ -27,6 +27,7 @@ class HttpCallback
      * @var int
      */
     protected int $timerId;
+
     protected int $timerId2;
 
     /**
@@ -73,11 +74,11 @@ class HttpCallback
     {
         // 处理配置参数类型，确保是数组
         $configArray = is_array($config) ? $config : [];
-        
+
         // 从配置中读取SSL验证设置
         $this->verifySsl = $configArray['verify_ssl'] ?? false;
         $this->caCertPath = $configArray['ca_cert_path'] ?? null;
-        
+
         // 如果启用了SSL验证但没有提供CA证书路径，尝试使用系统默认证书
         if ($this->verifySsl && empty($this->caCertPath)) {
             $this->caCertPath = $this->getDefaultCaCertPath();
@@ -99,13 +100,13 @@ class HttpCallback
             'C:\\Windows\\System32\\curl-ca-bundle.crt',
             'C:\\Windows\\curl-ca-bundle.crt',
         ];
-        
+
         foreach ($commonPaths as $path) {
             if (file_exists($path)) {
                 return $path;
             }
         }
-        
+
         return null;
     }
 
@@ -153,6 +154,7 @@ class HttpCallback
             // 使用 MQService 提供的通道
             $this->mqChannel = MQService::getChannel();
         }
+
         return $this->mqChannel;
     }
 
@@ -168,46 +170,51 @@ class HttpCallback
         $envPath = base_path() . '/.env';
         if (!file_exists($envPath)) {
             Log::warning("HttpCallback 检测到缺少 .env，已跳过启动：{$envPath}");
+
             return;
         }
 
-        Log::info("HTTP回调进程已启动 - PID: " . getmypid());
+        Log::info('HTTP回调进程已启动 - PID: ' . getmypid());
 
         // 初始化MQ连接与本进程专属交换机/队列/死信
         try {
             $channel = MQService::getChannel();
 
-            $exchange   = (string)blog_config('rabbitmq_http_callback_exchange', 'http_callback_exchange', true);
-            $routingKey = (string)blog_config('rabbitmq_http_callback_routing_key', 'http_callback', true);
-            $queueName  = (string)blog_config('rabbitmq_http_callback_queue', 'http_callback_queue', true);
+            $exchange = (string) blog_config('rabbitmq_http_callback_exchange', 'http_callback_exchange', true);
+            $routingKey = (string) blog_config('rabbitmq_http_callback_routing_key', 'http_callback', true);
+            $queueName = (string) blog_config('rabbitmq_http_callback_queue', 'http_callback_queue', true);
 
             // 使用 HttpCallback 专属 DLX/DLQ（不共用）
-            $dlxExchange = (string)blog_config('rabbitmq_http_dlx_exchange', 'http_dlx_exchange', true);
-            $dlxQueue    = (string)blog_config('rabbitmq_http_dlx_queue', 'http_dlx_queue', true);
+            $dlxExchange = (string) blog_config('rabbitmq_http_dlx_exchange', 'http_dlx_exchange', true);
+            $dlxQueue = (string) blog_config('rabbitmq_http_dlx_queue', 'http_dlx_queue', true);
 
             MQService::declareDlx($channel, $dlxExchange, $dlxQueue);
             MQService::setupQueueWithDlx($channel, $exchange, $routingKey, $queueName, $dlxExchange, $dlxQueue);
 
             $this->mqChannel = $channel;
-            Log::info("RabbitMQ连接初始化成功(HttpCallback)");
+            Log::info('RabbitMQ连接初始化成功(HttpCallback)');
         } catch (\Exception $e) {
-            Log::error("RabbitMQ连接初始化失败(HttpCallback): " . $e->getMessage());
+            Log::error('RabbitMQ连接初始化失败(HttpCallback): ' . $e->getMessage());
         }
 
         // 监控进程状态
-        $this->timerId = Timer::add(60, function() {
+        $this->timerId = Timer::add(60, function () {
             $memoryUsage = memory_get_usage(true) / 1024 / 1024;
             $memoryPeak = memory_get_peak_usage(true) / 1024 / 1024;
             Log::debug("HTTP回调进程状态 - 内存使用: {$memoryUsage}MB, 峰值内存: {$memoryPeak}MB");
         });
         // 每60秒进行一次 MQ 健康检查
         Timer::add(60, function () {
-            try { \app\service\MQService::checkAndHeal(); } catch (\Throwable $e) { Log::warning('MQ 健康检查异常(HttpCallback): ' . $e->getMessage()); }
+            try {
+                \app\service\MQService::checkAndHeal();
+            } catch (\Throwable $e) {
+                Log::warning('MQ 健康检查异常(HttpCallback): ' . $e->getMessage());
+            }
         });
 
         // 立即开始处理消息，然后定时检查
         $this->processMessages();
-        
+
         // 定时处理消息
         $this->timerId2 = Timer::add($this->interval, [$this, 'processMessages']);
     }
@@ -222,10 +229,10 @@ class HttpCallback
         try {
             // 获取队列配置
             $queueName = blog_config('rabbitmq_http_callback_queue', 'http_callback_queue', true);
-            
+
             // 订阅消息队列
             $channel = $this->getMqChannel();
-            
+
             // 设置消息确认模式为手动确认
             $channel->basic_consume(
                 $queueName,
@@ -263,13 +270,14 @@ class HttpCallback
     public function handleCallbackMessage(AMQPMessage $message): void
     {
         $url = 'unknown';
-        
+
         try {
             $data = json_decode($message->body, true);
-            
+
             if (!$data) {
                 Log::warning('无效的回调消息格式: ' . $message->body);
                 $message->ack();
+
                 return;
             }
 
@@ -287,6 +295,7 @@ class HttpCallback
             } else {
                 Log::warning('无效的回调消息格式，缺少url或callback_url字段: ' . $message->body);
                 $message->ack();
+
                 return;
             }
 
@@ -296,6 +305,7 @@ class HttpCallback
             if ($this->shouldSendToDeadLetter($url)) {
                 Log::error('URL连续失败次数超过限制，直接进入死信队列: ' . $url);
                 $message->nack(false); // 不重新入队，进入死信队列
+
                 return;
             }
 
@@ -344,7 +354,7 @@ class HttpCallback
 
             // 初始化cURL
             $ch = curl_init();
-            
+
             // 设置cURL选项
             $curlOptions = [
                 CURLOPT_URL => $fullUrl,
@@ -358,7 +368,7 @@ class HttpCallback
                 CURLOPT_HEADER => false,
                 CURLOPT_WRITEFUNCTION => [$this, 'writeCallback'], // 流式处理响应
                 CURLOPT_NOPROGRESS => false,
-                CURLOPT_PROGRESSFUNCTION => [$this, 'progressCallback'] // 进度回调
+                CURLOPT_PROGRESSFUNCTION => [$this, 'progressCallback'], // 进度回调
             ];
 
             // 设置CA证书路径（如果提供）
@@ -381,7 +391,7 @@ class HttpCallback
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $error = curl_error($ch);
-            
+
             curl_close($ch);
 
             if ($error) {
@@ -395,7 +405,7 @@ class HttpCallback
             return [
                 'success' => true,
                 'response' => $response,
-                'http_code' => $httpCode
+                'http_code' => $httpCode,
             ];
 
         } catch (\Exception $e) {
@@ -413,13 +423,14 @@ class HttpCallback
     public function writeCallback($ch, string $data): int
     {
         static $receivedSize = 0;
-        
+
         $dataSize = strlen($data);
         $receivedSize += $dataSize;
 
         // 如果超过最大响应大小，中止请求
         if ($receivedSize > $this->maxResponseSize) {
             Log::warning("响应大小超过限制: {$receivedSize} > {$this->maxResponseSize}");
+
             return -1; // 返回-1会中止传输并报错
         }
 
@@ -441,9 +452,10 @@ class HttpCallback
         // 监控下载进度，防止超大响应
         if ($downloadSize > 0 && $downloaded > $this->maxResponseSize) {
             Log::warning("下载进度超过限制: {$downloaded} > {$this->maxResponseSize}");
+
             return 1; // 返回1会中止传输
         }
-        
+
         return 0;
     }
 
@@ -457,13 +469,13 @@ class HttpCallback
     protected function recordFailure(string $url, string $error): void
     {
         $urlKey = md5($url);
-        
+
         if (!isset($this->failureStats[$urlKey])) {
             $this->failureStats[$urlKey] = [
                 'count' => 0,
                 'last_error' => '',
                 'first_failure' => time(),
-                'url' => $url
+                'url' => $url,
             ];
         }
 
@@ -498,13 +510,13 @@ class HttpCallback
     protected function shouldSendToDeadLetter(string $url): bool
     {
         $urlKey = md5($url);
-        
+
         if (!isset($this->failureStats[$urlKey])) {
             return false;
         }
 
         $stats = $this->failureStats[$urlKey];
-        
+
         // 连续失败3次
         if ($stats['count'] >= 3) {
             return true;
@@ -531,16 +543,17 @@ class HttpCallback
             // 获取消息重试次数，处理application_headers可能不存在的情况
             $retryCount = 0;
             $headers = $message->has('application_headers') ? $message->get('application_headers') : null;
-            
+
             if ($headers instanceof \PhpAmqpLib\Wire\AMQPTable) {
-                $native = method_exists($headers, 'getNativeData') ? $headers->getNativeData() : (array)$headers;
-                $retryCount = (int)($native['x-retry-count'] ?? 0);
+                $native = method_exists($headers, 'getNativeData') ? $headers->getNativeData() : (array) $headers;
+                $retryCount = (int) ($native['x-retry-count'] ?? 0);
             }
-            
+
             // 检查是否应该直接进入死信队列（URL级别统计）
             if ($this->shouldSendToDeadLetter($url)) {
                 $message->nack(false);
                 Log::error('URL连续失败超过限制，直接进入死信队列: ' . $url);
+
                 return;
             }
 
@@ -551,7 +564,7 @@ class HttpCallback
                 $newHeaders->set('x-retry-count', $retryCount + 1);
                 $message->set('application_headers', $newHeaders);
                 $message->nack(true); // 重新入队
-                Log::warning('消息重试次数: ' . ($retryCount + 1) . "/3");
+                Log::warning('消息重试次数: ' . ($retryCount + 1) . '/3');
             } else {
                 // 第3次失败，进入死信队列
                 $message->nack(false);
@@ -581,8 +594,8 @@ class HttpCallback
                 $this->mqConnection->close();
                 $this->mqConnection = null;
             }
-            
-            Log::info("RabbitMQ连接已关闭");
+
+            Log::info('RabbitMQ连接已关闭');
         } catch (\Exception $e) {
             Log::error('关闭MQ连接时出错: ' . $e->getMessage());
         }

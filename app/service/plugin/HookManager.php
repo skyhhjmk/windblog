@@ -13,19 +13,27 @@ class HookManager
 {
     /** @var array<string, array<int, array<int, array{cb: callable, args: int}>>> */
     private array $actions = [];
+
     /** @var array<string, array<int, array<int, array{cb: callable, args: int}>>> */
     private array $filters = [];
+
     /** 当前执行的钩子名称（动作或过滤器） */
     private ?string $currentHook = null;
+
     /** 简单统计：执行次数与错误计数 */
     private array $stats = ['actions' => [], 'filters' => [], 'errors' => 0];
+
     /** 优化：通配符钩子前缀缓存（如 'post_*' 的前缀 'post_'） */
     private array $wildcardPrefixes = [];
+
     /** 插件注册上下文：当前正在注册钩子的插件 slug 与管理器引用 */
     private ?string $registeringSlug = null;
+
     private ?PluginManager $managerRef = null;
+
     /** 优化：每个钩子的优先级排序缓存（减少触发时排序开销） */
     private array $actionsSorted = [];
+
     private array $filtersSorted = [];
 
     public function addAction(string $hook, callable $callback, int $priority = 10, int $accepted_args = 1): void
@@ -37,7 +45,9 @@ class HookManager
             if (!$this->managerRef->hasPermission($this->registeringSlug, $perm)) {
                 try {
                     \support\Log::warning("[plugin-hook-registration-denied] slug={$this->registeringSlug} hook={$hook} perm={$perm} type=action");
-                } catch (\Throwable $e) {}
+                } catch (\Throwable $e) {
+                }
+
                 return;
             }
         }
@@ -56,7 +66,9 @@ class HookManager
             if (!$this->managerRef->hasPermission($this->registeringSlug, $perm)) {
                 try {
                     \support\Log::warning("[plugin-hook-remove-denied] slug={$this->registeringSlug} hook={$hook} perm={$perm} type=action");
-                } catch (\Throwable $e) {}
+                } catch (\Throwable $e) {
+                }
+
                 return;
             }
         }
@@ -65,11 +77,11 @@ class HookManager
         }
         if ($priority === null) {
             foreach ($this->actions[$hook] as $p => $list) {
-                $this->actions[$hook][$p] = array_values(array_filter($list, fn($item) => $item['cb'] !== $callback));
+                $this->actions[$hook][$p] = array_values(array_filter($list, fn ($item) => $item['cb'] !== $callback));
             }
         } else {
             $list = $this->actions[$hook][$priority] ?? [];
-            $this->actions[$hook][$priority] = array_values(array_filter($list, fn($item) => $item['cb'] !== $callback));
+            $this->actions[$hook][$priority] = array_values(array_filter($list, fn ($item) => $item['cb'] !== $callback));
         }
         // 清理通配符前缀缓存（当该钩子已无监听时）
         if (is_string($hook) && str_ends_with($hook, '*')) {
@@ -92,7 +104,7 @@ class HookManager
         foreach ($buckets as $priority => $list) {
             foreach ($list as $idx => $item) {
                 $cb = $item['cb'];
-                $n  = $item['args'];
+                $n = $item['args'];
                 $pass = $n > 0 ? array_slice($args, 0, $n) : [];
                 try {
                     $cb(...$pass);
@@ -119,7 +131,9 @@ class HookManager
             if (!$this->managerRef->hasPermission($this->registeringSlug, $perm)) {
                 try {
                     \support\Log::warning("[plugin-hook-registration-denied] slug={$this->registeringSlug} hook={$hook} perm={$perm} type=filter");
-                } catch (\Throwable $e) {}
+                } catch (\Throwable $e) {
+                }
+
                 return;
             }
         }
@@ -139,7 +153,9 @@ class HookManager
             if (!$this->managerRef->hasPermission($this->registeringSlug, $perm)) {
                 try {
                     \support\Log::warning("[plugin-hook-registration-denied] slug={$this->registeringSlug} hook={$hook} perm={$perm} type=action_once");
-                } catch (\Throwable $e) {}
+                } catch (\Throwable $e) {
+                }
+
                 return;
             }
         }
@@ -155,7 +171,9 @@ class HookManager
             if (!$this->managerRef->hasPermission($this->registeringSlug, $perm)) {
                 try {
                     \support\Log::warning("[plugin-hook-registration-denied] slug={$this->registeringSlug} hook={$hook} perm={$perm} type=filter_once");
-                } catch (\Throwable $e) {}
+                } catch (\Throwable $e) {
+                }
+
                 return;
             }
         }
@@ -188,6 +206,7 @@ class HookManager
         $this->registeringSlug = $slug;
         $this->managerRef = $manager;
     }
+
     public function endRegistering(): void
     {
         $this->registeringSlug = null;
@@ -207,13 +226,16 @@ class HookManager
                 $domain = explode('_', $prefix, 2)[0];
             }
             $domain = $domain !== '' ? $domain : 'system';
+
             return "{$domain}:action:*";
         }
         // 规范：domain:name -> domain:action:name
         if (str_contains($hook, ':')) {
             [$domain, $name] = explode(':', $hook, 2);
+
             return "{$domain}:action:{$name}";
         }
+
         // 特例映射
         return match ($hook) {
             'request_enter' => 'request:action:enter',
@@ -235,12 +257,15 @@ class HookManager
                 $domain = explode('_', $prefix, 2)[0];
             }
             $domain = $domain !== '' ? $domain : 'system';
+
             return "{$domain}:filter:*";
         }
         if (str_contains($hook, ':')) {
             [$domain, $name] = explode(':', $hook, 2);
+
             return "{$domain}:filter:{$name}";
         }
+
         // 特例：response_filter 属于请求过滤权限
         return match ($hook) {
             'response_filter' => 'request:filter',
@@ -261,6 +286,7 @@ class HookManager
                 }
             }
         }
+
         return $buckets;
     }
 
@@ -271,10 +297,11 @@ class HookManager
                 return true;
             }
         }
+
         return false;
     }
 
-    private function sortBuckets(array & $buckets, string $hook, bool $isFilter): void
+    private function sortBuckets(array &$buckets, string $hook, bool $isFilter): void
     {
         // 若未命中通配符前缀，可用缓存顺序；否则回退标准排序
         $useCache = !$this->hasWildcardHit($hook);
@@ -306,6 +333,7 @@ class HookManager
                     }
                 }
                 $buckets = $rebuilt;
+
                 return;
             }
         }
@@ -321,7 +349,9 @@ class HookManager
             if (!$this->managerRef->hasPermission($this->registeringSlug, $perm)) {
                 try {
                     \support\Log::warning("[plugin-hook-remove-denied] slug={$this->registeringSlug} hook={$hook} perm={$perm} type=filter");
-                } catch (\Throwable $e) {}
+                } catch (\Throwable $e) {
+                }
+
                 return;
             }
         }
@@ -330,11 +360,11 @@ class HookManager
         }
         if ($priority === null) {
             foreach ($this->filters[$hook] as $p => $list) {
-                $this->filters[$hook][$p] = array_values(array_filter($list, fn($item) => $item['cb'] !== $callback));
+                $this->filters[$hook][$p] = array_values(array_filter($list, fn ($item) => $item['cb'] !== $callback));
             }
         } else {
             $list = $this->filters[$hook][$priority] ?? [];
-            $this->filters[$hook][$priority] = array_values(array_filter($list, fn($item) => $item['cb'] !== $callback));
+            $this->filters[$hook][$priority] = array_values(array_filter($list, fn ($item) => $item['cb'] !== $callback));
         }
         // 清理通配符前缀缓存（当该钩子已无监听时）
         if (is_string($hook) && str_ends_with($hook, '*')) {
@@ -358,7 +388,7 @@ class HookManager
         foreach ($buckets as $priority => $list) {
             foreach ($list as $idx => $item) {
                 $cb = $item['cb'];
-                $n  = $item['args'];
+                $n = $item['args'];
                 $pass = $n > 0 ? array_slice([$current, ...$args], 0, $n) : [];
                 try {
                     $current = $cb(...$pass);
@@ -373,6 +403,7 @@ class HookManager
             }
         }
         $this->currentHook = null;
+
         return $current;
     }
 }

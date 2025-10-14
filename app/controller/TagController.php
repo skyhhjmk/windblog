@@ -2,15 +2,14 @@
 
 namespace app\controller;
 
+use app\model\Tag;
+use app\service\BlogService;
+use app\service\EnhancedCacheService;
+use app\service\PaginationService;
+use app\service\PJAXHelper;
 use support\Request;
 use support\Response;
-use app\service\BlogService;
-use app\service\PaginationService;
 use Webman\RateLimiter\Annotation\RateLimiter;
-use app\model\Tag;
-use support\Redis;
-use app\service\EnhancedCacheService;
-use app\service\PJAXHelper;
 
 class TagController
 {
@@ -26,11 +25,11 @@ class TagController
 
         // 解析排序
         $sort = $request->get('sort', 'latest');
-        $sort = in_array($sort, ['latest','hot']) ? $sort : 'latest';
-        
+        $sort = in_array($sort, ['latest', 'hot']) ? $sort : 'latest';
+
         // 使用PJAXHelper检测是否为PJAX请求
         $isPjax = PJAXHelper::isPJAX($request);
-        
+
         // 为PJAX请求生成缓存键
         $cacheKey = null;
         if ($isPjax) {
@@ -40,7 +39,7 @@ class TagController
         // 构建筛选条件
         $filters = [
             'tag' => $this->sanitize($slug),
-            'sort' => $sort
+            'sort' => $sort,
         ];
 
         // 获取文章列表
@@ -59,13 +58,13 @@ class TagController
 
         // 获取标签名称用于标题展示
         $tagModel = Tag::query()->where('slug', $slug)->first(['name', 'slug']);
-        $tag_name = $tagModel ? (string)$tagModel->name : $slug;
+        $tag_name = $tagModel ? (string) $tagModel->name : $slug;
 
         // 统一分页渲染
         $pagination_html = PaginationService::generatePagination(
             $page,
-            (int)($result['totalCount'] ?? 0),
-            (int)($result['postsPerPage'] ?? BlogService::getPostsPerPage()),
+            (int) ($result['totalCount'] ?? 0),
+            (int) ($result['postsPerPage'] ?? BlogService::getPostsPerPage()),
             't.page',
             ['slug' => $slug, 'sort' => $sort],
             10
@@ -83,13 +82,13 @@ class TagController
                 'pagination' => $pagination_html,
                 'totalCount' => $result['totalCount'] ?? 0,
                 'sort' => $sort,
-                'sidebar' => $sidebar
+                'sidebar' => $sidebar,
             ],
             $cacheKey,
             120,
             'tag'
         );
-        
+
         return $resp;
     }
 
@@ -99,8 +98,8 @@ class TagController
     public function list(Request $request): Response
     {
         $isPjax = ($request->header('X-PJAX') !== null)
-            || (bool)$request->get('_pjax')
-            || strtolower((string)$request->header('X-Requested-With')) === 'xmlhttprequest';
+            || (bool) $request->get('_pjax')
+            || strtolower((string) $request->header('X-Requested-With')) === 'xmlhttprequest';
 
         $sidebar = \app\service\SidebarService::getSidebarContent($request, 'tag');
 
@@ -113,23 +112,24 @@ class TagController
             $tags = Tag::query()
                 ->withCount('posts')
                 ->orderBy('id', 'asc')
-                ->get(['id','name','slug','description'])
-                ->map(fn($t) => [
-                    'id' => (int)$t->id,
-                    'name' => (string)$t->name,
-                    'slug' => (string)$t->slug,
-                    'description' => (string)($t->description ?? ''),
-                    'count' => (int)($t->posts_count ?? 0)
+                ->get(['id', 'name', 'slug', 'description'])
+                ->map(fn ($t) => [
+                    'id' => (int) $t->id,
+                    'name' => (string) $t->name,
+                    'slug' => (string) $t->slug,
+                    'description' => (string) ($t->description ?? ''),
+                    'count' => (int) ($t->posts_count ?? 0),
                 ])->toArray();
             $enhancedCache->set($cacheKey, json_encode($tags, JSON_UNESCAPED_UNICODE), 300, 'tag');
         }
 
         $blog_title = BlogService::getBlogTitle();
         $viewName = $isPjax ? 'tag/list.content' : 'tag/list';
+
         return view($viewName, [
             'page_title' => "全部标签 - {$blog_title}",
             'tags' => $tags,
-            'sidebar' => $sidebar
+            'sidebar' => $sidebar,
         ]);
     }
 
@@ -137,6 +137,7 @@ class TagController
     {
         $value = strip_tags($value);
         $value = trim($value);
+
         return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
     }
 }

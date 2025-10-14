@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of webman.
  *
@@ -24,7 +25,7 @@ Route::disableDefaultRoute();
 Route::any('/post/{keyword}', [app\controller\PostController::class, 'index']);
 Route::any('/post/{keyword}.html', [app\controller\PostController::class, 'index']);
 
-# 页面路由 - 支持 .html 后缀
+// 页面路由 - 支持 .html 后缀
 // 首页分页路由 -> IndexController
 Route::any('/page/{page}', [app\controller\IndexController::class, 'index'])->name('index.page');
 Route::any('/page/{page}.html', [app\controller\IndexController::class, 'index'])->name('index.page.html');
@@ -32,7 +33,7 @@ Route::any('/page/{page}.html', [app\controller\IndexController::class, 'index']
 // 首页路由
 Route::any('/', [app\controller\IndexController::class, 'index'])->name('index.index');
 
- // 搜索路由
+// 搜索路由
 Route::any('/search', [app\controller\SearchController::class, 'index'])->name('search.index');
 Route::any('/search/ajax', [app\controller\SearchController::class, 'ajax'])->name('search.ajax');
 // 搜索分页路由
@@ -43,7 +44,7 @@ Route::any('/search/page/{page}.html', [app\controller\SearchController::class, 
 Route::any('/category', [app\controller\CategoryController::class, 'list'])->name('category.list');
 Route::any('/tag', [app\controller\TagController::class, 'list'])->name('tag.list');
 
- // 链接页&分页路由
+// 链接页&分页路由
 Route::any('/link', [app\controller\LinkController::class, 'index'])->name('link.index');
 Route::any('/link/', [app\controller\LinkController::class, 'index']);
 Route::any('/link/goto/{id}', [app\controller\LinkController::class, 'goto'])->name('link.goto');
@@ -52,7 +53,7 @@ Route::any('/link/page/{page}', [app\controller\LinkController::class, 'index'])
 Route::any('/link/request', [app\controller\LinkController::class, 'request'])->name('link.request');
 Route::any('/link/connect/apply', [app\controller\LinkController::class, 'connectApply'])->name('link.connect.apply');
 
- // 分类浏览（兼容旧路由）
+// 分类浏览（兼容旧路由）
 Route::any('/category/{slug}', [app\controller\CategoryController::class, 'index'])->name('category.index');
 Route::any('/category/{slug}.html', [app\controller\CategoryController::class, 'index'])->name('category.index.html');
 Route::any('/category/{slug}/page/{page}', [app\controller\CategoryController::class, 'index'])->name('category.page');
@@ -79,7 +80,7 @@ Route::any('/t/{slug}/page/{page}', [app\controller\TagController::class, 'index
 Route::any('/t/{slug}/page/{page}.html', [app\controller\TagController::class, 'index'])->name('t.page.html');
 
 // 调试 API
-Route::get('/api/hello', function() {
+Route::get('/api/hello', function () {
     return json(['hello' => 'webman']);
 });
 

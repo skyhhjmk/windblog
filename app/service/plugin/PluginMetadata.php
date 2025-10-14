@@ -16,17 +16,27 @@ namespace app\service\plugin;
 class PluginMetadata
 {
     public string $name = '';
+
     public string $slug = '';
+
     public string $version = '';
+
     public string $description = '';
+
     public string $author = '';
+
     public string $requires_php = '';
+
     public string $requires_at_least = '';
+
     public string $file = '';
+
     /** @var array<string, string> 版本/环境依赖约束，如 { "php": ">=8.2" } */
     public array $requires = [];
+
     /** @var array<string> 能力声明，如 [ "template", "route", "queue" ] */
     public array $capabilities = [];
+
     /** @var array<string> 权限声明，如 [ "send_mail", "read_posts" ] */
     public array $permissions = [];
 
@@ -75,10 +85,10 @@ class PluginMetadata
         $jsonFile = dirname($file) . DIRECTORY_SEPARATOR . 'plugin.json';
         if (is_file($jsonFile)) {
             try {
-                $json = json_decode((string)@file_get_contents($jsonFile), true, 512, JSON_THROW_ON_ERROR);
+                $json = json_decode((string) @file_get_contents($jsonFile), true, 512, JSON_THROW_ON_ERROR);
                 if (is_array($json)) {
-                    $meta->name = $json['name']    ?? $meta->name;
-                    $meta->slug = $json['slug']    ?? $meta->slug;
+                    $meta->name = $json['name'] ?? $meta->name;
+                    $meta->slug = $json['slug'] ?? $meta->slug;
                     $meta->version = $json['version'] ?? $meta->version;
                     $meta->description = $json['description'] ?? $meta->description;
                     $meta->author = $json['author'] ?? $meta->author;

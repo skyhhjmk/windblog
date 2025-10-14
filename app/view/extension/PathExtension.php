@@ -1,4 +1,5 @@
 <?php
+
 namespace app\view\extension;
 
 use Twig\Extension\AbstractExtension;
@@ -14,6 +15,7 @@ class PathExtension extends AbstractExtension
             new TwigFunction('asset', function (string $path, ?string $version = null): string {
                 $ver = $version ?? getenv('ASSET_VERSION') ?? getenv('APP_VERSION') ?? date('Ymd');
                 $sep = str_contains($path, '?') ? '&' : '?';
+
                 return $path . $sep . 'v=' . $ver;
             }),
         ];

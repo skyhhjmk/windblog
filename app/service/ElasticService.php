@@ -2,14 +2,14 @@
 
 namespace app\service;
 
-use support\Log;
 use Elastic\Elasticsearch\ClientBuilder;
 use Elastic\Elasticsearch\ClientInterface;
+use support\Log;
 
 class ElasticService
 {
     protected static ?ClientInterface $client = null;
-    
+
     /**
      * 在 ES 中按标签名称聚合并返回标准化标签列表（通过数据库补全id/slug）
      */
@@ -29,7 +29,7 @@ class ElasticService
             return $cached;
         }
 
-        $analyzer = (string)\app\service\BlogService::getConfig('es.analyzer', 'standard');
+        $analyzer = (string) \app\service\BlogService::getConfig('es.analyzer', 'standard');
         $payload = [
             'size' => max(10, $limit),
             'query' => [
@@ -43,13 +43,13 @@ class ElasticService
                                     ['match_phrase_prefix' => ['tag_name' => ['query' => $kw]]],
                                     ['term' => ['tag_slug' => $kw]],
                                 ],
-                                'minimum_should_match' => 1
-                            ]
-                        ]
-                    ]
-                ]
+                                'minimum_should_match' => 1,
+                            ],
+                        ],
+                    ],
+                ],
             ],
-            '_source' => ['tag_id', 'tag_name', 'tag_slug']
+            '_source' => ['tag_id', 'tag_name', 'tag_slug'],
         ];
         $url = sprintf('%s/%s/_search', $cfg['host'], $cfg['index']);
         $resp = self::curlRequest('POST', $url, $payload, $cfg['timeout']);
@@ -61,17 +61,18 @@ class ElasticService
         foreach ($hits as $h) {
             $src = $h['_source'] ?? [];
             $results[] = [
-                'id' => (int)($src['tag_id'] ?? 0),
-                'name' => (string)($src['tag_name'] ?? ''),
-                'slug' => (string)($src['tag_slug'] ?? ''),
+                'id' => (int) ($src['tag_id'] ?? 0),
+                'name' => (string) ($src['tag_name'] ?? ''),
+                'slug' => (string) ($src['tag_slug'] ?? ''),
             ];
             if (count($results) >= $limit) {
                 break;
             }
         }
-        $total = isset($resp['body']['hits']['total']['value']) ? (int)$resp['body']['hits']['total']['value'] : count($hits);
+        $total = isset($resp['body']['hits']['total']['value']) ? (int) $resp['body']['hits']['total']['value'] : count($hits);
         \support\Log::debug(sprintf('[ElasticService] searchTags kw="%s" total=%d results=%d', $kw, $total, count($results)));
         CacheService::cache($ckey, $results, true, 45);
+
         return $results;
     }
 
@@ -94,7 +95,7 @@ class ElasticService
             return $cached;
         }
 
-        $analyzer = (string)\app\service\BlogService::getConfig('es.analyzer', 'standard');
+        $analyzer = (string) \app\service\BlogService::getConfig('es.analyzer', 'standard');
         $payload = [
             'size' => max(10, $limit),
             'query' => [
@@ -108,13 +109,13 @@ class ElasticService
                                     ['match_phrase_prefix' => ['category_name' => ['query' => $kw]]],
                                     ['term' => ['category_slug' => $kw]],
                                 ],
-                                'minimum_should_match' => 1
-                            ]
-                        ]
-                    ]
-                ]
+                                'minimum_should_match' => 1,
+                            ],
+                        ],
+                    ],
+                ],
             ],
-            '_source' => ['category_id', 'category_name', 'category_slug']
+            '_source' => ['category_id', 'category_name', 'category_slug'],
         ];
         $url = sprintf('%s/%s/_search', $cfg['host'], $cfg['index']);
         $resp = self::curlRequest('POST', $url, $payload, $cfg['timeout']);
@@ -126,17 +127,18 @@ class ElasticService
         foreach ($hits as $h) {
             $src = $h['_source'] ?? [];
             $results[] = [
-                'id' => (int)($src['category_id'] ?? 0),
-                'name' => (string)($src['category_name'] ?? ''),
-                'slug' => (string)($src['category_slug'] ?? ''),
+                'id' => (int) ($src['category_id'] ?? 0),
+                'name' => (string) ($src['category_name'] ?? ''),
+                'slug' => (string) ($src['category_slug'] ?? ''),
             ];
             if (count($results) >= $limit) {
                 break;
             }
         }
-        $total = isset($resp['body']['hits']['total']['value']) ? (int)$resp['body']['hits']['total']['value'] : count($hits);
+        $total = isset($resp['body']['hits']['total']['value']) ? (int) $resp['body']['hits']['total']['value'] : count($hits);
         \support\Log::debug(sprintf('[ElasticService] searchCategories kw="%s" total=%d results=%d', $kw, $total, count($results)));
         CacheService::cache($ckey, $results, true, 45);
+
         return $results;
     }
 
@@ -157,30 +159,31 @@ class ElasticService
         $cfg = self::getConfig();
 
         $builder = ClientBuilder::create()
-            ->setHosts([rtrim((string)$cfg['host'], '/')]);
+            ->setHosts([rtrim((string) $cfg['host'], '/')]);
 
         // Basic 认证
         if (!empty($cfg['basic_user'])) {
-            $builder->setBasicAuthentication((string)$cfg['basic_user'], (string)($cfg['basic_pass'] ?? ''));
+            $builder->setBasicAuthentication((string) $cfg['basic_user'], (string) ($cfg['basic_pass'] ?? ''));
         }
 
         // SSL 验证与证书配置
-        $builder->setSSLVerification(!(bool)($cfg['ssl_ignore'] ?? false));
+        $builder->setSSLVerification(!(bool) ($cfg['ssl_ignore'] ?? false));
 
-        $caFile = self::materialize((string)($cfg['ssl_ca_content'] ?? ''), '.ca.pem');
+        $caFile = self::materialize((string) ($cfg['ssl_ca_content'] ?? ''), '.ca.pem');
         if (!empty($caFile)) {
             $builder->setCABundle($caFile);
         }
-        $certFile = self::materialize((string)($cfg['ssl_client_cert_content'] ?? ''), '.cert.pem');
+        $certFile = self::materialize((string) ($cfg['ssl_client_cert_content'] ?? ''), '.cert.pem');
         if (!empty($certFile) && method_exists($builder, 'setSSLCert')) {
             $builder->setSSLCert($certFile);
         }
-        $keyFile = self::materialize((string)($cfg['ssl_client_key_content'] ?? ''), '.key.pem');
+        $keyFile = self::materialize((string) ($cfg['ssl_client_key_content'] ?? ''), '.key.pem');
         if (!empty($keyFile) && method_exists($builder, 'setSSLKey')) {
             $builder->setSSLKey($keyFile);
         }
 
         self::$client = $builder->build();
+
         return self::$client;
     }
 
@@ -195,12 +198,13 @@ class ElasticService
         $hash = md5($content);
         $dir = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'windblog_es';
         if (!is_dir($dir)) {
-            @mkdir($dir, 0777, true);
+            @mkdir($dir, 0o777, true);
         }
         $file = $dir . DIRECTORY_SEPARATOR . $hash . $suffix;
         if (!file_exists($file)) {
             @file_put_contents($file, $content);
         }
+
         return $file;
     }
 
@@ -208,6 +212,7 @@ class ElasticService
     {
         return self::curlRequest($method, $url, $payload, $timeout);
     }
+
     /**
      * 从博客配置读取 ES 基本信息
      */
@@ -215,18 +220,20 @@ class ElasticService
     {
         try {
             $enabled = BlogService::getConfig('es.enabled', false);
-            $host = rtrim((string)BlogService::getConfig('es.host', 'http://127.0.0.1:9200'), '/');
-            $index = (string)BlogService::getConfig('es.index', 'windblog-posts');
-            $timeout = (int)BlogService::getConfig('es.timeout', 3);
-            $basic_user = (string)BlogService::getConfig('es.basic.username', '');
-            $basic_pass = (string)BlogService::getConfig('es.basic.password', '');
-            $ssl_ca_content = (string)BlogService::getConfig('es.ssl.ca_content', '');
-            $ssl_ignore = (bool)BlogService::getConfig('es.ssl.ignore_errors', false);
-            $ssl_client_cert_content = (string)BlogService::getConfig('es.ssl.client_cert_content', '');
-            $ssl_client_key_content = (string)BlogService::getConfig('es.ssl.client_key_content', '');
+            $host = rtrim((string) BlogService::getConfig('es.host', 'http://127.0.0.1:9200'), '/');
+            $index = (string) BlogService::getConfig('es.index', 'windblog-posts');
+            $timeout = (int) BlogService::getConfig('es.timeout', 3);
+            $basic_user = (string) BlogService::getConfig('es.basic.username', '');
+            $basic_pass = (string) BlogService::getConfig('es.basic.password', '');
+            $ssl_ca_content = (string) BlogService::getConfig('es.ssl.ca_content', '');
+            $ssl_ignore = (bool) BlogService::getConfig('es.ssl.ignore_errors', false);
+            $ssl_client_cert_content = (string) BlogService::getConfig('es.ssl.client_cert_content', '');
+            $ssl_client_key_content = (string) BlogService::getConfig('es.ssl.client_key_content', '');
+
             return compact('enabled', 'host', 'index', 'timeout', 'basic_user', 'basic_pass', 'ssl_ca_content', 'ssl_ignore', 'ssl_client_cert_content', 'ssl_client_key_content');
         } catch (\Throwable $e) {
             Log::error('[ElasticService] Read config failed: ' . $e->getMessage());
+
             return [
                 'enabled' => false,
                 'host' => 'http://127.0.0.1:9200',
@@ -274,12 +281,13 @@ class ElasticService
             $hash = md5($content);
             $dir = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'windblog_es';
             if (!is_dir($dir)) {
-                @mkdir($dir, 0777, true);
+                @mkdir($dir, 0o777, true);
             }
             $file = $dir . DIRECTORY_SEPARATOR . $hash . $suffix;
             if (!file_exists($file)) {
                 @file_put_contents($file, $content);
             }
+
             return $file;
         };
 
@@ -312,17 +320,19 @@ class ElasticService
         $resp = curl_exec($ch);
         $errno = curl_errno($ch);
         $error = curl_error($ch);
-        $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
         if ($errno !== 0) {
             Log::error(sprintf('[ElasticService] curl error(%d): %s url=%s', $errno, $error, $url));
+
             return ['ok' => false, 'status' => $status, 'error' => $error, 'body' => null];
         }
         $data = null;
         if (is_string($resp) && $resp !== '') {
             $data = json_decode($resp, true);
         }
+
         return ['ok' => ($status >= 200 && $status < 300), 'status' => $status, 'error' => null, 'body' => $data];
     }
 
@@ -361,10 +371,10 @@ class ElasticService
                                 'fields' => ['title^5', 'excerpt^3', 'content^1', 'categories_names^2', 'tags_names^2'],
                                 'type' => 'best_fields',
                                 'operator' => 'and',
-                                'analyzer' => (string)\app\service\BlogService::getConfig('es.analyzer', 'standard'),
-                                'fuzziness' => 'AUTO'
-                            ]
-                        ]
+                                'analyzer' => (string) \app\service\BlogService::getConfig('es.analyzer', 'standard'),
+                                'fuzziness' => 'AUTO',
+                            ],
+                        ],
                     ],
                     'should' => [
                         // 标题短语匹配，较高权重（保留），去除对不存在的 title.keyword 精确匹配以避免400
@@ -373,21 +383,21 @@ class ElasticService
                             'match_phrase' => [
                                 'title' => [
                                     'query' => $keyword,
-                                    'boost' => 12
-                                ]
-                            ]
+                                    'boost' => 12,
+                                ],
+                            ],
                         ],
                         // 标题前缀短语匹配，辅助提升
                         [
                             'match_phrase_prefix' => [
                                 'title' => [
                                     'query' => $keyword,
-                                    'boost' => 8
-                                ]
-                            ]
-                        ]
-                    ]
-                ]
+                                    'boost' => 8,
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
             ],
             'highlight' => [
                 'pre_tags' => ['<em class="hl">'],
@@ -397,8 +407,8 @@ class ElasticService
                     'content' => new \stdClass(),
                     'categories_names' => new \stdClass(),
                     'tags_names' => new \stdClass(),
-                ]
-            ]
+                ],
+            ],
         ];
 
         $url = sprintf('%s/%s/_search', $cfg['host'], $cfg['index']);
@@ -406,20 +416,21 @@ class ElasticService
         if (!$resp['ok'] || !is_array($resp['body'])) {
             $bodyStr = isset($resp['body']) ? json_encode($resp['body'], JSON_UNESCAPED_UNICODE) : '';
             Log::warning('[ElasticService] search fallback to DB, status=' . $resp['status'] . ' body=' . $bodyStr);
+
             return ['ids' => [], 'total' => 0, 'used' => false];
         }
 
         $body = $resp['body'];
         $hits = $body['hits']['hits'] ?? [];
-        $total = isset($body['hits']['total']['value']) ? (int)$body['hits']['total']['value'] : count($hits);
+        $total = isset($body['hits']['total']['value']) ? (int) $body['hits']['total']['value'] : count($hits);
         $ids = [];
         $highlights = [];
         foreach ($hits as $h) {
             $id = null;
             if (isset($h['_id'])) {
-                $id = (int)$h['_id'];
+                $id = (int) $h['_id'];
             } elseif (isset($h['_source']['id'])) {
-                $id = (int)$h['_source']['id'];
+                $id = (int) $h['_source']['id'];
             }
             if ($id !== null) {
                 $ids[] = $id;
@@ -432,7 +443,7 @@ class ElasticService
                 }
             }
         }
-        $analyzerUsed = (string)\app\service\BlogService::getConfig('es.analyzer', 'standard');
+        $analyzerUsed = (string) \app\service\BlogService::getConfig('es.analyzer', 'standard');
         $signals = [
             'highlighted' => !empty($highlights),
             'synonym' => str_contains(mb_strtolower($analyzerUsed), 'synonym'),
@@ -441,6 +452,7 @@ class ElasticService
         $result = ['ids' => $ids, 'total' => $total, 'used' => true, 'highlights' => $highlights, 'signals' => $signals];
         // 写入短TTL缓存（45秒）
         CacheService::cache($ckey, $result, true, 45);
+
         return $result;
     }
 
@@ -457,12 +469,12 @@ class ElasticService
         if (mb_strlen($prefix) < 1) {
             return [];
         }
-        $skey = 'es_suggest:' . md5($prefix) . ':' . (int)$limit;
+        $skey = 'es_suggest:' . md5($prefix) . ':' . (int) $limit;
         $scached = CacheService::cache($skey);
         if ($scached !== false && is_array($scached)) {
             return $scached;
         }
-        $usePinyin = (bool)BlogService::getConfig('es.suggest.pinyin', false);
+        $usePinyin = (bool) BlogService::getConfig('es.suggest.pinyin', false);
         // 优先使用 title.pinyin（若映射存在且开启），否则使用 title 前缀匹配
         $field = $usePinyin ? 'title.pinyin' : 'title';
         $payload = [
@@ -471,11 +483,11 @@ class ElasticService
                 'match_phrase_prefix' => [
                     $field => [
                         'query' => $prefix,
-                        'analyzer' => (string)BlogService::getConfig('es.analyzer', 'standard')
-                    ]
-                ]
+                        'analyzer' => (string) BlogService::getConfig('es.analyzer', 'standard'),
+                    ],
+                ],
             ],
-            '_source' => ['id', 'title']
+            '_source' => ['id', 'title'],
         ];
         $url = sprintf('%s/%s/_search', $cfg['host'], $cfg['index']);
         $resp = self::curlRequest('POST', $url, $payload, $cfg['timeout']);
@@ -492,6 +504,7 @@ class ElasticService
         }
         // 写入超短TTL缓存（30秒）
         CacheService::cache($skey, $titles, true, 30);
+
         return $titles;
     }
 }

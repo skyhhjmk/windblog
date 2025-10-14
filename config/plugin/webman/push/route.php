@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of webman.
  *
@@ -13,14 +14,14 @@
  */
 
 use support\Request;
-use Webman\Route;
 use Webman\Push\Api;
+use Webman\Route;
 
 /**
  * 推送js客户端文件
  */
 Route::get('/plugin/webman/push/push.js', function (Request $request) {
-    return response()->file(base_path().'/vendor/webman/push/src/push.js');
+    return response()->file(base_path() . '/vendor/webman/push/src/push.js');
 });
 
 /**
@@ -29,9 +30,9 @@ Route::get('/plugin/webman/push/push.js', function (Request $request) {
 Route::post(config('plugin.webman.push.app.auth'), function (Request $request) {
     $pusher = new Api(str_replace('0.0.0.0', '127.0.0.1', config('plugin.webman.push.app.api')), config('plugin.webman.push.app.app_key'), config('plugin.webman.push.app.app_secret'));
     $channel_name = $request->post('channel_name');
-//    $session = $request->session();
+    //    $session = $request->session();
     // 这里应该通过session和channel_name判断当前用户是否有权限监听channel_name
-//    session('')
+    //    session('')
     $has_authority = true;
     if ($has_authority) {
         return response($pusher->socketAuth($channel_name, $request->post('socket_id')));
@@ -70,7 +71,7 @@ Route::post(parse_url(config('plugin.webman.push.app.channel_hook'), PHP_URL_PAT
     foreach ($payload['events'] as $event) {
         if ($event['name'] === 'channel_added') {
             $channels_online[] = $event['channel'];
-        } else if ($event['name'] === 'channel_removed') {
+        } elseif ($event['name'] === 'channel_removed') {
             $channels_offline[] = $event['channel'];
         }
     }
@@ -83,6 +84,3 @@ Route::post(parse_url(config('plugin.webman.push.app.channel_hook'), PHP_URL_PAT
 
     return 'OK';
 });
-
-
-

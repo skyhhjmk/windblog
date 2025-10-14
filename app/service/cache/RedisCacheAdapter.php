@@ -1,21 +1,24 @@
 <?php
+
 namespace app\service\cache;
 
+use DateInterval;
 use Psr\SimpleCache\CacheInterface;
 use support\Redis;
-use DateInterval;
 
 class RedisCacheAdapter implements CacheInterface
 {
     private string $connection;
+
     private string $prefix;
+
     private int $defaultTtl;
 
     public function __construct(array $options = [])
     {
         $this->connection = $options['connection'] ?? 'default';
         $this->prefix = $options['prefix'] ?? 'twig:fragment:';
-        $this->defaultTtl = (int)($options['default_ttl'] ?? 300);
+        $this->defaultTtl = (int) ($options['default_ttl'] ?? 300);
     }
 
     private function conn()
@@ -33,11 +36,13 @@ class RedisCacheAdapter implements CacheInterface
         if ($ttl instanceof DateInterval) {
             $now = new \DateTimeImmutable();
             $future = (new \DateTimeImmutable())->add($ttl);
+
             return max(0, $future->getTimestamp() - $now->getTimestamp());
         }
         if (is_int($ttl)) {
             return max(0, $ttl);
         }
+
         return $this->defaultTtl;
     }
 
@@ -48,7 +53,9 @@ class RedisCacheAdapter implements CacheInterface
 
     private function decode(?string $payload)
     {
-        if ($payload === null) return null;
+        if ($payload === null) {
+            return null;
+        }
         try {
             return unserialize($payload);
         } catch (\Throwable $e) {
@@ -59,6 +66,7 @@ class RedisCacheAdapter implements CacheInterface
     public function get(string $key, mixed $default = null): mixed
     {
         $val = $this->conn()->get($this->k($key));
+
         return $val === null ? $default : $this->decode($val);
     }
 
@@ -68,14 +76,15 @@ class RedisCacheAdapter implements CacheInterface
         $payload = $this->encode($value);
         $keyName = $this->k($key);
         if ($ttlSec > 0) {
-            return (bool)$this->conn()->setex($keyName, $ttlSec, $payload);
+            return (bool) $this->conn()->setex($keyName, $ttlSec, $payload);
         }
-        return (bool)$this->conn()->set($keyName, $payload);
+
+        return (bool) $this->conn()->set($keyName, $payload);
     }
 
     public function delete(string $key): bool
     {
-        return (bool)$this->conn()->del($this->k($key));
+        return (bool) $this->conn()->del($this->k($key));
     }
 
     public function clear(): bool
@@ -91,6 +100,7 @@ class RedisCacheAdapter implements CacheInterface
                 $conn->del(...$keys);
             }
         } while ($cursor != 0);
+
         return true;
     }
 
@@ -98,7 +108,7 @@ class RedisCacheAdapter implements CacheInterface
     {
         $prefixed = [];
         foreach ($keys as $k) {
-            $prefixed[] = $this->k((string)$k);
+            $prefixed[] = $this->k((string) $k);
         }
         $vals = $this->conn()->mget($prefixed);
         $out = [];
@@ -107,6 +117,7 @@ class RedisCacheAdapter implements CacheInterface
             $out[$k] = ($vals[$i] ?? null) === null ? $default : $this->decode($vals[$i]);
             $i++;
         }
+
         return $out;
     }
 
@@ -115,7 +126,7 @@ class RedisCacheAdapter implements CacheInterface
         $ttlSec = $this->normTtl($ttl);
         $conn = $this->conn();
         foreach ($values as $k => $v) {
-            $key = $this->k((string)$k);
+            $key = $this->k((string) $k);
             $payload = $this->encode($v);
             if ($ttlSec > 0) {
                 $conn->setex($key, $ttlSec, $payload);
@@ -123,6 +134,7 @@ class RedisCacheAdapter implements CacheInterface
                 $conn->set($key, $payload);
             }
         }
+
         return true;
     }
 
@@ -130,16 +142,17 @@ class RedisCacheAdapter implements CacheInterface
     {
         $prefixed = [];
         foreach ($keys as $k) {
-            $prefixed[] = $this->k((string)$k);
+            $prefixed[] = $this->k((string) $k);
         }
         if (!empty($prefixed)) {
             $this->conn()->del(...$prefixed);
         }
+
         return true;
     }
 
     public function has(string $key): bool
     {
-        return (bool)$this->conn()->exists($this->k($key));
+        return (bool) $this->conn()->exists($this->k($key));
     }
 }

@@ -57,12 +57,18 @@ jobs:
 
     - name: Comment PR with PHPStan summary
       if: github.event_name == 'pull_request' && always()
+      continue-on-error: true
       uses: actions/github-script@v7
       with:
         script: |
           const fs = require('fs');
 
           try {
+            if (!fs.existsSync('phpstan-report.json')) {
+              console.log('No PHPStan report found');
+              return;
+            }
+
             const reportData = fs.readFileSync('phpstan-report.json', 'utf8');
             const report = JSON.parse(reportData);
 
@@ -89,7 +95,7 @@ jobs:
               });
             }
           } catch (error) {
-            console.log('No PHPStan issues found or report file missing');
+            console.log('Error processing PHPStan report:', error.message);
           }
 
   php-cs-fixer:
@@ -150,45 +156,46 @@ jobs:
 
     - name: Comment PR with summary
       if: github.event_name == 'pull_request' && always()
+      continue-on-error: true
       uses: actions/github-script@v7
       with:
         script: |
           const fs = require('fs');
-          const xml2js = require('xml2js');
 
           try {
-            const xmlData = fs.readFileSync('php-cs-fixer-report.xml', 'utf8');
-            const parser = new xml2js.Parser();
-            const result = await parser.parseStringPromise(xmlData);
-
-            let issueCount = 0;
-            let fileCount = 0;
-            if (result.checkstyle && result.checkstyle.file) {
-              fileCount = result.checkstyle.file.length;
-              result.checkstyle.file.forEach(file => {
-                if (file.error) {
-                  issueCount += file.error.length;
-                }
-              });
+            if (!fs.existsSync('php-cs-fixer-report.xml')) {
+              console.log('No PHP CS Fixer report found');
+              return;
             }
 
-            const comment = '## 🎨 PHP CS Fixer Report\n\n' +
-              '**发现代码风格问题**: ' + issueCount + ' 个问题，涉及 ' + fileCount + ' 个文件\n\n' +
-              '### 如何修复\n\n' +
-              '在本地运行以下命令自动修复：\n' +
-              '```bash\n' +
-              'vendor/bin/php-cs-fixer fix\n' +
-              '```\n\n' +
-              '📥 详细报告已保存为 Artifact，可在 Actions 页面下载查看。';
+            const xmlData = fs.readFileSync('php-cs-fixer-report.xml', 'utf8');
 
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: comment
-            });
+            // 简单解析 XML：统计 <file> 和 <error> 标签数量
+            const fileMatches = xmlData.match(/<file[^>]*>/g) || [];
+            const errorMatches = xmlData.match(/<error[^>]*>/g) || [];
+
+            const fileCount = fileMatches.length;
+            const issueCount = errorMatches.length;
+
+            if (issueCount > 0) {
+              const comment = '## 🎨 PHP CS Fixer Report\n\n' +
+                '**发现代码风格问题**: ' + issueCount + ' 个问题，涉及 ' + fileCount + ' 个文件\n\n' +
+                '### 如何修复\n\n' +
+                '在本地运行以下命令自动修复：\n' +
+                '```bash\n' +
+                'vendor/bin/php-cs-fixer fix\n' +
+                '```\n\n' +
+                '📥 详细报告已保存为 Artifact，可在 Actions 页面下载查看。';
+
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            }
           } catch (error) {
-            console.log('No issues found or report file missing');
+            console.log('Error processing PHP CS Fixer report:', error.message);
           }
 
   security:

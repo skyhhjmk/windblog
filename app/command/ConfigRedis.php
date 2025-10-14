@@ -10,6 +10,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 class ConfigRedis extends Command
 {
     protected static $defaultName = 'config:redis';
+
     protected static $defaultDescription = 'Show Redis config';
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -18,7 +19,7 @@ class ConfigRedis extends Command
         $config = config('redis');
         $headers = ['name', 'host', 'port', 'database', 'password', 'max_connections', 'min_connections', 'wait_timeout', 'idle_timeout', 'heartbeat_interval'];
         $rows = [];
-        
+
         foreach ($config as $name => $redis_config) {
             $row = [];
             foreach ($headers as $key) {
@@ -47,12 +48,12 @@ class ConfigRedis extends Command
             }
             $rows[] = $row;
         }
-        
+
         $table = new Table($output);
         $table->setHeaders($headers);
         $table->setRows($rows);
         $table->render();
-        
+
         return self::SUCCESS;
     }
 }

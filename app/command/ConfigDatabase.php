@@ -10,6 +10,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 class ConfigDatabase extends Command
 {
     protected static $defaultName = 'config:db';
+
     protected static $defaultDescription = 'Show database config';
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -37,6 +38,7 @@ class ConfigDatabase extends Command
         $table->setHeaders($headers);
         $table->setRows($rows);
         $table->render();
+
         return self::SUCCESS;
     }
 }

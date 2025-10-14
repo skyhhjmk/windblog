@@ -4,10 +4,8 @@
  * Here is your custom functions.
  */
 
-use support\Log;
-use Symfony\Component\Translation\Translator;
-use Symfony\Component\Translation\Loader\ArrayLoader;
 use app\service\CacheService;
+use support\Log;
 
 /**
  * 获取缓存处理器实例
@@ -39,6 +37,7 @@ function cache(?string $key = null, mixed $value = null, bool $set = false, ?int
     if (is_null($key)) {
         return new CacheService();
     }
+
     return CacheService::cache($key, $value, $set, $ttl);
 }
 
@@ -85,9 +84,11 @@ function blog_config_write(string $cache_key, string $fullCacheKey, mixed $value
         if ($use_cache && $value !== null) {
             cache($fullCacheKey, $value, true);
         }
+
         return $value;
     } catch (Exception|Error $e) {
         Log::error("[blog_config] 写入失败 (key: {$cache_key}): " . $e->getMessage());
+
         return $value;
     }
 }
@@ -114,6 +115,7 @@ function blog_config_read(string $cache_key, string $fullCacheKey, mixed $defaul
                 }
             } else {
                 Log::debug("[blog_config] cache hit: {$fullCacheKey}");
+
                 return $cachedValue;
             }
         }
@@ -128,11 +130,13 @@ function blog_config_read(string $cache_key, string $fullCacheKey, mixed $defaul
             cache($fullCacheKey, $dbValue, true);
         }
         Log::debug("[blog_config] db hit: {$cache_key}=" . var_export($dbValue, true));
+
         return $dbValue;
     }
 
     // 3. 数据库无记录，处理初始化
-    Log::debug("[blog_config] db miss: {$cache_key}, init=" . ($init ? 'true' : 'false') . ", default=" . var_export($default, true));
+    Log::debug("[blog_config] db miss: {$cache_key}, init=" . ($init ? 'true' : 'false') . ', default=' . var_export($default, true));
+
     return blog_config_handle_init($cache_key, $fullCacheKey, $default, $init, $use_cache);
 }
 
@@ -160,10 +164,11 @@ function blog_config_get_from_db(string $cache_key): mixed
         if (!is_numeric($val)) {
             return null;
         }
-        $port = (int)$val;
+        $port = (int) $val;
         if ($port <= 0) {
             return null;
         }
+
         return $port;
     }
 
@@ -197,6 +202,7 @@ function blog_config_handle_init(string $cache_key, string $fullCacheKey, mixed 
         if ($use_cache && $default !== null) {
             cache($fullCacheKey, $default, true);
         }
+
         return $default;
     } catch (Exception|Error $e) {
         // 如果仍然失败（极少情况），记录日志并返回默认值
@@ -209,6 +215,7 @@ function blog_config_handle_init(string $cache_key, string $fullCacheKey, mixed 
                 if ($use_cache) {
                     cache($fullCacheKey, $dbValue, true);
                 }
+
                 return $dbValue;
             }
         } catch (Exception $e2) {
@@ -233,6 +240,7 @@ function blog_config_convert_to_storage(mixed $value): string
             return $value;
         }
     }
+
     return json_encode($value, JSON_UNESCAPED_UNICODE);
 }
 
@@ -247,6 +255,7 @@ function blog_config_convert_from_storage(mixed $value): mixed
             return $decoded;
         }
     }
+
     return $value;
 }
 
@@ -305,7 +314,7 @@ function random_string(int $length = 10, string $type = 'mix'): string
     $numberChars = '0123456789';
     $letterChars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
     $mixChars = $numberChars . $letterChars;
-    
+
     switch ($type) {
         case 'number':
             $chars = $numberChars;
@@ -318,12 +327,13 @@ function random_string(int $length = 10, string $type = 'mix'): string
             $chars = $mixChars;
             break;
     }
-    
+
     $result = '';
     $charsLength = strlen($chars);
     for ($i = 0; $i < $length; $i++) {
         $result .= $chars[rand(0, $charsLength - 1)];
     }
+
     return $result;
 }
 
@@ -339,18 +349,18 @@ function random_string(int $length = 10, string $type = 'mix'): string
 function publish_static(array $data): bool
 {
     try {
-        $host   = (string)blog_config('rabbitmq_host', '127.0.0.1', true);
-        $port   = (int)blog_config('rabbitmq_port', 5672, true);
-        $user   = (string)blog_config('rabbitmq_user', 'guest', true);
-        $pass   = (string)blog_config('rabbitmq_password', 'guest', true);
-        $vhost  = (string)blog_config('rabbitmq_vhost', '/', true);
+        $host = (string) blog_config('rabbitmq_host', '127.0.0.1', true);
+        $port = (int) blog_config('rabbitmq_port', 5672, true);
+        $user = (string) blog_config('rabbitmq_user', 'guest', true);
+        $pass = (string) blog_config('rabbitmq_password', 'guest', true);
+        $vhost = (string) blog_config('rabbitmq_vhost', '/', true);
 
-        $exchange   = (string)blog_config('rabbitmq_static_exchange', 'static_exchange', true);
-        $routingKey = (string)blog_config('rabbitmq_static_routing_key', 'static_routing', true);
-        $queueName  = (string)blog_config('rabbitmq_static_queue', 'static_queue', true);
+        $exchange = (string) blog_config('rabbitmq_static_exchange', 'static_exchange', true);
+        $routingKey = (string) blog_config('rabbitmq_static_routing_key', 'static_routing', true);
+        $queueName = (string) blog_config('rabbitmq_static_queue', 'static_queue', true);
 
-        $dlxExchange = (string)blog_config('rabbitmq_static_dlx_exchange', 'static_dlx', true);
-        $dlxQueue    = (string)blog_config('rabbitmq_static_dlx_queue', 'static_dlx_queue', true);
+        $dlxExchange = (string) blog_config('rabbitmq_static_dlx_exchange', 'static_dlx', true);
+        $dlxQueue = (string) blog_config('rabbitmq_static_dlx_queue', 'static_dlx_queue', true);
 
         $conn = new \PhpAmqpLib\Connection\AMQPStreamConnection($host, $port, $user, $pass, $vhost);
         $ch = $conn->channel();
@@ -407,9 +417,11 @@ function publish_static(array $data): bool
 
         $ch->close();
         $conn->close();
+
         return true;
     } catch (\Throwable $e) {
         \support\Log::error('publish_static 失败: ' . $e->getMessage());
+
         return false;
     }
 }
@@ -419,7 +431,7 @@ function publish_static(array $data): bool
  */
 function mail_view(mixed $template = null, array $vars = [], ?string $app = null, ?string $plugin = null): string
 {
-    return \app\service\TwigTemplateService::render((string)$template, $vars, $app, $plugin);
+    return \app\service\TwigTemplateService::render((string) $template, $vars, $app, $plugin);
 }
 
 /**
@@ -489,5 +501,6 @@ function sendhtml(string|array $to, string $subject, string $html, array $option
 function sendtext(string|array $to, string $subject, string $text, array $options = []): bool
 {
     $opts = array_merge($options, ['text' => $text, 'html' => '']);
+
     return sendmail($to, $subject, null, $opts);
 }

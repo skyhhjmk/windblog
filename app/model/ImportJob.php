@@ -1,4 +1,5 @@
 <?php
+
 namespace app\model;
 
 use support\Model;
@@ -39,7 +40,7 @@ class ImportJob extends Model
         'options',
         'progress',
         'message',
-        'author_id'
+        'author_id',
     ];
 
     /**

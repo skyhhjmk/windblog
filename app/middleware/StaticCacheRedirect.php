@@ -1,10 +1,13 @@
 <?php
+
 namespace app\middleware;
 
-use support\Request;
 use Closure;
-use support\Response;
+
 use function public_path;
+
+use support\Request;
+use support\Response;
 
 class StaticCacheRedirect
 {
@@ -51,10 +54,11 @@ class StaticCacheRedirect
             $body = file_get_contents($full);
             // 基础缓存头（可根据需要调优）
             $generatedAt = @filemtime($full) ?: time();
+
             return new Response(200, [
                 'Content-Type' => 'text/html; charset=utf-8',
                 'Cache-Control' => 'public, max-age=60',
-                'X-Static-Cache' => gmdate('c', $generatedAt)
+                'X-Static-Cache' => gmdate('c', $generatedAt),
             ], $body);
         }
 

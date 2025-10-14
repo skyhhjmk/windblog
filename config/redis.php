@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of webman.
  *
@@ -38,5 +39,5 @@ return [
             'idle_timeout' => 60,
             'heartbeat_interval' => 50,
         ],
-    ]
+    ],
 ];

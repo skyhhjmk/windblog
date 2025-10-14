@@ -1,4 +1,5 @@
 <?php
+
 // zh_CN/messages.php
 return [
     'Input :parameter must be of type :exceptType, :actualType given' => '输入参数 :parameter 必须是 :exceptType 类型，传递的类型是 :actualType',
