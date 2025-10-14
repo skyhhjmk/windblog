@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>编辑FloLink浮动链接</title>
+    <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css"/>
+    <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+    <script src="/app/admin/component/pear/pear.js"></script>
+</head>
+
+<body class="pear-container">
+<div class="layui-card">
+    <div class="layui-card-body">
+<form id="floLinkForm" class="layui-form layui-form-pane" lay-filter="floLinkForm">
+            <input type="hidden" name="id" value="<?= $floLink['id'] ?>">
+
+            <!-- 基本信息 -->
+            <fieldset class="layui-elem-field layui-field-title">
+                <legend>基本信息</legend>
+            </fieldset>
+
+            <div class="layui-form-item layui-row">
+                <div class="layui-col-md6">
+                    <label class="layui-form-label layui-form-required">关键词</label>
+                    <div class="layui-input-block">
+                        <input type="text" name="keyword" value="<?= htmlspecialchars($floLink['keyword']) ?>" lay-verify="required" placeholder="请输入关键词（如：雨云）" class="layui-input">
+                        <div class="layui-form-mid layui-word-aux">文章中匹配的关键词</div>
+                    </div>
+                </div>
+                <div class="layui-col-md6">
+                    <label class="layui-form-label layui-form-required">链接地址</label>
+                    <div class="layui-input-block">
+                        <input type="text" name="url" value="<?= htmlspecialchars($floLink['url']) ?>" lay-verify="required|url" placeholder="https://example.com" class="layui-input">
+                        <div class="layui-form-mid layui-word-aux">点击后跳转的目标地址</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="layui-form-item layui-row">
+                <div class="layui-col-md6">
+                    <label class="layui-form-label">链接标题</label>
+                    <div class="layui-input-block">
+                        <input type="text" name="title" value="<?= htmlspecialchars($floLink['title'] ?? '') ?>" placeholder="用于悬浮窗显示" class="layui-input">
+                        <div class="layui-form-mid layui-word-aux">悬浮窗中显示的标题</div>
+                    </div>
+                </div>
+                <div class="layui-col-md6">
+                    <label class="layui-form-label">图片URL</label>
+                    <div class="layui-input-block">
+                        <input type="text" name="image" value="<?= htmlspecialchars($floLink['image'] ?? '') ?>" placeholder="https://example.com/image.jpg" class="layui-input">
+                        <div class="layui-form-mid layui-word-aux">悬浮窗中显示的图片</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">链接描述</label>
+                <div class="layui-input-block">
+                    <textarea name="description" placeholder="用于悬浮窗显示的描述信息" class="layui-textarea"><?= htmlspecialchars($floLink['description'] ?? '') ?></textarea>
+                </div>
+            </div>
+
+            <!-- 匹配规则 -->
+            <fieldset class="layui-elem-field layui-field-title">
+                <legend>匹配规则</legend>
+            </fieldset>
+
+            <div class="layui-form-item layui-row">
+                <div class="layui-col-md4">
+                    <label class="layui-form-label">匹配模式</label>
+                    <div class="layui-input-block">
+                        <select name="match_mode">
+                            <option value="first" <?= ($floLink['match_mode'] ?? 'first') === 'first' ? 'selected' : '' ?>>仅首次出现</option>
+                            <option value="all" <?= ($floLink['match_mode'] ?? 'first') === 'all' ? 'selected' : '' ?>>全部替换</option>
+                        </select>
+                        <div class="layui-form-mid layui-word-aux">关键词在文章中的替换次数</div>
+                    </div>
+                </div>
+                <div class="layui-col-md4">
+                    <label class="layui-form-label">优先级</label>
+                    <div class="layui-input-block">
+                        <input type="number" name="priority" value="<?= $floLink['priority'] ?? 100 ?>" placeholder="数字越小优先级越高" class="layui-input">
+                        <div class="layui-form-mid layui-word-aux">数字越小优先级越高</div>
+                    </div>
+                </div>
+                <div class="layui-col-md4">
+                    <label class="layui-form-label">排序权重</label>
+                    <div class="layui-input-block">
+                        <input type="number" name="sort_order" value="<?= $floLink['sort_order'] ?? 999 ?>" placeholder="排序权重" class="layui-input">
+                        <div class="layui-form-mid layui-word-aux">列表排序使用</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">匹配选项</label>
+                <div class="layui-input-block">
+                    <input type="checkbox" name="case_sensitive" lay-skin="switch" lay-text="是|否" <?= ($floLink['case_sensitive'] ?? false) ? 'checked' : '' ?> title="区分大小写">
+                    <div class="layui-form-mid layui-word-aux" style="padding-left: 10px;">是否区分大小写匹配关键词</div>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">智能替换</label>
+                <div class="layui-input-block">
+                    <input type="checkbox" name="replace_existing" lay-skin="switch" lay-text="开启|关闭" <?= ($floLink['replace_existing'] ?? true) ? 'checked' : '' ?> title="替换已有链接">
+                    <div class="layui-form-mid layui-word-aux" style="padding-left: 10px;">智能替换文章中已有的关键词链接（如aff链接等）</div>
+                </div>
+            </div>
+
+            <!-- 链接属性 -->
+            <fieldset class="layui-elem-field layui-field-title">
+                <legend>链接属性</legend>
+            </fieldset>
+
+            <div class="layui-form-item layui-row">
+                <div class="layui-col-md4">
+                    <label class="layui-form-label">打开方式</label>
+                    <div class="layui-input-block">
+                        <select name="target">
+                            <option value="_blank" <?= ($floLink['target'] ?? '_blank') === '_blank' ? 'selected' : '' ?>>新窗口打开</option>
+                            <option value="_self" <?= ($floLink['target'] ?? '_blank') === '_self' ? 'selected' : '' ?>>当前窗口打开</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-col-md4">
+                    <label class="layui-form-label">CSS类名</label>
+                    <div class="layui-input-block">
+                        <input type="text" name="css_class" value="<?= htmlspecialchars($floLink['css_class'] ?? 'flo-link') ?>" placeholder="自定义CSS类名" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-col-md4">
+                    <label class="layui-form-label">Rel属性</label>
+                    <div class="layui-input-block">
+                        <input type="text" name="rel" value="<?= htmlspecialchars($floLink['rel'] ?? 'noopener noreferrer') ?>" placeholder="rel属性" class="layui-input">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 悬浮窗设置 -->
+            <fieldset class="layui-elem-field layui-field-title">
+                <legend>悬浮窗设置</legend>
+            </fieldset>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">启用悬浮窗</label>
+                <div class="layui-input-block">
+                    <input type="checkbox" name="enable_hover" lay-skin="switch" lay-text="开启|关闭" <?= ($floLink['enable_hover'] ?? true) ? 'checked' : '' ?> title="启用悬浮窗">
+                    <div class="layui-form-mid layui-word-aux" style="padding-left: 10px;">鼠标悬停时显示悬浮窗</div>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">延迟时间</label>
+                <div class="layui-input-block">
+                    <input type="number" name="hover_delay" value="<?= $floLink['hover_delay'] ?? 200 ?>" placeholder="毫秒" class="layui-input" style="width: 200px;">
+                    <div class="layui-form-mid layui-word-aux">悬浮窗延迟显示时间（毫秒）</div>
+                </div>
+            </div>
+
+            <!-- 状态设置 -->
+            <fieldset class="layui-elem-field layui-field-title">
+                <legend>状态设置</legend>
+            </fieldset>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">启用状态</label>
+                <div class="layui-input-block">
+                    <input type="checkbox" name="status" lay-skin="switch" lay-text="启用|禁用" <?= ($floLink['status'] ?? true) ? 'checked' : '' ?> title="启用状态">
+                    <div class="layui-form-mid layui-word-aux" style="padding-left: 10px;">禁用后不会在文章中生效</div>
+                </div>
+            </div>
+
+            <!-- 提交按钮 -->
+            <div class="layui-form-item">
+                <div class="layui-input-block">
+                    <button class="layui-btn layui-btn-normal" lay-submit lay-filter="flolink-submit">
+                        <i class="layui-icon layui-icon-ok"></i>
+                        保存修改
+                    </button>
+                    <button type="reset" class="layui-btn">
+                        <i class="layui-icon layui-icon-refresh"></i>
+                        重置表单
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+layui.use(['form', 'jquery'], function () {
+    var form = layui.form;
+    var $ = layui.jquery;
+
+    // 表单提交
+    form.on('submit(flolink-submit)', function (data) {
+        var formData = data.field;
+        var id = formData.id;
+
+        // 处理复选框值
+        formData.case_sensitive = formData.case_sensitive === 'on' ? 1 : 0;
+        formData.replace_existing = formData.replace_existing === 'on' ? 1 : 0;
+        formData.enable_hover = formData.enable_hover === 'on' ? 1 : 0;
+        formData.status = formData.status === 'on' ? 1 : 0;
+
+        // 提交数据
+        $.ajax({
+            url: '/app/admin/flolink/edit/' + id,
+            type: 'POST',
+            data: formData,
+            success: function (result) {
+                if (result.code === 0) {
+                    layer.msg(result.msg, {icon: 1, time: 1500}, function () {
+                        // 关闭当前iframe层
+                        var index = parent.layer.getFrameIndex(window.name);
+                        parent.layer.close(index);
+                    });
+                } else {
+                    layer.msg(result.msg, {icon: 2});
+                }
+            },
+            error: function () {
+                layer.msg('系统错误，请稍后再试', {icon: 2});
+            }
+        });
+
+        return false;
+    });
+});
+</script>
+</body>
+</html>

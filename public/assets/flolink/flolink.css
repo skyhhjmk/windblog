@@ -1,0 +1,213 @@
+/**
+ * FloLink - 浮动链接悬浮窗样式
+ * 自动为文章中的关键词创建链接并显示悬浮窗
+ */
+
+/* 浮动链接基础样式 */
+.flo-link {
+    position: relative;
+    color: #3b82f6;
+    text-decoration: none;
+    border-bottom: 1px dotted #3b82f6;
+    transition: all 0.3s ease;
+}
+
+.flo-link:hover {
+    color: #2563eb;
+    border-bottom-color: #2563eb;
+}
+
+/* 悬浮窗容器 */
+.flolink-tooltip {
+    position: fixed;
+    z-index: 99999;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    padding: 0;
+    max-width: 360px;
+    min-width: 280px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+    transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.flolink-tooltip.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+/* 悬浮窗箭头 */
+.flolink-tooltip::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: 20px;
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-bottom: 8px solid #ffffff;
+}
+
+/* 悬浮窗图片 */
+.flolink-tooltip-image {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    display: block;
+}
+
+/* 悬浮窗内容区 */
+.flolink-tooltip-content {
+    padding: 16px;
+}
+
+/* 悬浮窗标题 */
+.flolink-tooltip-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0 0 8px 0;
+    line-height: 1.4;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.flolink-tooltip-title::before {
+    content: '🔗';
+    font-size: 18px;
+}
+
+/* 悬浮窗描述 */
+.flolink-tooltip-description {
+    font-size: 14px;
+    color: #6b7280;
+    line-height: 1.6;
+    margin: 0 0 12px 0;
+}
+
+/* 悬浮窗底部信息 */
+.flolink-tooltip-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 12px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.flolink-tooltip-url {
+    font-size: 12px;
+    color: #9ca3af;
+    text-decoration: none;
+    max-width: 70%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.flolink-tooltip-icon {
+    font-size: 20px;
+    color: #3b82f6;
+}
+
+/* 加载动画 */
+.flolink-tooltip-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+}
+
+.flolink-tooltip-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #e5e7eb;
+    border-top-color: #3b82f6;
+    border-radius: 50%;
+    animation: flolink-spin 1s linear infinite;
+}
+
+@keyframes flolink-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* 响应式设计 */
+@media (max-width: 640px) {
+    .flolink-tooltip {
+        max-width: 90vw;
+        min-width: 280px;
+    }
+
+    .flolink-tooltip-image {
+        height: 140px;
+    }
+
+    .flolink-tooltip-content {
+        padding: 12px;
+    }
+
+    .flolink-tooltip-title {
+        font-size: 15px;
+    }
+
+    .flolink-tooltip-description {
+        font-size: 13px;
+    }
+}
+
+/* 暗色主题支持 */
+@media (prefers-color-scheme: dark) {
+    .flolink-tooltip {
+        background: #1f2937;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .flolink-tooltip::before {
+        border-bottom-color: #1f2937;
+    }
+
+    .flolink-tooltip-title {
+        color: #f9fafb;
+    }
+
+    .flolink-tooltip-description {
+        color: #d1d5db;
+    }
+
+    .flolink-tooltip-footer {
+        border-top-color: #374151;
+    }
+
+    .flolink-tooltip-url {
+        color: #9ca3af;
+    }
+}
+
+/* 无图片时的样式调整 */
+.flolink-tooltip.no-image .flolink-tooltip-content {
+    padding: 20px;
+}
+
+/* 简约模式（仅标题） */
+.flolink-tooltip.simple {
+    min-width: 200px;
+    max-width: 300px;
+}
+
+.flolink-tooltip.simple .flolink-tooltip-content {
+    padding: 12px 16px;
+}
+
+.flolink-tooltip.simple .flolink-tooltip-title {
+    margin: 0;
+    font-size: 14px;
+}

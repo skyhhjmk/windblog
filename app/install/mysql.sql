@@ -126,6 +126,36 @@ CREATE TABLE IF NOT EXISTS `links` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='友链表';
 
+-- 创建浮动链接表（FloLink）
+CREATE TABLE IF NOT EXISTS `flo_links` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT COMMENT '浮动链接ID',
+  `keyword` varchar(255) NOT NULL COMMENT '关键词',
+  `url` varchar(500) NOT NULL COMMENT '目标链接地址',
+  `title` varchar(255) DEFAULT NULL COMMENT '链接标题(用于悬浮窗显示)',
+  `description` text DEFAULT NULL COMMENT '链接描述(用于悬浮窗显示)',
+  `image` varchar(500) DEFAULT NULL COMMENT '图片URL(用于悬浮窗显示)',
+  `priority` int(11) DEFAULT 100 COMMENT '优先级(数字越小优先级越高)',
+  `match_mode` enum('first', 'all') DEFAULT 'first' COMMENT '匹配模式: first=仅替换首次出现, all=替换所有',
+  `case_sensitive` tinyint(1) DEFAULT 0 COMMENT '是否区分大小写',
+  `replace_existing` tinyint(1) DEFAULT 1 COMMENT '是否替换已有链接(智能替换aff等)',
+  `target` varchar(20) DEFAULT '_blank' COMMENT '打开方式',
+  `rel` varchar(100) DEFAULT 'noopener noreferrer' COMMENT 'rel属性',
+  `css_class` varchar(100) DEFAULT 'flo-link' COMMENT 'CSS类名',
+  `enable_hover` tinyint(1) DEFAULT 1 COMMENT '是否启用悬浮窗',
+  `hover_delay` int(11) DEFAULT 200 COMMENT '悬浮窗延迟显示时间(毫秒)',
+  `status` tinyint(1) DEFAULT 1 COMMENT '状态: 1=启用, 0=禁用',
+  `sort_order` int(11) DEFAULT 999 COMMENT '排序权重',
+  `custom_fields` json DEFAULT NULL COMMENT '自定义字段(JSON格式)',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted_at` timestamp NULL DEFAULT NULL COMMENT '软删除时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_keyword` (`keyword`),
+  KEY `idx_status` (`status`),
+  KEY `idx_priority` (`priority`),
+  KEY `idx_sort_order` (`sort_order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='FloLink浮动链接表';
+
 -- 创建页面表
 CREATE TABLE IF NOT EXISTS `pages` (
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,

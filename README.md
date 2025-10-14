@@ -12,6 +12,7 @@
 - [Features to be Proud Of](#features-to-be-proud-of)
 - [Features](#features)
 - [Install & use](#install--use)
+- [Commands](#commands)
 
 # NOTE
 
@@ -42,12 +43,16 @@
 
 ***本项目不适用于作为深度学习的训练数据集使用，因为这样做会使模型质量下降***
 
+***浮动链接功能不建议启用，因为其中包含 AFF 替换，详见 [FloLinkService.php](app/service/FloLinkService.php) 中的 `rewriteAffiliateLink` 方法，如需使用请自行修改相关 AFF***
+
 # Main Tech Stack
 
 - Webman
 - Twig
 - ES
 - RabbitMQ
+- Redis
+- PostgreSQL
 - LLM(For development)
 
 # Overkill Everywhere
@@ -98,18 +103,18 @@ ES 仅仅被用于搜索优化，这也许说得过去
 
 基本依赖：
 
-- PostgreSQL
+- PostgreSQL（可选 MySQL/SQLite）
 - PHP >= 8.3
 - PHP PDO 扩展
-- PHP pdo_pgsql 扩展
+- PHP pdo_pgsql 扩展（可选其他驱动以支持其他数据库）
 
 **由于追求较为极致的性能，首页并不存在安装检测的相关代码，首次启动需访问 `/app/admin` 进行安装，安装完成后请重启应用以实现扩展进程的资源初始化**
 
 若要完整使用博客功能，请安装：
 
-- PostgreSQL: 主要数据库（必须安装）
-- Redis: 缓存数据库（可选安装）
-- ElasticSearch: 全文索引数据库（可选安装）
+- PostgreSQL: 主要数据库（必须安装，也可使用 MySQL/SQLite 但是性能受限）
+- Redis: 缓存数据库（可选安装，不启用则不支持调用统计等功能，同时支持 Memcached/APCu/memory）
+- ElasticSearch: 全文索引数据库（可选安装，不启用则不支持索引优化、同义词等功能，将回退到数据库搜索）
 - RabbitMQ: 消息队列（必须安装）
 
 ***本项目仍然处于开发阶段***
@@ -126,14 +131,95 @@ git clone https://github.com/skyhhjmk/windblog.git && cd windblog
 composer --no-dev install -vvv
 
 # 启动
-./webman start
+./console start
 ```
 
 如果您遇到了任何问题，请优先尝试运行修复命令以解除某些函数的禁用（会允许包括 exec 在内的多个函数）
 
-```bash
-./webman fix-disable-functions
+```shell
+./console fix-disable-functions
 ```
 
 当项目启动后，访问 `/app/admin` 即可看到安装页面（为了优化一点性能，首页并没有做安装检测）
 是否安装的检测依据是根目录是否有 `.env` 文件，有则视为已安装并且使用文件中定义的环境变量运行
+
+# Commands
+
+仅包含部分命令的说明
+
+## 获取帮助列表
+
+```shell
+
+# Linux
+./console help
+
+# Windows
+php ./console help
+```
+
+## 获取可用命令列表
+
+```shell
+
+# Linux
+./console
+
+# Windows
+php ./console
+```
+
+## 重新配置管理员账户信息
+
+```shell
+
+# Linux
+./console config:admin:re-init
+
+# Windows
+php ./console config:admin:re-init
+```
+
+## 重新配置数据库信息
+
+```shell
+
+# Linux
+./console config:re-init
+
+# Windows
+php ./console config:re-init
+```
+
+## 获取数据库信息
+
+```shell
+
+# Linux
+./console config:db
+
+# Windows
+php ./console config:db
+```
+
+## 获取 Redis 信息
+
+```shell
+
+# Linux
+./console config:redis
+
+# Windows
+php ./console config:redis
+```
+
+## 检查依赖
+
+```shell
+
+# Linux
+./console check:requirements
+
+# Windows
+php ./console check:requirements
+```

@@ -16,3 +16,4 @@
 /public/assets/min/
 /.lingma/
 /.claude/
+/.php-cs-fixer.cache
