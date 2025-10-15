@@ -14,6 +14,7 @@ $finder = PhpCsFixer\Finder::create()
     ->notName('_ide_helper.php');
 
 $config = new PhpCsFixer\Config();
+
 return $config
     ->setRiskyAllowed(true)
     ->setRules([
@@ -22,18 +23,18 @@ return $config
         'array_syntax' => ['syntax' => 'short'],
         'binary_operator_spaces' => [
             'default' => 'single_space',
-            'operators' => ['=>' => null]
+            'operators' => ['=>' => null],
         ],
         'blank_line_after_opening_tag' => true,
         'blank_line_before_statement' => [
-            'statements' => ['return']
+            'statements' => ['return'],
         ],
         'cast_spaces' => true,
         'class_attributes_separation' => [
             'elements' => [
                 'method' => 'one',
                 'property' => 'one',
-            ]
+            ],
         ],
         'concat_space' => ['spacing' => 'one'],
         'declare_equal_normalize' => true,
@@ -58,7 +59,7 @@ return $config
                 'extra',
                 'throw',
                 'use',
-            ]
+            ],
         ],
         'no_leading_import_slash' => true,
         'no_leading_namespace_whitespace' => true,

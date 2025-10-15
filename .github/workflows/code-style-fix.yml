@@ -1,0 +1,108 @@
+name: Auto Fix Code Style
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to fix'
+        required: true
+        type: number
+      branch:
+        description: 'Branch name to fix'
+        required: true
+        type: string
+
+jobs:
+  fix-code-style:
+    runs-on: ubuntu-latest
+    name: Auto Fix Code Style
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+    - name: Get PR details
+      id: pr
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const pr = await github.rest.pulls.get({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: ${{ inputs.pr_number }}
+          });
+          core.setOutput('head_ref', pr.data.head.ref);
+          core.setOutput('head_repo', pr.data.head.repo.full_name);
+
+    - name: Checkout PR branch
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.branch }}
+        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.3'
+        tools: php-cs-fixer, composer:v2
+
+    - name: Get composer cache directory
+      id: composer-cache
+      run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+    - name: Cache composer dependencies
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.composer-cache.outputs.dir }}
+        key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-composer-
+
+    - name: Install dependencies
+      run: composer install --prefer-dist --no-interaction --no-progress
+
+    - name: Run PHP CS Fixer
+      run: |
+        vendor/bin/php-cs-fixer fix --verbose
+        echo "Code style fixes applied"
+
+    - name: Check for changes
+      id: git-check
+      run: |
+        if git diff --quiet; then
+          echo "has_changes=false" >> $GITHUB_OUTPUT
+          echo "No changes detected"
+        else
+          echo "has_changes=true" >> $GITHUB_OUTPUT
+          echo "Changes detected"
+        fi
+
+    - name: Commit and push changes
+      if: steps.git-check.outputs.has_changes == 'true'
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git add -A
+        git commit -m "style: auto fix code style issues by php-cs-fixer [skip ci]"
+        git push
+
+    - name: Comment on PR
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const hasChanges = '${{ steps.git-check.outputs.has_changes }}' === 'true';
+          
+          const comment = hasChanges 
+            ? '## ✅ 代码样式已自动修复\n\n' +
+              '所有代码样式问题已通过 PHP CS Fixer 自动修复并提交到此 PR。\n\n' +
+              '请重新运行 CI 检查以确认问题已解决。'
+            : '## ℹ️ 无需修复\n\n' +
+              '当前代码已符合代码样式规范，无需进行任何修复。';
+          
+          await github.rest.issues.createComment({
+            issue_number: ${{ inputs.pr_number }},
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
