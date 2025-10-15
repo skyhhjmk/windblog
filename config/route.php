@@ -25,6 +25,10 @@ Route::disableDefaultRoute();
 Route::any('/post/{keyword}', [app\controller\PostController::class, 'index']);
 Route::any('/post/{keyword}.html', [app\controller\PostController::class, 'index']);
 
+// 评论相关路由
+Route::any('/comment/submit/{postId}', [app\controller\CommentController::class, 'submit']);
+Route::any('/comment/list/{postId}', [app\controller\CommentController::class, 'getList']);
+
 // 页面路由 - 支持 .html 后缀
 // 首页分页路由 -> IndexController
 Route::any('/page/{page}', [app\controller\IndexController::class, 'index'])->name('index.page');

@@ -14,8 +14,8 @@ return [
                 'href' => '/app/admin/table/index',
                 'type' => 1,
                 'weight' => 800,
-            ]
-        ]
+            ],
+        ],
     ],
     [
         'title' => '权限管理',
@@ -45,7 +45,7 @@ return [
                 'type' => 1,
                 'weight' => 800,
             ],
-        ]
+        ],
     ],
     [
         'title' => '会员管理',
@@ -60,8 +60,8 @@ return [
                 'href' => '/app/admin/user/index',
                 'type' => 1,
                 'weight' => 800,
-            ]
-        ]
+            ],
+        ],
     ],
     [
         'title' => '文章管理',
@@ -76,8 +76,15 @@ return [
                 'href' => '/app/admin/posts/index',
                 'type' => 1,
                 'weight' => 940,
-            ]
-        ]
+            ],
+            [
+                'title' => '评论管理',
+                'key' => 'plugin\\admin\\app\\controller\\CommentController',
+                'href' => '/app/admin/comment/index',
+                'type' => 1,
+                'weight' => 930,
+            ],
+        ],
     ],
     [
         'title' => '媒体管理',
@@ -92,8 +99,8 @@ return [
                 'href' => '/app/admin/media/index',
                 'type' => 1,
                 'weight' => 0,
-            ]
-        ]
+            ],
+        ],
     ],
     [
         'title' => '通用设置',
@@ -175,11 +182,11 @@ return [
                         'key' => 'plugin\\admin\\app\\controller\\MailController@configPage',
                         'href' => '/app/admin/mail/config-page',
                         'type' => 1,
-                    ]
+                    ],
                 ],
-                'weight' => 470
-            ]
-        ]
+                'weight' => 470,
+            ],
+        ],
     ],
     [
         'title' => '插件管理',
@@ -201,8 +208,8 @@ return [
                 'href' => '/app/admin/plugin-system/index',
                 'weight' => 790,
                 'type' => 1,
-            ]
-        ]
+            ],
+        ],
     ],
     [
         'title' => '链接',
@@ -231,8 +238,8 @@ return [
                 'href' => '/app/admin/linkconnect/index',
                 'type' => 1,
                 'weight' => 700,
-            ]
-        ]
+            ],
+        ],
     ],
     [
         'title' => '工具',
@@ -267,9 +274,9 @@ return [
                 'key' => 'plugin\\admin\\app\\controller\\StaticCacheController',
                 'href' => '/app/admin/static-cache/index',
                 'type' => 1,
-                'weight' => 0
+                'weight' => 0,
             ],
-        ]
+        ],
     ],
     [
         'title' => '开发辅助',
@@ -285,7 +292,7 @@ return [
                 'weight' => 800,
                 'type' => 1,
             ],
-        ]
+        ],
     ],
     [
         'title' => '示例页面',
@@ -306,27 +313,27 @@ return [
                         'title' => '控制后台',
                         'icon' => 'layui-icon-console',
                         'type' => 1,
-                        'href' => '/app/admin/demos/console/console1.html'
+                        'href' => '/app/admin/demos/console/console1.html',
                     ], [
                         'key' => 'demo13',
                         'title' => '数据分析',
                         'icon' => 'layui-icon-console',
                         'type' => 1,
-                        'href' => '/app/admin/demos/console/console2.html'
+                        'href' => '/app/admin/demos/console/console2.html',
                     ], [
                         'key' => 'demo14',
                         'title' => '百度一下',
                         'icon' => 'layui-icon-console',
                         'type' => 1,
-                        'href' => 'http://www.baidu.com'
+                        'href' => 'http://www.baidu.com',
                     ], [
                         'key' => 'demo15',
                         'title' => '主题预览',
                         'icon' => 'layui-icon-console',
                         'type' => 1,
-                        'href' => '/app/admin/demos/system/theme.html'
-                    ]
-                ]
+                        'href' => '/app/admin/demos/system/theme.html',
+                    ],
+                ],
             ],
             [
                 'key' => 'demo20',
@@ -340,135 +347,135 @@ return [
                         'title' => '功能按钮',
                         'icon' => 'layui-icon-face-smile',
                         'type' => 1,
-                        'href' => '/app/admin/demos/document/button.html'
+                        'href' => '/app/admin/demos/document/button.html',
                     ], [
                         'key' => 'demo2014',
                         'title' => '表单集合',
                         'icon' => 'layui-icon-face-cry',
                         'type' => 1,
-                        'href' => '/app/admin/demos/document/form.html'
+                        'href' => '/app/admin/demos/document/form.html',
                     ], [
                         'key' => 'demo2010',
                         'title' => '字体图标',
                         'icon' => 'layui-icon-face-cry',
                         'type' => 1,
-                        'href' => '/app/admin/demos/document/icon.html'
+                        'href' => '/app/admin/demos/document/icon.html',
                     ], [
                         'key' => 'demo2012',
                         'title' => '多选下拉',
                         'icon' => 'layui-icon-face-cry',
                         'type' => 1,
-                        'href' => '/app/admin/demos/document/select.html'
+                        'href' => '/app/admin/demos/document/select.html',
                     ], [
                         'key' => 'demo2013',
                         'title' => '动态标签',
                         'icon' => 'layui-icon-face-cry',
                         'type' => 1,
-                        'href' => '/app/admin/demos/document/tag.html'
+                        'href' => '/app/admin/demos/document/tag.html',
                     ], [
                         'key' => 'demo2031',
                         'title' => '数据表格',
                         'icon' => 'layui-icon-face-cry',
                         'type' => 1,
-                        'href' => '/app/admin/demos/document/table.html'
+                        'href' => '/app/admin/demos/document/table.html',
                     ], [
                         'key' => 'demo2032',
                         'title' => '分布表单',
                         'icon' => 'layui-icon-face-cry',
                         'type' => 1,
-                        'href' => '/app/admin/demos/document/step.html'
+                        'href' => '/app/admin/demos/document/step.html',
                     ], [
                         'key' => 'demo2033',
                         'title' => '树形表格',
                         'icon' => 'layui-icon-face-cry',
                         'type' => 1,
-                        'href' => '/app/admin/demos/document/treetable.html'
+                        'href' => '/app/admin/demos/document/treetable.html',
                     ], [
                         'key' => 'demo2034',
                         'title' => '树状结构',
                         'icon' => 'layui-icon-face-cry',
                         'type' => 1,
-                        'href' => '/app/admin/demos/document/dtree.html'
+                        'href' => '/app/admin/demos/document/dtree.html',
                     ], [
                         'key' => 'demo2035',
                         'title' => '文本编辑',
                         'icon' => 'layui-icon-face-cry',
                         'type' => 1,
-                        'href' => '/app/admin/demos/document/tinymce.html'
+                        'href' => '/app/admin/demos/document/tinymce.html',
                     ], [
                         'key' => 'demo2036',
                         'title' => '卡片组件',
                         'icon' => 'layui-icon-face-cry',
                         'type' => 1,
-                        'href' => '/app/admin/demos/document/card.html'
+                        'href' => '/app/admin/demos/document/card.html',
                     ], [
                         'key' => 'demo2021',
                         'title' => '抽屉组件',
                         'icon' => 'layui-icon-face-cry',
                         'type' => 1,
-                        'href' => '/app/admin/demos/document/drawer.html'
+                        'href' => '/app/admin/demos/document/drawer.html',
                     ], [
                         'key' => 'demo2022',
                         'title' => '消息通知',
                         'icon' => 'layui-icon-face-cry',
                         'type' => 1,
-                        'href' => '/app/admin/demos/document/notice.html'
+                        'href' => '/app/admin/demos/document/notice.html',
                     ], [
                         'key' => 'demo2024',
                         'title' => '加载组件',
                         'icon' => 'layui-icon-face-cry',
                         'type' => 1,
-                        'href' => '/app/admin/demos/document/loading.html'
+                        'href' => '/app/admin/demos/document/loading.html',
                     ], [
                         'key' => 'demo2023',
                         'title' => '弹层组件',
                         'icon' => 'layui-icon-face-cry',
                         'type' => 1,
-                        'href' => '/app/admin/demos/document/popup.html'
+                        'href' => '/app/admin/demos/document/popup.html',
                     ], [
                         'key' => 'demo60131',
                         'title' => '多选项卡',
                         'icon' => 'layui-icon-face-cry',
                         'type' => 1,
-                        'href' => '/app/admin/demos/document/tab.html'
+                        'href' => '/app/admin/demos/document/tab.html',
                     ], [
                         'key' => 'demo60132',
                         'title' => '数据菜单',
                         'icon' => 'layui-icon-face-cry',
                         'type' => 1,
-                        'href' => '/app/admin/demos/document/menu.html'
+                        'href' => '/app/admin/demos/document/menu.html',
                     ], [
                         'key' => 'demo2041',
                         'title' => '哈希加密',
                         'icon' => 'layui-icon-face-cry',
                         'type' => 1,
-                        'href' => '/app/admin/demos/document/encrypt.html'
+                        'href' => '/app/admin/demos/document/encrypt.html',
                     ], [
                         'key' => 'demo2042',
                         'title' => '图标选择',
                         'icon' => 'layui-icon-face-cry',
                         'type' => 1,
-                        'href' => '/app/admin/demos/document/iconPicker.html'
+                        'href' => '/app/admin/demos/document/iconPicker.html',
                     ], [
                         'key' => 'demo2043',
                         'title' => '省市级联',
                         'icon' => 'layui-icon-face-cry',
                         'type' => 1,
-                        'href' => '/app/admin/demos/document/area.html'
+                        'href' => '/app/admin/demos/document/area.html',
                     ], [
                         'key' => 'demo2044',
                         'title' => '数字滚动',
                         'icon' => 'layui-icon-face-cry',
                         'type' => 1,
-                        'href' => '/app/admin/demos/document/count.html'
+                        'href' => '/app/admin/demos/document/count.html',
                     ], [
                         'key' => 'demo2045',
                         'title' => '顶部返回',
                         'icon' => 'layui-icon-face-cry',
                         'type' => 1,
-                        'href' => '/app/admin/demos/document/topBar.html'
-                    ]
-                ]
+                        'href' => '/app/admin/demos/document/topBar.html',
+                    ],
+                ],
             ],
             [
                 'key' => 'demo666',
@@ -482,15 +489,15 @@ return [
                         'title' => '成功',
                         'icon' => 'layui-icon-face-smile',
                         'type' => 1,
-                        'href' => '/app/admin/demos/result/success.html'
+                        'href' => '/app/admin/demos/result/success.html',
                     ], [
                         'key' => 'demo668',
                         'title' => '失败',
                         'icon' => 'layui-icon-face-cry',
                         'type' => 1,
-                        'href' => '/app/admin/demos/result/error.html'
-                    ]
-                ]
+                        'href' => '/app/admin/demos/result/error.html',
+                    ],
+                ],
             ],
             [
                 'key' => 'demo-error',
@@ -504,22 +511,22 @@ return [
                         'title' => '403',
                         'icon' => 'layui-icon-face-smile',
                         'type' => 1,
-                        'href' => '/app/admin/demos/error/403.html'
+                        'href' => '/app/admin/demos/error/403.html',
                     ], [
                         'key' => 'demo404',
                         'title' => '404',
                         'icon' => 'layui-icon-face-cry',
                         'type' => 1,
-                        'href' => '/app/admin/demos/error/404.html'
+                        'href' => '/app/admin/demos/error/404.html',
                     ], [
                         'key' => 'demo500',
                         'title' => '500',
                         'icon' => 'layui-icon-face-cry',
                         'type' => 1,
-                        'href' => '/app/admin/demos/error/500.html'
-                    ]
+                        'href' => '/app/admin/demos/error/500.html',
+                    ],
 
-                ]
+                ],
             ],
             [
                 'key' => 'demo-system',
@@ -533,39 +540,39 @@ return [
                         'title' => '用户管理',
                         'icon' => 'layui-icon-face-smile',
                         'type' => 1,
-                        'href' => '/app/admin/demos/system/user.html'
+                        'href' => '/app/admin/demos/system/user.html',
                     ], [
                         'key' => 'demo602',
                         'title' => '角色管理',
                         'icon' => 'layui-icon-face-cry',
                         'type' => 1,
-                        'href' => '/app/admin/demos/system/role.html'
+                        'href' => '/app/admin/demos/system/role.html',
                     ], [
                         'key' => 'demo603',
                         'title' => '权限管理',
                         'icon' => 'layui-icon-face-cry',
                         'type' => 1,
-                        'href' => '/app/admin/demos/system/power.html'
+                        'href' => '/app/admin/demos/system/power.html',
                     ], [
                         'key' => 'demo604',
                         'title' => '部门管理',
                         'icon' => 'layui-icon-face-cry',
                         'type' => 1,
-                        'href' => '/app/admin/demos/system/deptment.html'
+                        'href' => '/app/admin/demos/system/deptment.html',
                     ], [
                         'key' => 'demo605',
                         'title' => '行为日志',
                         'icon' => 'layui-icon-face-cry',
                         'type' => 1,
-                        'href' => '/app/admin/demos/system/log.html'
+                        'href' => '/app/admin/demos/system/log.html',
                     ], [
                         'key' => 'demo606',
                         'title' => '数据字典',
                         'icon' => 'layui-icon-face-cry',
                         'type' => 1,
-                        'href' => '/app/admin/demos/system/dict.html'
-                    ]
-                ]
+                        'href' => '/app/admin/demos/system/dict.html',
+                    ],
+                ],
             ],
             [
                 'key' => 'demo-common',
@@ -579,11 +586,11 @@ return [
                         'title' => '空白页面',
                         'icon' => 'layui-icon-face-smile',
                         'type' => 1,
-                        'href' => '/app/admin/demos/system/space.html'
-                    ]
-                ]
-            ]
-        ]
+                        'href' => '/app/admin/demos/system/space.html',
+                    ],
+                ],
+            ],
+        ],
     ],
     [
         'title' => '栏位管理',
@@ -598,7 +605,7 @@ return [
                 'href' => '/app/admin/sidebar/index',
                 'type' => 1,
                 'weight' => 889,
-            ]
-        ]
-    ]
+            ],
+        ],
+    ],
 ];

@@ -27,6 +27,7 @@ use plugin\admin\app\controller\PerformanceController;
 use plugin\admin\app\controller\StaticCacheController;
 use plugin\admin\app\controller\MailController;
 use plugin\admin\app\controller\PluginSystemController;
+use plugin\admin\app\controller\CommentController;
 use Webman\Route;
 use support\Request;
 
@@ -130,6 +131,17 @@ Route::group('/app/admin', function () {
         Route::delete('/batchRemove/{ids}', [PostsController::class, 'batchRemove']);
         Route::post('/batchRestore/{ids}', [PostsController::class, 'batchRestore']);
         Route::delete('/batchForceDelete/{ids}', [PostsController::class, 'batchForceDelete']);
+    });
+
+    // Comment 路由
+    Route::group('/comment', function () {
+        Route::get('', [CommentController::class, 'index']);
+        Route::get('/', [CommentController::class, 'index']);
+        Route::get('/index', [CommentController::class, 'index']);
+        Route::get('/list', [CommentController::class, 'list']);
+        Route::post('/moderate', [CommentController::class, 'moderate']);
+        Route::post('/delete', [CommentController::class, 'delete']);
+        Route::post('/restore', [CommentController::class, 'restore']);
     });
 
     // Index 路由

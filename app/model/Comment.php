@@ -3,8 +3,9 @@
 namespace app\model;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use support\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Throwable;
 
 /**
@@ -196,5 +197,15 @@ class Comment extends Model
     public function author(): BelongsTo
     {
         return $this->belongsTo(Author::class, 'user_id', 'id');
+    }
+
+    /**
+     * 获取评论的回复
+     *
+     * @return HasMany
+     */
+    public function replies(): HasMany
+    {
+        return $this->hasMany(Comment::class, 'parent_id', 'id');
     }
 }

@@ -1,5 +1,4 @@
 <?php
-
 return [
     // 默认数据库
     'default' => getenv('DB_DEFAULT') ?: 'pgsql',
@@ -46,5 +45,5 @@ return [
             'prefix' => '',
             'foreign_key_constraints' => getenv('DB_SQLITE_FOREIGN_KEYS') ?: true,
         ],
-    ],
+    ]
 ];
