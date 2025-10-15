@@ -124,7 +124,7 @@ RUN cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" && \
 RUN rm -rf /var/lib/apt/lists/*
 
 # 非 root 运行与目录权限
-RUN mkdir -p /app/runtime /app/public/uploads && \
+RUN mkdir -p /app/runtime /app/runtime/logs /app/public/uploads && \
     chown -R www-data:www-data /app
 USER www-data
 

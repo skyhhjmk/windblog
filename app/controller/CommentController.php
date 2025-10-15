@@ -88,7 +88,7 @@ class CommentController
                 ->where('post_id', $postId)
                 ->where('status', 'approved')
                 ->first();
-            
+
             if (!$parentComment) {
                 return json(['code' => 400, 'msg' => '父评论不存在或不属于该文章']);
             }
@@ -96,25 +96,25 @@ class CommentController
 
         // 4. 安全处理内容 - 防止XSS攻击
         $sanitizedContent = $this->sanitizeContent($content);
-        
+
         // 5. 处理引用内容（增强功能）
         $quoteData = null;
         if (!empty($quotedText)) {
             // 安全处理引用文本
             $sanitizedQuotedText = $this->sanitizeQuotedText($quotedText);
-            
+
             // 限制引用长度
             if (mb_strlen($sanitizedQuotedText, 'UTF-8') > 200) {
                 $sanitizedQuotedText = mb_substr($sanitizedQuotedText, 0, 200, 'UTF-8') . '...';
             }
-            
+
             // 如果引用的是评论（quoted_comment_id > 0），需要验证评论是否存在
             if ($quotedCommentId > 0) {
                 $quotedComment = Comment::where('id', $quotedCommentId)
                     ->where('post_id', $postId)
                     ->where('status', 'approved')
                     ->first();
-                
+
                 if ($quotedComment) {
                     // 构建结构化的引用数据（引用评论）
                     $quoteData = [
@@ -122,7 +122,7 @@ class CommentController
                         'comment_id' => $quotedComment->id,
                         'author' => htmlspecialchars($quotedComment->guest_name, ENT_QUOTES, 'UTF-8'),
                         'content' => $sanitizedQuotedText,
-                        'timestamp' => $quotedComment->created_at->format('Y-m-d H:i:s')
+                        'timestamp' => $quotedComment->created_at->format('Y-m-d H:i:s'),
                     ];
                 }
             } else {
@@ -130,7 +130,7 @@ class CommentController
                 $quoteData = [
                     'type' => 'post',
                     'content' => $sanitizedQuotedText,
-                    'timestamp' => date('Y-m-d H:i:s')
+                    'timestamp' => date('Y-m-d H:i:s'),
                 ];
             }
         }
@@ -147,7 +147,7 @@ class CommentController
             ->where('guest_email', $guestEmail)
             ->where('created_at', '>', date('Y-m-d H:i:s', time() - 60))
             ->first();
-        
+
         if ($recentComment && $recentComment->content === $sanitizedContent) {
             return json(['code' => 400, 'msg' => '请不要重复提交相同的评论']);
         }
@@ -162,12 +162,12 @@ class CommentController
             $comment->parent_id = $parentId > 0 ? $parentId : null;
             $comment->ip_address = $request->getRealIp();
             $comment->user_agent = substr($request->header('user-agent', ''), 0, 255);
-            
+
             // 存储引用数据（JSON格式）
             if ($quoteData) {
                 $comment->quoted_data = json_encode($quoteData, JSON_UNESCAPED_UNICODE);
             }
-            
+
             // 默认状态（可配置为需要审核）
             $requireModeration = blog_config('comment_moderation', false, true);
             $comment->status = $requireModeration ? 'pending' : 'approved';
@@ -175,26 +175,27 @@ class CommentController
             if ($comment->save()) {
                 // 返回新创建的评论
                 $newComment = Comment::where('id', $comment->id)->with('author')->first();
-                
+
                 // 如果需要审核，返回提示信息
-                $message = $requireModeration 
-                    ? '评论已提交，等待审核' 
+                $message = $requireModeration
+                    ? '评论已提交，等待审核'
                     : '评论提交成功';
 
                 return json([
-                    'code' => 0, 
-                    'msg' => $message, 
+                    'code' => 0,
+                    'msg' => $message,
                     'data' => [
                         'comment' => $newComment,
-                        'requires_moderation' => $requireModeration
-                    ]
+                        'requires_moderation' => $requireModeration,
+                    ],
                 ]);
             }
 
             return json(['code' => 500, 'msg' => '评论提交失败']);
-            
+
         } catch (\Exception $e) {
             \support\Log::error('Comment submission failed: ' . $e->getMessage());
+
             return json(['code' => 500, 'msg' => '评论提交失败，请稍后重试']);
         }
     }
@@ -249,16 +250,16 @@ class CommentController
         });
 
         return json([
-            'code' => 0, 
+            'code' => 0,
             'data' => [
                 'comments' => $comments,
                 'pagination' => [
                     'total' => $total,
                     'per_page' => $perPage,
                     'current_page' => $page,
-                    'last_page' => ceil($total / $perPage)
-                ]
-            ]
+                    'last_page' => ceil($total / $perPage),
+                ],
+            ],
         ]);
     }
 
@@ -272,27 +273,27 @@ class CommentController
     {
         // 1. 移除潜在危险的标签，只保留安全的HTML标签
         $content = strip_tags($content, self::ALLOWED_TAGS);
-        
+
         // 2. 转义特殊字符
         // 注意：如果允许HTML标签，需要更精细的处理
         // 这里我们采用更安全的策略：完全转义HTML
         $content = htmlspecialchars($content, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-        
+
         // 3. 移除潜在的脚本和事件处理器
         $content = preg_replace('/on\w+\s*=\s*["\'][^"\']*["\']|on\w+\s*=\s*\S+/i', '', $content);
-        
+
         // 4. 移除javascript:伪协议
         $content = preg_replace('/javascript:/i', '', $content);
-        
+
         // 5. 过滤null字节
         $content = str_replace(chr(0), '', $content);
-        
+
         // 6. 标准化换行符
         $content = str_replace(["\r\n", "\r"], "\n", $content);
-        
+
         // 7. 限制连续换行
         $content = preg_replace("/\n{3,}/", "\n\n", $content);
-        
+
         return trim($content);
     }
 
@@ -306,13 +307,13 @@ class CommentController
     {
         // 引用文本完全移除HTML标签
         $text = strip_tags($text);
-        
+
         // 转义所有特殊字符
         $text = htmlspecialchars($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-        
+
         // 移除多余的空白
         $text = preg_replace('/\s+/', ' ', $text);
-        
+
         return trim($text);
     }
 
@@ -325,7 +326,7 @@ class CommentController
     private function formatComment(Comment $comment): array
     {
         $data = $comment->toArray();
-        
+
         // 解析引用数据
         if (!empty($comment->quoted_data)) {
             try {
@@ -336,14 +337,14 @@ class CommentController
         } else {
             $data['quote'] = null;
         }
-        
+
         // 递归处理回复
         if (!empty($data['replies'])) {
             $data['replies'] = array_map(function ($reply) {
                 return $this->formatComment(Comment::find($reply['id']));
             }, $data['replies']);
         }
-        
+
         return $data;
     }
 }
