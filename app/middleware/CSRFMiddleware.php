@@ -141,20 +141,12 @@ class CSRFMiddleware implements MiddlewareInterface
                     // 这里可以根据配置的response_type、response_code、response_body、args进行响应处理
                     // 例如：return json(['code' => $responseCode, 'msg' => $responseBody]);
                     switch ($responseType ?? 'json') {
-                        default:
-                        case 'json':
-                            return response(
-                                json_encode($responseBody ?? 'CSRF Token validate failed.'),
-                                $responseCode ?? 403,
-                                ['Content-Type' => 'application/json; charset=utf-8']
-                            );
-                            break;
                         case 'view':
                             [$template, $vars, $app, $plugin] = template_inputs($responseBody ?? 'error/403', $args ?? [], null, null);
                             $handler = \config($plugin ? "plugin.$plugin.view.handler" : 'view.handler');
 
                             return new Response(200, [], $handler::render($template, $vars, $app, $plugin));
-                            break;
+
                         case 'raw_view':
                             return new Response(200, [], Raw::render(...template_inputs(
                                 $responseBody ?? 'error/403',
@@ -162,7 +154,7 @@ class CSRFMiddleware implements MiddlewareInterface
                                 null,
                                 null
                             )));
-                            break;
+
                         case 'twig_view':
                             return new Response(200, [], Twig::render(...template_inputs(
                                 $responseBody ?? 'error/403',
@@ -170,10 +162,21 @@ class CSRFMiddleware implements MiddlewareInterface
                                 null,
                                 null
                             )));
-                            break;
+
                         case 'text':
-                            return new Response(403, ['Content-Type' => 'text/plain; charset=utf-8']);
-                            break;
+                            return new Response(
+                                $responseCode ?? 403,
+                                ['Content-Type' => 'text/plain; charset=utf-8'],
+                                $responseBody ?? 'CSRF Token validation failed'
+                            );
+
+                        case 'json':
+                        default:
+                            return response(
+                                json_encode($responseBody ?? 'CSRF Token validate failed.'),
+                                $responseCode ?? 403,
+                                ['Content-Type' => 'application/json; charset=utf-8']
+                            );
                     }
                 }
 

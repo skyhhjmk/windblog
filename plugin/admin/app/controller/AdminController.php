@@ -11,7 +11,7 @@ use support\Response;
 use Throwable;
 
 /**
- * 管理员列表 
+ * 管理员列表
  */
 class AdminController extends Crud
 {
@@ -44,7 +44,7 @@ class AdminController extends Crud
      */
     public function __construct()
     {
-        $this->model = new Admin;
+        $this->model = new Admin();
     }
 
     /**
@@ -84,6 +84,7 @@ class AdminController extends Crud
             $items[$index]['roles'] = isset($roles_map[$admin_id]) ? implode(',', $roles_map[$admin_id]) : '';
             $items[$index]['show_toolbar'] = $admin_id != $login_admin_id;
         }
+
         return json(['code' => 0, 'msg' => 'ok', 'count' => $paginator->total(), 'data' => $items]);
     }
 
@@ -109,13 +110,15 @@ class AdminController extends Crud
             }
             AdminRole::where('admin_id', $admin_id)->delete();
             foreach ($role_ids as $id) {
-                $admin_role = new AdminRole;
+                $admin_role = new AdminRole();
                 $admin_role->admin_id = $admin_id;
                 $admin_role->role_id = $id;
                 $admin_role->save();
             }
+
             return $this->json(0, 'ok', ['id' => $admin_id]);
         }
+
         return raw_view('admin/insert');
     }
 
@@ -164,7 +167,7 @@ class AdminController extends Crud
                 // 添加账户角色
                 $add_ids = array_diff($role_ids, $exist_role_ids);
                 foreach ($add_ids as $role_id) {
-                    $admin_role = new AdminRole;
+                    $admin_role = new AdminRole();
                     $admin_role->admin_id = $admin_id;
                     $admin_role->role_id = $role_id;
                     $admin_role->save();
@@ -172,6 +175,7 @@ class AdminController extends Crud
             }
 
             $this->doUpdate($id, $data);
+
             return $this->json(0);
         }
 
@@ -190,7 +194,7 @@ class AdminController extends Crud
         if (!$ids) {
             return $this->json(0);
         }
-        $ids = (array)$ids;
+        $ids = (array) $ids;
         if (in_array(admin_id(), $ids)) {
             return $this->json(1, '不能删除自己');
         }
@@ -203,8 +207,7 @@ class AdminController extends Crud
         AdminRole::whereIn('admin_id', $ids)->each(function (AdminRole $admin_role) {
             $admin_role->delete();
         });
+
         return $this->json(0);
     }
-
-
 }

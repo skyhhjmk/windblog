@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace plugin\admin\app\controller;
@@ -32,10 +33,11 @@ class MailController
         } else {
             $list = $raw;
         }
-        $strategy = (string)blog_config('mail_strategy', 'weighted', false, true, false) ?: 'weighted';
+        $strategy = (string) blog_config('mail_strategy', 'weighted', false, true, false) ?: 'weighted';
+
         return json(['code' => 0, 'data' => [
             'providers' => is_array($list) ? $list : [],
-            'strategy' => in_array($strategy, ['weighted','rr'], true) ? $strategy : 'weighted'
+            'strategy' => in_array($strategy, ['weighted', 'rr'], true) ? $strategy : 'weighted',
         ]]);
     }
 
@@ -49,7 +51,7 @@ class MailController
         try {
             $payload = $request->post();
             if (!is_array($payload)) {
-                $json = (string)$request->rawBody();
+                $json = (string) $request->rawBody();
                 $payload = json_decode($json, true);
             }
             if (!is_array($payload)) {
@@ -63,8 +65,8 @@ class MailController
             $list = [];
             if (isset($payload['providers']) && is_array($payload['providers'])) {
                 $list = $payload['providers'];
-                $st = (string)($payload['strategy'] ?? 'weighted');
-                $strategy = in_array($st, ['weighted','rr'], true) ? $st : 'weighted';
+                $st = (string) ($payload['strategy'] ?? 'weighted');
+                $strategy = in_array($st, ['weighted', 'rr'], true) ? $st : 'weighted';
             } else {
                 // 旧格式
                 $list = $payload;
@@ -73,12 +75,16 @@ class MailController
             // 规范化与校验
             $out = [];
             foreach ($list as $item) {
-                if (!is_array($item)) continue;
-                $id = trim((string)($item['id'] ?? ''));
-                $name = trim((string)($item['name'] ?? ''));
-                if ($id === '' || $name === '') continue;
-                $weight = max(0, (int)($item['weight'] ?? 1));
-                $enabled = (bool)($item['enabled'] ?? true);
+                if (!is_array($item)) {
+                    continue;
+                }
+                $id = trim((string) ($item['id'] ?? ''));
+                $name = trim((string) ($item['name'] ?? ''));
+                if ($id === '' || $name === '') {
+                    continue;
+                }
+                $weight = max(0, (int) ($item['weight'] ?? 1));
+                $enabled = (bool) ($item['enabled'] ?? true);
                 $norm = $item;
                 $norm['id'] = $id;
                 $norm['name'] = $name;
@@ -104,8 +110,8 @@ class MailController
     public function providerTest(Request $request): Response
     {
         try {
-            $data = (array)$request->post();
-            $provider = (string)($data['provider'] ?? '');
+            $data = (array) $request->post();
+            $provider = (string) ($data['provider'] ?? '');
             if ($provider === '') {
                 return json(['code' => 1, 'msg' => 'provider is required']);
             }
@@ -116,13 +122,15 @@ class MailController
             $ref = new \ReflectionClass($worker);
             $method = $ref->getMethod('sendViaProvider');
             $method->setAccessible(true);
-            $ok = (bool)$method->invoke($worker, $data, $provider);
-            $err = method_exists($worker, 'getLastError') ? (string)$worker->getLastError() : '';
+            $ok = (bool) $method->invoke($worker, $data, $provider);
+            $err = method_exists($worker, 'getLastError') ? (string) $worker->getLastError() : '';
+
             return json(['code' => $ok ? 0 : 1, 'msg' => $ok ? 'ok' : ($err !== '' ? $err : 'failed')]);
         } catch (\Throwable $e) {
             return json(['code' => 1, 'msg' => $e->getMessage()]);
         }
     }
+
     /**
      * 获取/保存配置所用的键名清单
      */
@@ -159,6 +167,7 @@ class MailController
         if (!empty($data['rabbitmq_password'])) {
             $data['rabbitmq_password'] = '******';
         }
+
         return json(['code' => 0, 'data' => $data]);
     }
 
@@ -170,19 +179,20 @@ class MailController
     public function configSave(Request $request): Response
     {
         try {
-            $post = (array)$request->post();
+            $post = (array) $request->post();
             $rabbitKeys = [
-                'rabbitmq_mail_exchange'      => (string)($post['rabbitmq_mail_exchange'] ?? ''),
-                'rabbitmq_mail_routing_key'   => (string)($post['rabbitmq_mail_routing_key'] ?? ''),
-                'rabbitmq_mail_queue'         => (string)($post['rabbitmq_mail_queue'] ?? ''),
-                'rabbitmq_mail_dlx_exchange'  => (string)($post['rabbitmq_mail_dlx_exchange'] ?? ''),
-                'rabbitmq_mail_dlx_queue'     => (string)($post['rabbitmq_mail_dlx_queue'] ?? ''),
+                'rabbitmq_mail_exchange'      => (string) ($post['rabbitmq_mail_exchange'] ?? ''),
+                'rabbitmq_mail_routing_key'   => (string) ($post['rabbitmq_mail_routing_key'] ?? ''),
+                'rabbitmq_mail_queue'         => (string) ($post['rabbitmq_mail_queue'] ?? ''),
+                'rabbitmq_mail_dlx_exchange'  => (string) ($post['rabbitmq_mail_dlx_exchange'] ?? ''),
+                'rabbitmq_mail_dlx_queue'     => (string) ($post['rabbitmq_mail_dlx_queue'] ?? ''),
             ];
             foreach ($rabbitKeys as $k => $v) {
                 if ($v !== '') {
                     blog_config($k, $v, false, true, true);
                 }
             }
+
             return json(['code' => 0, 'msg' => '保存成功']);
         } catch (\Throwable $e) {
             return json(['code' => 1, 'msg' => $e->getMessage()]);
@@ -195,10 +205,11 @@ class MailController
      */
     public function strategyGet(Request $request): Response
     {
-        $st = (string)blog_config('mail_strategy', 'weighted', false, true, false) ?: 'weighted';
-        if (!in_array($st, ['weighted','rr'], true)) {
+        $st = (string) blog_config('mail_strategy', 'weighted', false, true, false) ?: 'weighted';
+        if (!in_array($st, ['weighted', 'rr'], true)) {
             $st = 'weighted';
         }
+
         return json(['code' => 0, 'data' => ['mail_strategy' => $st]]);
     }
 
@@ -210,12 +221,13 @@ class MailController
     public function strategySave(Request $request): Response
     {
         try {
-            $payload = (array)$request->post();
-            $st = (string)($payload['mail_strategy'] ?? 'weighted');
-            if (!in_array($st, ['weighted','rr'], true)) {
+            $payload = (array) $request->post();
+            $st = (string) ($payload['mail_strategy'] ?? 'weighted');
+            if (!in_array($st, ['weighted', 'rr'], true)) {
                 return json(['code' => 1, 'msg' => 'invalid strategy']);
             }
             blog_config('mail_strategy', $st, false, true, true);
+
             return json(['code' => 0, 'msg' => '保存成功']);
         } catch (\Throwable $e) {
             return json(['code' => 1, 'msg' => $e->getMessage()]);
@@ -230,8 +242,9 @@ class MailController
     {
         $path = base_path() . DIRECTORY_SEPARATOR . 'plugin' . DIRECTORY_SEPARATOR . 'admin' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'view' . DIRECTORY_SEPARATOR . 'mail' . DIRECTORY_SEPARATOR . 'index.html';
         if (is_file($path)) {
-            return new Response(200, ['Content-Type' => 'text/html; charset=utf-8'], (string)file_get_contents($path));
+            return new Response(200, ['Content-Type' => 'text/html; charset=utf-8'], (string) file_get_contents($path));
         }
+
         return new Response(404, ['Content-Type' => 'text/plain; charset=utf-8'], 'mail index template not found');
     }
 
@@ -243,8 +256,9 @@ class MailController
     {
         $path = base_path() . DIRECTORY_SEPARATOR . 'plugin' . DIRECTORY_SEPARATOR . 'admin' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'view' . DIRECTORY_SEPARATOR . 'mail' . DIRECTORY_SEPARATOR . 'preview.html';
         if (is_file($path)) {
-            return new Response(200, ['Content-Type' => 'text/html; charset=utf-8'], (string)file_get_contents($path));
+            return new Response(200, ['Content-Type' => 'text/html; charset=utf-8'], (string) file_get_contents($path));
         }
+
         return new Response(404, ['Content-Type' => 'text/plain; charset=utf-8'], 'mail preview template not found');
     }
 
@@ -256,20 +270,22 @@ class MailController
     {
         try {
             // 优先支持内联模板
-            $inline = (string)$request->get('inline_template', '');
+            $inline = (string) $request->get('inline_template', '');
             if ($inline !== '') {
-                $inlineVars = (array)$request->get('inline_vars', []);
+                $inlineVars = (array) $request->get('inline_vars', []);
                 $html = MailService::renderInline($inline, $inlineVars);
+
                 return new Response(200, ['Content-Type' => 'text/html; charset=utf-8'], $html);
             }
 
             // 回退到视图模板渲染
-            $view = (string)$request->get('view', '');
+            $view = (string) $request->get('view', '');
             if ($view === '') {
                 return json(['code' => 1, 'msg' => 'view or inline_template is required']);
             }
-            $vars = (array)$request->get('vars', []);
+            $vars = (array) $request->get('vars', []);
             $html = MailService::renderView($view, $vars, app: null, plugin: null);
+
             return new Response(200, ['Content-Type' => 'text/html; charset=utf-8'], $html);
         } catch (\Throwable $e) {
             return json(['code' => 1, 'msg' => $e->getMessage()]);
@@ -284,8 +300,9 @@ class MailController
     {
         $path = base_path() . DIRECTORY_SEPARATOR . 'plugin' . DIRECTORY_SEPARATOR . 'admin' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'view' . DIRECTORY_SEPARATOR . 'mail' . DIRECTORY_SEPARATOR . 'send.html';
         if (is_file($path)) {
-            return new Response(200, ['Content-Type' => 'text/html; charset=utf-8'], (string)file_get_contents($path));
+            return new Response(200, ['Content-Type' => 'text/html; charset=utf-8'], (string) file_get_contents($path));
         }
+
         return new Response(404, ['Content-Type' => 'text/plain; charset=utf-8'], 'mail send template not found');
     }
 
@@ -297,19 +314,20 @@ class MailController
     public function enqueueTest(Request $request): Response
     {
         try {
-            $data = (array)$request->post();
+            $data = (array) $request->post();
             if (empty($data['to'])) {
                 return json(['code' => 1, 'msg' => 'to is required']);
             }
             // 后台测试不使用模板渲染，直接使用 subject/text/html
             if (empty($data['html']) && !empty($data['text'])) {
-                $safeText = (string)$data['text'];
+                $safeText = (string) $data['text'];
                 $data['html'] = '<pre style="font-family: inherit; white-space: pre-wrap;">' . htmlspecialchars($safeText, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</pre>';
             }
             // 移除模板相关字段，避免 MailService 读取视图目录
             unset($data['view'], $data['view_vars'], $data['inline_template'], $data['inline_vars']);
 
             $ok = MailService::enqueue($data);
+
             return json(['code' => $ok ? 0 : 1, 'msg' => $ok ? 'enqueued' : 'failed']);
         } catch (\Throwable $e) {
             return json(['code' => 1, 'msg' => $e->getMessage()]);
@@ -323,35 +341,37 @@ class MailController
     public function queueStats(): Response
     {
         try {
-            $exchange   = (string)blog_config('rabbitmq_mail_exchange', 'mail_exchange', true);
-            $routingKey = (string)blog_config('rabbitmq_mail_routing_key', 'mail_send', true);
-            $queue      = (string)blog_config('rabbitmq_mail_queue', 'mail_queue', true);
-            $dlx        = (string)blog_config('rabbitmq_mail_dlx_exchange', 'mail_dlx_exchange', true);
-            $dlq        = (string)blog_config('rabbitmq_mail_dlx_queue', 'mail_dlx_queue', true);
+            $exchange = (string) blog_config('rabbitmq_mail_exchange', 'mail_exchange', true);
+            $routingKey = (string) blog_config('rabbitmq_mail_routing_key', 'mail_send', true);
+            $queue = (string) blog_config('rabbitmq_mail_queue', 'mail_queue', true);
+            $dlx = (string) blog_config('rabbitmq_mail_dlx_exchange', 'mail_dlx_exchange', true);
+            $dlq = (string) blog_config('rabbitmq_mail_dlx_queue', 'mail_dlx_queue', true);
 
-            $host   = (string)blog_config('rabbitmq_host', '127.0.0.1', true);
-            $port   = (int)blog_config('rabbitmq_port', 5672, true);
-            $user   = (string)blog_config('rabbitmq_user', 'guest', true);
-            $pass   = (string)blog_config('rabbitmq_password', 'guest', true);
-            $vhost  = (string)blog_config('rabbitmq_vhost', '/', true);
+            $host = (string) blog_config('rabbitmq_host', '127.0.0.1', true);
+            $port = (int) blog_config('rabbitmq_port', 5672, true);
+            $user = (string) blog_config('rabbitmq_user', 'guest', true);
+            $pass = (string) blog_config('rabbitmq_password', 'guest', true);
+            $vhost = (string) blog_config('rabbitmq_vhost', '/', true);
 
             $conn = new \PhpAmqpLib\Connection\AMQPStreamConnection($host, $port, $user, $pass, $vhost);
             $ch = $conn->channel();
 
             // 被动声明获取队列深度（返回[queue, messageCount, consumerCount]）
-            [$qName, $qCount] = (function() use ($ch, $queue) {
+            [$qName, $qCount] = (function () use ($ch, $queue) {
                 try {
                     $result = $ch->queue_declare($queue, true, true, false, false);
-                    return [$result[0] ?? $queue, (int)($result[1] ?? 0)];
+
+                    return [$result[0] ?? $queue, (int) ($result[1] ?? 0)];
                 } catch (\Throwable $e) {
                     return [$queue, 0];
                 }
             })();
 
-            [$dlqName, $dlqCount] = (function() use ($ch, $dlq) {
+            [$dlqName, $dlqCount] = (function () use ($ch, $dlq) {
                 try {
                     $result = $ch->queue_declare($dlq, true, true, false, false);
-                    return [$result[0] ?? $dlq, (int)($result[1] ?? 0)];
+
+                    return [$result[0] ?? $dlq, (int) ($result[1] ?? 0)];
                 } catch (\Throwable $e) {
                     return [$dlq, 0];
                 }
@@ -370,7 +390,7 @@ class MailController
                     'dlx' => $dlx,
                     'dlq' => $dlqName,
                     'dlq_depth' => $dlqCount,
-                ]
+                ],
             ]);
         } catch (\Throwable $e) {
             return json(['code' => 1, 'msg' => $e->getMessage()]);
@@ -384,22 +404,25 @@ class MailController
     public function configTest(Request $request): Response
     {
         try {
-            $post = (array)$request->post();
-            $host = (string)($post['mail_host'] ?? blog_config('mail_host', '', false, true, false));
-            $port = (int)($post['mail_port'] ?? blog_config('mail_port', 587, false, true, false));
-            $enc  = (string)($post['mail_encryption'] ?? blog_config('mail_encryption', 'tls', false, true, false));
+            $post = (array) $request->post();
+            $host = (string) ($post['mail_host'] ?? blog_config('mail_host', '', false, true, false));
+            $port = (int) ($post['mail_port'] ?? blog_config('mail_port', 587, false, true, false));
+            $enc = (string) ($post['mail_encryption'] ?? blog_config('mail_encryption', 'tls', false, true, false));
 
             if ($host === '' || $port <= 0) {
                 return json(['code' => 1, 'msg' => '请填写有效的主机与端口']);
             }
 
             $scheme = ($enc === 'ssl') ? 'ssl://' : '';
-            $errno = 0; $errstr = '';
+            $errno = 0;
+            $errstr = '';
             $fp = @stream_socket_client($scheme . $host . ':' . $port, $errno, $errstr, 5, STREAM_CLIENT_CONNECT);
             if ($fp) {
                 @fclose($fp);
+
                 return json(['code' => 0, 'msg' => 'TCP连接成功']);
             }
+
             return json(['code' => 1, 'msg' => $errstr ?: '连接失败']);
         } catch (\Throwable $e) {
             return json(['code' => 1, 'msg' => $e->getMessage()]);

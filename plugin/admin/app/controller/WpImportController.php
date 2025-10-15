@@ -2,20 +2,13 @@
 
 namespace plugin\admin\app\controller;
 
-use app\model\Author;
 use app\model\ImportJob;
-use app\model\Post;
-use Illuminate\Database\Schema\Blueprint;
-use plugin\admin\app\common\Util;
-use app\model\Setting;
+use app\service\MQService;
+use PhpAmqpLib\Message\AMQPMessage;
 use support\exception\BusinessException;
 use support\Request;
 use support\Response;
 use Throwable;
-use Webman\Http\UploadFile;
-
-use app\service\MQService;
-use PhpAmqpLib\Message\AMQPMessage;
 
 class WpImportController extends Base
 {
@@ -43,10 +36,10 @@ class WpImportController extends Base
         // 后台不使用缓存
         // 获取请求参数
         $name = $request->get('name', '');
-//        $username = $request->get('username', '');
+        //        $username = $request->get('username', '');
         $status = $request->get('status', '');
-        $page = (int)$request->get('page', 1);
-        $limit = (int)$request->get('limit', 15);
+        $page = (int) $request->get('page', 1);
+        $limit = (int) $request->get('limit', 15);
         $order = $request->get('order', 'id');
         $sort = $request->get('sort', 'desc');
 
@@ -58,9 +51,9 @@ class WpImportController extends Base
             $query->where('title', 'like', "%{$name}%");
         }
 
-//        if ($status) {
-//            $query->where('slug', 'like', "%{$status}%");
-//        }
+        //        if ($status) {
+        //            $query->where('slug', 'like', "%{$status}%");
+        //        }
 
         // 状态筛选
         if ($status) {
@@ -103,7 +96,6 @@ class WpImportController extends Base
      * @return Response
      */
 
-
     /**
      * 统一提交导入任务（包含文件和表单数据）
      *
@@ -128,7 +120,7 @@ class WpImportController extends Base
             // 创建上传目录
             $uploadDir = runtime_path('imports');
             if (!is_dir($uploadDir)) {
-                mkdir($uploadDir, 0755, true);
+                mkdir($uploadDir, 0o755, true);
             }
 
             // 移动文件到指定目录
@@ -142,7 +134,7 @@ class WpImportController extends Base
             $defaultAuthor = $request->post('default_author', 'system');
             $defaultAuthorId = null;
             if ($defaultAuthor !== 'system') {
-                $defaultAuthorId = (int)$defaultAuthor;
+                $defaultAuthorId = (int) $defaultAuthor;
             }
 
             // 获取force参数
@@ -160,8 +152,8 @@ class WpImportController extends Base
                         'msg' => '检测到相同文件名的导入任务，请手动处理或选择强制上传',
                         'data' => [
                             'job_id' => $existingJob->id,
-                            'status' => $existingJob->status
-                        ]
+                            'status' => $existingJob->status,
+                        ],
                     ]);
                 }
             }
@@ -169,11 +161,11 @@ class WpImportController extends Base
             // 构造导入任务选项
             $options = [
                 'convert_to' => $request->post('convert_to', 'markdown'),
-                'create_users' => (bool)$request->post('create_users', 0),
-                'import_attachments' => (bool)$request->post('import_attachments', 0),
-                'download_attachments' => (bool)$request->post('download_attachments', 0),
+                'create_users' => (bool) $request->post('create_users', 0),
+                'import_attachments' => (bool) $request->post('import_attachments', 0),
+                'download_attachments' => (bool) $request->post('download_attachments', 0),
                 'duplicate_mode' => $request->post('duplicate_mode', 'skip'),
-                'author_action' => $request->post('author_action','map_to_system'),
+                'author_action' => $request->post('author_action', 'map_to_system'),
             ];
 
             // 创建导入任务记录到数据库
@@ -195,12 +187,12 @@ class WpImportController extends Base
                 'file_path' => $filePath,
                 'author_id' => $defaultAuthorId,
                 'options' => $options,
-                'force' => (bool)$force,
+                'force' => (bool) $force,
                 'job_id' => $job->id, // 添加任务ID用于关联
             ];
 
-            $exchange   = (string)blog_config('rabbitmq_import_exchange', 'import_exchange', true);
-            $routingKey = (string)blog_config('rabbitmq_import_routing_key', 'import_job', true);
+            $exchange = (string) blog_config('rabbitmq_import_exchange', 'import_exchange', true);
+            $routingKey = (string) blog_config('rabbitmq_import_routing_key', 'import_job', true);
 
             $channel = MQService::getChannel();
             $message = new AMQPMessage(json_encode($payload, JSON_UNESCAPED_UNICODE), [
@@ -212,15 +204,16 @@ class WpImportController extends Base
             // 成功响应（兼容layui）
             return json([
                 'code' => 0,
-                'msg' => trans('Import job enqueued')
+                'msg' => trans('Import job enqueued'),
             ]);
         } catch (\Exception $e) {
             // 记录错误日志
             \support\Log::error('导入提交错误: ' . $e->getMessage(), ['exception' => $e]);
+
             // 错误响应格式兼容layui
             return json([
                 'code' => 500,
-                'msg' => trans('Server error :error', ['error' => $e->getMessage()])
+                'msg' => trans('Server error :error', ['error' => $e->getMessage()]),
             ]);
         }
     }
@@ -246,11 +239,12 @@ class WpImportController extends Base
                 'data' => [
                     'status' => $job->status,
                     'progress' => $job->progress,
-                    'message' => $job->message
-                ]
+                    'message' => $job->message,
+                ],
             ]);
         } catch (\Exception $e) {
             \support\Log::error('获取导入状态错误: ' . $e->getMessage(), ['exception' => $e]);
+
             return json(['code' => 500, 'msg' => '服务器内部错误']);
         }
     }
@@ -279,12 +273,13 @@ class WpImportController extends Base
             $job->update([
                 'status' => 'pending',
                 'progress' => 0,
-                'message' => '任务已被重置，等待重新处理'
+                'message' => '任务已被重置，等待重新处理',
             ]);
 
             return json(['code' => 200, 'msg' => '任务重置成功']);
         } catch (\Exception $e) {
             \support\Log::error('重置导入任务错误: ' . $e->getMessage(), ['exception' => $e]);
+
             return json(['code' => 500, 'msg' => '服务器内部错误']);
         }
     }
@@ -316,6 +311,7 @@ class WpImportController extends Base
             return json(['code' => 200, 'msg' => '任务删除成功']);
         } catch (\Exception $e) {
             \support\Log::error('删除导入任务错误: ' . $e->getMessage(), ['exception' => $e]);
+
             return json(['code' => 500, 'msg' => '服务器内部错误']);
         }
     }

@@ -2,10 +2,9 @@
 
 namespace plugin\admin\app\controller;
 
-use support\Request;
-use support\Redis;
-use app\model\Setting;
 use app\service\EnhancedCacheService;
+use support\Redis;
+use support\Request;
 
 /**
  * 性能监控控制器
@@ -33,25 +32,25 @@ class PerformanceController extends Base
             if (!in_array($conn, ['default', 'cache'], true)) {
                 return $this->fail('非法连接参数，允许值为 default 或 cache');
             }
-            
+
             $redis = Redis::connection($conn);
             $snapshotKey = 'perf:redis:snapshot';
             $seriesKey = 'perf:redis:series';
-               
-              // 初始化返回数据和默认值
-              $snapshot = null;
-              $series = [];
-              $defaultSnapshot = [
-                  't' => date('Y-m-d H:i:s'),
-                  'version' => '未知',
-                  'used_memory_mb' => 0,
-                  'connected_clients' => 0,
-                  'instantaneous_ops_per_sec' => 0,
-                  'keys' => 0,
-                  'keys_method' => '直接获取',
-                  'status' => '不可用'
-              ];
-            
+
+            // 初始化返回数据和默认值
+            $snapshot = null;
+            $series = [];
+            $defaultSnapshot = [
+                't' => date('Y-m-d H:i:s'),
+                'version' => '未知',
+                'used_memory_mb' => 0,
+                'connected_clients' => 0,
+                'instantaneous_ops_per_sec' => 0,
+                'keys' => 0,
+                'keys_method' => '直接获取',
+                'status' => '不可用',
+            ];
+
             try {
                 // 尝试从Redis获取预存的快照和时间序列数据
                 if ($redis) {
@@ -61,7 +60,7 @@ class PerformanceController extends Base
             } catch (\Throwable $e) {
                 // 忽略Redis操作异常
             }
-            
+
             // 如果没有预存的快照数据，或者Redis不可用，尝试直接获取当前状态
             if (!$snapshot || !$redis) {
                 try {
@@ -72,12 +71,12 @@ class PerformanceController extends Base
                             if (is_array($info)) {
                                 $currentStats = [
                                     't' => date('Y-m-d H:i:s'),
-                                    'version' => isset($info['redis_version']) ? $info['redis_version'] : '',
+                                    'version' => $info['redis_version'] ?? '',
                                     'used_memory_mb' => isset($info['used_memory']) ? round($info['used_memory'] / 1024 / 1024, 2) : 0,
-                                    'connected_clients' => isset($info['connected_clients']) ? $info['connected_clients'] : 0,
-                                    'instantaneous_ops_per_sec' => isset($info['instantaneous_ops_per_sec']) ? $info['instantaneous_ops_per_sec'] : 0,
+                                    'connected_clients' => $info['connected_clients'] ?? 0,
+                                    'instantaneous_ops_per_sec' => $info['instantaneous_ops_per_sec'] ?? 0,
                                     'keys' => 0,
-                                    'keys_method' => '直接获取'
+                                    'keys_method' => '直接获取',
                                 ];
                                 $snapshot = json_encode($currentStats);
                             }
@@ -97,8 +96,9 @@ class PerformanceController extends Base
                 'series' => array_map(function ($row) {
                     return json_decode($row, true);
                 }, $series ?: []),
-                'status' => class_exists('Redis') ? '可用' : '未安装'
+                'status' => class_exists('Redis') ? '可用' : '未安装',
             ];
+
             return $this->success('ok', $data, count($data['series']));
         } catch (\Throwable $e) {
             return $this->fail('获取Redis状态失败: ' . $e->getMessage());
@@ -128,9 +128,9 @@ class PerformanceController extends Base
                 'memory_free_mb' => 0,
                 'memory_used_mb' => 0,
                 'hit_rate' => '0%', // 前端期望的字段名是hit_rate
-                'status' => '不可用'
+                'status' => '不可用',
             ];
-            
+
             try {
                 // 尝试从Redis获取预存的快照和时间序列数据
                 if ($cache) {
@@ -142,7 +142,7 @@ class PerformanceController extends Base
             } catch (\Throwable $e) {
                 // 忽略Redis操作异常
             }
-            
+
             // 如果没有预存的快照数据，或者Redis不可用，尝试直接获取当前OPcache状态
             if (!$snapshot || (!$cache && !$default)) {
                 try {
@@ -154,11 +154,11 @@ class PerformanceController extends Base
                                 $stats = $status['opcache_statistics'];
                                 $currentStats = [
                                     't' => date('Y-m-d H:i:s'),
-                                    'hits' => isset($stats['hits']) ? $stats['hits'] : 0,
-                                    'misses' => isset($stats['misses']) ? $stats['misses'] : 0,
+                                    'hits' => $stats['hits'] ?? 0,
+                                    'misses' => $stats['misses'] ?? 0,
                                     'memory_free_mb' => isset($stats['free_memory']) ? round($stats['free_memory'] / 1024 / 1024, 2) : 0,
                                     'memory_used_mb' => isset($stats['used_memory']) ? round($stats['used_memory'] / 1024 / 1024, 2) : 0,
-                                    'hit_rate' => isset($stats['opcache_hit_rate']) ? round($stats['opcache_hit_rate'], 2) . '%' : '0%' // 前端期望的字段名是hit_rate
+                                    'hit_rate' => isset($stats['opcache_hit_rate']) ? round($stats['opcache_hit_rate'], 2) . '%' : '0%', // 前端期望的字段名是hit_rate
                                 ];
                                 $snapshot = json_encode($currentStats);
                             }
@@ -181,10 +181,12 @@ class PerformanceController extends Base
                         $item['hit_rate'] = $item['cache_hit_rate'];
                         unset($item['cache_hit_rate']);
                     }
+
                     return $item;
                 }, $series ?: []),
-                'status' => function_exists('opcache_get_status') ? '可用' : '未安装'
+                'status' => function_exists('opcache_get_status') ? '可用' : '未安装',
             ];
+
             return $this->success('ok', $data, count($data['series']));
         } catch (\Throwable $e) {
             return $this->fail('获取OPcache状态失败: ' . $e->getMessage());
@@ -199,24 +201,24 @@ class PerformanceController extends Base
         try {
             $cacheService = new EnhancedCacheService();
             $stats = $cacheService->getStats();
-            
+
             // 保存统计数据到Redis，用于时间序列分析
             $snapshotKey = 'perf:cache:stats';
             $seriesKey = 'perf:cache:series';
-            
+
             $redis = Redis::connection('cache');
             if ($redis) {
                 // 添加时间戳
                 $stats['t'] = date('Y-m-d H:i:s');
-                
+
                 // 保存当前快照
                 $redis->set($snapshotKey, json_encode($stats));
-                
+
                 // 添加到时间序列（保留最近100条）
                 $redis->rPush($seriesKey, json_encode($stats));
                 $redis->lTrim($seriesKey, -100, -1);
             }
-            
+
             // 获取时间序列数据
             $series = [];
             if ($redis) {
@@ -225,18 +227,18 @@ class PerformanceController extends Base
                     return json_decode($row, true);
                 }, $series ?: []);
             }
-            
+
             $data = [
                 'stats' => $stats,
-                'series' => $series
+                'series' => $series,
             ];
-            
+
             return $this->success('ok', $data, count($data['series']));
         } catch (\Throwable $e) {
             return $this->fail('获取缓存统计失败: ' . $e->getMessage());
         }
     }
-    
+
     /**
      * 综合时间序列（用于图表分析，来自 default 连接）
      */
@@ -256,9 +258,10 @@ class PerformanceController extends Base
 
             $data = [
                 'connection' => $conn,
-                'redis' => array_map(fn($v) => json_decode($v, true), $redisSeries ?: []),
-                'opcache' => array_map(fn($v) => json_decode($v, true), $opcacheSeries ?: []),
+                'redis' => array_map(fn ($v) => json_decode($v, true), $redisSeries ?: []),
+                'opcache' => array_map(fn ($v) => json_decode($v, true), $opcacheSeries ?: []),
             ];
+
             return $this->success('ok', $data, max(count($data['redis']), count($data['opcache'])));
         } catch (\Throwable $e) {
             return $this->fail('获取序列失败: ' . $e->getMessage());

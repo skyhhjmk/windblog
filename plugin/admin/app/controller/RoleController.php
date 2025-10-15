@@ -32,7 +32,7 @@ class RoleController extends Crud
      */
     public function __construct()
     {
-        $this->model = new Role;
+        $this->model = new Role();
     }
 
     /**
@@ -63,6 +63,7 @@ class RoleController extends Crud
             throw new BusinessException('无权限');
         }
         $query = $this->doSelect($where, $field, $order);
+
         return $this->doFormat($query, $format, $limit);
     }
 
@@ -87,8 +88,10 @@ class RoleController extends Crud
             $this->checkRules($pid, $data['rules'] ?? '');
 
             $id = $this->doInsert($data);
+
             return $this->json(0, 'ok', ['id' => $id]);
         }
+
         return raw_view('role/insert');
     }
 
@@ -151,7 +154,7 @@ class RoleController extends Crud
             foreach ($descendant_role_ids as $role_id) {
                 $tmp_role = Role::find($role_id);
                 $tmp_rule_ids = $role->getRuleIds();
-                $tmp_rule_ids = array_intersect(explode(',',$tmp_role->rules), $tmp_rule_ids);
+                $tmp_rule_ids = array_intersect(explode(',', $tmp_role->rules), $tmp_rule_ids);
                 $tmp_role->rules = implode(',', $tmp_rule_ids);
                 $tmp_role->save();
             }
@@ -181,6 +184,7 @@ class RoleController extends Crud
             $ids = array_merge($ids, array_column($descendants, 'id'));
         }
         $this->doDelete($ids);
+
         return $this->json(0);
     }
 
@@ -212,12 +216,13 @@ class RoleController extends Crud
         foreach ($rules as $item) {
             $items[] = [
                 'name' => $item->title ?? $item->name ?? $item->id,
-                'value' => (string)$item->id,
+                'value' => (string) $item->id,
                 'id' => $item->id,
                 'pid' => $item->pid,
             ];
         }
         $tree = new Tree($items);
+
         return $this->json(0, 'ok', $tree->getTree($include));
     }
 
@@ -252,6 +257,4 @@ class RoleController extends Crud
             }
         }
     }
-
-
 }

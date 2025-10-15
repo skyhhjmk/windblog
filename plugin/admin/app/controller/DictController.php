@@ -2,11 +2,10 @@
 
 namespace plugin\admin\app\controller;
 
+use app\model\Setting;
 use app\service\CacheService;
 use plugin\admin\app\model\Dict;
-use app\model\Setting;
 use support\exception\BusinessException;
-use support\Log;
 use support\Request;
 use support\Response;
 use Throwable;
@@ -60,6 +59,7 @@ class DictController extends Base
             $itemName = $item['key'];
             $item['name'] = Dict::optionNameToDictName($itemName);
         }
+
         return json(['code' => 0, 'msg' => 'ok', 'count' => $count, 'data' => $items]);
     }
 
@@ -81,9 +81,10 @@ class DictController extends Base
             if (!preg_match('/^[a-zA-Z0-9_]+$/', $name)) {
                 return $this->json(2, '字典名称只能是字母数字下划线的组合');
             }
-            $values = (array)$request->post('value', []);
+            $values = (array) $request->post('value', []);
             Dict::save($name, $values);
         }
+
         return raw_view('dict/insert');
     }
 
@@ -107,6 +108,7 @@ class DictController extends Base
             }
             Dict::save($name, $request->post('value'));
         }
+
         return raw_view('dict/update');
     }
 
@@ -119,9 +121,10 @@ class DictController extends Base
      */
     public function delete(Request $request): Response
     {
-        $names = (array)$request->post('name');
+        $names = (array) $request->post('name');
         Dict::delete($names);
         CacheService::clearCache('blog_config_dict_*');
+
         return $this->json(0);
     }
 
@@ -135,7 +138,6 @@ class DictController extends Base
      */
     public function get(Request $request, $name): Response
     {
-        return $this->json(0, 'ok', (array)Dict::get($name));
+        return $this->json(0, 'ok', (array) Dict::get($name));
     }
-
 }

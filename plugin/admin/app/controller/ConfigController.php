@@ -2,14 +2,12 @@
 
 namespace plugin\admin\app\controller;
 
-use plugin\admin\app\common\Util;
 use app\model\Setting;
+use plugin\admin\app\common\Util;
 use support\exception\BusinessException;
 use support\Request;
 use support\Response;
 use Throwable;
-use Intervention\Image\ImageManager;
-use Imagick;
 
 /**
  * 系统设置
@@ -55,77 +53,77 @@ class ConfigController extends Base
         $config = Setting::where('key', $name)->value('value');
         if (empty($config)) {
             $config = <<<EOF
-{
-	"logo": {
-		"title": "风屿岛管理页",
-		"image": "/app/admin/admin/images/logo.png"
-	},
-	"menu": {
-		"data": "/app/admin/rule/get",
-		"method": "GET",
-		"accordion": true,
-		"collapse": false,
-		"control": false,
-		"controlWidth": 2000,
-		"select": "0",
-		"async": true
-	},
-	"tab": {
-		"enable": true,
-		"keepState": true,
-		"session": true,
-		"preload": false,
-		"max": "30",
-		"index": {
-			"id": "0",
-			"href": "/app/admin/index/dashboard",
-			"title": "仪表盘"
-		}
-	},
-	"theme": {
-		"defaultColor": "2",
-		"defaultMenu": "light-theme",
-		"defaultHeader": "light-theme",
-		"allowCustom": true,
-		"banner": false
-	},
-	"colors": [
-		{
-			"id": "1",
-			"color": "#36b368",
-			"second": "#f0f9eb"
-		},
-		{
-			"id": "2",
-			"color": "#2d8cf0",
-			"second": "#ecf5ff"
-		},
-		{
-			"id": "3",
-			"color": "#f6ad55",
-			"second": "#fdf6ec"
-		},
-		{
-			"id": "4",
-			"color": "#f56c6c",
-			"second": "#fef0f0"
-		},
-		{
-			"id": "5",
-			"color": "#3963bc",
-			"second": "#ecf5ff"
-		}
-	],
-	"other": {
-		"keepLoad": "500",
-		"autoHead": false,
-		"footer": false
-	},
-	"header": {
-		"message": false
-	}
-}
-EOF;;
+                {
+                	"logo": {
+                		"title": "风屿岛管理页",
+                		"image": "/app/admin/admin/images/logo.png"
+                	},
+                	"menu": {
+                		"data": "/app/admin/rule/get",
+                		"method": "GET",
+                		"accordion": true,
+                		"collapse": false,
+                		"control": false,
+                		"controlWidth": 2000,
+                		"select": "0",
+                		"async": true
+                	},
+                	"tab": {
+                		"enable": true,
+                		"keepState": true,
+                		"session": true,
+                		"preload": false,
+                		"max": "30",
+                		"index": {
+                			"id": "0",
+                			"href": "/app/admin/index/dashboard",
+                			"title": "仪表盘"
+                		}
+                	},
+                	"theme": {
+                		"defaultColor": "2",
+                		"defaultMenu": "light-theme",
+                		"defaultHeader": "light-theme",
+                		"allowCustom": true,
+                		"banner": false
+                	},
+                	"colors": [
+                		{
+                			"id": "1",
+                			"color": "#36b368",
+                			"second": "#f0f9eb"
+                		},
+                		{
+                			"id": "2",
+                			"color": "#2d8cf0",
+                			"second": "#ecf5ff"
+                		},
+                		{
+                			"id": "3",
+                			"color": "#f6ad55",
+                			"second": "#fdf6ec"
+                		},
+                		{
+                			"id": "4",
+                			"color": "#f56c6c",
+                			"second": "#fef0f0"
+                		},
+                		{
+                			"id": "5",
+                			"color": "#3963bc",
+                			"second": "#ecf5ff"
+                		}
+                	],
+                	"other": {
+                		"keepLoad": "500",
+                		"autoHead": false,
+                		"footer": false
+                	},
+                	"header": {
+                		"message": false
+                	}
+                }
+                EOF;
             if ($config) {
                 $option = new Setting();
                 $option->key = $name;
@@ -133,6 +131,7 @@ EOF;;
                 $option->save();
             }
         }
+
         return json_decode($config, true);
     }
 
@@ -168,8 +167,8 @@ EOF;;
                     $data[$section]['accordion'] = !empty($items['accordion']);
                     $data[$section]['collapse'] = !empty($items['collapse']);
                     $data[$section]['control'] = !empty($items['control']);
-                    $data[$section]['controlWidth'] = (int)($items['controlWidth'] ?? 2000);
-                    $data[$section]['select'] = (int)($items['select'] ?? 0);
+                    $data[$section]['controlWidth'] = (int) ($items['controlWidth'] ?? 2000);
+                    $data[$section]['select'] = (int) ($items['select'] ?? 0);
                     $data[$section]['async'] = true;
                     break;
 
@@ -213,7 +212,7 @@ EOF;;
 
         // 保存到数据库
         Setting::where('key', $name)->update([
-            'value' => json_encode($config, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)
+            'value' => json_encode($config, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT),
         ]);
 
         return $this->json(0);
@@ -229,6 +228,7 @@ EOF;;
         try {
             // 调用全局函数blog_config获取URL模式配置
             $urlMode = blog_config('url_mode', 'slug', false);
+
             return json($urlMode);
         } catch (Throwable $e) {
             // 如果出错，返回默认值
@@ -255,6 +255,7 @@ EOF;;
 
             // 调用全局函数blog_config保存URL模式配置
             blog_config('url_mode', $urlMode, true, true, true);
+
             return $this->json(0);
         } catch (Throwable $e) {
             return $this->json(1, $e->getMessage());
@@ -278,6 +279,7 @@ EOF;;
                 'beian' => blog_config('beian', '', true),
                 'footer_txt' => blog_config('footer_txt', '', true),
             ];
+
             return json($siteInfo);
         } catch (Throwable $e) {
             return $this->json(1, $e->getMessage());
@@ -296,7 +298,7 @@ EOF;;
         try {
             // 获取表单数据
             $siteInfo = $request->post();
-            
+
             // 保存网站基本信息到blog_config
             blog_config('title', $siteInfo['title'] ?? 'WindBlog', true, true, true);
             blog_config('site_url', $siteInfo['site_url'] ?? '', true, true, true);
@@ -305,12 +307,12 @@ EOF;;
             blog_config('icp', $siteInfo['icp'] ?? '', true, true, true);
             blog_config('beian', $siteInfo['beian'] ?? '', true, true, true);
             blog_config('footer_txt', $siteInfo['footer_txt'] ?? '', true, true, true);
-            
+
             // 如果favicon有更新，则生成新的favicon.ico文件
             if (isset($siteInfo['favicon']) && !empty($siteInfo['favicon'])) {
                 $this->generateFavicon($siteInfo['favicon']);
             }
-            
+
             return $this->json(0);
         } catch (Throwable $e) {
             return $this->json(1, $e->getMessage());
@@ -329,27 +331,27 @@ EOF;;
             // 获取public目录路径
             $publicPath = base_path() . DIRECTORY_SEPARATOR . 'public';
             $faviconPath = $publicPath . DIRECTORY_SEPARATOR . 'favicon.ico';
-            
+
             // 如果已存在favicon.ico文件，则重命名为带时间戳的备份文件
             if (file_exists($faviconPath)) {
                 $backupPath = $publicPath . DIRECTORY_SEPARATOR . 'favicon_' . time() . '.ico.bak';
                 rename($faviconPath, $backupPath);
             }
-            
+
             // 获取图片内容
             $imageUrl = $faviconUrl;
             if (strpos($imageUrl, '/uploads/') === 0) {
                 // 如果是相对路径，转换为绝对路径
                 $imageUrl = base_path() . DIRECTORY_SEPARATOR . 'public' . $imageUrl;
             }
-            
+
             if (!file_exists($imageUrl)) {
                 // 如果文件不存在，尝试作为URL处理
                 $imageContent = @file_get_contents($faviconUrl);
                 if ($imageContent === false) {
                     return; // 无法获取图片内容
                 }
-                
+
                 // 将内容保存到临时文件
                 $tempPath = tempnam(sys_get_temp_dir(), 'favicon');
                 file_put_contents($tempPath, $imageContent);
@@ -358,11 +360,11 @@ EOF;;
             } else {
                 $isTemp = false;
             }
-            
+
             // 使用媒体库服务生成 favicon
             $mediaService = new \app\service\MediaLibraryService();
             $result = $mediaService->generateFavicon($imageUrl, $faviconPath);
-            
+
             // 如果使用了临时文件，删除它
             if (isset($isTemp) && $isTemp) {
                 unlink($imageUrl);
@@ -387,7 +389,7 @@ EOF;;
         if (!preg_match('/^#[0-9a-fA-F]{6}$/', $color)) {
             throw new BusinessException('颜色格式错误，请使用标准的16进制颜色值（如 #FFFFFF）');
         }
+
         return $color;
     }
-
 }

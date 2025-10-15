@@ -2,14 +2,14 @@
 
 namespace plugin\admin\app\controller;
 
+use app\model\Setting;
 use Doctrine\Inflector\InflectorFactory;
 use Illuminate\Database\Schema\Blueprint;
 use plugin\admin\app\common\Layui;
 use plugin\admin\app\common\Util;
+use plugin\admin\app\model\Option;
 use plugin\admin\app\model\Role;
 use plugin\admin\app\model\Rule;
-use app\model\Setting;
-use plugin\admin\app\model\Option;
 use support\exception\BusinessException;
 use support\Request;
 use support\Response;
@@ -50,6 +50,7 @@ class TableController extends Base
         $form = Layui::buildForm($table, 'search');
         $table_info = Util::getSchema($table, 'table');
         $primary_key = $table_info['primary_key'][0] ?? null;
+
         return raw_view('table/view', [
             'form' => $form,
             'table' => $table,
@@ -68,8 +69,8 @@ class TableController extends Base
     public function show(Request $request): Response
     {
         $table_name = $request->get('table_name', '');
-        $limit = (int)$request->get('limit', 10);
-        $page = (int)$request->get('page', 1);
+        $limit = (int) $request->get('limit', 10);
+        $page = (int) $request->get('page', 1);
         $offset = ($page - 1) * $limit;
         $field = $request->get('field', 'TABLE_NAME');
         $field = Util::filterAlphaNum($field);
@@ -126,7 +127,6 @@ class TableController extends Base
     ORDER BY \"$field\" $order LIMIT ? OFFSET ?", [$limit, $offset]);
         }
 
-
         if ($tables) {
             $table_names = array_column($tables, 'TABLE_NAME');
             $table_rows_count = [];
@@ -176,7 +176,7 @@ class TableController extends Base
             $columns[$index]['nullable'] = !empty($item['nullable']);
             if ($item['default'] === '') {
                 $columns[$index]['default'] = null;
-            } else if ($item['default'] === "''") {
+            } elseif ($item['default'] === "''") {
                 $columns[$index]['default'] = '';
             }
         }
@@ -213,7 +213,7 @@ class TableController extends Base
                 }
                 $this->createColumn($column, $table);
             }
-            
+
             // 根据数据库类型设置相应的表属性
             $driver = config('database.default');
             switch ($driver) {
@@ -253,6 +253,7 @@ class TableController extends Base
         }
         $form_schema_map = json_encode($form_schema_map, JSON_UNESCAPED_UNICODE);
         $this->updateSchemaOption($table_name, $form_schema_map);
+
         return $this->json(0, 'ok');
     }
 
@@ -300,7 +301,7 @@ class TableController extends Base
             }
             if ($item['default'] === '') {
                 $columns[$index]['default'] = null;
-            } else if ($item['default'] === "''") {
+            } elseif ($item['default'] === "''") {
                 $columns[$index]['default'] = '';
             }
             if ($columns[$index]['auto_increment']) {
@@ -456,7 +457,6 @@ class TableController extends Base
         return $this->json(0, $option_name);
     }
 
-
     /**
      * 一键菜单
      *
@@ -503,7 +503,7 @@ class TableController extends Base
             return $this->json(1, '控制器和model必须以.php为后缀');
         }
 
-        $pid = (int)$pid;
+        $pid = (int) $pid;
         if ($pid) {
             $parent_menu = Rule::find($pid);
             if (!$parent_menu) {
@@ -581,7 +581,7 @@ class TableController extends Base
             $template_file_path = ($plugin ? "/plugin/$plugin" : '') . '/app/' . ($app ? "$app/" : '') . 'view/' . $template_path;
 
             $model_class_with_namespace = "$model_namespace\\$model_class";
-            $primary_key = (new $model_class_with_namespace)->getKeyName();
+            $primary_key = (new $model_class_with_namespace())->getKeyName();
             $url_path_base = ($plugin ? "/app/$plugin/" : '/') . ($app ? "$app/" : '') . $template_path;
             $this->createTemplate(base_path($template_file_path), $table_name, $template_path, $url_path_base, $primary_key, "$controller_namespace\\$controller_class");
         } finally {
@@ -646,30 +646,31 @@ class TableController extends Base
             if ($driver === 'pgsql') {
                 // PostgreSQL查询
                 $primary_key_result = Util::db()->select(
-                    "SELECT a.attname FROM pg_index i " .
-                    "JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey) " .
-                    "WHERE i.indrelid = ?::regclass AND i.indisprimary",
+                    'SELECT a.attname FROM pg_index i ' .
+                    'JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey) ' .
+                    'WHERE i.indrelid = ?::regclass AND i.indisprimary',
                     [$table]
                 );
 
                 $primary_key_name = isset($primary_key_result[0]) ? $primary_key_result[0]->attname : 'id';
 
                 foreach (Util::db()->select(
-                    "SELECT column_name, data_type FROM information_schema.columns " .
+                    'SELECT column_name, data_type FROM information_schema.columns ' .
                     "WHERE table_name = ? AND table_schema = 'public' ORDER BY ordinal_position",
-                    [$table]) as $item) {
+                    [$table]
+                ) as $item) {
                     if ($item->column_name === $primary_key_name) {
                         $pk = $item->column_name;
                         if (!str_contains(strtolower($item->data_type), 'int')) {
                             $incrementing = <<<EOF
-/**
-     * Indicates if the model's ID is auto-incrementing.
-     *
-     * @var bool
-     */
-    public \$incrementing = false;
+                                /**
+                                     * Indicates if the model's ID is auto-incrementing.
+                                     *
+                                     * @var bool
+                                     */
+                                    public \$incrementing = false;
 
-EOF;
+                                EOF;
                         }
                     }
                     $type = $this->getType($item->data_type);
@@ -682,48 +683,48 @@ EOF;
         }
         if (!isset($columns['created_at']) || !isset($columns['updated_at'])) {
             $timestamps = <<<EOF
-/**
-     * Indicates if the model should be timestamped.
-     *
-     * @var bool
-     */
-    public \$timestamps = false;
+                /**
+                     * Indicates if the model should be timestamped.
+                     *
+                     * @var bool
+                     */
+                    public \$timestamps = false;
 
-EOF;
+                EOF;
 
         }
         $properties = rtrim($properties) ?: ' *';
         $model_content = <<<EOF
-<?php
+            <?php
 
-namespace $namespace;
+            namespace $namespace;
 
-use plugin\admin\app\model\Base;
+            use plugin\admin\app\model\Base;
 
-/**
-$properties
- */
-class $class extends Base
-{
-    /**
-     * The table associated with the model.
-     *
-     * @var string
-     */
-    protected \$table = $table_val;
+            /**
+            $properties
+             */
+            class $class extends Base
+            {
+                /**
+                 * The table associated with the model.
+                 *
+                 * @var string
+                 */
+                protected \$table = $table_val;
 
-    /**
-     * The primary key associated with the table.
-     *
-     * @var string
-     */
-    protected \$primaryKey = '$pk';
-    $timestamps
-    $incrementing
-    
-}
+                /**
+                 * The primary key associated with the table.
+                 *
+                 * @var string
+                 */
+                protected \$primaryKey = '$pk';
+                $timestamps
+                $incrementing
+                
+            }
 
-EOF;
+            EOF;
         file_put_contents($file, $model_content);
     }
 
@@ -749,76 +750,76 @@ EOF;
         }
         $this->mkdir($file);
         $controller_content = <<<EOF
-<?php
+            <?php
 
-namespace $namespace;
+            namespace $namespace;
 
-use support\Request;
-use support\Response;
-use $model_namespace\\$model_class_alias;
-use plugin\admin\app\controller\Crud;
-use support\\exception\BusinessException;
+            use support\Request;
+            use support\Response;
+            use $model_namespace\\$model_class_alias;
+            use plugin\admin\app\controller\Crud;
+            use support\\exception\BusinessException;
 
-/**
- * $name 
- */
-class $controller_class extends Crud
-{
-    
-    /**
-     * @var $model_class
-     */
-    protected \$model = null;
+            /**
+             * $name 
+             */
+            class $controller_class extends Crud
+            {
+                
+                /**
+                 * @var $model_class
+                 */
+                protected \$model = null;
 
-    /**
-     * 构造函数
-     * @return void
-     */
-    public function __construct()
-    {
-        \$this->model = new $model_class;
-    }
-    
-    /**
-     * 浏览
-     * @return Response
-     */
-    public function index(): Response
-    {
-        return view('$template_path/index');
-    }
+                /**
+                 * 构造函数
+                 * @return void
+                 */
+                public function __construct()
+                {
+                    \$this->model = new $model_class;
+                }
+                
+                /**
+                 * 浏览
+                 * @return Response
+                 */
+                public function index(): Response
+                {
+                    return view('$template_path/index');
+                }
 
-    /**
-     * 插入
-     * @param Request \$request
-     * @return Response
-     * @throws BusinessException
-     */
-    public function insert(Request \$request): Response
-    {
-        if (\$request->method() === 'POST') {
-            return parent::insert(\$request);
-        }
-        return view('$template_path/insert');
-    }
+                /**
+                 * 插入
+                 * @param Request \$request
+                 * @return Response
+                 * @throws BusinessException
+                 */
+                public function insert(Request \$request): Response
+                {
+                    if (\$request->method() === 'POST') {
+                        return parent::insert(\$request);
+                    }
+                    return view('$template_path/insert');
+                }
 
-    /**
-     * 更新
-     * @param Request \$request
-     * @return Response
-     * @throws BusinessException
-    */
-    public function update(Request \$request): Response
-    {
-        if (\$request->method() === 'POST') {
-            return parent::update(\$request);
-        }
-        return view('$template_path/update');
-    }
+                /**
+                 * 更新
+                 * @param Request \$request
+                 * @return Response
+                 * @throws BusinessException
+                */
+                public function update(Request \$request): Response
+                {
+                    if (\$request->method() === 'POST') {
+                        return parent::update(\$request);
+                    }
+                    return view('$template_path/update');
+                }
 
-}
+            }
 
-EOF;
+            EOF;
         file_put_contents($file, $controller_content);
     }
 
@@ -843,27 +844,27 @@ EOF;
         $form = Layui::buildForm($table, 'search');
         $html = $form->html(3);
         $html = $html ? <<<EOF
-<div class="layui-card">
-    <div class="layui-card-body">
-        <form class="layui-form top-search-from">
-            $html
-            <div class="layui-form-item layui-inline">
-                <label class="layui-form-label"></label>
-                <button class="pear-btn pear-btn-md pear-btn-primary" lay-submit lay-filter="table-query">
-                    <i class="layui-icon layui-icon-search"></i>查询
-                </button>
-                <button type="reset" class="pear-btn pear-btn-md" lay-submit lay-filter="table-reset">
-                    <i class="layui-icon layui-icon-refresh"></i>重置
-                </button>
+            <div class="layui-card">
+                <div class="layui-card-body">
+                    <form class="layui-form top-search-from">
+                        $html
+                        <div class="layui-form-item layui-inline">
+                            <label class="layui-form-label"></label>
+                            <button class="pear-btn pear-btn-md pear-btn-primary" lay-submit lay-filter="table-query">
+                                <i class="layui-icon layui-icon-search"></i>查询
+                            </button>
+                            <button type="reset" class="pear-btn pear-btn-md" lay-submit lay-filter="table-reset">
+                                <i class="layui-icon layui-icon-refresh"></i>重置
+                            </button>
+                        </div>
+                        <div class="toggle-btn">
+                            <a class="layui-hide">展开<i class="layui-icon layui-icon-down"></i></a>
+                            <a class="layui-hide">收起<i class="layui-icon layui-icon-up"></i></a>
+                        </div>
+                    </form>
+                </div>
             </div>
-            <div class="toggle-btn">
-                <a class="layui-hide">展开<i class="layui-icon layui-icon-down"></i></a>
-                <a class="layui-hide">收起<i class="layui-icon layui-icon-up"></i></a>
-            </div>
-        </form>
-    </div>
-</div>
-EOF
+            EOF
             : '';
         $html = str_replace("\n", "\n" . str_repeat('    ', 2), $html);
         $js = $form->js(3);
@@ -871,214 +872,214 @@ EOF
         $table_js = Layui::buildTable($table, 4);
         $template_content = <<<EOF
 
-<!DOCTYPE html>
-<html lang="zh-cn">
-    <head>
-        <meta charset="utf-8">
-        <title>浏览页面</title>
-        <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css" />
-        <link rel="stylesheet" href="/app/admin/admin/css/reset.css" />
-    </head>
-    <body class="pear-container">
-    
-        <!-- 顶部查询表单 -->
-        $html
-        
-        <!-- 数据表格 -->
-        <div class="layui-card">
-            <div class="layui-card-body">
-                <table id="data-table" lay-filter="data-table"></table>
-            </div>
-        </div>
-
-        <!-- 表格顶部工具栏 -->
-        <script type="text/html" id="table-toolbar">
-            <button class="pear-btn pear-btn-primary pear-btn-md" lay-event="add" permission="$code_base.insert">
-                <i class="layui-icon layui-icon-add-1"></i>新增
-            </button>
-            <button class="pear-btn pear-btn-danger pear-btn-md" lay-event="batchRemove" permission="$code_base.delete">
-                <i class="layui-icon layui-icon-delete"></i>删除
-            </button>
-        </script>
-
-        <!-- 表格行工具栏 -->
-        <script type="text/html" id="table-bar">
-            <button class="pear-btn pear-btn-xs tool-btn" lay-event="edit" permission="$code_base.update">编辑</button>
-            <button class="pear-btn pear-btn-xs tool-btn" lay-event="remove" permission="$code_base.delete">删除</button>
-        </script>
-
-        <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
-        <script src="/app/admin/component/pear/pear.js"></script>
-        <script src="/app/admin/admin/js/permission.js"></script>
-        <script src="/app/admin/admin/js/common.js"></script>
-        
-        <script>
-
-            // 相关常量
-            const PRIMARY_KEY = "$primary_key";
-            const SELECT_API = "$url_path_base/select";
-            const UPDATE_API = "$url_path_base/update";
-            const DELETE_API = "$url_path_base/delete";
-            const INSERT_URL = "$url_path_base/insert";
-            const UPDATE_URL = "$url_path_base/update";
-            $js
-            // 表格渲染
-            layui.use(["table", "form", "common", "popup", "util"], function() {
-                let table = layui.table;
-                let form = layui.form;
-                let $ = layui.$;
-                let common = layui.common;
-                let util = layui.util;
-                $table_js
-                // 编辑或删除行事件
-                table.on("tool(data-table)", function(obj) {
-                    if (obj.event === "remove") {
-                        remove(obj);
-                    } else if (obj.event === "edit") {
-                        edit(obj);
-                    }
-                });
-
-                // 表格顶部工具栏事件
-                table.on("toolbar(data-table)", function(obj) {
-                    if (obj.event === "add") {
-                        add();
-                    } else if (obj.event === "refresh") {
-                        refreshTable();
-                    } else if (obj.event === "batchRemove") {
-                        batchRemove(obj);
-                    }
-                });
-
-                // 表格顶部搜索事件
-                form.on("submit(table-query)", function(data) {
-                    table.reload("data-table", {
-                        page: {
-                            curr: 1
-                        },
-                        where: data.field
-                    })
-                    return false;
-                });
+            <!DOCTYPE html>
+            <html lang="zh-cn">
+                <head>
+                    <meta charset="utf-8">
+                    <title>浏览页面</title>
+                    <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css" />
+                    <link rel="stylesheet" href="/app/admin/admin/css/reset.css" />
+                </head>
+                <body class="pear-container">
                 
-                // 表格顶部搜索重置事件
-                form.on("submit(table-reset)", function(data) {
-                    table.reload("data-table", {
-                        where: []
-                    })
-                });
-                
-                // 字段允许为空
-                form.verify({
-                    phone: [/(^$)|^1\d{10}$/, "请输入正确的手机号"],
-                    email: [/(^$)|^([a-zA-Z0-9_\.\-])+\@(([a-zA-Z0-9\-])+\.)+([a-zA-Z0-9]{2,4})+$/, "邮箱格式不正确"],
-                    url: [/(^$)|(^#)|(^http(s*):\/\/[^\s]+\.[^\s]+)/, "链接格式不正确"],
-                    number: [/(^$)|^\d+$/,'只能填写数字'],
-                    date: [/(^$)|^(\d{4})[-\/](\d{1}|0\d{1}|1[0-2])([-\/](\d{1}|0\d{1}|[1-2][0-9]|3[0-1]))*$/, "日期格式不正确"],
-                    identity: [/(^$)|(^\d{15}$)|(^\d{17}(x|X|\d)$)/, "请输入正确的身份证号"]
-                });
+                    <!-- 顶部查询表单 -->
+                    $html
+                    
+                    <!-- 数据表格 -->
+                    <div class="layui-card">
+                        <div class="layui-card-body">
+                            <table id="data-table" lay-filter="data-table"></table>
+                        </div>
+                    </div>
 
-                // 表格排序事件
-                table.on("sort(data-table)", function(obj){
-                    table.reload("data-table", {
-                        initSort: obj,
-                        scrollPos: "fixed",
-                        where: {
-                            field: obj.field,
-                            order: obj.type
-                        }
-                    });
-                });
+                    <!-- 表格顶部工具栏 -->
+                    <script type="text/html" id="table-toolbar">
+                        <button class="pear-btn pear-btn-primary pear-btn-md" lay-event="add" permission="$code_base.insert">
+                            <i class="layui-icon layui-icon-add-1"></i>新增
+                        </button>
+                        <button class="pear-btn pear-btn-danger pear-btn-md" lay-event="batchRemove" permission="$code_base.delete">
+                            <i class="layui-icon layui-icon-delete"></i>删除
+                        </button>
+                    </script>
 
-                // 表格新增数据
-                let add = function() {
-                    layer.open({
-                        type: 2,
-                        title: "新增",
-                        shade: 0.1,
-                        maxmin: true,
-                        area: [common.isModile()?"100%":"500px", common.isModile()?"100%":"450px"],
-                        content: INSERT_URL
-                    });
-                }
+                    <!-- 表格行工具栏 -->
+                    <script type="text/html" id="table-bar">
+                        <button class="pear-btn pear-btn-xs tool-btn" lay-event="edit" permission="$code_base.update">编辑</button>
+                        <button class="pear-btn pear-btn-xs tool-btn" lay-event="remove" permission="$code_base.delete">删除</button>
+                    </script>
 
-                // 表格编辑数据
-                let edit = function(obj) {
-                    let value = obj.data[PRIMARY_KEY];
-                    layer.open({
-                        type: 2,
-                        title: "修改",
-                        shade: 0.1,
-                        maxmin: true,
-                        area: [common.isModile()?"100%":"500px", common.isModile()?"100%":"450px"],
-                        content: UPDATE_URL + "?" + PRIMARY_KEY + "=" + value
-                    });
-                }
+                    <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+                    <script src="/app/admin/component/pear/pear.js"></script>
+                    <script src="/app/admin/admin/js/permission.js"></script>
+                    <script src="/app/admin/admin/js/common.js"></script>
+                    
+                    <script>
 
-                // 删除一行
-                let remove = function(obj) {
-                    return doRemove(obj.data[PRIMARY_KEY]);
-                }
-
-                // 删除多行
-                let batchRemove = function(obj) {
-                    let checkIds = common.checkField(obj, PRIMARY_KEY);
-                    if (checkIds === "") {
-                        layui.popup.warning("未选中数据");
-                        return false;
-                    }
-                    doRemove(checkIds.split(","));
-                }
-
-                // 执行删除
-                let doRemove = function (ids) {
-                    let data = {};
-                    data[PRIMARY_KEY] = ids;
-                    layer.confirm("确定删除?", {
-                        icon: 3,
-                        title: "提示"
-                    }, function(index) {
-                        layer.close(index);
-                        let loading = layer.load();
-                        $.ajax({
-                            url: DELETE_API,
-                            data: data,
-                            dataType: "json",
-                            type: "post",
-                            success: function(res) {
-                                layer.close(loading);
-                                if (res.code) {
-                                    return layui.popup.failure(res.msg);
+                        // 相关常量
+                        const PRIMARY_KEY = "$primary_key";
+                        const SELECT_API = "$url_path_base/select";
+                        const UPDATE_API = "$url_path_base/update";
+                        const DELETE_API = "$url_path_base/delete";
+                        const INSERT_URL = "$url_path_base/insert";
+                        const UPDATE_URL = "$url_path_base/update";
+                        $js
+                        // 表格渲染
+                        layui.use(["table", "form", "common", "popup", "util"], function() {
+                            let table = layui.table;
+                            let form = layui.form;
+                            let $ = layui.$;
+                            let common = layui.common;
+                            let util = layui.util;
+                            $table_js
+                            // 编辑或删除行事件
+                            table.on("tool(data-table)", function(obj) {
+                                if (obj.event === "remove") {
+                                    remove(obj);
+                                } else if (obj.event === "edit") {
+                                    edit(obj);
                                 }
-                                return layui.popup.success("操作成功", refreshTable);
+                            });
+
+                            // 表格顶部工具栏事件
+                            table.on("toolbar(data-table)", function(obj) {
+                                if (obj.event === "add") {
+                                    add();
+                                } else if (obj.event === "refresh") {
+                                    refreshTable();
+                                } else if (obj.event === "batchRemove") {
+                                    batchRemove(obj);
+                                }
+                            });
+
+                            // 表格顶部搜索事件
+                            form.on("submit(table-query)", function(data) {
+                                table.reload("data-table", {
+                                    page: {
+                                        curr: 1
+                                    },
+                                    where: data.field
+                                })
+                                return false;
+                            });
+                            
+                            // 表格顶部搜索重置事件
+                            form.on("submit(table-reset)", function(data) {
+                                table.reload("data-table", {
+                                    where: []
+                                })
+                            });
+                            
+                            // 字段允许为空
+                            form.verify({
+                                phone: [/(^$)|^1\d{10}$/, "请输入正确的手机号"],
+                                email: [/(^$)|^([a-zA-Z0-9_\.\-])+\@(([a-zA-Z0-9\-])+\.)+([a-zA-Z0-9]{2,4})+$/, "邮箱格式不正确"],
+                                url: [/(^$)|(^#)|(^http(s*):\/\/[^\s]+\.[^\s]+)/, "链接格式不正确"],
+                                number: [/(^$)|^\d+$/,'只能填写数字'],
+                                date: [/(^$)|^(\d{4})[-\/](\d{1}|0\d{1}|1[0-2])([-\/](\d{1}|0\d{1}|[1-2][0-9]|3[0-1]))*$/, "日期格式不正确"],
+                                identity: [/(^$)|(^\d{15}$)|(^\d{17}(x|X|\d)$)/, "请输入正确的身份证号"]
+                            });
+
+                            // 表格排序事件
+                            table.on("sort(data-table)", function(obj){
+                                table.reload("data-table", {
+                                    initSort: obj,
+                                    scrollPos: "fixed",
+                                    where: {
+                                        field: obj.field,
+                                        order: obj.type
+                                    }
+                                });
+                            });
+
+                            // 表格新增数据
+                            let add = function() {
+                                layer.open({
+                                    type: 2,
+                                    title: "新增",
+                                    shade: 0.1,
+                                    maxmin: true,
+                                    area: [common.isModile()?"100%":"500px", common.isModile()?"100%":"450px"],
+                                    content: INSERT_URL
+                                });
+                            }
+
+                            // 表格编辑数据
+                            let edit = function(obj) {
+                                let value = obj.data[PRIMARY_KEY];
+                                layer.open({
+                                    type: 2,
+                                    title: "修改",
+                                    shade: 0.1,
+                                    maxmin: true,
+                                    area: [common.isModile()?"100%":"500px", common.isModile()?"100%":"450px"],
+                                    content: UPDATE_URL + "?" + PRIMARY_KEY + "=" + value
+                                });
+                            }
+
+                            // 删除一行
+                            let remove = function(obj) {
+                                return doRemove(obj.data[PRIMARY_KEY]);
+                            }
+
+                            // 删除多行
+                            let batchRemove = function(obj) {
+                                let checkIds = common.checkField(obj, PRIMARY_KEY);
+                                if (checkIds === "") {
+                                    layui.popup.warning("未选中数据");
+                                    return false;
+                                }
+                                doRemove(checkIds.split(","));
+                            }
+
+                            // 执行删除
+                            let doRemove = function (ids) {
+                                let data = {};
+                                data[PRIMARY_KEY] = ids;
+                                layer.confirm("确定删除?", {
+                                    icon: 3,
+                                    title: "提示"
+                                }, function(index) {
+                                    layer.close(index);
+                                    let loading = layer.load();
+                                    $.ajax({
+                                        url: DELETE_API,
+                                        data: data,
+                                        dataType: "json",
+                                        type: "post",
+                                        success: function(res) {
+                                            layer.close(loading);
+                                            if (res.code) {
+                                                return layui.popup.failure(res.msg);
+                                            }
+                                            return layui.popup.success("操作成功", refreshTable);
+                                        }
+                                    })
+                                });
+                            }
+
+                            // 刷新表格数据
+                            window.refreshTable = function() {
+                                table.reloadData("data-table", {
+                                    scrollPos: "fixed",
+                                    done: function (res, curr) {
+                                        if (curr > 1 && res.data && !res.data.length) {
+                                            curr = curr - 1;
+                                            table.reloadData("data-table", {
+                                                page: {
+                                                    curr: curr
+                                                },
+                                            })
+                                        }
+                                    }
+                                });
                             }
                         })
-                    });
-                }
 
-                // 刷新表格数据
-                window.refreshTable = function() {
-                    table.reloadData("data-table", {
-                        scrollPos: "fixed",
-                        done: function (res, curr) {
-                            if (curr > 1 && res.data && !res.data.length) {
-                                curr = curr - 1;
-                                table.reloadData("data-table", {
-                                    page: {
-                                        curr: curr
-                                    },
-                                })
-                            }
-                        }
-                    });
-                }
-            })
+                    </script>
+                </body>
+            </html>
 
-        </script>
-    </body>
-</html>
-
-EOF;
+            EOF;
         file_put_contents("$template_file_path/index.html", $template_content);
 
         $form = Layui::buildForm($table);
@@ -1086,225 +1087,224 @@ EOF;
         $html = $form->html(5);
         $js = $form->js(3);
         $template_content = <<<EOF
-<!DOCTYPE html>
-<html lang="zh-cn">
-    <head>
-        <meta charset="UTF-8">
-        <title>新增页面</title>
-        <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css" />
-        <link rel="stylesheet" href="/app/admin/component/jsoneditor/css/jsoneditor.css" />
-        <link rel="stylesheet" href="/app/admin/admin/css/reset.css" />
-    </head>
-    <body>
+            <!DOCTYPE html>
+            <html lang="zh-cn">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>新增页面</title>
+                    <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css" />
+                    <link rel="stylesheet" href="/app/admin/component/jsoneditor/css/jsoneditor.css" />
+                    <link rel="stylesheet" href="/app/admin/admin/css/reset.css" />
+                </head>
+                <body>
 
-        <form class="layui-form" action="">
+                    <form class="layui-form" action="">
 
-            <div class="mainBox">
-                <div class="main-container mr-5">
-                    $html
-                </div>
-            </div>
+                        <div class="mainBox">
+                            <div class="main-container mr-5">
+                                $html
+                            </div>
+                        </div>
 
-            <div class="bottom">
-                <div class="button-container">
-                    <button type="submit" class="pear-btn pear-btn-primary pear-btn-md" lay-submit=""
-                        lay-filter="save">
-                        提交
-                    </button>
-                    <button type="reset" class="pear-btn pear-btn-md">
-                        重置
-                    </button>
-                </div>
-            </div>
-            
-        </form>
+                        <div class="bottom">
+                            <div class="button-container">
+                                <button type="submit" class="pear-btn pear-btn-primary pear-btn-md" lay-submit=""
+                                    lay-filter="save">
+                                    提交
+                                </button>
+                                <button type="reset" class="pear-btn pear-btn-md">
+                                    重置
+                                </button>
+                            </div>
+                        </div>
+                        
+                    </form>
 
-        <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
-        <script src="/app/admin/component/pear/pear.js"></script>
-        <script src="/app/admin/component/jsoneditor/jsoneditor.js"></script>
-        <script src="/app/admin/admin/js/permission.js"></script>
-        
-        <script>
-            
-            // 相关接口
-            const INSERT_API = "$url_path_base/insert";
-            $js
-            //提交事件
-            layui.use(["form", "popup"], function () {
-                // 字段验证允许为空
-                layui.form.verify({
-                    phone: [/(^$)|^1\d{10}$/, "请输入正确的手机号"],
-                    email: [/(^$)|^([a-zA-Z0-9_\.\-])+\@(([a-zA-Z0-9\-])+\.)+([a-zA-Z0-9]{2,4})+$/, "邮箱格式不正确"],
-                    url: [/(^$)|(^#)|(^http(s*):\/\/[^\s]+\.[^\s]+)/, "链接格式不正确"],
-                    number: [/(^$)|^\d+$/,'只能填写数字'],
-                    date: [/(^$)|^(\d{4})[-\/](\d{1}|0\d{1}|1[0-2])([-\/](\d{1}|0\d{1}|[1-2][0-9]|3[0-1]))*$/, "日期格式不正确"],
-                    identity: [/(^$)|(^\d{15}$)|(^\d{17}(x|X|\d)$)/, "请输入正确的身份证号"]
-                });
-                layui.form.on("submit(save)", function (data) {
-                    layui.$.ajax({
-                        url: INSERT_API,
-                        type: "POST",
-                        dateType: "json",
-                        data: data.field,
-                        success: function (res) {
-                            if (res.code) {
-                                return layui.popup.failure(res.msg);
-                            }
-                            return layui.popup.success("操作成功", function () {
-                                parent.refreshTable();
-                                parent.layer.close(parent.layer.getFrameIndex(window.name));
+                    <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+                    <script src="/app/admin/component/pear/pear.js"></script>
+                    <script src="/app/admin/component/jsoneditor/jsoneditor.js"></script>
+                    <script src="/app/admin/admin/js/permission.js"></script>
+                    
+                    <script>
+                        
+                        // 相关接口
+                        const INSERT_API = "$url_path_base/insert";
+                        $js
+                        //提交事件
+                        layui.use(["form", "popup"], function () {
+                            // 字段验证允许为空
+                            layui.form.verify({
+                                phone: [/(^$)|^1\d{10}$/, "请输入正确的手机号"],
+                                email: [/(^$)|^([a-zA-Z0-9_\.\-])+\@(([a-zA-Z0-9\-])+\.)+([a-zA-Z0-9]{2,4})+$/, "邮箱格式不正确"],
+                                url: [/(^$)|(^#)|(^http(s*):\/\/[^\s]+\.[^\s]+)/, "链接格式不正确"],
+                                number: [/(^$)|^\d+$/,'只能填写数字'],
+                                date: [/(^$)|^(\d{4})[-\/](\d{1}|0\d{1}|1[0-2])([-\/](\d{1}|0\d{1}|[1-2][0-9]|3[0-1]))*$/, "日期格式不正确"],
+                                identity: [/(^$)|(^\d{15}$)|(^\d{17}(x|X|\d)$)/, "请输入正确的身份证号"]
                             });
-                        }
-                    });
-                    return false;
-                });
-            });
+                            layui.form.on("submit(save)", function (data) {
+                                layui.$.ajax({
+                                    url: INSERT_API,
+                                    type: "POST",
+                                    dateType: "json",
+                                    data: data.field,
+                                    success: function (res) {
+                                        if (res.code) {
+                                            return layui.popup.failure(res.msg);
+                                        }
+                                        return layui.popup.success("操作成功", function () {
+                                            parent.refreshTable();
+                                            parent.layer.close(parent.layer.getFrameIndex(window.name));
+                                        });
+                                    }
+                                });
+                                return false;
+                            });
+                        });
 
-        </script>
+                    </script>
 
-    </body>
-</html>
+                </body>
+            </html>
 
-EOF;
+            EOF;
 
         file_put_contents("$template_file_path/insert.html", $template_content);
 
         $form = Layui::buildForm($table, 'update');
 
-
         $html = $form->html(5);
         $js = $form->js(6);
         $template_content = <<<EOF
-<!DOCTYPE html>
-<html lang="zh-cn">
-    <head>
-        <meta charset="UTF-8">
-        <title>更新页面</title>
-        <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css" />
-        <link rel="stylesheet" href="/app/admin/component/jsoneditor/css/jsoneditor.css" />
-        <link rel="stylesheet" href="/app/admin/admin/css/reset.css" />
-        
-    </head>
-    <body>
+            <!DOCTYPE html>
+            <html lang="zh-cn">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>更新页面</title>
+                    <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css" />
+                    <link rel="stylesheet" href="/app/admin/component/jsoneditor/css/jsoneditor.css" />
+                    <link rel="stylesheet" href="/app/admin/admin/css/reset.css" />
+                    
+                </head>
+                <body>
 
-        <form class="layui-form">
+                    <form class="layui-form">
 
-            <div class="mainBox">
-                <div class="main-container mr-5">
-                    $html
-                </div>
-            </div>
+                        <div class="mainBox">
+                            <div class="main-container mr-5">
+                                $html
+                            </div>
+                        </div>
 
-            <div class="bottom">
-                <div class="button-container">
-                    <button type="submit" class="pear-btn pear-btn-primary pear-btn-md" lay-submit="" lay-filter="save">
-                        提交
-                    </button>
-                    <button type="reset" class="pear-btn pear-btn-md">
-                        重置
-                    </button>
-                </div>
-            </div>
-            
-        </form>
-
-        <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
-        <script src="/app/admin/component/pear/pear.js"></script>
-        <script src="/app/admin/component/jsoneditor/jsoneditor.js"></script>
-        <script src="/app/admin/admin/js/permission.js"></script>
-        
-        <script>
-
-            // 相关接口
-            const PRIMARY_KEY = "$primary_key";
-            const SELECT_API = "$url_path_base/select" + location.search;
-            const UPDATE_API = "$url_path_base/update";
-            // 获取数据库记录
-            layui.use(["form", "util", "popup"], function () {
-                let $ = layui.$;
-                $.ajax({
-                    url: SELECT_API,
-                    dataType: "json",
-                    success: function (res) {
+                        <div class="bottom">
+                            <div class="button-container">
+                                <button type="submit" class="pear-btn pear-btn-primary pear-btn-md" lay-submit="" lay-filter="save">
+                                    提交
+                                </button>
+                                <button type="reset" class="pear-btn pear-btn-md">
+                                    重置
+                                </button>
+                            </div>
+                        </div>
                         
-                        // 给表单初始化数据
-                        layui.each(res.data[0], function (key, value) {
-                            let obj = $('*[name="'+key+'"]');
-                            if (key === "password") {
-                                obj.attr("placeholder", "不更新密码请留空");
-                                return;
-                            }
-                            if (typeof obj[0] === "undefined" || !obj[0].nodeName) return;
-                            if (obj[0].nodeName.toLowerCase() === "textarea") {
-                                obj.val(value);
-                            } else {
-                                obj.attr("value", value);
-                                obj[0].value = value;
-                            }
-                            
-                            // 多图渲染
-                            if (obj[0].classList.contains('uploader-list')) {
-                                let multiple_images = value.split(",");
-                                $.each(multiple_images, function(index, value) {
-                                    $('#uploader-list-'+ key).append(
-                                        '<div class="file-iteme">' +
-                                        '<div class="handle"><i class="layui-icon layui-icon-delete"></i></div>' +
-                                        '<img src='+value +' alt="'+ value +'" >' +
-                                        '</div>'
-                                    );
-                                });
-                            }
-                        });
-                        $js
-                        
-                        // ajax返回失败
-                        if (res.code) {
-                            layui.popup.failure(res.msg);
-                        }
-                        
-                    }
-                });
-            });
+                    </form>
 
-            //提交事件
-            layui.use(["form", "popup"], function () {
-                // 字段验证允许为空
-                layui.form.verify({
-                    phone: [/(^$)|^1\d{10}$/, "请输入正确的手机号"],
-                    email: [/(^$)|^([a-zA-Z0-9_\.\-])+\@(([a-zA-Z0-9\-])+\.)+([a-zA-Z0-9]{2,4})+$/, "邮箱格式不正确"],
-                    url: [/(^$)|(^#)|(^http(s*):\/\/[^\s]+\.[^\s]+)/, "链接格式不正确"],
-                    number: [/(^$)|^\d+$/,'只能填写数字'],
-                    date: [/(^$)|^(\d{4})[-\/](\d{1}|0\d{1}|1[0-2])([-\/](\d{1}|0\d{1}|[1-2][0-9]|3[0-1]))*$/, "日期格式不正确"],
-                    identity: [/(^$)|(^\d{15}$)|(^\d{17}(x|X|\d)$)/, "请输入正确的身份证号"]
-                });
-                layui.form.on("submit(save)", function (data) {
-                    data.field[PRIMARY_KEY] = layui.url().search[PRIMARY_KEY];
-                    layui.$.ajax({
-                        url: UPDATE_API,
-                        type: "POST",
-                        dateType: "json",
-                        data: data.field,
-                        success: function (res) {
-                            if (res.code) {
-                                return layui.popup.failure(res.msg);
-                            }
-                            return layui.popup.success("操作成功", function () {
-                                parent.refreshTable();
-                                parent.layer.close(parent.layer.getFrameIndex(window.name));
+                    <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+                    <script src="/app/admin/component/pear/pear.js"></script>
+                    <script src="/app/admin/component/jsoneditor/jsoneditor.js"></script>
+                    <script src="/app/admin/admin/js/permission.js"></script>
+                    
+                    <script>
+
+                        // 相关接口
+                        const PRIMARY_KEY = "$primary_key";
+                        const SELECT_API = "$url_path_base/select" + location.search;
+                        const UPDATE_API = "$url_path_base/update";
+                        // 获取数据库记录
+                        layui.use(["form", "util", "popup"], function () {
+                            let $ = layui.$;
+                            $.ajax({
+                                url: SELECT_API,
+                                dataType: "json",
+                                success: function (res) {
+                                    
+                                    // 给表单初始化数据
+                                    layui.each(res.data[0], function (key, value) {
+                                        let obj = $('*[name="'+key+'"]');
+                                        if (key === "password") {
+                                            obj.attr("placeholder", "不更新密码请留空");
+                                            return;
+                                        }
+                                        if (typeof obj[0] === "undefined" || !obj[0].nodeName) return;
+                                        if (obj[0].nodeName.toLowerCase() === "textarea") {
+                                            obj.val(value);
+                                        } else {
+                                            obj.attr("value", value);
+                                            obj[0].value = value;
+                                        }
+                                        
+                                        // 多图渲染
+                                        if (obj[0].classList.contains('uploader-list')) {
+                                            let multiple_images = value.split(",");
+                                            $.each(multiple_images, function(index, value) {
+                                                $('#uploader-list-'+ key).append(
+                                                    '<div class="file-iteme">' +
+                                                    '<div class="handle"><i class="layui-icon layui-icon-delete"></i></div>' +
+                                                    '<img src='+value +' alt="'+ value +'" >' +
+                                                    '</div>'
+                                                );
+                                            });
+                                        }
+                                    });
+                                    $js
+                                    
+                                    // ajax返回失败
+                                    if (res.code) {
+                                        layui.popup.failure(res.msg);
+                                    }
+                                    
+                                }
                             });
-                        }
-                    });
-                    return false;
-                });
-            });
+                        });
 
-        </script>
+                        //提交事件
+                        layui.use(["form", "popup"], function () {
+                            // 字段验证允许为空
+                            layui.form.verify({
+                                phone: [/(^$)|^1\d{10}$/, "请输入正确的手机号"],
+                                email: [/(^$)|^([a-zA-Z0-9_\.\-])+\@(([a-zA-Z0-9\-])+\.)+([a-zA-Z0-9]{2,4})+$/, "邮箱格式不正确"],
+                                url: [/(^$)|(^#)|(^http(s*):\/\/[^\s]+\.[^\s]+)/, "链接格式不正确"],
+                                number: [/(^$)|^\d+$/,'只能填写数字'],
+                                date: [/(^$)|^(\d{4})[-\/](\d{1}|0\d{1}|1[0-2])([-\/](\d{1}|0\d{1}|[1-2][0-9]|3[0-1]))*$/, "日期格式不正确"],
+                                identity: [/(^$)|(^\d{15}$)|(^\d{17}(x|X|\d)$)/, "请输入正确的身份证号"]
+                            });
+                            layui.form.on("submit(save)", function (data) {
+                                data.field[PRIMARY_KEY] = layui.url().search[PRIMARY_KEY];
+                                layui.$.ajax({
+                                    url: UPDATE_API,
+                                    type: "POST",
+                                    dateType: "json",
+                                    data: data.field,
+                                    success: function (res) {
+                                        if (res.code) {
+                                            return layui.popup.failure(res.msg);
+                                        }
+                                        return layui.popup.success("操作成功", function () {
+                                            parent.refreshTable();
+                                            parent.layer.close(parent.layer.getFrameIndex(window.name));
+                                        });
+                                    }
+                                });
+                                return false;
+                            });
+                        });
 
-    </body>
+                    </script>
 
-</html>
+                </body>
 
-EOF;
+            </html>
+
+            EOF;
 
         file_put_contents("$template_file_path/update.html", $template_content);
 
@@ -1321,10 +1321,9 @@ EOF;
     {
         $path = pathinfo($file, PATHINFO_DIRNAME);
         if (!is_dir($path)) {
-            mkdir($path, 0777, true);
+            mkdir($path, 0o777, true);
         }
     }
-
 
     /**
      * 查询记录
@@ -1350,7 +1349,7 @@ EOF;
         } else {
             $allow_column = Util::db()->select("SELECT column_name AS Field, data_type AS Type, is_nullable AS Null, column_default AS Default FROM information_schema.columns WHERE table_name = '$table'");
         }
-        
+
         if (!$allow_column) {
             return $this->json(2, '表不存在');
         }
@@ -1385,7 +1384,7 @@ EOF;
         if ($format == 'tree') {
             $items_map = [];
             foreach ($items as $item) {
-                $items_map[$item->id] = (array)$item;
+                $items_map[$item->id] = (array) $item;
             }
             $formatted_items = [];
             foreach ($items_map as $index => $item) {
@@ -1418,14 +1417,15 @@ EOF;
         if ($request->method() === 'GET') {
             $table = $request->get('table');
             $form = Layui::buildForm($table);
+
             return raw_view('table/insert', [
                 'form' => $form,
-                'table' => $table
+                'table' => $table,
             ]);
         }
         $table = Util::filterAlphaNum($request->input('table', ''));
         $data = $request->post();
-        
+
         // 根据数据库类型使用不同的查询方式
         $driver = config('database.default');
         if ($driver === 'pgsql') {
@@ -1433,7 +1433,7 @@ EOF;
         } else {
             $allow_column = Util::db()->select("SELECT column_name AS Field, data_type AS Type, is_nullable AS Null, column_default AS Default FROM information_schema.columns WHERE table_name = '$table'");
         }
-        
+
         if (!$allow_column) {
             throw new BusinessException('表不存在', 2);
         }
@@ -1463,6 +1463,7 @@ EOF;
             $data['updated_at'] = $datetime;
         }
         $id = Util::db()->table($table)->insertGetId($data);
+
         return $this->json(0, $id);
     }
 
@@ -1482,11 +1483,12 @@ EOF;
             $primary_key = $table_info['primary_key'][0] ?? null;
             $value = htmlspecialchars($request->get($primary_key, ''));
             $form = Layui::buildForm($table, 'update');
+
             return raw_view('table/update', [
                 'primary_key' => $primary_key,
                 'value' => $value,
                 'form' => $form,
-                'table' => $table
+                'table' => $table,
             ]);
         }
         $table = Util::filterAlphaNum($request->post('table'));
@@ -1501,7 +1503,7 @@ EOF;
         $primary_key = $primary_keys[0];
         $value = $request->post($primary_key);
         $data = $request->post();
-        
+
         // 根据数据库类型使用不同的查询方式
         $driver = config('database.default');
         if ($driver === 'pgsql') {
@@ -1509,7 +1511,7 @@ EOF;
         } else {
             $allow_column = Util::db()->select("SELECT column_name AS Field, data_type AS Type, is_nullable AS Null, column_default AS Default FROM information_schema.columns WHERE table_name = '$table'");
         }
-        
+
         if (!$allow_column) {
             throw new BusinessException('表不存在', 2);
         }
@@ -1540,6 +1542,7 @@ EOF;
             $data['updated_at'] = $datetime;
         }
         Util::db()->table($table)->where($primary_key, $value)->update($data);
+
         return $this->json(0);
     }
 
@@ -1563,11 +1566,11 @@ EOF;
             return $this->json(1, '不支持复合主键删除');
         }
         $primary_key = $primary_keys[0];
-        $value = (array)$request->post($primary_key);
+        $value = (array) $request->post($primary_key);
         Util::db()->table($table)->whereIn($primary_key, $value)->delete();
+
         return $this->json(0);
     }
-
 
     /**
      * 删除表
@@ -1592,6 +1595,7 @@ EOF;
             // 删除schema
             Util::db()->table('wa_options')->where('name', "table_form_schema_$table")->delete();
         }
+
         return $this->json(0, 'ok');
     }
 
@@ -1669,6 +1673,7 @@ EOF;
         if ($method != 'text' && $column['default'] !== null) {
             $column_def->default($column['default']);
         }
+
         return $column_def;
     }
 
@@ -1695,7 +1700,7 @@ EOF;
             null;
         $comment = Util::pdoQuote($column['comment']);
         $auto_increment = $column['auto_increment'];
-        $length = (int)$column['length'];
+        $length = (int) $column['length'];
 
         if ($column['primary_key']) {
             $default = null;
@@ -1744,11 +1749,11 @@ EOF;
                         break;
                     case 'enum':
                         // PostgreSQL不直接支持ENUM，使用check约束代替
-                        $enum_values = array_map('trim', explode(',', (string)$column['length']));
+                        $enum_values = array_map('trim', explode(',', (string) $column['length']));
                         $enum_constraint = "\"{$table}_{$field}_check\"";
                         // 先删除可能存在的约束
                         Util::db()->statement("ALTER TABLE \"$table\" DROP CONSTRAINT IF EXISTS $enum_constraint");
-                        $type_args = "varchar";
+                        $type_args = 'varchar';
                         // 添加check约束
                         $enum_values_quoted = implode(', ', array_map(function ($v) {
                             return Util::pdoQuote(trim($v, "'\""));
@@ -1762,7 +1767,7 @@ EOF;
                     case 'decimal':
                         if (trim($column['length'])) {
                             $args = array_map('intval', explode(',', $column['length']));
-                            $args[1] = $args[1] ?? $args[0];
+                            $args[1] ??= $args[0];
                             $type_args = "$method($args[0], $args[1])";
                         } else {
                             $type_args = "$method";
@@ -1784,7 +1789,7 @@ EOF;
                 $default_sql = "ALTER TABLE \"$table\" ALTER COLUMN \"$field\" SET DEFAULT $default";
                 echo "$default_sql\n";
                 Util::db()->statement($default_sql);
-            } else if ($default === null) {
+            } elseif ($default === null) {
                 $drop_default_sql = "ALTER TABLE \"$table\" ALTER COLUMN \"$field\" DROP DEFAULT";
                 echo "$drop_default_sql\n";
                 Util::db()->statement($drop_default_sql);
@@ -1840,7 +1845,7 @@ EOF;
                         $sql .= $length ? "$method($length) " : "$method ";
                         break;
                     case 'enum':
-                        $args = array_map('trim', explode(',', (string)$column['length']));
+                        $args = array_map('trim', explode(',', (string) $column['length']));
                         foreach ($args as $key => $value) {
                             $args[$key] = Util::pdoQuote($value);
                         }
@@ -1851,13 +1856,13 @@ EOF;
                     case 'decimal':
                         if (trim($column['length'])) {
                             $args = array_map('intval', explode(',', $column['length']));
-                            $args[1] = $args[1] ?? $args[0];
+                            $args[1] ??= $args[0];
                             $sql .= "$method($args[0], $args[1]) ";
                             break;
                         }
                         $sql .= "$method ";
                         break;
-                    default :
+                    default:
                         $sql .= "$method ";
 
                 }
@@ -1890,9 +1895,9 @@ EOF;
     public function types(Request $request): Response
     {
         $types = Util::methodControlMap();
+
         return $this->json(0, 'ok', $types);
     }
-
 
     /**
      * 更新表的form schema信息
@@ -1911,6 +1916,7 @@ EOF;
         } else {
             Option::insert(['name' => $option_name, 'value' => $data]);
         }
+
         return $option_name;
     }
 
@@ -1946,5 +1952,4 @@ EOF;
                 return 'mixed';
         }
     }
-
 }

@@ -2,7 +2,6 @@
 
 namespace plugin\admin\app\controller;
 
-use plugin\admin\app\controller\Base;
 use app\model\Post;
 use support\Request;
 use support\Response;
@@ -37,8 +36,8 @@ class PostsController extends Base
         $username = $request->get('username', '');
         $status = $request->get('status', '');
         $isTrashed = $request->get('isTrashed', 'false');
-        $page = (int)$request->get('page', 1);
-        $limit = (int)$request->get('limit', 15);
+        $page = (int) $request->get('page', 1);
+        $limit = (int) $request->get('limit', 15);
         $order = $request->get('order', 'id');
         $sort = $request->get('sort', 'desc');
 
@@ -250,6 +249,7 @@ class PostsController extends Base
                 }
             }
         }
+
         return $this->success("成功删除 {$count} 篇文章");
     }
 

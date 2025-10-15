@@ -36,6 +36,7 @@ class FloLinkService
         // Markdown 内容：走 Markdown 安全替换流程，避免破坏换行与语法
         if (!self::isHtmlLike($content)) {
             $floLinks = self::getActiveFloLinks();
+
             return self::processMarkdown($content, $floLinks);
         }
 
@@ -193,6 +194,7 @@ class FloLinkService
         } catch (\Throwable $e) {
             // 忽略，返回已收集的占位符
         }
+
         return $placeholders;
     }
 
@@ -211,6 +213,7 @@ class FloLinkService
         foreach ($placeholders as $ph => $frag) {
             $html = str_replace($ph, $frag, $html);
         }
+
         return $html;
     }
 
@@ -238,6 +241,7 @@ class FloLinkService
             foreach ($root->childNodes as $child) {
                 $html .= $dom->saveHTML($child);
             }
+
             return $html;
         } catch (\Throwable $e) {
             return $dom->saveHTML();
@@ -271,6 +275,7 @@ class FloLinkService
                 if ($new === $url || $new === '') {
                     return $m[0];
                 }
+
                 // 替换原有 url，保持展示文本不变
                 return str_replace('(' . $url . ')', '(' . self::escapeMarkdownUrl($new) . ')', $m[0]);
             }, $content) ?? $content;
@@ -286,6 +291,7 @@ class FloLinkService
             $content = preg_replace_callback($pattern, function ($m) use (&$placeholders, &$seq) {
                 $key = '[[[FLOLINK_MD_' . (++$seq) . ']]]';
                 $placeholders[$key] = $m[0];
+
                 return $key;
             }, $content);
         };
@@ -342,6 +348,7 @@ class FloLinkService
     {
         // 避免 markdown 链接中出现未转义的括号与空格
         $url = str_replace(['(', ')', ' '], ['%28', '%29', '%20'], $url);
+
         return $url;
     }
 
@@ -532,7 +539,6 @@ class FloLinkService
         }
     }
 
-
     /**
      * 获取所有启用的浮动链接配置（带缓存）
      *
@@ -624,12 +630,16 @@ class FloLinkService
             return null;
         }
     }
+
     /**
      * 简单判断内容是否像 HTML 片段
      */
     private static function isHtmlLike(string $content): bool
     {
-        if ($content === '') return false;
+        if ($content === '') {
+            return false;
+        }
+
         // 存在任意形如 <tag ...> 的标记则认为是 HTML
         return (bool) preg_match('/<\s*[a-zA-Z][a-zA-Z0-9-]*[^>]*>/', $content);
     }

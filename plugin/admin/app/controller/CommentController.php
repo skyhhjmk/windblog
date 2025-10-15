@@ -2,10 +2,9 @@
 
 namespace plugin\admin\app\controller;
 
-use plugin\admin\app\controller\Base;
+use app\model\Comment as CommentModel;
 use support\Request;
 use support\Response;
-use app\model\Comment as CommentModel;
 use Throwable;
 
 /**
@@ -32,8 +31,8 @@ class CommentController extends Base
      */
     public function list(Request $request): Response
     {
-        $page = (int)$request->get('page', 1);
-        $limit = (int)$request->get('limit', 10);
+        $page = (int) $request->get('page', 1);
+        $limit = (int) $request->get('limit', 10);
         $status = $request->get('status', '');
         $keyword = $request->get('keyword', '');
 
@@ -66,7 +65,7 @@ class CommentController extends Base
             'code' => 0,
             'msg' => 'success',
             'count' => $count,
-            'data' => $comments
+            'data' => $comments,
         ]);
     }
 
@@ -99,7 +98,8 @@ class CommentController extends Base
 
         try {
             // 严格按状态字段更新，符合检查器
-            CommentModel::whereIn('id', (array)$ids)->update(['status' => $status]);
+            CommentModel::whereIn('id', (array) $ids)->update(['status' => $status]);
+
             return json(['code' => 0, 'msg' => '操作成功']);
         } catch (Throwable $e) {
             return json(['code' => 500, 'msg' => '操作失败：' . $e->getMessage()]);
@@ -115,7 +115,7 @@ class CommentController extends Base
     public function delete(Request $request): Response
     {
         $ids = $request->post('ids', []);
-        $force = (bool)$request->post('force', false);
+        $force = (bool) $request->post('force', false);
         // 兼容 JSON 请求体
         if (!$ids) {
             $raw = $request->getContent();
@@ -123,7 +123,7 @@ class CommentController extends Base
                 $data = json_decode($raw, true);
                 if (json_last_error() === JSON_ERROR_NONE) {
                     $ids = $data['ids'] ?? $ids;
-                    $force = (bool)($data['force'] ?? $force);
+                    $force = (bool) ($data['force'] ?? $force);
                 }
             }
         }
@@ -134,12 +134,13 @@ class CommentController extends Base
 
         try {
             $count = 0;
-            foreach ((array)$ids as $id) {
+            foreach ((array) $ids as $id) {
                 $comment = CommentModel::withTrashed()->find($id);
                 if ($comment && $comment->softDelete($force)) {
                     $count++;
                 }
             }
+
             return json(['code' => 0, 'msg' => $force ? '已彻底删除' : '已删除至回收站', 'data' => ['count' => $count]]);
         } catch (Throwable $e) {
             return json(['code' => 500, 'msg' => '删除失败：' . $e->getMessage()]);
@@ -172,10 +173,13 @@ class CommentController extends Base
 
         try {
             $count = 0;
-            $models = CommentModel::onlyTrashed()->whereIn('id', (array)$ids)->get();
+            $models = CommentModel::onlyTrashed()->whereIn('id', (array) $ids)->get();
             foreach ($models as $m) {
-                if ($m->restore()) { $count++; }
+                if ($m->restore()) {
+                    $count++;
+                }
             }
+
             return json(['code' => 0, 'msg' => '恢复成功', 'data' => ['count' => $count]]);
         } catch (Throwable $e) {
             return json(['code' => 500, 'msg' => '恢复失败：' . $e->getMessage()]);

@@ -4,12 +4,12 @@ namespace plugin\admin\app\controller;
 
 use app\model\Link;
 use app\service\CacheService;
+use app\service\MQService;
 use Exception;
+use PhpAmqpLib\Message\AMQPMessage;
 use support\Request;
 use support\Response;
 use Throwable;
-use app\service\MQService;
-use PhpAmqpLib\Message\AMQPMessage;
 
 class LinkController extends Base
 {
@@ -40,8 +40,8 @@ class LinkController extends Base
         $status = $request->get('status', '');
         $isTrashed = $request->get('isTrashed', 'false');
         $isPending = $request->get('isPending', 'false'); // 新增：是否只显示待审核
-        $page = (int)$request->get('page', 1);
-        $limit = (int)$request->get('limit', 15);
+        $page = (int) $request->get('page', 1);
+        $limit = (int) $request->get('limit', 15);
         $order = $request->get('order', 'id');
         $sort = $request->get('sort', 'desc');
 
@@ -89,13 +89,12 @@ class LinkController extends Base
             $item['is_pending'] = !$item['status'];
         }
 
-
         // 返回列表数据（无缓存）
         return $this->success(trans('Success'), $list, $total)
             ->withHeaders([
                 'Cache-Control' => 'no-cache, no-store, must-revalidate',
                 'Pragma' => 'no-cache',
-                'Expires' => '0'
+                'Expires' => '0',
             ]);
     }
 
@@ -111,6 +110,7 @@ class LinkController extends Base
         if ($request->method() === 'POST') {
             return $this->save($request);
         }
+
         return view('link/add');
     }
 
@@ -184,7 +184,7 @@ class LinkController extends Base
                 }
 
                 // 检查是否为审核操作
-                $isApproval = !$link->status && isset($data['status']) && (bool)$data['status'] === true;
+                $isApproval = !$link->status && isset($data['status']) && (bool) $data['status'] === true;
             } else {
                 // 创建新链接
                 $link = new Link();
@@ -228,11 +228,11 @@ class LinkController extends Base
                 'description' => htmlspecialchars($data['description'] ?? '', ENT_QUOTES, 'UTF-8'),
                 'icon' => $data['icon'] ?? '',
                 'image' => $data['image'] ?? '',
-                'sort_order' => (int)($data['sort_order'] ?? 999),
+                'sort_order' => (int) ($data['sort_order'] ?? 999),
                 'status' => $status,
                 'target' => $data['target'] ?? '_blank',
                 'redirect_type' => $data['redirect_type'] ?? 'direct',
-                'show_url' => (bool)($data['show_url'] ?? true),
+                'show_url' => (bool) ($data['show_url'] ?? true),
                 'content' => $data['content'] ?? '',
                 'seo_title' => $data['seo_title'] ?? '',
                 'seo_keywords' => $data['seo_keywords'] ?? '',
@@ -246,7 +246,7 @@ class LinkController extends Base
                 'name' => $link->name,
                 'status' => $link->status,
                 'status_type' => gettype($link->status),
-                'original_status' => $data['status'] ?? 'not_set'
+                'original_status' => $data['status'] ?? 'not_set',
             ]);
 
             // 如果是审核通过操作，添加审核记录
@@ -271,7 +271,7 @@ class LinkController extends Base
                 'id' => $link->id,
                 'status_after_save' => $link->status,
                 'dirty' => $link->getDirty(),
-                'changes' => $link->getChanges()
+                'changes' => $link->getChanges(),
             ]);
 
             if ($saved) {
@@ -294,7 +294,7 @@ class LinkController extends Base
                     'url' => $link->url,
                     'status' => $link->status,
                     'is_pending' => !$link->status,
-                    'updated_at' => $link->updated_at->format('Y-m-d H:i:s')
+                    'updated_at' => $link->updated_at->format('Y-m-d H:i:s'),
                 ];
 
                 // 返回成功响应（无缓存）
@@ -302,13 +302,14 @@ class LinkController extends Base
                     ->withHeaders([
                         'Cache-Control' => 'no-cache, no-store, must-revalidate',
                         'Pragma' => 'no-cache',
-                        'Expires' => '0'
+                        'Expires' => '0',
                     ]);
             }
 
             return $this->fail($id ? '链接更新失败' : '链接添加失败');
         } catch (Exception $e) {
             \support\Log::error('链接保存失败: ' . $e->getMessage());
+
             return $this->fail('系统错误，请稍后再试');
         }
     }
@@ -333,10 +334,12 @@ class LinkController extends Base
             if ($link->softDelete() !== false) {
                 // 清除前台链接列表缓存
                 $this->clearLinkCache();
+
                 return $this->success('链接已移至垃圾箱');
             }
         } catch (Exception $e) {
             \support\Log::error('链接删除失败: ' . $e->getMessage());
+
             return $this->fail('系统错误，请稍后再试');
         }
 
@@ -362,10 +365,12 @@ class LinkController extends Base
             if ($link->restore()) {
                 // 清除前台链接列表缓存
                 $this->clearLinkCache();
+
                 return $this->success('链接已恢复');
             }
         } catch (Exception $e) {
             \support\Log::error('链接恢复失败: ' . $e->getMessage());
+
             return $this->fail('系统错误，请稍后再试');
         }
 
@@ -392,10 +397,12 @@ class LinkController extends Base
             if ($link->softDelete(true) === true) {
                 // 清除前台链接列表缓存
                 $this->clearLinkCache();
+
                 return $this->success('链接已永久删除');
             }
         } catch (Exception $e) {
             \support\Log::error('链接永久删除失败: ' . $e->getMessage());
+
             return $this->fail('系统错误，请稍后再试');
         }
 
@@ -433,6 +440,7 @@ class LinkController extends Base
             }
         } catch (Exception $e) {
             \support\Log::error('批量恢复链接失败: ' . $e->getMessage());
+
             return $this->fail('系统错误，请稍后再试');
         }
 
@@ -471,6 +479,7 @@ class LinkController extends Base
             }
         } catch (Exception $e) {
             \support\Log::error('批量永久删除链接失败: ' . $e->getMessage());
+
             return $this->fail('系统错误，请稍后再试');
         }
 
@@ -509,6 +518,7 @@ class LinkController extends Base
             }
         } catch (Exception $e) {
             \support\Log::error('批量删除链接失败: ' . $e->getMessage());
+
             return $this->fail('系统错误，请稍后再试');
         }
 
@@ -557,7 +567,7 @@ class LinkController extends Base
             ->withHeaders([
                 'Cache-Control' => 'no-cache, no-store, must-revalidate',
                 'Pragma' => 'no-cache',
-                'Expires' => '0'
+                'Expires' => '0',
             ]);
     }
 
@@ -613,6 +623,7 @@ class LinkController extends Base
             }
         } catch (Exception $e) {
             \support\Log::error('批量审核链接失败: ' . $e->getMessage());
+
             return $this->fail('系统错误，请稍后再试');
         }
 
@@ -662,6 +673,7 @@ class LinkController extends Base
             }
         } catch (Exception $e) {
             \support\Log::error('批量拒绝链接失败: ' . $e->getMessage());
+
             return $this->fail('系统错误，请稍后再试');
         }
 
@@ -711,7 +723,7 @@ class LinkController extends Base
             'performance' => [],
             'security' => [],
             'seo' => [],
-            'errors' => []
+            'errors' => [],
         ];
 
         // 获取网页内容
@@ -719,11 +731,12 @@ class LinkController extends Base
         if (!$fetchResult['success']) {
             $result['status'] = 'error';
             $result['errors'][] = $fetchResult['error'];
+
             return $this->success('检测完成', $result)
                 ->withHeaders([
                     'Cache-Control' => 'no-cache, no-store, must-revalidate',
                     'Pragma' => 'no-cache',
-                    'Expires' => '0'
+                    'Expires' => '0',
                 ]);
         }
 
@@ -753,7 +766,7 @@ class LinkController extends Base
             ->withHeaders([
                 'Cache-Control' => 'no-cache, no-store, must-revalidate',
                 'Pragma' => 'no-cache',
-                'Expires' => '0'
+                'Expires' => '0',
             ]);
     }
 
@@ -771,12 +784,12 @@ class LinkController extends Base
                     'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
                     'follow_location' => true,
                     'max_redirects' => 5,
-                    'ignore_errors' => true
+                    'ignore_errors' => true,
                 ],
                 'ssl' => [
                     'verify_peer' => false,
-                    'verify_peer_name' => false
-                ]
+                    'verify_peer_name' => false,
+                ],
             ]);
 
             $startTime = microtime(true);
@@ -786,20 +799,21 @@ class LinkController extends Base
             if ($html === false) {
                 return [
                     'success' => false,
-                    'error' => '无法访问目标网站'
+                    'error' => '无法访问目标网站',
                 ];
             }
 
             return [
                 'success' => true,
                 'html' => $html,
-                'load_time' => $loadTime
+                'load_time' => $loadTime,
             ];
         } catch (Exception $e) {
             \support\Log::error('获取网页内容失败: ' . $e->getMessage());
+
             return [
                 'success' => false,
-                'error' => '网络请求失败: ' . $e->getMessage()
+                'error' => '网络请求失败: ' . $e->getMessage(),
             ];
         }
     }
@@ -817,13 +831,14 @@ class LinkController extends Base
             return [
                 'success' => true,
                 'dom' => $dom,
-                'xpath' => $xpath
+                'xpath' => $xpath,
             ];
         } catch (Exception $e) {
             \support\Log::error('HTML解析失败: ' . $e->getMessage());
+
             return [
                 'success' => false,
-                'error' => 'HTML解析失败: ' . $e->getMessage()
+                'error' => 'HTML解析失败: ' . $e->getMessage(),
             ];
         }
     }
@@ -837,9 +852,11 @@ class LinkController extends Base
             if (!$dom || !$xpath) {
                 return ['error' => 'HTML解析失败，无法获取网站信息'];
             }
+
             return $this->extractSiteInfo($dom, $xpath, $url);
         } catch (Exception $e) {
             \support\Log::error('网站信息检测失败: ' . $e->getMessage());
+
             return ['error' => '网站信息检测失败: ' . $e->getMessage()];
         }
     }
@@ -853,10 +870,11 @@ class LinkController extends Base
             return [
                 'load_time' => $loadTime . 'ms',
                 'content_size' => strlen($html) . ' bytes',
-                'response_headers' => $this->getResponseHeaders($url)
+                'response_headers' => $this->getResponseHeaders($url),
             ];
         } catch (Exception $e) {
             \support\Log::error('性能检测失败: ' . $e->getMessage());
+
             return ['error' => '性能检测失败: ' . $e->getMessage()];
         }
     }
@@ -870,9 +888,11 @@ class LinkController extends Base
             if (!$dom || !$xpath) {
                 return ['error' => 'HTML解析失败，无法进行SEO检测'];
             }
+
             return $this->extractSeoInfo($dom, $xpath);
         } catch (Exception $e) {
             \support\Log::error('SEO检测失败: ' . $e->getMessage());
+
             return ['error' => 'SEO检测失败: ' . $e->getMessage()];
         }
     }
@@ -886,6 +906,7 @@ class LinkController extends Base
             return $this->checkSecurity($url, $html);
         } catch (Exception $e) {
             \support\Log::error('安全检测失败: ' . $e->getMessage());
+
             return ['error' => '安全检测失败: ' . $e->getMessage()];
         }
     }
@@ -899,6 +920,7 @@ class LinkController extends Base
             return $this->checkBacklink($html, $myDomain, $url);
         } catch (Exception $e) {
             \support\Log::error('反向链接检测失败: ' . $e->getMessage());
+
             return ['error' => '反向链接检测失败: ' . $e->getMessage()];
         }
     }
@@ -997,7 +1019,7 @@ class LinkController extends Base
             'found' => false,
             'links' => [],
             'domain_mentioned' => false,
-            'link_count' => 0
+            'link_count' => 0,
         ];
 
         // 清理域名（移除协议和www）
@@ -1022,7 +1044,7 @@ class LinkController extends Base
                 $result['links'][] = [
                     'url' => $href,
                     'text' => $text,
-                    'full_tag' => $match[0]
+                    'full_tag' => $match[0],
                 ];
                 $result['link_count']++;
             }
@@ -1053,7 +1075,7 @@ class LinkController extends Base
             'eval\s*\(',
             'document\.write\s*\(',
             'innerHTML\s*=',
-            '<script[^>]*src=["\'][^"\']*[^a-zA-Z0-9\-\._~:/\?#\[\]@!$&\'()*+,;=]["\']'
+            '<script[^>]*src=["\'][^"\']*[^a-zA-Z0-9\-\._~:/\?#\[\]@!$&\'()*+,;=]["\']',
         ];
 
         $security['suspicious_content'] = [];
@@ -1077,8 +1099,8 @@ class LinkController extends Base
                 'http' => [
                     'method' => 'HEAD',
                     'timeout' => 10,
-                    'user_agent' => 'Mozilla/5.0 (compatible; LinkChecker/1.0)'
-                ]
+                    'user_agent' => 'Mozilla/5.0 (compatible; LinkChecker/1.0)',
+                ],
             ]);
 
             $result = @get_headers($url, 1, $context);
@@ -1114,6 +1136,7 @@ class LinkController extends Base
         }
 
         $path = dirname($parsedBase['path'] ?? '/');
+
         return $scheme . '://' . $host . rtrim($path, '/') . '/' . $relativeUrl;
     }
 
@@ -1143,11 +1166,12 @@ class LinkController extends Base
 
         if (is_string($value)) {
             $value = strtolower(trim($value));
+
             return in_array($value, ['1', 'true', 'on', 'yes', 't']);
         }
 
         if (is_numeric($value)) {
-            return (int)$value === 1;
+            return (int) $value === 1;
         }
 
         return false;
@@ -1159,8 +1183,8 @@ class LinkController extends Base
      */
     public function monitor(Request $request): Response
     {
-        $ids = (array)$request->post('ids', []);
-        $urls = (array)$request->post('urls', []);
+        $ids = (array) $request->post('ids', []);
+        $urls = (array) $request->post('urls', []);
         $myDomain = blog_config('site_url', '', true);
 
         $targets = [];
@@ -1191,8 +1215,8 @@ class LinkController extends Base
             ];
             try {
                 // 发布到 link_monitor 队列
-                $exchange = (string)blog_config('rabbitmq_link_monitor_exchange', 'link_monitor_exchange', true);
-                $routingKey = (string)blog_config('rabbitmq_link_monitor_routing_key', 'link_monitor', true);
+                $exchange = (string) blog_config('rabbitmq_link_monitor_exchange', 'link_monitor_exchange', true);
+                $routingKey = (string) blog_config('rabbitmq_link_monitor_routing_key', 'link_monitor', true);
                 $channel = MQService::getChannel();
                 $msg = new AMQPMessage(json_encode($payload, JSON_UNESCAPED_UNICODE), [
                     'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT,
@@ -1207,11 +1231,11 @@ class LinkController extends Base
 
         return $this->success('任务已入队', [
             'accepted' => $accepted,
-            'total' => count($targets)
+            'total' => count($targets),
         ])->withHeaders([
             'Cache-Control' => 'no-cache, no-store, must-revalidate',
             'Pragma' => 'no-cache',
-            'Expires' => '0'
+            'Expires' => '0',
         ]);
     }
 
@@ -1240,18 +1264,18 @@ class LinkController extends Base
 
         $score = $this->scoreBacklink($backlink, $html);
         // 阈值可配置：link_auto_audit_threshold（默认50）；排序=1000-得分（越前）
-        $threshold = (int)blog_config('link_auto_audit_threshold', 50, true);
+        $threshold = (int) blog_config('link_auto_audit_threshold', 50, true);
         $pass = $score >= $threshold;
 
         if ($pass) {
             $link->status = true;
             // 只在默认排序时根据评分前置
-            if ((int)$link->sort_order === 999) {
+            if ((int) $link->sort_order === 999) {
                 $link->sort_order = max(1, 1000 - $score);
             }
             $link->setCustomField('auto_audit', [
                 'score' => $score,
-                'time' => date('Y-m-d H:i:s')
+                'time' => date('Y-m-d H:i:s'),
             ]);
             $link->save();
             $this->clearLinkCache();
@@ -1262,7 +1286,7 @@ class LinkController extends Base
             'score' => $score,
             'approved' => $pass,
             'sort_order' => $link->sort_order,
-            'status' => $link->status
+            'status' => $link->status,
         ]);
     }
 
@@ -1284,9 +1308,10 @@ class LinkController extends Base
             if (!$ok['success']) {
                 return $this->fail('推送失败：' . $ok['error']);
             }
+
             return $this->success('推送完成', [
                 'peer_api' => $ok['peer_api'] ?? '',
-                'status' => 'ok'
+                'status' => 'ok',
             ]);
         } catch (\Throwable $e) {
             return $this->fail('推送异常：' . $e->getMessage());
@@ -1310,23 +1335,25 @@ class LinkController extends Base
                 'description' => blog_config('description', '', true),
                 'icon' => blog_config('favicon', '', true),
                 'protocol' => 'CAT5',
-                'version' => '1.0'
+                'version' => '1.0',
             ],
             'link' => [
                 'name' => $link->name,
                 'url' => $link->url,
                 'icon' => $link->icon,
                 'description' => $link->description,
-                'tags' => $link->getCustomField('tags', [])
+                'tags' => $link->getCustomField('tags', []),
             ],
-            'timestamp' => time()
+            'timestamp' => time(),
         ];
         $res = $this->httpPostJson($peerApi, $payload);
         if ($res['success']) {
             $link->setCustomField('peer_last_push', date('Y-m-d H:i:s'));
             $link->save();
+
             return ['success' => true, 'peer_api' => $peerApi];
         }
+
         return ['success' => false, 'error' => $res['error'] ?? 'unknown'];
     }
 
@@ -1338,13 +1365,14 @@ class LinkController extends Base
         $score = 0;
         if ($backlink['found'] ?? false) {
             $score += 40;
-            $count = (int)($backlink['link_count'] ?? 1);
+            $count = (int) ($backlink['link_count'] ?? 1);
             $score += min(20, $count * 5);
         }
         // 语义加权：section/container含friend/links等
         if (preg_match('/(friend|links|友情链接|友链)/i', $html)) {
             $score += 20;
         }
+
         // 主页加载速度（可选，已有性能检测返回给前端展示，不直接计入）
         return min(100, $score);
     }
@@ -1359,22 +1387,23 @@ class LinkController extends Base
                 'http' => [
                     'method' => 'POST',
                     'timeout' => 30,
-                    'header' => "Content-Type: application/json
+                    'header' => 'Content-Type: application/json
 
-",
-                    'content' => json_encode($payload, JSON_UNESCAPED_UNICODE)
+',
+                    'content' => json_encode($payload, JSON_UNESCAPED_UNICODE),
                 ],
                 'ssl' => [
                     'verify_peer' => false,
-                    'verify_peer_name' => false
-                ]
+                    'verify_peer_name' => false,
+                ],
             ];
             $context = stream_context_create($opts);
             $result = @file_get_contents($url, false, $context);
             if ($result === false) {
                 return ['success' => false, 'error' => '请求失败'];
             }
-            return ['success' => true, 'body' => (string)$result];
+
+            return ['success' => true, 'body' => (string) $result];
         } catch (\Exception $e) {
             return ['success' => false, 'error' => $e->getMessage()];
         }

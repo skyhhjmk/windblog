@@ -9,11 +9,10 @@ use support\Response;
 use Throwable;
 
 /**
- * 用户管理 
+ * 用户管理
  */
 class UserController extends Crud
 {
-    
     /**
      * @var User
      */
@@ -25,7 +24,7 @@ class UserController extends Crud
      */
     public function __construct()
     {
-        $this->model = new User;
+        $this->model = new User();
     }
 
     /**
@@ -49,6 +48,7 @@ class UserController extends Crud
         if ($request->method() === 'POST') {
             return parent::insert($request);
         }
+
         return raw_view('user/insert');
     }
 
@@ -63,7 +63,7 @@ class UserController extends Crud
         if ($request->method() === 'POST') {
             return parent::update($request);
         }
+
         return raw_view('user/update');
     }
-
 }

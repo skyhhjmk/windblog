@@ -6,7 +6,6 @@ use support\exception\BusinessException;
 
 class Layui
 {
-
     /**
      * 生成的html代码
      * @var string
@@ -81,14 +80,14 @@ class Layui
 
         $this->htmlContent .= <<<EOF
 
-<div class="layui-form-item">
-    $label
-    <div class="$class">
-        <input type="$type" name="$field" value="$value"$disabled_string$required_string$verify_string$placeholder_string$autocomplete_string class="layui-input">
-    </div>
-</div>
+            <div class="layui-form-item">
+                $label
+                <div class="$class">
+                    <input type="$type" name="$field" value="$value"$disabled_string$required_string$verify_string$placeholder_string$autocomplete_string class="layui-input">
+                </div>
+            </div>
 
-EOF;
+            EOF;
     }
 
     /**
@@ -114,18 +113,18 @@ EOF;
 
         $this->htmlContent .= <<<EOF
 
-<div class="layui-form-item">
-    $label
-    <div class="$class">
-        <div class="layui-input-block">
-            <input type="$type" autocomplete="off" name="{$field}[]" class="layui-input inline-block" placeholder="开始">
-            -
-            <input type="$type" autocomplete="off" name="{$field}[]" class="layui-input inline-block" placeholder="结束">
-        </div>
-    </div>
-</div>
+            <div class="layui-form-item">
+                $label
+                <div class="$class">
+                    <div class="layui-input-block">
+                        <input type="$type" autocomplete="off" name="{$field}[]" class="layui-input inline-block" placeholder="开始">
+                        -
+                        <input type="$type" autocomplete="off" name="{$field}[]" class="layui-input inline-block" placeholder="结束">
+                    </div>
+                </div>
+            </div>
 
-EOF;
+            EOF;
     }
 
     /**
@@ -140,17 +139,17 @@ EOF;
 
         $this->htmlContent .= <<<EOF
 
-<div class="layui-form-item">
-    $label
-    <div class="$class">
-        <div class="layui-input-block">
-            <input type="hidden" autocomplete="off" name="{$field}[]" value="like" class="layui-input inline-block">
-            <input type="$type" autocomplete="off" name="{$field}[]" class="layui-input">
-        </div>
-    </div>
-</div>
+            <div class="layui-form-item">
+                $label
+                <div class="$class">
+                    <div class="layui-input-block">
+                        <input type="hidden" autocomplete="off" name="{$field}[]" value="like" class="layui-input inline-block">
+                        <input type="$type" autocomplete="off" name="{$field}[]" class="layui-input">
+                    </div>
+                </div>
+            </div>
 
-EOF;
+            EOF;
     }
 
     /**
@@ -200,14 +199,14 @@ EOF;
 
         $this->htmlContent .= <<<EOF
 
-<div class="layui-form-item">
-    $label
-    <div class="$class">
-        <textarea name="$field"$required_string$verify_string$placeholder_string$disabled_string class="layui-textarea">$value</textarea>
-    </div>
-</div>
+            <div class="layui-form-item">
+                $label
+                <div class="$class">
+                    <textarea name="$field"$required_string$verify_string$placeholder_string$disabled_string class="layui-textarea">$value</textarea>
+                </div>
+            </div>
 
-EOF;
+            EOF;
     }
 
     /**
@@ -225,14 +224,14 @@ EOF;
 
         $this->htmlContent .= <<<EOF
 
-<div class="layui-form-item">
-    $label
-    <div class="$class">
-        <textarea id="$id" name="$field"$required_string$verify_string$placeholder_string$disabled_string class="layui-textarea">$value</textarea>
-    </div>
-</div>
+            <div class="layui-form-item">
+                $label
+                <div class="$class">
+                    <textarea id="$id" name="$field"$required_string$verify_string$placeholder_string$disabled_string class="layui-textarea">$value</textarea>
+                </div>
+            </div>
 
-EOF;
+            EOF;
 
         $options_string = '';
         if (!isset($props['images_upload_url'])) {
@@ -242,18 +241,18 @@ EOF;
         $options_string .= "\n" . $this->preparePropsToJsObject($props, 1, true);
         $this->jsContent .= <<<EOF
 
-// 字段 {$options['label']} $field
-layui.use(["tinymce"], function() {
-    var tinymce = layui.tinymce
-    var edit = tinymce.render({
-        elem: "#$id",$options_string
-    });
-    edit.on("blur", function(){
-        layui.$("#$id").val(edit.getContent());
-    });
-});
+            // 字段 {$options['label']} $field
+            layui.use(["tinymce"], function() {
+                var tinymce = layui.tinymce
+                var edit = tinymce.render({
+                    elem: "#$id",$options_string
+                });
+                edit.on("blur", function(){
+                    layui.$("#$id").val(edit.getContent());
+                });
+            });
 
-EOF;
+            EOF;
     }
 
     /**
@@ -274,21 +273,21 @@ EOF;
         }
         $this->htmlContent .= <<<EOF
 
-<div class="layui-form-item">
-    $label
-    <div class="$class">
-        <input type="$type" name="$field"id="$field" value="$value"$disabled_string$required_string$verify_string$placeholder_string$autocomplete_string class="layui-input">
-    </div>
-</div>
-EOF;
+            <div class="layui-form-item">
+                $label
+                <div class="$class">
+                    <input type="$type" name="$field"id="$field" value="$value"$disabled_string$required_string$verify_string$placeholder_string$autocomplete_string class="layui-input">
+                </div>
+            </div>
+            EOF;
         $this->jsContent .= <<<EOF
-jsonArea({
-    el: "#$field",
-    change: function(data) {
-        console.log(data);
-    }
-});
-EOF;
+            jsonArea({
+                el: "#$field",
+                change: function(data) {
+                    console.log(data);
+                }
+            });
+            EOF;
 
     }
 
@@ -301,11 +300,11 @@ EOF;
     {
         [$label, $field, $value, $props, $verify_string, $required_string, $class] = $this->options($options);
 
-        $props['accept'] = $props['accept'] ?? 'file';
-        $props['url'] = $props['url'] ?? '/app/admin/media/upload';
+        $props['accept'] ??= 'file';
+        $props['url'] ??= '/app/admin/media/upload';
         $id = $this->createId($field);
 
-        $props['field'] = $props['field'] ?? '__file__';
+        $props['field'] ??= '__file__';
         unset($props['lay-verify']);
         $options_string = '';
         $props = $this->prepareProps($props);
@@ -313,50 +312,50 @@ EOF;
 
         $this->htmlContent .= <<<EOF
 
-<div class="layui-form-item">
-    $label
-    <div class="$class">
-        <span>$value</span>
-        <input type="text" style="display:none" name="$field" value="$value" />
-        <button type="button" class="pear-btn pear-btn-primary pear-btn-sm" id="$id" permission="app.admin.upload.file">
-                <i class="layui-icon layui-icon-upload"></i>上传媒体
-            </button>
-            <button type="button" class="pear-btn pear-btn-primary pear-btn-sm" id="attachment-choose-$id" permission="app.admin.upload.attachment">
-                <i class="layui-icon layui-icon-align-left"></i>选择媒体
-            </button>
-    </div>
-</div>
+            <div class="layui-form-item">
+                $label
+                <div class="$class">
+                    <span>$value</span>
+                    <input type="text" style="display:none" name="$field" value="$value" />
+                    <button type="button" class="pear-btn pear-btn-primary pear-btn-sm" id="$id" permission="app.admin.upload.file">
+                            <i class="layui-icon layui-icon-upload"></i>上传媒体
+                        </button>
+                        <button type="button" class="pear-btn pear-btn-primary pear-btn-sm" id="attachment-choose-$id" permission="app.admin.upload.attachment">
+                            <i class="layui-icon layui-icon-align-left"></i>选择媒体
+                        </button>
+                </div>
+            </div>
 
-EOF;
+            EOF;
         $this->jsContent .= <<<EOF
 
-// 字段 {$options['label']} $field
-layui.use(["upload", "layer", "popup", "util"], function() {
-    let input = layui.$("#$id").prev();
-    input.prev().html(layui.util.escape(input.val()));
-    layui.$("#attachment-choose-$id").on("click", function() {
-        parent.layer.open({
-            type: 2,
-            title: "选择媒体",
-            content: "/app/admin/media/selector",
-            area: ["95%", "90%"],
-            success: function (layero, index) {
-                parent.layui.$("#layui-layer" + index).data("callback", function (data) {
-                    input.val(data.url).prev().html(layui.util.escape(data.url));
+            // 字段 {$options['label']} $field
+            layui.use(["upload", "layer", "popup", "util"], function() {
+                let input = layui.$("#$id").prev();
+                input.prev().html(layui.util.escape(input.val()));
+                layui.$("#attachment-choose-$id").on("click", function() {
+                    parent.layer.open({
+                        type: 2,
+                        title: "选择媒体",
+                        content: "/app/admin/media/selector",
+                        area: ["95%", "90%"],
+                        success: function (layero, index) {
+                            parent.layui.$("#layui-layer" + index).data("callback", function (data) {
+                                input.val(data.url).prev().html(layui.util.escape(data.url));
+                            });
+                        }
+                    });
                 });
-            }
-        });
-    });
-    layui.upload.render({
-        elem: "#$id",$options_string
-        done: function (res) {
-            if (res.code) return layui.popup.failure(res.msg);
-            this.item.prev().val(res.data.url).prev().html(layui.util.escape(res.data.url));
-        }
-    });
-});
+                layui.upload.render({
+                    elem: "#$id",$options_string
+                    done: function (res) {
+                        if (res.code) return layui.popup.failure(res.msg);
+                        this.item.prev().val(res.data.url).prev().html(layui.util.escape(res.data.url));
+                    }
+                });
+            });
 
-EOF;
+            EOF;
     }
 
     /**
@@ -367,14 +366,14 @@ EOF;
     public function uploadImage($options)
     {
         [$label, $field, $value, $props, $verify_string, $required_string, $class] = $this->options($options);
-        $props['acceptMime'] = $props['acceptMime'] ?? 'image/gif,image/jpeg,image/jpg,image/png';
-        $props['url'] = $props['url'] ?? '/app/admin/media/upload';
-        $props['multiple'] = $props['multiple'] ?? 0;
+        $props['acceptMime'] ??= 'image/gif,image/jpeg,image/jpg,image/png';
+        $props['url'] ??= '/app/admin/media/upload';
+        $props['multiple'] ??= 0;
 
         $id = $this->createId($field);
 
         unset($props['lay-verify']);
-        $props['field'] = $props['field'] ?? '__file__';
+        $props['field'] ??= '__file__';
         $options_string = '';
         $props = $this->prepareProps($props);
         $options_string .= "\n" . $this->preparePropsToJsObject($props, 1, true);
@@ -382,167 +381,166 @@ EOF;
         if ($props['multiple'] == 0) {
             $this->htmlContent .= <<<EOF
 
-<div class="layui-form-item">
-    $label
-    <div class="$class">
-        <img class="img-3" src=""/>
-        <input type="text" style="display:none" name="$field" value="$value" />
-        <button type="button" class="pear-btn pear-btn-primary pear-btn-sm" id="$id"  permission="app.admin.upload.image">
-                <i class="layui-icon layui-icon-upload"></i>上传媒体图片
-            </button>
-            <button type="button" class="pear-btn pear-btn-primary pear-btn-sm" id="attachment-choose-$id"  permission="app.admin.upload.attachment">
-                <i class="layui-icon layui-icon-align-left"></i>选择媒体图片
-            </button>
-    </div>
-</div>
+                <div class="layui-form-item">
+                    $label
+                    <div class="$class">
+                        <img class="img-3" src=""/>
+                        <input type="text" style="display:none" name="$field" value="$value" />
+                        <button type="button" class="pear-btn pear-btn-primary pear-btn-sm" id="$id"  permission="app.admin.upload.image">
+                                <i class="layui-icon layui-icon-upload"></i>上传媒体图片
+                            </button>
+                            <button type="button" class="pear-btn pear-btn-primary pear-btn-sm" id="attachment-choose-$id"  permission="app.admin.upload.attachment">
+                                <i class="layui-icon layui-icon-align-left"></i>选择媒体图片
+                            </button>
+                    </div>
+                </div>
 
-EOF;
+                EOF;
             $this->jsContent .= <<<EOF
 
-// 字段 {$options['label']} $field
-layui.use(["upload", "layer"], function() {
-    let input = layui.$("#$id").prev();
-    input.prev().attr("src", input.val());
-    layui.$("#attachment-choose-$id").on("click", function() {
-        parent.layer.open({
-            type: 2,
-            title: "选择媒体",
-            content: "/app/admin/media/selector",
-            area: ["95%", "90%"],
-            success: function (layero, index) {
-                parent.layui.$("#layui-layer" + index).data("callback", function (data) {
-                    input.val(data.url).prev().attr("src", data.url);
+                // 字段 {$options['label']} $field
+                layui.use(["upload", "layer"], function() {
+                    let input = layui.$("#$id").prev();
+                    input.prev().attr("src", input.val());
+                    layui.$("#attachment-choose-$id").on("click", function() {
+                        parent.layer.open({
+                            type: 2,
+                            title: "选择媒体",
+                            content: "/app/admin/media/selector",
+                            area: ["95%", "90%"],
+                            success: function (layero, index) {
+                                parent.layui.$("#layui-layer" + index).data("callback", function (data) {
+                                    input.val(data.url).prev().attr("src", data.url);
+                                });
+                            }
+                        });
+                    });
+                    layui.upload.render({
+                        elem: "#$id",$options_string
+                        done: function (res) {
+                            if (res.code > 0) return layui.layer.msg(res.msg);
+                            this.item.prev().val(res.data.url).prev().attr("src", res.data.url);
+                        }
+                    });
                 });
-            }
-        });
-    });
-    layui.upload.render({
-        elem: "#$id",$options_string
-        done: function (res) {
-            if (res.code > 0) return layui.layer.msg(res.msg);
-            this.item.prev().val(res.data.url).prev().attr("src", res.data.url);
-        }
-    });
-});
 
-EOF;
+                EOF;
         } else {
             $this->htmlContent .= <<<EOF
 
-<div class="layui-form-item">
-    $label
-    <div class="$class">
-    
-        <div class="layui-upload">
-           <input type="text" class="uploader-list" style="display:none" name="$field" value="$value" id="$id"/>
-           <blockquote class="layui-elem-quote layui-quote-nm" style="margin-top: 10px;">
-               预览图：
-               <div class="layui-upload-list uploader-list" style="overflow: auto;" id="uploader-list-$id">
-               </div>
-           </blockquote>
+                <div class="layui-form-item">
+                    $label
+                    <div class="$class">
+                    
+                        <div class="layui-upload">
+                           <input type="text" class="uploader-list" style="display:none" name="$field" value="$value" id="$id"/>
+                           <blockquote class="layui-elem-quote layui-quote-nm" style="margin-top: 10px;">
+                               预览图：
+                               <div class="layui-upload-list uploader-list" style="overflow: auto;" id="uploader-list-$id">
+                               </div>
+                           </blockquote>
 
-           <button type="button" class="pear-btn pear-btn-primary pear-btn-sm" id="multi-upload-$id" permission="app.admin.upload.image">
-               <i class="layui-icon layui-icon-upload"></i>多图上传
-           </button>
-           
-           <button type="button" class="pear-btn pear-btn-primary pear-btn-sm" id="attachment-choose-$id"  permission="app.admin.upload.attachment">
-            <i class="layui-icon layui-icon-align-left"></i>选择图片
-          </button>
-       </div>
-    </div>
-</div>
+                           <button type="button" class="pear-btn pear-btn-primary pear-btn-sm" id="multi-upload-$id" permission="app.admin.upload.image">
+                               <i class="layui-icon layui-icon-upload"></i>多图上传
+                           </button>
+                           
+                           <button type="button" class="pear-btn pear-btn-primary pear-btn-sm" id="attachment-choose-$id"  permission="app.admin.upload.attachment">
+                            <i class="layui-icon layui-icon-align-left"></i>选择图片
+                          </button>
+                       </div>
+                    </div>
+                </div>
 
-EOF;
+                EOF;
             $this->jsContent .= <<<EOF
 
-// 字段 {$options['label']} $field
-layui.use(["upload", "layer"], function() {
-    var upload = layui.upload;
-    var $ = layui.$;
-    let multiple_images = layui.$("#$id").attr("value") ? layui.$("#$id").attr("value").split(",") : [];
-    
-    
-    $("#attachment-choose-$id").on("click", function() {
-        parent.layer.open({
-            type: 2,
-            title: "选择媒体",
-            content: "/app/admin/media/selector",
-            area: ["95%", "90%"],
-            success: function (layero, index) {
-                parent.layui.$("#layui-layer" + index).data("callback", function (data) {
-                            //上传完毕
-       $('#uploader-list-$id').append(
-           '<div class="file-iteme">' +
-           '<div class="handle"><i class="layui-icon layui-icon-delete"></i></div>' +
-           '<img src='+ data.url +' alt="'+ data.name +'" >' +
-           '</div>'
-       );
+                // 字段 {$options['label']} $field
+                layui.use(["upload", "layer"], function() {
+                    var upload = layui.upload;
+                    var $ = layui.$;
+                    let multiple_images = layui.$("#$id").attr("value") ? layui.$("#$id").attr("value").split(",") : [];
+                    
+                    
+                    $("#attachment-choose-$id").on("click", function() {
+                        parent.layer.open({
+                            type: 2,
+                            title: "选择媒体",
+                            content: "/app/admin/media/selector",
+                            area: ["95%", "90%"],
+                            success: function (layero, index) {
+                                parent.layui.$("#layui-layer" + index).data("callback", function (data) {
+                                            //上传完毕
+                       $('#uploader-list-$id').append(
+                           '<div class="file-iteme">' +
+                           '<div class="handle"><i class="layui-icon layui-icon-delete"></i></div>' +
+                           '<img src='+ data.url +' alt="'+ data.name +'" >' +
+                           '</div>'
+                       );
 
-       //追加图片成功追加文件名至图片容器
-       multiple_images.push(data.url);
-       $('#$id').val(multiple_images);
+                       //追加图片成功追加文件名至图片容器
+                       multiple_images.push(data.url);
+                       $('#$id').val(multiple_images);
+                                });
+                            }
+                        });
+                    });
+                    
+                    upload.render({
+                        elem: '#multi-upload-$id',$options_string
+                        before: function(obj){
+                       layer.msg('图片上传中...', {
+                           icon: 16,
+                           shade: 0.01,
+                           time: 0
+                       })
+                   },
+                   done: function(res){
+                       layer.close(layer.msg());//关闭上传提示窗口
+                       //上传完毕
+                       $('#uploader-list-$id').append(
+                           '<div class="file-iteme">' +
+                           '<div class="handle"><i class="layui-icon layui-icon-delete"></i></div>' +
+                           '<img src='+ res.data.url +' alt="'+ res.data.name +'" >' +
+                           '</div>'
+                       );
+
+                       //追加图片成功追加文件名至图片容器
+                       multiple_images.push(res.data.url);
+                       $('#$id').val(multiple_images);
+                   }
                 });
-            }
-        });
-    });
-    
-    upload.render({
-        elem: '#multi-upload-$id',$options_string
-        before: function(obj){
-       layer.msg('图片上传中...', {
-           icon: 16,
-           shade: 0.01,
-           time: 0
-       })
-   },
-   done: function(res){
-       layer.close(layer.msg());//关闭上传提示窗口
-       //上传完毕
-       $('#uploader-list-$id').append(
-           '<div class="file-iteme">' +
-           '<div class="handle"><i class="layui-icon layui-icon-delete"></i></div>' +
-           '<img src='+ res.data.url +' alt="'+ res.data.name +'" >' +
-           '</div>'
-       );
 
-       //追加图片成功追加文件名至图片容器
-       multiple_images.push(res.data.url);
-       $('#$id').val(multiple_images);
-   }
-});
+                //鼠标悬浮事件
+                $(document).on("mouseenter mouseleave", ".file-iteme", function(event){
+                   if(event.type === "mouseenter"){
+                       //鼠标悬浮
+                       $(this).children(".info").fadeIn("fast");
+                       $(this).children(".handle").fadeIn("fast");
+                   }else if(event.type === "mouseleave") {
+                       //鼠标离开
+                       $(this).children(".info").hide();
+                       $(this).children(".handle").hide();
+                   }
+                });
 
-//鼠标悬浮事件
-$(document).on("mouseenter mouseleave", ".file-iteme", function(event){
-   if(event.type === "mouseenter"){
-       //鼠标悬浮
-       $(this).children(".info").fadeIn("fast");
-       $(this).children(".handle").fadeIn("fast");
-   }else if(event.type === "mouseleave") {
-       //鼠标离开
-       $(this).children(".info").hide();
-       $(this).children(".handle").hide();
-   }
-});
+                // 删除图片
+                $(document).on("click", ".file-iteme .handle", function(event){
+                   var delImg = $(this).parent().children("img").attr("src")
+                   var index = multiple_images.indexOf(delImg);
+                   if (index !== -1) {
+                       multiple_images.splice(index, 1);
+                   }
+                   //重新赋值
+                   $('#$id').val(multiple_images);
+                   //删除标签
+                   $(this).parent().remove();
+                });
+                //多图上传 end
 
-// 删除图片
-$(document).on("click", ".file-iteme .handle", function(event){
-   var delImg = $(this).parent().children("img").attr("src")
-   var index = multiple_images.indexOf(delImg);
-   if (index !== -1) {
-       multiple_images.splice(index, 1);
-   }
-   //重新赋值
-   $('#$id').val(multiple_images);
-   //删除标签
-   $(this).parent().remove();
-});
-//多图上传 end
+                });
 
-});
-
-EOF;
+                EOF;
         }
-
 
     }
 
@@ -574,24 +572,24 @@ EOF;
 
         $this->htmlContent .= <<<EOF
 
-<div class="layui-form-item">
-    $label
-    <div class="$class">
-        <input type="text" name="$field" id="$id"$value_string$required_string$verify_string autocomplete="off" class="layui-input">
-    </div>
-</div>
+            <div class="layui-form-item">
+                $label
+                <div class="$class">
+                    <input type="text" name="$field" id="$id"$value_string$required_string$verify_string autocomplete="off" class="layui-input">
+                </div>
+            </div>
 
-EOF;
+            EOF;
         $this->jsContent .= <<<EOF
 
-// 字段 {$options['label']} $field
-layui.use(["laydate"], function() {
-    layui.laydate.render({
-        elem: "#$id",$options_string
-    });
-})
+            // 字段 {$options['label']} $field
+            layui.use(["laydate"], function() {
+                layui.laydate.render({
+                    elem: "#$id",$options_string
+                });
+            })
 
-EOF;
+            EOF;
     }
 
     /**
@@ -625,29 +623,29 @@ EOF;
         $id_end = "$id-date-end";
         $this->htmlContent .= <<<EOF
 
-<div class="layui-form-item">
-    $label
-    <div class="$class">
-        <div class="layui-input-block" id="$id">
-            <input type="text" autocomplete="off" name="{$field}[]" id="$id_start" class="layui-input inline-block" placeholder="开始时间">
-            -
-            <input type="text" autocomplete="off" name="{$field}[]" id="$id_end" class="layui-input inline-block" placeholder="结束时间">
-        </div>
-    </div>
-</div>
+            <div class="layui-form-item">
+                $label
+                <div class="$class">
+                    <div class="layui-input-block" id="$id">
+                        <input type="text" autocomplete="off" name="{$field}[]" id="$id_start" class="layui-input inline-block" placeholder="开始时间">
+                        -
+                        <input type="text" autocomplete="off" name="{$field}[]" id="$id_end" class="layui-input inline-block" placeholder="结束时间">
+                    </div>
+                </div>
+            </div>
 
-EOF;
+            EOF;
         $this->jsContent .= <<<EOF
 
-// 字段 {$options['label']} $field
-layui.use(["laydate"], function() {
-    layui.laydate.render({
-        elem: "#$id",
-        range: ["#$id_start", "#$id_end"],$options_string
-    });
-})
+            // 字段 {$options['label']} $field
+            layui.use(["laydate"], function() {
+                layui.laydate.render({
+                    elem: "#$id",
+                    range: ["#$id_start", "#$id_end"],$options_string
+                });
+            })
 
-EOF;
+            EOF;
     }
 
     /**
@@ -677,27 +675,27 @@ EOF;
 
         $this->htmlContent .= <<<EOF
 
-<div class="layui-form-item">
-    $label
-    <div class="$class">
-        <input name="$field" id="$id"$value_string$required_string$verify_string />
-    </div>
-</div>
+            <div class="layui-form-item">
+                $label
+                <div class="$class">
+                    <input name="$field" id="$id"$value_string$required_string$verify_string />
+                </div>
+            </div>
 
-EOF;
+            EOF;
 
         $this->jsContent .= <<<EOF
 
-// 字段 {$options['label']} $field
-layui.use(["iconPicker"], function() {
-    layui.iconPicker.render({
-        elem: "#$id",
-        type: "fontClass",
-        page: false,$options_string
-    });
-});
+            // 字段 {$options['label']} $field
+            layui.use(["iconPicker"], function() {
+                layui.iconPicker.render({
+                    elem: "#$id",
+                    type: "fontClass",
+                    page: false,$options_string
+                });
+            });
 
-EOF;
+            EOF;
 
     }
 
@@ -710,7 +708,7 @@ EOF;
     {
         [$label, $field, $value, $props, $verify_string, $required_string, $class] = $this->options($options);
 
-        $value = (int)$value;
+        $value = (int) $value;
         $disabled_string = !empty($props['disabled']) ? ' disabled' : '';
         $lay_text = !empty($props['lay-text']) ? "lay-text=\"{$props['lay-text']}\"" : '';
 
@@ -718,28 +716,28 @@ EOF;
 
         $this->htmlContent .= <<<EOF
 
-<div class="layui-form-item">
-    $label
-    <div class="$class">
-        <input type="checkbox" id="$id" lay-filter="$field"$disabled_string$required_string lay-skin="switch" $lay_text/>
-        <input type="text" style="display:none" name="$field" value="$value"$required_string />
-    </div>
-</div>
+            <div class="layui-form-item">
+                $label
+                <div class="$class">
+                    <input type="checkbox" id="$id" lay-filter="$field"$disabled_string$required_string lay-skin="switch" $lay_text/>
+                    <input type="text" style="display:none" name="$field" value="$value"$required_string />
+                </div>
+            </div>
 
-EOF;
+            EOF;
 
         $this->jsContent .= <<<EOF
 
-// 字段 {$options['label']} $field
-layui.use(["form"], function() {
-    layui.$("#$id").attr("checked", layui.$('input[name="$field"]').val() != 0);
-    layui.form.render();
-    layui.form.on("switch($field)", function(data) {
-        layui.$('input[name="$field"]').val(this.checked ? 1 : 0);
-    });
-})
+            // 字段 {$options['label']} $field
+            layui.use(["form"], function() {
+                layui.$("#$id").attr("checked", layui.$('input[name="$field"]').val() != 0);
+                layui.form.render();
+                layui.form.on("switch($field)", function(data) {
+                    layui.$('input[name="$field"]').val(this.checked ? 1 : 0);
+                });
+            })
 
-EOF;
+            EOF;
 
     }
 
@@ -753,10 +751,10 @@ EOF;
             'icon' => 'hidden',
             'label' => [
                 'type' => 'text',
-            ]
+            ],
         ], $options['props']['model'] ?? []);
-        $options['props']['clickClose'] = $options['props']['clickClose'] ?? true;
-        $options['props']['radio'] = $options['props']['radio'] ?? true;
+        $options['props']['clickClose'] ??= true;
+        $options['props']['radio'] ??= true;
         $this->apiSelect($options);
     }
 
@@ -768,7 +766,7 @@ EOF;
     {
         $options['props']['toolbar'] = array_merge_recursive([
             'show' => true,
-            'list' => ['ALL', 'CLEAR', 'REVERSE']
+            'list' => ['ALL', 'CLEAR', 'REVERSE'],
         ], $options['props']['toolbar'] ?? []);
         $this->apiSelect($options);
     }
@@ -783,16 +781,16 @@ EOF;
             'icon' => 'hidden',
             'label' => [
                 'type' => 'text',
-            ]
+            ],
         ], $options['props']['model'] ?? []);
-        $options['props']['clickClose'] = $options['props']['clickClose'] ?? true;
-        $options['props']['radio'] = $options['props']['radio'] ?? true;
+        $options['props']['clickClose'] ??= true;
+        $options['props']['radio'] ??= true;
         $options['props']['tree'] = array_merge_recursive([
             '$show' => true,
             '$strict' => false,
             '$clickCheck' => true,
             '$clickExpand' => false,
-            '$expandedKeys' => '$initValue'
+            '$expandedKeys' => '$initValue',
         ], $options['props']['tree'] ?? []);
         $this->apiSelect($options);
     }
@@ -807,7 +805,7 @@ EOF;
             '$expandedKeys' => '$initValue'], $options['props']['tree'] ?? []);
         $options['props']['toolbar'] = array_merge_recursive([
             '$show' => true,
-            '$list' => ['ALL', 'CLEAR', 'REVERSE']
+            '$list' => ['ALL', 'CLEAR', 'REVERSE'],
         ], $options['props']['toolbar'] ?? []);
         $this->apiSelect($options);
     }
@@ -834,7 +832,7 @@ EOF;
                 $item = json_encode($item, JSON_UNESCAPED_UNICODE);
                 $item = preg_replace('/"\$([^"]+)"/', '$1', $item);
                 $options_string .= "\n" . ($url ? '                ' : '        ') . "$key: $item,";
-            } else if (is_string($item)) {
+            } elseif (is_string($item)) {
                 $options_string .= "\n" . ($url ? '                ' : '        ') . "$key: \"$item\",";
             } else {
                 $options_string .= "\n" . ($url ? '                ' : '        ') . "$key: " . var_export($item, true) . ',';
@@ -845,57 +843,57 @@ EOF;
         if ($url) {
             $this->jsContent .= <<<EOF
 
-// 字段 {$options['label']} $field
-layui.use(["jquery", "xmSelect", "popup"], function() {
-    layui.$.ajax({
-        url: "$url",
-        dataType: "json",
-        success: function (res) {
-            let value = layui.$("#$id").attr("value");
-            let initValue = value ? value.split(",") : [];
-            layui.xmSelect.render({
-                el: "#$id",
-                name: "$field",
-                initValue: initValue,
-                filterable: true,
-                data: res.data, $options_string
-            });
-            if (res.code) {
-                layui.popup.failure(res.msg);
-            }
-        }
-    });
-});
+                // 字段 {$options['label']} $field
+                layui.use(["jquery", "xmSelect", "popup"], function() {
+                    layui.$.ajax({
+                        url: "$url",
+                        dataType: "json",
+                        success: function (res) {
+                            let value = layui.$("#$id").attr("value");
+                            let initValue = value ? value.split(",") : [];
+                            layui.xmSelect.render({
+                                el: "#$id",
+                                name: "$field",
+                                initValue: initValue,
+                                filterable: true,
+                                data: res.data, $options_string
+                            });
+                            if (res.code) {
+                                layui.popup.failure(res.msg);
+                            }
+                        }
+                    });
+                });
 
-EOF;
+                EOF;
         } else {
             $this->jsContent .= <<<EOF
 
-// 字段 {$options['label']} $field
-layui.use(["jquery", "xmSelect"], function() {
-    let value = layui.$("#$id").attr("value");
-    let initValue = value ? value.split(",") : [];
-    layui.xmSelect.render({
-        el: "#$id",
-        name: "$field",
-        filterable: true,
-        initValue: initValue,$options_string
-    })
-});
+                // 字段 {$options['label']} $field
+                layui.use(["jquery", "xmSelect"], function() {
+                    let value = layui.$("#$id").attr("value");
+                    let initValue = value ? value.split(",") : [];
+                    layui.xmSelect.render({
+                        el: "#$id",
+                        name: "$field",
+                        filterable: true,
+                        initValue: initValue,$options_string
+                    })
+                });
 
-EOF;
+                EOF;
         }
 
         $this->htmlContent .= <<<EOF
 
-<div class="layui-form-item">
-    $select_label
-    <div class="$class">
-        <div name="$field" id="$id"$required_string value="$default_value_string" ></div>
-    </div>
-</div>
+            <div class="layui-form-item">
+                $select_label
+                <div class="$class">
+                    <div name="$field" id="$id"$required_string value="$default_value_string" ></div>
+                </div>
+            </div>
 
-EOF;
+            EOF;
 
     }
 
@@ -980,6 +978,7 @@ EOF;
 
             $form->{$control}($options);
         }
+
         return $form;
     }
 
@@ -1007,9 +1006,9 @@ EOF;
             $field = $info['field'];
             $templet = '';
             $schema = <<<EOF
-title: "$title",align: "center",
-		field: "$field",$hide_str$sort_str
-EOF;
+                title: "$title",align: "center",
+                		field: "$field",$hide_str$sort_str
+                EOF;
 
             $control = strtolower($info['control']);
             switch ($control) {
@@ -1018,45 +1017,45 @@ EOF;
                     $lay_text = $props['lay-text'] ?? '';
                     $templet = <<<EOF
 
-		templet: function (d) {
-			let field = "$field";
-			form.on("switch("+field+")", function (data) {
-				let load = layer.load();
-				let postData = {};
-				postData[field] = data.elem.checked ? 1 : 0;
-				postData[PRIMARY_KEY] = this.value;
-				$.post(UPDATE_API, postData, function (res) {
-					layer.close(load);
-					if (res.code) {
-                        return layui.popup.failure(res.msg, function () {
-                            data.elem.checked = !data.elem.checked;
-                            form.render();
-                        });
-                    }
-					return layui.popup.success("操作成功");
-				})
-			});
-			let checked = d[field] === 1 ? "checked" : "";
-			return '<input type="checkbox" value="'+util.escape(d[PRIMARY_KEY])+'" lay-filter="'+util.escape(field)+'" lay-skin="switch" lay-text="'+util.escape('$lay_text')+'" '+checked+'/>';
-		}
-EOF;
+                        		templet: function (d) {
+                        			let field = "$field";
+                        			form.on("switch("+field+")", function (data) {
+                        				let load = layer.load();
+                        				let postData = {};
+                        				postData[field] = data.elem.checked ? 1 : 0;
+                        				postData[PRIMARY_KEY] = this.value;
+                        				$.post(UPDATE_API, postData, function (res) {
+                        					layer.close(load);
+                        					if (res.code) {
+                                                return layui.popup.failure(res.msg, function () {
+                                                    data.elem.checked = !data.elem.checked;
+                                                    form.render();
+                                                });
+                                            }
+                        					return layui.popup.success("操作成功");
+                        				})
+                        			});
+                        			let checked = d[field] === 1 ? "checked" : "";
+                        			return '<input type="checkbox" value="'+util.escape(d[PRIMARY_KEY])+'" lay-filter="'+util.escape(field)+'" lay-skin="switch" lay-text="'+util.escape('$lay_text')+'" '+checked+'/>';
+                        		}
+                        EOF;
                     break;
 
                 case 'iconpicker':
                     $templet = <<<EOF
 
-		templet: function (d) {
-			return '<i class="layui-icon ' + util.escape(d['$field']) + '"></i>';
-		}
-EOF;
+                        		templet: function (d) {
+                        			return '<i class="layui-icon ' + util.escape(d['$field']) + '"></i>';
+                        		}
+                        EOF;
                     break;
                 case 'upload':
                     $templet = <<<EOF
 
-		templet: function (d) {
-			return '<a href="' + encodeURI(d['$field']) + '" target="_blank">' + util.escape(d['$field']) + '</a>';
-		}
-EOF;
+                        		templet: function (d) {
+                        			return '<a href="' + encodeURI(d['$field']) + '" target="_blank">' + util.escape(d['$field']) + '</a>';
+                        		}
+                        EOF;
                     break;
                 case 'uploadimage':
                     $props = Util::getControlProps($info['control'], $info['control_args']);
@@ -1064,26 +1063,26 @@ EOF;
                     if ($multiple == 0) {
                         $templet = <<<EOF
 
-		templet: function (d) {
-			return '<img src="'+encodeURI(d['$field'])+'" style="max-width:32px;max-height:32px;" alt="" />'
-		}
-EOF;
+                            		templet: function (d) {
+                            			return '<img src="'+encodeURI(d['$field'])+'" style="max-width:32px;max-height:32px;" alt="" />'
+                            		}
+                            EOF;
                     } else {
                         $templet = <<<EOF
 
-		                templet: function (d) {
-		                    let html = '';
-		                    if(d['$field']){
-		                    const images = d['$field'].split(',');
-                        
-                            for (let img of images) {
-                                html += '<img src="' + encodeURI(img.trim()) + '" style="max-width:32px;max-height:32px;" alt="" />';
-                            }
-		                    }
-                            
-                            return html;
-						}
-EOF;
+                            		                templet: function (d) {
+                            		                    let html = '';
+                            		                    if(d['$field']){
+                            		                    const images = d['$field'].split(',');
+                                                    
+                                                        for (let img of images) {
+                                                            html += '<img src="' + encodeURI(img.trim()) + '" style="max-width:32px;max-height:32px;" alt="" />';
+                                                        }
+                            		                    }
+                                                        
+                                                        return html;
+                            						}
+                            EOF;
                     }
                     break;
 
@@ -1095,7 +1094,7 @@ EOF;
                 if (isset($props['url'])) {
                     $api .= "\napis.push([\"$field\", \"{$props['url']}\"]);";
                     $api_result .= "\napiResults[\"$field\"] = [];";
-                } else if (!empty($props['data'])) {
+                } elseif (!empty($props['data'])) {
                     $options = [];
                     foreach ($props['data'] as $option) {
                         if (isset($option['value']) && isset($option['name'])) {
@@ -1109,148 +1108,148 @@ EOF;
 
                 $templet = <<<EOF
 
-		templet: function (d) {
-			let field = "$field";
-			if (typeof d[field] == "undefined") return "";
-			let items = [];
-			layui.each((d[field] + "").split(","), function (k , v) {
-				items.push(apiResults[field][v] || v);
-			});
-			return util.escape(items.join(","));
-		}
-EOF;
+                    		templet: function (d) {
+                    			let field = "$field";
+                    			if (typeof d[field] == "undefined") return "";
+                    			let items = [];
+                    			layui.each((d[field] + "").split(","), function (k , v) {
+                    				items.push(apiResults[field][v] || v);
+                    			});
+                    			return util.escape(items.join(","));
+                    		}
+                    EOF;
 
             }
 
             $cols .= <<<EOF
-,{
-		$schema$templet
-	}
-EOF;
+                ,{
+                		$schema$templet
+                	}
+                EOF;
 
         }
 
         $cols = <<<EOF
 
-// 表头参数
-let cols = [
-	{
-		type: "checkbox",
-		align: "center"
-	}$cols,{
-		title: "操作",
-		toolbar: "#table-bar",
-		align: "center",
-		fixed: "right",
-		width: 120,
-	}
-];
+            // 表头参数
+            let cols = [
+            	{
+            		type: "checkbox",
+            		align: "center"
+            	}$cols,{
+            		title: "操作",
+            		toolbar: "#table-bar",
+            		align: "center",
+            		fixed: "right",
+            		width: 120,
+            	}
+            ];
 
-EOF;
+            EOF;
         if (!$api && $api_result) {
             $codes = <<<EOF
-// 获取表格中下拉或树形组件数据
-let apiResults = {};$api_result
-EOF;
-        } else if ($api && !$api_result) {
+                // 获取表格中下拉或树形组件数据
+                let apiResults = {};$api_result
+                EOF;
+        } elseif ($api && !$api_result) {
             $codes = <<<EOF
-// 获取表格中下拉或树形组件数据
-let apis = [];$api
-EOF;
-        } else if ($api && $api_result) {
+                // 获取表格中下拉或树形组件数据
+                let apis = [];$api
+                EOF;
+        } elseif ($api && $api_result) {
             $codes = <<<EOF
-// 获取表格中下拉或树形组件数据
-let apis = [];$api
-let apiResults = {};$api_result
-EOF;
+                // 获取表格中下拉或树形组件数据
+                let apis = [];$api
+                let apiResults = {};$api_result
+                EOF;
         }
 
         if ($api) {
             $codes = <<<EOF
-$cols
-// 渲染表格
-function render()
-{
-    table.render({
-        elem: "#data-table",
-        url: SELECT_API,
-        page: true,
-        cols: [cols],
-        skin: "line",
-        size: "lg",
-        toolbar: "#table-toolbar",
-        autoSort: false,
-        defaultToolbar: [{
-            title: "刷新",
-            layEvent: "refresh",
-            icon: "layui-icon-refresh",
-        }, "filter", "print", "exports"],
-        done: function () {
-            layer.photos({photos: 'div[lay-id="data-table"]', anim: 5});
-        }
-    });
-}
-
-$codes
-let count = apis.length;
-layui.each(apis, function (k, item) {
-    let [field, url] = item;
-    $.ajax({
-        url: url,
-        dateType: "json",
-        success: function (res) {
-            if (res.code) {
-                return layui.popup.failure(res.msg);
-            }
-            function travel(items) {
-                for (let k in items) {
-                    let item = items[k];
-                    apiResults[field][item.value] = item.name;
-                    if (item.children) {
-                        travel(item.children);
-                    }
+                $cols
+                // 渲染表格
+                function render()
+                {
+                    table.render({
+                        elem: "#data-table",
+                        url: SELECT_API,
+                        page: true,
+                        cols: [cols],
+                        skin: "line",
+                        size: "lg",
+                        toolbar: "#table-toolbar",
+                        autoSort: false,
+                        defaultToolbar: [{
+                            title: "刷新",
+                            layEvent: "refresh",
+                            icon: "layui-icon-refresh",
+                        }, "filter", "print", "exports"],
+                        done: function () {
+                            layer.photos({photos: 'div[lay-id="data-table"]', anim: 5});
+                        }
+                    });
                 }
-            }
-            travel(res.data);
-        },
-        complete: function () {
-            if (--count === 0) {
-                render();
-            }
-        }
-    });
-});
-if (!count) {
-    render();
-}
 
-EOF;
+                $codes
+                let count = apis.length;
+                layui.each(apis, function (k, item) {
+                    let [field, url] = item;
+                    $.ajax({
+                        url: url,
+                        dateType: "json",
+                        success: function (res) {
+                            if (res.code) {
+                                return layui.popup.failure(res.msg);
+                            }
+                            function travel(items) {
+                                for (let k in items) {
+                                    let item = items[k];
+                                    apiResults[field][item.value] = item.name;
+                                    if (item.children) {
+                                        travel(item.children);
+                                    }
+                                }
+                            }
+                            travel(res.data);
+                        },
+                        complete: function () {
+                            if (--count === 0) {
+                                render();
+                            }
+                        }
+                    });
+                });
+                if (!count) {
+                    render();
+                }
+
+                EOF;
 
         } else {
             $codes = <<<EOF
-$cols
-// 渲染表格
-table.render({
-    elem: "#data-table",
-    url: SELECT_API,
-    page: true,
-    cols: [cols],
-    skin: "line",
-    size: "lg",
-    toolbar: "#table-toolbar",
-    autoSort: false,
-    defaultToolbar: [{
-        title: "刷新",
-        layEvent: "refresh",
-        icon: "layui-icon-refresh",
-    }, "filter", "print", "exports"],
-    done: function () {
-        layer.photos({photos: 'div[lay-id="data-table"]', anim: 5});
-    }
-});
+                $cols
+                // 渲染表格
+                table.render({
+                    elem: "#data-table",
+                    url: SELECT_API,
+                    page: true,
+                    cols: [cols],
+                    skin: "line",
+                    size: "lg",
+                    toolbar: "#table-toolbar",
+                    autoSort: false,
+                    defaultToolbar: [{
+                        title: "刷新",
+                        layEvent: "refresh",
+                        icon: "layui-icon-refresh",
+                    }, "filter", "print", "exports"],
+                    done: function () {
+                        layer.photos({photos: 'div[lay-id="data-table"]', anim: 5});
+                    }
+                });
 
-$codes
-EOF;
+                $codes
+                EOF;
 
         }
 
@@ -1275,6 +1274,7 @@ EOF;
                 }
             }
         }
+
         return $props;
     }
 
@@ -1298,8 +1298,7 @@ EOF;
         if (!$sub) {
             $string .= "$indent_string}\n";
         }
+
         return trim($string, "\n");
     }
-
-
 }

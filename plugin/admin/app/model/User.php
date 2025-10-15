@@ -2,10 +2,8 @@
 
 namespace plugin\admin\app\model;
 
-use plugin\admin\app\model\Base;
-
 /**
- * @property integer $id 主键(主键)
+ * @property int $id 主键(主键)
  * @property string $username 用户名
  * @property string $nickname 昵称
  * @property string $password 密码
@@ -13,10 +11,10 @@ use plugin\admin\app\model\Base;
  * @property string $avatar 头像
  * @property string $email 邮箱
  * @property string $mobile 手机
- * @property integer $level 等级
+ * @property int $level 等级
  * @property string $birthday 生日
- * @property integer $money 余额
- * @property integer $score 积分
+ * @property int $money 余额
+ * @property int $score 积分
  * @property string $last_time 登录时间
  * @property string $last_ip 登录ip
  * @property string $join_time 注册时间
@@ -24,8 +22,8 @@ use plugin\admin\app\model\Base;
  * @property string $token token
  * @property string $created_at 创建时间
  * @property string $updated_at 更新时间
- * @property integer $role 角色
- * @property integer $status 禁用
+ * @property int $role 角色
+ * @property int $status 禁用
  */
 class User extends Base
 {
@@ -42,8 +40,4 @@ class User extends Base
      * @var string
      */
     protected $primaryKey = 'id';
-    
-    
-    
-    
 }

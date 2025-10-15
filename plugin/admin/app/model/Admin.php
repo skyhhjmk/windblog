@@ -2,10 +2,8 @@
 
 namespace plugin\admin\app\model;
 
-use plugin\admin\app\model\Base;
-
 /**
- * @property integer $id ID(主键)
+ * @property int $id ID(主键)
  * @property string $username 用户名
  * @property string $nickname 昵称
  * @property string $password 密码
@@ -16,7 +14,7 @@ use plugin\admin\app\model\Base;
  * @property string $updated_at 更新时间
  * @property string $login_at 登录时间
  * @property string $roles 角色
- * @property integer $status 状态 0正常 1禁用
+ * @property int $status 状态 0正常 1禁用
  */
 class Admin extends Base
 {
@@ -33,7 +31,7 @@ class Admin extends Base
      * @var string
      */
     protected $primaryKey = 'id';
-    
+
     /**
      * 可以被批量赋值的属性。
      *
@@ -50,10 +48,6 @@ class Admin extends Base
         'updated_at',
         'login_at',
         'roles',
-        'status'
+        'status',
     ];
-    
-    
-    
-    
 }

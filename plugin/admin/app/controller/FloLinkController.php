@@ -38,8 +38,8 @@ class FloLinkController extends Base
         $url = $request->get('url', '');
         $status = $request->get('status', '');
         $isTrashed = $request->get('isTrashed', 'false');
-        $page = (int)$request->get('page', 1);
-        $limit = (int)$request->get('limit', 15);
+        $page = (int) $request->get('page', 1);
+        $limit = (int) $request->get('limit', 15);
         $order = $request->get('order', 'priority');
         $sort = $request->get('sort', 'asc');
 
@@ -78,7 +78,7 @@ class FloLinkController extends Base
             ->withHeaders([
                 'Cache-Control' => 'no-cache, no-store, must-revalidate',
                 'Pragma' => 'no-cache',
-                'Expires' => '0'
+                'Expires' => '0',
             ]);
     }
 
@@ -93,6 +93,7 @@ class FloLinkController extends Base
         if ($request->method() === 'POST') {
             return $this->save($request);
         }
+
         return view('flolink/add');
     }
 
@@ -191,7 +192,7 @@ class FloLinkController extends Base
                 'title' => htmlspecialchars($data['title'] ?? '', ENT_QUOTES, 'UTF-8'),
                 'description' => htmlspecialchars($data['description'] ?? '', ENT_QUOTES, 'UTF-8'),
                 'image' => $data['image'] ?? '',
-                'priority' => (int)($data['priority'] ?? 100),
+                'priority' => (int) ($data['priority'] ?? 100),
                 'match_mode' => in_array($data['match_mode'] ?? 'first', ['first', 'all']) ? $data['match_mode'] : 'first',
                 'case_sensitive' => $caseSensitive,
                 'replace_existing' => $replaceExisting,
@@ -199,9 +200,9 @@ class FloLinkController extends Base
                 'rel' => $data['rel'] ?? 'noopener noreferrer',
                 'css_class' => $data['css_class'] ?? 'flo-link',
                 'enable_hover' => $enableHover,
-                'hover_delay' => (int)($data['hover_delay'] ?? 200),
+                'hover_delay' => (int) ($data['hover_delay'] ?? 200),
                 'status' => $status,
-                'sort_order' => (int)($data['sort_order'] ?? 999),
+                'sort_order' => (int) ($data['sort_order'] ?? 999),
                 'custom_fields' => $customFields,
             ]);
 
@@ -218,20 +219,21 @@ class FloLinkController extends Base
                     'keyword' => $floLink->keyword,
                     'url' => $floLink->url,
                     'status' => $floLink->status,
-                    'updated_at' => $floLink->updated_at->format('Y-m-d H:i:s')
+                    'updated_at' => $floLink->updated_at->format('Y-m-d H:i:s'),
                 ];
 
                 return $this->success($id ? 'FloLink更新成功' : 'FloLink添加成功', $responseData)
                     ->withHeaders([
                         'Cache-Control' => 'no-cache, no-store, must-revalidate',
                         'Pragma' => 'no-cache',
-                        'Expires' => '0'
+                        'Expires' => '0',
                     ]);
             }
 
             return $this->fail($id ? 'FloLink更新失败' : 'FloLink添加失败');
         } catch (Exception $e) {
             \support\Log::error('FloLink保存失败: ' . $e->getMessage());
+
             return $this->fail('系统错误，请稍后再试');
         }
     }
@@ -254,10 +256,12 @@ class FloLinkController extends Base
         try {
             if ($floLink->softDelete() !== false) {
                 FloLinkService::clearCache();
+
                 return $this->success('FloLink已移至垃圾箱');
             }
         } catch (Exception $e) {
             \support\Log::error('FloLink删除失败: ' . $e->getMessage());
+
             return $this->fail('系统错误，请稍后再试');
         }
 
@@ -281,10 +285,12 @@ class FloLinkController extends Base
         try {
             if ($floLink->restore()) {
                 FloLinkService::clearCache();
+
                 return $this->success('FloLink已恢复');
             }
         } catch (Exception $e) {
             \support\Log::error('FloLink恢复失败: ' . $e->getMessage());
+
             return $this->fail('系统错误，请稍后再试');
         }
 
@@ -309,10 +315,12 @@ class FloLinkController extends Base
         try {
             if ($floLink->softDelete(true) === true) {
                 FloLinkService::clearCache();
+
                 return $this->success('FloLink已永久删除');
             }
         } catch (Exception $e) {
             \support\Log::error('FloLink永久删除失败: ' . $e->getMessage());
+
             return $this->fail('系统错误，请稍后再试');
         }
 
@@ -348,6 +356,7 @@ class FloLinkController extends Base
             }
         } catch (Exception $e) {
             \support\Log::error('批量恢复FloLink失败: ' . $e->getMessage());
+
             return $this->fail('系统错误，请稍后再试');
         }
 
@@ -384,6 +393,7 @@ class FloLinkController extends Base
             }
         } catch (Exception $e) {
             \support\Log::error('批量永久删除FloLink失败: ' . $e->getMessage());
+
             return $this->fail('系统错误，请稍后再试');
         }
 
@@ -420,6 +430,7 @@ class FloLinkController extends Base
             }
         } catch (Exception $e) {
             \support\Log::error('批量删除FloLink失败: ' . $e->getMessage());
+
             return $this->fail('系统错误，请稍后再试');
         }
 
@@ -444,7 +455,7 @@ class FloLinkController extends Base
             ->withHeaders([
                 'Cache-Control' => 'no-cache, no-store, must-revalidate',
                 'Pragma' => 'no-cache',
-                'Expires' => '0'
+                'Expires' => '0',
             ]);
     }
 
@@ -466,13 +477,15 @@ class FloLinkController extends Base
             $floLink->status = !$floLink->status;
             if ($floLink->save()) {
                 FloLinkService::clearCache();
+
                 return $this->success('状态更新成功', [
                     'id' => $floLink->id,
-                    'status' => $floLink->status
+                    'status' => $floLink->status,
                 ]);
             }
         } catch (Exception $e) {
             \support\Log::error('FloLink状态切换失败: ' . $e->getMessage());
+
             return $this->fail('系统错误，请稍后再试');
         }
 
@@ -489,9 +502,11 @@ class FloLinkController extends Base
     {
         try {
             FloLinkService::clearCache();
+
             return $this->success('缓存清除成功');
         } catch (Exception $e) {
             \support\Log::error('FloLink缓存清除失败: ' . $e->getMessage());
+
             return $this->fail('缓存清除失败');
         }
     }
@@ -507,11 +522,12 @@ class FloLinkController extends Base
 
         if (is_string($value)) {
             $value = strtolower(trim($value));
+
             return in_array($value, ['1', 'true', 'on', 'yes', 't']);
         }
 
         if (is_numeric($value)) {
-            return (int)$value === 1;
+            return (int) $value === 1;
         }
 
         return false;

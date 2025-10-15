@@ -1,4 +1,5 @@
 <?php
+
 return [
     // 默认数据库
     'default' => getenv('DB_DEFAULT') ?: 'pgsql',
@@ -15,6 +16,7 @@ return [
             'prefix' => '',
             'schema' => 'public',
             'sslmode' => 'prefer',
+            'timezone' => 'UTC',  // 修复：设置数据库连接时区为 UTC
             'options' => [
                 PDO::ATTR_PERSISTENT => false,
                 PDO::ATTR_EMULATE_PREPARES => false,
@@ -45,5 +47,5 @@ return [
             'prefix' => '',
             'foreign_key_constraints' => getenv('DB_SQLITE_FOREIGN_KEYS') ?: true,
         ],
-    ]
+    ],
 ];

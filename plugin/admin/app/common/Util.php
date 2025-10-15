@@ -2,18 +2,10 @@
 
 namespace plugin\admin\app\common;
 
-use DateTime;
-use Exception;
 use Illuminate\Database\Connection;
-use Illuminate\Database\Schema\Builder;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Str;
-use InvalidArgumentException;
 use plugin\admin\app\model\Setting;
-use RuntimeException;
 use support\Db;
 use support\exception\BusinessException;
-use support\Log;
 use Throwable;
 use Workerman\Timer;
 use Workerman\Worker;
@@ -54,21 +46,21 @@ class Util
     public static function db(): Connection
     {
         $defaultConnection = config('database.default');
-        
+
         // 如果是 SQLite 数据库且文件不存在，则先创建一个空文件
         if ($defaultConnection === 'sqlite') {
             $dbPath = config('database.connections.sqlite.database');
             if ($dbPath !== ':memory:' && !file_exists($dbPath)) {
                 $dir = dirname($dbPath);
                 if (!is_dir($dir)) {
-                    mkdir($dir, 0777, true);
+                    mkdir($dir, 0o777, true);
                 }
                 // 创建空的 SQLite 数据库文件
-                $pdo = new \PDO("sqlite:" . $dbPath);
+                $pdo = new \PDO('sqlite:' . $dbPath);
                 $pdo = null; // 关闭连接
             }
         }
-        
+
         return Db::connection($defaultConnection);
     }
 
@@ -80,6 +72,7 @@ class Util
     public static function schema(): \Illuminate\Database\Schema\Builder
     {
         $defaultConnection = config('database.default', 'pgsql');
+
         return Db::schema($defaultConnection);
     }
 
@@ -109,12 +102,13 @@ class Util
                         if ($dur < 2592000) { // 30天内
                             return floor($dur / 86400) . '天前';
                         } else {
-                            return date('Y-m-d', $timestamp);;
+                            return date('Y-m-d', $timestamp);
                         }
                     }
                 }
             }
         }
+
         return date('Y-m-d', $timestamp);
     }
 
@@ -127,11 +121,12 @@ class Util
      */
     public static function formatBytes($file_size): string
     {
-        $size = sprintf("%u", $file_size);
+        $size = sprintf('%u', $file_size);
         if ($size == 0) {
-            return ("0 Bytes");
+            return '0 Bytes';
         }
-        $size_name = array(" Bytes", " KB", " MB", " GB", " TB", " PB", " EB", " ZB", " YB");
+        $size_name = [' Bytes', ' KB', ' MB', ' GB', ' TB', ' PB', ' EB', ' ZB', ' YB'];
+
         return round($size / pow(1024, ($i = floor(log($size, 1024)))), 2) . $size_name[$i];
     }
 
@@ -160,6 +155,7 @@ class Util
         if (!preg_match('/^[a-zA-Z_0-9]+$/', $table)) {
             throw new BusinessException('表名不合法');
         }
+
         return $table;
     }
 
@@ -173,12 +169,13 @@ class Util
      */
     public static function filterAlphaNum($var)
     {
-        $vars = (array)$var;
+        $vars = (array) $var;
         array_walk_recursive($vars, function ($item) {
             if (is_string($item) && !preg_match('/^[a-zA-Z_0-9]+$/', $item)) {
                 throw new BusinessException('参数不合法');
             }
         });
+
         return $var;
     }
 
@@ -192,12 +189,13 @@ class Util
      */
     public static function filterNum($var)
     {
-        $vars = (array)$var;
+        $vars = (array) $var;
         array_walk_recursive($vars, function ($item) {
             if (is_string($item) && !preg_match('/^[0-9]+$/', $item)) {
                 throw new BusinessException('参数不合法');
             }
         });
+
         return $var;
     }
 
@@ -222,6 +220,7 @@ class Util
         } elseif (!preg_match('/^[a-zA-Z0-9_\-\/&?.]+$/', $var)) {
             throw new BusinessException('参数不合法，不是合法的Path！');
         }
+
         return $var;
     }
 
@@ -238,6 +237,7 @@ class Util
         if (!is_string($var) || !preg_match('/^[a-zA-Z0-9_\-\/]+$/', $var)) {
             throw new BusinessException('参数不合法');
         }
+
         return $var;
     }
 
@@ -248,7 +248,7 @@ class Util
      *
      * @return false|string
      */
-    static function controllerToUrlPath($controller_class)
+    public static function controllerToUrlPath($controller_class)
     {
         $key = strtolower($controller_class);
         $action = '';
@@ -280,6 +280,7 @@ class Util
         if (substr($code, -strlen($suffix)) === $suffix) {
             $code = substr($code, 0, -strlen($suffix));
         }
+
         return $action ? "$code/$action" : $code;
     }
 
@@ -333,6 +334,7 @@ class Util
                 return $s;
             }
         }
+
         return $comment;
     }
 
@@ -382,7 +384,7 @@ class Util
 
             'binary' => ['Input'],
 
-            'json' => ['input']
+            'json' => ['input'],
         ];
     }
 
@@ -407,6 +409,7 @@ class Util
         if ($type === 'enum') {
             return 'select';
         }
+
         return 'input';
     }
 
@@ -422,7 +425,8 @@ class Util
     {
         if (stripos($type, 'int') !== false) {
             $type = str_replace('int', 'Integer', $type);
-            return $unsigned ? "unsigned" . ucfirst($type) : lcfirst($type);
+
+            return $unsigned ? 'unsigned' . ucfirst($type) : lcfirst($type);
         }
         $map = [
             'int' => 'integer',
@@ -431,6 +435,7 @@ class Util
             'longtext' => 'longText',
             'datetime' => 'dateTime',
         ];
+
         return $map[$type] ?? $type;
     }
 
@@ -466,7 +471,7 @@ class Util
                     'length' => static::getLengthValuePgsql($item),
                     'nullable' => $item->is_nullable !== 'NO',
                     'primary_key' => false, // PostgreSQL主键需要特殊查询
-                    'auto_increment' => false // PostgreSQL自增需要特殊处理
+                    'auto_increment' => false, // PostgreSQL自增需要特殊处理
                 ];
 
                 $forms[$field] = [
@@ -485,9 +490,9 @@ class Util
             // 查询主键信息
             if ($section !== 'table' && $columns) {
                 $primary_keys_result = Util::db()->select(
-                    "SELECT a.attname FROM pg_index i " .
-                    "JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey) " .
-                    "WHERE i.indrelid = ?::regclass AND i.indisprimary",
+                    'SELECT a.attname FROM pg_index i ' .
+                    'JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey) ' .
+                    'WHERE i.indrelid = ?::regclass AND i.indisprimary',
                     [$table]
                 );
 
@@ -502,8 +507,8 @@ class Util
 
             // 查询表注释
             $table_schema = $section == 'table' || !$section ? Util::db()->select(
-                "SELECT description AS table_comment FROM pg_description " .
-                "WHERE objoid = (SELECT oid FROM pg_class WHERE relname = ?) AND objsubid = 0",
+                'SELECT description AS table_comment FROM pg_description ' .
+                'WHERE objoid = (SELECT oid FROM pg_class WHERE relname = ?) AND objsubid = 0',
                 [$table]
             ) : [];
 
@@ -512,15 +517,15 @@ class Util
             $primary_key = [];
             if (!$section || in_array($section, ['keys', 'table'])) {
                 $indexes = Util::db()->select(
-                    "SELECT " .
-                    "ic.relname AS index_name, " .
-                    "a.attname AS column_name, " .
-                    "i.indisunique AS is_unique " .
-                    "FROM pg_class bc " .
-                    "JOIN pg_index i ON bc.oid = i.indrelid " .
-                    "JOIN pg_class ic ON ic.oid = i.indexrelid " .
-                    "JOIN pg_attribute a ON a.attrelid = bc.oid AND a.attnum = ANY(i.indkey) " .
-                    "WHERE bc.relname = ?",
+                    'SELECT ' .
+                    'ic.relname AS index_name, ' .
+                    'a.attname AS column_name, ' .
+                    'i.indisunique AS is_unique ' .
+                    'FROM pg_class bc ' .
+                    'JOIN pg_index i ON bc.oid = i.indrelid ' .
+                    'JOIN pg_class ic ON ic.oid = i.indexrelid ' .
+                    'JOIN pg_attribute a ON a.attrelid = bc.oid AND a.attnum = ANY(i.indkey) ' .
+                    'WHERE bc.relname = ?',
                     [$table]
                 );
 
@@ -534,15 +539,15 @@ class Util
                         $keys[$key_name] = [
                             'name' => $key_name,
                             'columns' => [],
-                            'type' => $index->is_unique ? 'unique' : 'normal'
+                            'type' => $index->is_unique ? 'unique' : 'normal',
                         ];
                     }
                     $keys[$key_name]['columns'][] = $index->column_name;
                 }
             }
-        } else if ($driver === 'mysql') {
+        } elseif ($driver === 'mysql') {
             // MySQL查询
-            $schema_raw = $section !== 'table' ? Util::db()->select("SELECT * FROM information_schema.columns WHERE table_schema = ? AND table_name = ? ORDER BY ordinal_position", [$database, $table]) : [];
+            $schema_raw = $section !== 'table' ? Util::db()->select('SELECT * FROM information_schema.columns WHERE table_schema = ? AND table_name = ? ORDER BY ordinal_position', [$database, $table]) : [];
 
             foreach ($schema_raw as $item) {
                 $field = $item->COLUMN_NAME;
@@ -554,7 +559,7 @@ class Util
                     'length' => static::getLengthValue($item),
                     'nullable' => $item->IS_NULLABLE !== 'NO',
                     'primary_key' => $item->COLUMN_KEY === 'PRI',
-                    'auto_increment' => $item->EXTRA === 'auto_increment'
+                    'auto_increment' => $item->EXTRA === 'auto_increment',
                 ];
 
                 $forms[$field] = [
@@ -578,13 +583,13 @@ class Util
                 $driver = config('database.default');
                 if ($driver === 'mysql') {
                     $table_schema = Util::db()->select(
-                        "SELECT TABLE_COMMENT AS table_comment FROM information_schema.tables WHERE table_schema = ? AND table_name = ?",
+                        'SELECT TABLE_COMMENT AS table_comment FROM information_schema.tables WHERE table_schema = ? AND table_name = ?',
                         [$database, $table]
                     );
-                } else if ($driver === 'pgsql') {
+                } elseif ($driver === 'pgsql') {
                     $table_schema = Util::db()->select(
-                        "SELECT description AS table_comment FROM pg_description " .
-                        "WHERE objoid = (SELECT oid FROM pg_class WHERE relname = ?) AND objsubid = 0",
+                        'SELECT description AS table_comment FROM pg_description ' .
+                        'WHERE objoid = (SELECT oid FROM pg_class WHERE relname = ?) AND objsubid = 0',
                         [$table]
                     );
                 } else {
@@ -601,19 +606,19 @@ class Util
                 $driver = config('database.default');
                 if ($driver === 'mysql') {
                     $indexes = Util::db()->select(
-                        "SELECT INDEX_NAME as index_name, COLUMN_NAME as column_name, NON_UNIQUE as is_unique " .
-                        "FROM information_schema.statistics " .
-                        "WHERE table_schema = ? AND table_name = ?",
+                        'SELECT INDEX_NAME as index_name, COLUMN_NAME as column_name, NON_UNIQUE as is_unique ' .
+                        'FROM information_schema.statistics ' .
+                        'WHERE table_schema = ? AND table_name = ?',
                         [$database, $table]
                     );
-                } else if ($driver === 'pgsql') {
+                } elseif ($driver === 'pgsql') {
                     $indexes = Util::db()->select(
-                        "SELECT ix.relname as index_name, a.attname as column_name, " .
-                        "CASE WHEN ix.indisunique THEN 0 ELSE 1 END as is_unique " .
-                        "FROM pg_class t, pg_class ix, pg_index i, pg_attribute a " .
-                        "WHERE t.oid = i.indrelid and ix.oid = i.indexrelid " .
-                        "AND a.attrelid = t.oid AND a.attnum = ANY(i.indkey) " .
-                        "AND t.relname = ?",
+                        'SELECT ix.relname as index_name, a.attname as column_name, ' .
+                        'CASE WHEN ix.indisunique THEN 0 ELSE 1 END as is_unique ' .
+                        'FROM pg_class t, pg_class ix, pg_index i, pg_attribute a ' .
+                        'WHERE t.oid = i.indrelid and ix.oid = i.indexrelid ' .
+                        'AND a.attrelid = t.oid AND a.attnum = ANY(i.indkey) ' .
+                        'AND t.relname = ?',
                         [$table]
                     );
                 } else {
@@ -635,7 +640,7 @@ class Util
                         $keys[$key_name] = [
                             'name' => $key_name,
                             'columns' => [],
-                            'type' => !$index->is_unique ? 'unique' : 'normal'
+                            'type' => !$index->is_unique ? 'unique' : 'normal',
                         ];
                     }
                     $keys[$key_name]['columns'][] = $index->column_name;
@@ -647,7 +652,7 @@ class Util
             'table' => ['name' => $table, 'comment' => $table_schema[0]->table_comment ?? ($table_schema[0]->TABLE_COMMENT ?? ''), 'primary_key' => $primary_key],
             'columns' => $columns,
             'forms' => $forms,
-            'keys' => array_reverse($keys, true)
+            'keys' => array_reverse($keys, true),
         ];
 
         $schema = Setting::where('key', "table_form_schema_$table")->value('value');
@@ -686,6 +691,7 @@ class Util
         if (in_array($type, ['time', 'datetime', 'timestamp'])) {
             return $schema->CHARACTER_MAXIMUM_LENGTH;
         }
+
         return '';
     }
 
@@ -712,6 +718,7 @@ class Util
         if (in_array($type, ['time', 'timestamp', 'timestamptz'])) {
             return '';
         }
+
         return '';
     }
 
@@ -740,7 +747,7 @@ class Util
             $values = trim(substr($item, $pos + 1));
             // values = a:v,c:d
             $pos = strpos($values, ':');
-            if ($pos !== false && strpos($values, "#") !== 0) {
+            if ($pos !== false && strpos($values, '#') !== 0) {
                 $options = explode(',', $values);
                 $values = [];
                 foreach ($options as $option) {
@@ -754,6 +761,7 @@ class Util
             }
             $props[$name] = $values;
         }
+
         return $props;
 
     }
@@ -771,9 +779,9 @@ class Util
         if (is_file($installed_php)) {
             $packages = include $installed_php;
         }
+
         return substr($packages['versions'][$package]['version'] ?? 'unknown  ', 0, -2);
     }
-
 
     /**
      * Reload webman
@@ -785,6 +793,7 @@ class Util
         if (function_exists('posix_kill')) {
             try {
                 posix_kill(posix_getppid(), SIGUSR1);
+
                 return true;
             } catch (Throwable $e) {
             }
@@ -793,6 +802,7 @@ class Util
                 Worker::stopAll();
             });
         }
+
         return false;
     }
 

@@ -1,4 +1,5 @@
 <?php
+
 namespace plugin\admin\api;
 
 use plugin\admin\app\model\Rule;
@@ -8,7 +9,6 @@ use plugin\admin\app\model\Rule;
  */
 class Menu
 {
-
     /**
      * 根据key获取菜单
      * @param $key
@@ -17,6 +17,7 @@ class Menu
     public static function get($key)
     {
         $menu = Rule::where('key', $key)->first();
+
         return $menu ? $menu->toArray() : null;
     }
 
@@ -37,11 +38,12 @@ class Menu
      */
     public static function add(array $menu)
     {
-        $item = new Rule;
+        $item = new Rule();
         foreach ($menu as $key => $value) {
             $item->$key = $value;
         }
         $item->save();
+
         return $item->id;
     }
 
@@ -56,6 +58,7 @@ class Menu
             foreach ($menu_tree as $item) {
                 static::import($item);
             }
+
             return;
         }
         $children = $menu_tree['children'] ?? [];
@@ -85,13 +88,12 @@ class Menu
         }
         // 子规则一起删除
         $delete_ids = $children_ids = [$item['id']];
-        while($children_ids) {
+        while ($children_ids) {
             $children_ids = Rule::whereIn('pid', $children_ids)->pluck('id')->toArray();
             $delete_ids = array_merge($delete_ids, $children_ids);
         }
         Rule::whereIn('id', $delete_ids)->delete();
     }
-
 
     /**
      * 获取菜单中某个(些)字段的值
@@ -107,6 +109,7 @@ class Menu
             foreach ($menu as $item) {
                 $values = array_merge($values, static::column($item, $column, $index));
             }
+
             return $values;
         }
 
@@ -141,7 +144,7 @@ class Menu
         foreach ($children as $child) {
             $values = array_merge($values, static::column($child, $column, $index));
         }
+
         return $values;
     }
-
 }

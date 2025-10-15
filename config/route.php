@@ -96,6 +96,8 @@ Route::group('/api/v1', function () {
     // 文章相关API
     Route::get('/post/{id}', [\app\api\controller\v1\ApiPostController::class, 'get']);
     Route::get('/posts', [\app\api\controller\v1\ApiPostController::class, 'index']);
+    // 文章内容API（支持 GET 和 POST）
+    Route::any('/post/content/{keyword}', [\app\api\controller\v1\ApiPostController::class, 'content']);
 });
 
 // 友链互联API

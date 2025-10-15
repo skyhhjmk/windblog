@@ -56,6 +56,7 @@ class RuleController extends Crud
     public function select(Request $request): Response
     {
         $this->syncRules();
+
         return parent::select($request);
     }
 
@@ -65,7 +66,7 @@ class RuleController extends Crud
      * @return Response
      * @throws Exception
      */
-    function get(Request $request): Response
+    public function get(Request $request): Response
     {
         $rules = $this->getRules(admin('roles'));
         $types = $request->get('type', '0,1');
@@ -74,7 +75,7 @@ class RuleController extends Crud
 
         $formatted_items = [];
         foreach ($items as $item) {
-            $item['pid'] = (int)$item['pid'];
+            $item['pid'] = (int) $item['pid'];
             $item['name'] = $item['title'];
             $item['value'] = $item['id'];
             $item['icon'] = $item['icon'] ? "layui-icon {$item['icon']}" : '';
@@ -89,6 +90,7 @@ class RuleController extends Crud
         }
         $this->removeNotContain($tree_items, 'type', $types);
         $menus = $this->empty_filter(Tree::arrayValues($tree_items));
+
         return $this->json(0, 'ok', $menus);
     }
 
@@ -99,6 +101,7 @@ class RuleController extends Crud
                 if (isset($menu['children'])) {
                     $menu['children'] = $this->empty_filter($menu['children']);
                 }
+
                 return $menu;
             },
             array_values(array_filter(
@@ -132,6 +135,7 @@ class RuleController extends Crud
             $code = str_replace('/', '.', trim($key, '/'));
             $permissions[] = $code;
         }
+
         return $this->json(0, 'ok', $permissions);
     }
 
@@ -173,7 +177,7 @@ class RuleController extends Crud
                         }
                         continue;
                     }
-                    $menu = new Rule;
+                    $menu = new Rule();
                     $menu->pid = $pid;
                     $menu->key = $name;
                     $menu->title = $title;
@@ -208,6 +212,7 @@ class RuleController extends Crud
             $field = 'weight';
             $order = 'desc';
         }
+
         return [$where, $format, $limit, $field, $order];
     }
 
@@ -222,22 +227,22 @@ class RuleController extends Crud
         if ($request->method() === 'GET') {
             return raw_view('rule/insert');
         }
-        
+
         // 获取原始POST数据用于调试
         $rawPostData = $request->post();
-        
+
         // 检查原始数据中的title字段
         if (!isset($rawPostData['title']) || $rawPostData['title'] === '') {
             return $this->json(1, '提交的数据中标题不能为空，原始数据: ' . json_encode($rawPostData, JSON_UNESCAPED_UNICODE));
         }
-        
+
         $data = $this->insertInput($request);
-        
+
         // 检查处理后的数据中title字段是否存在
         if (!isset($data['title']) || $data['title'] === '') {
             return $this->json(1, '标题字段在数据处理过程中丢失，原始数据: ' . json_encode($rawPostData, JSON_UNESCAPED_UNICODE) . '，处理后数据: ' . json_encode($data, JSON_UNESCAPED_UNICODE));
         }
-        
+
         if (empty($data['type']) && isset($data['key'])) {
             $data['type'] = strpos($data['key'], '\\') ? 1 : 0;
         }
@@ -250,6 +255,7 @@ class RuleController extends Crud
         }
         $data['pid'] = empty($data['pid']) ? 0 : $data['pid'];
         $this->doInsert($data);
+
         return $this->json(0);
     }
 
@@ -278,9 +284,10 @@ class RuleController extends Crud
             $data['key'] = str_replace('\\\\', '\\', $data['key']);
         }
         $this->doUpdate($id, $data);
+
         return $this->json(0);
     }
-    
+
     /**
      * 删除
      * @param Request $request
@@ -291,11 +298,12 @@ class RuleController extends Crud
         $ids = $this->deleteInput($request);
         // 子规则一起删除
         $delete_ids = $children_ids = $ids;
-        while($children_ids) {
+        while ($children_ids) {
             $children_ids = $this->model->whereIn('pid', $children_ids)->pluck('id')->toArray();
             $delete_ids = array_merge($delete_ids, $children_ids);
         }
         $this->doDelete($delete_ids);
+
         return $this->json(0);
     }
 
@@ -346,6 +354,7 @@ class RuleController extends Crud
                 return true;
             }
         }
+
         return false;
     }
 
@@ -364,7 +373,7 @@ class RuleController extends Crud
             }
             $rules = array_merge($rules, explode(',', $rule_string));
         }
+
         return $rules;
     }
-
 }

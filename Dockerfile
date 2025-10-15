@@ -49,7 +49,7 @@ ARG MIRROR=tsinghua
 ARG APP_ENV=prod
 ARG APP_PORT=8787
 
-ENV TZ=Asia/Shanghai \
+ENV TZ=UTC \
     APP_ENV=${APP_ENV} \
     APP_PORT=${APP_PORT}
 
@@ -104,7 +104,7 @@ COPY --from=vendor /app/vendor /app/vendor
 
 # php.ini 基线 + 性能优化（JIT/OPcache/PCRE）
 RUN cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" && \
-    sed -i 's/;date.timezone =/date.timezone = Asia\/Shanghai/' "$PHP_INI_DIR/php.ini" && \
+    sed -i 's/;date.timezone =/date.timezone = UTC/' "$PHP_INI_DIR/php.ini" && \
     sed -i 's/memory_limit = 128M/memory_limit = 512M/' "$PHP_INI_DIR/php.ini" && \
     sed -i 's/;opcache.enable=1/opcache.enable=1/' "$PHP_INI_DIR/php.ini" && \
     { \
@@ -124,7 +124,7 @@ RUN cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" && \
 RUN rm -rf /var/lib/apt/lists/*
 
 # 非 root 运行与目录权限
-RUN mkdir -p /app/runtime /app/public/uploads && \
+RUN mkdir -p /app/runtime /app/runtime/logs /app/public/uploads && \
     chown -R www-data:www-data /app
 USER www-data
 

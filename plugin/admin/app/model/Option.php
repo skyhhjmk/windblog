@@ -2,9 +2,8 @@
 
 namespace plugin\admin\app\model;
 
-
 /**
- * @property integer $id (主键)
+ * @property int $id (主键)
  * @property string $name 键
  * @property mixed $value 值
  * @property string $created_at 创建时间
@@ -25,5 +24,4 @@ class Option extends Base
      * @var string
      */
     protected $primaryKey = 'id';
-
 }

@@ -57,7 +57,10 @@ CREATE TABLE IF NOT EXISTS `posts` (
   `content` longtext NOT NULL,
   `excerpt` text DEFAULT NULL,
   `status` varchar(15) NOT NULL DEFAULT 'draft',
-  `featured` tinyint(1) NOT NULL DEFAULT 0,
+  `visibility` varchar(20) NOT NULL DEFAULT 'public' COMMENT '可见性: public=公开, private=私密, password=密码保护',
+  `password` varchar(255) DEFAULT NULL COMMENT '文章密码（当visibility=password时使用）',
+  `featured` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否精选文章',
+  `allow_comments` tinyint(1) NOT NULL DEFAULT 1 COMMENT '是否允许评论',
   `comment_count` int(11) NOT NULL DEFAULT 0,
   `published_at` timestamp NULL DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
@@ -65,8 +68,12 @@ CREATE TABLE IF NOT EXISTS `posts` (
   `deleted_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `slug` (`slug`),
+  KEY `idx_featured` (`featured`),
+  KEY `idx_visibility` (`visibility`),
+  KEY `idx_allow_comments` (`allow_comments`),
   CONSTRAINT `chk_posts_content_type` CHECK (`content_type` IN ('markdown','html','text','visual')),
-  CONSTRAINT `chk_posts_status` CHECK (`status` IN ('draft','published','archived'))
+  CONSTRAINT `chk_posts_status` CHECK (`status` IN ('draft','published','archived')),
+  CONSTRAINT `chk_posts_visibility` CHECK (`visibility` IN ('public','private','password'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='文章表';
 
 -- 创建文章-分类关联表

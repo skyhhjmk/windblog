@@ -2,7 +2,6 @@
 
 namespace plugin\admin\app\common;
 
-
 use plugin\admin\app\model\AdminRole;
 use plugin\admin\app\model\Role;
 
@@ -28,6 +27,7 @@ class Auth
         $roles = Role::get();
         $tree = new Tree($roles);
         $descendants = $tree->getDescendant($role_ids, $with_self);
+
         return array_column($descendants, 'id');
     }
 
@@ -44,6 +44,7 @@ class Auth
         if ($with_self) {
             $admin_ids[] = admin_id();
         }
+
         return array_unique($admin_ids);
     }
 
@@ -75,7 +76,7 @@ class Auth
             $roles = AdminRole::where('admin_id', $admin_id)->pluck('role_id');
         }
         $rules = Role::whereIn('id', $roles)->pluck('rules');
+
         return $rules && in_array('*', $rules->toArray());
     }
-
 }

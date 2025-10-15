@@ -10,7 +10,6 @@ use support\Response;
  */
 class Base
 {
-
     /**
      * @var Model
      */
@@ -57,7 +56,7 @@ class Base
             'total' => $total,
             'count' => $total,
             'data' => $data,
-            'msg' => $msg
+            'msg' => $msg,
         ]);
     }
 

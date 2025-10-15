@@ -15,7 +15,6 @@ use Workerman\Worker;
 
 class IndexController
 {
-
     /**
      * 无需登录的方法
      *
@@ -51,8 +50,10 @@ class IndexController
             $config = $config ? json_decode($config, true) : null;
             $title = ($config && isset($config['logo']['title'])) ? $config['logo']['title'] : 'webman admin';
             $logo = ($config && isset($config['logo']['image'])) ? $config['logo']['image'] : '/app/admin/admin/images/logo.png';
+
             return raw_view('account/login', ['logo' => $logo, 'title' => $title]);
         }
+
         return raw_view('index/index');
     }
 
@@ -80,7 +81,7 @@ class IndexController
         $draft_count = Post::where('status', 'draft')->count();
         // 总媒体数
         $media_count = Media::count();
-        
+
         // 根据当前数据库类型获取版本信息
         $driver = config('database.default');
         $version_info = 'unknown';
@@ -128,7 +129,7 @@ class IndexController
             'day7_detail' => array_reverse($day7_detail),
         ]);
     }
-    
+
     /**
      * 获取网站标题和Logo用于后台显示
      *
@@ -146,8 +147,7 @@ class IndexController
             'beian' => blog_config('beian', '', true),
             'footer_txt' => blog_config('footer_txt', '', true),
         ];
-        
+
         return json($siteInfo);
     }
-
 }

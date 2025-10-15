@@ -18,7 +18,6 @@ class DevController
     public function formBuild()
     {
         return raw_view('dev/form-build');
-//        return raw_view('dev/layui-form-render/editor');
+        //        return raw_view('dev/layui-form-render/editor');
     }
-
 }

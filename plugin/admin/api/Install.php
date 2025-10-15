@@ -71,8 +71,10 @@ class Install
         clearstatcache();
         if (is_file($menu_file = __DIR__ . '/../config/menu.php')) {
             $menus = include $menu_file;
+
             return $menus ?: [];
         }
+
         return [];
     }
 
@@ -89,5 +91,4 @@ class Install
             Menu::delete($name);
         }
     }
-
 }

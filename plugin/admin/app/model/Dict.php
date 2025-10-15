@@ -2,7 +2,6 @@
 
 namespace plugin\admin\app\model;
 
-
 use support\exception\BusinessException;
 
 /**
@@ -20,6 +19,7 @@ class Dict
     public static function get($name)
     {
         $value = Setting::where('key', static::dictNameToOptionName($name))->value('value');
+
         return $value ? json_decode($value, true) : null;
     }
 
@@ -103,6 +103,7 @@ class Dict
             }
             $format_values[] = ['value' => $item['value'], 'name' => $item['name']];
         }
+
         return $format_values;
     }
 }
