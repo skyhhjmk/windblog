@@ -32,7 +32,7 @@ class UploadController extends Crud
      */
     public function __construct()
     {
-        $this->model = new Upload;
+        $this->model = new Upload();
     }
 
     /**
@@ -71,6 +71,7 @@ class UploadController extends Crud
             $where['name'] = ['like', "%{$where['name']}%"];
         }
         $query = $this->doSelect($where, $field, $order);
+
         return $this->doFormat($query, $format, $limit);
     }
 
@@ -85,6 +86,7 @@ class UploadController extends Crud
         if ($request->method() === 'GET') {
             return raw_view('upload/update');
         }
+
         return parent::update($request);
     }
 
@@ -104,7 +106,7 @@ class UploadController extends Crud
             return $this->json(1, '未找到文件');
         }
         $data = $this->base($request, '/upload/files/' . date('Ymd'));
-        $upload = new Upload;
+        $upload = new Upload();
         $upload->admin_id = admin_id();
         $upload->name = $data['name'];
         [
@@ -119,6 +121,7 @@ class UploadController extends Crud
         ] = array_values($data);
         $upload->category = $request->post('category');
         $upload->save();
+
         return $this->json(0, '上传成功', [
             'url' => $data['url'],
             'name' => $data['name'],
@@ -142,12 +145,13 @@ class UploadController extends Crud
             'jpg',
             'jpeg',
             'png',
-            'gif'
+            'gif',
         ];
         if (in_array($file->getUploadExtension(), $img_exts)) {
             return $this->image($request);
         }
         $data = $this->base($request, '/upload/files/' . date('Ymd'));
+
         return $this->json(0, '上传成功', [
             'url' => $data['url'],
             'name' => $data['name'],
@@ -178,11 +182,13 @@ class UploadController extends Crud
             $img->resize($width * $ratio, $height * $ratio)->save($realpath);
         } catch (Exception $e) {
             unlink($realpath);
+
             return json([
                 'code' => 500,
-                'msg' => '处理图片发生错误'
+                'msg' => '处理图片发生错误',
             ]);
         }
+
         return json([
             'code' => 0,
             'msg' => '上传成功',
@@ -190,7 +196,7 @@ class UploadController extends Crud
                 'url' => $data['url'],
                 'name' => $data['name'],
                 'size' => $data['size'],
-            ]
+            ],
         ]);
     }
 
@@ -215,7 +221,7 @@ class UploadController extends Crud
             $relative_path = 'upload/avatar/' . date('Ym');
             $real_path = base_path() . "/plugin/admin/public/$relative_path";
             if (!is_dir($real_path)) {
-                mkdir($real_path, 0777, true);
+                mkdir($real_path, 0o777, true);
             }
             $name = bin2hex(pack('Nn', time(), random_int(1, 65535)));
             $ext = $file->getUploadExtension();
@@ -240,10 +246,11 @@ class UploadController extends Crud
                 'code' => 0,
                 'msg' => '上传成功',
                 'data' => [
-                    'url' => "/app/admin/$relative_path/$name.md.$ext"
-                ]
+                    'url' => "/app/admin/$relative_path/$name.md.$ext",
+                ],
             ]);
         }
+
         return json(['code' => 1, 'msg' => 'file not found']);
     }
 
@@ -260,10 +267,12 @@ class UploadController extends Crud
         $files = $this->model->whereIn($primary_key, $ids)->get()->toArray();
         $file_list = array_map(function ($item) {
             $path = $item['url'];
-            if (preg_match("#^/app/admin#", $path)) {
-                $admin_public_path = config('plugin.admin.app.public_path') ?: base_path() . "/plugin/admin/public";
-                return $admin_public_path . str_replace("/app/admin", "", $item['url']);
+            if (preg_match('#^/app/admin#', $path)) {
+                $admin_public_path = config('plugin.admin.app.public_path') ?: base_path() . '/plugin/admin/public';
+
+                return $admin_public_path . str_replace('/app/admin', '', $item['url']);
             }
+
             return null;
         }, $files);
         $file_list = array_filter($file_list, function ($item) {
@@ -275,6 +284,7 @@ class UploadController extends Crud
                 @unlink($file);
             }
         }
+
         return $result;
     }
 
@@ -297,7 +307,7 @@ class UploadController extends Crud
         $base_dir = $admin_public_path ? $admin_public_path . DIRECTORY_SEPARATOR : base_path() . '/plugin/admin/public/';
         $full_dir = $base_dir . $relative_dir;
         if (!is_dir($full_dir)) {
-            mkdir($full_dir, 0777, true);
+            mkdir($full_dir, 0o777, true);
         }
 
         $ext = $file->getUploadExtension() ?: null;
@@ -324,6 +334,7 @@ class UploadController extends Crud
             [$image_with, $image_height] = $img_info;
             $mime_type = $img_info['mime'];
         }
+
         return [
             'url' => "/app/admin/$relative_path",
             'name' => $file_name,
@@ -335,5 +346,4 @@ class UploadController extends Crud
             'ext' => $ext,
         ];
     }
-
 }

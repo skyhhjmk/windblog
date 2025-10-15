@@ -14,7 +14,6 @@ use support\Response;
 
 class Crud extends Base
 {
-
     /**
      * @var Model
      */
@@ -32,6 +31,7 @@ class Crud extends Base
     {
         [$where, $format, $limit, $field, $order] = $this->selectInput($request);
         $query = $this->doSelect($where, $field, $order);
+
         return $this->doFormat($query, $format, $limit);
     }
 
@@ -47,6 +47,7 @@ class Crud extends Base
     {
         $data = $this->insertInput($request);
         $id = $this->doInsert($data);
+
         return $this->json(0, 'ok', ['id' => $id]);
     }
 
@@ -62,6 +63,7 @@ class Crud extends Base
     {
         [$id, $data] = $this->updateInput($request);
         $this->doUpdate($id, $data);
+
         return $this->json(0);
     }
 
@@ -77,6 +79,7 @@ class Crud extends Base
     {
         $ids = $this->deleteInput($request);
         $this->doDelete($ids);
+
         return $this->json(0);
     }
 
@@ -93,11 +96,11 @@ class Crud extends Base
         $field = $request->get('field');
         $order = $request->get('order', 'asc');
         $format = $request->get('format', 'normal');
-        $limit = (int)$request->get('limit', $format === 'tree' ? 1000 : 10);
+        $limit = (int) $request->get('limit', $format === 'tree' ? 1000 : 10);
         $limit = $limit <= 0 ? 10 : $limit;
         $order = $order === 'asc' ? 'asc' : 'desc';
         $where = $request->get();
-        $page = (int)$request->get('page');
+        $page = (int) $request->get('page');
         $page = $page > 0 ? $page : 1;
         $table = config('database.connections.pgsql.prefix') . $this->model->getTable();
 
@@ -137,6 +140,7 @@ class Crud extends Base
                 }
             }
         }
+
         return [$where, $format, $limit, $field, $order, $page];
     }
 
@@ -161,13 +165,13 @@ class Crud extends Base
                 } elseif ($value[0] == 'in' && !empty($value[1])) {
                     $valArr = $value[1];
                     if (is_string($value[1])) {
-                        $valArr = explode(",", trim($value[1]));
+                        $valArr = explode(',', trim($value[1]));
                     }
                     $model = $model->whereIn($column, $valArr);
                 } elseif ($value[0] == 'not in' && !empty($value[1])) {
                     $valArr = $value[1];
                     if (is_string($value[1])) {
-                        $valArr = explode(",", trim($value[1]));
+                        $valArr = explode(',', trim($value[1]));
                     }
                     $model = $model->whereNotIn($column, $valArr);
                 } elseif ($value[0] == 'null') {
@@ -184,6 +188,7 @@ class Crud extends Base
         if ($field) {
             $model = $model->orderBy($field, $order);
         }
+
         return $model;
     }
 
@@ -207,10 +212,11 @@ class Crud extends Base
         $paginator = $query->paginate($limit);
         $total = $paginator->total();
         $items = $paginator->items();
-        if (method_exists($this, "afterQuery")) {
-            $items = call_user_func([$this, "afterQuery"], $items);
+        if (method_exists($this, 'afterQuery')) {
+            $items = call_user_func([$this, 'afterQuery'], $items);
         }
         $format_function = $methods[$format] ?? 'formatNormal';
+
         return call_user_func([$this, $format_function], $items, $total);
     }
 
@@ -251,6 +257,7 @@ class Crud extends Base
         if ($primary_key && isset($data[$primary_key])) {
             unset($data[$primary_key]);
         }
+
         return $data;
     }
 
@@ -265,11 +272,12 @@ class Crud extends Base
     {
         $primary_key = $this->model->getKeyName();
         $model_class = get_class($this->model);
-        $model = new $model_class;
+        $model = new $model_class();
         foreach ($data as $key => $val) {
             $model->{$key} = $val;
         }
         $model->save();
+
         return $primary_key ? $model->$primary_key : null;
     }
 
@@ -300,7 +308,7 @@ class Crud extends Base
                 $scopeAdminIds = Auth::getScopeAdminIds(true);
                 $admin_ids = [
                     $data[$this->dataLimitField] ?? false, // 检查要更新的数据admin_id是否是有权限的值
-                    $model->{$this->dataLimitField} ?? false // 检查要更新的记录的admin_id是否有权限
+                    $model->{$this->dataLimitField} ?? false, // 检查要更新的记录的admin_id是否有权限
                 ];
                 foreach ($admin_ids as $admin_id) {
                     if ($admin_id && !in_array($admin_id, $scopeAdminIds)) {
@@ -319,6 +327,7 @@ class Crud extends Base
             }
         }
         unset($data[$primary_key]);
+
         return [$id, $data];
     }
 
@@ -379,6 +388,7 @@ class Crud extends Base
         if (empty($data['updated_at'])) {
             unset($data['updated_at']);
         }
+
         return $data;
     }
 
@@ -396,7 +406,7 @@ class Crud extends Base
         if (!$primary_key) {
             throw new BusinessException('该表无主键，不支持删除');
         }
-        $ids = (array)$request->post($primary_key, []);
+        $ids = (array) $request->post($primary_key, []);
         if (!Auth::isSuperAdmin()) {
             $admin_ids = [];
             if ($this->dataLimit) {
@@ -412,6 +422,7 @@ class Crud extends Base
                 }
             }
         }
+
         return $ids;
     }
 
@@ -447,12 +458,13 @@ class Crud extends Base
         foreach ($items as $item) {
             $format_items[] = [
                 'name' => $this->guessName($item) ?: $item->$primary_key,
-                'value' => (string)$item->$primary_key,
+                'value' => (string) $item->$primary_key,
                 'id' => $item->$primary_key,
                 'pid' => $item->pid,
             ];
         }
         $tree = new Tree($format_items);
+
         return $this->json(0, 'ok', $tree->getTree());
     }
 
@@ -466,6 +478,7 @@ class Crud extends Base
     protected function formatTableTree($items): Response
     {
         $tree = new Tree($items);
+
         return $this->json(0, 'ok', $tree->getTree());
     }
 
@@ -483,9 +496,10 @@ class Crud extends Base
         foreach ($items as $item) {
             $formatted_items[] = [
                 'name' => $this->guessName($item) ?: $item->$primary_key,
-                'value' => $item->$primary_key
+                'value' => $item->$primary_key,
             ];
         }
+
         return $this->json(0, 'ok', $formatted_items);
     }
 

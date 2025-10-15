@@ -2,13 +2,11 @@
 
 namespace plugin\admin\app\model;
 
-use plugin\admin\app\model\Base;
-
 /**
- * @property integer $id (主键)
- * @property string $key 
- * @property string $value 
- * @property mixed $created_at 
+ * @property int $id (主键)
+ * @property string $key
+ * @property string $value
+ * @property mixed $created_at
  * @property mixed $updated_at
  */
 class Setting extends Base
@@ -26,7 +24,4 @@ class Setting extends Base
      * @var string
      */
     protected $primaryKey = 'id';
-    
-    
-    
 }

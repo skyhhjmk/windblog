@@ -2,9 +2,9 @@
 
 namespace plugin\admin\app\controller;
 
+use app\service\LinkConnectService;
 use support\Request;
 use support\Response;
-use app\service\LinkConnectService;
 
 /**
  * 互联协议管理控制器
@@ -29,6 +29,7 @@ class LinkConnectController extends Base
     {
         try {
             $config = LinkConnectService::getConfig();
+
             return $this->success('Success', $config);
         } catch (\Exception $e) {
             return $this->fail($e->getMessage());
@@ -44,13 +45,13 @@ class LinkConnectController extends Base
     {
         try {
             $config = $request->post('config', []);
-            
+
             if (empty($config)) {
                 return $this->fail('配置数据不能为空');
             }
-            
+
             $result = LinkConnectService::saveConfig($config);
-            
+
             if ($result) {
                 return $this->success('配置保存成功', []);
             } else {
@@ -69,6 +70,7 @@ class LinkConnectController extends Base
     {
         try {
             $example = LinkConnectService::getExample();
+
             return $this->success('Success', $example);
         } catch (\Exception $e) {
             return $this->fail($e->getMessage());
@@ -84,13 +86,13 @@ class LinkConnectController extends Base
     {
         try {
             $url = $request->post('url', '');
-            
+
             if (empty($url)) {
                 return $this->fail('请输入测试URL');
             }
-            
+
             $result = LinkConnectService::testConnection($url);
-            
+
             if ($result['success']) {
                 return $this->success($result['message'], $result);
             } else {
@@ -108,8 +110,10 @@ class LinkConnectController extends Base
     {
         try {
             $cfg = LinkConnectService::getConfig();
-            $siteUrl = (string)($cfg['site_info']['url'] ?? '') ?: (string)blog_config('site_url', '', true);
-            if (!$siteUrl) return $this->fail('站点 URL 未配置');
+            $siteUrl = (string) ($cfg['site_info']['url'] ?? '') ?: (string) blog_config('site_url', '', true);
+            if (!$siteUrl) {
+                return $this->fail('站点 URL 未配置');
+            }
 
             $token = LinkConnectService::getLatestUnusedToken();
             if (!$token) {
@@ -118,6 +122,7 @@ class LinkConnectController extends Base
 
             $api = rtrim($siteUrl, '/') . '/api/wind-connect';
             $url = $api . '?token=' . urlencode($token);
+
             return $this->success('Success', ['url' => $url]);
         } catch (\Exception $e) {
             return $this->fail($e->getMessage());
@@ -131,6 +136,7 @@ class LinkConnectController extends Base
     {
         try {
             $record = LinkConnectService::generateToken();
+
             return $this->success('Token 已生成', $record);
         } catch (\Exception $e) {
             return $this->fail($e->getMessage());
@@ -155,9 +161,12 @@ class LinkConnectController extends Base
     public function invalidateToken(Request $request): Response
     {
         try {
-            $token = (string)$request->post('token', '');
-            if (!$token) return $this->fail('token 不能为空');
+            $token = (string) $request->post('token', '');
+            if (!$token) {
+                return $this->fail('token 不能为空');
+            }
             $ok = LinkConnectService::invalidateToken($token);
+
             return $ok ? $this->success('已作废', []) : $this->fail('作废失败');
         } catch (\Exception $e) {
             return $this->fail($e->getMessage());
@@ -173,17 +182,18 @@ class LinkConnectController extends Base
     {
         try {
             $input = [
-                'peer_api'    => (string)$request->post('peer_api', ''),
-                'name'        => (string)$request->post('name', ''),
-                'url'         => (string)$request->post('url', ''),
-                'icon'        => (string)$request->post('icon', ''),
-                'description' => (string)$request->post('description', ''),
-                'email'       => (string)$request->post('email', ''),
+                'peer_api'    => (string) $request->post('peer_api', ''),
+                'name'        => (string) $request->post('name', ''),
+                'url'         => (string) $request->post('url', ''),
+                'icon'        => (string) $request->post('icon', ''),
+                'description' => (string) $request->post('description', ''),
+                'email'       => (string) $request->post('email', ''),
             ];
             $res = LinkConnectService::applyToPeer($input);
             if (($res['code'] ?? 1) === 0) {
                 return $this->success($res['msg'] ?? '成功', []);
             }
+
             return $this->fail($res['msg'] ?? '失败');
         } catch (\Exception $e) {
             return $this->fail($e->getMessage());

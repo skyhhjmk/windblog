@@ -1,11 +1,12 @@
 <?php
+
 namespace plugin\admin\api;
 
 use ReflectionException;
+use support\exception\BusinessException;
 use Webman\Http\Request;
 use Webman\Http\Response;
 use Webman\MiddlewareInterface;
-use support\exception\BusinessException;
 
 /**
  * 对外提供的鉴权中间件
@@ -42,7 +43,7 @@ class Middleware implements MiddlewareInterface
         } else {
             $response = $request->method() == 'OPTIONS' ? response('') : $handler($request);
         }
+
         return $response;
     }
-
 }

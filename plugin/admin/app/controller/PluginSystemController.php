@@ -2,9 +2,9 @@
 
 namespace plugin\admin\app\controller;
 
+use app\service\PluginService;
 use support\Request;
 use support\Response;
-use app\service\PluginService;
 
 /**
  * 独立插件系统管理页与API（纯HTML+API）
@@ -26,8 +26,9 @@ class PluginSystemController extends Base
             . DIRECTORY_SEPARATOR . 'plugin_system'
             . DIRECTORY_SEPARATOR . 'index.html';
         if (is_file($path)) {
-            return new Response(200, ['Content-Type' => 'text/html; charset=utf-8'], (string)file_get_contents($path));
+            return new Response(200, ['Content-Type' => 'text/html; charset=utf-8'], (string) file_get_contents($path));
         }
+
         return new Response(404, ['Content-Type' => 'text/plain; charset=utf-8'], 'plugin system page not found');
     }
 
@@ -41,13 +42,13 @@ class PluginSystemController extends Base
      */
     public function list(Request $request): Response
     {
-        $q = (string)($request->get('q', ''));
-        $status = (string)($request->get('status', 'all'));
-        $page = max(1, (int)$request->get('page', 1));
-        $limit = max(1, min(100, (int)$request->get('limit', 10)));
+        $q = (string) ($request->get('q', ''));
+        $status = (string) ($request->get('status', 'all'));
+        $page = max(1, (int) $request->get('page', 1));
+        $limit = max(1, min(100, (int) $request->get('limit', 10)));
 
         $plugins = PluginService::all_plugins();
-        $enabled = (array)(blog_config('plugins.enabled', [], true) ?: []);
+        $enabled = (array) (blog_config('plugins.enabled', [], true) ?: []);
 
         $items = [];
         foreach ($plugins as $slug => $meta) {
@@ -66,9 +67,9 @@ class PluginSystemController extends Base
 
         // 筛选：状态
         if ($status === 'enabled') {
-            $items = array_values(array_filter($items, fn($it) => !empty($it['enabled'])));
+            $items = array_values(array_filter($items, fn ($it) => !empty($it['enabled'])));
         } elseif ($status === 'disabled') {
-            $items = array_values(array_filter($items, fn($it) => empty($it['enabled'])));
+            $items = array_values(array_filter($items, fn ($it) => empty($it['enabled'])));
         }
 
         // 搜索：q
@@ -76,22 +77,23 @@ class PluginSystemController extends Base
             $qq = mb_strtolower($q);
             $items = array_values(array_filter($items, function ($it) use ($qq) {
                 $pool = [
-                    (string)($it['name'] ?? ''),
-                    (string)($it['slug'] ?? ''),
-                    (string)($it['description'] ?? ''),
-                    (string)($it['author'] ?? ''),
+                    (string) ($it['name'] ?? ''),
+                    (string) ($it['slug'] ?? ''),
+                    (string) ($it['description'] ?? ''),
+                    (string) ($it['author'] ?? ''),
                 ];
                 $joined = mb_strtolower(implode(' ', $pool));
+
                 return str_contains($joined, $qq);
             }));
         }
 
         // 排序
-        $field = (string)$request->get('field', '');
-        $order = (string)$request->get('order', '');
+        $field = (string) $request->get('field', '');
+        $order = (string) $request->get('order', '');
         $sortable = [
             'name', 'slug', 'version', 'author', 'enabled',
-            'requires_php', 'requires_at_least'
+            'requires_php', 'requires_at_least',
         ];
         if ($field && in_array($field, $sortable, true) && ($order === 'asc' || $order === 'desc')) {
             usort($items, function ($a, $b) use ($field, $order) {
@@ -102,11 +104,14 @@ class PluginSystemController extends Base
                     $va = $va ? 1 : 0;
                     $vb = $vb ? 1 : 0;
                 } else {
-                    $va = (string)$va;
-                    $vb = (string)$vb;
+                    $va = (string) $va;
+                    $vb = (string) $vb;
                 }
-                if ($va == $vb) return 0;
+                if ($va == $vb) {
+                    return 0;
+                }
                 $cmp = $va < $vb ? -1 : 1;
+
                 return $order === 'asc' ? $cmp : -$cmp;
             });
         }
@@ -124,11 +129,12 @@ class PluginSystemController extends Base
      */
     public function enable(Request $request): Response
     {
-        $slug = (string)$request->post('slug');
+        $slug = (string) $request->post('slug');
         if ($slug === '') {
             return json(['code' => 1, 'msg' => '缺少slug']);
         }
         $ok = PluginService::enable($slug);
+
         return json(['code' => $ok ? 0 : 1, 'msg' => $ok ? 'ok' : '启用失败']);
     }
 
@@ -137,11 +143,12 @@ class PluginSystemController extends Base
      */
     public function disable(Request $request): Response
     {
-        $slug = (string)$request->post('slug');
+        $slug = (string) $request->post('slug');
         if ($slug === '') {
             return json(['code' => 1, 'msg' => '缺少slug']);
         }
         $ok = PluginService::disable($slug);
+
         return json(['code' => $ok ? 0 : 1, 'msg' => $ok ? 'ok' : '停用失败']);
     }
 
@@ -150,11 +157,12 @@ class PluginSystemController extends Base
      */
     public function uninstall(Request $request): Response
     {
-        $slug = (string)$request->post('slug');
+        $slug = (string) $request->post('slug');
         if ($slug === '') {
             return json(['code' => 1, 'msg' => '缺少slug']);
         }
         $ok = PluginService::uninstall($slug);
+
         return json(['code' => $ok ? 0 : 1, 'msg' => $ok ? 'ok' : '卸载失败']);
     }
 
@@ -163,7 +171,7 @@ class PluginSystemController extends Base
      */
     public function permissions(Request $request): Response
     {
-        $slug = (string)$request->get('slug', '');
+        $slug = (string) $request->get('slug', '');
         if ($slug === '') {
             return json(['code' => 1, 'msg' => '缺少slug']);
         }
@@ -173,8 +181,8 @@ class PluginSystemController extends Base
 
         $stats = [];
         foreach ($declared as $perm) {
-            $base = PluginService::getCounts($slug, (string)$perm);
-            $win  = PluginService::getWindowCounts($slug, (string)$perm);
+            $base = PluginService::getCounts($slug, (string) $perm);
+            $win = PluginService::getWindowCounts($slug, (string) $perm);
             $stats[$perm] = array_merge($base, $win);
         }
 
@@ -191,12 +199,13 @@ class PluginSystemController extends Base
      */
     public function grantPermissions(Request $request): Response
     {
-        $slug = (string)$request->post('slug');
-        $perms = (array)$request->post('permissions');
+        $slug = (string) $request->post('slug');
+        $perms = (array) $request->post('permissions');
         if ($slug === '' || empty($perms)) {
             return json(['code' => 1, 'msg' => '缺少参数']);
         }
         PluginService::grantPermissions($slug, array_map('strval', $perms));
+
         return json(['code' => 0, 'msg' => 'ok']);
     }
 
@@ -205,12 +214,13 @@ class PluginSystemController extends Base
      */
     public function revokePermissions(Request $request): Response
     {
-        $slug = (string)$request->post('slug');
-        $perms = (array)$request->post('permissions');
+        $slug = (string) $request->post('slug');
+        $perms = (array) $request->post('permissions');
         if ($slug === '' || empty($perms)) {
             return json(['code' => 1, 'msg' => '缺少参数']);
         }
         PluginService::revokePermissions($slug, array_map('strval', $perms));
+
         return json(['code' => 0, 'msg' => 'ok']);
     }
 
@@ -219,12 +229,13 @@ class PluginSystemController extends Base
      */
     public function grantPermission(Request $request): Response
     {
-        $slug = (string)$request->post('slug');
-        $perm = (string)$request->post('permission');
+        $slug = (string) $request->post('slug');
+        $perm = (string) $request->post('permission');
         if ($slug === '' || $perm === '') {
             return json(['code' => 1, 'msg' => '缺少参数']);
         }
         PluginService::grantPermission($slug, $perm);
+
         return json(['code' => 0, 'msg' => 'ok']);
     }
 
@@ -233,15 +244,16 @@ class PluginSystemController extends Base
      */
     public function revokePermission(Request $request): Response
     {
-        $slug = (string)$request->post('slug');
-        $perm = (string)$request->post('permission');
+        $slug = (string) $request->post('slug');
+        $perm = (string) $request->post('permission');
         if ($slug === '' || $perm === '') {
             return json(['code' => 1, 'msg' => '缺少参数']);
         }
         PluginService::revokePermission($slug, $perm);
+
         return json(['code' => 0, 'msg' => 'ok']);
     }
-    
+
     /**
      * 获取插件注册的后台菜单
      */
@@ -252,24 +264,24 @@ class PluginSystemController extends Base
         $managerProp = $pluginServiceRef->getProperty('manager');
         $managerProp->setAccessible(true);
         $manager = $managerProp->getValue(null);
-        
+
         if ($manager) {
             $adminMenus = $manager->getAdminMenus();
             $formattedMenus = [];
-            
+
             foreach ($adminMenus as $pluginSlug => $menus) {
                 // 确保菜单格式正确
                 if (is_array($menus) && !empty($menus)) {
                     $formattedMenus[] = $menus;
                 }
             }
-            
+
             return json(['code' => 0, 'msg' => 'ok', 'data' => array_values($formattedMenus)]);
         }
-        
+
         return json(['code' => 0, 'msg' => 'ok', 'data' => []]);
     }
-    
+
     /**
      * 处理插件请求
      */
@@ -278,88 +290,89 @@ class PluginSystemController extends Base
         if (!$slug || !$action) {
             return new Response(400, [], 'Missing plugin slug or action');
         }
-        
+
         // 检查插件是否启用
-        $enabled = (array)(blog_config('plugins.enabled', [], true) ?: []);
+        $enabled = (array) (blog_config('plugins.enabled', [], true) ?: []);
         if (!in_array($slug, $enabled, true)) {
             return new Response(404, [], "Plugin {$slug} not found or not enabled");
         }
-        
+
         // 获取插件管理器
         $pluginServiceRef = new \ReflectionClass(\app\service\PluginService::class);
         $managerProp = $pluginServiceRef->getProperty('manager');
         $managerProp->setAccessible(true);
         $manager = $managerProp->getValue(null);
-        
+
         if (!$manager) {
             return new Response(500, [], 'Plugin manager not available');
         }
-        
+
         // 强制注册插件路由
         $manager->forceRegisterRoutes($slug);
-        
+
         // 构造原始请求路径 - 使用实际的插件路由路径
         $originalPath = "/app/admin/plugin/{$slug}/{$action}";
-        
+
         // 直接调用插件的路由处理器，而不是通过Webman路由调度器
         $plugins = $manager->allMetadata();
         if (!isset($plugins[$slug])) {
             return new Response(404, [], "Plugin {$slug} not found");
         }
-        
+
         // 获取插件实例
         $pluginEntry = null;
         $pluginsProperty = new \ReflectionProperty($manager, 'plugins');
         $pluginsProperty->setAccessible(true);
         $pluginData = $pluginsProperty->getValue($manager);
-        
+
         if (isset($pluginData[$slug])) {
             $pluginEntry = $pluginData[$slug];
         }
-        
+
         if (!$pluginEntry || !isset($pluginEntry['instance'])) {
             return new Response(500, [], 'Plugin instance not available');
         }
-        
+
         $pluginInstance = $pluginEntry['instance'];
         $routes = $pluginInstance->registerRoutes($slug);
-        
+
         // 查找匹配的路由
         foreach ($routes as $route) {
             if (!isset($route['method']) || !isset($route['route']) || !isset($route['handler'])) {
                 continue;
             }
-            
+
             $method = strtolower($route['method']);
             $routePath = $route['route'];
             $handler = $route['handler'];
             $permission = $route['permission'] ?? '';
-            
+
             // 检查方法是否匹配
             if ($method !== strtolower($request->method())) {
                 continue;
             }
-            
+
             // 检查路径是否匹配
             if ($routePath === $originalPath) {
                 // 检查权限
                 if ($permission && !\app\service\PluginService::ensurePermission($slug, $permission)) {
                     return new Response(403, [], 'Access denied to plugin route. Plugin: ' . $slug . ', Permission: ' . $permission);
                 }
-                
+
                 // 执行处理器
                 try {
                     $response = call_user_func($handler, $request);
                     if ($response instanceof Response) {
                         return $response;
                     }
-                    return new Response(200, [], (string)$response);
+
+                    return new Response(200, [], (string) $response);
                 } catch (\Throwable $e) {
                     return new Response(500, [], 'Internal Server Error: ' . $e->getMessage());
                 }
             }
         }
-        
+
         return new Response(404, [], "Plugin route {$originalPath} not found");
     }
 }

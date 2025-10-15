@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of webman.
  *
@@ -17,5 +18,5 @@ use plugin\admin\app\middleware\AccessControl;
 return [
     '' => [
         AccessControl::class,
-    ]
+    ],
 ];

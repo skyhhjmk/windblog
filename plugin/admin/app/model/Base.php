@@ -5,7 +5,6 @@ namespace plugin\admin\app\model;
 use DateTimeInterface;
 use support\Model;
 
-
 class Base extends Model
 {
     /**

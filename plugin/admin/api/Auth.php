@@ -1,10 +1,12 @@
 <?php
+
 namespace plugin\admin\api;
+
+use function admin;
 
 use plugin\admin\app\model\Role;
 use plugin\admin\app\model\Rule;
 use support\exception\BusinessException;
-use function admin;
 
 /**
  * 对外提供的鉴权接口
@@ -60,6 +62,7 @@ class Auth
             $msg = '请登录';
             // 401是未登录固定的返回码
             $code = 401;
+
             return false;
         }
 
@@ -73,6 +76,7 @@ class Auth
         if (!$roles) {
             $msg = '无权限';
             $code = 2;
+
             return false;
         }
 
@@ -88,11 +92,12 @@ class Auth
         if (!$rule_ids) {
             $msg = '无权限';
             $code = 2;
+
             return false;
         }
 
         // 超级管理员
-        if (in_array('*', $rule_ids)){
+        if (in_array('*', $rule_ids)) {
             return true;
         }
 
@@ -107,6 +112,7 @@ class Auth
             }
             $msg = '无权限';
             $code = 2;
+
             return false;
         }
 
@@ -118,10 +124,10 @@ class Auth
         if (!$rule) {
             $msg = '无权限';
             $code = 2;
+
             return false;
         }
 
         return true;
     }
-
 }

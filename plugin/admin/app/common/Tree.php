@@ -1,19 +1,18 @@
 <?php
-namespace plugin\admin\app\common;
 
+namespace plugin\admin\app\common;
 
 class Tree
 {
-
     /**
      * 获取完整的树结构，包含祖先节点
      */
-    const INCLUDE_ANCESTORS = 1;
+    public const INCLUDE_ANCESTORS = 1;
 
     /**
      * 获取部分树，不包含祖先节点
      */
-    const EXCLUDE_ANCESTORS = 0;
+    public const EXCLUDE_ANCESTORS = 0;
 
     /**
      * 数据
@@ -43,11 +42,12 @@ class Tree
         if (is_object($data) && method_exists($data, 'toArray')) {
             $this->data = $data->toArray();
         } else {
-            $this->data = (array)$data;
+            $this->data = (array) $data;
             $this->data = array_map(function ($item) {
                 if (is_object($item) && method_exists($item, 'toArray')) {
                     return $item->toArray();
                 }
+
                 return $item;
             }, $this->data);
         }
@@ -80,6 +80,7 @@ class Tree
                 }
             }
         }
+
         return array_values($items);
     }
 
@@ -100,6 +101,7 @@ class Tree
                 $hash_tree[$item[$this->pidName]]['children'][$hash_tree[$index]['id']] = &$hash_tree[$index];
             }
         }
+
         return $hash_tree;
     }
 
@@ -121,6 +123,7 @@ class Tree
                 }
                 $items[] = $this->hashTree[$id];
             }
+
             return static::arrayValues($items);
         }
 
@@ -181,13 +184,14 @@ class Tree
             foreach ($tree as $index => $item) {
                 $tree[$index] = static::arrayValues($item);
             }
+
             return $tree;
         }
         $array['children'] = array_values($array['children']);
         foreach ($array['children'] as $index => $child) {
             $array['children'][$index] = static::arrayValues($child);
         }
+
         return $array;
     }
-
 }

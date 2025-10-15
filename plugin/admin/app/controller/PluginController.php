@@ -2,20 +2,27 @@
 
 namespace plugin\admin\app\controller;
 
+use function array_diff;
+
+use const DIRECTORY_SEPARATOR;
+
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
+
+use function ini_get;
+
+use const PATH_SEPARATOR;
+
 use plugin\admin\app\common\Util;
 use process\Monitor;
+
+use function scandir;
+
 use support\exception\BusinessException;
 use support\Log;
 use support\Request;
 use support\Response;
 use ZIPARCHIVE;
-use function array_diff;
-use function ini_get;
-use function scandir;
-use const DIRECTORY_SEPARATOR;
-use const PATH_SEPARATOR;
 
 class PluginController extends Base
 {
@@ -33,8 +40,9 @@ class PluginController extends Base
     public function index(Request $request)
     {
         $client = $this->httpClient();
-        $response = $client->get("/webman-admin/apps");
-        return (string)$response->getBody();
+        $response = $client->get('/webman-admin/apps');
+
+        return (string) $response->getBody();
     }
 
     /**
@@ -57,6 +65,7 @@ class PluginController extends Base
             $msg = "/api/app/list return $content";
             echo "msg\r\n";
             Log::error($msg);
+
             return $this->json(1, '获取数据出错');
         }
         $disabled = is_phar();
@@ -67,6 +76,7 @@ class PluginController extends Base
         }
         $items = $data['data']['items'];
         $count = $data['data']['total'];
+
         return json(['code' => 0, 'msg' => 'ok', 'data' => $items, 'count' => $count]);
     }
 
@@ -117,7 +127,7 @@ class PluginController extends Base
         try {
             // 解压zip到plugin目录
             if ($has_zip_archive) {
-                $zip = new ZipArchive;
+                $zip = new ZipArchive();
                 $zip->open($zip_file);
             }
 
@@ -225,7 +235,8 @@ class PluginController extends Base
         }
         $client = $this->httpClient();
         $response = $client->get("/payment/app/$app/$token");
-        return (string)$response->getBody();
+
+        return (string) $response->getBody();
     }
 
     /**
@@ -243,6 +254,7 @@ class PluginController extends Base
             $sid = $match[1];
             session()->set('app-plugin-token', $sid);
         }
+
         return response($response->getBody()->getContents())->withHeader('Content-Type', 'image/jpeg');
     }
 
@@ -256,16 +268,17 @@ class PluginController extends Base
     {
         $client = $this->httpClient();
         if ($request->method() === 'GET') {
-            $response = $client->get("/webman-admin/login");
-            return (string)$response->getBody();
+            $response = $client->get('/webman-admin/login');
+
+            return (string) $response->getBody();
         }
 
         $response = $client->post('/api/user/login', [
             'form_params' => [
                 'email' => $request->post('username'),
                 'password' => $request->post('password'),
-                'captcha' => $request->post('captcha')
-            ]
+                'captcha' => $request->post('captcha'),
+            ],
         ]);
         $content = $response->getBody()->getContents();
         $data = json_decode($content, true);
@@ -273,14 +286,16 @@ class PluginController extends Base
             $msg = "/api/user/login return $content";
             echo "msg\r\n";
             Log::error($msg);
+
             return $this->json(1, '发生错误');
         }
         if ($data['code'] != 0) {
             return $this->json($data['code'], $data['msg']);
         }
         session()->set('app-plugin-user', [
-            'uid' => $data['data']['uid']
+            'uid' => $data['data']['uid'],
         ]);
+
         return $this->json(0);
     }
 
@@ -310,6 +325,7 @@ class PluginController extends Base
         if ($data['code'] == 0 && !isset($data['data']['url'])) {
             throw new BusinessException('官方接口返回数据错误');
         }
+
         return $data;
     }
 
@@ -347,11 +363,12 @@ class PluginController extends Base
     {
         if ($cmd = $this->findCmd('unzip')) {
             $cmd = "$cmd -o -qq $zip_file -d $extract_to";
-        } else if ($cmd = $this->findCmd('7z')) {
+        } elseif ($cmd = $this->findCmd('7z')) {
             $cmd = "$cmd x -bb0 -y $zip_file -o$extract_to";
-        } else if ($cmd = $this->findCmd('7zz')) {
+        } elseif ($cmd = $this->findCmd('7zz')) {
             $cmd = "$cmd x -bb0 -y $zip_file -o$extract_to";
         }
+
         return $cmd;
     }
 
@@ -364,13 +381,13 @@ class PluginController extends Base
     protected function unzipWithCmd($cmd)
     {
         $desc = [
-            0 => ["pipe", "r"],
-            1 => ["pipe", "w"],
-            2 => ["pipe", "w"],
+            0 => ['pipe', 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
         ];
         $handler = proc_open($cmd, $desc, $pipes);
         if (!is_resource($handler)) {
-            throw new BusinessException("解压zip时出错:proc_open调用失败");
+            throw new BusinessException('解压zip时出错:proc_open调用失败');
         }
         $err = fread($pipes[2], 1024);
         fclose($pipes[2]);
@@ -388,12 +405,13 @@ class PluginController extends Base
     {
         clearstatcache();
         $installed = [];
-        $plugin_names = array_diff(scandir(base_path() . '/plugin/'), array('.', '..')) ?: [];
+        $plugin_names = array_diff(scandir(base_path() . '/plugin/'), ['.', '..']) ?: [];
         foreach ($plugin_names as $plugin_name) {
             if (is_dir(base_path() . "/plugin/$plugin_name") && $version = $this->getPluginVersion($plugin_name)) {
                 $installed[$plugin_name] = $version;
             }
         }
+
         return $installed;
     }
 
@@ -406,7 +424,6 @@ class PluginController extends Base
     {
         return $this->json(0, 'ok', $this->getLocalPlugins());
     }
-    
 
     /**
      * 获取本地插件版本
@@ -419,6 +436,7 @@ class PluginController extends Base
             return null;
         }
         $config = include $file;
+
         return $config['version'] ?? null;
     }
 
@@ -470,11 +488,12 @@ class PluginController extends Base
                 'Referer' => \request()->fullUrl(),
                 'User-Agent' => 'webman-app-plugin',
                 'Accept' => 'application/json;charset=UTF-8',
-            ]
+            ],
         ];
         if ($token = session('app-plugin-token')) {
             $options['headers']['Cookie'] = "PHPSID=$token;";
         }
+
         return new Client($options);
     }
 
@@ -493,11 +512,12 @@ class PluginController extends Base
             'headers' => [
                 'Referer' => \request()->fullUrl(),
                 'User-Agent' => 'webman-app-plugin',
-            ]
+            ],
         ];
         if ($token = session('app-plugin-token')) {
             $options['headers']['Cookie'] = "PHPSID=$token;";
         }
+
         return new Client($options);
     }
 
@@ -544,5 +564,4 @@ class PluginController extends Base
 
         return $default;
     }
-
 }

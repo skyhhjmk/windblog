@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of webman.
  *
@@ -15,5 +16,5 @@
 return [
     'files' => [
         base_path() . '/plugin/admin/app/functions.php',
-    ]
+    ],
 ];

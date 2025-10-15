@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of webman.
  *
@@ -13,10 +14,7 @@
  */
 
 use support\view\Raw;
-use support\view\Twig;
-use support\view\Blade;
-use support\view\ThinkPHP;
 
 return [
-    'handler' => Raw::class
+    'handler' => Raw::class,
 ];

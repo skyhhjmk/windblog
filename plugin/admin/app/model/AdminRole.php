@@ -2,10 +2,8 @@
 
 namespace plugin\admin\app\model;
 
-use plugin\admin\app\model\Base;
-
 /**
- * @property integer $id ID(主键)
+ * @property int $id ID(主键)
  * @property string $admin_id 管理员id
  * @property string $role_id 角色id
  */
@@ -24,8 +22,6 @@ class AdminRole extends Base
      * @var string
      */
     protected $primaryKey = 'id';
-    
-    
+
     public $timestamps = false;
-    
 }

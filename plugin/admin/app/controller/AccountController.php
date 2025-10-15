@@ -39,7 +39,7 @@ class AccountController extends Crud
      */
     public function __construct()
     {
-        $this->model = new Admin;
+        $this->model = new Admin();
     }
 
     /**
@@ -86,6 +86,7 @@ class AccountController extends Crud
         $session = $request->session();
         $admin['password'] = md5($admin['password']);
         $session->set('admin', $admin);
+
         return $this->json(0, '登录成功', [
             'nickname' => $admin['nickname'],
             'token' => $request->sessionId(),
@@ -100,6 +101,7 @@ class AccountController extends Crud
     public function logout(Request $request): Response
     {
         $request->session()->delete('admin');
+
         return $this->json(0);
     }
 
@@ -124,6 +126,7 @@ class AccountController extends Crud
             'isSuperAdmin' => Auth::isSuperAdmin(),
             'token' => $request->sessionId(),
         ];
+
         return $this->json(0, 'ok', $info);
     }
 
@@ -158,6 +161,7 @@ class AccountController extends Crud
             $admin[$key] = $value;
         }
         $request->session()->set('admin', $admin);
+
         return $this->json(0);
     }
 
@@ -180,9 +184,10 @@ class AccountController extends Crud
             return $this->json(1, '原始密码不正确');
         }
         $update_data = [
-            'password' => Util::passwordHash($password)
+            'password' => Util::passwordHash($password),
         ];
         Admin::where('id', admin_id())->update($update_data);
+
         return $this->json(0);
     }
 
@@ -199,6 +204,7 @@ class AccountController extends Crud
         $captcha->build(120);
         $request->session()->set("captcha-$type", strtolower($captcha->getPhrase()));
         $img_content = $captcha->get();
+
         return response($img_content, 200, ['Content-Type' => 'image/jpeg']);
     }
 
@@ -212,10 +218,10 @@ class AccountController extends Crud
     {
         $limit_log_path = runtime_path() . '/login';
         if (!is_dir($limit_log_path)) {
-            mkdir($limit_log_path, 0777, true);
+            mkdir($limit_log_path, 0o777, true);
         }
         $limit_file = $limit_log_path . '/' . md5($username) . '.limit';
-        $time = date('YmdH') . ceil(date('i')/5);
+        $time = date('YmdH') . ceil(date('i') / 5);
         $limit_info = [];
         if (is_file($limit_file)) {
             $json_str = file_get_contents($limit_file);
@@ -226,7 +232,7 @@ class AccountController extends Crud
             $limit_info = [
                 'username' => $username,
                 'count' => 0,
-                'time' => $time
+                'time' => $time,
             ];
         }
         $limit_info['count']++;
@@ -256,5 +262,4 @@ class AccountController extends Crud
             throw new BusinessException('请重启webman');
         }
     }
-
 }

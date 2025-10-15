@@ -14,22 +14,22 @@
  */
 
 use plugin\admin\app\controller\AccountController;
+use plugin\admin\app\controller\CommentController;
 use plugin\admin\app\controller\DictController;
 use plugin\admin\app\controller\EditorController;
-use plugin\admin\app\controller\LinkController;
-use plugin\admin\app\controller\FloLinkController;
-use plugin\admin\app\controller\MediaController;
-use plugin\admin\app\controller\PostsController;
-use plugin\admin\app\controller\WpImportController;
-use plugin\admin\app\controller\SidebarController;
 use plugin\admin\app\controller\ElasticController;
-use plugin\admin\app\controller\PerformanceController;
-use plugin\admin\app\controller\StaticCacheController;
+use plugin\admin\app\controller\FloLinkController;
+use plugin\admin\app\controller\LinkController;
 use plugin\admin\app\controller\MailController;
+use plugin\admin\app\controller\MediaController;
+use plugin\admin\app\controller\PerformanceController;
 use plugin\admin\app\controller\PluginSystemController;
-use plugin\admin\app\controller\CommentController;
-use Webman\Route;
+use plugin\admin\app\controller\PostsController;
+use plugin\admin\app\controller\SidebarController;
+use plugin\admin\app\controller\StaticCacheController;
+use plugin\admin\app\controller\WpImportController;
 use support\Request;
+use Webman\Route;
 
 Route::group('/app/admin', function () {
     Route::any('/account/captcha/{type}', [AccountController::class, 'captcha']);
@@ -183,7 +183,7 @@ Route::group('/app/admin', function () {
             Route::get('/index', [WpImportController::class, 'index']);
             Route::get('/list', [WpImportController::class, 'list'])->name('admin.tools.wp-import.list');
             Route::get('/create', [WpImportController::class, 'create'])->name('admin.tools.wp-import.create');
-//            Route::post('/upload', [WpImportController::class, 'upload'])->name('admin.tools.wp-import.upload');
+            //            Route::post('/upload', [WpImportController::class, 'upload'])->name('admin.tools.wp-import.upload');
             Route::post('/submit', [WpImportController::class, 'submit'])->name('admin.tools.wp-import.submit');
             Route::get('/status/{id}', [WpImportController::class, 'status'])->name('admin.tools.wp-import.status');
             Route::post('/reset/{id}', [WpImportController::class, 'reset'])->name('admin.tools.wp-import.reset');
@@ -215,7 +215,6 @@ Route::group('/app/admin', function () {
         Route::get('/index', [ElasticController::class, 'index']);
         Route::post('/save', [ElasticController::class, 'save']);
         Route::post('/createIndex', [ElasticController::class, 'createIndex']);
-
 
         Route::get('/get', [ElasticController::class, 'get']);
         Route::get('/test', [ElasticController::class, 'testConnection']);
@@ -275,11 +274,12 @@ Route::group('/app/admin', function () {
         // 其他功能
         Route::get('/preview', [MailController::class, 'pagePreview']);
         // 多平台配置页（新）
-        Route::get('/config-page', function() {
+        Route::get('/config-page', function () {
             $path = base_path() . DIRECTORY_SEPARATOR . 'plugin' . DIRECTORY_SEPARATOR . 'admin' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'view' . DIRECTORY_SEPARATOR . 'mail' . DIRECTORY_SEPARATOR . 'config.html';
             if (is_file($path)) {
-                return new \support\Response(200, ['Content-Type' => 'text/html; charset=utf-8'], (string)file_get_contents($path));
+                return new \support\Response(200, ['Content-Type' => 'text/html; charset=utf-8'], (string) file_get_contents($path));
             }
+
             return new \support\Response(404, ['Content-Type' => 'text/plain; charset=utf-8'], 'mail config template not found');
         });
         Route::get('/send', [MailController::class, 'pageSend']);
@@ -292,12 +292,12 @@ Route::group('/app/admin', function () {
         Route::post('/providers-save', [MailController::class, 'providersSave']);
         Route::post('/provider-test', [MailController::class, 'providerTest']);
     });
-    
+
     // 配置路由
     Route::group('/config', function () {
         Route::get('/get_site_info', [plugin\admin\app\controller\ConfigController::class, 'get_site_info']);
     });
-    
+
     // 插件沙箱路由
     Route::any('/pluginsandbox[/{slug}[/{action}]]', [plugin\admin\app\controller\PluginSystemController::class, 'handlePluginRequest']);
 });
