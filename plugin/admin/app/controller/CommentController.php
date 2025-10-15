@@ -37,12 +37,10 @@ class CommentController extends Base
         $status = $request->get('status', '');
         $keyword = $request->get('keyword', '');
 
-        // 'trash' 视为回收站（软删除的数据）
-        $isTrash = ($status === 'trash');
-        $query = $isTrash ? CommentModel::onlyTrashed() : CommentModel::query();
-
-        // 状态筛选（非回收站状态才按字段过滤）
-        if ($status !== '' && !$isTrash) {
+        // 使用 deleted_at 判断是否删除；status 仅用于业务状态（pending/approved/spam/trash）
+        $isDeleted = $request->get('isDeleted', 'false');
+        $query = ($isDeleted === 'true') ? CommentModel::onlyTrashed() : CommentModel::query();
+        if ($status !== '') {
             $query->where('status', $status);
         }
 
@@ -95,20 +93,12 @@ class CommentController extends Base
             }
         }
 
-        if (empty($ids) || !in_array($status, ['approved', 'spam', 'trash'])) {
+        if (empty($ids) || !in_array($status, ['pending', 'approved', 'spam', 'trash'])) {
             return json(['code' => 400, 'msg' => '参数错误']);
         }
 
         try {
-            if ($status === 'trash') {
-                // 回收站：执行软删除
-                $affected = 0;
-                foreach ((array)$ids as $id) {
-                    $c = CommentModel::find($id);
-                    if ($c && $c->softDelete()) { $affected++; }
-                }
-                return json(['code' => 0, 'msg' => '已移入回收站', 'data' => ['count' => $affected]]);
-            }
+            // 严格按状态字段更新，符合检查器
             CommentModel::whereIn('id', (array)$ids)->update(['status' => $status]);
             return json(['code' => 0, 'msg' => '操作成功']);
         } catch (Throwable $e) {
@@ -125,6 +115,7 @@ class CommentController extends Base
     public function delete(Request $request): Response
     {
         $ids = $request->post('ids', []);
+        $force = (bool)$request->post('force', false);
         // 兼容 JSON 请求体
         if (!$ids) {
             $raw = $request->getContent();
@@ -132,6 +123,7 @@ class CommentController extends Base
                 $data = json_decode($raw, true);
                 if (json_last_error() === JSON_ERROR_NONE) {
                     $ids = $data['ids'] ?? $ids;
+                    $force = (bool)($data['force'] ?? $force);
                 }
             }
         }
@@ -144,11 +136,11 @@ class CommentController extends Base
             $count = 0;
             foreach ((array)$ids as $id) {
                 $comment = CommentModel::withTrashed()->find($id);
-                if ($comment && $comment->softDelete(true)) {
+                if ($comment && $comment->softDelete($force)) {
                     $count++;
                 }
             }
-            return json(['code' => 0, 'msg' => '删除成功', 'data' => ['count' => $count]]);
+            return json(['code' => 0, 'msg' => $force ? '已彻底删除' : '已删除至回收站', 'data' => ['count' => $count]]);
         } catch (Throwable $e) {
             return json(['code' => 500, 'msg' => '删除失败：' . $e->getMessage()]);
         }

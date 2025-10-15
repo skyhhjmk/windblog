@@ -28,8 +28,8 @@ class FloLinkService
      */
     public static function processContent(string $content): string
     {
-        // 检查是否启用FloLink功能
-        if (!blog_config('flolink_enabled', true)) {
+        // 检查是否启用FloLink功能（缺失时初始化为默认值，避免反复 miss 日志）
+        if (!blog_config('flolink_enabled', true, true)) {
             return $content;
         }
 
@@ -65,7 +65,7 @@ class FloLinkService
 
         // 对现有超链接执行特殊改写（可配置）
         try {
-            $enableAffiliateRewrite = blog_config('flolink_affiliate_rewrite', true);
+            $enableAffiliateRewrite = blog_config('flolink_affiliate_rewrite', true, true);
         } catch (\Throwable $e) {
             $enableAffiliateRewrite = true;
         }
@@ -253,7 +253,30 @@ class FloLinkService
      */
     private static function processMarkdown(string $content, array $floLinks): string
     {
-        if ($content === '' || !$floLinks) {
+        if ($content === '') {
+            return $content;
+        }
+
+        // 先对 Markdown 中已有的链接做联盟改写（rainyun 等）
+        try {
+            $enableAffiliateRewrite = blog_config('flolink_affiliate_rewrite', true, true);
+        } catch (\Throwable $e) {
+            $enableAffiliateRewrite = true;
+        }
+        if ($enableAffiliateRewrite) {
+            // 简单重写 [text](url) 形式的链接地址
+            $content = preg_replace_callback('/\\[[^\\]]*\\]\\(([^)\s]+)\\)/u', function ($m) {
+                $url = $m[1] ?? '';
+                $new = self::rewriteAffiliateLink($url);
+                if ($new === $url || $new === '') {
+                    return $m[0];
+                }
+                // 替换原有 url，保持展示文本不变
+                return str_replace('(' . $url . ')', '(' . self::escapeMarkdownUrl($new) . ')', $m[0]);
+            }, $content) ?? $content;
+        }
+
+        if (!$floLinks) {
             return $content;
         }
 
@@ -296,13 +319,13 @@ class FloLinkService
 
             $escapedKeyword = preg_quote($keyword, '/');
             $flags = $floLink->case_sensitive ? 'u' : 'iu';
-            $pattern = '/' . $escapedKeyword . '/' . $flags;
+            // 使用捕获组，便于套入 HTML a 标签（包含 data- 属性等）
+            $pattern = '/(' . $escapedKeyword . ')/' . $flags;
 
             $limit = ($floLink->match_mode === 'first') ? 1 : -1;
 
-            // Markdown 链接：使用 () 包裹，转义括号，避免断开
-            $mdUrl = self::escapeMarkdownUrl($url);
-            $replacement = '[$0](' . $mdUrl . ')';
+            // 直接输出 HTML 超链接（Markdown 允许内联 HTML），以便携带 data-flolink 属性用于悬浮效果
+            $replacement = self::createLinkHTML($floLink); // 形如 <a ...>$1</a>
 
             $content = preg_replace($pattern, $replacement, $content, $limit);
         }
@@ -447,7 +470,7 @@ class FloLinkService
             // 统一改写为配置的后缀（默认 github_）
             $suffix = 'github_';
             try {
-                $conf = blog_config('flolink_affiliate_suffix', 'github_');
+                $conf = blog_config('flolink_affiliate_suffix', 'github_', true);
                 if (is_string($conf) && $conf !== '') {
                     $suffix = $conf;
                 }
