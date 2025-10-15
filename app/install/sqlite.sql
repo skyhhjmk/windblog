@@ -210,6 +210,7 @@ CREATE TABLE IF NOT EXISTS comments (
   guest_name TEXT DEFAULT NULL,
   guest_email TEXT DEFAULT NULL,
   content TEXT NOT NULL,
+  quoted_data TEXT DEFAULT NULL,
   status TEXT NOT NULL DEFAULT 'pending',
   ip_address TEXT DEFAULT NULL,
   user_agent TEXT DEFAULT NULL,
