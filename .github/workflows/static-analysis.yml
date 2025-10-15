@@ -178,15 +178,40 @@ jobs:
             const issueCount = errorMatches.length;
 
             if (issueCount > 0) {
+              const pr = context.payload.pull_request;
+              const branch = pr.head.ref;
+              const prNumber = pr.number;
+              
+              // 构建 workflow dispatch URL
+              const fixUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/workflows/code-style-fix.yml`;
+              
               const comment = '## 🎨 PHP CS Fixer Report\n\n' +
                 '**发现代码风格问题**: ' + issueCount + ' 个问题，涉及 ' + fileCount + ' 个文件\n\n' +
-                '### 如何修复\n\n' +
-                '在本地运行以下命令自动修复：\n' +
+                '### 🔧 自动修复\n\n' +
+                '点击下方按钮一键修复所有代码样式问题：\n\n' +
+                '[![Auto Fix](https://img.shields.io/badge/🔧-Auto_Fix_Code_Style-success?style=for-the-badge)](' + fixUrl + ')\n\n' +
+                '> **使用说明**：点击上方按钮后，在打开的页面中：\n' +
+                '> 1. 点击右侧 "Run workflow" 按钮\n' +
+                '> 2. 输入 PR Number: `' + prNumber + '`\n' +
+                '> 3. 输入 Branch: `' + branch + '`\n' +
+                '> 4. 点击 "Run workflow" 执行自动修复\n\n' +
+                '### 📋 手动修复\n\n' +
+                '或在本地运行以下命令：\n' +
                 '```bash\n' +
                 'vendor/bin/php-cs-fixer fix\n' +
                 '```\n\n' +
                 '📥 详细报告已保存为 Artifact，可在 Actions 页面下载查看。';
 
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            } else {
+              const comment = '## ✅ PHP CS Fixer Check Passed\n\n' +
+                '代码样式检查通过，无需修复。';
+              
               github.rest.issues.createComment({
                 issue_number: context.issue.number,
                 owner: context.repo.owner,
