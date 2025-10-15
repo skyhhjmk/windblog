@@ -96,10 +96,12 @@ class BlogService
                 switch ($key) {
                     case 'search':
                         if (!empty($value)) {
-                            $query->where(function ($q) use ($value) {
-                                $q->where('title', 'like', "%{$value}%")
-                                  ->orWhere('content', 'like', "%{$value}%")
-                                  ->orWhere('excerpt', 'like', "%{$value}%");
+                            // 安全地转义搜索词，防止 SQL 注入
+                            $searchTerm = (string) $value;
+                            $query->where(function ($q) use ($searchTerm) {
+                                $q->where('title', 'like', '%' . addcslashes($searchTerm, '%_\\') . '%')
+                                  ->orWhere('content', 'like', '%' . addcslashes($searchTerm, '%_\\') . '%')
+                                  ->orWhere('excerpt', 'like', '%' . addcslashes($searchTerm, '%_\\') . '%');
                             });
                         }
                         break;
@@ -171,8 +173,12 @@ class BlogService
 
             // 获取文章列表并预加载作者信息
             if (!empty($filters['search'])) {
-                $s = "%{$filters['search']}%";
-                $query = $query->orderByRaw('CASE WHEN title LIKE ? THEN 0 WHEN excerpt LIKE ? THEN 1 WHEN content LIKE ? THEN 2 ELSE 3 END', [$s, $s, $s]);
+                // 安全地处理搜索词，防止 SQL 注入
+                $searchTerm = '%' . addcslashes((string) $filters['search'], '%_\\') . '%';
+                $query = $query->orderByRaw(
+                    'CASE WHEN title LIKE ? THEN 0 WHEN excerpt LIKE ? THEN 1 WHEN content LIKE ? THEN 2 ELSE 3 END',
+                    [$searchTerm, $searchTerm, $searchTerm]
+                );
             }
 
             if ($sort === 'hot') {
@@ -191,7 +197,7 @@ class BlogService
         try {
             self::processPostExcerpts($posts);
         } catch (CommonMarkException $e) {
-            Log::error(trans('Failed to process post excerpts'), $e->getMessage());
+            Log::error('Failed to process post excerpts: ' . $e->getMessage());
             throw $e;
         }
 
