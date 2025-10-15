@@ -18,7 +18,7 @@ use support\Request;
 return [
     'debug' => getenv('APP_DEBUG'),
     'error_reporting' => E_ALL,
-    'default_timezone' => 'Asia/Shanghai',
+    'default_timezone' => 'UTC',  // 修复：使用 UTC 时区，与数据库保持一致
     'request_class' => Request::class,
     'public_path' => base_path() . DIRECTORY_SEPARATOR . 'public',
     'runtime_path' => base_path(false) . DIRECTORY_SEPARATOR . 'runtime',

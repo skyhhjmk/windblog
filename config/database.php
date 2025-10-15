@@ -15,6 +15,7 @@ return [
             'prefix' => '',
             'schema' => 'public',
             'sslmode' => 'prefer',
+            'timezone' => 'UTC',  // 修复：设置数据库连接时区为 UTC
             'options' => [
                 PDO::ATTR_PERSISTENT => false,
                 PDO::ATTR_EMULATE_PREPARES => false,

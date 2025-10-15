@@ -48,6 +48,10 @@ class EditorController
         $title = $request->post('title', '');
         $content = $request->post('content', '');
         $status = $request->post('status', 'draft');
+        $visibility = $request->post('visibility', 'public');
+        $password = $request->post('password', '');
+        $allow_comments = $request->post('allow_comments', 1);
+        $featured = $request->post('featured', 0);
         $authors = $request->post('authors', []);
         
         // 验证输入
@@ -71,8 +75,28 @@ class EditorController
             'title' => $title,
             'content' => $content,
             'status' => $status,
+            'visibility' => $visibility,
+            'allow_comments' => $allow_comments ? 1 : 0,
+            'featured' => $featured ? 1 : 0,
             'updated_at' => date('Y-m-d H:i:s')
         ];
+        
+        // 调试日志
+        \support\Log::info('EditorController::save - 接收到的数据', [
+            'allow_comments_raw' => $allow_comments,
+            'allow_comments_processed' => $data['allow_comments'],
+            'featured_raw' => $featured,
+            'featured_processed' => $data['featured'],
+            'visibility' => $visibility,
+            'post_id' => $post_id
+        ]);
+        
+        // 如果可见性是密码保护，处理密码字段
+        if ($visibility === 'password') {
+            $data['password'] = $password;
+        } else {
+            $data['password'] = null; // 清空密码
+        }
         
         try {
             if ($post_id > 0) {

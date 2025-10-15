@@ -31,8 +31,8 @@ class CommentController
             return json(['code' => 404, 'msg' => '文章不存在']);
         }
 
-        // 检查文章是否允许评论（如果有此字段）
-        if (isset($post->allow_comment) && !$post->allow_comment) {
+        // 检查文章是否允许评论
+        if (!$post->allow_comments) {
             return json(['code' => 403, 'msg' => '该文章已关闭评论']);
         }
 
@@ -201,6 +201,7 @@ class CommentController
 
     /**
      * 获取文章的评论列表
+     * 注意：即使文章关闭评论，也允许查看已有评论
      *
      * @param Request $request
      * @param int $postId
@@ -213,6 +214,8 @@ class CommentController
         if (!$post) {
             return json(['code' => 404, 'msg' => '文章不存在']);
         }
+
+        // 注意：不再检查 allow_comments，允许查看已有评论
 
         // 获取分页参数
         $page = max(1, (int) $request->get('page', 1));

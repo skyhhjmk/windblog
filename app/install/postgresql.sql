@@ -84,23 +84,30 @@ COMMENT ON COLUMN categories.deleted_at IS '删除时间';
 -- 创建文章表
 CREATE TABLE IF NOT EXISTS posts
 (
-    id            BIGSERIAL PRIMARY KEY,
-    title         VARCHAR(255)             NOT NULL,
-    slug          VARCHAR(255)             NOT NULL,
-    content_type  VARCHAR(10)              NOT NULL DEFAULT 'markdown',
-    content       TEXT                     NOT NULL,
-    excerpt       TEXT                              DEFAULT NULL,
-    status        VARCHAR(15)              NOT NULL DEFAULT 'draft',
-    featured      BOOLEAN                  NOT NULL DEFAULT false,
-    comment_count INTEGER                  NOT NULL DEFAULT 0,
-    published_at  TIMESTAMP WITH TIME ZONE NULL     DEFAULT NULL,
-    created_at    TIMESTAMP WITH TIME ZONE          DEFAULT CURRENT_TIMESTAMP,
-    updated_at    TIMESTAMP WITH TIME ZONE          DEFAULT CURRENT_TIMESTAMP,
-    deleted_at    TIMESTAMP WITH TIME ZONE NULL     DEFAULT NULL,
+    id             BIGSERIAL PRIMARY KEY,
+    title          VARCHAR(255)             NOT NULL,
+    slug           VARCHAR(255)             NOT NULL,
+    content_type   VARCHAR(10)              NOT NULL DEFAULT 'markdown',
+    content        TEXT                     NOT NULL,
+    excerpt        TEXT                              DEFAULT NULL,
+    status         VARCHAR(15)              NOT NULL DEFAULT 'draft',
+    visibility     VARCHAR(20)              NOT NULL DEFAULT 'public',
+    password       VARCHAR(255)                      DEFAULT NULL,
+    featured       BOOLEAN                  NOT NULL DEFAULT false,
+    allow_comments BOOLEAN                  NOT NULL DEFAULT true,
+    comment_count  INTEGER                  NOT NULL DEFAULT 0,
+    published_at   TIMESTAMP WITH TIME ZONE NULL     DEFAULT NULL,
+    created_at     TIMESTAMP WITH TIME ZONE          DEFAULT CURRENT_TIMESTAMP,
+    updated_at     TIMESTAMP WITH TIME ZONE          DEFAULT CURRENT_TIMESTAMP,
+    deleted_at     TIMESTAMP WITH TIME ZONE NULL     DEFAULT NULL,
     UNIQUE (slug),
     CONSTRAINT chk_posts_content_type CHECK (content_type IN ('markdown', 'html', 'text', 'visual')),
-    CONSTRAINT chk_posts_status CHECK (status IN ('draft', 'published', 'archived'))
+    CONSTRAINT chk_posts_status CHECK (status IN ('draft', 'published', 'archived')),
+    CONSTRAINT chk_posts_visibility CHECK (visibility IN ('public', 'private', 'password'))
 );
+
+CREATE INDEX IF NOT EXISTS idx_posts_visibility ON posts (visibility);
+CREATE INDEX IF NOT EXISTS idx_posts_allow_comments ON posts (allow_comments);
 
 COMMENT ON TABLE posts IS '文章表';
 COMMENT ON COLUMN posts.title IS '文章标题';
@@ -109,7 +116,10 @@ COMMENT ON COLUMN posts.content_type IS '内容类型';
 COMMENT ON COLUMN posts.content IS '文章内容';
 COMMENT ON COLUMN posts.excerpt IS '文章摘要';
 COMMENT ON COLUMN posts.status IS '文章状态';
+COMMENT ON COLUMN posts.visibility IS '文章可见性';
+COMMENT ON COLUMN posts.password IS '文章密码';
 COMMENT ON COLUMN posts.featured IS '是否精选';
+COMMENT ON COLUMN posts.allow_comments IS '是否允许评论';
 COMMENT ON COLUMN posts.comment_count IS '评论数量';
 COMMENT ON COLUMN posts.published_at IS '发布时间';
 COMMENT ON COLUMN posts.created_at IS '创建时间';
@@ -211,8 +221,8 @@ COMMENT ON COLUMN links.deleted_at IS '删除时间';
 CREATE TABLE IF NOT EXISTS flo_links
 (
     id               BIGSERIAL PRIMARY KEY,
-    keyword          VARCHAR(255)             NOT NULL,
-    url              VARCHAR(500)             NOT NULL,
+    keyword          VARCHAR(255) NOT NULL,
+    url              VARCHAR(500) NOT NULL,
     title            VARCHAR(255)             DEFAULT NULL,
     description      TEXT                     DEFAULT NULL,
     image            VARCHAR(500)             DEFAULT NULL,

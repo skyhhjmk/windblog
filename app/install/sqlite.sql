@@ -49,15 +49,23 @@ CREATE TABLE IF NOT EXISTS posts (
   content TEXT NOT NULL,
   excerpt TEXT DEFAULT NULL,
   status TEXT NOT NULL DEFAULT 'draft',
+  visibility TEXT NOT NULL DEFAULT 'public',
+  password TEXT DEFAULT NULL,
   featured INTEGER NOT NULL DEFAULT 0,
+  allow_comments INTEGER NOT NULL DEFAULT 1,
   comment_count INTEGER NOT NULL DEFAULT 0,
   published_at DATETIME DEFAULT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   deleted_at DATETIME DEFAULT NULL,
   CHECK (content_type IN ('markdown', 'html', 'text', 'visual')),
-  CHECK (status IN ('draft', 'published', 'archived'))
+  CHECK (status IN ('draft', 'published', 'archived')),
+  CHECK (visibility IN ('public', 'private', 'password'))
 );
+
+CREATE INDEX IF NOT EXISTS idx_posts_featured ON posts(featured);
+CREATE INDEX IF NOT EXISTS idx_posts_visibility ON posts(visibility);
+CREATE INDEX IF NOT EXISTS idx_posts_allow_comments ON posts(allow_comments);
 
 -- 创建文章-分类关联表
 CREATE TABLE IF NOT EXISTS post_category (

@@ -86,6 +86,47 @@
                         </select>
                     </div>
 
+                    <!-- 可见性 -->
+                    <div>
+                        <label for="post-visibility" class="block text-sm text-gray-600 mb-1">可见性</label>
+                        <select id="post-visibility"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="public">公开</option>
+                            <option value="private">私密</option>
+                            <option value="password">密码保护</option>
+                        </select>
+                    </div>
+
+                    <!-- 文章密码 -->
+                    <div id="password-field" class="hidden">
+                        <label for="post-password" class="block text-sm text-gray-600 mb-1">文章密码</label>
+                        <input type="text" id="post-password"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                               placeholder="设置文章密码">
+                    </div>
+
+                    <!-- 评论设置 -->
+                    <div class="p-3 bg-gray-50 rounded border border-gray-200">
+                        <label class="flex items-center justify-between cursor-pointer">
+                            <span class="text-sm text-gray-700">允许评论</span>
+                            <div class="relative">
+                                <input type="checkbox" id="allow-comments" class="sr-only peer" checked>
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- 精选文章 -->
+                    <div class="p-3 bg-gray-50 rounded border border-gray-200">
+                        <label class="flex items-center justify-between cursor-pointer">
+                            <span class="text-sm text-gray-700">精选文章</span>
+                            <div class="relative">
+                                <input type="checkbox" id="post-featured" class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </div>
+                        </label>
+                    </div>
+
                     <!-- 作者选择 -->
                     <div class="relative">
                         <label class="block text-sm text-gray-600 mb-1">作者</label>
@@ -170,6 +211,11 @@
         // 获取DOM元素 - 使用防御性编程
         const postTitle = document.getElementById('post-title') || {value: ''};
         const postStatus = document.getElementById('post-status') || {value: 'draft'};
+        const postVisibility = document.getElementById('post-visibility') || {value: 'public'};
+        const postPassword = document.getElementById('post-password') || {value: ''};
+        const passwordField = document.getElementById('password-field');
+        const allowComments = document.getElementById('allow-comments') || {checked: true};
+        const postFeatured = document.getElementById('post-featured') || {checked: false};
         const pageTitle = document.getElementById('page-title') || {textContent: '文章编辑'};
         let defaultContent = `# 请输入文章标题
 
@@ -495,6 +541,32 @@ flowchart TD
                                     statusSelect.value = data.data.status || 'draft';
                                 }
 
+                                // 设置可见性
+                                const visibilitySelect = document.getElementById('post-visibility');
+                                if (visibilitySelect) {
+                                    visibilitySelect.value = data.data.visibility || 'public';
+                                    // 触发change事件以显示/隐藏密码字段
+                                    visibilitySelect.dispatchEvent(new Event('change'));
+                                }
+
+                                // 设置密码
+                                const passwordInput = document.getElementById('post-password');
+                                if (passwordInput && data.data.password) {
+                                    passwordInput.value = data.data.password;
+                                }
+
+                                // 设置评论允许
+                                const allowCommentsCheckbox = document.getElementById('allow-comments');
+                                if (allowCommentsCheckbox) {
+                                    allowCommentsCheckbox.checked = data.data.allow_comments !== false;
+                                }
+
+                                // 设置精选文章
+                                const featuredCheckbox = document.getElementById('post-featured');
+                                if (featuredCheckbox) {
+                                    featuredCheckbox.checked = data.data.featured === true || data.data.featured === 1;
+                                }
+
                                 if (pageTitleElem && typeof pageTitleElem.textContent !== 'undefined') {
                                     // 设置页面标题
                                     pageTitleElem.textContent = `编辑文章: ${data.data.title || '未命名'}`;
@@ -793,6 +865,23 @@ flowchart TD
                 // 准备作者数据
                 const authorIds = selectedAuthors.map(a => a.id);
 
+                // 准备保存数据
+                const saveData = {
+                    post_id: postId,
+                    title: postTitle.value.trim(),
+                    content: vditor.getValue(),
+                    status: postStatus.value,
+                    visibility: postVisibility.value,
+                    allow_comments: allowComments.checked ? 1 : 0,
+                    featured: postFeatured.checked ? 1 : 0,
+                    authors: authorIds
+                };
+
+                // 如果是密码保护，添加密码字段
+                if (postVisibility.value === 'password' && postPassword.value) {
+                    saveData.password = postPassword.value;
+                }
+
                 // 发送到服务器保存
                 fetch('/app/admin/editor/save', {
                     method: 'POST',
@@ -800,13 +889,7 @@ flowchart TD
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
                     },
-                    body: JSON.stringify({
-                        post_id: postId,
-                        title: postTitle.value.trim(),
-                        content: vditor.getValue(),
-                        status: postStatus.value,
-                        authors: authorIds
-                    })
+                    body: JSON.stringify(saveData)
                 })
                     .then(response => response.json())
                     .then(data => {
@@ -829,6 +912,17 @@ flowchart TD
 
         // 初始化作者选择器
         initAuthorsSelector();
+
+        // 可见性字段变化监听，显示/隐藏密码输入框
+        if (postVisibility && passwordField) {
+            postVisibility.addEventListener('change', function() {
+                if (this.value === 'password') {
+                    passwordField.classList.remove('hidden');
+                } else {
+                    passwordField.classList.add('hidden');
+                }
+            });
+        }
 
         // 清除localStorage中与当前编辑器相关的缓存
         function clearLocalCache() {

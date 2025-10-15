@@ -14,24 +14,28 @@ use Throwable;
 /**
  * 文章模型
  *
- * @property int                 $id             文章ID
- * @property string              $title          文章标题
- * @property string              $slug           文章URL别名
- * @property string              $content_type   内容类型 (e.g., 'markdown', 'html')
- * @property string              $content        文章内容
- * @property string              $excerpt        文章摘要
- * @property string              $status         文章状态 (e.g., 'published', 'draft', 'archived')
- * @property Carbon|null         $created_at     创建时间
- * @property Carbon|null         $updated_at     更新时间
- * @property Carbon|null         $deleted_at     软删除时间
- * @property-read PostAuthor[]   $postAuthors    文章-作者关联记录
- * @property-read Author[]       $authors        通过中间表关联的所有作者
- * @property-read Author         $primaryAuthor  文章的主要作者
- * @property-read PostCategory[] $postCategories 文章-分类关联记录
- * @property-read Category[]     $categories     通过中间表关联的所有分类
- * @property-read PostTag[]      $postTags       文章-标签关联记录
- * @property-read Tag[]          $tags           通过中间表关联的所有标签
- * @property-read Comment[]      $comments       文章的评论
+ * @property int                 $id              文章ID
+ * @property string              $title           文章标题
+ * @property string              $slug            文章URL别名
+ * @property string              $content_type    内容类型 (e.g., 'markdown', 'html')
+ * @property string              $content         文章内容
+ * @property string              $excerpt         文章摘要
+ * @property string              $status          文章状态 (e.g., 'published', 'draft', 'archived')
+ * @property string              $visibility      文章可见性 (e.g., 'public', 'private')
+ * @property string              $password        文章密码
+ * @property bool                $featured        是否为特色文章
+ * @property bool                $allow_comments  是否允许评论
+ * @property Carbon|null         $created_at      创建时间
+ * @property Carbon|null         $updated_at      更新时间
+ * @property Carbon|null         $deleted_at      软删除时间
+ * @property-read PostAuthor[]   $postAuthors     文章-作者关联记录
+ * @property-read Author[]       $authors         通过中间表关联的所有作者
+ * @property-read Author         $primaryAuthor   文章的主要作者
+ * @property-read PostCategory[] $postCategories  文章-分类关联记录
+ * @property-read Category[]     $categories      通过中间表关联的所有分类
+ * @property-read PostTag[]      $postTags        文章-标签关联记录
+ * @property-read Tag[]          $tags            通过中间表关联的所有标签
+ * @property-read Comment[]      $comments        文章的评论
  *
  * @method static Builder|Post published() 只查询已发布的文章
  * @method static Builder|Post draft() 只查询草稿箱的文章
@@ -99,6 +103,11 @@ class Post extends Model
         'content',
         'excerpt',
         'status',
+        'visibility',
+        'password',
+        'featured',
+        'allow_comments',
+        'published_at',
     ];
 
     /**
@@ -109,9 +118,13 @@ class Post extends Model
      */
     protected $casts = [
         'id' => 'integer',
+        'featured' => 'boolean',
+        'allow_comments' => 'boolean',
+        'comment_count' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',
+        'published_at' => 'datetime',
     ];
 
     /**
