@@ -119,6 +119,10 @@ ES 仅仅被用于搜索优化，这也许说得过去
 
 ***本项目仍然处于开发阶段***
 
+一键部署：
+
+[![通过雨云一键部署](https://rainyun-apps.cn-nb1.rains3.com/materials/deploy-on-rainyun-cn.svg)](https://app.rainyun.com/apps/rca/store/7117/github_?s=rainyun_app7117)
+
 ## Linux
 
 如果使用宝塔面板等可直接安装 PHP 环境后使用命令行启动
