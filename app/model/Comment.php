@@ -3,8 +3,9 @@
 namespace app\model;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use support\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Throwable;
 
 /**
@@ -16,6 +17,7 @@ use Throwable;
  * @property string $guest_name 访客姓名
  * @property string $guest_email 访客邮箱
  * @property string $content 评论内容
+ * @property string $quoted_data 引用数据（JSON格式）
  * @property string $status 评论状态
  * @property string $ip_address IP地址
  * @property string $user_agent 用户代理
@@ -62,6 +64,24 @@ class Comment extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',
+    ];
+
+    /**
+     * 可批量赋值的属性
+     *
+     * @var array
+     */
+    protected $fillable = [
+        'post_id',
+        'user_id',
+        'parent_id',
+        'guest_name',
+        'guest_email',
+        'content',
+        'quoted_data',
+        'status',
+        'ip_address',
+        'user_agent',
     ];
 
     /**
@@ -196,5 +216,15 @@ class Comment extends Model
     public function author(): BelongsTo
     {
         return $this->belongsTo(Author::class, 'user_id', 'id');
+    }
+
+    /**
+     * 获取评论的回复
+     *
+     * @return HasMany
+     */
+    public function replies(): HasMany
+    {
+        return $this->hasMany(Comment::class, 'parent_id', 'id');
     }
 }

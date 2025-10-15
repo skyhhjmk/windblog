@@ -55,6 +55,8 @@
             document.addEventListener('mouseover', (e) => {
                 const link = e.target.closest(this.options.selector);
                 if (link) {
+                    // 屏蔽 raw_md 容器内的链接
+                    if (link.closest('#raw_md')) return;
                     this.handleMouseEnter(link, e);
                 }
             });
@@ -62,6 +64,7 @@
             document.addEventListener('mouseout', (e) => {
                 const link = e.target.closest(this.options.selector);
                 if (link && !this.tooltip.contains(e.relatedTarget)) {
+                    if (link.closest('#raw_md')) return;
                     this.handleMouseLeave(link);
                 }
             });
@@ -70,6 +73,7 @@
             document.addEventListener('click', (e) => {
                 const link = e.target.closest(this.options.selector);
                 if (link) {
+                    if (link.closest('#raw_md')) return;
                     this.hide(true);
                 }
             });

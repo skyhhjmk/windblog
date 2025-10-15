@@ -232,6 +232,7 @@ CREATE TABLE IF NOT EXISTS `comments` (
   `guest_name` varchar(255) DEFAULT NULL,
   `guest_email` varchar(255) DEFAULT NULL,
   `content` text NOT NULL,
+  `quoted_data` text DEFAULT NULL COMMENT '引用数据(JSON格式,包含被引用评论的ID、作者、内容等信息)',
   `status` varchar(10) NOT NULL DEFAULT 'pending',
   `ip_address` varchar(45) DEFAULT NULL,
   `user_agent` varchar(255) DEFAULT NULL,

@@ -62,9 +62,64 @@
                 </div>
             </div>
         </article>
+
+        <!-- 评论区域 -->
+        <div class="mt-8 bg-white rounded-xl shadow-md p-6" id="comments-section">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">评论</h2>
+
+            <!-- 评论列表 -->
+            <div id="comments-list" class="mb-8">
+                <!-- 评论将通过JavaScript动态加载 -->
+            </div>
+
+            <!-- 评论表单 -->
+            <div class="border-t border-gray-200 pt-6">
+                <h3 class="text-lg font-medium text-gray-800 mb-4">发表评论</h3>
+                <form id="comment-form" class="space-y-4">
+                <input type="hidden" id="post-id" name="post_id" value="{{ post.id }}">
+                <input type="hidden" id="parent-id" name="parent_id" value="0">
+                <input type="hidden" id="quoted-text" name="quoted_text" value="">
+                <input type="hidden" id="quoted-comment-id" name="quoted_comment_id" value="0">
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="guest_name" class="block text-sm font-medium text-gray-700 mb-1">姓名 *</label>
+                            <input type="text" id="guest_name" name="guest_name" required
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label for="guest_email" class="block text-sm font-medium text-gray-700 mb-1">邮箱 *</label>
+                            <input type="email" id="guest_email" name="guest_email" required
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="content" class="block text-sm font-medium text-gray-700 mb-1">评论内容 *</label>
+                        <textarea id="content" name="content" rows="4" required
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                        <div id="selected-text-quote" class="mt-2 p-2 bg-gray-100 border-l-4 border-blue-500 text-sm text-gray-600 hidden">
+                            <span class="font-medium">引用:</span>
+                            <span id="selected-text-content"></span>
+                            <button type="button" id="remove-quote" class="ml-2 text-red-500 hover:text-red-700">&times;</button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <button type="submit"
+                                class="px-6 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors">
+                            提交评论
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
-    <div hidden="hidden" id="raw_md">{{ post.content|raw }}</div>
+    <script id="raw_md" type="text/plain">{{ post.content|raw }}</script>
+    <div id="selection-tooltip" class="fixed bg-gray-800 text-white px-3 py-2 rounded text-sm hidden z-50">
+        <button id="quote-selection-btn" class="hover:text-blue-300">引用选中内容评论</button>
+    </div>
     <script>
         // 文章页渲染封装：兼容首开与 PJAX 进入
         function renderPost() {
@@ -78,7 +133,7 @@
             const raw = document.getElementById('raw_md');
             if (!container || !raw) return;
             container.innerHTML = '';
-            Vditor.preview(container, raw.innerHTML, {
+            Vditor.preview(container, raw.textContent, {
                 mode: 'light',
                 lang: 'zh_CN',
                 anchor: 1, // 标题锚点
@@ -86,10 +141,400 @@
                 lazyLoadImage: 'https://cdn.jsdelivr.net/npm/vditor/dist/images/img-loading.svg',
                 after() {
                     try { raw.remove(); } catch (e) {}
+                    // 初始化评论功能
+                    initComments();
+                    // 初始化划词评论功能
+                    initTextSelection();
                 }
             });
         }
         document.addEventListener('DOMContentLoaded', renderPost);
         document.addEventListener('page:ready', renderPost);
+
+        // 初始化评论功能
+        function initComments() {
+            const postId = {{ post.id }};
+
+            // 加载评论
+            loadComments(postId);
+
+            // 提交评论表单
+            const commentForm = document.getElementById('comment-form');
+            if (commentForm) {
+                commentForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    submitComment(postId);
+                });
+
+                // 移除回车提交功能，使回车正常换行
+                const contentTextarea = document.getElementById('content');
+                contentTextarea.addEventListener('keydown', function(e) {
+                    // 不做任何阻止，让回车正常换行
+                });
+            }
+
+            // 移除引用按钮
+            const removeQuoteBtn = document.getElementById('remove-quote');
+            if (removeQuoteBtn) {
+                removeQuoteBtn.addEventListener('click', function() {
+                    document.getElementById('selected-text-quote').classList.add('hidden');
+                    document.getElementById('parent-id').value = '0';
+                    document.getElementById('quoted-text').value = '';
+                    document.getElementById('quoted-comment-id').value = '0';
+                });
+            }
+        }
+
+        // 加载评论
+        function loadComments(postId) {
+            fetch('/comment/list/' + postId)
+                .then(response => response.json())
+                .then(data => {
+                    const commentsList = document.getElementById('comments-list');
+                    if (data.code === 0) {
+                        renderComments(commentsList, data.data);
+                    } else {
+                        commentsList.innerHTML = '<p class="text-gray-500">加载评论失败</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading comments:', error);
+                    document.getElementById('comments-list').innerHTML = '<p class="text-gray-500">加载评论失败</p>';
+                });
+        }
+
+        // 渲染评论
+        function renderComments(container, comments) {
+            // Handle nested structure where comments is an object with a comments field
+            const commentsList = Array.isArray(comments) ? comments : (comments.comments || []);
+
+            if (!commentsList || commentsList.length === 0) {
+                container.innerHTML = '<p class="text-gray-500">暂无评论</p>';
+                return;
+            }
+
+            let commentsHtml = '';
+            commentsList.forEach(comment => {
+                // 处理评论内容
+                let content = comment.content.replace(/\n/g, '<br>');
+
+                // 如果有结构化的引用数据，显示引用块
+                let quoteHtml = '';
+                if (comment.quote && comment.quote.content) {
+                    const quoteType = comment.quote.type || 'post';
+                    const quoteAuthor = comment.quote.author ? `@${comment.quote.author}` : '文章内容';
+                    quoteHtml = `
+                        <div class="border-l-4 border-blue-500 pl-3 py-2 mb-3 bg-blue-50 rounded">
+                            <div class="text-xs text-gray-500 mb-1">${quoteAuthor}:</div>
+                            <div class="text-sm text-gray-700">${comment.quote.content}</div>
+                        </div>
+                    `;
+                }
+
+                commentsHtml += `
+                    <div class="mb-6 border-b border-gray-100 pb-6" data-comment-id="${comment.id}">
+                        <div class="flex items-start">
+                            <div class="flex-shrink-0 mr-3">
+                                <div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                    <span class="text-gray-600 font-medium">${comment.guest_name.charAt(0)}</span>
+                                </div>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center">
+                                    <h4 class="text-sm font-medium text-gray-900">${comment.guest_name}</h4>
+                                    <span class="mx-2 text-gray-300">•</span>
+                                    <span class="text-xs text-gray-500">${formatDate(comment.created_at)}</span>
+                                </div>
+                                <div class="mt-2 text-gray-700">
+                                    ${quoteHtml}
+                                    ${content}
+                                </div>
+                                <div class="mt-2">
+                                    <button class="text-xs text-blue-600 hover:text-blue-800 reply-btn"
+                                            data-comment-id="${comment.id}"
+                                            data-comment-name="${comment.guest_name}">
+                                        回复
+                                    </button>
+                                </div>
+
+                                <!-- 回复列表 -->
+                                ${comment.replies && comment.replies.length > 0 ? `
+                                    <div class="mt-4 ml-6 space-y-4">
+                                        ${comment.replies.map(reply => {
+                                            // 处理回复内容
+                                            let replyContent = reply.content.replace(/\n/g, '<br>');
+
+                                            // 如果有结构化的引用数据，显示引用块
+                                            let replyQuoteHtml = '';
+                                            if (reply.quote && reply.quote.content) {
+                                                const quoteAuthor = reply.quote.author ? `@${reply.quote.author}` : '文章内容';
+                                                replyQuoteHtml = `
+                                                    <div class="border-l-4 border-blue-500 pl-2 py-1 mb-2 bg-blue-50 rounded">
+                                                        <div class="text-xs text-gray-500 mb-1">${quoteAuthor}:</div>
+                                                        <div class="text-xs text-gray-700">${reply.quote.content}</div>
+                                                    </div>
+                                                `;
+                                            }
+
+                                            return `
+                                                <div class="flex items-start" data-comment-id="${reply.id}">
+                                                    <div class="flex-shrink-0 mr-3">
+                                                        <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                                                            <span class="text-gray-500 text-xs">${reply.guest_name.charAt(0)}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="flex-1">
+                                                        <div class="flex items-center">
+                                                            <h5 class="text-xs font-medium text-gray-900">${reply.guest_name}</h5>
+                                                            <span class="mx-1 text-gray-300">•</span>
+                                                            <span class="text-xs text-gray-500">${formatDate(reply.created_at)}</span>
+                                                        </div>
+                                                        <div class="mt-1 text-sm text-gray-700">
+                                                            ${replyQuoteHtml}
+                                                            ${replyContent}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            `;
+                                        }).join('')}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = commentsHtml;
+
+            // 绑定回复按钮事件
+            document.querySelectorAll('.reply-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const commentId = this.getAttribute('data-comment-id');
+                    const commentName = this.getAttribute('data-comment-name');
+                    replyToComment(commentId, commentName);
+                });
+            });
+        }
+
+        // 回复评论
+        function replyToComment(commentId, commentName) {
+            document.getElementById('parent-id').value = commentId;
+            document.getElementById('selected-text-content').textContent = `${commentName}: `;
+            document.getElementById('selected-text-quote').classList.remove('hidden');
+            document.getElementById('quoted-comment-id').value = commentId;
+
+            // 滚动到评论表单
+            document.getElementById('comment-form').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // 提交评论
+        function submitComment(postId) {
+            const form = document.getElementById('comment-form');
+            const formData = new FormData(form);
+
+            // 添加CSRF token（如果需要）
+            // formData.append('_token', '{{ csrf_token() }}');
+
+            fetch('/comment/submit/' + postId, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 0) {
+                    // 重置表单
+                    form.reset();
+                    document.getElementById('selected-text-quote').classList.add('hidden');
+                    document.getElementById('parent-id').value = '0';
+                    document.getElementById('quoted-text').value = '';
+                    document.getElementById('quoted-comment-id').value = '0';
+
+                    // 重新加载评论
+                    loadComments(postId);
+                } else {
+                    alert('评论提交失败: ' + data.msg);
+                }
+            })
+            .catch(error => {
+                console.error('Error submitting comment:', error);
+                alert('评论提交失败，请稍后再试');
+            });
+        }
+
+        // 格式化日期
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diff = now - date;
+
+            if (diff < 60000) { // 1分钟内
+                return '刚刚';
+            } else if (diff < 3600000) { // 1小时内
+                return Math.floor(diff / 60000) + '分钟前';
+            } else if (diff < 86400000) { // 1天内
+                return Math.floor(diff / 3600000) + '小时前';
+            } else {
+                return date.getFullYear() + '年' + (date.getMonth() + 1) + '月' + date.getDate() + '日';
+            }
+        }
+
+        // 初始化划词评论功能
+        function initTextSelection() {
+            const postContainer = document.getElementById('post-container');
+            const tooltip = document.getElementById('selection-tooltip');
+            const quoteBtn = document.getElementById('quote-selection-btn');
+            const selectedTextQuote = document.getElementById('selected-text-quote');
+            const selectedTextContent = document.getElementById('selected-text-content');
+            const quotedText = document.getElementById('quoted-text');
+            const parentId = document.getElementById('parent-id');
+            const commentForm = document.getElementById('comment-form');
+            const textarea = document.getElementById('content');
+
+            // 检查所有必需元素是否存在
+            if (!postContainer || !tooltip || !quoteBtn || !selectedTextQuote || !selectedTextContent || !quotedText) {
+                console.error('Required elements for text selection not found');
+                return;
+            }
+
+            // 变量用于跟踪是否显示了提示框
+            let tooltipVisible = false;
+            let currentSelection = '';
+            let tooltipShownAt = 0; // 记录提示框显示时间，用于防抖首次点击
+
+            // 监听鼠标释放事件（使用选区矩形定位）
+            postContainer.addEventListener('mouseup', function() {
+                setTimeout(showTooltipForSelection, 0);
+            });
+
+            // 监听选区变化，动态更新或隐藏提示框
+            document.addEventListener('selectionchange', function() {
+                setTimeout(showTooltipForSelection, 0);
+            });
+
+            // 滚动或窗口尺寸变化时隐藏提示框，避免位置错乱
+            window.addEventListener('scroll', function(){ tooltip.classList.add('hidden'); tooltipVisible = false; }, { passive: true });
+            window.addEventListener('resize', function(){ tooltip.classList.add('hidden'); tooltipVisible = false; });
+
+            function showTooltipForSelection() {
+                const selection = window.getSelection();
+                if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+                    tooltip.classList.add('hidden');
+                    tooltipVisible = false;
+                    return;
+                }
+                const selectedText = selection.toString().trim();
+                if (!selectedText || selectedText.length <= 1) {
+                    tooltip.classList.add('hidden');
+                    tooltipVisible = false;
+                    return;
+                }
+                let inContainer = false;
+                try {
+                    const range = selection.getRangeAt(0);
+                    const anc = range.commonAncestorContainer;
+                    const node = (anc && anc.nodeType === 1) ? anc : (anc ? anc.parentNode : null);
+                    if (node && postContainer.contains(node)) inContainer = true;
+                    if (!inContainer) {
+                        const an = selection.anchorNode;
+                        const fn = selection.focusNode;
+                        if ((an && postContainer.contains(an)) || (fn && postContainer.contains(fn))) inContainer = true;
+                    }
+                } catch (_) {}
+                if (!inContainer) {
+                    tooltip.classList.add('hidden');
+                    tooltipVisible = false;
+                    return;
+                }
+                currentSelection = selectedText;
+                showTooltipFromSelection();
+                tooltipVisible = true;
+            }
+
+            // 点击页面其他地方隐藏提示框
+            document.addEventListener('mousedown', function(e) {
+                // 只有当点击的不是提示框内的元素时才隐藏
+                if (tooltip && !tooltip.contains(e.target)) {
+                    tooltip.classList.add('hidden');
+                    tooltipVisible = false;
+                }
+            });
+
+            // 引用选中文本按钮点击事件
+            quoteBtn.addEventListener('click', function(e) {
+                e.stopPropagation(); // 阻止事件冒泡
+                // 防止在显示后立即因残留点击而误触发
+                if (Date.now() - tooltipShownAt < 300) {
+                    return;
+                }
+
+                console.log('Quote button clicked, processing selection');
+
+                if (currentSelection) {
+                    // 显示引用
+                    selectedTextContent.textContent = currentSelection;
+                    selectedTextQuote.classList.remove('hidden');
+                    quotedText.value = currentSelection;
+
+                    // 清除之前的父评论ID
+                    if (parentId) {
+                        parentId.value = '0';
+                    }
+
+                    // 滚动到评论表单
+                    if (commentForm) {
+                        commentForm.scrollIntoView({ behavior: 'smooth' });
+                        // 聚焦到评论框
+                        if (textarea) {
+                            setTimeout(() => textarea.focus(), 500);
+                        }
+                    }
+                }
+
+                // 隐藏提示框
+                tooltip.classList.add('hidden');
+                tooltipVisible = false;
+            });
+        }
+
+        // 显示提示框
+        function showTooltipFromSelection() {
+            const tooltip = document.getElementById('selection-tooltip');
+            if (!tooltip) return;
+            const sel = window.getSelection();
+            if (!sel || sel.rangeCount === 0) return;
+            const range = sel.getRangeAt(0);
+            const rect = range.getBoundingClientRect();
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+
+            // 先显示以便测量尺寸（不闪烁）
+            tooltip.style.visibility = 'hidden';
+            tooltip.classList.remove('hidden');
+            const tooltipWidth = tooltip.offsetWidth || 120;
+            const tooltipHeight = tooltip.offsetHeight || 30;
+
+            // 计算基于 viewport 的位置（fixed 定位不需要 pageOffset）
+            let finalX = (rect.left + rect.width / 2) - (tooltipWidth / 2);
+            let finalY = rect.top - tooltipHeight - 8; // 优先显示在上方
+            if (finalY < 8) {
+                finalY = rect.bottom + 8; // 空间不足时显示在下方
+            }
+            // 视口内约束
+            finalX = Math.max(8, Math.min(finalX, viewportWidth - tooltipWidth - 8));
+            finalY = Math.max(8, Math.min(finalY, viewportHeight - tooltipHeight - 8));
+
+            // 应用位置
+            tooltip.style.position = 'fixed';
+            tooltip.style.left = Math.round(finalX) + 'px';
+            tooltip.style.top = Math.round(finalY) + 'px';
+            tooltip.style.zIndex = '9999';
+            tooltip.style.visibility = '';
+
+            // 记录显示时间并短暂禁用点击，避免鼠标抬起后的残余 click 命中按钮
+            tooltipShownAt = Date.now();
+            tooltip.style.pointerEvents = 'none';
+            setTimeout(() => { tooltip.style.pointerEvents = 'auto'; }, 250);
+        }
     </script>
 {% endblock %}

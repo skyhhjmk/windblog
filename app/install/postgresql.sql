@@ -385,6 +385,7 @@ CREATE TABLE IF NOT EXISTS comments
     guest_name  VARCHAR(255)                      DEFAULT NULL,
     guest_email VARCHAR(255)                      DEFAULT NULL,
     content     TEXT                     NOT NULL,
+    quoted_data TEXT                              DEFAULT NULL,
     status      VARCHAR(10)              NOT NULL DEFAULT 'pending',
     ip_address  VARCHAR(45)                       DEFAULT NULL,
     user_agent  VARCHAR(255)                      DEFAULT NULL,
@@ -404,6 +405,7 @@ COMMENT ON COLUMN comments.parent_id IS '父评论ID';
 COMMENT ON COLUMN comments.guest_name IS '访客姓名';
 COMMENT ON COLUMN comments.guest_email IS '访客邮箱';
 COMMENT ON COLUMN comments.content IS '评论内容';
+COMMENT ON COLUMN comments.quoted_data IS '引用数据(JSON格式,包含被引用评论的ID、作者、内容等信息)';
 COMMENT ON COLUMN comments.status IS '评论状态';
 COMMENT ON COLUMN comments.ip_address IS 'IP地址';
 COMMENT ON COLUMN comments.user_agent IS '用户代理';

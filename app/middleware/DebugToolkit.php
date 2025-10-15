@@ -36,9 +36,9 @@ class DebugToolkit implements MiddlewareInterface
         $hasQuery = !empty($request->get('debug'));
         $hasCookie = $request->cookie('debug_toolkit') === '1';
 
-        //        if (!$hasHeader) {
-        //            return $response;
-        //        }
+        if (!$hasHeader) {
+            return $response;
+        }
 
         // 安全注入：仅当响应体可用且包含 </body>，且未已注入
         $content = $response->rawBody();
@@ -48,7 +48,7 @@ class DebugToolkit implements MiddlewareInterface
         if (stripos($content, '</body>') === false) {
             return $response;
         }
-        if (strpos($content, '<!-- Debug Toolkit Start -->') !== false) {
+        if (str_contains($content, '<!-- Debug Toolkit Start -->')) {
             return $response;
         }
 

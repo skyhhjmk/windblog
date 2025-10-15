@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>评论管理</title>
+    <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css"/>
+    <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+    <script src="/app/admin/component/pear/pear.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 pear-container">
+<div class="layui-card rounded-lg shadow-sm">
+    <div class="layui-card-body">
+        <div class="flex border-b border-gray-200 mb-5" id="commentTab">
+            <div class="tab-item px-4 py-2 cursor-pointer text-blue-500 border-b-2 border-blue-500 font-medium" data-type="normal">评论列表</div>
+            <div class="tab-item px-4 py-2 cursor-pointer text-gray-500 hover:text-gray-700 font-medium" data-type="trash">回收站</div>
+        </div>
+        <form id="commentForm" class="layui-form" action="">
+            <div class="layui-form-item">
+                <div class="layui-inline">
+                    <label class="layui-form-label font-medium">关键词</label>
+                    <div class="layui-input-inline">
+                        <input type="text" name="keyword" placeholder="内容/昵称/邮箱" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-inline" id="statusFilter">
+                    <label class="layui-form-label font-medium">状态</label>
+                    <div class="layui-input-inline">
+                        <select name="status" class="layui-input">
+                            <option value="">全部</option>
+                            <option value="pending">待审核</option>
+                            <option value="approved">已通过</option>
+                            <option value="spam">垃圾</option>
+                            <option value="trash">丢弃</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-inline ml-[50px]">
+                    <button class="pear-btn pear-btn-md pear-btn-primary" lay-submit lay-filter="comment-query">
+                        <i class="layui-icon layui-icon-search"></i>
+                        查询
+                    </button>
+                    <button type="reset" class="pear-btn pear-btn-md">
+                        <i class="layui-icon layui-icon-refresh"></i>
+                        重置
+                    </button>
+                </div>
+            </div>
+        </form>
+        <input type="hidden" id="isDeleted" name="isDeleted" value="false">
+    </div>
+</div>
+<div class="layui-card rounded-lg shadow-sm">
+    <div class="layui-card-body">
+        <table id="comment-table" lay-filter="comment-table"></table>
+    </div>
+</div>
+
+<script type="text/html" id="comment-toolbar-normal">
+    <button class="pear-btn pear-btn-success pear-btn-md" lay-event="batchApprove">
+        <i class="layui-icon layui-icon-ok"></i>
+        批量通过
+    </button>
+    <button class="pear-btn pear-btn-warming pear-btn-md" lay-event="batchSpam">
+        <i class="layui-icon layui-icon-face-cry"></i>
+        标记垃圾
+    </button>
+    <button class="pear-btn pear-btn-warming pear-btn-md" lay-event="batchTrash">
+        <i class="layui-icon layui-icon-tips"></i>
+        标记丢弃
+    </button>
+    <button class="pear-btn pear-btn-danger pear-btn-md" lay-event="batchRemove">
+        <i class="layui-icon layui-icon-delete"></i>
+        删除（回收站）
+    </button>
+</script>
+
+<script type="text/html" id="comment-toolbar-trash">
+    <button class="pear-btn pear-btn-primary pear-btn-md" lay-event="batchRestore">
+        <i class="layui-icon layui-icon-refresh-1"></i>
+        从回收站恢复
+    </button>
+    <button class="pear-btn pear-btn-danger pear-btn-md" lay-event="batchDelete">
+        <i class="layui-icon layui-icon-close"></i>
+        彻底删除
+    </button>
+</script>
+
+<script type="text/html" id="comment-bar">
+    <div class="flex space-x-1">
+        <button class="pear-btn pear-btn-success pear-btn-sm" lay-event="approve" title="通过">
+            <i class="layui-icon layui-icon-ok"></i>
+        </button>
+        <button class="pear-btn pear-btn-warming pear-btn-sm" lay-event="spam" title="标记垃圾">
+            <i class="layui-icon layui-icon-face-cry"></i>
+        </button>
+        <button class="pear-btn pear-btn-warming pear-btn-sm" lay-event="trash" title="标记丢弃（trash）">
+            <i class="layui-icon layui-icon-tips"></i>
+        </button>
+        <button class="pear-btn pear-btn-danger pear-btn-sm" lay-event="remove" title="删除（回收站）">
+            <i class="layui-icon layui-icon-delete"></i>
+        </button>
+    </div>
+</script>
+
+<script type="text/html" id="trash-comment-bar">
+    <div class="flex items-center space-x-2">
+        <button class="pear-btn pear-btn-primary pear-btn-sm" lay-event="restore" title="恢复">
+            <i class="layui-icon layui-icon-refresh-1"></i>
+        </button>
+        <button class="pear-btn pear-btn-danger pear-btn-sm" lay-event="forceDelete" title="彻底删除">
+            <i class="layui-icon layui-icon-close"></i>
+        </button>
+    </div>
+</script>
+
+<script type="text/html" id="comment-status">
+    {{# if(d.status === 'approved') { }}
+        <span class="px-2 py-1 text-xs rounded bg-green-100 text-green-800">已通过</span>
+    {{# } else if(d.status === 'pending') { }}
+        <span class="px-2 py-1 text-xs rounded bg-yellow-100 text-yellow-800">待审核</span>
+    {{# } else if(d.status === 'spam') { }}
+        <span class="px-2 py-1 text-xs rounded bg-red-100 text-red-800">垃圾</span>
+    {{# } else if(d.status === 'trash') { }}
+        <span class="px-2 py-1 text-xs rounded bg-gray-100 text-gray-800">丢弃</span>
+    {{# } }}
+</script>
+
+<script type="text/html" id="comment-created">
+    <span class="text-gray-600">{{layui.util.toDateString(d.created_at, 'yyyy-MM-dd HH:mm:ss')}}</span>
+</script>
+
+<script type="text/html" id="comment-deleted">
+    {{#if (d.deleted_at) { }}
+    <span class="text-gray-500 text-sm">{{layui.util.toDateString(d.deleted_at, 'yyyy-MM-dd HH:mm:ss')}}</span>
+    {{# } }}
+</script>
+
+<script>
+layui.use(['table', 'form', 'jquery', 'layer'], function () {
+    let table = layui.table;
+    let form = layui.form;
+    let $ = layui.jquery;
+    let layer = layui.layer;
+
+    let MODULE_PATH = "/app/admin/comment/";
+
+    // 列配置
+    let normalCols = [[
+        { type: 'checkbox' },
+        { title: 'ID', field: 'id', align: 'center', width: 100 },
+        { title: '文章', align: 'left', templet: function(d){ return d.post ? d.post.title : '—'; } },
+        { title: '作者', align: 'left', templet: function(d){
+            let name = d.guest_name || (d.author ? d.author.nickname : '访客');
+            let email = d.guest_email || (d.author ? d.author.email : '');
+            return name + (email ? ' ('+email+')' : '');
+        } },
+        { title: '内容', field: 'content', align: 'left', templet: function(d){
+            let text = (d.content || '').replace(/<[^>]*>/g,'');
+            return text.length > 80 ? text.substring(0, 80) + '...' : text;
+        } },
+        { title: '状态', field: 'status', align: 'center', width: 100, templet: '#comment-status' },
+        { title: '时间', field: 'created_at', align: 'center', width: 160, templet: '#comment-created' },
+        { title: '操作', toolbar: '#comment-bar', align: 'left', width: 180, fixed: 'right' }
+    ]];
+
+    let trashCols = [[
+        { type: 'checkbox' },
+        { title: 'ID', field: 'id', align: 'center', width: 100 },
+        { title: '文章', align: 'left', templet: function(d){ return d.post ? d.post.title : '—'; } },
+        { title: '作者', align: 'left', templet: function(d){
+            let name = d.guest_name || (d.author ? d.author.nickname : '访客');
+            let email = d.guest_email || (d.author ? d.author.email : '');
+            return name + (email ? ' ('+email+')' : '');
+        } },
+        { title: '内容', field: 'content', align: 'left', templet: function(d){
+            let text = (d.content || '').replace(/<[^>]*>/g,'');
+            return text.length > 80 ? text.substring(0, 80) + '...' : text;
+        } },
+        { title: '删除时间', field: 'deleted_at', align: 'center', width: 160, templet: '#comment-deleted' },
+        { title: '操作', toolbar: '#trash-comment-bar', align: 'left', width: 160, fixed: 'right' }
+    ]];
+
+    let currentMode = 'normal';
+    let currentTable = null;
+
+    function renderTable(mode){
+        currentMode = mode;
+        let isDeleted = mode === 'trash';
+
+        // 更新隐藏字段
+        $('#isDeleted').val(isDeleted ? 'true' : 'false');
+
+        // 切换tab样式
+        if (isDeleted) {
+            $('.tab-item').eq(0).removeClass('text-blue-500 border-b-2 border-blue-500').addClass('text-gray-500');
+            $('.tab-item').eq(1).removeClass('text-gray-500').addClass('text-blue-500 border-b-2 border-blue-500');
+        } else {
+            $('.tab-item').eq(1).removeClass('text-blue-500 border-b-2 border-blue-500').addClass('text-gray-500');
+            $('.tab-item').eq(0).removeClass('text-gray-500').addClass('text-blue-500 border-b-2 border-blue-500');
+        }
+
+        // 显示/隐藏状态筛选
+        $('#statusFilter').toggle(!isDeleted);
+
+        // 获取搜索条件
+        let searchData = form.val('commentForm') || {};
+        if (!searchData.status) {
+            searchData.status = $('select[name="status"]').val() || '';
+        }
+        searchData.isDeleted = isDeleted ? 'true' : 'false';
+
+        if (currentTable) {
+            currentTable.reload({
+                url: 'list',
+                where: searchData,
+                cols: isDeleted ? trashCols : normalCols,
+                toolbar: isDeleted ? '#comment-toolbar-trash' : '#comment-toolbar-normal',
+                page: { curr: 1 }
+            });
+        } else {
+            currentTable = table.render({
+                elem: '#comment-table',
+                url: 'list',
+                where: searchData,
+                page: true,
+                cols: isDeleted ? trashCols : normalCols,
+                skin: 'line',
+                toolbar: isDeleted ? '#comment-toolbar-trash' : '#comment-toolbar-normal',
+                defaultToolbar: [{ layEvent: 'refresh', icon: 'layui-icon-refresh' }, 'filter', 'print', 'exports']
+            });
+        }
+    }
+
+    // 初始渲染
+    renderTable('normal');
+
+    // tab切换
+    $('.tab-item').on('click', function(){
+        $('.tab-item').removeClass('text-blue-500 border-b-2 border-blue-500').addClass('text-gray-500');
+        $(this).removeClass('text-gray-500').addClass('text-blue-500 border-b-2 border-blue-500');
+        let mode = $(this).data('type');
+        renderTable(mode);
+    });
+
+    // 查询
+    form.on('submit(comment-query)', function (data) {
+        let formData = form.val('commentForm') || {};
+        formData.status = $('select[name="status"]').val() || '';
+        formData.isDeleted = $('#isDeleted').val() || 'false';
+        if (currentTable) {
+            currentTable.reload({ where: formData, page: { curr: 1 } });
+        }
+        return false;
+    });
+
+    // 行内操作
+    table.on('tool(comment-table)', function (obj) {
+        const id = obj.data.id;
+        if (obj.event === 'approve') {
+            moderate([id], 'approved');
+        } else if (obj.event === 'spam') {
+            moderate([id], 'spam');
+        } else if (obj.event === 'trash') {
+            moderate([id], 'trash');
+        } else if (obj.event === 'restore') {
+            doRestore([id]);
+        } else if (obj.event === 'forceDelete') {
+            doDelete([id], true, obj);
+        } else if (obj.event === 'remove') {
+            doDelete([id], false, obj);
+        }
+    });
+
+    // 顶部工具栏
+    table.on('toolbar(comment-table)', function (obj) {
+        if (obj.event === 'batchApprove') {
+            let data = table.checkStatus(obj.config.id).data;
+            if (!data.length) return layer.msg('未选中数据');
+            moderate(data.map(i=>i.id), 'approved');
+        } else if (obj.event === 'batchSpam') {
+            let data = table.checkStatus(obj.config.id).data;
+            if (!data.length) return layer.msg('未选中数据');
+            moderate(data.map(i=>i.id), 'spam');
+        } else if (obj.event === 'batchTrash') {
+            let data = table.checkStatus(obj.config.id).data;
+            if (!data.length) return layer.msg('未选中数据');
+            moderate(data.map(i=>i.id), 'trash');
+        } else if (obj.event === 'batchRemove') {
+            let data = table.checkStatus(obj.config.id).data;
+            if (!data.length) return layer.msg('未选中数据');
+            doDelete(data.map(i=>i.id), false);
+        } else if (obj.event === 'batchRestore') {
+            let data = table.checkStatus(obj.config.id).data;
+            if (!data.length) return layer.msg('未选中数据');
+            doRestore(data.map(i=>i.id));
+        } else if (obj.event === 'batchDelete' || obj.event === 'refresh') {
+            if (obj.event === 'refresh') return renderTable(currentMode);
+            let data = table.checkStatus(obj.config.id).data;
+            if (!data.length) return layer.msg('未选中数据');
+            doDelete(data.map(i=>i.id), true);
+        }
+    });
+
+    function moderate(ids, status){
+        let loading = layer.load();
+        $.ajax({
+            url: MODULE_PATH + 'moderate',
+            type: 'post',
+            dataType: 'json',
+            contentType: 'application/json',
+            data: JSON.stringify({ ids: ids, status: status }),
+            success: function (res) {
+                layer.close(loading);
+                if (res.code === 0) {
+                    layer.msg('操作成功', {icon:1, time: 800}, function(){ tableIns.reload(); });
+                } else {
+                    layer.msg(res.msg || '操作失败', {icon:2});
+                }
+            },
+            error: function(){ layer.close(loading); layer.msg('请求失败', {icon:2}); }
+        })
+    }
+
+    function doDelete(ids, force, obj){
+        const msg = force ? '确定要彻底删除所选评论吗？此操作不可恢复！' : '确定要删除所选评论吗？（可在“仅看已删除”中恢复）';
+        layer.confirm(msg, {icon:3, title:'提示'}, function(index){
+            layer.close(index);
+            let loading = layer.load();
+            $.ajax({
+                url: MODULE_PATH + 'delete',
+                type: 'post',
+                dataType: 'json',
+                contentType: 'application/json',
+                data: JSON.stringify({ ids: ids, force: !!force }),
+                success: function (res) {
+                    layer.close(loading);
+                    if (res.code === 0) {
+                        layer.msg(force ? '已彻底删除' : '已删除至回收站', {icon:1, time: 800}, function(){
+                            if(obj){ obj.del(); } else { tableIns.reload(); }
+                        });
+                    } else {
+                        layer.msg(res.msg || '操作失败', {icon:2});
+                    }
+                },
+                error: function(){ layer.close(loading); layer.msg('请求失败', {icon:2}); }
+            })
+        });
+    }
+
+    function doRestore(ids){
+        let loading = layer.load();
+        $.ajax({
+            url: MODULE_PATH + 'restore',
+            type: 'post',
+            dataType: 'json',
+            contentType: 'application/json',
+            data: JSON.stringify({ ids: ids }),
+            success: function (res) {
+                layer.close(loading);
+                if (res.code === 0) {
+                    layer.msg('已恢复为待审', {icon:1, time: 800}, function(){ tableIns.reload(); });
+                } else {
+                    layer.msg(res.msg || '恢复失败', {icon:2});
+                }
+            },
+            error: function(){ layer.close(loading); layer.msg('请求失败', {icon:2}); }
+        })
+    }
+});
+</script>
+</body>
+</html>
