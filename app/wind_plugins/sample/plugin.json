@@ -9,6 +9,7 @@
   },
   "permissions": [
     "request:action",
+    "request:filter",
     "plugin:sample:route:dashboard",
     "plugin:sample:route:settings",
     "plugin:sample:route:index",

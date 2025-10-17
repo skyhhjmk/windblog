@@ -8,11 +8,11 @@
     "high performance"
   ],
   "homepage": "https://www.biliwind.com",
-  "license": "MIT",
+  "license": "BSD 3-Clause License",
   "description": "A high-performance blog system based on Webman framework.",
   "authors": [
     {
-      "name": "hhjmk",
+      "name": "skyhhjmk",
       "email": "admin@biliwind.com",
       "homepage": "https://www.biliwind.com",
       "role": "Developer"

@@ -3,15 +3,7 @@
 namespace app\service\plugin;
 
 /**
- * 解析插件主文件头部注释的元数据（WordPress 风格）
- * 支持字段：
- * - Plugin Name:
- * - Plugin Slug:（可选；若缺失则根据文件名推导）
- * - Version:
- * - Description:
- * - Author:
- * - Requires PHP:
- * - Requires at least:
+ * 插件元数据
  */
 class PluginMetadata
 {
@@ -31,8 +23,14 @@ class PluginMetadata
 
     public string $file = '';
 
-    /** @var array<string, string> 版本/环境依赖约束，如 { "php": ">=8.2" } */
+    /** @var array<string, string> 版本/环境依赖约束，如 { "php": ">=8.2", "engine": ">=1.0.0" } */
     public array $requires = [];
+
+    /** @var array<string, string> 依赖的其他插件，如 { "another-plugin": ">=1.2" } */
+    public array $dependencies = [];
+
+    /** @var array<string, string> 冲突插件声明，如 { "bad-plugin": "*" } */
+    public array $conflicts = [];
 
     /** @var array<string> 能力声明，如 [ "template", "route", "queue" ] */
     public array $capabilities = [];
@@ -51,13 +49,14 @@ class PluginMetadata
         }
         $head = @fread($fp, 8192);
         @fclose($fp);
-        if (!is_string($head) || $head === '') {
+        if (!is_string($head)) {
             return null;
         }
 
         // 仅解析文件顶部第一个块注释
         if (!preg_match('#/\*\*(.*?)\*/#s', $head, $m)) {
-            return null;
+            // 兼容：若主文件没有头注释，依然尝试读取 plugin.json
+            $m = [1 => ''];
         }
         $block = $m[1];
 
@@ -75,13 +74,13 @@ class PluginMetadata
         ];
 
         foreach ($fields as $label => $prop) {
-            if (preg_match('/^\s*\*\s*' . preg_quote($label, '/') . '\s*:\s*(.+)$/mi', $block, $mm)) {
+            if ($block !== '' && preg_match('/^\s*\*\s*' . preg_quote($label, '/') . '\s*:\s*(.+)$/mi', $block, $mm)) {
                 $val = trim($mm[1]);
                 $meta->{$prop} = $val;
             }
         }
 
-        // 可选：读取同目录下的 plugin.json 以覆盖/补充元数据与权限声明
+        // 读取 plugin.json 以覆盖/补充
         $jsonFile = dirname($file) . DIRECTORY_SEPARATOR . 'plugin.json';
         if (is_file($jsonFile)) {
             try {
@@ -97,6 +96,9 @@ class PluginMetadata
                     $meta->requires = is_array($json['requires'] ?? null) ? $json['requires'] : $meta->requires;
                     $meta->capabilities = is_array($json['capabilities'] ?? null) ? $json['capabilities'] : $meta->capabilities;
                     $meta->permissions = is_array($json['permissions'] ?? null) ? $json['permissions'] : $meta->permissions;
+                    // 新增字段
+                    $meta->dependencies = is_array($json['dependencies'] ?? null) ? $json['dependencies'] : ($json['requires']['plugins'] ?? []);
+                    $meta->conflicts = is_array($json['conflicts'] ?? null) ? $json['conflicts'] : [];
                 }
             } catch (\Throwable $e) {
                 // 忽略 plugin.json 解析错误，保持兼容
