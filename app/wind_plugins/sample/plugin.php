@@ -50,44 +50,37 @@ return new class () implements PluginInterface {
         }
 
         // 示例：根据版本差异执行不同的升级逻辑
-        // if (version_compare($prevVersion, '1.1.0', '<')) {
-        //     // 执行从1.1.0版本以下升级所需的特定操作
-        // }
+        //         if (version_compare($prevVersion, '1.1.0', '<')) {
+        //             // 执行从1.1.0版本以下升级所需的特定操作
+        //         }
     }
 
     public function activate(HookManager $hooks): void
     {
-        // 请求进入动作：依授权决定是否执行
+        // 请求进入动作：权限已在注册阶段检查，此处无需重复检查
         \app\service\PluginService::add_action('request_enter', function ($request) {
-            if (\app\service\PluginService::ensurePermission('sample', 'request:action')) {
-                // 演示：在请求对象上添加一个属性标记
-                try {
-                    $request->sample_flag = true;
-                } catch (\Throwable $e) {
-                    // 保持演示最小侵入，忽略异常
-                }
+            // 演示：在请求对象上添加一个属性标记
+            try {
+                $request->sample_flag = true;
+            } catch (\Throwable $e) {
+                // 保持演示最小侵入，忽略异常
             }
         }, 10, 1);
 
-        // 响应发出前动作：依授权决定是否执行
+        // 响应发出前动作：权限已在注册阶段检查
         \app\service\PluginService::add_action('response_exit', function ($response) {
-            if (\app\service\PluginService::ensurePermission('sample', 'request:action')) {
-                // 演示：为响应头添加一个示例标记
-                try {
-                    $response->header('X-Sample-Action', '1');
-                } catch (\Throwable $e) {
-                    // 忽略异常
-                }
+            // 演示：为响应头添加一个示例标记
+            try {
+                $response->header('X-Sample-Action', '1');
+            } catch (\Throwable $e) {
+                // 忽略异常
             }
         }, 10, 1);
 
-        // 响应过滤器：未声明"request:filter"权限，默认拒绝
+        // 响应过滤器：注意 plugin.json 中未声明 "request:filter" 权限
+        // 如果需要使用此过滤器，需在 plugin.json 中添加并由管理员授权
         \app\service\PluginService::add_filter('response_filter', function ($resp) {
-            // 过滤器调用前强制权限检查：未授权则拒绝修改，返回原对象
-            if (!\app\service\PluginService::ensurePermission('sample', 'request:filter')) {
-                return $resp;
-            }
-            // 如获授权（未来可在admin授权后），示例地添加另一个标头
+            // 示例：添加响应头
             try {
                 $resp->header('X-Sample-Filter', '2');
             } catch (\Throwable $e) {

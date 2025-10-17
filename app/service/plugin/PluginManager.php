@@ -82,14 +82,11 @@ class PluginManager
     }
 
     /**
-     * 加载当前已启用插件
+     * 加载当前已启用插件（按依赖顺序）
      */
     public function loadEnabled(): void
     {
-        $enabled = (array) (blog_config('plugins.enabled', [], true) ?: []);
-        foreach ($enabled as $slug) {
-            $this->enable($slug);
-        }
+        $this->loadEnabledWithDeps();
     }
 
     /**
@@ -199,60 +196,8 @@ class PluginManager
                 unset($this->appMenus[$slug]);
             }
 
-            // 注册路由（确保只注册一次）
-            if (!isset($this->routesRegistered[$slug]) || !$this->routesRegistered[$slug]) {
-                $routes = $entry['instance']->registerRoutes($slug);
-                if (is_array($routes) && !empty($routes)) {
-                    foreach ($routes as $route) {
-                        if (!isset($route['method']) || !isset($route['route']) || !isset($route['handler'])) {
-                            continue;
-                        }
-
-                        $method = strtolower($route['method']);
-                        $routePath = $route['route'];
-                        $handler = $route['handler'];
-                        $permission = $route['permission'] ?? '';
-
-                        // 如果定义了权限，则检查权限
-                        if ($permission && !$this->hasPermission($slug, $permission)) {
-                            // 权限未批准，添加到待授权列表
-                            $pending = (array) (blog_config("plugins.permissions.$slug.pending", [], true) ?: []);
-                            if (!in_array($permission, $pending)) {
-                                $pending[] = $permission;
-                                blog_config("plugins.permissions.$slug.pending", $pending, true, true, true);
-                                CacheService::clearCache("blog_config_plugins.permissions.$slug*");
-                            }
-
-                            // 不执行原始处理器，直接返回拒绝访问响应
-                            $handler = function () use ($slug, $permission) {
-                                return new \support\Response(403, [], 'Access denied to plugin route. Plugin: ' . $slug . ', Permission: ' . $permission);
-                            };
-                        }
-
-                        // 注册路由
-                        switch ($method) {
-                            case 'get':
-                                Route::get($routePath, $handler);
-                                break;
-                            case 'post':
-                                Route::post($routePath, $handler);
-                                break;
-                            case 'put':
-                                Route::put($routePath, $handler);
-                                break;
-                            case 'delete':
-                                Route::delete($routePath, $handler);
-                                break;
-                            case 'any':
-                                Route::any($routePath, $handler);
-                                break;
-                            default:
-                                Route::any($routePath, $handler);
-                        }
-                    }
-                }
-                $this->routesRegistered[$slug] = true;
-            }
+            // 注册路由（仅在首次启用时注册）
+            $this->registerPluginRoutes($slug, $entry['instance']);
         } catch (\Throwable $e) {
             // 插件菜单或路由注册异常不影响启用
             // 可以记录日志但不中断流程
@@ -308,9 +253,14 @@ class PluginManager
         // 权限变更后重置计数器（calls/denied）
         $this->resetCounts($slug, $permission);
 
-        // 如果需要重新注册菜单，则重新启用插件
+        // 如果需要重新注册菜单，检查插件是否已启用，只为已启用的插件重新注册菜单
         if ($needReRegisterMenu) {
-            $this->enable($slug);
+            $enabled = (array) (blog_config('plugins.enabled', [], true) ?: []);
+            if (in_array($slug, $enabled, true)) {
+                // 插件已启用，重新激活以注册菜单
+                $this->enable($slug);
+            }
+            // 未启用的插件只授予权限，等到启用时再注册菜单
         }
     }
 
@@ -580,12 +530,16 @@ class PluginManager
         // 检查是否有通配符权限
         foreach ($granted as $grantedPerm) {
             // 支持 :* 和 .* 两种通配符形式
-            if (str_ends_with($grantedPerm, ':*') || str_ends_with($grantedPerm, '.*')) {
-                $prefix = rtrim($grantedPerm, ':*.*');
-                // 确保精确匹配前缀，避免部分匹配问题
-                if (str_starts_with($permission, $prefix) &&
-                    (strlen($permission) == strlen($prefix) ||
-                     $permission[strlen($prefix)] == ':')) {
+            if (str_ends_with($grantedPerm, ':*')) {
+                $prefix = substr($grantedPerm, 0, -2); // 移除 :*
+                // 确保精确匹配前缀，检查完整前缀 + 冒号
+                if (str_starts_with($permission, $prefix . ':')) {
+                    return true;
+                }
+            } elseif (str_ends_with($grantedPerm, '.*')) {
+                $prefix = substr($grantedPerm, 0, -2); // 移除 .*
+                // 确保精确匹配前缀，检查完整前缀 + 点
+                if (str_starts_with($permission, $prefix . '.')) {
                     return true;
                 }
             }
@@ -609,6 +563,8 @@ class PluginManager
             } catch (\Throwable $e) {
                 // 忽略异常以保证流程继续
             }
+            // 清空实例引用，下次启用时重新实例化
+            $entry['instance'] = null;
         }
 
         $enabled = (array) (blog_config('plugins.enabled', [], true) ?: []);
@@ -620,8 +576,8 @@ class PluginManager
         unset($this->adminMenus[$slug]);
         unset($this->appMenus[$slug]);
 
-        // 重置路由注册状态
-        $this->routesRegistered[$slug] = false;
+        // 清除路由注册状态（注意：路由一旦注册无法移除，需要重启）
+        unset($this->routesRegistered[$slug]);
 
         return true;
     }
@@ -668,7 +624,15 @@ class PluginManager
         if (is_file($prefer)) {
             return $prefer;
         }
-        // 回退：选择第一个包含 WP 风格头注释的 php 文件
+        // 若有 plugin.json 则尝试 index.php 回退
+        $json = $pluginDir . DIRECTORY_SEPARATOR . 'plugin.json';
+        if (is_file($json)) {
+            $idx = $pluginDir . DIRECTORY_SEPARATOR . 'index.php';
+            if (is_file($idx)) {
+                return $idx;
+            }
+        }
+        // 回退：选择第一个包含头注释的 php 文件
         $files = scandir($pluginDir);
         if (!is_array($files)) {
             return null;
@@ -747,10 +711,250 @@ class PluginManager
             return false;
         }
 
-        // 重置路由注册状态
-        $this->routesRegistered[$slug] = false;
+        $entry = &$this->plugins[$slug];
+        if (!$entry['instance']) {
+            return false;
+        }
 
-        // 重新启用插件以注册路由
-        return $this->enable($slug);
+        // 重置路由注册状态
+        unset($this->routesRegistered[$slug]);
+
+        // 仅重新注册路由，不重新激活插件
+        $this->registerPluginRoutes($slug, $entry['instance']);
+
+        return true;
+    }
+
+    /**
+     * 注册插件路由（内部方法）
+     */
+    private function registerPluginRoutes(string $slug, PluginInterface $instance): void
+    {
+        // 检查是否已注册
+        if (isset($this->routesRegistered[$slug])) {
+            return;
+        }
+
+        try {
+            $routes = $instance->registerRoutes($slug);
+            if (!is_array($routes) || empty($routes)) {
+                $this->routesRegistered[$slug] = true;
+
+                return;
+            }
+
+            foreach ($routes as $route) {
+                if (!isset($route['method']) || !isset($route['route']) || !isset($route['handler'])) {
+                    continue;
+                }
+
+                $method = strtolower($route['method']);
+                $routePath = $route['route'];
+                $handler = $route['handler'];
+                $permission = $route['permission'] ?? '';
+
+                // 如果定义了权限，则检查权限
+                if ($permission && !$this->hasPermission($slug, $permission)) {
+                    // 权限未批准，添加到待授权列表
+                    $pending = (array) (blog_config("plugins.permissions.$slug.pending", [], true) ?: []);
+                    if (!in_array($permission, $pending)) {
+                        $pending[] = $permission;
+                        blog_config("plugins.permissions.$slug.pending", $pending, true, true, true);
+                        CacheService::clearCache("blog_config_plugins.permissions.$slug*");
+                    }
+
+                    // 不执行原始处理器，直接返回拒绝访问响应
+                    $handler = function () use ($slug, $permission) {
+                        return new \support\Response(403, [], 'Access denied to plugin route. Plugin: ' . $slug . ', Permission: ' . $permission);
+                    };
+                }
+
+                // 注册路由
+                switch ($method) {
+                    case 'get':
+                        Route::get($routePath, $handler);
+                        break;
+                    case 'post':
+                        Route::post($routePath, $handler);
+                        break;
+                    case 'put':
+                        Route::put($routePath, $handler);
+                        break;
+                    case 'delete':
+                        Route::delete($routePath, $handler);
+                        break;
+                    case 'any':
+                        Route::any($routePath, $handler);
+                        break;
+                    default:
+                        Route::any($routePath, $handler);
+                }
+            }
+
+            $this->routesRegistered[$slug] = true;
+        } catch (\Throwable $e) {
+            // 插件路由注册异常不影响启用
+            // 可以记录日志但不中断流程
+            try {
+                \support\Log::warning("[plugin-route-registration-failed] slug={$slug} error=" . $e->getMessage());
+            } catch (\Throwable $logError) {
+                // 忽略日志异常
+            }
+        }
+    }
+    // ========= 新增：健壮性与依赖处理 =========
+
+    /**
+     * 验证元数据与运行环境
+     * @return array{errors: array<int,string>, warnings: array<int,string>}
+     */
+    public function validate(string $slug): array
+    {
+        $errors = [];
+        $warnings = [];
+        $entry = $this->plugins[$slug] ?? null;
+        if (!$entry) {
+            $errors[] = 'Plugin not found';
+
+            return compact('errors', 'warnings');
+        }
+        $m = $entry['meta'];
+        if ($m->name === '') {
+            $warnings[] = 'Missing name';
+        }
+        if ($m->version === '') {
+            $warnings[] = 'Missing version';
+        }
+        if ($m->slug === '') {
+            $errors[] = 'Missing slug';
+        }
+        if ($m->requires_php !== '') {
+            if (!Semver::satisfies(PHP_VERSION, (string) $m->requires_php)) {
+                $errors[] = 'PHP version not satisfied: ' . PHP_VERSION . ' ! ' . $m->requires_php;
+            }
+        } elseif (($m->requires['php'] ?? '') !== '') {
+            if (!Semver::satisfies(PHP_VERSION, (string) $m->requires['php'])) {
+                $errors[] = 'PHP version not satisfied: ' . PHP_VERSION . ' ! ' . $m->requires['php'];
+            }
+        }
+        // engine 版本（可选）
+        $engine = (string) ($m->requires['engine'] ?? '');
+        if ($engine !== '') {
+            $appVer = (string) (defined('APP_VERSION') ? APP_VERSION : '1.0.0');
+            if (!Semver::satisfies($appVer, $engine)) {
+                $errors[] = 'Engine version not satisfied: ' . $appVer . ' ! ' . $engine;
+            }
+        }
+        // 冲突检查（仅已启用集）
+        $enabled = (array) (blog_config('plugins.enabled', [], true) ?: []);
+        foreach ($m->conflicts as $confSlug => $constraint) {
+            if (in_array($confSlug, $enabled, true)) {
+                $other = $this->plugins[$confSlug]['meta']->version ?? '';
+                if ($constraint === '' || $constraint === '*' || $other === '') {
+                    $errors[] = "Conflicts with {$confSlug}";
+                } elseif (Semver::satisfies($other, (string) $constraint)) {
+                    $errors[] = "Conflicts with {$confSlug} {$constraint}";
+                }
+            }
+        }
+
+        return compact('errors', 'warnings');
+    }
+
+    /**
+     * 加载已启用插件并按照依赖拓扑排序激活
+     */
+    public function loadEnabledWithDeps(): void
+    {
+        $enabled = array_values((array) (blog_config('plugins.enabled', [], true) ?: []));
+        if (!$enabled) {
+            return;
+        }
+        $metas = $this->allMetadata();
+        $resolver = new DependencyResolver();
+        try {
+            $order = $resolver->resolve($metas, $enabled);
+        } catch (PluginDependencyException $e) {
+            // 回退：出现依赖错误时，按原顺序启用但跳过失败项
+            $order = $enabled;
+            try {
+                \support\Log::warning('[plugin-deps] ' . $e->getMessage());
+            } catch (\Throwable $x) {
+            }
+        }
+        foreach ($order as $slug) {
+            // 每个启用前做验证，失败则跳过
+            $vr = $this->validate($slug);
+            if (!empty($vr['errors'])) {
+                try {
+                    \support\Log::warning('[plugin-validate] ' . $slug . ' ' . implode('; ', $vr['errors']));
+                } catch (\Throwable $x) {
+                }
+                continue;
+            }
+            $this->enable($slug);
+        }
+    }
+
+    /**
+     * 启用单个插件及其依赖闭包
+     */
+    public function enableWithDependencies(string $slug): bool
+    {
+        if (!isset($this->plugins[$slug])) {
+            return false;
+        }
+        // 构建依赖闭包
+        $metas = $this->allMetadata();
+        $stack = [$slug];
+        $closure = [];
+        while ($stack) {
+            $s = array_pop($stack);
+            if (isset($closure[$s])) {
+                continue;
+            }
+            $closure[$s] = true;
+            $deps = $metas[$s]->dependencies ?? [];
+            foreach ($deps as $d => $c) {
+                if (!isset($metas[$d])) {
+                    try {
+                        \support\Log::warning("[plugin-deps] {$s} requires missing plugin {$d}");
+                    } catch (\Throwable $x) {
+                    }
+
+                    return false;
+                }
+                $stack[] = $d;
+            }
+        }
+        $closureSlugs = array_keys($closure);
+        $enabled = array_values(array_unique(array_merge((array) (blog_config('plugins.enabled', [], true) ?: []), $closureSlugs)));
+        $resolver = new DependencyResolver();
+        try {
+            $order = $resolver->resolve($metas, $enabled);
+        } catch (PluginDependencyException $e) {
+            try {
+                \support\Log::warning('[plugin-deps] ' . $e->getMessage());
+            } catch (\Throwable $x) {
+            }
+
+            return false;
+        }
+        foreach ($order as $s) {
+            $vr = $this->validate($s);
+            if (!empty($vr['errors'])) {
+                try {
+                    \support\Log::warning('[plugin-validate] ' . $s . ' ' . implode('; ', $vr['errors']));
+                } catch (\Throwable $x) {
+                }
+                if ($s === $slug) {
+                    return false;
+                }
+                continue;
+            }
+            $this->enable($s);
+        }
+
+        return true;
     }
 }

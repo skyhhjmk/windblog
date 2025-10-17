@@ -19,13 +19,8 @@ class PluginBootstrap
     public static function loadRoutes(): void
     {
         // 在路由加载后注册插件路由
-        if (file_exists(base_path() . '/.env')) {
-            $enabled = (array) (blog_config('plugins.enabled', [], true) ?: []);
-            foreach ($enabled as $slug) {
-                // 重新启用插件以注册路由
-                PluginService::enable($slug);
-            }
-        }
+        // 注意：不需要此方法，因为 init() 已经通过 loadEnabled() 加载并激活了插件
+        // 路由会在 enable() 时自动注册
     }
 }
 

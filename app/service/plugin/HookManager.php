@@ -102,6 +102,7 @@ class HookManager
         $this->stats['actions'][$hook] = ($this->stats['actions'][$hook] ?? 0) + 1;
         $this->sortBuckets($buckets, $hook, false);
         foreach ($buckets as $priority => $list) {
+            $toRemove = [];
             foreach ($list as $idx => $item) {
                 $cb = $item['cb'];
                 $n = $item['args'];
@@ -114,9 +115,17 @@ class HookManager
                 }
                 // once 支持：约定传入的回调若为一次性，执行后移除
                 if (is_array($item) && ($item['_once'] ?? false) === true) {
-                    unset($list[$idx]);
-                    $this->actions[$hook][$priority] = array_values($list);
+                    $toRemove[] = $idx;
                 }
+            }
+            // 批量移除一次性钩子
+            if (!empty($toRemove)) {
+                foreach ($toRemove as $idx) {
+                    unset($this->actions[$hook][$priority][$idx]);
+                }
+                $this->actions[$hook][$priority] = array_values($this->actions[$hook][$priority]);
+                // 清理缓存
+                unset($this->actionsSorted[$hook]);
             }
         }
         $this->currentHook = null;
@@ -386,6 +395,7 @@ class HookManager
         $this->sortBuckets($buckets, $hook, true);
         $current = $value;
         foreach ($buckets as $priority => $list) {
+            $toRemove = [];
             foreach ($list as $idx => $item) {
                 $cb = $item['cb'];
                 $n = $item['args'];
@@ -397,9 +407,17 @@ class HookManager
                     // 过滤器异常时保持当前值
                 }
                 if (is_array($item) && ($item['_once'] ?? false) === true) {
-                    unset($list[$idx]);
-                    $this->filters[$hook][$priority] = array_values($list);
+                    $toRemove[] = $idx;
                 }
+            }
+            // 批量移除一次性过滤器
+            if (!empty($toRemove)) {
+                foreach ($toRemove as $idx) {
+                    unset($this->filters[$hook][$priority][$idx]);
+                }
+                $this->filters[$hook][$priority] = array_values($this->filters[$hook][$priority]);
+                // 清理缓存
+                unset($this->filtersSorted[$hook]);
             }
         }
         $this->currentHook = null;
