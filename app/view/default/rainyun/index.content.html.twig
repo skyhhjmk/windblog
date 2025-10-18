@@ -44,7 +44,7 @@
     </div>
 
     <!-- 版本详细配置区域 (默认隐藏，获取版本详情后显示) -->
-    <div id="versionDetails" class="mb-8 bg-white rounded-xl p-5 border border-gray-200 hidden">
+    <div id="versionDetails" class="mb-8 bg-white rounded-xl p-5 border border-gray-200 hidden no-animation">
         <div class="flex justify-between items-center mb-4">
             <h2 class="text-xl font-semibold text-gray-800">版本详细配置</h2>
             <div class="flex space-x-3">
@@ -56,13 +56,13 @@
                 </button>
             </div>
         </div>
-        
+
         <!-- 配置表单 -->
         <form id="versionConfigForm" class="space-y-4">
             <!-- 配置字段将通过JavaScript动态生成 -->
             <div id="configFields" class="space-y-4"></div>
         </form>
-        
+
         <!-- 用于新增字段的临时模板 (默认隐藏) -->
         <div id="configFieldTemplate" class="hidden">
             <div class="config-field bg-gray-50 p-4 rounded-lg border border-gray-200">
@@ -100,33 +100,33 @@
     <!-- 应用详情表单 -->
     <form id="appForm" class="space-y-6 hidden">
         <h2 class="text-xl font-semibold text-gray-800 mb-4">应用信息</h2>
-        
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="col-span-1 md:col-span-2">
                 <label for="title" class="block text-sm font-medium text-gray-700 mb-1">应用标题</label>
                 <input type="text" id="title" name="title" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" required>
             </div>
-            
+
             <div class="col-span-1 md:col-span-2">
                 <label for="description" class="block text-sm font-medium text-gray-700 mb-1">应用描述</label>
                 <textarea id="description" name="description" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" required></textarea>
             </div>
-            
+
             <div>
                 <label for="name" class="block text-sm font-medium text-gray-700 mb-1">应用名称（英文标识）</label>
                 <input type="text" id="name" name="name" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" required>
             </div>
-            
+
             <div>
                 <label for="website" class="block text-sm font-medium text-gray-700 mb-1">应用官方网站</label>
                 <input type="url" id="website" name="website" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" required>
             </div>
-            
+
             <div>
                 <label for="project_link" class="block text-sm font-medium text-gray-700 mb-1">应用项目链接</label>
                 <input type="url" id="project_link" name="project_link" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" required>
             </div>
-            
+
             <div>
                 <label for="cross_version_update" class="block text-sm font-medium text-gray-700 mb-1">是否支持跨版本更新</label>
                 <div class="flex items-center space-x-4">
@@ -140,24 +140,24 @@
                     </label>
                 </div>
             </div>
-            
+
             <div class="col-span-1 md:col-span-2">
                 <label for="tags" class="block text-sm font-medium text-gray-700 mb-1">标签（用逗号分隔）</label>
                 <input type="text" id="tags" name="tags" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" placeholder="如: web,tools,development">
                 <p class="text-xs text-gray-500 mt-1">提示：多个标签请用逗号分隔</p>
             </div>
-            
+
             <div class="col-span-1 md:col-span-2">
                 <label for="readme" class="block text-sm font-medium text-gray-700 mb-1">应用介绍（Markdown格式）</label>
                 <textarea id="readme" name="readme" rows="8" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" required></textarea>
             </div>
-            
+
             <div class="col-span-1 md:col-span-2">
                 <label for="logo" class="block text-sm font-medium text-gray-700 mb-1">Logo（Base64格式，可选）</label>
                 <textarea id="logo" name="logo" rows="4" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" placeholder="输入Base64编码的图片数据（最大50KB）"></textarea>
             </div>
         </div>
-        
+
         <!-- 操作按钮 -->
         <div class="flex justify-end space-x-4 pt-4 border-t border-gray-200">
             <button type="button" id="resetForm" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
@@ -200,13 +200,13 @@
             </button>
         </div>
     </div>
-    
+
     <!-- 配置表单 -->
     <form id="versionConfigForm" class="space-y-4">
         <!-- 配置字段将通过JavaScript动态生成 -->
         <div id="configFields" class="space-y-4"></div>
     </form>
-    
+
     <!-- 用于新增字段的临时模板 (默认隐藏) -->
     <div id="configFieldTemplate" class="hidden">
         <div class="config-field bg-gray-50 p-4 rounded-lg border border-gray-200">
@@ -254,11 +254,11 @@
         const configFieldTemplate = document.getElementById('configFieldTemplate');
         const addConfigFieldBtn = document.getElementById('addConfigField');
         const saveVersionConfigBtn = document.getElementById('saveVersionConfig');
-        
+
         // 全局变量存储版本数据
         let versionsData = [];
         let currentVersionData = null;
-        
+
         // 表单字段引用
         const titleInput = document.getElementById('title');
         const descriptionInput = document.getElementById('description');
@@ -270,93 +270,93 @@
         const tagsInput = document.getElementById('tags');
         const readmeInput = document.getElementById('readme');
         const logoInput = document.getElementById('logo');
-        
+
         // 显示加载指示器
         function showLoading(message = '正在处理，请稍候...') {
             loadingMessage.textContent = message;
             loadingIndicator.classList.remove('hidden');
         }
-        
+
         // 隐藏加载指示器
         function hideLoading() {
             loadingIndicator.classList.add('hidden');
         }
-        
+
         // 显示结果消息
         function showResult(message, isSuccess = true) {
             resultMessage.textContent = message;
-            resultMessage.className = 'mt-6 p-4 rounded-lg ' + 
+            resultMessage.className = 'mt-6 p-4 rounded-lg ' +
                 (isSuccess ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200');
             resultMessage.classList.remove('hidden');
-            
+
             // 3秒后自动隐藏消息
             setTimeout(() => {
                 resultMessage.classList.add('hidden');
             }, 3000);
         }
-        
+
         // 获取应用详情
         fetchAppDataBtn.addEventListener('click', function() {
             const appId = appIdInput.value.trim();
             const apiKey = apiKeyInput.value.trim();
-            
+
             if (!appId || !apiKey) {
                 showResult('请填写App ID和API Key', false);
                 return;
             }
-            
+
             showLoading('正在获取应用详情...');
-            
+
             // 创建请求对象，避免直接fetch的跨域问题
             // 注意：API需要在URL末尾添加斜杠以避免301重定向
             const xhr = new XMLHttpRequest();
             xhr.open('GET', `https://api.v2.rainyun.com/product/rca/appstore/${appId}/`, true);
-            
+
             // 设置请求头
             xhr.setRequestHeader('x-api-key', apiKey);
             xhr.setRequestHeader('Content-Type', 'application/json');
-            
+
             // 处理响应
             xhr.onload = function() {
                 hideLoading();
                 if (xhr.status === 200) {
                     try {
                         const data = JSON.parse(xhr.responseText);
-                        
+
                         // 检查响应数据是否包含所需字段
                         if (data && data.data) {
                             const appData = data.data;
-                            
+
                             // 填充表单
                             titleInput.value = appData.title || '';
                             descriptionInput.value = appData.description || '';
                             nameInput.value = appData.name || '';
                             websiteInput.value = appData.website || '';
                             projectLinkInput.value = appData.project_link || '';
-                            
+
                             // 设置跨版本更新选项
                             if (appData.cross_version_update === true) {
                                 crossVersionUpdateYes.checked = true;
                             } else {
                                 crossVersionUpdateNo.checked = true;
                             }
-                            
+
                             // 设置标签（数组转字符串）
                             tagsInput.value = appData.tags ? appData.tags.join(', ') : '';
                             readmeInput.value = appData.readme || '';
                             logoInput.value = appData.logo || '';
-                            
+
                             // 显示表单
                             // 保持“应用信息”表单隐藏，仅使用下方版本详细配置
                             // appForm.classList.remove('hidden');
-                            
+
                             // 处理版本数据
                             if (appData.versions && Array.isArray(appData.versions)) {
                                 versionsData = appData.versions;
                                 populateVersionDropdown(versionsData);
                                 versionSelection.classList.remove('hidden');
                             }
-                            
+
                             showResult('应用详情获取成功');
                         } else {
                             showResult('无效的响应数据', false);
@@ -372,14 +372,14 @@
                     showResult(`获取应用详情失败: HTTP状态码 ${xhr.status}`, false);
                 }
             };
-            
+
             // 处理网络错误
             xhr.onerror = function() {
                 hideLoading();
                 showResult('网络请求错误，请检查网络连接或API服务是否可用。', false);
                 console.error('获取应用详情网络错误');
             };
-            
+
             // 处理超时
             xhr.timeout = 10000; // 10秒超时
             xhr.ontimeout = function() {
@@ -387,15 +387,15 @@
                 showResult('请求超时，请稍后重试。', false);
                 console.error('获取应用详情请求超时');
             };
-            
+
             // 发送请求
             xhr.send();
         });
-        
+
         // 填充版本下拉框
         function populateVersionDropdown(versions) {
             appVersionSelect.innerHTML = '<option value="">请选择版本</option>';
-            
+
             versions.forEach(version => {
                 const option = document.createElement('option');
                 option.value = version.version;
@@ -403,52 +403,52 @@
                 appVersionSelect.appendChild(option);
             });
         }
-        
+
         // 获取版本详细配置
         fetchVersionDetailsBtn.addEventListener('click', function() {
             const appId = appIdInput.value.trim();
             const apiKey = apiKeyInput.value.trim();
             const selectedVersion = appVersionSelect.value;
-            
+
             if (!appId || !apiKey || !selectedVersion) {
                 showResult('请先输入App ID、API Key并选择版本', false);
                 return;
             }
-            
+
             showLoading('正在获取版本详细配置...');
-            
+
             const xhr = new XMLHttpRequest();
             xhr.open('GET', `https://api.v2.rainyun.com/product/rca/appstore/${appId}/release?version=${encodeURIComponent(selectedVersion)}`, true);
-            
+
             // 设置请求头
             xhr.setRequestHeader('x-api-key', apiKey);
             xhr.setRequestHeader('Content-Type', 'application/json');
-            
+
             // 处理响应
             xhr.onload = function() {
                 hideLoading();
                 if (xhr.status === 200) {
                     try {
                         const data = JSON.parse(xhr.responseText);
-                        
+
                         if (data && data.data) {
                             // 保存当前版本数据
                             currentVersionData = data.data;
-                            
+
                             // 检查currentVersionData是否包含另一个data字段，如果有则展开它
-                            if (currentVersionData.hasOwnProperty('data') && 
-                                typeof currentVersionData.data === 'object' && 
+                            if (currentVersionData.hasOwnProperty('data') &&
+                                typeof currentVersionData.data === 'object' &&
                                 currentVersionData.data !== null) {
                                 // 保存展开后的数据
                                 currentVersionData = currentVersionData.data;
                             }
-                            
+
                             // 清空现有字段
                             configFields.innerHTML = '';
-                            
+
                             // 动态生成配置表单
                             generateConfigForm(currentVersionData);
-                            
+
                             // 显示版本详情区域
                             versionDetails.classList.remove('hidden');
                             showResult('版本详细配置获取成功');
@@ -465,14 +465,14 @@
                     showResult(`获取版本配置失败: HTTP状态码 ${xhr.status}`, false);
                 }
             };
-            
+
             // 处理网络错误
             xhr.onerror = function() {
                 hideLoading();
                 showResult('网络请求错误，请检查网络连接', false);
                 console.error('获取版本配置网络错误');
             };
-            
+
             // 处理超时
             xhr.timeout = 10000; // 10秒超时
             xhr.ontimeout = function() {
@@ -480,11 +480,11 @@
                 showResult('请求超时，请稍后重试', false);
                 console.error('获取版本配置请求超时');
             };
-            
+
             // 发送请求
             xhr.send();
         });
-        
+
         // 动态生成配置表单
         function generateConfigForm(configData) {
             // 清空现有字段
@@ -500,9 +500,10 @@
             const tabDefs = [
                 { id: 'commands', label: '命令与参数' },
                 { id: 'scripts', label: '脚本设定' },
-                { id: 'configmaps', label: '配置文件（configmap）' },
+                { id: 'configmaps', label: '配置文件' },
                 { id: 'env', label: '环境变量' },
                 { id: 'volumes', label: '持久化卷' },
+                { id: 'resources', label: '资源限制' },
                 { id: 'services', label: '服务配置' },
                 { id: 'options', label: '选项配置' },
             ];
@@ -548,44 +549,45 @@
             tabsWrap.appendChild(tabsNav);
             tabsWrap.appendChild(tabsBody);
             configFields.appendChild(tabsWrap);
-            
+
             if (typeof configData !== 'object' || configData === null) {
                 // 如果不是对象，直接添加一个字段
                 addConfigField('config', configData);
                 return;
             }
-            
+
             // 定义要处理的分组（按 Tab 分类）
             const groups = [
                 { id: 'commands',   title: '命令与参数',              fields: ['command', 'args'] },
                 { id: 'scripts',    title: '脚本设定',                fields: ['scripts'] },
                 { id: 'configmaps', title: '配置文件（configmap）',   fields: ['config_maps'] },
                 { id: 'env',        title: '环境变量',                fields: ['env'] },
-                { id: 'volumes',    title: '持久化卷',                fields: ['volume_mounts', 'resource_request'] },
+                { id: 'volumes',    title: '持久化卷',                fields: ['volume_mounts'] },
+                { id: 'resources',  title: '资源限制',                fields: ['resource_request'] },
                 { id: 'services',   title: '服务配置',                fields: ['services'] },
                 { id: 'options',    title: '选项配置',                fields: ['options'] }
             ];
-            
+
             // 跟踪已处理的字段
             const processedFields = new Set();
-            
+
             // 处理每个分组
             groups.forEach(group => {
                 // 创建分组容器
                 const groupContainer = document.createElement('div');
                 groupContainer.className = 'config-group border border-gray-200 rounded-lg p-4 mb-6';
-                
+
                 // 添加分组标题
                 const groupTitle = document.createElement('h3');
                 groupTitle.className = 'text-lg font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-200';
                 groupTitle.textContent = group.title;
                 groupContainer.appendChild(groupTitle);
-                
+
                 // 添加分组内的字段
                 group.fields.forEach(fieldName => {
                     if (configData.hasOwnProperty(fieldName)) {
                         const fieldValue = configData[fieldName];
-                        
+
                         if (fieldName === 'options' && Array.isArray(fieldValue)) {
                             // 特殊处理options数组
                             renderOptionsField(fieldValue, groupContainer);
@@ -608,11 +610,11 @@
                             // 普通字段处理
                             addConfigField(fieldName, fieldValue, groupContainer);
                         }
-                        
+
                         processedFields.add(fieldName);
                     }
                 });
-                
+
                 // 只有当分组有内容时才添加到对应 Tab
                 if (groupContainer.children.length > 1 && tabContainers[group.id]) {
                     tabContainers[group.id].appendChild(groupContainer);
@@ -638,7 +640,8 @@
                     scripts:    countScripts(configData.scripts),
                     configmaps: countArray(configData.config_maps),
                     env:        countArray(configData.env),
-                    volumes:    countArray(configData.volume_mounts) + (configData.resource_request ? 1 : 0),
+                    volumes:    countArray(configData.volume_mounts),
+                    resources:  configData.resource_request ? 1 : 0,
                     services:   countArray(configData.services),
                     options:    countArray(configData.options)
                 };
@@ -648,16 +651,16 @@
                     if (btn) btn.textContent = `${tabDefs.find(t=>t.id===id)?.label || id} (${num})`;
                 });
             })();
-            
+
             // 处理未分组的其他字段
             const otherFieldsGroup = document.createElement('div');
             otherFieldsGroup.className = 'config-group border border-gray-200 rounded-lg p-4';
-            
+
             const otherFieldsTitle = document.createElement('h3');
             otherFieldsTitle.className = 'text-lg font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-200';
             otherFieldsTitle.textContent = '其他配置';
             otherFieldsGroup.appendChild(otherFieldsTitle);
-            
+
             let hasOtherFields = false;
             for (const [key, value] of Object.entries(configData)) {
                 if (!processedFields.has(key)) {
@@ -665,38 +668,38 @@
                     hasOtherFields = true;
                 }
             }
-            
+
             // 如果有未分组的字段，添加到表单
             if (hasOtherFields) {
                 configFields.appendChild(otherFieldsGroup);
             }
         }
-        
+
         // 渲染配置选项字段
         function renderOptionsField(options, container) {
             if (!Array.isArray(options)) {
                 return;
             }
-            
+
             const optionsContainer = document.createElement('div');
             optionsContainer.className = 'options-container space-y-4';
-            
+
             options.forEach((option, index) => {
                 const optionCard = document.createElement('div');
                 optionCard.className = 'bg-gray-50 p-4 rounded-lg border border-gray-200';
                 // 绑定原始选项完整数据
                 optionCard.dataset.optionJson = JSON.stringify(option);
-                
+
                 // 选项标题
                 const optionTitle = document.createElement('div');
                 optionTitle.className = 'font-medium text-gray-800 mb-2';
                 optionTitle.textContent = `${option.label} (${option.env_key || '无环境键'})`;
                 optionCard.appendChild(optionTitle);
-                
+
                 // 选项表单
                 const optionForm = document.createElement('div');
                 optionForm.className = 'space-y-2 text-sm';
-                
+
                 // 基本属性（类型使用下拉）
                 const typeRow = document.createElement('div');
                 typeRow.className = 'mb-2';
@@ -731,7 +734,7 @@
                 reqLabel.appendChild(reqText);
                 reqRow.appendChild(reqLabel);
                 optionForm.appendChild(reqRow);
-                
+
                 // 标签 label（可编辑）
                 const labelRow = document.createElement('div');
                 labelRow.className = 'mb-2';
@@ -823,7 +826,7 @@
                 envKeyInput.addEventListener('input', updateTitle);
                 // 初始化一次
                 updateTitle();
-                
+
                 // 根据类型显示不同的输入控件
                 if ((option.type === 'apps' || option.type === 'select')) {
                     // 多可选项编辑器 + 当前值选择
@@ -929,26 +932,26 @@
                     // 文本输入类型
                     const inputContainer = document.createElement('div');
                     inputContainer.className = 'mb-2';
-                    
+
                     const inputLabel = document.createElement('label');
                     inputLabel.className = 'block text-gray-700 mb-1';
                     inputLabel.textContent = '值';
                     inputContainer.appendChild(inputLabel);
-                    
+
                     const input = document.createElement('input');
-                    input.type = option.type === 'password' ? 'password' : 
+                    input.type = option.type === 'password' ? 'password' :
                                 option.type === 'number' ? 'number' : 'text';
                     input.className = 'field-value px-3 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
                     input.value = option.value || option.default || '';
                     inputContainer.appendChild(input);
                     optionForm.appendChild(inputContainer);
                 }
-                
+
                 // 默认值显示
                 if (option.default) {
                     addOptionAttribute(optionForm, '默认值', option.default);
                 }
-                
+
                 // 删除按钮
                 const deleteBtn = document.createElement('button');
                 deleteBtn.type = 'button';
@@ -960,7 +963,7 @@
                 optionCard.appendChild(deleteBtn);
                 optionsContainer.appendChild(optionCard);
             });
-            
+
             // 新增选项按钮
             const addOptionBtn = document.createElement('button');
             addOptionBtn.type = 'button';
@@ -973,49 +976,49 @@
             container.appendChild(optionsContainer);
             container.appendChild(addOptionBtn);
         }
-        
+
         // 添加选项属性显示
         function addOptionAttribute(container, label, value) {
             const attribute = document.createElement('div');
             attribute.className = 'flex justify-between text-gray-600';
-            
+
             const labelSpan = document.createElement('span');
             labelSpan.className = 'font-medium';
             labelSpan.textContent = label + ':';
-            
+
             const valueSpan = document.createElement('span');
             valueSpan.textContent = value !== undefined && value !== null ? value : '-';
-            
+
             attribute.appendChild(labelSpan);
             attribute.appendChild(valueSpan);
             container.appendChild(attribute);
         }
-        
+
         // 渲染环境变量字段
         function renderEnvField(envVars, container) {
             if (!Array.isArray(envVars)) {
                 return;
             }
-            
+
             const envContainer = document.createElement('div');
             envContainer.className = 'env-container space-y-2';
-            
+
             envVars.forEach((envVar, index) => {
                 const envRow = document.createElement('div');
                 envRow.className = 'flex flex-wrap items-center gap-2 bg-gray-50 p-3 rounded-lg';
                 // 绑定原始环境变量key
                 envRow.dataset.key = envVar.key;
-                
+
                 const keyInput = document.createElement('input');
                 keyInput.type = 'text';
                 keyInput.className = 'env-key px-3 py-1 border border-gray-300 rounded-lg min-w-[150px]';
                 keyInput.value = envVar.key || '';
-                
+
                 const valueInput = document.createElement('input');
                 valueInput.type = 'text';
                 valueInput.className = 'field-value px-3 py-1 border border-gray-300 rounded-lg flex-grow focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
                 valueInput.value = envVar.value || '';
-                
+
                 // 删除按钮
                 const deleteBtn = document.createElement('button');
                 deleteBtn.type = 'button';
@@ -1028,7 +1031,7 @@
                 envRow.appendChild(deleteBtn);
                 envContainer.appendChild(envRow);
             });
-            
+
             // 新增环境变量按钮
             const addEnvBtn = document.createElement('button');
             addEnvBtn.type = 'button';
@@ -1041,30 +1044,30 @@
             container.appendChild(envContainer);
             container.appendChild(addEnvBtn);
         }
-        
+
         // 渲染卷挂载字段
         function renderVolumeMountsField(volumeMounts, container) {
             if (!Array.isArray(volumeMounts)) {
                 return;
             }
-            
+
             const volumesContainer = document.createElement('div');
             volumesContainer.className = 'volumes-container space-y-4';
-            
+
             volumeMounts.forEach((volume, index) => {
                 const volumeCard = document.createElement('div');
                 volumeCard.className = 'bg-gray-50 p-4 rounded-lg border border-gray-200';
                 // 绑定原始卷挂载完整数据
                 volumeCard.dataset.volumeJson = JSON.stringify(volume);
-                
+
                 const volumeTitle = document.createElement('div');
                 volumeTitle.className = 'font-medium text-gray-800 mb-2';
                 volumeTitle.textContent = volume.name || `卷挂载 ${index + 1}`;
                 volumeCard.appendChild(volumeTitle);
-                
+
                 const volumeDetails = document.createElement('div');
                 volumeDetails.className = 'space-y-1 text-sm text-gray-600';
-                
+
                 if (volume.mount_path) {
                     volumeDetails.innerHTML += `<div><span class="font-medium">挂载路径:</span> ${volume.mount_path}</div>`;
                 }
@@ -1074,7 +1077,7 @@
                 if (volume.mount_content_type) {
                     volumeDetails.innerHTML += `<div><span class="font-medium">类型:</span> ${volume.mount_content_type}</div>`;
                 }
-                
+
                 // 删除按钮
                 const deleteBtn = document.createElement('button');
                 deleteBtn.type = 'button';
@@ -1086,7 +1089,7 @@
                 volumeCard.appendChild(deleteBtn);
                 volumesContainer.appendChild(volumeCard);
             });
-            
+
             // 新增卷挂载按钮
             const addVolBtn = document.createElement('button');
             addVolBtn.type = 'button';
@@ -1099,55 +1102,79 @@
             container.appendChild(volumesContainer);
             container.appendChild(addVolBtn);
         }
-        
-        // 渲染服务字段
+
+        // 渲染服务字段（支持编辑）
         function renderServicesField(services, container) {
             if (!Array.isArray(services)) {
                 return;
             }
-            
+
             const servicesContainer = document.createElement('div');
             servicesContainer.className = 'services-container space-y-4';
-            
+
             services.forEach((service, index) => {
                 const serviceCard = document.createElement('div');
-                serviceCard.className = 'bg-gray-50 p-4 rounded-lg border border-gray-200';
-                // 绑定原始服务完整数据
+                serviceCard.className = 'bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow';
                 serviceCard.dataset.serviceJson = JSON.stringify(service);
-                
-                const serviceTitle = document.createElement('div');
-                serviceTitle.className = 'font-medium text-gray-800 mb-2';
-                serviceTitle.textContent = service.name || service.label || `服务 ${index + 1}`;
-                serviceCard.appendChild(serviceTitle);
-                
-                const serviceDetails = document.createElement('div');
-                serviceDetails.className = 'space-y-1 text-sm text-gray-600';
-                
-                if (service.type) {
-                    serviceDetails.innerHTML += `<div><span class="font-medium">类型:</span> ${service.type}</div>`;
-                }
-                if (service.internal_port) {
-                    serviceDetails.innerHTML += `<div><span class="font-medium">内部端口:</span> ${service.internal_port}</div>`;
-                }
-                if (service.external_port) {
-                    serviceDetails.innerHTML += `<div><span class="font-medium">外部端口:</span> ${service.external_port}</div>`;
-                }
-                if (service.protocol) {
-                    serviceDetails.innerHTML += `<div><span class="font-medium">协议:</span> ${service.protocol}</div>`;
-                }
-                
-                // 删除按钮
+
+                // 标题栏
+                const header = document.createElement('div');
+                header.className = 'flex justify-between items-start mb-3 pb-2 border-b border-gray-200';
+
+                const titleInput = document.createElement('input');
+                titleInput.type = 'text';
+                titleInput.className = 'svc-name-edit text-base font-medium text-gray-800 border-0 border-b-2 border-transparent hover:border-blue-300 focus:border-blue-500 focus:outline-none px-1 flex-1 mr-2';
+                titleInput.value = service.name || service.label || '';
+                titleInput.placeholder = '服务名称';
+
                 const deleteBtn = document.createElement('button');
                 deleteBtn.type = 'button';
-                deleteBtn.className = 'text-red-500 hover:text-red-700 transition-colors text-sm';
+                deleteBtn.className = 'text-gray-400 hover:text-red-600 transition-colors';
                 deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
-                deleteBtn.addEventListener('click', function() { serviceCard.remove(); });
+                deleteBtn.addEventListener('click', function() {
+                    if (confirm('确定删除此服务吗？')) {
+                        serviceCard.remove();
+                    }
+                });
 
-                serviceCard.appendChild(serviceDetails);
-                serviceCard.appendChild(deleteBtn);
+                header.appendChild(titleInput);
+                header.appendChild(deleteBtn);
+                serviceCard.appendChild(header);
+
+                // 表单区域
+                const form = document.createElement('div');
+                form.className = 'grid grid-cols-1 md:grid-cols-2 gap-3';
+
+                // 创建输入字段
+                const createField = (label, value, className, type = 'text', placeholder = '') => {
+                    const field = document.createElement('div');
+                    field.className = 'space-y-1';
+
+                    const labelEl = document.createElement('label');
+                    labelEl.className = 'block text-xs font-medium text-gray-600';
+                    labelEl.textContent = label;
+
+                    const input = document.createElement('input');
+                    input.type = type;
+                    input.className = `${className} w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors`;
+                    input.value = value || '';
+                    input.placeholder = placeholder;
+
+                    field.appendChild(labelEl);
+                    field.appendChild(input);
+                    return field;
+                };
+
+                form.appendChild(createField('标签', service.label, 'svc-label-edit', 'text', '服务标签'));
+                form.appendChild(createField('类型', service.type, 'svc-type-edit', 'text', 'external'));
+                form.appendChild(createField('内部端口', service.internal_port, 'svc-internal-edit', 'text', '8080'));
+                form.appendChild(createField('外部端口', service.external_port, 'svc-external-edit', 'text', '8080 或 ${PORT}'));
+                form.appendChild(createField('协议', service.protocol, 'svc-protocol-edit', 'text', 'tcp'));
+
+                serviceCard.appendChild(form);
                 servicesContainer.appendChild(serviceCard);
             });
-            
+
             // 新增服务按钮
             const addServiceBtn = document.createElement('button');
             addServiceBtn.type = 'button';
@@ -1160,58 +1187,121 @@
             container.appendChild(servicesContainer);
             container.appendChild(addServiceBtn);
         }
-        
+
         // 渲染资源限制（滑块，单条不可新增）
         function renderResourceRequest(resource, container) {
             const wrap = document.createElement('div');
-            wrap.className = 'resource-request-container bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-3';
+            wrap.className = 'resource-request-container bg-white p-5 rounded-lg border border-gray-200 shadow-sm space-y-4';
 
+            const header = document.createElement('div');
+            header.className = 'mb-1';
             const title = document.createElement('div');
-            title.className = 'font-medium text-gray-800';
-            title.textContent = '资源限制（不可新增，仅编辑）';
-            wrap.appendChild(title);
+            title.className = 'text-base font-semibold text-gray-800';
+            title.textContent = '资源配置';
+            const desc = document.createElement('div');
+            desc.className = 'text-xs text-gray-500 mt-1';
+            desc.textContent = '设置应用运行所需的最小 CPU 和内存资源';
+            header.appendChild(title);
+            header.appendChild(desc);
+            wrap.appendChild(header);
 
-            // CPU 滑块（单位：mCPU）
+            // CPU 滑块和手动输入（单位：mCPU）
             const cpuRow = document.createElement('div');
-            cpuRow.className = 'space-y-1';
+            cpuRow.className = 'space-y-2';
             const cpuLabel = document.createElement('label');
-            cpuLabel.className = 'block text-gray-700 text-sm';
+            cpuLabel.className = 'text-sm font-medium text-gray-700 block';
             cpuLabel.textContent = 'CPU (mCPU)';
-            const cpuValue = document.createElement('div');
-            cpuValue.className = 'text-xs text-gray-500';
-            cpuValue.textContent = `${resource.min_cpu ?? 0} mCPU`;
-            const cpuInput = document.createElement('input');
-            cpuInput.type = 'range';
-            cpuInput.className = 'res-cpu w-full';
-            cpuInput.min = '128';
-            cpuInput.max = '4000';
-            cpuInput.step = '50';
-            cpuInput.value = (resource.min_cpu ?? 500);
-            cpuInput.addEventListener('input', () => { cpuValue.textContent = `${cpuInput.value} mCPU`; });
-            cpuRow.appendChild(cpuLabel);
-            cpuRow.appendChild(cpuInput);
-            cpuRow.appendChild(cpuValue);
 
-            // Memory 滑块（单位：MB）
+            const cpuControls = document.createElement('div');
+            cpuControls.className = 'flex items-center space-x-3';
+
+            const cpuSlider = document.createElement('input');
+            cpuSlider.type = 'range';
+            cpuSlider.className = 'res-cpu flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer';
+            cpuSlider.min = '128';
+            cpuSlider.max = '4000';
+            cpuSlider.step = '2';
+            cpuSlider.value = (resource.min_cpu ?? 500);
+
+            const cpuInputBox = document.createElement('input');
+            cpuInputBox.type = 'number';
+            cpuInputBox.className = 'res-cpu-input w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
+            cpuInputBox.min = '128';
+            cpuInputBox.max = '4000';
+            cpuInputBox.step = '2';
+            cpuInputBox.value = (resource.min_cpu ?? 500);
+
+            const cpuUnit = document.createElement('span');
+            cpuUnit.className = 'text-sm text-gray-500';
+            cpuUnit.textContent = 'mCPU';
+
+            // 同步滑块和输入框
+            cpuSlider.addEventListener('input', () => {
+                cpuInputBox.value = cpuSlider.value;
+            });
+            cpuInputBox.addEventListener('input', () => {
+                const value = parseInt(cpuInputBox.value) || 128;
+                if (value >= 128 && value <= 4000) {
+                    cpuSlider.value = value;
+                } else {
+                    cpuInputBox.value = cpuSlider.value;
+                }
+            });
+
+            cpuControls.appendChild(cpuSlider);
+            cpuControls.appendChild(cpuInputBox);
+            cpuControls.appendChild(cpuUnit);
+            cpuRow.appendChild(cpuLabel);
+            cpuRow.appendChild(cpuControls);
+
+            // Memory 滑块和手动输入（单位：MB）
             const memRow = document.createElement('div');
-            memRow.className = 'space-y-1';
+            memRow.className = 'space-y-2';
             const memLabel = document.createElement('label');
-            memLabel.className = 'block text-gray-700 text-sm';
+            memLabel.className = 'text-sm font-medium text-gray-700 block';
             memLabel.textContent = '内存 (MB)';
-            const memValue = document.createElement('div');
-            memValue.className = 'text-xs text-gray-500';
-            memValue.textContent = `${resource.min_memory ?? 0} MB`;
-            const memInput = document.createElement('input');
-            memInput.type = 'range';
-            memInput.className = 'res-mem w-full';
-            memInput.min = '128';
-            memInput.max = '8192';
-            memInput.step = '64';
-            memInput.value = (resource.min_memory ?? 256);
-            memInput.addEventListener('input', () => { memValue.textContent = `${memInput.value} MB`; });
+
+            const memControls = document.createElement('div');
+            memControls.className = 'flex items-center space-x-3';
+
+            const memSlider = document.createElement('input');
+            memSlider.type = 'range';
+            memSlider.className = 'res-mem flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer';
+            memSlider.min = '128';
+            memSlider.max = '8192';
+            memSlider.step = '2';
+            memSlider.value = (resource.min_memory ?? 256);
+
+            const memInputBox = document.createElement('input');
+            memInputBox.type = 'number';
+            memInputBox.className = 'res-mem-input w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
+            memInputBox.min = '128';
+            memInputBox.max = '8192';
+            memInputBox.step = '2';
+            memInputBox.value = (resource.min_memory ?? 256);
+
+            const memUnit = document.createElement('span');
+            memUnit.className = 'text-sm text-gray-500';
+            memUnit.textContent = 'MB';
+
+            // 同步滑块和输入框
+            memSlider.addEventListener('input', () => {
+                memInputBox.value = memSlider.value;
+            });
+            memInputBox.addEventListener('input', () => {
+                const value = parseInt(memInputBox.value) || 128;
+                if (value >= 128 && value <= 8192) {
+                    memSlider.value = value;
+                } else {
+                    memInputBox.value = memSlider.value;
+                }
+            });
+
+            memControls.appendChild(memSlider);
+            memControls.appendChild(memInputBox);
+            memControls.appendChild(memUnit);
             memRow.appendChild(memLabel);
-            memRow.appendChild(memInput);
-            memRow.appendChild(memValue);
+            memRow.appendChild(memControls);
 
             wrap.appendChild(cpuRow);
             wrap.appendChild(memRow);
@@ -1259,18 +1349,18 @@
             // 克隆模板
             const template = configFieldTemplate.querySelector('.config-field');
             const newField = template.cloneNode(true);
-            
+
             // 设置字段名
             const nameInput = newField.querySelector('.field-name');
             nameInput.value = fieldName;
-            
+
             // 设置字段值
             const valueInput = newField.querySelector('.field-value');
             const valueContainer = newField.querySelector('.field-value-container');
-            
+
             // 根据值类型设置字段类型
             const typeSelect = newField.querySelector('.field-type');
-            
+
             if (Array.isArray(fieldValue)) {
                 typeSelect.value = 'array';
                 valueInput.value = JSON.stringify(fieldValue);
@@ -1294,30 +1384,30 @@
                 typeSelect.value = 'string';
                 valueInput.value = fieldValue !== undefined ? fieldValue : '';
             }
-            
+
             // 添加删除按钮事件
             const removeBtn = newField.querySelector('.remove-field');
             removeBtn.addEventListener('click', function() {
                 newField.remove();
             });
-            
+
             // 添加类型变更事件
             typeSelect.addEventListener('change', function() {
                 const currentValue = getFieldValue(newField);
                 updateFieldInputType(newField, typeSelect.value, currentValue);
             });
-            
+
             // 添加到指定容器，如果没有指定则添加到默认容器
             container.appendChild(newField);
         }
-        
+
         // 更新字段输入类型
         function updateFieldInputType(fieldElement, type, currentValue) {
             const valueContainer = fieldElement.querySelector('.field-value-container');
-            
+
             // 清空容器
             valueContainer.innerHTML = '';
-            
+
             // 根据类型创建不同的输入控件
             if (type === 'boolean') {
                 const checkbox = document.createElement('input');
@@ -1345,7 +1435,7 @@
                 valueContainer.appendChild(input);
             }
         }
-        
+
         // 新增：选项卡片（可编辑）
         function addOptionItem(optionsContainer) {
             const card = document.createElement('div');
@@ -1376,7 +1466,7 @@
                     <textarea class="opt-values px-3 py-2 border border-gray-300 rounded-lg md:col-span-2 hidden" rows="2" placeholder="values（JSON数组，apps/select 可填）"></textarea>
                 </div>
             `;
-            
+
             const delBtn = card.querySelector('button');
             delBtn.addEventListener('click', function() { card.remove(); });
 
@@ -1552,7 +1642,7 @@
         function getFieldValue(fieldElement) {
             const type = fieldElement.querySelector('.field-type').value;
             const valueElement = fieldElement.querySelector('.field-value');
-            
+
             if (type === 'boolean') {
                 return valueElement.checked;
             } else if (type === 'number') {
@@ -1568,12 +1658,12 @@
                 return valueElement.value;
             }
         }
-        
+
         // 获取所有配置字段数据
         function getConfigData() {
             // 创建一个基于原始数据的配置对象，确保保留所有字段
             const configData = currentVersionData ? { ...currentVersionData } : {};
-            
+
             // 1. 更新从普通配置字段中收集的数据
             const fields = document.querySelectorAll('.config-field');
             fields.forEach(field => {
@@ -1582,7 +1672,7 @@
                     configData[name] = getFieldValue(field);
                 }
             });
-            
+
             // 2. 处理options字段（基于当前DOM，删除的原始项不收集）
             const optionsContainer = document.querySelector('.options-container');
             if (optionsContainer) {
@@ -1632,17 +1722,17 @@
                     configData.options = options;
                 }
             }
-            
+
             // 3. 处理env字段
             const envContainer = document.querySelector('.env-container');
             if (envContainer) {
                 const envVars = [];
                 const envRows = envContainer.querySelectorAll('div.flex');
-                
+
                 envRows.forEach(row => {
                     const keySpan = row.querySelector('span');
                     const valueInput = row.querySelector('.field-value');
-                    
+
                     if (keySpan && valueInput) {
                         // 从span文本中提取key (去掉末尾的冒号)
                         const key = keySpan.textContent.replace(':', '').trim();
@@ -1652,7 +1742,7 @@
                         });
                     }
                 });
-                
+
                 // 采集新增的环境变量行
                 const newEnvRows = document.querySelectorAll('.env-new-row');
                 newEnvRows.forEach(row => {
@@ -1708,12 +1798,12 @@
                     configData.services = [...original, ...servicesArr];
                 }
             }
-            
+
             // 6. 采集资源限制
             const resWrap = document.querySelector('.resource-request-container');
             if (resWrap) {
-                const cpuInput = resWrap.querySelector('.res-cpu');
-                const memInput = resWrap.querySelector('.res-mem');
+                const cpuInput = resWrap.querySelector('.res-cpu-input') || resWrap.querySelector('.res-cpu');
+                const memInput = resWrap.querySelector('.res-mem-input') || resWrap.querySelector('.res-mem');
                 const min_cpu = cpuInput ? parseInt(cpuInput.value, 10) : undefined;
                 const min_memory = memInput ? parseInt(memInput.value, 10) : undefined;
                 configData.resource_request = {
@@ -1738,7 +1828,7 @@
             if (configData.hasOwnProperty('data') && typeof configData.data === 'object' && configData.data !== null) {
                 const dataObj = configData.data;
                 delete configData.data;
-                
+
                 // 将data对象的属性合并到configData中
                 for (const [key, value] of Object.entries(dataObj)) {
                     if (!(key in configData)) {
@@ -1746,10 +1836,10 @@
                     }
                 }
             }
-            
+
             return configData;
         }
-        
+
         // 构造最终提交payload（仅收集当前DOM中的元素，删除的原始项不包含）
         function getFinalPayload() {
             const payload = {};
@@ -1761,8 +1851,8 @@
             // 资源限制
             const resWrap = document.querySelector('.resource-request-container');
             if (resWrap) {
-                const cpuInput = resWrap.querySelector('.res-cpu');
-                const memInput = resWrap.querySelector('.res-mem');
+                const cpuInput = resWrap.querySelector('.res-cpu-input') || resWrap.querySelector('.res-cpu');
+                const memInput = resWrap.querySelector('.res-mem-input') || resWrap.querySelector('.res-mem');
                 const min_cpu = cpuInput ? parseInt(cpuInput.value, 10) : undefined;
                 const min_memory = memInput ? parseInt(memInput.value, 10) : undefined;
                 payload.resource_request = {
@@ -1837,7 +1927,7 @@
             const servicesContainerRef = document.querySelector('.services-container');
             payload.services = [];
             if (servicesContainerRef) {
-                const serviceCards = servicesContainerRef.querySelectorAll('.bg-gray-50, .service-new-card');
+                const serviceCards = servicesContainerRef.querySelectorAll('.bg-white, .service-new-card');
                 serviceCards.forEach(card => {
                     if (card.classList.contains('service-new-card')) {
                         const name = card.querySelector('.svc-name')?.value || '';
@@ -1848,10 +1938,14 @@
                         const protocol = card.querySelector('.svc-protocol')?.value || '';
                         payload.services.push({ name, label, type, internal_port, external_port, protocol });
                     } else if (card.dataset.serviceJson) {
-                        try {
-                            const s = JSON.parse(card.dataset.serviceJson);
-                            payload.services.push(s);
-                        } catch (e) {}
+                        // 从编辑框读取值
+                        const name = card.querySelector('.svc-name-edit')?.value || '';
+                        const label = card.querySelector('.svc-label-edit')?.value || '';
+                        const type = card.querySelector('.svc-type-edit')?.value || '';
+                        const internal_port = card.querySelector('.svc-internal-edit')?.value || '';
+                        const external_port = card.querySelector('.svc-external-edit')?.value || '';
+                        const protocol = card.querySelector('.svc-protocol-edit')?.value || '';
+                        payload.services.push({ name, label, type, internal_port, external_port, protocol });
                     }
                 });
             }
@@ -1984,18 +2078,18 @@
         addConfigFieldBtn.addEventListener('click', function() {
             addConfigField();
         });
-        
+
         // 保存版本配置按钮事件
         saveVersionConfigBtn.addEventListener('click', function() {
             const appId = appIdInput.value.trim();
             const apiKey = apiKeyInput.value.trim();
             const selectedVersion = appVersionSelect.value;
-            
+
             if (!appId || !apiKey || !selectedVersion) {
                 showResult('请先输入App ID、API Key并选择版本', false);
                 return;
             }
-            
+
             // apps/select 的可选项 value 唯一性校验（同一组内不可重复）
             {
                 const editors = document.querySelectorAll('.opt-values-editor');
@@ -2114,67 +2208,66 @@
                     }
                 }
 
-                // 校验原始服务卡片（读取绑定的 JSON）
-                const originalCards = servicesContainer.querySelectorAll('.bg-gray-50');
+                // 校验原始服务卡片（从输入框读取）
+                const originalCards = servicesContainer.querySelectorAll('.bg-white');
                 for (const card of originalCards) {
-                    const json = card.dataset.serviceJson;
-                    if (!json) continue;
-                    let svc;
-                    try { svc = JSON.parse(json); } catch { continue; }
-                    const intVal = svc?.internal_port ?? '';
-                    const extVal = svc?.external_port ?? '';
+                    if (!card.dataset.serviceJson) continue;
+                    const internalInput = card.querySelector('.svc-internal-edit');
+                    const externalInput = card.querySelector('.svc-external-edit');
+                    const intVal = internalInput?.value || '';
+                    const extVal = externalInput?.value || '';
 
                     // internal_port 必须为数字且范围有效
-                    if (!/^\d+$/.test(String(intVal)) || parseInt(String(intVal), 10) < 1 || parseInt(String(intVal), 10) > 65535) {
-                        card.classList.add('border-red-500');
-                        showResult('原始服务项 internal_port 应为 1-65535 的数字', false);
-                        throw new Error('service internal_port invalid (original)');
+                    if (!/^\d+$/.test(intVal) || parseInt(intVal, 10) < 1 || parseInt(intVal, 10) > 65535) {
+                        internalInput?.classList.add('border-red-500');
+                        showResult('服务的 internal_port 必须为 1-65535 的数字', false);
+                        throw new Error('service internal_port invalid');
                     } else {
-                        card.classList.remove('border-red-500');
+                        internalInput?.classList.remove('border-red-500');
                     }
 
                     // external_port 可为数字范围或占位符
-                    const extIsNum = /^\d+$/.test(String(extVal));
-                    const extIsPlaceholder = /^\$\{[A-Za-z0-9_]+\}$/.test(String(extVal));
+                    const extIsNum = /^\d+$/.test(extVal);
+                    const extIsPlaceholder = /^\$\{[A-Za-z0-9_]+\}$/.test(extVal);
                     if (!(extIsNum || extIsPlaceholder)) {
-                        card.classList.add('border-red-500');
-                        showResult('原始服务项 external_port 必须为 1-65535 的数字或 ${VAR} 形式占位符', false);
-                        throw new Error('service external_port invalid (original)');
+                        externalInput?.classList.add('border-red-500');
+                        showResult('服务的 external_port 必须为 1-65535 的数字或 ${VAR} 形式占位符', false);
+                        throw new Error('service external_port invalid');
                     } else if (extIsNum) {
-                        const num = parseInt(String(extVal), 10);
+                        const num = parseInt(extVal, 10);
                         if (num < 1 || num > 65535) {
-                            card.classList.add('border-red-500');
-                            showResult('原始服务项 external_port 数值需在 1-65535 范围内', false);
-                            throw new Error('service external_port range invalid (original)');
+                            externalInput?.classList.add('border-red-500');
+                            showResult('服务的 external_port 数值需在 1-65535 范围内', false);
+                            throw new Error('service external_port range invalid');
                         } else {
-                            card.classList.remove('border-red-500');
+                            externalInput?.classList.remove('border-red-500');
                         }
                     } else {
-                        card.classList.remove('border-red-500');
+                        externalInput?.classList.remove('border-red-500');
                     }
                 }
             })();
 
             // 获取配置数据
             const configData = getFinalPayload();
-            
+
             // 构建更新数据（这里假设API接受的参数结构）
             const updateData = {
                 // 根据API要求构建数据结构
                 // 这里简单使用configData作为示例
                 ...configData
             };
-            
+
             showLoading('正在保存版本配置...');
-            
+
             const xhr = new XMLHttpRequest();
             // 注意：这里需要根据实际API的更新端点进行调整
             xhr.open('PATCH', `https://api.v2.rainyun.com/product/rca/appstore/${appId}/release?version=${encodeURIComponent(selectedVersion)}`, true);
-            
+
             // 设置请求头
             xhr.setRequestHeader('x-api-key', apiKey);
             xhr.setRequestHeader('Content-Type', 'application/json');
-            
+
             // 处理响应
             xhr.onload = function() {
                 hideLoading();
@@ -2193,14 +2286,14 @@
                     showResult(`保存版本配置失败: HTTP状态码 ${xhr.status}`, false);
                 }
             };
-            
+
             // 处理网络错误
             xhr.onerror = function() {
                 hideLoading();
                 showResult('网络请求错误，请检查网络连接', false);
                 console.error('保存版本配置网络错误');
             };
-            
+
             // 处理超时
             xhr.timeout = 15000; // 15秒超时
             xhr.ontimeout = function() {
@@ -2208,28 +2301,28 @@
                 showResult('请求超时，请稍后重试', false);
                 console.error('保存版本配置请求超时');
             };
-            
+
             // 发送请求
             xhr.send(JSON.stringify(updateData));
         });
-        
+
         // 重置表单
         resetFormBtn.addEventListener('click', function() {
             appForm.reset();
         });
-        
+
         // 提交表单更新应用数据
         appForm.addEventListener('submit', function(event) {
             event.preventDefault();
-            
+
             const appId = appIdInput.value.trim();
             const apiKey = apiKeyInput.value.trim();
-            
+
             if (!appId || !apiKey) {
                 showResult('请填写App ID和API Key', false);
                 return;
             }
-            
+
             // 构建请求数据
             const formData = {
                 title: titleInput.value.trim(),
@@ -2241,22 +2334,22 @@
                 tags: tagsInput.value.trim().split(',').map(tag => tag.trim()).filter(tag => tag),
                 readme: readmeInput.value.trim()
             };
-            
+
             // 可选字段
             if (logoInput.value.trim()) {
                 formData.logo = logoInput.value.trim();
             }
-            
+
             showLoading('正在更新应用信息...');
-            
+
             // 使用XMLHttpRequest替代fetch
             const xhr = new XMLHttpRequest();
             xhr.open('PATCH', `https://api.v2.rainyun.com/product/rca/appstore/${appId}/`, true);
-            
+
             // 设置请求头
             xhr.setRequestHeader('x-api-key', apiKey);
             xhr.setRequestHeader('Content-Type', 'application/json');
-            
+
             // 处理响应
             xhr.onload = function() {
                 hideLoading();
@@ -2276,14 +2369,14 @@
                     showResult(`更新应用信息失败: HTTP状态码 ${xhr.status}`, false);
                 }
             };
-            
+
             // 处理网络错误
             xhr.onerror = function() {
                 hideLoading();
                 showResult('网络请求错误，请检查网络连接或API服务是否可用。', false);
                 console.error('更新应用信息网络错误');
             };
-            
+
             // 处理超时
             xhr.timeout = 15000; // 15秒超时
             xhr.ontimeout = function() {
@@ -2291,7 +2384,7 @@
                 showResult('请求超时，请稍后重试。', false);
                 console.error('更新应用信息请求超时');
             };
-            
+
             // 发送请求
             xhr.send(JSON.stringify(formData));
         });
