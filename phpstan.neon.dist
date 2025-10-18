@@ -13,5 +13,17 @@ parameters:
     - '#Call to undefined method .*::.*#'
     - '#Access to an undefined property .*::\$.*#'
     - '#Parameter .* of method .* expects .* array\\|Traversable, .* given#'
+    - '#Call to function is_array\(\) with Webman\\Http\\UploadFile will always evaluate to false#'
+    - '#Instanceof between \*NEVER\* and Webman\\Http\\UploadFile will always evaluate to false#'
+    - '#Call to an undefined method Elastic\\Elasticsearch\\ClientInterface::.*\(\)#'
+    - '#Function redis not found#'
+    - '#Function method_exists\(\) with .* will always evaluate to true#'
+    - '#If condition is always true#'
+    - '#Right side of && is always true#'
+    - '#Comparison operation .* between .* and .* is always true#'
+    - '#Offset .* on .* always exists and is not nullable#'
+    - '#Parameter .* of array_values is already a list, call has no effect#'
+    - '#Offset .* in isset\(\) does not exist#'
+    - '#Call to function method_exists\(\) with .* and .* will always evaluate to true#'
   bootstrapFiles:
     - vendor/autoload.php

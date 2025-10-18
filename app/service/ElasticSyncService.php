@@ -4,7 +4,6 @@ namespace app\service;
 
 use app\model\Post;
 use support\Log;
-use support\Redis;
 
 class ElasticSyncService
 {
@@ -85,7 +84,7 @@ class ElasticSyncService
             $resp = ['ok' => false, 'status' => 0, 'error' => $e->getMessage()];
         }
         $msg = sprintf('[ES] createIndex analyzer=%s status=%s', $analyzer, $resp['status'] ?? 'n/a');
-        Redis::lpush('es:sync:logs', date('Y-m-d H:i:s') . ' ' . $msg);
+        redis()->lPush('es:sync:logs', date('Y-m-d H:i:s') . ' ' . $msg);
         if (!$resp['ok']) {
             Log::warning('[ElasticSyncService] createIndex failed status=' . $resp['status'] . ' error=' . ($resp['error'] ?? ''));
 
@@ -193,17 +192,18 @@ class ElasticSyncService
 
         try {
             $client = ElasticService::client();
-            $client->index([
+            $params = [
                 'index' => $cfg['index'],
                 'id' => (int) $post->id,
                 'body' => $payload,
-            ]);
-            $resp = ['ok' => true, 'status' => 200];
+            ];
+            $response = $client->index($params);
+            $resp = ['ok' => true, 'status' => 200, 'body' => $response->asArray()];
         } catch (\Throwable $e) {
             $resp = ['ok' => false, 'status' => 0, 'error' => $e->getMessage()];
         }
         $msg = sprintf('[ES] indexPost id=%d status=%s', (int) $post->id, $resp['status'] ?? 'n/a');
-        Redis::lpush('es:sync:logs', date('Y-m-d H:i:s') . ' ' . $msg . (isset($resp['body']) ? ' body=' . json_encode($resp['body']) : ''));
+        redis()->lPush('es:sync:logs', date('Y-m-d H:i:s') . ' ' . $msg . (isset($resp['body']) ? ' body=' . json_encode($resp['body']) : ''));
         if (!$resp['ok']) {
             Log::warning('[ElasticSyncService] indexPost failed id=' . $post->id . ' status=' . $resp['status'] . ' error=' . ($resp['error'] ?? '') . (isset($resp['body']) ? ' body=' . json_encode($resp['body']) : ''));
 
@@ -234,12 +234,13 @@ class ElasticSyncService
 
         try {
             $client = ElasticService::client();
-            $client->index([
+            $params = [
                 'index' => $cfg['index'],
                 'id' => 'tag_' . (int) $tag->id,
                 'body' => $body,
-            ]);
-            \support\Redis::lpush('es:sync:logs', date('Y-m-d H:i:s') . ' [ES] indexTag id=' . (int) $tag->id . ' name=' . (string) $tag->name);
+            ];
+            $response = $client->index($params);
+            redis()->lPush('es:sync:logs', date('Y-m-d H:i:s') . ' [ES] indexTag id=' . (int) $tag->id . ' name=' . (string) $tag->name . ' status=200');
 
             // 动作：完成索引标签（需权限 search:action.index_tag_done）
             \app\service\PluginService::do_action('elastic.index_tag_done', ['id' => (int) $tag->id]);
@@ -273,12 +274,13 @@ class ElasticSyncService
 
         try {
             $client = ElasticService::client();
-            $client->index([
+            $params = [
                 'index' => $cfg['index'],
                 'id' => 'category_' . (int) $category->id,
                 'body' => $body,
-            ]);
-            \support\Redis::lpush('es:sync:logs', date('Y-m-d H:i:s') . ' [ES] indexCategory id=' . (int) $category->id . ' name=' . (string) $category->name);
+            ];
+            $response = $client->index($params);
+            redis()->lPush('es:sync:logs', date('Y-m-d H:i:s') . ' [ES] indexCategory id=' . (int) $category->id . ' name=' . (string) $category->name . ' status=200');
 
             // 动作：完成索引分类（需权限 search:action.index_category_done）
             \app\service\PluginService::do_action('elastic.index_category_done', ['id' => (int) $category->id]);
@@ -301,17 +303,18 @@ class ElasticSyncService
             \app\service\PluginService::do_action('elastic.delete_post_start', ['id' => $id]);
 
             $client = ElasticService::client();
-            $client->delete([
+            $params = [
                 'index' => $cfg['index'],
                 'id' => $id,
-            ]);
+            ];
+            $response = $client->delete($params);
             \app\service\PluginService::do_action('elastic.delete_post_done', ['id' => $id]);
-            $resp = ['ok' => true, 'status' => 200];
+            $resp = ['ok' => true, 'status' => 200, 'body' => $response->asArray()];
         } catch (\Throwable $e) {
             $resp = ['ok' => false, 'status' => 0, 'error' => $e->getMessage()];
         }
         $msg = sprintf('[ES] deletePost id=%d status=%s', $id, $resp['status'] ?? 'n/a');
-        Redis::lpush('es:sync:logs', date('Y-m-d H:i:s') . ' ' . $msg);
+        redis()->lPush('es:sync:logs', date('Y-m-d H:i:s') . ' ' . $msg);
         if (!$resp['ok']) {
             Log::warning('[ElasticSyncService] deletePost failed id=' . $id . ' status=' . $resp['status'] . ' error=' . ($resp['error'] ?? ''));
 
@@ -331,10 +334,11 @@ class ElasticSyncService
             \app\service\PluginService::do_action('elastic.delete_tag_start', ['id' => $id]);
 
             $client = ElasticService::client();
-            $client->delete([
+            $params = [
                 'index' => $cfg['index'],
                 'id' => 'tag_' . $id,
-            ]);
+            ];
+            $response = $client->delete($params);
             \app\service\PluginService::do_action('elastic.delete_tag_done', ['id' => $id]);
 
             return true;
@@ -355,10 +359,11 @@ class ElasticSyncService
             \app\service\PluginService::do_action('elastic.delete_category_start', ['id' => $id]);
 
             $client = ElasticService::client();
-            $client->delete([
+            $params = [
                 'index' => $cfg['index'],
                 'id' => 'category_' . $id,
-            ]);
+            ];
+            $response = $client->delete($params);
             \app\service\PluginService::do_action('elastic.delete_category_done', ['id' => $id]);
 
             return true;

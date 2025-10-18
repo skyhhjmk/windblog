@@ -50,21 +50,24 @@ class MQService
             for ($i = 0; $i < $attempts; $i++) {
                 try {
                     // 使用扩展构造参数，提升连接稳定性
+                    // 从配置读取 locale，默认 en_US
+                    $locale = (string) blog_config('rabbitmq_locale', 'en_US', true);
+
                     self::$connection = new AMQPStreamConnection(
                         $host,
                         $port,
                         $user,
                         $pass,
                         $vhost,
-                        false,                  // insist
-                        'AMQPLAIN',             // login_method
-                        null,                   // locale
-                        null,                   // connection_parameters writer (自动)
-                        $connTimeout,
-                        $readWriteTimeout,
-                        null,                   // context
-                        $keepalive,
-                        $heartbeat
+                        false,                  // insist (#6)
+                        'AMQPLAIN',             // login_method (#7)
+                        null,                   // login_response (#8)
+                        $locale,                // locale (#9) must be string
+                        $connTimeout,           // connection_timeout (#10)
+                        $readWriteTimeout,      // read_write_timeout (#11)
+                        null,                   // context (#12)
+                        $keepalive,             // keepalive (#13)
+                        $heartbeat              // heartbeat (#14)
                     );
                     // 连接成功则退出重试
                     break;

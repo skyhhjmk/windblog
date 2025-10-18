@@ -18,6 +18,9 @@ $global = [
     app\middleware\Lang::class,
     app\middleware\DebugToolkit::class,
     app\middleware\IpChecker::class,
+    // 新增的安全和性能优化中间件
+    app\middleware\SecureFileUpload::class,
+    app\middleware\EnhancedAuthCheck::class,
 ];
 
 if (file_exists(base_path() . '.env')) {

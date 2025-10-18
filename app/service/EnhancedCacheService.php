@@ -373,9 +373,9 @@ class EnhancedCacheService
      * @param string $key 缓存键
      * @param int $step 步长
      * @param string $group 缓存分组
-     * @return int|false 增加后的值或失败
+     * @return bool 成功返回true，失败返回false
      */
-    public function increment($key, $step = 1, $group = 'default')
+    public function increment($key, $step = 1, $group = 'default'): bool
     {
         $groupConfig = $this->getGroupConfig($group);
         $fullKey = $groupConfig['prefix'] . $key;
@@ -395,7 +395,7 @@ class EnhancedCacheService
             $this->updateSecondaryCache($fullKey, $result, $groupConfig['secondary_ttl']);
         }
 
-        return $result;
+        return $result !== false;
     }
 
     /**
@@ -403,9 +403,9 @@ class EnhancedCacheService
      * @param string $key 缓存键
      * @param int $step 步长
      * @param string $group 缓存分组
-     * @return int|false 减少后的值或失败
+     * @return bool 成功返回true，失败返回false
      */
-    public function decrement($key, $step = 1, $group = 'default')
+    public function decrement($key, $step = 1, $group = 'default'): bool
     {
         $groupConfig = $this->getGroupConfig($group);
         $fullKey = $groupConfig['prefix'] . $key;
@@ -425,6 +425,6 @@ class EnhancedCacheService
             $this->updateSecondaryCache($fullKey, $result, $groupConfig['secondary_ttl']);
         }
 
-        return $result;
+        return $result !== false;
     }
 }
