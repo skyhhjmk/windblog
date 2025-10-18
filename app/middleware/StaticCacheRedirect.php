@@ -2,20 +2,23 @@
 
 namespace app\middleware;
 
-use Closure;
-
 use function public_path;
 
-use support\Request;
-use support\Response;
+use Webman\Http\Request;
+use Webman\Http\Response;
+use Webman\MiddlewareInterface;
 
-class StaticCacheRedirect
+/**
+ * 静态缓存重定向中间件
+ * 命中静态HTML缓存时直接返回，提升性能
+ */
+class StaticCacheRedirect implements MiddlewareInterface
 {
-    public function process(Request $request, Closure $next): Response
+    public function process(Request $request, callable $handler): Response
     {
         // 仅处理 GET，排除后台/接口与显式禁用缓存情况
         if (strtoupper($request->method()) !== 'GET') {
-            return $next($request);
+            return $handler($request);
         }
         $path = $request->path();
         // 后台与插件、接口路径直接放行
@@ -27,17 +30,17 @@ class StaticCacheRedirect
             str_starts_with($path, '/plugin') ||
             str_starts_with($path, '/api')
         ) {
-            return $next($request);
+            return $handler($request);
         }
         // 允许通过 query 显式绕过缓存
         if ($request->get('no_cache') || $request->get('preview')) {
-            return $next($request);
+            return $handler($request);
         }
         // 简单登录判断：存在后台登录会话/令牌则绕过（可根据项目实际调整）
         $adminSession = $request->session()?->get('admin');
         $adminToken = $request->cookie('admin_token');
         if ($adminSession || $adminToken) {
-            return $next($request);
+            return $handler($request);
         }
 
         // 将URL路径映射到 public/cache/static 下的文件
@@ -63,6 +66,6 @@ class StaticCacheRedirect
         }
 
         // 未命中，走后续业务
-        return $next($request);
+        return $handler($request);
     }
 }

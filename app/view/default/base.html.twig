@@ -358,7 +358,8 @@
             const pjaxConfig = {
                 transitionSpeed: 300,
                 progressBar: null,
-                container: null
+                container: null,
+                isLoading: false  // 添加加载状态标志，防止重复请求
             };
 
             // 动态加载响应中的外部资源（script[src] 与 link[rel=stylesheet]），避免PJAX丢失新依赖
@@ -613,14 +614,20 @@
 
                     // 监听浏览器历史记录导航
                     $(window).on('popstate', function(e) {
-                        if (e.originalEvent && e.originalEvent.state) {
-                            loadContentWithPJAX(window.location.href, false);
-                        }
+                        // 无论 state 是否存在，都应该加载内容以响应浏览器前进/后退操作
+                        loadContentWithPJAX(window.location.href, false);
                     });
                 }
 
                 // 执行PJAX导航
                 function navigateWithPJAX(url) {
+                    // 如果正在加载，忽略新请求
+                    if (pjaxConfig.isLoading) {
+                        console.log('PJAX: 正在加载中，忽略新请求');
+                        return;
+                    }
+                    pjaxConfig.isLoading = true;
+                    
                     try {
                         document.dispatchEvent(new CustomEvent('pjax:start'));
                         document.dispatchEvent(new CustomEvent('pjax:send'));
@@ -854,6 +861,7 @@
 
                                     // 移除加载状态
                                     document.body.classList.remove('pjax-loading');
+                                    pjaxConfig.isLoading = false;  // 重置加载标志
 
                                     // 统一发送完成事件
                                     try {
@@ -897,6 +905,7 @@
                                 }
                                 // 移除加载状态
                                 document.body.classList.remove('pjax-loading');
+                                pjaxConfig.isLoading = false;  // 重置加载标志
                                 // 统一发送完成事件（不刷新）
                                 try {
                                     document.dispatchEvent(new CustomEvent('pjax:complete'));
@@ -924,6 +933,7 @@
                             // 重置容器样式
                             pjaxConfig.container.style.opacity = '1';
                             document.body.classList.remove('pjax-loading');
+                            pjaxConfig.isLoading = false;  // 重置加载标志
 
                             // 统一错误事件
                             try {
