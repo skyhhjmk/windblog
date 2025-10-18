@@ -29,8 +29,28 @@ class InstantFirstPaint implements MiddlewareInterface
         }
 
         // 允许通过 Header/Query 显式绕过（防递归/调试）
-        if ($request->header('X-INSTANT-BYPASS') === '1' || $request->get('no_instant') == '1') {
-            return $handler($request);
+        // Query 参数会被 CDN 转发，更可靠
+        if ($request->header('X-INSTANT-BYPASS') === '1' ||
+            $request->get('no_instant') == '1' ||
+            $request->get('_instant_bypass') === '1') {
+            // 绕过骨架页，返回完整页面
+            // 完整页面应该被 CDN 缓存，添加缓存头
+            $response = $handler($request);
+
+            // 仅对 HTML 响应添加缓存头
+            $contentType = $response->getHeader('Content-Type');
+            if ($contentType && strpos($contentType[0], 'text/html') !== false) {
+                $response->withHeaders([
+                    // CDN 缓存 1 小时，浏览器缓存 5 分钟
+                    'Cache-Control' => 'public, max-age=300, s-maxage=3600',
+                    // 告诉 CDN 这是完整页面，可缓存
+                    'X-Content-Type' => 'full-page',
+                    // Vary 头确保移动/PC 端分开缓存
+                    'Vary' => 'Accept-Encoding',
+                ]);
+            }
+
+            return $response;
         }
 
         // 跳过后台、插件、API、静态资源、健康检查等
@@ -45,8 +65,8 @@ class InstantFirstPaint implements MiddlewareInterface
         }
 
         // 跳过 PJAX/AJAX 请求（正常渲染内容片段）
-        $isAjax = strtolower((string) $request->header('X-Requested-With')) === 'xmlhttprequest';
-        $isPjax = ($request->header('X-PJAX') !== null) || (bool) $request->get('_pjax');
+        $isAjax = strtolower((string) $request->header('X-Requested-With')) === 'xmlhttprequest' || $request->isAjax();
+        $isPjax = ($request->header('X-PJAX') !== null) || $request->get('_pjax') || $request->isPjax();
         if ($isAjax || $isPjax) {
             return $handler($request);
         }
@@ -54,10 +74,8 @@ class InstantFirstPaint implements MiddlewareInterface
         // 跳过常见爬虫，避免只见 Loading 影响 SEO
         $ua = strtolower((string) $request->header('User-Agent'));
         if ($ua) {
-            foreach (['bot', 'spider', 'crawler', 'bingpreview', 'slurp', 'duckduckbot', 'baiduspider', 'sogou', 'yisouspider', 'bytespider', 'petalbot', 'google'] as $kw) {
-                if (str_contains($ua, $kw)) {
-                    return $handler($request);
-                }
+            if (array_any(['bot', 'spider', 'crawler', 'bingpreview', 'slurp', 'duckduckbot', 'baiduspider', 'sogou', 'yisouspider', 'bytespider', 'petalbot', 'google'], fn ($kw) => str_contains($ua, $kw))) {
+                return $handler($request);
             }
         }
 
@@ -71,7 +89,13 @@ class InstantFirstPaint implements MiddlewareInterface
 
         return new Response(200, [
             'Content-Type' => 'text/html; charset=utf-8',
-            'Cache-Control' => 'no-store, no-cache, must-revalidate',
+            // 多重防缓存策略，防止 CDN 缓存骨架页
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0, s-maxage=0',
+            'Pragma' => 'no-cache',
+            'Expires' => '0',
+            // CDN 特殊指令（主流 CDN 支持）
+            'CDN-Cache-Control' => 'no-store',
+            'Cloudflare-CDN-Cache-Control' => 'no-store',
             'X-Instant' => '1',
         ], $html);
     }
@@ -84,8 +108,6 @@ class InstantFirstPaint implements MiddlewareInterface
      */
     protected function skeletonHtml(Request $request): string
     {
-        $safeTitle = '加载中…';
-
         // 极致压缩的骨架页，减少首字节
         return <<<'HTML'
             <!doctype html>
@@ -110,21 +132,30 @@ class InstantFirstPaint implements MiddlewareInterface
             <div class="t">首屏构建中…</div>
             </div>
             <script>
-            (function(){
-            var p=function(w){try{document.getElementById('p').style.width=w+'%'}catch(e){}}
-            var load=function(){
-            try{
-            var c=new AbortController();
-            setTimeout(function(){try{c.abort()}catch(e){}},12e3);
-            p(30);
-            fetch(location.href,{headers:{'X-INSTANT-BYPASS':'1'},signal:c.signal,credentials:'same-origin'})
-            .then(function(r){p(70);return r.text()})
-            .then(function(h){p(100);setTimeout(function(){try{document.open();document.write(h);document.close()}catch(e){location.reload()}},50)})
-            .catch(function(){location.reload()})
-            }catch(e){location.reload()}
-            }
-            if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',load);else load()
-            })()
+                (function(){
+                // 循环检测：防止 CDN 缓存造成死循环
+                try{var lc=parseInt(sessionStorage.getItem('_ilc')||'0');if(lc>=3){sessionStorage.removeItem('_ilc');location.href=location.href.split('?')[0]+'?no_instant=1&t='+Date.now();return}sessionStorage.setItem('_ilc',lc+1)}catch(e){}
+                var p=function(w){try{document.getElementById('p').style.width=w+'%'}catch(e){}}
+                var load=function(){
+                try{
+                var c=new AbortController();
+                setTimeout(function(){try{c.abort()}catch(e){}},12e3);
+                p(30);
+                // 同时使用 Header + Query 参数，CDN 至少会转发 Query
+                var sep=location.href.indexOf('?')===-1?'?':'&';
+                var bypassUrl=location.href+sep+'_instant_bypass=1&t='+Date.now();
+                fetch(bypassUrl,{headers:{'X-INSTANT-BYPASS':'1'},signal:c.signal,credentials:'same-origin'})
+                .then(function(r){p(70);return r.text()})
+                .then(function(h){
+                // 检测是否又返回了骨架页（含有特定标记）
+                if(h.indexOf('_ilc')!==-1&&h.length<2000){sessionStorage.removeItem('_ilc');location.href=location.href.split('?')[0]+'?no_instant=1&t='+Date.now();return}
+                p(100);try{sessionStorage.removeItem('_ilc')}catch(e){};setTimeout(function(){try{document.open();document.write(h);document.close()}catch(e){location.reload()}},50)
+                })
+                .catch(function(){location.reload()})
+                }catch(e){location.reload()}
+                }
+                if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',load);else load()
+                })()
             </script>
             </body>
             </html>
