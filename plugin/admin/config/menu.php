@@ -131,14 +131,6 @@ return [
                 'weight' => 500,
             ],
             [
-                'title' => '资源CDN设置',
-                'key' => 'plugin\\admin\\app\\controller\\ResController',
-                'href' => '/app/admin/res/index',
-                'type' => 1,
-                'weight' => 490,
-            ],
-
-            [
                 'title' => '消息队列设置',
                 'key' => 'plugin\\admin\\app\\controller\\MqController',
                 'href' => '/app/admin/mq/index',
