@@ -2,7 +2,6 @@
 
 namespace app\api\controller\v1;
 
-use app\annotation\CSRFVerify;
 use app\model\Post;
 use app\service\FloLinkService;
 use support\Request;
@@ -74,8 +73,8 @@ class ApiPostController
 
     /**
      * 获取文章内容（用于前端异步加载）
-     * 需要 CSRF 校验以防止恶意访问
      *
+     * @deprecated 不再使用，内容已直接嵌入到模板中以优化 SEO
      * @param Request $request
      * @param mixed   $keyword
      *
@@ -83,7 +82,6 @@ class ApiPostController
      * @throws \Throwable
      */
     #[RateLimiter(limit: 10, ttl: 3)]
-    #[CSRFVerify(methods: ['GET', 'POST'], jsonResponse: true)]
     public function content(Request $request, mixed $keyword = null): Response
     {
         // 移除URL参数中的 .html 后缀
