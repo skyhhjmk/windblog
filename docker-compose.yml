@@ -3,7 +3,7 @@ version: '3.8'
 services:
   # 应用服务
   app:
-    image: ghcr.io/skyhhjmk/windblog:master
+    image: ghcr.io/skyhhjmk/windblog:latest
     container_name: windblog_app
     ports:
       - "8787:8787"
