@@ -169,7 +169,7 @@ class CommentController
             }
 
             // 默认状态（可配置为需要审核）
-            $requireModeration = blog_config('comment_moderation', false, true);
+            $requireModeration = blog_config('comment_moderation', true, true);
             $comment->status = $requireModeration ? 'pending' : 'approved';
 
             if ($comment->save()) {

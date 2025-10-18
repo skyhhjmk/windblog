@@ -23,9 +23,13 @@ $global = [
     app\middleware\EnhancedAuthCheck::class,
 ];
 
-if (file_exists(base_path() . '.env')) {
+if (file_exists(base_path() . '/.env')) {
     $must_installed = [
+        // 首屏极快返回骨架（最高优先级，用户首次访问时立即看到 loading）
+        app\middleware\InstantFirstPaint::class,
+        // 命中静态缓存则直接返回（骨架页二次请求时命中缓存）
         app\middleware\StaticCacheRedirect::class,
+        // 常规中间件
         app\middleware\CSRFMiddleware::class,
         app\middleware\PluginSupport::class,
     ];
