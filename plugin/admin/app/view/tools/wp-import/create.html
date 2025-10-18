@@ -58,6 +58,13 @@
                                         </div>
                                     </div>
                                     <div class="layui-form-item">
+                                        <label class="layui-form-label">导入文章评论:</label>
+                                        <div class="layui-input-block">
+                                            <input type="checkbox" name="import_comments" lay-skin="switch"
+                                                   lay-text="是|否" checked>
+                                        </div>
+                                    </div>
+                                    <div class="layui-form-item">
                                         <label class="layui-form-label">转换文章类型:</label>
                                         <div class="layui-input-block">
                                             <select name="convert_to">
@@ -188,6 +195,7 @@
             uploadData.append('create_users', (data.field.author_action === 'create' ? 1 : 0).toString());
             uploadData.append('import_attachments', (data.field.import_attachments === 'on' ? 1 : 0).toString());
             uploadData.append('download_attachments', (data.field.import_attachments === 'on' ? 1 : 0).toString());
+            uploadData.append('import_comments', (data.field.import_comments === 'on' ? 1 : 0).toString());
             uploadData.append('duplicate_mode', 'skip');
             uploadData.append('default_author', 'system');
 

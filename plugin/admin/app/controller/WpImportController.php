@@ -164,6 +164,7 @@ class WpImportController extends Base
                 'create_users' => (bool) $request->post('create_users', 0),
                 'import_attachments' => (bool) $request->post('import_attachments', 0),
                 'download_attachments' => (bool) $request->post('download_attachments', 0),
+                'import_comments' => (bool) $request->post('import_comments', 0),
                 'duplicate_mode' => $request->post('duplicate_mode', 'skip'),
                 'author_action' => $request->post('author_action', 'map_to_system'),
             ];

@@ -4,6 +4,7 @@ namespace app\service;
 
 use app\model\Admin;
 use app\model\Author;
+use app\model\Comment;
 use app\model\ImportJob;
 use app\model\Post;
 use DOMNode;
@@ -58,6 +59,20 @@ class WordpressImporter
     protected array $attachmentMap = [];
 
     /**
+     * WordPress文章ID到新文章ID的映射关系
+     *
+     * @var array
+     */
+    protected array $postIdMap = [];
+
+    /**
+     * WordPress评论ID到新评论ID的映射关系
+     *
+     * @var array
+     */
+    protected array $commentIdMap = [];
+
+    /**
      * 构造函数
      *
      * @param ImportJob $importJob
@@ -102,15 +117,25 @@ class WordpressImporter
             // 第二阶段：处理所有文章和页面，使用完整的附件映射关系
             $this->processAllPosts($fixedXmlFile, $totalItems);
 
-            // 清理临时文件
+            // 清空附件映射关系
+            $this->attachmentMap = [];
+            Log::debug('清空附件映射关系');
+
+            // 第三阶段：处理评论（如果启用）
+            if (!empty($this->options['import_comments'])) {
+                $this->processAllComments($fixedXmlFile, $totalItems);
+            }
+
+            // 清理临时文件（所有处理完成后）
             if ($fixedXmlFile !== $this->importJob->file_path && file_exists($fixedXmlFile)) {
                 unlink($fixedXmlFile);
                 Log::info('删除临时修复文件: ' . $fixedXmlFile);
             }
 
-            // 清空附件映射关系
-            $this->attachmentMap = [];
-            Log::debug('清空附件映射关系');
+            // 清空映射关系
+            $this->postIdMap = [];
+            $this->commentIdMap = [];
+            Log::debug('清空文章和评论映射关系');
 
             Log::info('WordPress XML导入任务处理完成: ' . $this->importJob->name);
 
@@ -272,8 +297,8 @@ class WordpressImporter
                     Log::error('处理附件项目时出错: ' . $e->getMessage(), ['exception' => $e]);
                 }
 
-                // 更新进度（第一阶段占50%进度）
-                $progress = intval(($processedItems / max(1, $totalItems)) * 50);
+                // 更新进度（第一阶段區30%进度）
+                $progress = intval(($processedItems / max(1, $totalItems)) * 30);
                 $this->importJob->update([
                     'progress' => $progress,
                     'message' => "第一阶段：处理附件 ({$processedItems}/{$totalItems})",
@@ -338,8 +363,8 @@ class WordpressImporter
                     Log::error('处理文章/页面项目时出错: ' . $e->getMessage(), ['exception' => $e]);
                 }
 
-                // 更新进度（第二阶段占50%进度，从50%开始）
-                $progress = 50 + intval(($processedItems / max(1, $totalItems)) * 50);
+                // 更新进度（第二阶段區50%进度，从30%到80%）
+                $progress = 30 + intval(($processedItems / max(1, $totalItems)) * 50);
                 $this->importJob->update([
                     'progress' => $progress,
                     'message' => "第二阶段：处理文章和页面 ({$processedItems}/{$totalItems})",
@@ -509,25 +534,16 @@ class WordpressImporter
                 $slug = !empty($wpPostId) ? $wpPostId : uniqid();
             }
         }
-
-        // 确保slug唯一性
-        $originalSlug = $slug;
-        $suffix = 1;
-        while (Post::where('slug', $slug)->exists()) {
-            $slug = $originalSlug . '-' . $suffix;
-            $suffix++;
-        }
-
-        // 检查是否已存在相同标题的文章
+        // 检查是否已存在相同slug的文章（作为重复判断依据）
         $existingPost = null;
-        if ($title) {
-            $existingPost = Post::where('title', $title)->first();
+        if ($slug) {
+            $existingPost = Post::where('slug', $slug)->first();
         }
 
         // 根据重复处理模式决定如何处理
         $duplicateMode = $this->options['duplicate_mode'] ?? 'skip';
 
-        // 如果存在相同标题的文章
+        // 如果存在相同slug的文章
         if ($existingPost) {
             switch ($duplicateMode) {
                 case 'overwrite':
@@ -573,14 +589,36 @@ class WordpressImporter
 
                     Log::debug('文章更新完成，ID: ' . $existingPost->id);
 
+                    // 保存WordPress文章ID到更新后文章ID的映射（以便评论导入）
+                    if (!empty($wpPostId)) {
+                        $this->postIdMap[$wpPostId] = $existingPost->id;
+                        Log::debug('保存覆盖文章的ID映射: WP ID ' . $wpPostId . ' => 现有ID ' . $existingPost->id);
+                    }
+
                     return;
 
                 case 'skip':
                 default:
-                    // 跳过模式：记录日志并跳过
+                    // 跳过模式：记录日志并跳过，但要保存ID映射以便导入评论
                     Log::debug('跳过模式：跳过重复文章，标题: ' . $title);
 
+                    // 保存WordPress文章ID到现有文章ID的映射（以便评论导入）
+                    if (!empty($wpPostId) && $existingPost) {
+                        $this->postIdMap[$wpPostId] = $existingPost->id;
+                        Log::debug('保存跳过文章的ID映射: WP ID ' . $wpPostId . ' => 现有ID ' . $existingPost->id);
+                    }
+
                     return;
+            }
+        }
+
+        // 创建新文章前，确保slug唯一，避免数据库唯一约束冲突
+        if (!empty($slug)) {
+            $originalSlug = $slug;
+            $suffix = 1;
+            while (Post::where('slug', $slug)->exists()) {
+                $slug = $originalSlug . '-' . $suffix;
+                $suffix++;
             }
         }
 
@@ -597,7 +635,30 @@ class WordpressImporter
         $post->updated_at = date('Y-m-d H:i:s');
 
         Log::debug('保存文章: ' . $post->title);
-        $post->save();
+        try {
+            $post->save();
+        } catch (\Throwable $e) {
+            // 如果是slug唯一约束冲突，回退到使用已有文章并建立映射
+            $message = $e->getMessage();
+            if (strpos($message, 'posts_slug_key') !== false || strpos($message, 'SQLSTATE[23505]') !== false) {
+                $existing = Post::where('slug', $slug)->first();
+                if ($existing) {
+                    Log::warning('检测到slug冲突，使用现有文章并建立映射。slug=' . $slug . '，现有ID=' . $existing->id);
+                    if (!empty($wpPostId)) {
+                        $this->postIdMap[$wpPostId] = $existing->id;
+                    }
+
+                    return; // 使用现有文章，后续评论将映射到该文章
+                }
+            }
+            throw $e;
+        }
+
+        // 保存WordPress文章ID到新文章ID的映射
+        if (!empty($wpPostId)) {
+            $this->postIdMap[$wpPostId] = $post->id;
+            Log::debug('保存文章ID映射: WP ID ' . $wpPostId . ' => 新ID ' . $post->id);
+        }
 
         // 保存文章作者关联
         if ($authorId) {
@@ -1463,5 +1524,182 @@ class WordpressImporter
         Log::debug("无法提取基础URL: $url");
 
         return null;
+    }
+
+    /**
+     * 第三阶段：处理所有评论
+     *
+     * @param string $xmlFile    XML文件路径
+     * @param int    $totalItems 总项目数
+     *
+     * @return void
+     */
+    protected function processAllComments(string $xmlFile, int $totalItems): void
+    {
+        Log::info('开始处理所有评论');
+
+        $reader = new XMLReader();
+        if (!$reader->open($xmlFile)) {
+            throw new \Exception('无法打开XML文件: ' . $xmlFile);
+        }
+
+        $processedItems = 0;
+        $commentCount = 0;
+
+        while ($reader->read()) {
+            if ($reader->nodeType == XMLReader::ELEMENT && $reader->localName == 'item') {
+                $processedItems++;
+
+                try {
+                    $doc = new \DOMDocument();
+                    $libxmlErrors = libxml_use_internal_errors(true);
+                    $node = $doc->importNode($reader->expand(), true);
+                    $doc->appendChild($node);
+
+                    $xpath = new DOMXPath($doc);
+                    $xpath->registerNamespace('wp', 'http://wordpress.org/export/1.2/');
+
+                    // 恢复错误报告设置
+                    libxml_use_internal_errors($libxmlErrors);
+
+                    $postType = $xpath->evaluate('string(wp:post_type)', $node);
+
+                    // 只处理文章和页面的评论
+                    if ($postType === 'post' || $postType === 'page') {
+                        $wpPostId = $xpath->evaluate('string(wp:post_id)', $node);
+                        $commentsProcessed = $this->processComments($xpath, $node, $wpPostId);
+                        $commentCount += $commentsProcessed;
+                    }
+                } catch (\Exception $e) {
+                    Log::error('处理评论时出错: ' . $e->getMessage(), ['exception' => $e]);
+                }
+
+                // 更新进度（第三阶段區20%进度，从80%到100%）
+                $progress = 80 + intval(($processedItems / max(1, $totalItems)) * 20);
+                $this->importJob->update([
+                    'progress' => $progress,
+                    'message' => "第三阶段：处理评论 ({$processedItems}/{$totalItems})",
+                ]);
+            }
+        }
+
+        $reader->close();
+        Log::info('评论处理完成，共处理评论: ' . $commentCount . ' 条');
+    }
+
+    /**
+     * 处理单篇文章的评论
+     *
+     * @param DOMXPath $xpath
+     * @param DOMNode  $node
+     * @param string   $wpPostId WordPress文章ID
+     *
+     * @return int 处理的评论数量
+     */
+    protected function processComments(DOMXPath $xpath, DOMNode $node, string $wpPostId): int
+    {
+        // 检查是否存在文章ID映射
+        if (empty($wpPostId) || !isset($this->postIdMap[$wpPostId])) {
+            Log::debug('文章ID不存在或未映射，跳过评论处理: WP ID ' . $wpPostId);
+
+            return 0;
+        }
+
+        $newPostId = $this->postIdMap[$wpPostId];
+        Log::debug('处理文章评论，WP文章ID: ' . $wpPostId . ', 新文章ID: ' . $newPostId);
+
+        // 获取所有评论节点
+        $commentNodes = $xpath->query('wp:comment', $node);
+        if (!$commentNodes || $commentNodes->length === 0) {
+            Log::debug('文章无评论');
+
+            return 0;
+        }
+
+        $commentCount = 0;
+
+        // 第一遍：导入所有评论（不处理父评论关系）
+        foreach ($commentNodes as $commentNode) {
+            try {
+                $wpCommentId = $xpath->evaluate('string(wp:comment_id)', $commentNode);
+                $wpCommentParentId = $xpath->evaluate('string(wp:comment_parent)', $commentNode);
+                $commentAuthor = $xpath->evaluate('string(wp:comment_author)', $commentNode);
+                $commentAuthorEmail = $xpath->evaluate('string(wp:comment_author_email)', $commentNode);
+                $commentContent = $xpath->evaluate('string(wp:comment_content)', $commentNode);
+                $commentDate = $xpath->evaluate('string(wp:comment_date)', $commentNode);
+                $commentApproved = $xpath->evaluate('string(wp:comment_approved)', $commentNode);
+                $commentAuthorIP = $xpath->evaluate('string(wp:comment_author_IP)', $commentNode);
+                $commentUserAgent = $xpath->evaluate('string(wp:comment_agent)', $commentNode);
+
+                // 转换为UTF-8编码
+                $commentAuthor = $this->convertToUtf8($commentAuthor);
+                $commentAuthorEmail = $this->convertToUtf8($commentAuthorEmail);
+                $commentContent = $this->convertToUtf8($commentContent);
+
+                // 转换评论状态
+                $status = 'pending';
+                if ($commentApproved === '1') {
+                    $status = 'approved';
+                } elseif ($commentApproved === 'spam') {
+                    $status = 'spam';
+                } elseif ($commentApproved === 'trash') {
+                    $status = 'rejected';
+                }
+
+                // 创建评论记录
+                $comment = new Comment();
+                $comment->post_id = $newPostId;
+                $comment->user_id = null; // WordPress导出的评论通常是访客评论
+                $comment->parent_id = null; // 稍后在第二遍处理中更新
+                $comment->guest_name = $commentAuthor ?: '匿名用户';
+                $comment->guest_email = $commentAuthorEmail ?: '';
+                $comment->content = $commentContent;
+                $comment->status = $status;
+                $comment->ip_address = $commentAuthorIP ?: '';
+                $comment->user_agent = $commentUserAgent ?: '';
+                $comment->created_at = $commentDate && $commentDate !== '0000-00-00 00:00:00'
+                    ? date('Y-m-d H:i:s', strtotime($commentDate))
+                    : date('Y-m-d H:i:s');
+                $comment->updated_at = date('Y-m-d H:i:s');
+
+                $comment->save();
+
+                // 保存WordPress评论ID到新评论ID的映射
+                if (!empty($wpCommentId)) {
+                    $this->commentIdMap[$wpCommentId] = [
+                        'new_id' => $comment->id,
+                        'wp_parent_id' => $wpCommentParentId,
+                    ];
+                    Log::debug('保存评论ID映射: WP ID ' . $wpCommentId . ' => 新ID ' . $comment->id);
+                }
+
+                $commentCount++;
+            } catch (\Exception $e) {
+                Log::error('创建评论时出错: ' . $e->getMessage(), ['exception' => $e]);
+            }
+        }
+
+        // 第二遍：更新父评论关系
+        foreach ($this->commentIdMap as $wpCommentId => $commentData) {
+            $wpParentId = $commentData['wp_parent_id'];
+            if (!empty($wpParentId) && $wpParentId !== '0' && isset($this->commentIdMap[$wpParentId])) {
+                try {
+                    $newCommentId = $commentData['new_id'];
+                    $newParentId = $this->commentIdMap[$wpParentId]['new_id'];
+
+                    Comment::where('id', $newCommentId)->update([
+                        'parent_id' => $newParentId,
+                    ]);
+
+                    Log::debug('更新评论父子关系: 评论ID ' . $newCommentId . ' 的父评论ID设为 ' . $newParentId);
+                } catch (\Exception $e) {
+                    Log::error('更新评论父子关系时出错: ' . $e->getMessage(), ['exception' => $e]);
+                }
+            }
+        }
+
+        Log::debug('文章评论处理完成，共处理 ' . $commentCount . ' 条评论');
+
+        return $commentCount;
     }
 }
