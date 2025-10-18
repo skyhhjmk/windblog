@@ -3,9 +3,7 @@ version: '3.8'
 services:
   # 应用服务
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/skyhhjmk/windblog:master
     container_name: windblog_app
     ports:
       - "8787:8787"
