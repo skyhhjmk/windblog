@@ -1,12 +1,12 @@
 #!/usr/bin/env php
 <?php
+
 declare(strict_types=1);
 
+use Dotenv\Dotenv;
 use Webman\Config;
 use Webman\Console\Command;
 use Webman\Console\Util;
-use support\Container;
-use Dotenv\Dotenv;
 
 if (!Phar::running()) {
     chdir(__DIR__);
@@ -46,7 +46,6 @@ if (!in_array($argv[1] ?? '', ['start', 'restart', 'stop', 'status', 'reload', '
 } else {
     Config::load(config_path(), ['route', 'container']);
 }
-
 
 $cli = new Command();
 $cli->setName('WindBlog cli [Build with webman]');

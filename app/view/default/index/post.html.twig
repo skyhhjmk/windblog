@@ -47,15 +47,13 @@
                 <div class="prose max-w-none fade-in-on-scroll no-animation" 
                      id="post-container" 
                      data-post-id="{{ post.id }}" 
-                     data-post-slug="{{ post.slug }}" 
-                     data-csrf-token="{{ csrf_token() }}">
-                    <div class="animate-pulse space-y-3">
-                        <div class="h-6 bg-blue-100 rounded w-2/3"></div>
-                        <div class="h-4 bg-blue-100 rounded w-full"></div>
-                        <div class="h-4 bg-blue-100 rounded w-5/6"></div>
-                        <div class="h-4 bg-blue-100 rounded w-3/4"></div>
-                    </div>
+                     data-post-slug="{{ post.slug }}">
+                    <!-- 内容将由 Vditor 渲染 -->
                 </div>
+                <!-- 将文章内容嵌入为 JSON 数据 -->
+                <script type="application/json" id="post-content-data">
+                    {{ post.content|json_encode|raw }}
+                </script>
             </div>
 
             <!-- 文章底部 -->
@@ -150,70 +148,28 @@
                 return;
             }
 
-            const postId = container.dataset.postId;
-            const postSlug = container.dataset.postSlug;
-            const csrfToken = container.dataset.csrfToken;
-
-            if (!postSlug) {
-                console.error('[Post] 缺少文章标识');
-                return;
-            }
-
-            // 检查是否正在加载
-            if (window.__postLoadingState[postSlug]) {
-                console.log('[Post] 文章正在加载中，跳过重复请求:', postSlug);
-                return;
-            }
-
-            console.log('[Post] 开始加载文章:', postSlug);
-
-            // 检查缓存
-            const cacheKey = 'post_' + postSlug;
-            if (window.__postContentCache[cacheKey]) {
-                console.log('[Post] 使用缓存内容');
-                renderContent(container, window.__postContentCache[cacheKey]);
-                return;
-            }
-
-            // 标记为正在加载
-            window.__postLoadingState[postSlug] = true;
-
-            // 通过 API 获取内容
-            fetch('/api/v1/post/content/' + postSlug, {
-                method: 'GET',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': csrfToken,
-                    'Accept': 'application/json'
-                },
-                credentials: 'same-origin'
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('HTTP ' + response.status);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.code === 200 && data.data && data.data.content) {
-                    // 缓存内容
-                    window.__postContentCache[cacheKey] = data.data.content;
-                    renderContent(container, data.data.content);
-                } else {
-                    throw new Error(data.message || '加载失败');
-                }
-            })
-            .catch(error => {
-                console.error('[Post] 加载失败:', error);
+            // 从嵌入的 JSON 数据中读取内容
+            const contentDataEl = document.getElementById('post-content-data');
+            if (!contentDataEl) {
+                console.error('[Post] 内容数据不存在');
                 container.innerHTML = '<div class="text-red-500 p-4 border border-red-300 rounded">' +
-                    '⚠️ 文章内容加载失败：' + error.message + '<br>' +
+                    '⚠️ 文章内容加载失败：数据丢失<br>' +
                     '<button onclick="location.reload()" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">刷新页面</button>' +
                     '</div>';
-            })
-            .finally(() => {
-                // 清除加载状态
-                delete window.__postLoadingState[postSlug];
-            });
+                return;
+            }
+
+            try {
+                const content = JSON.parse(contentDataEl.textContent || '""');
+                console.log('[Post] 从模板数据加载内容');
+                renderContent(container, content);
+            } catch (error) {
+                console.error('[Post] 解析内容数据失败:', error);
+                container.innerHTML = '<div class="text-red-500 p-4 border border-red-300 rounded">' +
+                    '⚠️ 文章内容解析失败<br>' +
+                    '<button onclick="location.reload()" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">刷新页面</button>' +
+                    '</div>';
+            }
         }
 
         function renderContent(container, content) {

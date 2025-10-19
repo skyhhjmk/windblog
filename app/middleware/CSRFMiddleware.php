@@ -8,6 +8,7 @@ use ReflectionClass;
 use ReflectionMethod;
 use support\view\Raw;
 use support\view\Twig;
+use Throwable;
 use Webman\Http\Request;
 use Webman\Http\Response;
 use Webman\MiddlewareInterface;
@@ -26,6 +27,7 @@ class CSRFMiddleware implements MiddlewareInterface
      * @param callable $handler 下一个处理器
      *
      * @return Response
+     * @throws Throwable
      */
     public function process(Request $request, callable $handler): Response
     {
@@ -93,9 +95,17 @@ class CSRFMiddleware implements MiddlewareInterface
                 // 处理if_failed_config配置
                 $ifFailedConfig = $annotation->if_failed_config;
 
-                // 如果是字符串，直接返回响应
+                // 如果是字符串，根据请求类型返回响应（优先JSON）
                 if (is_string($ifFailedConfig)) {
-                    return response($ifFailedConfig);
+                    // 如果注解要求JSON，或请求期望JSON/为Ajax请求，则返回JSON
+                    if (($annotation->jsonResponse ?? false)
+                        || $request->expectsJson()
+                        || strtolower($request->header('X-Requested-With') ?? '') === 'xmlhttprequest') {
+                        return json(['code' => 403, 'msg' => $ifFailedConfig]);
+                    }
+
+                    // 否则返回文本，附带403状态码
+                    return response($ifFailedConfig, 403, ['Content-Type' => 'text/plain; charset=utf-8']);
                 }
 
                 // 如果是数组，进行配置验证
@@ -222,6 +232,7 @@ class CSRFMiddleware implements MiddlewareInterface
      * 检测是否为跨域请求
      *
      * @param Request $request 请求对象
+     *
      * @return bool
      */
     private function isCrossOriginRequest(Request $request): bool

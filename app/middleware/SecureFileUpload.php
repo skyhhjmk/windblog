@@ -18,8 +18,9 @@ class SecureFileUpload implements MiddlewareInterface
     /**
      * 处理请求
      *
-     * @param Request $request
+     * @param Request  $request
      * @param callable $handler
+     *
      * @return Response
      */
     public function process(Request $request, callable $handler): Response
@@ -57,6 +58,7 @@ class SecureFileUpload implements MiddlewareInterface
      * 判断请求是否包含文件上传
      *
      * @param Request $request
+     *
      * @return bool
      */
     private function isFileUploadRequest(Request $request): bool
@@ -70,6 +72,7 @@ class SecureFileUpload implements MiddlewareInterface
      * 验证上传的文件
      *
      * @param Request $request
+     *
      * @return array [是否有效, 错误信息]
      */
     private function validateUploadedFiles(Request $request): array
@@ -109,6 +112,7 @@ class SecureFileUpload implements MiddlewareInterface
      * 验证单个文件
      *
      * @param UploadFile $file
+     *
      * @return array [是否有效, 错误信息]
      */
     private function validateSingleFile(UploadFile $file): array
@@ -160,6 +164,7 @@ class SecureFileUpload implements MiddlewareInterface
      * 判断是否需要检查文件内容
      *
      * @param string $mimeType
+     *
      * @return bool
      */
     private function shouldCheckFileContent(string $mimeType): bool
@@ -182,6 +187,7 @@ class SecureFileUpload implements MiddlewareInterface
      *
      * @param string $filePath
      * @param string $mimeType
+     *
      * @return array [是否有效, 错误信息]
      */
     private function checkFileContent(string $filePath, string $mimeType): array
