@@ -40,7 +40,7 @@ class IndexController
     public function index(Request $request): Response
     {
         clearstatcache();
-        if (!is_file(base_path('/.env'))) {
+        if (!is_installed()) {
             return raw_view('index/install');
         }
         $admin = admin();

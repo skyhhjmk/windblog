@@ -78,8 +78,7 @@ if (strtolower(trim((string) $__cacheDriver)) === 'redis') {
     ];
 }
 
-$__envPath = base_path() . '/.env';
-if (file_exists($__envPath)) {
+if (is_installed()) {
     // HTTP回调处理进程（存在 .env 时注册）
     $__processes['http_callback'] = [
         'handler' => app\process\HttpCallback::class,
