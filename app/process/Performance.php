@@ -55,10 +55,9 @@ class Performance
 
     public function onWorkerStart(Worker $worker): void
     {
-        // 在启动前检查 .env 是否存在
-        $envPath = base_path() . '/.env';
-        if (!file_exists($envPath)) {
-            Log::warning("Performance 进程检测到缺少 .env，已跳过启动：{$envPath}");
+        // 检查系统是否已安装
+        if (!is_installed()) {
+            Log::warning('Performance 进程检测到系统未安装，已跳过启动');
 
             return;
         }

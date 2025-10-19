@@ -184,10 +184,9 @@ class InstallController extends Base
             return $this->json(1, "缺少 {$db_name} 数据库驱动（{$required_driver}）。请安装并启用后重试安装。");
         }
 
-        $database_config_file = base_path() . '/.env';
         clearstatcache();
-        if (is_file($database_config_file)) {
-            return $this->json(1, '管理后台已经安装！如需重新安装，请删除该插件数据库配置文件并重启');
+        if (is_installed()) {
+            return $this->json(1, '管理后台已经安装！如需重新安装，请删除 .env 文件和 runtime/install.lock 文件并重启');
         }
 
         if (!class_exists(CaptchaBuilder::class) || !class_exists(Manager::class)) {
@@ -387,6 +386,18 @@ class InstallController extends Base
             default => $this->getPgsqlEnvConfig($host, $port, $database, $user, $password)
         };
         file_put_contents(base_path() . '/.env', $env_config);
+
+        // 创建 install.lock 文件标记安装完成
+        $lockFile = base_path() . '/runtime/install.lock';
+        $lockDir = dirname($lockFile);
+        if (!is_dir($lockDir)) {
+            mkdir($lockDir, 0o755, true);
+        }
+        file_put_contents($lockFile, json_encode([
+            'installed_at' => date('Y-m-d H:i:s'),
+            'db_type' => $type,
+            'version' => '1.0',
+        ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
 
         // 尝试reload
         if (function_exists('posix_kill')) {

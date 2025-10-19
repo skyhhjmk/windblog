@@ -271,7 +271,7 @@ function blog_config_normalize_default(mixed $value): mixed
 /**
  * 格式化日期时间
  *
- * @param string $time 时间字符串
+ * @param string $time   时间字符串
  * @param string $format 格式化模板
  *
  * @return string
@@ -304,8 +304,8 @@ function format_bytes(int $bytes): string
 /**
  * 生成随机字符串
  *
- * @param int $length 字符串长度
- * @param string $type 字符串类型：'number', 'letter', 'mix'
+ * @param int    $length 字符串长度
+ * @param string $type   字符串类型：'number', 'letter', 'mix'
  *
  * @return string
  */
@@ -344,6 +344,7 @@ function random_string(int $length = 10, string $type = 'mix'): string
  *  - ['type' => 'url', 'value' => '/link', 'options' => ['force' => true]]
  *
  * @param array $data
+ *
  * @return bool 发布是否成功
  */
 function publish_static(array $data): bool
@@ -375,9 +376,9 @@ function publish_static(array $data): bool
 
         // 队列（带死信参数，尽量与 StaticGenerator 保持一致）
         $args = new \PhpAmqpLib\Wire\AMQPTable([
-            'x-dead-letter-exchange'    => $dlxExchange,
+            'x-dead-letter-exchange' => $dlxExchange,
             'x-dead-letter-routing-key' => $dlxQueue,
-            'x-max-priority'            => 10, // 开启队列优先级（0-9）
+            'x-max-priority' => 10, // 开启队列优先级（0-9）
         ]);
         try {
             $ch->queue_declare($queueName, false, true, false, false, false, $args);
@@ -410,7 +411,7 @@ function publish_static(array $data): bool
         // 发布消息
         $payload = json_encode($data, JSON_UNESCAPED_UNICODE);
         $msg = new \PhpAmqpLib\Message\AMQPMessage($payload, [
-            'content_type'  => 'application/json',
+            'content_type' => 'application/json',
             'delivery_mode' => 2, // 持久化
         ]);
         $ch->basic_publish($msg, $exchange, $routingKey);
@@ -442,10 +443,12 @@ function mail_view(mixed $template = null, array $vars = [], ?string $app = null
  *  - sendmail(['a@x.com', 'b@y.com'], '通知', ['text' => '纯文本'], ['cc' => ['c@z.com']]);
  *  - sendmail('user@example.com', '模板渲染', ['view' => 'emails/welcome', 'view_vars' => ['name' => '张三']]);
  *
- * @param string|array $to 收件人：字符串或数组（支持 ['email'=>'','name'=>'']）
- * @param string $subject 主题
+ * @param string|array      $to               收件人：字符串或数组（支持 ['email'=>'','name'=>'']）
+ * @param string            $subject          主题
  * @param string|array|null $contentOrOptions 第三参为字符串时视为 html；为数组时与 $options 合并
- * @param array $options 其他选项（headers, attachments, cc, bcc, text, view, view_vars, inline_template, inline_vars, priority）
+ * @param array             $options          其他选项（headers, attachments, cc, bcc, text, view, view_vars,
+ *                                            inline_template, inline_vars, priority）
+ *
  * @return bool 入队是否成功
  */
 function sendmail(string|array $to, string $subject, string|array|null $contentOrOptions = null, array $options = []): bool

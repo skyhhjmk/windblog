@@ -11,7 +11,7 @@ class PluginBootstrap
 {
     public static function init(): void
     {
-        if (file_exists(base_path() . '/.env')) {
+        if (is_installed()) {
             PluginService::init();
         }
     }

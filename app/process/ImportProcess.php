@@ -63,10 +63,9 @@ class ImportProcess
      */
     public function onWorkerStart(Worker $worker): void
     {
-        // 检查 .env 是否存在
-        $config_file = base_path() . '/.env';
-        if (!is_file($config_file)) {
-            \support\Log::info('缺少 .env，跳过导入队列消费');
+        // 检查系统是否已安装
+        if (!is_installed()) {
+            \support\Log::info('系统未安装，跳过导入队列消费');
 
             return;
         }
