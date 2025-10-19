@@ -1,0 +1,254 @@
+{% extends "base.html.twig" %}
+
+{% block extra_css %}
+<style>
+    .sitemap-section {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+    }
+    .sitemap-section:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        transform: translateY(-2px);
+    }
+    .sitemap-link {
+        transition: all 0.2s ease;
+    }
+    .sitemap-link:hover {
+        background: #f3f4f6;
+        padding-left: 1rem;
+    }
+    .tag-cloud .tag-item {
+        transition: all 0.2s ease;
+    }
+    .tag-cloud .tag-item:hover {
+        transform: scale(1.05);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="flex-grow container mx-auto px-4 py-8">
+    <!-- 页面标题 -->
+    <div class="text-center mb-12">
+        <h1 class="text-4xl font-bold text-gray-800 mb-4 flex items-center justify-center">
+            <i class="fas fa-sitemap text-blue-600 mr-3"></i>
+            站点地图
+        </h1>
+        <p class="text-gray-600">浏览网站的所有内容，快速找到您需要的页面</p>
+    </div>
+
+    <div class="blog-container mx-auto space-y-8">
+        
+        <!-- 首页 -->
+        <div class="sitemap-section">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                <i class="fas {{ home.icon }} text-blue-600 mr-2"></i>
+                {{ home.title }}
+            </h2>
+            <div class="pl-4">
+                <a href="{{ home.url }}" class="sitemap-link block py-2 text-blue-600 hover:text-blue-800 transition-all rounded">
+                    <i class="fas fa-arrow-right text-xs mr-2"></i>
+                    访问首页
+                </a>
+            </div>
+        </div>
+
+        <!-- 分类 -->
+        {% if categories|length > 0 %}
+        <div class="sitemap-section">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                <i class="fas fa-folder-open text-green-600 mr-2"></i>
+                分类
+                <span class="ml-2 text-sm font-normal text-gray-500">({{ categories|length }})</span>
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for category in categories %}
+                <a href="{{ category.url }}" class="sitemap-link block p-3 rounded border border-gray-200 hover:border-blue-400 transition-all">
+                    <div class="font-medium text-gray-800 mb-1">
+                        <i class="fas fa-folder text-green-500 text-sm mr-2"></i>
+                        {{ category.name }}
+                    </div>
+                    {% if category.description %}
+                    <div class="text-sm text-gray-500 truncate">{{ category.description }}</div>
+                    {% endif %}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 标签云 -->
+        {% if tags|length > 0 %}
+        <div class="sitemap-section">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                <i class="fas fa-tags text-purple-600 mr-2"></i>
+                标签
+                <span class="ml-2 text-sm font-normal text-gray-500">(共 {{ tags|length }} 个标签)</span>
+            </h2>
+            <div class="tag-cloud flex flex-wrap gap-2">
+                {% for tag in tags %}
+                <a href="{{ tag.url }}" class="tag-item inline-block px-4 py-2 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 rounded-full text-sm hover:from-purple-200 hover:to-pink-200 border border-purple-200">
+                    <i class="fas fa-tag text-xs mr-1"></i>
+                    {{ tag.name }}
+                    {% if tag.count > 0 %}
+                    <span class="ml-1 text-xs text-purple-500">({{ tag.count }})</span>
+                    {% endif %}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 全部文章 -->
+        {% if posts|length > 0 %}
+        <div class="sitemap-section">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center justify-between">
+                <div>
+                    <i class="fas fa-file-alt text-orange-600 mr-2"></i>
+                    全部文章
+                    <span class="ml-2 text-sm font-normal text-gray-500">(共 {{ posts|length }} 篇)</span>
+                </div>
+                {% if posts|length > 20 %}
+                <button id="toggleAllPosts" class="text-sm text-blue-600 hover:text-blue-800 transition-colors">
+                    <i class="fas fa-chevron-down mr-1"></i>
+                    <span id="togglePostsText">展开全部</span>
+                </button>
+                {% endif %}
+            </h2>
+            <div class="space-y-2">
+                {% for post in posts %}
+                <a href="{{ post.url }}" class="sitemap-link post-item block p-3 rounded hover:bg-gray-50 transition-all border-l-4 border-transparent hover:border-blue-500 {% if loop.index > 20 %}hidden{% endif %}" data-index="{{ loop.index }}">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <div class="font-medium text-gray-800 mb-1">
+                                <i class="fas fa-file-alt text-orange-500 text-xs mr-2"></i>
+                                {{ post.title }}
+                            </div>
+                            {% if post.excerpt %}
+                            <div class="text-sm text-gray-500 line-clamp-1">{{ post.excerpt }}</div>
+                            {% endif %}
+                        </div>
+                        {% if post.date %}
+                        <div class="text-xs text-gray-400 ml-4 whitespace-nowrap">
+                            <i class="far fa-calendar text-xs mr-1"></i>
+                            {{ post.date }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 归档 -->
+        {% if archives|length > 0 %}
+        <div class="sitemap-section">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                <i class="fas fa-archive text-indigo-600 mr-2"></i>
+                归档
+                <span class="ml-2 text-sm font-normal text-gray-500">(按月)</span>
+            </h2>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+                {% for archive in archives %}
+                <a href="{{ archive.url }}" class="sitemap-link block p-3 rounded bg-indigo-50 hover:bg-indigo-100 text-center transition-all border border-indigo-200 hover:border-indigo-400">
+                    <i class="fas fa-calendar-alt text-indigo-500 mb-2"></i>
+                    <div class="text-sm font-medium text-indigo-700">{{ archive.month }}</div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- XML Sitemap 链接 -->
+        <div class="sitemap-section bg-gradient-to-r from-blue-50 to-purple-50">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                <i class="fas fa-code text-gray-600 mr-2"></i>
+                搜索引擎专用
+            </h2>
+            <div class="space-y-2 pl-4">
+                <a href="/sitemap.xml" class="sitemap-link block py-2 text-blue-600 hover:text-blue-800 transition-all rounded" target="_blank">
+                    <i class="fas fa-file-code text-xs mr-2"></i>
+                    XML Sitemap (标准格式)
+                </a>
+                <a href="/index_sitemap.xml" class="sitemap-link block py-2 text-blue-600 hover:text-blue-800 transition-all rounded" target="_blank">
+                    <i class="fas fa-sitemap text-xs mr-2"></i>
+                    Sitemap Index (索引型)
+                </a>
+            </div>
+        </div>
+
+    </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 平滑滚动
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+            target.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+        }
+    });
+});
+
+// 添加入场动画
+const sections = document.querySelectorAll('.sitemap-section');
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            entry.target.style.opacity = '0';
+            entry.target.style.transform = 'translateY(20px)';
+            setTimeout(() => {
+                entry.target.style.transition = 'all 0.6s ease';
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }, 100);
+            observer.unobserve(entry.target);
+        }
+    });
+}, { threshold: 0.1 });
+
+sections.forEach(section => observer.observe(section));
+
+// 文章列表展开/收起功能
+const toggleBtn = document.getElementById('toggleAllPosts');
+if (toggleBtn) {
+    let isExpanded = false;
+    toggleBtn.addEventListener('click', function() {
+        const postItems = document.querySelectorAll('.post-item');
+        const toggleText = document.getElementById('togglePostsText');
+        const icon = toggleBtn.querySelector('i');
+        
+        if (isExpanded) {
+            // 收起：隐藏第21篇之后的文章
+            postItems.forEach((item, index) => {
+                if (parseInt(item.dataset.index) > 20) {
+                    item.classList.add('hidden');
+                }
+            });
+            toggleText.textContent = '展开全部';
+            icon.className = 'fas fa-chevron-down mr-1';
+            isExpanded = false;
+        } else {
+            // 展开：显示所有文章
+            postItems.forEach(item => {
+                item.classList.remove('hidden');
+            });
+            toggleText.textContent = '收起列表';
+            icon.className = 'fas fa-chevron-up mr-1';
+            isExpanded = true;
+        }
+    });
+}
+</script>
+{% endblock %}
