@@ -1,0 +1,189 @@
+version: '3.8'
+
+services:
+  # 应用服务
+  app:
+    image: ghcr.io/skyhhjmk/windblog:latest
+    container_name: windblog_app
+    ports:
+      - "8787:8787"
+    volumes:
+      - ../:/var/www/html
+      - ../runtime:/var/www/html/runtime
+      - ./data/uploads:/app/public/uploads
+    environment:
+      - DB_PGSQL_HOST=postgres
+      - DB_PGSQL_PORT=${POSTGRES_PORT}
+      - DB_PGSQL_DATABASE=${POSTGRES_DB}
+      - DB_PGSQL_USERNAME=${POSTGRES_USER}
+      - DB_PGSQL_PASSWORD=${POSTGRES_PASSWORD}
+      - REDIS_HOST=redis
+      - REDIS_PORT=${REDIS_PORT}
+      - CACHE_DRIVER=redis
+      - APP_DEBUG=${APP_DEBUG}
+      - ELASTICSEARCH_HOST=elasticsearch
+      - ELASTICSEARCH_PORT=${ES_PORT}
+      - LOGSTASH_HOST=${LOGSTASH_HOST}
+      - LOGSTASH_PORT=${LOGSTASH_TCP_PORT}
+      - ENABLE_LOGSTASH=${ENABLE_LOGSTASH}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      logstash:
+        condition: service_started
+    networks:
+      - windblog_network
+    command: php start.php start
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # PostgreSQL 数据库
+  postgres:
+    image: postgres:18-alpine
+    container_name: windblog_postgres
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - windblog_network
+
+  # Redis 缓存
+  redis:
+    image: redis:8-alpine
+    container_name: windblog_redis
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - ./data/redis:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - windblog_network
+    command: redis-server --appendonly yes
+
+  # RabbitMQ 消息队列
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    container_name: windblog_rabbitmq
+    ports:
+      - "${RABBITMQ_PORT}:5672"   # AMQP 端口
+      - "${RABBITMQ_MANAGEMENT_PORT}:15672" # 管理界面
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
+    volumes:
+      - ./data/rabbitmq:/var/lib/rabbitmq
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - windblog_network
+
+  # Elasticsearch 搜索引擎
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION}
+    container_name: windblog_elasticsearch
+    ports:
+      - "${ES_PORT}:9200"
+      - "9300:9300"
+    environment:
+      - node.name=elasticsearch
+      - cluster.name=windblog-cluster
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - xpack.security.enabled=true
+      - xpack.security.authc.api_key.enabled=true
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - "ES_JAVA_OPTS=${ES_JAVA_OPTS}"
+    volumes:
+      - ./data/elasticsearch:/usr/share/elasticsearch/data
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -s -u elastic:${ELASTIC_PASSWORD} http://localhost:9200/_cluster/health || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - windblog_network
+
+  # Logstash 日志处理
+  logstash:
+    image: docker.elastic.co/logstash/logstash:${ELASTIC_VERSION}
+    container_name: windblog_logstash
+    ports:
+      - "${LOGSTASH_PORT}:5044"     # Beats 端口
+      - "${LOGSTASH_TCP_PORT}:5000" # TCP 端口（用于应用直接发送日志）
+      - "9600:9600"                 # 监控端口
+    environment:
+      - xpack.monitoring.enabled=true
+      - xpack.monitoring.elasticsearch.hosts=http://elasticsearch:9200
+      - xpack.monitoring.elasticsearch.username=elastic
+      - xpack.monitoring.elasticsearch.password=${ELASTIC_PASSWORD}
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+    volumes:
+      - ./elk/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
+      - ./data/logstash:/usr/share/logstash/data
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - windblog_network
+    command: logstash -f /usr/share/logstash/pipeline/logstash.conf
+
+  # Kibana 可视化界面
+  kibana:
+    image: docker.elastic.co/kibana/kibana:${ELASTIC_VERSION}
+    container_name: windblog_kibana
+    ports:
+      - "${KIBANA_PORT}:5601"
+    environment:
+      - SERVERNAME=windblog-kibana
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=elastic
+      - ELASTICSEARCH_PASSWORD=${ELASTIC_PASSWORD}
+      - KIBANA_ENCRYPTION_KEY=${KIBANA_ENCRYPTION_KEY}
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+    volumes:
+      - ./elk/kibana.yml:/usr/share/kibana/config/kibana.yml:ro
+      - ./data/kibana:/usr/share/kibana/data
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - windblog_network
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -s -I http://localhost:5601 | grep -q 'HTTP/1.1' || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+networks:
+  windblog_network:
+    driver: bridge
