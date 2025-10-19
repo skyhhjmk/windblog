@@ -13,7 +13,7 @@ if (!function_exists('is_installed')) {
      */
     function is_installed(): bool
     {
-        // 1. 优先检查环境变量：如果设置了 DB_DEFAULT 或其他关键数据库配置，视为已安装
+        // 优先检查环境变量：如果设置了 DB_DEFAULT 或其他关键数据库配置，视为已安装
         $dbDefault = getenv('DB_DEFAULT');
         if ($dbDefault !== false && !empty($dbDefault)) {
             // 检查对应数据库的关键配置是否存在
@@ -39,14 +39,9 @@ if (!function_exists('is_installed')) {
             }
         }
 
-        // 2. 后备方案：检查 install.lock 文件
+        // 后备方案：检查 install.lock 文件
         $lockFile = base_path() . '/runtime/install.lock';
         if (file_exists($lockFile)) {
-            return true;
-        }
-
-        // 3. 兼容性：检查 .env 文件（保留向后兼容）
-        if (file_exists(base_path() . '/.env')) {
             return true;
         }
 
