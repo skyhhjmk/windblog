@@ -2,6 +2,7 @@
 
 namespace app\controller;
 
+use app\annotation\EnableInstantFirstPaint;
 use app\service\BlogService;
 use app\service\PJAXHelper;
 use League\CommonMark\Exception\CommonMarkException;
@@ -40,6 +41,7 @@ class IndexController
      * @throws CommonMarkException
      * @throws Throwable
      */
+    #[EnableInstantFirstPaint]
     #[RateLimiter(limit: 3, ttl: 3)]
     public function index(Request $request, int $page = 1): Response
     {

@@ -107,6 +107,16 @@ Route::post('/api/wind-connect', [app\controller\LinkController::class, 'windCon
 Route::any('/animation-demo', [app\controller\AnimationDemoController::class, 'index'])->name('animation.demo');
 Route::any('/animation-demo.html', [app\controller\AnimationDemoController::class, 'index'])->name('animation.demo.html');
 
+// Sitemap 路由
+Route::get('/sitemap.xml', [app\controller\SitemapController::class, 'sitemap'])->name('sitemap.xml');
+Route::get('/index_sitemap.xml', [app\controller\SitemapController::class, 'index'])->name('sitemap.index');
+Route::get('/sitemap/posts.xml', [app\controller\SitemapController::class, 'posts'])->name('sitemap.posts');
+Route::get('/sitemap/categories.xml', [app\controller\SitemapController::class, 'categories'])->name('sitemap.categories');
+Route::get('/sitemap/tags.xml', [app\controller\SitemapController::class, 'tags'])->name('sitemap.tags');
+Route::get('/sitemap/archives.xml', [app\controller\SitemapController::class, 'archives'])->name('sitemap.archives');
+Route::get('/g_sitemap', [app\controller\SitemapController::class, 'graphical'])->name('sitemap.graphical');
+Route::get('/g_sitemap.html', [app\controller\SitemapController::class, 'graphical'])->name('sitemap.graphical.html');
+
 Route::fallback(function () {
     return view('error/404');
 });

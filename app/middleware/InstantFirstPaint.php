@@ -2,6 +2,9 @@
 
 namespace app\middleware;
 
+use app\annotation\EnableInstantFirstPaint;
+use ReflectionClass;
+use ReflectionMethod;
 use Webman\Http\Request;
 use Webman\Http\Response;
 use Webman\MiddlewareInterface;
@@ -13,11 +16,17 @@ use Webman\MiddlewareInterface;
  * - 对于首屏 HTML GET 请求，快速返回一个极简的 Loading HTML（含微量内联样式与脚本）。
  * - 前端脚本会立即以同 URL 重新请求完整页面，携带自定义请求头以绕过本中间件，然后以 document.write 方式替换整页。
  * - 对 API、后台、插件、静态资源、PJAX/AJAX、机器人 UA 等请求一律放行，避免副作用与 SEO 影响。
+ * - 只有添加了 EnableInstantFirstPaint 注解的控制器方法才会触发骨架页逻辑。
  */
 class InstantFirstPaint implements MiddlewareInterface
 {
     public function process(Request $request, callable $handler): Response
     {
+        // 检查是否有控制器方法标记了 EnableInstantFirstPaint 注解
+        if (!$this->hasInstantFirstPaintAnnotation($request)) {
+            return $handler($request);
+        }
+
         // 仅处理 GET
         if (strtoupper($request->method()) !== 'GET') {
             return $handler($request);
@@ -160,5 +169,57 @@ class InstantFirstPaint implements MiddlewareInterface
             </body>
             </html>
             HTML;
+    }
+
+    /**
+     * 检查控制器方法是否标记了 EnableInstantFirstPaint 注解
+     *
+     * @param Request $request
+     * @return bool
+     */
+    protected function hasInstantFirstPaintAnnotation(Request $request): bool
+    {
+        // 如果没有控制器或方法，直接返回 false
+        if (!$request->controller || !$request->action) {
+            return false;
+        }
+
+        try {
+            $controllerClass = $request->controller;
+            $actionMethod = $request->action;
+
+            // 检查控制器类是否存在
+            if (!class_exists($controllerClass)) {
+                return false;
+            }
+
+            // 检查方法是否存在
+            if (!method_exists($controllerClass, $actionMethod)) {
+                return false;
+            }
+
+            // 获取类级别注解
+            $classReflection = new ReflectionClass($controllerClass);
+            $classAnnotations = $classReflection->getAttributes(EnableInstantFirstPaint::class);
+
+            // 获取方法级别注解
+            $methodReflection = new ReflectionMethod($controllerClass, $actionMethod);
+            $methodAnnotations = $methodReflection->getAttributes(EnableInstantFirstPaint::class);
+
+            // 优先使用方法级别注解，如果没有则使用类级别注解
+            $annotations = !empty($methodAnnotations) ? $methodAnnotations : $classAnnotations;
+
+            if (empty($annotations)) {
+                return false;
+            }
+
+            // 获取注解实例并检查是否启用
+            $annotation = $annotations[0]->newInstance();
+
+            return $annotation->enabled;
+        } catch (\Throwable $e) {
+            // 出现异常时，返回 false
+            return false;
+        }
     }
 }

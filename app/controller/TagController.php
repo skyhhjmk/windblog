@@ -2,6 +2,7 @@
 
 namespace app\controller;
 
+use app\annotation\EnableInstantFirstPaint;
 use app\model\Tag;
 use app\service\BlogService;
 use app\service\EnhancedCacheService;
@@ -15,6 +16,7 @@ class TagController
 {
     protected array $noNeedLogin = ['index', 'list'];
 
+    #[EnableInstantFirstPaint]
     #[RateLimiter(limit: 3, ttl: 3)]
     public function index(Request $request, string $slug, int $page = 1): Response
     {

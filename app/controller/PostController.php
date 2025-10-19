@@ -2,6 +2,7 @@
 
 namespace app\controller;
 
+use app\annotation\EnableInstantFirstPaint;
 use app\model\Post;
 use app\service\FloLinkService;
 use app\service\PJAXHelper;
@@ -13,6 +14,7 @@ class PostController
 {
     protected array $noNeedLogin = ['index'];
 
+    #[EnableInstantFirstPaint]
     #[RateLimiter(limit: 3, ttl: 3)]
     public function index(Request $request, mixed $keyword = null): Response
     {
