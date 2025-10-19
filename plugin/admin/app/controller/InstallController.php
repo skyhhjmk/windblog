@@ -482,7 +482,7 @@ class InstallController extends Base
             }
             $smt->execute();
             $lastId = $pdo->lastInsertId();
-            $admin_id = is_numeric($lastId) ? (int)$lastId : 0;
+            $admin_id = is_numeric($lastId) ? (int) $lastId : 0;
 
             $smt = $pdo->prepare("insert into {$quoteChar}wa_admin_roles{$quoteChar} ({$quoteChar}role_id{$quoteChar}, {$quoteChar}admin_id{$quoteChar}) values (:role_id, :admin_id)");
             $smt->bindValue('role_id', 1);
@@ -556,7 +556,8 @@ class InstallController extends Base
         $smt->execute();
 
         $lastId = $pdo->lastInsertId();
-        return is_numeric($lastId) ? (int)$lastId : 0;
+
+        return is_numeric($lastId) ? (int) $lastId : 0;
     }
 
     /**

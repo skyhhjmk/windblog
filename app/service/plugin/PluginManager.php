@@ -606,6 +606,7 @@ class PluginManager
 
     /**
      * 获取所有扫描到的插件元信息
+     *
      * @return array<string, PluginMetadata>
      */
     public function allMetadata(): array
@@ -806,6 +807,7 @@ class PluginManager
 
     /**
      * 验证元数据与运行环境
+     *
      * @return array{errors: array<int,string>, warnings: array<int,string>}
      */
     public function validate(string $slug): array

@@ -3,6 +3,7 @@
 namespace app\middleware;
 
 use app\service\SecurityService;
+use Exception;
 use ReflectionClass;
 use support\Db;
 use Webman\Http\Request;
@@ -50,9 +51,11 @@ class EnhancedAuthCheck implements MiddlewareInterface
     /**
      * 处理请求
      *
-     * @param Request $request
+     * @param Request  $request
      * @param callable $handler
+     *
      * @return Response
+     * @throws Exception
      */
     public function process(Request $request, callable $handler): Response
     {
@@ -117,6 +120,7 @@ class EnhancedAuthCheck implements MiddlewareInterface
      * 判断请求是否需要身份验证
      *
      * @param Request $request
+     *
      * @return bool
      */
     private function requiresAuth(Request $request): bool
@@ -124,28 +128,22 @@ class EnhancedAuthCheck implements MiddlewareInterface
         $path = $request->path();
 
         // 检查是否为公开路由
-        foreach ($this->publicRoutes as $publicRoute) {
-            if (strpos($path, $publicRoute) === 0) {
-                return false;
-            }
+        if (array_any($this->publicRoutes, fn ($publicRoute) => str_starts_with($path, $publicRoute))) {
+            return false;
         }
 
         // 检查是否为受保护的路由前缀
-        foreach ($this->protectedPrefixes as $prefix) {
-            if (strpos($path, $prefix) === 0) {
-                return true;
-            }
-        }
+        return array_any($this->protectedPrefixes, fn ($prefix) => str_starts_with($path, $prefix));
 
         // 默认不需要身份验证
-        return false;
     }
 
     /**
      * 检查请求频率限制
      *
      * @param Request $request
-     * @return array [是否允许, 错误信息]
+     *
+     * @return array [(bool)是否允许, (string)错误信息]
      */
     private function checkRateLimit(Request $request): array
     {
@@ -191,23 +189,24 @@ class EnhancedAuthCheck implements MiddlewareInterface
      *
      * @param string $path
      * @param string $method
+     *
      * @return string|null
      */
     private function getLimitType(string $path, string $method): ?string
     {
-        if (strpos($path, '/login') !== false) {
+        if (str_contains($path, '/login')) {
             return 'admin_login';
         }
 
-        if (strpos($path, '/admin') !== false || strpos($path, '/api/admin') !== false) {
+        if (str_contains($path, '/admin') || str_contains($path, '/api/admin')) {
             return 'admin_action';
         }
 
-        if (strpos($path, '/api/') !== false) {
+        if (str_contains($path, '/api/')) {
             return 'api_request';
         }
 
-        if ($method === 'POST' && strpos($path, '/upload') !== false) {
+        if ($method === 'POST' && str_contains($path, '/upload')) {
             return 'file_upload';
         }
 
@@ -218,7 +217,9 @@ class EnhancedAuthCheck implements MiddlewareInterface
      * 检查会话有效性
      *
      * @param Request $request
+     *
      * @return bool
+     * @throws Exception
      */
     private function isValidSession(Request $request): bool
     {
@@ -244,7 +245,7 @@ class EnhancedAuthCheck implements MiddlewareInterface
 
                 return false;
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             \support\Log::error('Session validation error: ' . $e->getMessage());
 
             return false;
@@ -257,7 +258,9 @@ class EnhancedAuthCheck implements MiddlewareInterface
      * 处理无效会话
      *
      * @param Request $request
+     *
      * @return Response
+     * @throws Exception
      */
     private function handleInvalidSession(Request $request): Response
     {
@@ -281,6 +284,7 @@ class EnhancedAuthCheck implements MiddlewareInterface
      * 检查权限
      *
      * @param Request $request
+     *
      * @return array [是否允许, 错误信息, 所需权限]
      */
     private function checkPermission(Request $request): array
@@ -308,7 +312,7 @@ class EnhancedAuthCheck implements MiddlewareInterface
                 return $this->checkAdminPermission($request);
             }
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             \support\Log::error('Permission check error: ' . $e->getMessage());
 
             return ['allowed' => false, 'message' => '权限检查失败'];
@@ -321,7 +325,8 @@ class EnhancedAuthCheck implements MiddlewareInterface
      * 检查特定权限
      *
      * @param Request $request
-     * @param string $permission
+     * @param string  $permission
+     *
      * @return array
      */
     private function checkSpecificPermission(Request $request, string $permission): array
@@ -343,6 +348,7 @@ class EnhancedAuthCheck implements MiddlewareInterface
      * 检查管理员权限
      *
      * @param Request $request
+     *
      * @return array
      */
     private function checkAdminPermission(Request $request): array
@@ -379,7 +385,7 @@ class EnhancedAuthCheck implements MiddlewareInterface
 
             $shouldLog = false;
             foreach ($importantActions as $importantAction) {
-                if (strpos($action, $importantAction) !== false) {
+                if (str_contains($action, $importantAction)) {
                     $shouldLog = true;
                     break;
                 }
@@ -396,7 +402,7 @@ class EnhancedAuthCheck implements MiddlewareInterface
                     'timestamp' => time(),
                 ]);
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             \support\Log::error('Access logging error: ' . $e->getMessage());
         }
     }
@@ -405,6 +411,7 @@ class EnhancedAuthCheck implements MiddlewareInterface
      * 获取客户端真实IP地址
      *
      * @param Request $request
+     *
      * @return string
      */
     private function getClientIp(Request $request): string
