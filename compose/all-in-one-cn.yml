@@ -114,7 +114,7 @@ services:
     image: docker.1ms.run/curlimages/curl:latest
     container_name: windblog_elk_setup
     volumes:
-      - ./elk/setup-elk.sh:/setup-elk.sh:rw
+      - ./elk/setup-elk.sh:/setup-elk.sh:ro
     environment:
       - ELASTICSEARCH_URL=http://elasticsearch:9200
       - ELASTIC_USER=elastic
@@ -130,9 +130,10 @@ services:
       "/bin/sh",
       "-c",
       "
-      chmod +x /setup-elk.sh &&
+      cp /setup-elk.sh /tmp/setup-elk.sh &&
+      chmod +x /tmp/setup-elk.sh &&
       sleep 10 &&
-      /setup-elk.sh
+      /tmp/setup-elk.sh
       "
     ]
 
