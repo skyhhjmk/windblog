@@ -3,9 +3,6 @@
 # ELK 自动配置脚本
 # 用于自动创建 Elasticsearch 用户和角色
 
-# 移除 set -e，避免脚本在命令失败时立即退出
-# set -e
-
 ELASTICSEARCH_URL="${ELASTICSEARCH_URL:-http://elasticsearch:9200}"
 ELASTIC_USER="${ELASTIC_USER:-elastic}"
 ELASTIC_PASSWORD="${ELASTIC_PASSWORD:-changeme}"
@@ -13,12 +10,18 @@ KIBANA_PASSWORD="${KIBANA_PASSWORD:-changeme}"
 LOGSTASH_PASSWORD="${LOGSTASH_PASSWORD:-changeme}"
 
 echo "等待 Elasticsearch 启动..."
-retries=30
-until curl -s "$ELASTICSEARCH_URL" | grep -q "missing authentication credentials"; do
+retries=60
+until curl -s "$ELASTICSEARCH_URL" | grep -q "missing authentication credentials" || curl -s "$ELASTICSEARCH_URL" | grep -q "Unauthorized"; do
   sleep 5
   retries=$((retries-1))
   if [ $retries -le 0 ]; then
     echo "Elasticsearch 启动超时"
+    echo "尝试直接连接 Elasticsearch 进行诊断..."
+    if curl -v "$ELASTICSEARCH_URL"; then
+      echo "可以连接到 Elasticsearch，但响应内容不符合预期"
+    else
+      echo "无法连接到 Elasticsearch"
+    fi
     exit 1
   fi
   echo "Elasticsearch 还未就绪,继续等待... (剩余重试次数: $retries)"
