@@ -126,7 +126,14 @@ services:
         condition: service_healthy
     networks:
       - windblog_network
-    command: sh /setup-elk.sh
+    command: [
+      "/bin/sh",
+      "-c",
+      "
+      chmod +x /setup-elk.sh &&
+      /setup-elk.sh
+      "
+    ]
 
   # Elasticsearch 搜索引擎
   elasticsearch:
