@@ -1,14 +1,13 @@
-version: '3.8'
-
 services:
   # 应用服务
   app:
     image: ghcr.1ms.run/skyhhjmk/windblog:latest
     container_name: windblog_app
+    user: "1000:1000"  # 非 root 用户
     ports:
       - "8787:8787"
     volumes:
-      - ./data/windblog/runtime:/var/www/html/runtime
+      - ./data/windblog/runtime:/app/runtime
       - ./data/windblog/uploads:/app/public/uploads
     environment:
       - DB_PGSQL_HOST=postgres
@@ -50,13 +49,23 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+      - NET_BIND_SERVICE
 
   # PostgreSQL 数据库
   postgres:
     image: docker.1ms.run/postgres:18-alpine
     container_name: windblog_postgres
+    user: "70:70"  # postgres 用户
     ports:
-      - "${POSTGRES_PORT}:5432"
+      - "127.0.0.1:${POSTGRES_PORT}:5432"  # 只绑定 localhost
     environment:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
@@ -71,13 +80,22 @@ services:
       retries: 120
     networks:
       - windblog_network
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
 
   # Redis 缓存
   redis:
     image: docker.1ms.run/redis:8-alpine
     container_name: windblog_redis
+    user: "999:999"  # redis 用户
     ports:
-      - "${REDIS_PORT}:6379"
+      - "127.0.0.1:${REDIS_PORT}:6379"  # 只绑定 localhost
     volumes:
       - ./data/redis:/data
     healthcheck:
@@ -88,14 +106,22 @@ services:
     networks:
       - windblog_network
     command: redis-server --appendonly yes
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - SETGID
+      - SETUID
 
   # RabbitMQ 消息队列
   rabbitmq:
     image: docker.1ms.run/rabbitmq:4-management-alpine
     container_name: windblog_rabbitmq
+    user: "999:999"  # rabbitmq 用户
     ports:
-      - "${RABBITMQ_PORT}:5672"   # AMQP 端口
-      - "${RABBITMQ_MANAGEMENT_PORT}:15672" # 管理界面
+      - "127.0.0.1:${RABBITMQ_PORT}:5672"   # AMQP 端口，只绑定 localhost
+      - "127.0.0.1:${RABBITMQ_MANAGEMENT_PORT}:15672" # 管理界面
     environment:
       - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
@@ -108,11 +134,20 @@ services:
       retries: 120
     networks:
       - windblog_network
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
 
   # ELK Setup - 初始化 Elasticsearch 用户密码
   elk-setup:
     image: docker.1ms.run/curlimages/curl:latest
     container_name: windblog_elk_setup
+    user: "1000:1000"  # 非 root 用户
     volumes:
       - ./elk/setup-elk.sh:/setup-elk.sh:ro
     environment:
@@ -128,22 +163,38 @@ services:
       - windblog_network
     command: [
       "/bin/sh",
+      "-x",  # 添加 -x 参数以获取详细的执行日志
       "-c",
       "
-      cp /setup-elk.sh /tmp/setup-elk.sh &&
+      echo '检查挂载的脚本...' &&
+      ls -la /setup-elk.sh &&
+      echo '创建目标目录...' &&
+      mkdir -p /tmp &&
+      echo '转换行尾并复制脚本...' &&
+      cat /setup-elk.sh | tr -d '\\r' > /tmp/setup-elk.sh &&
+      echo '设置执行权限...' &&
       chmod +x /tmp/setup-elk.sh &&
+      echo '验证脚本权限...' &&
+      ls -la /tmp/setup-elk.sh &&
+      echo '等待Elasticsearch就绪...' &&
       sleep 10 &&
-      /tmp/setup-elk.sh
+      echo '执行脚本...' &&
+      /bin/sh /tmp/setup-elk.sh || echo '脚本执行失败，错误码: $?'
       "
     ]
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
 
   # Elasticsearch 搜索引擎
   elasticsearch:
     image: elastic.1ms.run/elasticsearch/elasticsearch-wolfi:${ELASTIC_VERSION}
     container_name: windblog_elasticsearch
+    user: "1000:1000"  # elasticsearch 用户
     ports:
-      - "${ES_PORT}:9200"
-      - "9300:9300"
+      - "127.0.0.1:${ES_PORT}:9200"  # 只绑定 localhost
+      - "127.0.0.1:9300:9300"
     environment:
       - node.name=elasticsearch
       - cluster.name=windblog-cluster
@@ -166,15 +217,24 @@ services:
       retries: 120
     networks:
       - windblog_network
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
 
   # Logstash 日志处理
   logstash:
     image: elastic.1ms.run/logstash/logstash:${ELASTIC_VERSION}
     container_name: windblog_logstash
+    user: "1000:1000"  # logstash 用户
     ports:
-      - "${LOGSTASH_PORT}:5044"     # Beats 端口
+      - "127.0.0.1:${LOGSTASH_PORT}:5044"     # Beats 端口
       - "${LOGSTASH_TCP_PORT}:5000" # TCP 端口（用于应用直接发送日志）
-      - "9600:9600"                 # 监控端口
+      - "127.0.0.1:9600:9600"                 # 监控端口
     environment:
       - xpack.monitoring.enabled=true
       - xpack.monitoring.elasticsearch.hosts=http://elasticsearch:9200
@@ -196,13 +256,22 @@ services:
       timeout: 10s
       retries: 120
     command: logstash -f /usr/share/logstash/pipeline/logstash.conf
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
 
   # Kibana 可视化界面
   kibana:
     image: elastic.1ms.run/kibana/kibana:${ELASTIC_VERSION}
     container_name: windblog_kibana
+    user: "1000:1000"  # kibana 用户
     ports:
-      - "${KIBANA_PORT}:5601"
+      - "127.0.0.1:${KIBANA_PORT}:5601"  # 只绑定 localhost
     environment:
       - SERVERNAME=windblog-kibana
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
@@ -225,11 +294,20 @@ services:
       interval: 30s
       timeout: 10s
       retries: 120
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
 
   # Kibana 自动配置 - 创建索引模式和 ILM 策略
   kibana-setup:
     image: docker.1ms.run/curlimages/curl:latest
     container_name: windblog_kibana_setup
+    user: "1000:1000"  # 非 root 用户
     volumes:
       - ./elk/setup-kibana.sh:/setup-kibana.sh:ro
     environment:
@@ -243,6 +321,10 @@ services:
     networks:
       - windblog_network
     command: sh /setup-kibana.sh
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
 
 networks:
   windblog_network:

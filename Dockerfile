@@ -125,9 +125,12 @@ RUN cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" && \
 RUN rm -rf /var/lib/apt/lists/*
 
 # 非 root 运行与目录权限
-RUN mkdir -p /app/runtime /app/runtime/logs /app/public/uploads && \
-    chown -R www-data:www-data /app
-USER www-data
+# 创建 UID 1000 的用户（与 docker-compose.yml 中的 user 保持一致）
+RUN groupadd -g 1000 appuser && \
+    useradd -u 1000 -g appuser -m -s /bin/bash appuser && \
+    mkdir -p /app/runtime /app/runtime/logs /app/public/uploads && \
+    chown -R appuser:appuser /app
+USER appuser
 
 # 暴露端口（可通过 APP_PORT 自定义，默认 8787）
 EXPOSE 8787

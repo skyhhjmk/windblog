@@ -9,15 +9,9 @@ server.shutdownTimeout: "5s"
 # Elasticsearch Configuration
 elasticsearch.hosts: [ "http://elasticsearch:9200" ]
 elasticsearch.username: "kibana_system"
-elasticsearch.password: "${KIBANA_PASSWORD}"
 
 # Monitoring
 monitoring.ui.container.elasticsearch.enabled: true
-
-# Security - Encryption Keys
-xpack.encryptedSavedObjects.encryptionKey: "${KIBANA_ENCRYPTION_KEY}"
-xpack.reporting.encryptionKey: "${KIBANA_ENCRYPTION_KEY}"
-xpack.security.encryptionKey: "${KIBANA_ENCRYPTION_KEY}"
 
 # Localization
 i18n.locale: "zh-CN"
