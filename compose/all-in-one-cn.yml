@@ -8,9 +8,8 @@ services:
     ports:
       - "8787:8787"
     volumes:
-      - ../:/var/www/html
-      - ../runtime:/var/www/html/runtime
-      - ./data/uploads:/app/public/uploads
+      - ./data/windblog/runtime:/var/www/html/runtime
+      - ./data/windblog/uploads:/app/public/uploads
     environment:
       - DB_PGSQL_HOST=postgres
       - DB_PGSQL_PORT=${POSTGRES_PORT}
@@ -37,7 +36,7 @@ services:
       elasticsearch:
         condition: service_healthy
       logstash:
-        condition: service_started
+        condition: service_healthy
     networks:
       - windblog_network
     command: php start.php start
@@ -110,6 +109,37 @@ services:
     networks:
       - windblog_network
 
+  # ELK Setup - 初始化 Elasticsearch 用户密码
+  elk-setup:
+    image: elastic.1ms.run/elasticsearch/elasticsearch-wolfi:${ELASTIC_VERSION}
+    container_name: windblog_elk_setup
+    user: "0"
+    command: >
+      bash -c '
+        echo "Waiting for Elasticsearch availability";
+        until curl -s http://elasticsearch:9200 | grep -q "missing authentication credentials"; do sleep 5; done;
+        echo "Setting kibana_system password";
+        until curl -s -X POST -u "elastic:${ELASTIC_PASSWORD}" -H "Content-Type: application/json" http://elasticsearch:9200/_security/user/kibana_system/_password -d "{\"password\":\"${KIBANA_PASSWORD}\"}" | grep -q "^{}"; do sleep 5; done;
+        echo "Setting logstash_system password";
+        until curl -s -X POST -u "elastic:${ELASTIC_PASSWORD}" -H "Content-Type: application/json" http://elasticsearch:9200/_security/user/logstash_system/_password -d "{\"password\":\"${LOGSTASH_PASSWORD}\"}" | grep -q "^{}"; do sleep 5; done;
+        echo "Creating logstash writer role";
+        curl -s -X POST -u "elastic:${ELASTIC_PASSWORD}" -H "Content-Type: application/json" http://elasticsearch:9200/_security/role/logstash_writer -d ''{
+          "cluster": ["manage_index_templates", "monitor", "manage_ilm"],
+          "indices": [
+            {
+              "names": ["windblog-logs-*", "logstash-*"],
+              "privileges": ["write", "create", "create_index", "manage", "manage_ilm"]
+            }
+          ]
+        }'';
+        echo "All done!";
+      '
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - windblog_network
+
   # Elasticsearch 搜索引擎
   elasticsearch:
     image: elastic.1ms.run/elasticsearch/elasticsearch-wolfi:${ELASTIC_VERSION}
@@ -151,17 +181,23 @@ services:
     environment:
       - xpack.monitoring.enabled=true
       - xpack.monitoring.elasticsearch.hosts=http://elasticsearch:9200
-      - xpack.monitoring.elasticsearch.username=elastic
-      - xpack.monitoring.elasticsearch.password=${ELASTIC_PASSWORD}
+      - xpack.monitoring.elasticsearch.username=logstash_system
+      - xpack.monitoring.elasticsearch.password=${LOGSTASH_PASSWORD}
       - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - LOGSTASH_PASSWORD=${LOGSTASH_PASSWORD}
     volumes:
       - ./elk/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
       - ./data/logstash:/usr/share/logstash/data
     depends_on:
-      elasticsearch:
-        condition: service_healthy
+      elk-setup:
+        condition: service_completed_successfully
     networks:
       - windblog_network
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -s http://localhost:9600/_node/stats || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 120
     command: logstash -f /usr/share/logstash/pipeline/logstash.conf
 
   # Kibana 可视化界面
@@ -173,16 +209,18 @@ services:
     environment:
       - SERVERNAME=windblog-kibana
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-      - ELASTICSEARCH_USERNAME=elastic
-      - ELASTICSEARCH_PASSWORD=${ELASTIC_PASSWORD}
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
       - KIBANA_ENCRYPTION_KEY=${KIBANA_ENCRYPTION_KEY}
-      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - xpack.security.encryptionKey=${KIBANA_ENCRYPTION_KEY}
+      - xpack.reporting.encryptionKey=${KIBANA_ENCRYPTION_KEY}
+      - xpack.encryptedSavedObjects.encryptionKey=${KIBANA_ENCRYPTION_KEY}
     volumes:
       - ./elk/kibana.yml:/usr/share/kibana/config/kibana.yml:ro
       - ./data/kibana:/usr/share/kibana/data
     depends_on:
-      elasticsearch:
-        condition: service_healthy
+      elk-setup:
+        condition: service_completed_successfully
     networks:
       - windblog_network
     healthcheck:
@@ -190,6 +228,24 @@ services:
       interval: 30s
       timeout: 10s
       retries: 120
+
+  # Kibana 自动配置 - 创建索引模式和 ILM 策略
+  kibana-setup:
+    image: docker.1ms.run/curlimages/curl:latest
+    container_name: windblog_kibana_setup
+    volumes:
+      - ./elk/setup-kibana.sh:/setup-kibana.sh:ro
+    environment:
+      - KIBANA_URL=http://kibana:5601
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - ELASTIC_USER=elastic
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+    depends_on:
+      kibana:
+        condition: service_healthy
+    networks:
+      - windblog_network
+    command: sh /setup-kibana.sh
 
 networks:
   windblog_network:

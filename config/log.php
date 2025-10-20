@@ -30,7 +30,7 @@ $handlers = [
     [
         'class' => Monolog\Handler\RotatingFileHandler::class,
         'constructor' => [
-            runtime_path() . '/logs/webman.log',
+            runtime_path() . '/logs/windblog.log',
             3, // 保留 3 天的日志文件，自动删除旧文件
             $logLevel,
         ],

@@ -8,8 +8,8 @@ server.shutdownTimeout: "5s"
 
 # Elasticsearch Configuration
 elasticsearch.hosts: [ "http://elasticsearch:9200" ]
-elasticsearch.username: "elastic"
-elasticsearch.password: "${ELASTIC_PASSWORD}"
+elasticsearch.username: "kibana_system"
+elasticsearch.password: "${KIBANA_PASSWORD}"
 
 # Monitoring
 monitoring.ui.container.elasticsearch.enabled: true
