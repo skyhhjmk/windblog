@@ -1,17 +1,26 @@
-#
-# ** THIS IS AN AUTO-GENERATED FILE **
-#
+# Kibana Configuration for Windblog
 
-# Default Kibana configuration for docker target
+# Server Configuration
 server.host: "0.0.0.0"
+server.port: 5601
+server.name: "windblog-kibana"
 server.shutdownTimeout: "5s"
-elasticsearch.hosts: [ "https://es01:9200" ]
+
+# Elasticsearch Configuration
+elasticsearch.hosts: [ "http://elasticsearch:9200" ]
+elasticsearch.username: "elastic"
+elasticsearch.password: "${ELASTIC_PASSWORD}"
+
+# Monitoring
 monitoring.ui.container.elasticsearch.enabled: true
 
-xpack.encryptedSavedObjects.encryptionKey:
-xpack.reporting.encryptionKey:
-xpack.security.encryptionKey:
+# Security - Encryption Keys
+xpack.encryptedSavedObjects.encryptionKey: "${KIBANA_ENCRYPTION_KEY}"
+xpack.reporting.encryptionKey: "${KIBANA_ENCRYPTION_KEY}"
+xpack.security.encryptionKey: "${KIBANA_ENCRYPTION_KEY}"
+
+# Localization
 i18n.locale: "zh-CN"
 
-elasticsearch.username: "kibana_system"
-elasticsearch.password: ""
+# Logging
+logging.root.level: info

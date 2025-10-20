@@ -1,0 +1,14 @@
+# 忽略所有数据文件，但保留目录结构
+*
+!.gitignore
+!.gitkeep
+
+# 说明：
+# 此目录用于存储所有服务的持久化数据
+# - postgres/       PostgreSQL 数据库
+# - redis/          Redis 数据
+# - rabbitmq/       RabbitMQ 数据
+# - elasticsearch/  Elasticsearch 索引
+# - logstash/       Logstash 数据
+# - kibana/         Kibana 数据
+# - uploads/        应用上传文件
