@@ -18,12 +18,12 @@ if (-not (Test-Path $dataDir)) {
 
 # 需要创建的子目录列表
 $subDirs = @(
-    "postgres",
-    "redis",
-    "rabbitmq",
-    "elasticsearch",
-    "logstash",
-    "kibana",
+    "postgres"
+    "redis"
+    "rabbitmq"
+    "elasticsearch"
+    "logstash"
+    "kibana"
     "uploads"
 )
 
@@ -55,12 +55,16 @@ foreach ($dir in $subDirs) {
 #Write-Host "  - data/uploads        应用上传文件" -ForegroundColor Gray
 #Write-Host ""
 
-# 设置 elasticsearch 目录权限（Windows 不需要，但在 Linux/Mac 上需要）
+# 设置 elasticsearch 和 logstash 目录权限（仅在 Linux/Mac 上需要）
 if ($IsLinux -or $IsMacOS) {
-#    Write-Host "检测到 Linux/Mac 系统，设置 Elasticsearch 目录权限..." -ForegroundColor Yellow
+#    Write-Host "检测到 Linux/Mac 系统，设置 Elasticsearch 和 Logstash 目录权限..." -ForegroundColor Yellow
     $esPath = Join-Path $dataDir "elasticsearch"
-    chmod 777 $esPath
-#    Write-Host "✓ Elasticsearch 目录权限已设置" -ForegroundColor Green
+    chown -R 1000:1000 $esPath
+#    Write-Host "✓ Elasticsearch 目录权限已设置 (1000:1000)" -ForegroundColor Green
+    
+    $logstashPath = Join-Path $dataDir "logstash"
+    chown -R 1000:1000 $logstashPath
+#    Write-Host "✓ Logstash 目录权限已设置 (1000:1000)" -ForegroundColor Green
 }
 
 #Write-Host "现在可以运行: docker-compose -f all-in-one.yml --env-file .env up -d" -ForegroundColor Cyan

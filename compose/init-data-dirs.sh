@@ -41,10 +41,15 @@ for dir in "${SUB_DIRS[@]}"; do
     fi
 done
 
-# 设置 Elasticsearch 目录权限
+# 设置 Elasticsearch 目录权限 (使用 1000:1000 用户/组)
 ES_PATH="${DATA_DIR}/elasticsearch"
-chmod 777 "$ES_PATH"
-echo "✓ Elasticsearch 目录权限已设置 (777)"
+chown -R 1000:1000 "$ES_PATH"
+echo "✓ Elasticsearch 目录权限已设置 (1000:1000)"
+
+# 设置 Logstash 目录权限
+LOGSTASH_PATH="${DATA_DIR}/logstash"
+chown -R 1000:1000 "$LOGSTASH_PATH"
+echo "✓ Logstash 目录权限已设置 (1000:1000)"
 
 # 设置 uploads 目录权限
 UPLOADS_PATH="${DATA_DIR}/uploads"
