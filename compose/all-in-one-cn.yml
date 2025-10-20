@@ -186,7 +186,7 @@ services:
       - ./data/logstash:/usr/share/logstash/data
     depends_on:
       elk-setup:
-        condition: service_completed
+        condition: service_completed_successfully
     networks:
       - windblog_network
     healthcheck:
@@ -216,7 +216,7 @@ services:
       - ./data/kibana:/usr/share/kibana/data
     depends_on:
       elk-setup:
-        condition: service_completed
+        condition: service_completed_successfully
     networks:
       - windblog_network
     healthcheck:
