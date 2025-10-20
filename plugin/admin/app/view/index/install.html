@@ -274,10 +274,30 @@
 
         // 初始化
         document.addEventListener('DOMContentLoaded', function() {
-            checkDependencies();
+            checkInstallStatus();
             setupEventListeners();
             setupDatabaseTypeSwitch();
         });
+
+        // 检查安装状态
+        function checkInstallStatus() {
+            fetch('/app/admin/install/status')
+                .then(res => res.json())
+                .then(data => {
+                    // 如果 install_lock_exists 为 false，说明数据库已配置但管理员未创建
+                    if (data.install_lock_exists === false && data.installed === true) {
+                        // 直接跳转到步骤3（管理员创建）
+                        goToStep(3);
+                    } else {
+                        // 否则从步骤1开始
+                        checkDependencies();
+                    }
+                })
+                .catch(err => {
+                    // 如果状态检查失败，仍然从步骤1开始
+                    checkDependencies();
+                });
+        }
 
         // 依赖检查
         function checkDependencies() {

@@ -2,6 +2,7 @@
 
 namespace plugin\admin\app\controller;
 
+use Exception;
 use Illuminate\Database\Capsule\Manager;
 use plugin\admin\app\common\Util;
 use support\exception\BusinessException;
@@ -20,10 +21,29 @@ class InstallController extends Base
      *
      * @var string[]
      */
-    protected $noNeedLogin = ['step0', 'step1', 'step2'];
+    protected $noNeedLogin = ['status', 'step0', 'step1', 'step2'];
+
+    public function status(Request $request): Response
+    {
+        if (is_install_lock_exists()) {
+            return $this->json(1, '系统已安装，请勿重复安装');
+        }
+        $res = [
+            'installed' => is_installed(),
+            'install_lock_exists' => is_install_lock_exists(),
+            'in_container' => container_info()['in_container'],
+            'in_docker' => container_info()['in_docker'],
+            'in_k8s' => container_info()['in_k8s'],
+        ];
+
+        return json($res);
+    }
 
     public function step0(Request $request): Response
     {
+        if (is_install_lock_exists()) {
+            return $this->json(1, '系统已安装，请勿重复安装');
+        }
         $checks = [];
         $missing = [];
         $critical_missing = []; // 致命错误
@@ -159,6 +179,9 @@ class InstallController extends Base
      */
     public function step1(Request $request): Response
     {
+        if (is_install_lock_exists()) {
+            return $this->json(1, '系统已安装，请勿重复安装');
+        }
         $type = $request->post('type', 'pgsql');
 
         // 根据选择的数据库类型验证对应的驱动
@@ -214,6 +237,7 @@ class InstallController extends Base
 
             // 检查数据库是否存在，不存在则创建
             switch ($type) {
+                default:
                 case 'pgsql':
                     // PostgreSQL中检查数据库是否存在
                     $smt = $db->prepare('SELECT 1 FROM pg_database WHERE datname = ?');
@@ -333,9 +357,7 @@ class InstallController extends Base
                 if (in_array($table, $tables_exist)) {
                     // 根据数据库类型使用正确的引号语法
                     $dropSql = match ($type) {
-                        'mysql' => "DROP TABLE IF EXISTS `$table`",
-                        'sqlite' => "DROP TABLE IF EXISTS \"$table\"",
-                        'pgsql' => "DROP TABLE IF EXISTS \"$table\"",
+                        'mysql' => "DROP TABLE IF EXISTS `$table`", // 省略 sqlite 和 pgsql
                         default => "DROP TABLE IF EXISTS \"$table\""
                     };
                     $db->exec($dropSql);
@@ -369,15 +391,6 @@ class InstallController extends Base
         $db = $this->getPdo($host, $user, $password, $port, $database, $type);
         // 安装过程中没有数据库配置，无法使用api\Menu::import()方法
         $this->importMenu($menus, $db, $type);
-
-        // 根据数据库类型生成配置内容
-        $config_content = match ($type) {
-            'mysql' => $this->getMysqlConfigContent(),
-            'sqlite' => $this->getSqliteConfigContent(),
-            default => $this->getPgsqlConfigContent()
-        };
-
-        file_put_contents($database_config_file, $config_content);
 
         // 生成.env配置
         $env_config = match ($type) {
@@ -416,10 +429,13 @@ class InstallController extends Base
      * @param Request $request
      *
      * @return Response
-     * @throws BusinessException|Exception
+     * @throws Exception
      */
     public function step2(Request $request): Response
     {
+        if (is_install_lock_exists()) {
+            return $this->json(1, '系统已安装，请勿重复安装');
+        }
         try {
             $username = $request->post('username');
             $password = $request->post('password');
@@ -447,6 +463,7 @@ class InstallController extends Base
 
             // 前置校验：确保必需表已存在
             switch ($db_type) {
+                default:
                 case 'pgsql':
                     $existsStmt = $pdo->query("SELECT tablename FROM pg_tables WHERE schemaname = 'public'");
                     break;
@@ -469,9 +486,7 @@ class InstallController extends Base
 
             // 根据数据库类型确定引号字符
             $quoteChar = match ($db_type) {
-                'mysql' => '`',
-                'sqlite' => '"',
-                'pgsql' => '"',
+                'mysql' => '`', // 省略 sqlite 和 pgsql
                 default => '"'
             };
 
@@ -515,6 +530,8 @@ class InstallController extends Base
             $smt->execute();
 
             $request->session()->flush();
+
+            file_put_contents(base_path() . '/install.lock', 'installed');
 
             return $this->json(0);
         } catch (\Throwable $e) {
@@ -732,80 +749,6 @@ class InstallController extends Base
         }
 
         return new \PDO($dsn, $username, $password, $params);
-    }
-
-    /**
-     * 获取 PostgreSQL 配置内容
-     */
-    protected function getPgsqlConfigContent(): string
-    {
-        return <<<EOF
-            <?php
-            return [
-                // 默认数据库
-                'default' => getenv('DB_DEFAULT') ?: 'pgsql',
-                // 各种数据库配置
-                'connections' => [
-                    'pgsql' => [
-                        'driver' => 'pgsql',
-                        'host' => getenv('DB_PGSQL_HOST') ?: 'localhost',
-                        'port' => getenv('DB_PGSQL_PORT') ?: '5432',
-                        'database' => getenv('DB_PGSQL_DATABASE') ?: 'windblog',
-                        'username' => getenv('DB_PGSQL_USERNAME') ?: 'root',
-                        'password' => getenv('DB_PGSQL_PASSWORD') ?: 'root',
-                        'charset' => 'utf8',
-                        'prefix' => '',
-                        'schema' => 'public',
-                        'sslmode' => 'prefer',
-                        'options' => [
-                            PDO::ATTR_PERSISTENT => false,
-                            PDO::ATTR_EMULATE_PREPARES => false,
-                            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                        ],
-                    ],
-                    'mysql' => [
-                        'driver' => 'mysql',
-                        'host' => getenv('DB_MYSQL_HOST') ?: 'localhost',
-                        'port' => getenv('DB_MYSQL_PORT') ?: '3306',
-                        'database' => getenv('DB_MYSQL_DATABASE') ?: 'windblog',
-                        'username' => getenv('DB_MYSQL_USERNAME') ?: 'root',
-                        'password' => getenv('DB_MYSQL_PASSWORD') ?: 'root',
-                        'charset' => 'utf8mb4',
-                        'collation' => 'utf8mb4_unicode_ci',
-                        'prefix' => '',
-                        'strict' => true,
-                        'engine' => null,
-                        'options' => [
-                            PDO::ATTR_PERSISTENT => false,
-                            PDO::ATTR_EMULATE_PREPARES => false,
-                            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                        ],
-                    ],
-                    'sqlite' => [
-                        'driver' => 'sqlite',
-                        'database' => getenv('DB_SQLITE_DATABASE') ?: runtime_path('windblog.db'),
-                        'prefix' => '',
-                        'foreign_key_constraints' => getenv('DB_SQLITE_FOREIGN_KEYS') ?: true,
-                    ],
-                ]
-            ];
-            EOF;
-    }
-
-    /**
-     * 获取 MySQL 配置内容
-     */
-    protected function getMysqlConfigContent(): string
-    {
-        return $this->getPgsqlConfigContent(); // 使用相同的配置内容
-    }
-
-    /**
-     * 获取 SQLite 配置内容
-     */
-    protected function getSqliteConfigContent(): string
-    {
-        return $this->getPgsqlConfigContent(); // 使用相同的配置内容
     }
 
     /**

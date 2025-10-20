@@ -51,7 +51,8 @@ ARG APP_PORT=8787
 
 ENV TZ=UTC \
     APP_ENV=${APP_ENV} \
-    APP_PORT=${APP_PORT}
+    APP_PORT=${APP_PORT} \
+    IN_CONTAINER=true
 
 WORKDIR /app
 
