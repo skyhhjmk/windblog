@@ -111,34 +111,22 @@ services:
 
   # ELK Setup - 初始化 Elasticsearch 用户密码
   elk-setup:
-    image: elastic.1ms.run/elasticsearch/elasticsearch-wolfi:${ELASTIC_VERSION}
+    image: docker.1ms.run/curlimages/curl:latest
     container_name: windblog_elk_setup
-    user: "0"
-    command: >
-      bash -c '
-        echo "Waiting for Elasticsearch availability";
-        until curl -s http://elasticsearch:9200 | grep -q "missing authentication credentials"; do sleep 5; done;
-        echo "Setting kibana_system password";
-        until curl -s -X POST -u "elastic:${ELASTIC_PASSWORD}" -H "Content-Type: application/json" http://elasticsearch:9200/_security/user/kibana_system/_password -d "{\"password\":\"${KIBANA_PASSWORD}\"}" | grep -q "^{}"; do sleep 5; done;
-        echo "Setting logstash_system password";
-        until curl -s -X POST -u "elastic:${ELASTIC_PASSWORD}" -H "Content-Type: application/json" http://elasticsearch:9200/_security/user/logstash_system/_password -d "{\"password\":\"${LOGSTASH_PASSWORD}\"}" | grep -q "^{}"; do sleep 5; done;
-        echo "Creating logstash writer role";
-        curl -s -X POST -u "elastic:${ELASTIC_PASSWORD}" -H "Content-Type: application/json" http://elasticsearch:9200/_security/role/logstash_writer -d ''{
-          "cluster": ["manage_index_templates", "monitor", "manage_ilm"],
-          "indices": [
-            {
-              "names": ["windblog-logs-*", "logstash-*"],
-              "privileges": ["write", "create", "create_index", "manage", "manage_ilm"]
-            }
-          ]
-        }'';
-        echo "All done!";
-      '
+    volumes:
+      - ./elk/setup-elk.sh:/setup-elk.sh:ro
+    environment:
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - ELASTIC_USER=elastic
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - KIBANA_PASSWORD=${KIBANA_PASSWORD}
+      - LOGSTASH_PASSWORD=${LOGSTASH_PASSWORD}
     depends_on:
       elasticsearch:
         condition: service_healthy
     networks:
       - windblog_network
+    command: sh /setup-elk.sh
 
   # Elasticsearch 搜索引擎
   elasticsearch:
