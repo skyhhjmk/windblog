@@ -4,6 +4,7 @@ namespace plugin\admin\app\controller;
 
 use Exception;
 use Illuminate\Database\Capsule\Manager;
+use PDO;
 use plugin\admin\app\common\Util;
 use support\exception\BusinessException;
 use support\Request;
@@ -531,10 +532,10 @@ class InstallController extends Base
 
             $request->session()->flush();
 
-            file_put_contents(base_path() . '/install.lock', 'installed');
+            file_put_contents(base_path() . '/runtime/install.lock', 'installed in container');
 
             return $this->json(0);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return $this->json(1, $e->getMessage());
         }
     }
@@ -543,12 +544,12 @@ class InstallController extends Base
      * 添加菜单
      *
      * @param array  $menu
-     * @param \PDO   $pdo
+     * @param PDO   $pdo
      * @param string $type 数据库类型
      *
      * @return int
      */
-    protected function addMenu(array $menu, \PDO $pdo, string $type = 'pgsql'): int
+    protected function addMenu(array $menu, PDO $pdo, string $type = 'pgsql'): int
     {
         $allow_columns = ['title', 'key', 'icon', 'href', 'pid', 'weight', 'type'];
         $data = [];
@@ -592,12 +593,12 @@ class InstallController extends Base
      * 导入菜单
      *
      * @param array  $menu_tree
-     * @param \PDO   $pdo
+     * @param PDO   $pdo
      * @param string $type 数据库类型
      *
      * @return void
      */
-    protected function importMenu(array $menu_tree, \PDO $pdo, string $type = 'pgsql')
+    protected function importMenu(array $menu_tree, PDO $pdo, string $type = 'pgsql')
     {
         if (is_numeric(key($menu_tree)) && !isset($menu_tree['key'])) {
             foreach ($menu_tree as $item) {
@@ -713,14 +714,14 @@ class InstallController extends Base
      * @param $database
      * @param $type
      *
-     * @return \PDO
+     * @return PDO
      */
-    protected function getPdo($host, $username, $password, $port, $database = null, $type = 'pgsql'): \PDO
+    protected function getPdo($host, $username, $password, $port, $database = null, $type = 'pgsql'): PDO
     {
         $params = [
-            \PDO::ATTR_EMULATE_PREPARES => false,
-            \PDO::ATTR_TIMEOUT => 5,
-            \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_EMULATE_PREPARES => false,
+            PDO::ATTR_TIMEOUT => 5,
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         ];
 
         switch ($type) {
@@ -729,7 +730,7 @@ class InstallController extends Base
                 if ($database) {
                     $dsn .= "dbname=$database";
                 }
-                $params[\PDO::MYSQL_ATTR_INIT_COMMAND] = 'SET NAMES utf8mb4';
+                $params[PDO::MYSQL_ATTR_INIT_COMMAND] = 'SET NAMES utf8mb4';
                 break;
 
             case 'sqlite':
@@ -737,7 +738,7 @@ class InstallController extends Base
                 $dsn = 'sqlite:' . ($database ?: ':memory:');
 
                 // SQLite不需要用户名和密码
-                return new \PDO($dsn, null, null, $params);
+                return new PDO($dsn, null, null, $params);
 
             case 'pgsql':
             default:
@@ -748,7 +749,7 @@ class InstallController extends Base
                 break;
         }
 
-        return new \PDO($dsn, $username, $password, $params);
+        return new PDO($dsn, $username, $password, $params);
     }
 
     /**
