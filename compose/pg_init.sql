@@ -1658,13 +1658,13 @@ INSERT INTO settings (id, key, value, "group", created_at, updated_at)
 VALUES (default, 'rabbitmq_port', '5672', 'general', '2025-10-16 04:01:11.000000 +00:00',
         '2025-10-16 04:01:11.000000 +00:00');
 INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'rabbitmq_user', '"guest"', 'general', '2025-10-16 04:01:11.000000 +00:00',
+VALUES (default, 'rabbitmq_user', '"windblog"', 'general', '2025-10-16 04:01:11.000000 +00:00',
         '2025-10-16 04:01:11.000000 +00:00');
 INSERT INTO settings (id, key, value, "group", created_at, updated_at)
 VALUES (default, 'rabbitmq_import_exchange', '"import_exchange"', 'general', '2025-10-16 04:01:11.000000 +00:00',
         '2025-10-16 04:01:11.000000 +00:00');
 INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'rabbitmq_password', '"guest"', 'general', '2025-10-16 04:01:11.000000 +00:00',
+VALUES (default, 'rabbitmq_password', '"rabbitmq_secret_change_me"', 'general', '2025-10-16 04:01:11.000000 +00:00',
         '2025-10-16 04:01:11.000000 +00:00');
 INSERT INTO settings (id, key, value, "group", created_at, updated_at)
 VALUES (default, 'rabbitmq_import_routing_key', '"import_job"', 'general', '2025-10-16 04:01:11.000000 +00:00',
