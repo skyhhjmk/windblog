@@ -11,7 +11,9 @@ class Menu
 {
     /**
      * 根据key获取菜单
+     *
      * @param $key
+     *
      * @return array
      */
     public static function get($key)
@@ -23,7 +25,9 @@ class Menu
 
     /**
      * 根据id获得菜单
+     *
      * @param $id
+     *
      * @return array
      */
     public static function find($id): array
@@ -33,7 +37,9 @@ class Menu
 
     /**
      * 添加菜单
+     *
      * @param array $menu
+     *
      * @return int
      */
     public static function add(array $menu)
@@ -49,7 +55,9 @@ class Menu
 
     /**
      * 导入菜单
+     *
      * @param array $menu_tree
+     *
      * @return void
      */
     public static function import(array $menu_tree)
@@ -77,7 +85,9 @@ class Menu
 
     /**
      * 删除菜单
+     *
      * @param $key
+     *
      * @return void
      */
     public static function delete($key)
@@ -97,9 +107,11 @@ class Menu
 
     /**
      * 获取菜单中某个(些)字段的值
-     * @param $menu
+     *
+     * @param      $menu
      * @param null $column
      * @param null $index
+     *
      * @return array|mixed
      */
     public static function column($menu, $column = null, $index = null)

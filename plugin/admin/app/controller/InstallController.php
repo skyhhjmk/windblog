@@ -5,6 +5,7 @@ namespace plugin\admin\app\controller;
 use Exception;
 use Illuminate\Database\Capsule\Manager;
 use PDO;
+use plugin\admin\api\Menu;
 use plugin\admin\app\common\Util;
 use support\exception\BusinessException;
 use support\Request;
@@ -386,32 +387,24 @@ class InstallController extends Base
             }
         }
 
-        // 导入菜单
-        $menus = include base_path() . '/plugin/admin/config/menu.php';
-        // 重新获取数据库连接，因为迁移可能已经改变了数据库状态
-        $db = $this->getPdo($host, $user, $password, $port, $database, $type);
-        // 安装过程中没有数据库配置，无法使用api\Menu::import()方法
-        $this->importMenu($menus, $db, $type);
-
         // 生成.env配置
         $env_config = match ($type) {
             'mysql' => $this->getMysqlEnvConfig($host, $port, $database, $user, $password),
             'sqlite' => $this->getSqliteEnvConfig($database),
             default => $this->getPgsqlEnvConfig($host, $port, $database, $user, $password)
         };
-        file_put_contents(base_path() . '/.env', $env_config);
 
-        // 创建 install.lock 文件标记安装完成
-        $lockFile = base_path() . '/runtime/install.lock';
-        $lockDir = dirname($lockFile);
-        if (!is_dir($lockDir)) {
-            mkdir($lockDir, 0o755, true);
+        if (!container_info()['in_container']) {
+            file_put_contents(base_path() . '/.env', $env_config);
+
+            // 导入菜单
+            $menus = include base_path() . '/plugin/admin/config/menu.php';
+            // 重新获取数据库连接，因为迁移可能已经改变了数据库状态
+            $db = $this->getPdo($host, $user, $password, $port, $database, $type);
+            // 安装过程中没有数据库配置，无法使用api\Menu::import()方法
+            $this->importMenu($menus, $db, $type);
+            // 容器内由 step2 完成菜单导入
         }
-        file_put_contents($lockFile, json_encode([
-            'installed_at' => date('Y-m-d H:i:s'),
-            'db_type' => $type,
-            'version' => '1.0',
-        ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
 
         // 尝试reload
         if (function_exists('posix_kill')) {
@@ -532,7 +525,21 @@ class InstallController extends Base
 
             $request->session()->flush();
 
-            file_put_contents(base_path() . '/runtime/install.lock', 'installed in container');
+            if (container_info()['in_container']) {
+                // 容器内导入菜单
+                $menu_tree = include base_path() . '/plugin/admin/config/menu.php';
+                Menu::import($menu_tree);
+            }
+
+            // 创建 install.lock 文件标记安装完成
+            $lockFile = base_path() . '/runtime/install.lock';
+            $lockDir = dirname($lockFile);
+            if (!is_dir($lockDir)) {
+                mkdir($lockDir, 0o755, true);
+            }
+            file_put_contents($lockFile, json_encode([
+                'installed_at' => date('Y-m-d H:i:s'),
+            ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
 
             return $this->json(0);
         } catch (Throwable $e) {
@@ -544,7 +551,7 @@ class InstallController extends Base
      * 添加菜单
      *
      * @param array  $menu
-     * @param PDO   $pdo
+     * @param PDO $pdo
      * @param string $type 数据库类型
      *
      * @return int
@@ -593,7 +600,7 @@ class InstallController extends Base
      * 导入菜单
      *
      * @param array  $menu_tree
-     * @param PDO   $pdo
+     * @param PDO $pdo
      * @param string $type 数据库类型
      *
      * @return void
