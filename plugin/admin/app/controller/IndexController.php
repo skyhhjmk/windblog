@@ -40,7 +40,7 @@ class IndexController
     public function index(Request $request): Response
     {
         clearstatcache();
-        if (!container_info()['install_lock_exists'] && container_info()['in_container']) {
+        if (!is_install_lock_exists() && container_info()['in_container']) {
             return raw_view('index/install');
         }
         $admin = admin();

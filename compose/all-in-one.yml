@@ -67,14 +67,14 @@ services:
     container_name: windblog_postgres
     user: "70:70"  # postgres 用户
     ports:
-      - "127.0.0.1:${POSTGRES_PORT}:5432"  # 只绑定 localhost
+      - "0.0.0.0:${POSTGRES_PORT}:5432"
     environment:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
-      - ../app/install/postgresql.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./pg_init.sql:/docker-entrypoint-initdb.d/pg_init.sql:ro
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER}" ]
       interval: 10s
@@ -97,7 +97,7 @@ services:
     container_name: windblog_redis
     user: "999:999"  # redis 用户
     ports:
-      - "127.0.0.1:${REDIS_PORT}:6379"  # 只绑定 localhost
+      - "0.0.0.0:${REDIS_PORT}:6379"
     volumes:
       - ./data/redis:/data
     healthcheck:
@@ -122,8 +122,8 @@ services:
     container_name: windblog_rabbitmq
     user: "999:999"  # rabbitmq 用户
     ports:
-      - "127.0.0.1:${RABBITMQ_PORT}:5672"   # AMQP 端口，只绑定 localhost
-      - "127.0.0.1:${RABBITMQ_MANAGEMENT_PORT}:15672" # 管理界面
+      - "0.0.0.0:${RABBITMQ_PORT}:5672"   # AMQP 端口
+      - "0.0.0.0:${RABBITMQ_MANAGEMENT_PORT}:15672" # 管理界面
     environment:
       - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
@@ -184,8 +184,8 @@ services:
     container_name: windblog_elasticsearch
     user: "1000:1000"  # elasticsearch 用户
     ports:
-      - "127.0.0.1:${ES_PORT}:9200"  # 只绑定 localhost
-      - "127.0.0.1:9300:9300"
+      - "0.0.0.0:${ES_PORT}:9200"
+      - "0.0.0.0:9300:9300"
     environment:
       - node.name=elasticsearch
       - cluster.name=windblog-cluster
@@ -223,9 +223,9 @@ services:
     container_name: windblog_logstash
     user: "1000:1000"  # logstash 用户
     ports:
-      - "127.0.0.1:${LOGSTASH_PORT}:5044"     # Beats 端口
+      - "0.0.0.0:${LOGSTASH_PORT}:5044"     # Beats 端口
       - "${LOGSTASH_TCP_PORT}:5000" # TCP 端口（用于应用直接发送日志）
-      - "127.0.0.1:9600:9600"                 # 监控端口
+      - "0.0.0.0:9600:9600"                 # 监控端口
     environment:
       - xpack.monitoring.enabled=true
       - xpack.monitoring.elasticsearch.hosts=http://elasticsearch:9200
@@ -262,7 +262,7 @@ services:
     container_name: windblog_kibana
     user: "1000:1000"  # kibana 用户
     ports:
-      - "127.0.0.1:${KIBANA_PORT}:5601"  # 只绑定 localhost
+      - "0.0.0.0:${KIBANA_PORT}:5601"
     environment:
       - SERVERNAME=windblog-kibana
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
