@@ -6,6 +6,10 @@ use app\annotation\EnableInstantFirstPaint;
 use app\model\Post;
 use app\service\FloLinkService;
 use app\service\PJAXHelper;
+use app\service\PluginService;
+use app\service\SidebarService;
+use Exception;
+use support\Log;
 use support\Request;
 use support\Response;
 use Webman\RateLimiter\Annotation\RateLimiter;
@@ -15,7 +19,6 @@ class PostController
     protected array $noNeedLogin = ['index'];
 
     #[EnableInstantFirstPaint]
-    #[RateLimiter(limit: 3, ttl: 3)]
     public function index(Request $request, mixed $keyword = null): Response
     {
         // 移除URL参数中的 .html 后缀
@@ -61,7 +64,7 @@ class PostController
         $isPjax = PJAXHelper::isPJAX($request);
 
         // 获取侧边栏内容（PJAX 与非 PJAX 均获取）
-        $sidebar = \app\service\SidebarService::getSidebarContent($request, 'post');
+        $sidebar = SidebarService::getSidebarContent($request, 'post');
 
         // 加载作者信息与分类、标签
         $post->load(['authors', 'primaryAuthor', 'categories', 'tags']);
@@ -72,8 +75,8 @@ class PostController
         if (blog_config('flolink_enabled', true)) {
             try {
                 $post->content = FloLinkService::processContent($post->content);
-            } catch (\Exception $e) {
-                \support\Log::error('FloLink处理失败: ' . $e->getMessage());
+            } catch (Exception $e) {
+                Log::error('FloLink处理失败: ' . $e->getMessage());
                 // 处理失败时使用原始内容
             }
         }
@@ -109,13 +112,13 @@ class PostController
         );
 
         // 动作：文章内容渲染完成（需权限 content:action.post_rendered）
-        \app\service\PluginService::do_action('content.post_rendered', [
+        PluginService::do_action('content.post_rendered', [
             'slug' => is_string($keyword) ? $keyword : null,
             'id' => is_numeric($keyword) ? (int) $keyword : null,
         ]);
 
         // 过滤器：文章响应（需权限 content:filter.post_response）
-        $resp = \app\service\PluginService::apply_filters('content.post_response_filter', $resp);
+        $resp = PluginService::apply_filters('content.post_response_filter', $resp);
 
         return $resp;
     }

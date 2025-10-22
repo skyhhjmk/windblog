@@ -5,6 +5,7 @@ namespace app\controller;
 use app\annotation\EnableInstantFirstPaint;
 use app\service\BlogService;
 use app\service\PJAXHelper;
+use app\service\SidebarService;
 use League\CommonMark\Exception\CommonMarkException;
 use support\Request;
 use support\Response;
@@ -42,7 +43,6 @@ class IndexController
      * @throws Throwable
      */
     #[EnableInstantFirstPaint]
-    #[RateLimiter(limit: 3, ttl: 3)]
     public function index(Request $request, int $page = 1): Response
     {
 
@@ -59,7 +59,7 @@ class IndexController
         $isPjax = PJAXHelper::isPJAX($request);
 
         // 获取侧边栏内容（PJAX 与非 PJAX 均获取，便于片段携带并在完成后注入右栏）
-        $sidebar = \app\service\SidebarService::getSidebarContent($request, 'home');
+        $sidebar = SidebarService::getSidebarContent($request, 'home');
 
         // 动态选择模板：PJAX 返回片段，非 PJAX 返回完整页面
         $viewName = PJAXHelper::getViewName('index/index', $isPjax);

@@ -4,8 +4,11 @@ namespace app\controller;
 
 use app\model\Comment;
 use app\model\Post;
+use Exception;
+use support\Log;
 use support\Request;
 use support\Response;
+use Throwable;
 use Webman\RateLimiter\Annotation\RateLimiter;
 
 class CommentController
@@ -20,9 +23,10 @@ class CommentController
      *
      * @param Request $request
      * @param int $postId
+     *
      * @return Response
+     * @throws Throwable
      */
-    #[RateLimiter(limit: 3, ttl: 60)]
     public function submit(Request $request, int $postId): Response
     {
         // 检查文章是否存在且允许评论
@@ -193,8 +197,8 @@ class CommentController
 
             return json(['code' => 500, 'msg' => '评论提交失败']);
 
-        } catch (\Exception $e) {
-            \support\Log::error('Comment submission failed: ' . $e->getMessage());
+        } catch (Exception $e) {
+            Log::error('Comment submission failed: ' . $e->getMessage());
 
             return json(['code' => 500, 'msg' => '评论提交失败，请稍后重试']);
         }
@@ -331,7 +335,7 @@ class CommentController
         if (!empty($comment->quoted_data)) {
             try {
                 $data['quote'] = json_decode($comment->quoted_data, true);
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 $data['quote'] = null;
             }
         } else {

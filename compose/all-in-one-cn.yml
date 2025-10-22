@@ -17,6 +17,7 @@ services:
       - DB_PGSQL_PASSWORD=${POSTGRES_PASSWORD}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
       - CACHE_DRIVER=redis
       - APP_DEBUG=${APP_DEBUG}
       - ELASTICSEARCH_HOST=elasticsearch
@@ -98,6 +99,7 @@ services:
       - "0.0.0.0:${REDIS_PORT}:6379"
     volumes:
       - ./data/redis:/data
+      - ./conf/redis/redis.conf:/etc/redis/redis.conf
     healthcheck:
       test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
@@ -105,7 +107,7 @@ services:
       retries: 120
     networks:
       - windblog_network
-    command: redis-server --appendonly yes
+    command: redis-server /etc/redis/redis.conf
     security_opt:
       - no-new-privileges:true
     cap_drop:

@@ -10,6 +10,7 @@ echo ""
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DATA_DIR="${SCRIPT_DIR}/data"
+CONFIG_DIR="${SCRIPT_DIR}/conf"
 
 # 创建主数据目录
 if [ ! -d "$DATA_DIR" ]; then
@@ -71,6 +72,12 @@ REDIS_PATH="${DATA_DIR}/redis"
 chown -R 999:999 "$REDIS_PATH" 2>/dev/null || echo "⚠ Redis 权限设置失败 (可能需要 sudo)"
 chmod 750 "$REDIS_PATH" 2>/dev/null || echo "⚠ Redis 权限设置失败 (可能需要 sudo)"
 echo "✓ Redis 目录权限已设置 (999:999, 750)"
+
+# Redis 配置目录权限 (999:999 - redis用户)
+REDIS_CONFIG_PATH="${CONFIG_DIR}/redis"
+chown -R 999:999 "$REDIS_CONFIG_PATH" 2>/dev/null || echo "⚠ Redis 配置权限设置失败 (可能需要 sudo)"
+chmod 750 "$REDIS_CONFIG_PATH" 2>/dev/null || echo "⚠ Redis 配置权限设置失败 (可能需要 sudo)"
+echo "✓ Redis 配置目录权限已设置 (999:999, 750)"
 
 # RabbitMQ 目录权限 (999:999 - rabbitmq用户)
 RABBITMQ_PATH="${DATA_DIR}/rabbitmq"

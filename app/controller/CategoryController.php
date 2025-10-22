@@ -8,6 +8,7 @@ use app\service\BlogService;
 use app\service\EnhancedCacheService;
 use app\service\PaginationService;
 use app\service\PJAXHelper;
+use app\service\SidebarService;
 use support\Request;
 use support\Response;
 use Webman\RateLimiter\Annotation\RateLimiter;
@@ -17,7 +18,6 @@ class CategoryController
     protected array $noNeedLogin = ['index', 'list'];
 
     #[EnableInstantFirstPaint]
-    #[RateLimiter(limit: 3, ttl: 3)]
     public function index(Request $request, string $slug, int $page = 1): Response
     {
         // 兼容 .html 形式
@@ -51,7 +51,7 @@ class CategoryController
         $blog_title = BlogService::getBlogTitle();
 
         // 侧边栏
-        $sidebar = \app\service\SidebarService::getSidebarContent($request, 'category');
+        $sidebar = SidebarService::getSidebarContent($request, 'category');
 
         // 动态选择模板：PJAX 返回片段，非 PJAX 返回完整页面
         $viewName = PJAXHelper::getViewName('category/index', $isPjax);
@@ -101,7 +101,7 @@ class CategoryController
             || (bool) $request->get('_pjax')
             || strtolower((string) $request->header('X-Requested-With')) === 'xmlhttprequest';
 
-        $sidebar = \app\service\SidebarService::getSidebarContent($request, 'category');
+        $sidebar = SidebarService::getSidebarContent($request, 'category');
 
         $cacheKey = 'category_list_counts_v1';
         $enhancedCache = new EnhancedCacheService();
