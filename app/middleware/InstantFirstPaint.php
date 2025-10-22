@@ -40,9 +40,11 @@ class InstantFirstPaint implements MiddlewareInterface
 
         // 允许通过 Header/Query 显式绕过（防递归/调试）
         // Query 参数会被 CDN 转发，更可靠
+        // 添加对静态化生成请求的检测，自动绕过骨架屏逻辑
         if ($request->header('X-INSTANT-BYPASS') === '1' ||
             $request->get('no_instant') == '1' ||
-            $request->get('_instant_bypass') === '1') {
+            $request->get('_instant_bypass') === '1' ||
+            $request->header('User-Agent') === 'StaticGenerator/1.0') {
             // 绕过骨架页，返回完整页面
             // 完整页面应该被 CDN 缓存，添加缓存头
             $response = $handler($request);

@@ -202,7 +202,7 @@ class StaticGenerator
         } elseif ($scope === 'all') {
             $total = (max(1, $pages) + 1) // index
                 + (max(1, $pages) + 1) // list
-                + (int)Post::where('status', 'published')->count('*')
+                + (int) Post::where('status', 'published')->count('*')
                 + 1; // /search
         }
         if ($jobId) {
@@ -473,6 +473,8 @@ class StaticGenerator
         $headers = [
             'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
             'User-Agent: StaticGenerator/1.0',
+            // 添加绕过首屏快速加载的请求头
+            'X-INSTANT-BYPASS: 1',
         ];
         curl_setopt_array($ch, [
             CURLOPT_URL => $url,
@@ -620,7 +622,7 @@ class StaticGenerator
             MQService::closeConnection();
             Log::info('StaticGenerator MQ连接已关闭');
         } catch (Throwable $e) {
-            Log::warning('关闭MQ连接失败: ' . $e->Message());
+            Log::warning('关闭MQ连接失败: ' . $e->getMessage());
         }
     }
 }
