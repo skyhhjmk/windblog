@@ -4,8 +4,11 @@ namespace app\api\controller\v1;
 
 use app\model\Post;
 use app\service\FloLinkService;
+use Exception;
+use support\Log;
 use support\Request;
 use support\Response;
+use Throwable;
 use Webman\RateLimiter\Annotation\RateLimiter;
 
 class ApiPostController
@@ -23,7 +26,6 @@ class ApiPostController
         ]);
     }
 
-    #[RateLimiter(limit: 3, ttl: 3)]
     public function get(Request $request, ?int $id = null): Response
     {
         // 验证ID
@@ -79,7 +81,7 @@ class ApiPostController
      * @param mixed   $keyword
      *
      * @return Response
-     * @throws \Throwable
+     * @throws Throwable
      */
     #[RateLimiter(limit: 10, ttl: 3)]
     public function content(Request $request, mixed $keyword = null): Response
@@ -122,8 +124,8 @@ class ApiPostController
         if (blog_config('flolink_enabled', true)) {
             try {
                 $content = FloLinkService::processContent($content);
-            } catch (\Exception $e) {
-                \support\Log::error('FloLink处理失败: ' . $e->getMessage());
+            } catch (Exception $e) {
+                Log::error('FloLink处理失败: ' . $e->getMessage());
             }
         }
 
