@@ -21,6 +21,52 @@ use Webman\MiddlewareInterface;
  */
 class InstantFirstPaint implements MiddlewareInterface
 {
+    // 定义已知的合法搜索引擎爬虫 User-Agent 关键词
+    protected const KNOWN_SEARCH_ENGINES = [
+        'googlebot',
+        'bingbot',
+        'baiduspider',
+        'yandexbot',
+        'yahoo! slurp',
+        'sogou',
+        'yisouspider',
+        'bytespider',
+        'petalbot',
+        'duckduckbot',
+        'facebookexternalhit',
+        'twitterbot',
+        'linkedinbot',
+        'applebot',
+        '360spider',
+        'semrushbot',
+        'ahrefsbot',
+        'amazonbot',
+        'archive.org_bot',
+        'ia_archiver',
+        'heritrix',
+        'wget',
+        'curl',
+        'feedly',
+        'feedburner',
+        'mediapartners-google',
+        'adsbot-google',
+    ];
+
+    // 定义需要拦截的其他爬虫关键词
+    protected const OTHER_CRAWLERS = [
+        'bot',
+        'spider',
+        'crawler',
+        'scraper',
+        'scrapy',
+        'httrack',
+        'java/',
+        'python-requests',
+        'go-http-client',
+        'axios',
+        'seo',
+    ];
+
     public function process(Request $request, callable $handler): Response
     {
         // 检查是否有控制器方法标记了 EnableInstantFirstPaint 注解
@@ -83,10 +129,16 @@ class InstantFirstPaint implements MiddlewareInterface
             return $handler($request);
         }
 
-        // 跳过常见爬虫，避免只见 Loading 影响 SEO
+        // 检查 User-Agent，确保合法搜索引擎爬虫能获取完整页面
         $ua = strtolower((string) $request->header('User-Agent'));
         if ($ua) {
-            if (array_any(['bot', 'spider', 'crawler', 'bingpreview', 'slurp', 'duckduckbot', 'baiduspider', 'sogou', 'yisouspider', 'bytespider', 'petalbot', 'google'], fn ($kw) => str_contains($ua, $kw))) {
+            // 如果是已知的合法搜索引擎爬虫，直接返回完整页面
+            if ($this->isKnownSearchEngine($ua)) {
+                return $handler($request);
+            }
+
+            // 如果是其他可疑的爬虫，跳过首屏优化
+            if ($this->isOtherCrawler($ua)) {
                 return $handler($request);
             }
         }
@@ -110,6 +162,42 @@ class InstantFirstPaint implements MiddlewareInterface
             'Cloudflare-CDN-Cache-Control' => 'no-store',
             'X-Instant' => '1',
         ], $html);
+    }
+
+    /**
+     * 检查是否为已知的合法搜索引擎
+     *
+     * @param string $userAgent
+     *
+     * @return bool
+     */
+    protected function isKnownSearchEngine(string $userAgent): bool
+    {
+        foreach (self::KNOWN_SEARCH_ENGINES as $searchEngine) {
+            if (str_contains($userAgent, $searchEngine)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * 检查是否为其他可疑爬虫
+     *
+     * @param string $userAgent
+     *
+     * @return bool
+     */
+    protected function isOtherCrawler(string $userAgent): bool
+    {
+        foreach (self::OTHER_CRAWLERS as $crawler) {
+            if (str_contains($userAgent, $crawler)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
