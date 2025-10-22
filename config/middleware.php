@@ -19,14 +19,14 @@ $global = [
     app\middleware\DebugToolkit::class,
     app\middleware\IpChecker::class,
     // 新增的安全和性能优化中间件
-//    app\middleware\SecureFileUpload::class,
-//    app\middleware\EnhancedAuthCheck::class,
+    app\middleware\SecureFileUpload::class,
+    app\middleware\EnhancedAuthCheck::class,
 ];
 
 if (is_installed()) {
     $must_installed = [
         // 首屏极快返回骨架（最高优先级，用户首次访问时立即看到 loading）
-//        app\middleware\InstantFirstPaint::class,
+        app\middleware\InstantFirstPaint::class,
         // 命中静态缓存则直接返回（骨架页二次请求时命中缓存）
         app\middleware\StaticCacheRedirect::class,
         // 常规中间件

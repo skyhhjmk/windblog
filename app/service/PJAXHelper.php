@@ -102,7 +102,7 @@ class PJAXHelper
             $cached = $enhancedCache->get($cacheKey, $cacheGroup, null, $ttl);
 
             if ($cached !== false) {
-                return new Response(200, ['X-Cache' => 'HIT', 'X-PJAX-URL' => $request->url()], $cached);
+                return new Response(200, ['X-PJAX-Cache' => 'HIT', 'X-PJAX-URL' => $request->url()], $cached);
             }
         }
 
@@ -111,6 +111,7 @@ class PJAXHelper
 
         // 添加PJAX相关的响应头
         $headers = [
+            'X-PJAX-Cache' => 'MISS',
             'X-PJAX-URL' => $request->url(),
             'X-PJAX-CONTAINER' => '#pjax-container', // 统一与前端容器选择器一致
             'Vary' => 'X-PJAX,X-Requested-With',
@@ -121,9 +122,14 @@ class PJAXHelper
             $resp = $resp->withHeader($key, $value);
         }
 
-        // 如果提供了缓存键，缓存响应
+        // 如果提供了缓存键，且响应内容不为空，则缓存响应
         if ($cacheKey && $enhancedCache) {
-            $enhancedCache->set($cacheKey, $resp->rawBody(), $ttl, $cacheGroup);
+            $rawBody = $resp->rawBody();
+            // 避免缓存空响应或极小的响应（可能表示错误）
+            // 只有当响应内容长度大于10个字符时才缓存
+            if (strlen($rawBody) > 10) {
+                $enhancedCache->set($cacheKey, $rawBody, $ttl, $cacheGroup);
+            }
         }
 
         return $resp;

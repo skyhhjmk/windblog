@@ -69,6 +69,16 @@ class EnhancedCacheService
                 'ttl' => 86400, // 默认1天
                 'secondary_ttl' => 300, // 二级缓存5分钟
             ],
+            'page' => [
+                'prefix' => 'page_',
+                'ttl' => 120, // 默认2分钟
+                'secondary_ttl' => 30, // 二级缓存30秒
+            ],
+            'tag' => [
+                'prefix' => 'tag_',
+                'ttl' => 120, // 默认2分钟
+                'secondary_ttl' => 30, // 二级缓存30秒
+            ],
         ];
     }
 
@@ -201,8 +211,12 @@ class EnhancedCacheService
         $prefix = $this->groups[$group]['prefix'];
 
         // 清空主缓存中该分组的所有键
-        // 注意：这里需要根据实际的缓存驱动实现键的批量删除
-        // 由于原CacheService没有提供批量删除方法，这里需要扩展
+        try {
+            // 使用CacheService的清理方法，清理指定前缀的缓存
+            CacheService::clearCache($prefix . '*');
+        } catch (Exception $e) {
+            // 忽略清理异常
+        }
 
         // 清空二级缓存中该分组的所有键
         foreach (array_keys($this->secondaryCache) as $key) {
@@ -212,6 +226,42 @@ class EnhancedCacheService
         }
 
         return true;
+    }
+
+    /**
+     * 清除所有缓存
+     *
+     * @return bool
+     */
+    public function clearAll()
+    {
+        // 清空主缓存
+        try {
+            CacheService::clearCacheAllDrivers('*');
+        } catch (Exception $e) {
+            // 忽略清理异常
+        }
+
+        // 清空二级缓存
+        $this->secondaryCache = [];
+
+        return true;
+    }
+
+    /**
+     * 根据键模式删除缓存
+     *
+     * @param string $pattern 键模式（支持通配符*）
+     *
+     * @return bool
+     */
+    public function deleteByPattern($pattern)
+    {
+        try {
+            return CacheService::clearCache($pattern);
+        } catch (Exception $e) {
+            return false;
+        }
     }
 
     /**
