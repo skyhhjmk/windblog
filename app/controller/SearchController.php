@@ -7,6 +7,7 @@ use app\model\Tag;
 use app\service\BlogService;
 use app\service\ElasticService;
 use app\service\PaginationService;
+use app\service\PJAXHelper;
 use app\service\SidebarService;
 use Exception;
 use League\CommonMark\Exception\CommonMarkException;
@@ -165,17 +166,9 @@ class SearchController
         // 获取博客标题
         $blog_title = BlogService::getBlogTitle();
 
-        // PJAX 优化：检测是否为 PJAX 请求（兼容 header/_pjax 参数/XHR）
-        $isPjax = ($request->header('X-PJAX') !== null)
-            || (bool) $request->get('_pjax')
-            || strtolower((string) $request->header('X-Requested-With')) === 'xmlhttprequest';
-
         // 获取侧边栏内容（PJAX 与非 PJAX 均获取）
         $sidebar = SidebarService::getSidebarContent($request, 'search');
         $suggestTitles = !empty($keyword) ? ElasticService::suggestTitles($keyword, 5) : [];
-
-        // 动态选择模板
-        $viewName = $isPjax ? 'search/index.content' : 'search/index';
 
         // 为搜索页生成正确的分页HTML，携带查询参数，避免跳转到首页分页
         $pagination_html = PaginationService::generatePagination(
@@ -192,7 +185,7 @@ class SearchController
         );
 
         // 动态选择模板：PJAX 返回片段，非 PJAX 返回完整页面
-        $viewName = $isPjax ? 'search/index.content' : 'search/index';
+        $viewName = PJAXHelper::isPJAX($request) ? 'search/index.content' : 'search/index';
 
         return view($viewName, [
             'page_title' => "搜索: {$keyword} - {$blog_title}",

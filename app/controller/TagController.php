@@ -98,9 +98,6 @@ class TagController
      */
     public function list(Request $request): Response
     {
-        $isPjax = ($request->header('X-PJAX') !== null)
-            || (bool) $request->get('_pjax')
-            || strtolower((string) $request->header('X-Requested-With')) === 'xmlhttprequest';
 
         $sidebar = SidebarService::getSidebarContent($request, 'tag');
 
@@ -125,7 +122,7 @@ class TagController
         }
 
         $blog_title = BlogService::getBlogTitle();
-        $viewName = $isPjax ? 'tag/list.content' : 'tag/list';
+        $viewName = PJAXHelper::isPJAX($request) ? 'tag/list.content' : 'tag/list';
 
         return view($viewName, [
             'page_title' => "全部标签 - {$blog_title}",

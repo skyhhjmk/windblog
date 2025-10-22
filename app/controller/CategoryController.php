@@ -96,10 +96,6 @@ class CategoryController
      */
     public function list(Request $request): Response
     {
-        $isPjax = ($request->header('X-PJAX') !== null)
-            || (bool) $request->get('_pjax')
-            || strtolower((string) $request->header('X-Requested-With')) === 'xmlhttprequest';
-
         $sidebar = SidebarService::getSidebarContent($request, 'category');
 
         $cacheKey = 'category_list_counts_v1';
@@ -123,7 +119,7 @@ class CategoryController
         }
 
         $blog_title = BlogService::getBlogTitle();
-        $viewName = $isPjax ? 'category/list.content' : 'category/list';
+        $viewName = PJAXHelper::isPJAX($request) ? 'category/list.content' : 'category/list';
 
         return view($viewName, [
             'page_title' => "全部分类 - {$blog_title}",

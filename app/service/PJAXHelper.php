@@ -2,6 +2,7 @@
 
 namespace app\service;
 
+use support\Log;
 use support\Request;
 use support\Response;
 
@@ -22,13 +23,18 @@ class PJAXHelper
     {
         // 优先使用Request对象自带的方法（如果存在）
         if (method_exists($request, 'isPjax')) {
-            return $request->isPjax();
+            $isPjax = $request->isPjax();
+            Log::debug('[IsPjax] ' . ($isPjax ? 'true' : 'false'), $request->header());
+
+            return $isPjax;
         }
 
-        // 备用实现：检查常见的PJAX请求特征
-        return ($request->header('X-PJAX') !== null)
-            || (bool) $request->get('_pjax')
-            || strtolower((string) $request->header('X-Requested-With')) === 'xmlhttprequest';
+        Log::debug('[IsPjax] fallback.', $request->header());
+        $isPjax = ($request->header('X-PJAX') !== null)
+            || ($request->get('_pjax') == '1');
+        Log::debug('[IsPjax-Fallback-Result] ' . ($isPjax ? 'true' : 'false'), $request->header());
+
+        return $isPjax;
     }
 
     /**
@@ -61,7 +67,12 @@ class PJAXHelper
      */
     public static function generateCacheKey(string $route, array $params = [], int $page = 1, string $locale = 'zh-CN'): string
     {
-        $paramsHash = substr(sha1(json_encode($params, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)), 0, 16);
+        // 过滤掉可能影响缓存但实际不影响内容的参数
+        $filteredParams = array_filter($params, function ($key) {
+            return !in_array($key, ['_pjax', '_token', 'timestamp']);
+        }, ARRAY_FILTER_USE_KEY);
+
+        $paramsHash = substr(sha1(json_encode($filteredParams, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)), 0, 16);
 
         return sprintf('list:%s:%s:%d:%s', $route, $paramsHash, $page, $locale);
     }
@@ -101,7 +112,8 @@ class PJAXHelper
             $enhancedCache = new EnhancedCacheService();
             $cached = $enhancedCache->get($cacheKey, $cacheGroup, null, $ttl);
 
-            if ($cached !== false) {
+            // 确保缓存内容有效（不为空且长度大于10个字符）
+            if ($cached !== false && is_string($cached) && strlen($cached) > 10) {
                 return new Response(200, ['X-PJAX-Cache' => 'HIT', 'X-PJAX-URL' => $request->url()], $cached);
             }
         }

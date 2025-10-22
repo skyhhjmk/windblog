@@ -50,6 +50,7 @@ echo "设置目录权限..."
 # Windblog 应用目录权限 (1000:1000 - 应用用户)
 WINDBLOG_RUNTIME="${DATA_DIR}/windblog/runtime"
 WINDBLOG_UPLOADS="${DATA_DIR}/windblog/uploads"
+WINDBLOG_CACHE="${DATA_DIR}/windblog/static_cache"
 
 # Runtime 目录：应用运行时数据、日志、缓存等
 chown -R 1000:1000 "$WINDBLOG_RUNTIME" 2>/dev/null || echo "⚠ Windblog runtime 权限设置失败 (可能需要 sudo)"
@@ -60,6 +61,11 @@ echo "✓ Windblog runtime 目录权限已设置 (1000:1000, 750)"
 chown -R 1000:1000 "$WINDBLOG_UPLOADS" 2>/dev/null || echo "⚠ Windblog uploads 权限设置失败 (可能需要 sudo)"
 chmod 750 "$WINDBLOG_UPLOADS" 2>/dev/null || echo "⚠ Windblog uploads 权限设置失败 (可能需要 sudo)"
 echo "✓ Windblog uploads 目录权限已设置 (1000:1000, 750)"
+
+# static_cache 目录权限
+chown -R 1000:1000 "$WINDBLOG_CACHE" 2>/dev/null || echo "⚠ Windblog static_cache 权限设置失败 (可能需要 sudo)"
+chmod 750 "$WINDBLOG_CACHE" 2>/dev/null || echo "⚠ Windblog static_cache 权限设置失败 (可能需要 sudo)"
+echo "✓ Windblog static_cache 目录权限已设置 (1000:1000, 750)"
 
 # PostgreSQL 目录权限 (70:70 - postgres用户)
 PG_PATH="${DATA_DIR}/postgres"

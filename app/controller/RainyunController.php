@@ -2,6 +2,7 @@
 
 namespace app\controller;
 
+use app\service\PJAXHelper;
 use app\service\SidebarService;
 use support\Request;
 use support\Response;
@@ -29,16 +30,11 @@ class RainyunController
         // 获取页面标题
         $page_title = 'Rainyun API 工具';
 
-        // PJAX 优化：检测是否为 PJAX 请求（兼容 header/_pjax 参数/XHR）
-        $isPjax = ($request->header('X-PJAX') !== null)
-            || (bool) $request->get('_pjax')
-            || strtolower((string) $request->header('X-Requested-With')) === 'xmlhttprequest';
-
         // 获取侧边栏内容（PJAX 与非 PJAX 均获取）
         $sidebar = SidebarService::getSidebarContent($request, 'rainyun');
 
         // 动态选择模板：PJAX 返回片段，非 PJAX 返回完整页面
-        $viewName = $isPjax ? 'rainyun/index.content' : 'rainyun/index';
+        $viewName = PJAXHelper::isPJAX($request) ? 'rainyun/index.content' : 'rainyun/index';
 
         return view($viewName, [
             'page_title' => $page_title,

@@ -123,8 +123,8 @@ class InstantFirstPaint implements MiddlewareInterface
         }
 
         // 跳过 PJAX/AJAX 请求（正常渲染内容片段）
-        $isAjax = strtolower((string) $request->header('X-Requested-With')) === 'xmlhttprequest' || $request->isAjax();
-        $isPjax = ($request->header('X-PJAX') !== null) || $request->get('_pjax') || $request->isPjax();
+        $isAjax = $request->isAjax();
+        $isPjax = $request->isPjax();
         if ($isAjax || $isPjax) {
             return $handler($request);
         }
