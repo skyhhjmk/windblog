@@ -17,7 +17,7 @@ class PostController
 {
     protected array $noNeedLogin = ['index'];
 
-    #[EnableInstantFirstPaint]
+    //    #[EnableInstantFirstPaint]
     public function index(Request $request, mixed $keyword = null): Response
     {
         // 移除URL参数中的 .html 后缀
