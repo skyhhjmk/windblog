@@ -39,6 +39,28 @@
             max-width: 1200px;
         }
 
+        /* 添加对topbarTitle元素的样式 */
+        #topbarTitle {
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            mask-image: linear-gradient(to right, black 85%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
+        }
+
+        @media (min-width: 768px) {
+            #topbarTitle {
+                max-width: 300px;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            #topbarTitle {
+                max-width: 400px;
+            }
+        }
+
         /* 添加平滑过渡效果 */
         body {
             transition: all 0.3s ease;
