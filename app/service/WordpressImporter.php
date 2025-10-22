@@ -4,11 +4,17 @@ namespace app\service;
 
 use app\model\Admin;
 use app\model\Author;
+use app\model\Category;
 use app\model\Comment;
 use app\model\ImportJob;
 use app\model\Post;
+use app\model\Tag;
+use DOMDocument;
+use DOMElement;
 use DOMNode;
 use DOMXPath;
+use Exception;
+use Illuminate\Support\Str;
 use League\CommonMark\Environment\Environment;
 use League\CommonMark\Extension\Autolink\AutolinkExtension;
 use League\CommonMark\Extension\CommonMark\CommonMarkCoreExtension;
@@ -100,13 +106,13 @@ class WordpressImporter
             // 修复XML文件命名空间问题
             $fixedXmlFile = $this->fixXmlNamespaces($this->importJob->file_path);
             if (!$fixedXmlFile) {
-                throw new \Exception('XML文件修复失败');
+                throw new Exception('XML文件修复失败');
             }
 
             // 计算项目总数
             $totalItems = $this->countItems($fixedXmlFile);
             if ($totalItems === 0) {
-                throw new \Exception('XML文件中没有找到任何项目');
+                throw new Exception('XML文件中没有找到任何项目');
             }
 
             Log::info('开始处理XML项目，总数: ' . $totalItems);
@@ -141,7 +147,7 @@ class WordpressImporter
 
             return true;
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('导入任务执行错误: ' . $e->getMessage(), ['exception' => $e]);
 
             return false;
@@ -207,7 +213,7 @@ class WordpressImporter
 
             // 如果没有需要修复的，返回原文件路径
             return $xmlFile;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::warning('修复XML命名空间时出错: ' . $e->getMessage());
 
             // 出错时返回原始文件路径
@@ -259,7 +265,7 @@ class WordpressImporter
 
         $reader = new XMLReader();
         if (!$reader->open($xmlFile)) {
-            throw new \Exception('无法打开XML文件: ' . $xmlFile);
+            throw new Exception('无法打开XML文件: ' . $xmlFile);
         }
 
         $processedItems = 0;
@@ -270,7 +276,7 @@ class WordpressImporter
                 $processedItems++;
 
                 try {
-                    $doc = new \DOMDocument();
+                    $doc = new DOMDocument();
                     $libxmlErrors = libxml_use_internal_errors(true);
                     $node = $doc->importNode($reader->expand(), true);
                     $doc->appendChild($node);
@@ -293,7 +299,7 @@ class WordpressImporter
                             Log::debug('保存附件映射: ' . $attachmentInfo['url'] . ' => 媒体ID: ' . $attachmentInfo['media_id']);
                         }
                     }
-                } catch (\Exception $e) {
+                } catch (Exception $e) {
                     Log::error('处理附件项目时出错: ' . $e->getMessage(), ['exception' => $e]);
                 }
 
@@ -324,7 +330,7 @@ class WordpressImporter
 
         $reader = new XMLReader();
         if (!$reader->open($xmlFile)) {
-            throw new \Exception('无法打开XML文件: ' . $xmlFile);
+            throw new Exception('无法打开XML文件: ' . $xmlFile);
         }
 
         $processedItems = 0;
@@ -336,7 +342,7 @@ class WordpressImporter
                 $processedItems++;
 
                 try {
-                    $doc = new \DOMDocument();
+                    $doc = new DOMDocument();
                     $libxmlErrors = libxml_use_internal_errors(true);
                     $node = $doc->importNode($reader->expand(), true);
                     $doc->appendChild($node);
@@ -359,7 +365,7 @@ class WordpressImporter
                             $pageCount++;
                         }
                     }
-                } catch (\Exception $e) {
+                } catch (Exception $e) {
                     Log::error('处理文章/页面项目时出错: ' . $e->getMessage(), ['exception' => $e]);
                 }
 
@@ -386,7 +392,7 @@ class WordpressImporter
     protected function processItem(XMLReader $reader): void
     {
         Log::debug('处理XML项目');
-        $doc = new \DOMDocument();
+        $doc = new DOMDocument();
         // 禁用错误报告以避免命名空间警告
         $libxmlErrors = libxml_use_internal_errors(true);
         $node = $doc->importNode($reader->expand(), true);
@@ -517,11 +523,11 @@ class WordpressImporter
                 } else {
                     // 尝试翻译标题
                     $translatedTitle = $this->translateTitle($title);
-                    $slug = \Illuminate\Support\Str::slug($translatedTitle);
+                    $slug = Str::slug($translatedTitle);
 
                     // 如果翻译后的slug仍然为空，则使用原文
                     if (empty($slug)) {
-                        $slug = \Illuminate\Support\Str::slug($title);
+                        $slug = Str::slug($title);
                     }
 
                     // 如果仍然为空，则使用ID
@@ -560,7 +566,7 @@ class WordpressImporter
                     // 更新作者关联
                     if ($authorId) {
                         // 获取作者模型实例
-                        $author = \app\model\Author::find($authorId);
+                        $author = Author::find($authorId);
                         if ($author) {
                             // 使用attach方法更新文章作者关联
                             // 先清除现有关联
@@ -637,7 +643,7 @@ class WordpressImporter
         Log::debug('保存文章: ' . $post->title);
         try {
             $post->save();
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // 如果是slug唯一约束冲突，回退到使用已有文章并建立映射
             $message = $e->getMessage();
             if (strpos($message, 'posts_slug_key') !== false || strpos($message, 'SQLSTATE[23505]') !== false) {
@@ -663,7 +669,7 @@ class WordpressImporter
         // 保存文章作者关联
         if ($authorId) {
             // 获取作者模型实例
-            $author = \app\model\Author::find($authorId);
+            $author = Author::find($authorId);
             if ($author) {
                 // 使用attach方法保存文章作者关联
                 $post->authors()->attach($author, [
@@ -737,7 +743,7 @@ class WordpressImporter
                     return $this->formatTitleAsSlug($result['trans_result'][0]['dst']);
                 }
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::warning('翻译标题时出错: ' . $e->getMessage());
         }
 
@@ -837,7 +843,7 @@ class WordpressImporter
         foreach ($nodes as $n) {
             $name = trim((string) $n->nodeValue);
             $nicename = '';
-            if ($n instanceof \DOMElement) {
+            if ($n instanceof DOMElement) {
                 $nicename = (string) $n->getAttribute('nicename');
             }
             if ($name === '') {
@@ -847,13 +853,13 @@ class WordpressImporter
             // 确定slug：优先 nicename，否则翻译生成
             $slug = $nicename ?: $this->translateTitle($name);
             if (empty($slug)) {
-                $slug = \Illuminate\Support\Str::slug($name) ?: ('category-' . time());
+                $slug = Str::slug($name) ?: ('category-' . time());
             }
 
             // 先按 slug 查找，找不到再按 name 查找
-            $category = \app\model\Category::where('slug', $slug)->first();
+            $category = Category::where('slug', $slug)->first();
             if (!$category) {
-                $category = \app\model\Category::where('name', $name)->first();
+                $category = Category::where('name', $name)->first();
             }
 
             if ($category) {
@@ -865,13 +871,13 @@ class WordpressImporter
             // 唯一 slug 处理
             $originalSlug = $slug;
             $suffix = 1;
-            while (\app\model\Category::where('slug', $slug)->exists()) {
+            while (Category::where('slug', $slug)->exists()) {
                 $slug = $originalSlug . '-' . $suffix;
                 $suffix++;
             }
 
             try {
-                $category = new \app\model\Category();
+                $category = new Category();
                 $category->name = $name;
                 $category->slug = $slug;
                 $category->parent_id = null;
@@ -881,7 +887,7 @@ class WordpressImporter
                 $category->save();
                 $ids[] = (int) $category->id;
                 Log::debug('新分类创建完成，ID: ' . $category->id);
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 Log::error('创建分类时出错: ' . $e->getMessage());
             }
         }
@@ -913,7 +919,7 @@ class WordpressImporter
         foreach ($nodes as $n) {
             $name = trim((string) $n->nodeValue);
             $nicename = '';
-            if ($n instanceof \DOMElement) {
+            if ($n instanceof DOMElement) {
                 $nicename = (string) $n->getAttribute('nicename');
             }
             if ($name === '') {
@@ -923,13 +929,13 @@ class WordpressImporter
             // 确定slug：优先 nicename，否则翻译生成
             $slug = $nicename ?: $this->translateTitle($name);
             if (empty($slug)) {
-                $slug = \Illuminate\Support\Str::slug($name) ?: ('tag-' . time());
+                $slug = Str::slug($name) ?: ('tag-' . time());
             }
 
             // 先按 slug 查找，找不到再按 name 查找
-            $tag = \app\model\Tag::where('slug', $slug)->first();
+            $tag = Tag::where('slug', $slug)->first();
             if (!$tag) {
-                $tag = \app\model\Tag::where('name', $name)->first();
+                $tag = Tag::where('name', $name)->first();
             }
 
             if ($tag) {
@@ -941,13 +947,13 @@ class WordpressImporter
             // 唯一 slug 处理
             $originalSlug = $slug;
             $suffix = 1;
-            while (\app\model\Tag::where('slug', $slug)->exists()) {
+            while (Tag::where('slug', $slug)->exists()) {
                 $slug = $originalSlug . '-' . $suffix;
                 $suffix++;
             }
 
             try {
-                $tag = new \app\model\Tag();
+                $tag = new Tag();
                 $tag->name = $name;
                 $tag->slug = $slug;
                 $tag->created_at = date('Y-m-d H:i:s');
@@ -955,7 +961,7 @@ class WordpressImporter
                 $tag->save();
                 $ids[] = (int) $tag->id;
                 Log::debug('新标签创建完成，ID: ' . $tag->id);
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 Log::error('创建标签时出错: ' . $e->getMessage());
             }
         }
@@ -993,7 +999,7 @@ class WordpressImporter
             if ($any) {
                 return (int) $any->id;
             }
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::warning('解析默认作者ID失败: ' . $e->getMessage());
         }
 
@@ -1079,7 +1085,7 @@ class WordpressImporter
 
                 return null;
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('下载附件时出错: ' . $e->getMessage(), ['exception' => $e]);
 
             return null;
@@ -1140,7 +1146,7 @@ class WordpressImporter
             }
 
             Log::info('导入目录清理完成: ' . $importDir);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('清理导入目录时出错: ' . $e->getMessage(), ['exception' => $e]);
         }
     }
@@ -1540,7 +1546,7 @@ class WordpressImporter
 
         $reader = new XMLReader();
         if (!$reader->open($xmlFile)) {
-            throw new \Exception('无法打开XML文件: ' . $xmlFile);
+            throw new Exception('无法打开XML文件: ' . $xmlFile);
         }
 
         $processedItems = 0;
@@ -1551,7 +1557,7 @@ class WordpressImporter
                 $processedItems++;
 
                 try {
-                    $doc = new \DOMDocument();
+                    $doc = new DOMDocument();
                     $libxmlErrors = libxml_use_internal_errors(true);
                     $node = $doc->importNode($reader->expand(), true);
                     $doc->appendChild($node);
@@ -1570,7 +1576,7 @@ class WordpressImporter
                         $commentsProcessed = $this->processComments($xpath, $node, $wpPostId);
                         $commentCount += $commentsProcessed;
                     }
-                } catch (\Exception $e) {
+                } catch (Exception $e) {
                     Log::error('处理评论时出错: ' . $e->getMessage(), ['exception' => $e]);
                 }
 
@@ -1674,7 +1680,7 @@ class WordpressImporter
                 }
 
                 $commentCount++;
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 Log::error('创建评论时出错: ' . $e->getMessage(), ['exception' => $e]);
             }
         }
@@ -1692,7 +1698,7 @@ class WordpressImporter
                     ]);
 
                     Log::debug('更新评论父子关系: 评论ID ' . $newCommentId . ' 的父评论ID设为 ' . $newParentId);
-                } catch (\Exception $e) {
+                } catch (Exception $e) {
                     Log::error('更新评论父子关系时出错: ' . $e->getMessage(), ['exception' => $e]);
                 }
             }

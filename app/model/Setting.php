@@ -7,9 +7,9 @@ use support\Model;
 /**
  * 设置模型
  *
- * @property int $id 主键
- * @property string $key 设置键名
- * @property string $value 设置值
+ * @property int    $id         主键
+ * @property string $key        设置键名
+ * @property string $value      设置值
  * @property string|null $created_at 创建时间
  * @property string|null $updated_at 更新时间
  */

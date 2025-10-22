@@ -5,6 +5,7 @@ namespace plugin\admin\app\controller;
 use Exception;
 use Intervention\Image\ImageManagerStatic as Image;
 use plugin\admin\app\model\Upload;
+use Random\RandomException;
 use support\exception\BusinessException;
 use support\Request;
 use support\Response;
@@ -290,10 +291,12 @@ class UploadController extends Crud
 
     /**
      * 获取上传数据
+     *
      * @param Request $request
      * @param $relative_dir
+     *
      * @return array
-     * @throws BusinessException|\Random\RandomException
+     * @throws BusinessException|RandomException
      */
     protected function base(Request $request, $relative_dir): array
     {

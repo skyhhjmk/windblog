@@ -2,8 +2,11 @@
 
 namespace app\model;
 
+use Closure;
+use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
+use support\Log;
 use support\Model;
 use Throwable;
 
@@ -34,7 +37,8 @@ use Throwable;
  * @property Carbon|null $updated_at      更新时间
  * @property Carbon|null $deleted_at      软删除时间
  *
- * @method static Builder|Link where(string|array|\Closure $column, mixed $operator = null, mixed $value = null, string $boolean = 'and') 添加where条件查询
+ * @method static Builder|Link where(string|array|Closure $column, mixed $operator = null, mixed $value = null, string
+ *         $boolean = 'and') 添加where条件查询
  * @method static Builder|Link active() 只查询显示状态的链接
  * @method static Builder|Link ordered() 按排序权重升序查询
  * @method static Builder|Link withTrashed() 包含软删除的记录
@@ -210,32 +214,32 @@ class Link extends Model
     {
         // 判断是否启用软删除，除非强制硬删除
         $useSoftDelete = blog_config('soft_delete', true);
-        \support\Log::debug('Soft delete config value: ' . var_export($useSoftDelete, true));
-        \support\Log::debug('Force delete flag: ' . var_export($forceDelete, true));
+        Log::debug('Soft delete config value: ' . var_export($useSoftDelete, true));
+        Log::debug('Force delete flag: ' . var_export($forceDelete, true));
 
         if (!$forceDelete && $useSoftDelete) {
             // 软删除：设置 deleted_at 字段
             try {
-                \support\Log::debug('Executing soft delete for link ID: ' . $this->id);
+                Log::debug('Executing soft delete for link ID: ' . $this->id);
                 // 使用save方法而不是update方法，确保模型状态同步
                 $this->deleted_at = date('Y-m-d H:i:s');
                 $result = $this->save();
-                \support\Log::debug('Soft delete result: ' . var_export($result, true));
-                \support\Log::debug('Link deleted_at value after save: ' . var_export($this->deleted_at, true));
+                Log::debug('Soft delete result: ' . var_export($result, true));
+                Log::debug('Link deleted_at value after save: ' . var_export($this->deleted_at, true));
 
                 return $result !== false; // 确保返回布尔值
-            } catch (\Exception $e) {
-                \support\Log::error('Soft delete failed for link ID ' . $this->id . ': ' . $e->getMessage());
+            } catch (Exception $e) {
+                Log::error('Soft delete failed for link ID ' . $this->id . ': ' . $e->getMessage());
 
                 return false;
             }
         } else {
             // 硬删除：直接从数据库中删除记录
-            \support\Log::debug('Executing hard delete for link ID: ' . $this->id);
+            Log::debug('Executing hard delete for link ID: ' . $this->id);
             try {
                 return $this->delete();
-            } catch (\Exception $e) {
-                \support\Log::error('Hard delete failed for link ID ' . $this->id . ': ' . $e->getMessage());
+            } catch (Exception $e) {
+                Log::error('Hard delete failed for link ID ' . $this->id . ': ' . $e->getMessage());
 
                 return false;
             }
@@ -255,8 +259,8 @@ class Link extends Model
             $result = $this->save();
 
             return $result !== false;
-        } catch (\Exception $e) {
-            \support\Log::error('Restore failed for link ID ' . $this->id . ': ' . $e->getMessage());
+        } catch (Exception $e) {
+            Log::error('Restore failed for link ID ' . $this->id . ': ' . $e->getMessage());
 
             return false;
         }
@@ -280,6 +284,7 @@ class Link extends Model
      * 设置管理员笔记
      *
      * @param string|null $value
+     *
      * @return void
      */
     public function setAdminNoteAttribute(?string $value): void
@@ -298,6 +303,7 @@ class Link extends Model
      *
      * @param string $key
      * @param mixed $default
+     *
      * @return mixed
      */
     public function getCustomField(string $key, $default = null)
@@ -310,6 +316,7 @@ class Link extends Model
      *
      * @param string $key
      * @param mixed $value
+     *
      * @return void
      */
     public function setCustomField(string $key, $value): void
@@ -327,6 +334,7 @@ class Link extends Model
      * 批量设置自定义字段
      *
      * @param array $fields
+     *
      * @return void
      */
     public function setCustomFields(array $fields): void

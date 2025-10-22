@@ -21,10 +21,10 @@ class SecurityConfigUpdate extends Command
     protected function configure()
     {
         $this->addOption('headers', null, InputOption::VALUE_NONE, 'Update security headers')
-             ->addOption('csrf', null, InputOption::VALUE_NONE, 'Update CSRF settings')
-             ->addOption('rate-limit', null, InputOption::VALUE_NONE, 'Update rate limiting')
-             ->addOption('file-upload', null, InputOption::VALUE_NONE, 'Update file upload security')
-             ->addOption('all', null, InputOption::VALUE_NONE, 'Update all security configurations');
+            ->addOption('csrf', null, InputOption::VALUE_NONE, 'Update CSRF settings')
+            ->addOption('rate-limit', null, InputOption::VALUE_NONE, 'Update rate limiting')
+            ->addOption('file-upload', null, InputOption::VALUE_NONE, 'Update file upload security')
+            ->addOption('all', null, InputOption::VALUE_NONE, 'Update all security configurations');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int

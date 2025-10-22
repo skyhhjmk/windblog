@@ -9,7 +9,9 @@ class DebugController
 {
     /**
      * 获取服务器信息
+     *
      * @param Request $request
+     *
      * @return Response
      */
     public function serverInfo(Request $request): Response
@@ -30,7 +32,9 @@ class DebugController
 
     /**
      * 获取请求信息
+     *
      * @param Request $request
+     *
      * @return Response
      */
     public function requestInfo(Request $request): Response
@@ -50,7 +54,9 @@ class DebugController
 
     /**
      * 获取响应信息
+     *
      * @param Request $request
+     *
      * @return Response
      */
     public function responseInfo(Request $request): Response

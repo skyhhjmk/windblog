@@ -23,8 +23,10 @@ class PathExtension extends AbstractExtension
 
     /**
      * 生成路由路径
-     * @param string $name 路由名称
-     * @param array $params 路由参数
+     *
+     * @param string $name   路由名称
+     * @param array  $params 路由参数
+     *
      * @return string
      */
     public function getPath(string $name, array $params = []): string

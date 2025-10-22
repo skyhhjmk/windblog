@@ -71,7 +71,7 @@ class MQService
                     );
                     // 连接成功则退出重试
                     break;
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     $lastError = $e->getMessage();
                     Log::error('RabbitMQ 连接失败(第 ' . ($i + 1) . ' 次): ' . $lastError);
                     if ($i < $attempts - 1) {
@@ -101,7 +101,7 @@ class MQService
                 $connection = self::getConnection();
                 self::$channel = $connection->channel();
                 self::$channel->basic_qos(0, 1, false);
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 Log::warning('MQ 获取通道失败，尝试自动重连: ' . $e->getMessage());
                 // 自动重连一次
                 self::closeConnection();
@@ -113,7 +113,7 @@ class MQService
             // 通道已存在，进行轻量操作以触发异常（若已断开则走重连）
             try {
                 self::$channel->basic_qos(0, 1, false);
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 Log::warning('MQ 通道可能已断开，自动重连: ' . $e->getMessage());
                 self::closeConnection();
                 $connection = self::getConnection();
@@ -138,30 +138,30 @@ class MQService
     {
         try {
             $channel->exchange_declare($dlxExchange, 'direct', false, true, false);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::warning("DLX 交换机声明失败({$dlxExchange}): " . $e->getMessage());
             // 再次尝试非持久/自动删除以避免阻塞
             try {
                 $channel->exchange_declare($dlxExchange, 'direct', false, false, false);
-            } catch (\Throwable $e2) {
+            } catch (Throwable $e2) {
                 Log::error("DLX 交换机重试失败({$dlxExchange}): " . $e2->getMessage());
             }
         }
 
         try {
             $channel->queue_declare($dlxQueue, false, true, false, false);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::warning("DLQ 队列声明失败({$dlxQueue}): " . $e->getMessage());
             try {
                 $channel->queue_declare($dlxQueue, false, true, false, false);
-            } catch (\Throwable $e2) {
+            } catch (Throwable $e2) {
                 Log::error("DLQ 队列重试失败({$dlxQueue}): " . $e2->getMessage());
             }
         }
 
         try {
             $channel->queue_bind($dlxQueue, $dlxExchange, $dlxQueue);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::warning("DLQ 绑定失败(queue={$dlxQueue}, exchange={$dlxExchange}): " . $e->getMessage());
         }
     }
@@ -188,12 +188,12 @@ class MQService
     ): void {
         try {
             $channel->exchange_declare($exchange, 'direct', false, true, false);
-        } catch (\Throwable $e) {
-            \support\Log::warning("主交换机声明失败({$exchange}): " . $e->getMessage());
+        } catch (Throwable $e) {
+            Log::warning("主交换机声明失败({$exchange}): " . $e->getMessage());
             try {
                 $channel->exchange_declare($exchange, 'direct', false, false, false);
-            } catch (\Throwable $e2) {
-                \support\Log::error("主交换机重试失败({$exchange}): " . $e2->getMessage());
+            } catch (Throwable $e2) {
+                Log::error("主交换机重试失败({$exchange}): " . $e2->getMessage());
             }
         }
         $args = [
@@ -203,8 +203,8 @@ class MQService
         ];
         try {
             $channel->queue_declare($queueName, false, true, false, false, false, $args);
-        } catch (\Throwable $e) {
-            \support\Log::warning("队列声明失败，尝试无参重建({$queueName}): " . $e->getMessage());
+        } catch (Throwable $e) {
+            Log::warning("队列声明失败，尝试无参重建({$queueName}): " . $e->getMessage());
             // 如果是因为参数不匹配导致的错误，则删除队列后重新声明
             if (strpos($e->getMessage(), 'inequivalent arg') !== false) {
                 try {
@@ -212,16 +212,16 @@ class MQService
                     $channel->queue_delete($queueName);
                     // 重新声明队列
                     $channel->queue_declare($queueName, false, true, false, false, false, $args);
-                } catch (\Throwable $e2) {
-                    \support\Log::error("队列重建失败({$queueName}): " . $e2->getMessage());
+                } catch (Throwable $e2) {
+                    Log::error("队列重建失败({$queueName}): " . $e2->getMessage());
                     throw $e2;
                 }
             } else {
                 // 其他错误则尝试无参声明
                 try {
                     $channel->queue_declare($queueName, false, true, false, false, false);
-                } catch (\Throwable $e3) {
-                    \support\Log::error("队列无参重建失败({$queueName}): " . $e3->getMessage());
+                } catch (Throwable $e3) {
+                    Log::error("队列无参重建失败({$queueName}): " . $e3->getMessage());
                     throw $e3;
                 }
             }
@@ -257,12 +257,12 @@ class MQService
             $tmp->close();
 
             return true;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::warning('MQ 健康检查失败，执行自愈: ' . $e->getMessage());
             // 执行自愈：关闭现有连接并重建
             try {
                 self::closeConnection();
-            } catch (\Throwable $ce) {
+            } catch (Throwable $ce) {
                 Log::warning('MQ 关闭旧连接失败（忽略）: ' . $ce->getMessage());
             }
             try {
@@ -272,7 +272,7 @@ class MQService
                 self::$channel->basic_qos(0, 1, false);
 
                 return true;
-            } catch (\Throwable $re) {
+            } catch (Throwable $re) {
                 Log::error('MQ 自愈重建失败: ' . $re->getMessage());
 
                 return false;

@@ -9,6 +9,7 @@ services:
     volumes:
       - ./data/windblog/runtime:/app/runtime
       - ./data/windblog/uploads:/app/public/uploads
+      - ./data/windblog/static_cache:/app/public/cache
     environment:
       - DB_PGSQL_HOST=postgres
       - DB_PGSQL_PORT=5432

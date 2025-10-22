@@ -100,8 +100,8 @@ class BlogService
                             $searchTerm = (string) $value;
                             $query->where(function ($q) use ($searchTerm) {
                                 $q->where('title', 'like', '%' . addcslashes($searchTerm, '%_\\') . '%')
-                                  ->orWhere('content', 'like', '%' . addcslashes($searchTerm, '%_\\') . '%')
-                                  ->orWhere('excerpt', 'like', '%' . addcslashes($searchTerm, '%_\\') . '%');
+                                    ->orWhere('content', 'like', '%' . addcslashes($searchTerm, '%_\\') . '%')
+                                    ->orWhere('excerpt', 'like', '%' . addcslashes($searchTerm, '%_\\') . '%');
                             });
                         }
                         break;
@@ -113,7 +113,7 @@ class BlogService
                                     $q->where('categories.id', (int) $value);
                                 } else {
                                     $q->where('categories.slug', (string) $value)
-                                      ->orWhere('categories.name', (string) $value);
+                                        ->orWhere('categories.name', (string)$value);
                                 }
                             });
                         }
@@ -125,7 +125,7 @@ class BlogService
                                     $q->where('tags.id', (int) $value);
                                 } else {
                                     $q->where('tags.slug', (string) $value)
-                                      ->orWhere('tags.name', (string) $value);
+                                        ->orWhere('tags.name', (string)$value);
                                 }
                             });
                         }
@@ -325,7 +325,7 @@ class BlogService
             cache($key, $data, true);
         } catch (Throwable $e) {
             // 缓存设置失败时记录错误但不中断流程
-            \support\Log::error('[cacheResult] Error caching data: ' . $e->getMessage());
+            Log::error('[cacheResult] Error caching data: ' . $e->getMessage());
         }
     }
 }

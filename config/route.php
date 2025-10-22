@@ -13,6 +13,7 @@
  * @license   http://www.opensource.org/licenses/mit-license.php MIT License
  */
 
+use app\api\controller\v1\ApiPostController;
 use Webman\Route;
 
 Route::disableDefaultRoute();
@@ -94,10 +95,10 @@ Route::any('/rainyun', [app\controller\RainyunController::class, 'index'])->name
 // REST API v1
 Route::group('/api/v1', function () {
     // 文章相关API
-    Route::get('/post/{id}', [\app\api\controller\v1\ApiPostController::class, 'get']);
-    Route::get('/posts', [\app\api\controller\v1\ApiPostController::class, 'index']);
+    Route::get('/post/{id}', [ApiPostController::class, 'get']);
+    Route::get('/posts', [ApiPostController::class, 'index']);
     // 文章内容API（支持 GET 和 POST）
-    Route::any('/post/content/{keyword}', [\app\api\controller\v1\ApiPostController::class, 'content']);
+    Route::any('/post/content/{keyword}', [ApiPostController::class, 'content']);
 });
 
 // 友链互联API

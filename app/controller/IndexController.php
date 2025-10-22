@@ -10,7 +10,6 @@ use League\CommonMark\Exception\CommonMarkException;
 use support\Request;
 use support\Response;
 use Throwable;
-use Webman\RateLimiter\Annotation\RateLimiter;
 
 /**
  * 博客首页控制器
@@ -42,7 +41,7 @@ class IndexController
      * @throws CommonMarkException
      * @throws Throwable
      */
-    #[EnableInstantFirstPaint]
+    //    #[EnableInstantFirstPaint]
     public function index(Request $request, int $page = 1): Response
     {
 

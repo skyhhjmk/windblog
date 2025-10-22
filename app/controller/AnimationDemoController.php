@@ -3,6 +3,7 @@
 namespace app\controller;
 
 use app\service\PJAXHelper;
+use app\service\SidebarService;
 use support\Request;
 use support\Response;
 use Throwable;
@@ -33,7 +34,7 @@ class AnimationDemoController
         $isPjax = PJAXHelper::isPJAX($request);
 
         // 获取侧边栏内容
-        $sidebar = \app\service\SidebarService::getSidebarContent($request, 'animation-demo');
+        $sidebar = SidebarService::getSidebarContent($request, 'animation-demo');
 
         // 动态选择模板：PJAX 返回片段，非 PJAX 返回完整页面
         $viewName = PJAXHelper::getViewName('index/index', $isPjax);

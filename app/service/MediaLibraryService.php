@@ -3,7 +3,9 @@
 namespace app\service;
 
 use app\model\Media;
+use Exception;
 use Imagick;
+use support\Log;
 use Webman\Http\UploadFile;
 
 class MediaLibraryService
@@ -13,12 +15,13 @@ class MediaLibraryService
      *
      * @param UploadFile $file
      * @param array $data
+     *
      * @return array
      */
     public function upload(UploadFile $file, array $data = []): array
     {
         try {
-            \app\service\PluginService::do_action('media.upload_start', [
+            PluginService::do_action('media.upload_start', [
                 'name' => $file->getUploadName(),
                 'mime' => $file->getUploadMimeType(),
                 'size' => $file->getSize(),
@@ -74,7 +77,7 @@ class MediaLibraryService
             // 移动文件到指定目录
             if (!$file->move($filePath)) {
                 // 记录错误日志
-                \support\Log::error("文件移动失败: {$originalName} 到 {$filePath}");
+                Log::error("文件移动失败: {$originalName} 到 {$filePath}");
 
                 return ['code' => 500, 'msg' => '文件上传失败'];
             }
@@ -116,14 +119,14 @@ class MediaLibraryService
                 $this->generateThumbnail($media);
             }
 
-            \app\service\PluginService::do_action('media.upload_done', [
+            PluginService::do_action('media.upload_done', [
                 'id' => $media->id ?? null,
                 'path' => $media->file_path ?? null,
                 'mime' => $media->mime_type ?? null,
             ]);
 
             return ['code' => 0, 'msg' => '上传成功', 'data' => $media];
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return ['code' => 1, 'msg' => '上传失败: ' . $e->getMessage()];
         }
     }
@@ -132,6 +135,7 @@ class MediaLibraryService
      * 将图片转换为webp格式
      *
      * @param Media $media
+     *
      * @return array
      */
     private function convertToWebp(Media $media): array
@@ -140,14 +144,13 @@ class MediaLibraryService
             // 优先使用Imagick扩展
             if (extension_loaded('imagick')) {
                 return $this->convertToWebpImagick($media);
-            }
-            // 使用GD扩展
+            } // 使用GD扩展
             elseif (extension_loaded('gd') && function_exists('imagewebp')) {
                 return $this->convertToWebpGD($media);
             } else {
                 return ['code' => 1, 'msg' => '服务器不支持webp转换'];
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return ['code' => 1, 'msg' => '转换失败: ' . $e->getMessage()];
         }
     }
@@ -156,6 +159,7 @@ class MediaLibraryService
      * 使用Imagick库将图片转换为webp格式
      *
      * @param Media $media
+     *
      * @return array
      */
     private function convertToWebpImagick(Media $media): array
@@ -197,7 +201,7 @@ class MediaLibraryService
                     'file_size' => filesize($webpPath),
                 ],
             ];
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return ['code' => 1, 'msg' => '转换失败: ' . $e->getMessage()];
         }
     }
@@ -206,6 +210,7 @@ class MediaLibraryService
      * 使用GD库将图片转换为webp格式
      *
      * @param Media $media
+     *
      * @return array
      */
     private function convertToWebpGD(Media $media): array
@@ -268,7 +273,7 @@ class MediaLibraryService
                     'file_size' => filesize($webpPath),
                 ],
             ];
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return ['code' => 1, 'msg' => '转换失败: ' . $e->getMessage()];
         }
     }
@@ -277,6 +282,7 @@ class MediaLibraryService
      * 获取媒体列表
      *
      * @param array $params
+     *
      * @return array
      */
     public function getList(array $params = []): array
@@ -295,7 +301,7 @@ class MediaLibraryService
         // 搜索条件
         if ($search) {
             $query->where('filename', 'like', "%{$search}%")
-                  ->orWhere('original_name', 'like', "%{$search}%");
+                ->orWhere('original_name', 'like', "%{$search}%");
         }
 
         // MIME类型筛选条件
@@ -323,6 +329,7 @@ class MediaLibraryService
      *
      * @param int $id
      * @param array $data
+     *
      * @return array
      */
     public function update(int $id, array $data): array
@@ -340,7 +347,7 @@ class MediaLibraryService
             $media->save();
 
             return ['code' => 0, 'msg' => '更新成功'];
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return ['code' => 1, 'msg' => '更新失败: ' . $e->getMessage()];
         }
     }
@@ -349,6 +356,7 @@ class MediaLibraryService
      * 检查MIME类型是否为图片
      *
      * @param string $mimeType
+     *
      * @return bool
      */
     private function isImageMimeType(string $mimeType): bool
@@ -365,6 +373,7 @@ class MediaLibraryService
      *
      * @param string $mimeType
      * @param string $extension
+     *
      * @return bool
      */
     private function isDangerousFile(string $mimeType, string $extension): bool
@@ -392,6 +401,7 @@ class MediaLibraryService
      *
      * @param string $mimeType
      * @param string $extension
+     *
      * @return bool
      */
     private function isAllowedFile(string $mimeType, string $extension): bool
@@ -418,6 +428,7 @@ class MediaLibraryService
      * 获取文件类型分类
      *
      * @param string $mimeType
+     *
      * @return string
      */
     private function getFileCategory(string $mimeType): string
@@ -429,8 +440,8 @@ class MediaLibraryService
         } elseif (strpos($mimeType, 'audio/') === 0) {
             return 'audio';
         } elseif (strpos($mimeType, 'text/') === 0 ||
-                 strpos($mimeType, 'application/json') === 0 ||
-                 strpos($mimeType, 'application/xml') === 0) {
+            strpos($mimeType, 'application/json') === 0 ||
+            strpos($mimeType, 'application/xml') === 0) {
             return 'document';
         } else {
             return 'other';
@@ -441,6 +452,7 @@ class MediaLibraryService
      * 删除媒体文件
      *
      * @param int $id
+     *
      * @return array
      */
     public function delete(int $id): array
@@ -451,7 +463,7 @@ class MediaLibraryService
         }
 
         try {
-            \app\service\PluginService::do_action('media.delete_start', [
+            PluginService::do_action('media.delete_start', [
                 'id' => $id,
                 'path' => $media->file_path ?? null,
             ]);
@@ -470,7 +482,7 @@ class MediaLibraryService
                         unlink($thumbPath);
                     }
                 }
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 // 如果thumb_path字段不存在，忽略错误
             }
 
@@ -483,13 +495,13 @@ class MediaLibraryService
             // 删除数据库记录
             $media->delete();
 
-            \app\service\PluginService::do_action('media.delete_done', [
+            PluginService::do_action('media.delete_done', [
                 'id' => $id,
                 'path' => $filePath,
             ]);
 
             return ['code' => 0, 'msg' => '文件删除成功'];
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return ['code' => 1, 'msg' => '删除失败: ' . $e->getMessage()];
         }
     }
@@ -498,6 +510,7 @@ class MediaLibraryService
      * 批量删除媒体文件
      *
      * @param array $ids
+     *
      * @return array
      */
     public function batchDelete(array $ids): array
@@ -522,6 +535,7 @@ class MediaLibraryService
      * 重新生成缩略图
      *
      * @param int $id
+     *
      * @return array
      */
     public function regenerateThumbnail(int $id): array
@@ -549,7 +563,7 @@ class MediaLibraryService
             $this->generateThumbnail($media);
 
             return ['code' => 0, 'msg' => '缩略图生成成功'];
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return ['code' => 1, 'msg' => '缩略图生成失败: ' . $e->getMessage()];
         }
     }
@@ -558,6 +572,7 @@ class MediaLibraryService
      * 为图片生成缩略图
      *
      * @param Media $media
+     *
      * @return void
      */
     private function generateThumbnail(Media $media)
@@ -572,8 +587,7 @@ class MediaLibraryService
         if (extension_loaded('imagick')) {
             // 使用Imagick生成缩略图
             $this->generateThumbnailWithImagick($media);
-        }
-        // 检查GD扩展是否已加载
+        } // 检查GD扩展是否已加载
         elseif (extension_loaded('gd')) {
             // 使用GD生成缩略图
             $this->generateThumbnailWithGD($media);
@@ -585,6 +599,7 @@ class MediaLibraryService
      * 使用GD库生成缩略图
      *
      * @param Media $media
+     *
      * @return void
      */
     private function generateThumbnailWithGD(Media $media)
@@ -685,10 +700,10 @@ class MediaLibraryService
             try {
                 $media->thumb_path = dirname($media->file_path) . '/thumbs/' . $thumbFilename;
                 $media->save();
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 // 如果thumb_path字段不存在，忽略错误
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // 如果缩略图生成失败，不进行处理
             // 可以添加日志记录
         }
@@ -698,6 +713,7 @@ class MediaLibraryService
      * 使用Imagick库生成缩略图
      *
      * @param Media $media
+     *
      * @return void
      */
     private function generateThumbnailWithImagick(Media $media)
@@ -746,10 +762,10 @@ class MediaLibraryService
             try {
                 $media->thumb_path = dirname($media->file_path) . '/thumbs/' . $thumbFilename;
                 $media->save();
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 // 如果thumb_path字段不存在，忽略错误
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // 如果缩略图生成失败，不进行处理
             // 可以添加日志记录
         }
@@ -758,16 +774,17 @@ class MediaLibraryService
     /**
      * 下载远程文件并保存到媒体库
      *
-     * @param string $url 远程文件URL
-     * @param string $title 文件标题
-     * @param int|null $authorId 作者ID
-     * @param string $authorType 作者类型
+     * @param string   $url        远程文件URL
+     * @param string   $title      文件标题
+     * @param int|null $authorId   作者ID
+     * @param string   $authorType 作者类型
+     *
      * @return array
      */
     public function downloadRemoteFile(string $url, string $title = '', ?int $authorId = null, string $authorType = 'admin'): array
     {
         try {
-            \app\service\PluginService::do_action('media.download_start', [
+            PluginService::do_action('media.download_start', [
                 'url' => $url,
                 'title' => $title,
             ]);
@@ -899,14 +916,14 @@ class MediaLibraryService
                 $this->generateThumbnail($media);
             }
 
-            \app\service\PluginService::do_action('media.download_done', [
+            PluginService::do_action('media.download_done', [
                 'id' => $media->id ?? null,
                 'url' => $url,
                 'path' => $media->file_path ?? null,
             ]);
 
             return ['code' => 0, 'msg' => '文件下载成功', 'data' => $media];
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return ['code' => 1, 'msg' => '下载失败: ' . $e->getMessage()];
         }
     }
@@ -916,6 +933,7 @@ class MediaLibraryService
      *
      * @param string $sourceImagePath 源图片路径
      * @param string $outputPath 输出路径
+     *
      * @return bool 是否成功
      */
     public function generateFavicon(string $sourceImagePath, string $outputPath): bool
@@ -933,7 +951,7 @@ class MediaLibraryService
 
             // 否则使用 GD
             return $this->generateFaviconWithGD($sourceImagePath, $outputPath);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return false;
         }
     }
@@ -943,6 +961,7 @@ class MediaLibraryService
      *
      * @param string $sourceImagePath 源图片路径
      * @param string $outputPath 输出路径
+     *
      * @return bool 是否成功
      */
     private function generateFaviconWithImagick(string $sourceImagePath, string $outputPath): bool
@@ -965,7 +984,7 @@ class MediaLibraryService
             $imagick->destroy();
 
             return $result;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return false;
         }
     }
@@ -975,6 +994,7 @@ class MediaLibraryService
      *
      * @param string $sourceImagePath 源图片路径
      * @param string $outputPath 输出路径
+     *
      * @return bool 是否成功
      */
     private function generateFaviconWithGD(string $sourceImagePath, string $outputPath): bool
@@ -1053,7 +1073,7 @@ class MediaLibraryService
             }
 
             return $result;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return false;
         }
     }
@@ -1063,6 +1083,7 @@ class MediaLibraryService
      *
      * @param array $images 图像资源数组
      * @param string $filename 保存路径
+     *
      * @return bool 是否成功
      */
     private function saveAsIco(array $images, string $filename): bool
@@ -1155,7 +1176,7 @@ class MediaLibraryService
 
             // 写入文件
             return file_put_contents($filename, $icoData) !== false;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return false;
         }
     }

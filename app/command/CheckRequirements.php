@@ -2,6 +2,9 @@
 
 namespace app\command;
 
+use Exception;
+use PDO;
+use Redis;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Input\InputInterface;
@@ -314,13 +317,13 @@ class CheckRequirements extends Command
             }
 
             $dsn = "pgsql:host=$host;port=$port;dbname=$database";
-            $pdo = new \PDO($dsn, $username, $password, [
-                \PDO::ATTR_TIMEOUT => 3,
-                \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
+            $pdo = new PDO($dsn, $username, $password, [
+                PDO::ATTR_TIMEOUT => 3,
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             ]);
 
             return '<info>✓ Connected</info>';
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return '<error>✗ Failed: ' . $e->getMessage() . '</error>';
         }
     }
@@ -339,7 +342,7 @@ class CheckRequirements extends Command
             $port = getenv('REDIS_PORT') ?: 6379;
             $password = getenv('REDIS_PASSWORD') ?: null;
 
-            $redis = new \Redis();
+            $redis = new Redis();
             $redis->connect($host, (int) $port, 3);
 
             if ($password) {
@@ -349,7 +352,7 @@ class CheckRequirements extends Command
             $redis->ping();
 
             return '<info>✓ Connected</info>';
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return '<comment>○ Not available</comment>';
         }
     }

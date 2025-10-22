@@ -2,6 +2,9 @@
 
 namespace app\service\plugin;
 
+use support\Log;
+use Throwable;
+
 /**
  * WordPress 风格钩子系统（动作/过滤器）
  * - add_action($hook, $callback, $priority = 10, $accepted_args = 1)
@@ -44,8 +47,8 @@ class HookManager
             $perm = $this->resolveActionPermission($hook);
             if (!$this->managerRef->hasPermission($this->registeringSlug, $perm)) {
                 try {
-                    \support\Log::warning("[plugin-hook-registration-denied] slug={$this->registeringSlug} hook={$hook} perm={$perm} type=action");
-                } catch (\Throwable $e) {
+                    Log::warning("[plugin-hook-registration-denied] slug={$this->registeringSlug} hook={$hook} perm={$perm} type=action");
+                } catch (Throwable $e) {
                 }
 
                 return;
@@ -65,8 +68,8 @@ class HookManager
             $perm = $this->resolveActionPermission($hook);
             if (!$this->managerRef->hasPermission($this->registeringSlug, $perm)) {
                 try {
-                    \support\Log::warning("[plugin-hook-remove-denied] slug={$this->registeringSlug} hook={$hook} perm={$perm} type=action");
-                } catch (\Throwable $e) {
+                    Log::warning("[plugin-hook-remove-denied] slug={$this->registeringSlug} hook={$hook} perm={$perm} type=action");
+                } catch (Throwable $e) {
                 }
 
                 return;
@@ -109,7 +112,7 @@ class HookManager
                 $pass = $n > 0 ? array_slice($args, 0, $n) : [];
                 try {
                     $cb(...$pass);
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     $this->stats['errors']++;
                     // 吞异常以避免中断动作链（符合 WP 行为）
                 }
@@ -139,8 +142,8 @@ class HookManager
             $perm = $this->resolveFilterPermission($hook);
             if (!$this->managerRef->hasPermission($this->registeringSlug, $perm)) {
                 try {
-                    \support\Log::warning("[plugin-hook-registration-denied] slug={$this->registeringSlug} hook={$hook} perm={$perm} type=filter");
-                } catch (\Throwable $e) {
+                    Log::warning("[plugin-hook-registration-denied] slug={$this->registeringSlug} hook={$hook} perm={$perm} type=filter");
+                } catch (Throwable $e) {
                 }
 
                 return;
@@ -161,8 +164,8 @@ class HookManager
             $perm = $this->resolveActionPermission($hook);
             if (!$this->managerRef->hasPermission($this->registeringSlug, $perm)) {
                 try {
-                    \support\Log::warning("[plugin-hook-registration-denied] slug={$this->registeringSlug} hook={$hook} perm={$perm} type=action_once");
-                } catch (\Throwable $e) {
+                    Log::warning("[plugin-hook-registration-denied] slug={$this->registeringSlug} hook={$hook} perm={$perm} type=action_once");
+                } catch (Throwable $e) {
                 }
 
                 return;
@@ -179,8 +182,8 @@ class HookManager
             $perm = $this->resolveFilterPermission($hook);
             if (!$this->managerRef->hasPermission($this->registeringSlug, $perm)) {
                 try {
-                    \support\Log::warning("[plugin-hook-registration-denied] slug={$this->registeringSlug} hook={$hook} perm={$perm} type=filter_once");
-                } catch (\Throwable $e) {
+                    Log::warning("[plugin-hook-registration-denied] slug={$this->registeringSlug} hook={$hook} perm={$perm} type=filter_once");
+                } catch (Throwable $e) {
                 }
 
                 return;
@@ -357,8 +360,8 @@ class HookManager
             $perm = $this->resolveFilterPermission($hook);
             if (!$this->managerRef->hasPermission($this->registeringSlug, $perm)) {
                 try {
-                    \support\Log::warning("[plugin-hook-remove-denied] slug={$this->registeringSlug} hook={$hook} perm={$perm} type=filter");
-                } catch (\Throwable $e) {
+                    Log::warning("[plugin-hook-remove-denied] slug={$this->registeringSlug} hook={$hook} perm={$perm} type=filter");
+                } catch (Throwable $e) {
                 }
 
                 return;
@@ -402,7 +405,7 @@ class HookManager
                 $pass = $n > 0 ? array_slice([$current, ...$args], 0, $n) : [];
                 try {
                     $current = $cb(...$pass);
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     $this->stats['errors']++;
                     // 过滤器异常时保持当前值
                 }

@@ -3,6 +3,7 @@
 namespace plugin\admin\app\controller;
 
 use app\service\LinkConnectService;
+use Exception;
 use support\Request;
 use support\Response;
 
@@ -31,7 +32,7 @@ class LinkConnectController extends Base
             $config = LinkConnectService::getConfig();
 
             return $this->success('Success', $config);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return $this->fail($e->getMessage());
         }
     }
@@ -57,7 +58,7 @@ class LinkConnectController extends Base
             } else {
                 return $this->fail('配置保存失败');
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return $this->fail($e->getMessage());
         }
     }
@@ -72,7 +73,7 @@ class LinkConnectController extends Base
             $example = LinkConnectService::getExample();
 
             return $this->success('Success', $example);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return $this->fail($e->getMessage());
         }
     }
@@ -98,7 +99,7 @@ class LinkConnectController extends Base
             } else {
                 return $this->fail($result['message']);
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return $this->fail($e->getMessage());
         }
     }
@@ -124,7 +125,7 @@ class LinkConnectController extends Base
             $url = $api . '?token=' . urlencode($token);
 
             return $this->success('Success', ['url' => $url]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return $this->fail($e->getMessage());
         }
     }
@@ -138,7 +139,7 @@ class LinkConnectController extends Base
             $record = LinkConnectService::generateToken();
 
             return $this->success('Token 已生成', $record);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return $this->fail($e->getMessage());
         }
     }
@@ -150,7 +151,7 @@ class LinkConnectController extends Base
     {
         try {
             return $this->success('Success', LinkConnectService::listTokens());
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return $this->fail($e->getMessage());
         }
     }
@@ -168,7 +169,7 @@ class LinkConnectController extends Base
             $ok = LinkConnectService::invalidateToken($token);
 
             return $ok ? $this->success('已作废', []) : $this->fail('作废失败');
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return $this->fail($e->getMessage());
         }
     }
@@ -195,7 +196,7 @@ class LinkConnectController extends Base
             }
 
             return $this->fail($res['msg'] ?? '失败');
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return $this->fail($e->getMessage());
         }
     }

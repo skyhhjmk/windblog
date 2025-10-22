@@ -16,6 +16,7 @@
 //use support\view\Raw;
 //use support\view\Blade;
 //use support\view\ThinkPHP;
+use app\service\cache\RedisCacheAdapter;
 use app\service\TwigTemplateService;
 use app\view\extension\CsrfExtension;
 use app\view\extension\PathExtension;
@@ -57,7 +58,7 @@ return [
         $twig->addRuntimeLoader(new FactoryRuntimeLoader([
             CacheRuntime::class => function () {
                 // 使用独立的 cache 连接库（config/redis.php 中的 database=1）
-                return new \app\service\cache\RedisCacheAdapter([
+                return new RedisCacheAdapter([
                     'connection' => 'cache',
                     'prefix' => env('TWIG_CACHE_PREFIX', 'twig:fragment:'),
                     'default_ttl' => (int) env('TWIG_CACHE_DEFAULT_TTL', 300),

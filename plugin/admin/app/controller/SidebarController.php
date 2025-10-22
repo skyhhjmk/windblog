@@ -4,6 +4,7 @@ namespace plugin\admin\app\controller;
 
 use app\service\SidebarService;
 use support\Request;
+use support\Response;
 use Throwable;
 
 /**
@@ -25,9 +26,9 @@ class SidebarController extends Base
     /**
      * 侧边栏管理首页
      *
-     * @return \support\Response
+     * @return Response
      */
-    public function index(): \support\Response
+    public function index(): Response
     {
         try {
             // 只返回HTML内容，不传递数据
@@ -42,9 +43,9 @@ class SidebarController extends Base
      *
      * @param Request $request 请求对象
      *
-     * @return \support\Response
+     * @return Response
      */
-    public function getSidebar(Request $request): \support\Response
+    public function getSidebar(Request $request): Response
     {
         try {
             $pageKey = $request->get('page_key', 'default');
@@ -61,9 +62,9 @@ class SidebarController extends Base
      *
      * @param Request $request 请求对象
      *
-     * @return \support\Response
+     * @return Response
      */
-    public function saveSidebar(Request $request): \support\Response
+    public function saveSidebar(Request $request): Response
     {
         try {
             $pageKey = $request->post('page_key', 'default');
@@ -106,9 +107,9 @@ class SidebarController extends Base
     /**
      * 获取所有可用的小工具类型
      *
-     * @return \support\Response
+     * @return Response
      */
-    public function getAvailableWidgets(): \support\Response
+    public function getAvailableWidgets(): Response
     {
         try {
             $widgets = SidebarService::getAvailableWidgets();
@@ -122,9 +123,9 @@ class SidebarController extends Base
     /**
      * 获取可用的页面列表
      *
-     * @return \support\Response
+     * @return Response
      */
-    public function getPages(): \support\Response
+    public function getPages(): Response
     {
         try {
             $pages = SidebarService::getSidebarPages();
@@ -140,9 +141,9 @@ class SidebarController extends Base
      *
      * @param Request $request 请求对象
      *
-     * @return \support\Response
+     * @return Response
      */
-    public function addWidget(Request $request): \support\Response
+    public function addWidget(Request $request): Response
     {
         try {
             $pageKey = $request->post('page_key', 'default');
@@ -205,9 +206,9 @@ class SidebarController extends Base
      *
      * @param Request $request 请求对象
      *
-     * @return \support\Response
+     * @return Response
      */
-    public function removeWidget(Request $request): \support\Response
+    public function removeWidget(Request $request): Response
     {
         try {
             $pageKey = $request->post('page_key', 'default');
@@ -256,9 +257,9 @@ class SidebarController extends Base
      *
      * @param Request $request 请求对象
      *
-     * @return \support\Response
+     * @return Response
      */
-    public function updateWidget(Request $request): \support\Response
+    public function updateWidget(Request $request): Response
     {
         try {
             $pageKey = $request->post('page_key', 'default');

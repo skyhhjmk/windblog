@@ -3,6 +3,8 @@
 namespace plugin\admin\app\common;
 
 use Illuminate\Database\Connection;
+use Illuminate\Database\Schema\Builder;
+use PDO;
 use plugin\admin\app\model\Setting;
 use support\Db;
 use support\exception\BusinessException;
@@ -56,7 +58,7 @@ class Util
                     mkdir($dir, 0o777, true);
                 }
                 // 创建空的 SQLite 数据库文件
-                $pdo = new \PDO('sqlite:' . $dbPath);
+                $pdo = new PDO('sqlite:' . $dbPath);
                 $pdo = null; // 关闭连接
             }
         }
@@ -67,9 +69,9 @@ class Util
     /**
      * 获取SchemaBuilder
      *
-     * @return \Illuminate\Database\Schema\Builder
+     * @return Builder
      */
-    public static function schema(): \Illuminate\Database\Schema\Builder
+    public static function schema(): Builder
     {
         $defaultConnection = config('database.default', 'pgsql');
 
@@ -341,7 +343,7 @@ class Util
     /**
      * 表单类型到插件的映射
      *
-     * @return \string[][]
+     * @return string[][]
      */
     public static function methodControlMap(): array
     {

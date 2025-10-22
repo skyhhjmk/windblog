@@ -6,6 +6,7 @@ use app\service\SecurityService;
 use Exception;
 use ReflectionClass;
 use support\Db;
+use support\Log;
 use Webman\Http\Request;
 use Webman\Http\Response;
 use Webman\MiddlewareInterface;
@@ -246,7 +247,7 @@ class EnhancedAuthCheck implements MiddlewareInterface
                 return false;
             }
         } catch (Exception $e) {
-            \support\Log::error('Session validation error: ' . $e->getMessage());
+            Log::error('Session validation error: ' . $e->getMessage());
 
             return false;
         }
@@ -313,7 +314,7 @@ class EnhancedAuthCheck implements MiddlewareInterface
             }
 
         } catch (Exception $e) {
-            \support\Log::error('Permission check error: ' . $e->getMessage());
+            Log::error('Permission check error: ' . $e->getMessage());
 
             return ['allowed' => false, 'message' => '权限检查失败'];
         }
@@ -392,7 +393,7 @@ class EnhancedAuthCheck implements MiddlewareInterface
             }
 
             if ($shouldLog) {
-                \support\Log::info('Admin Access Log', [
+                Log::info('Admin Access Log', [
                     'user_id' => $userId,
                     'username' => $admin['username'] ?? 'unknown',
                     'ip' => $request->getRealIp(),
@@ -403,7 +404,7 @@ class EnhancedAuthCheck implements MiddlewareInterface
                 ]);
             }
         } catch (Exception $e) {
-            \support\Log::error('Access logging error: ' . $e->getMessage());
+            Log::error('Access logging error: ' . $e->getMessage());
         }
     }
 

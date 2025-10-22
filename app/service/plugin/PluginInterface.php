@@ -31,6 +31,7 @@ interface PluginInterface
      * 注册插件菜单
      *
      * @param string $type 菜单类型: 'admin' 后台, 'app' 前台
+     *
      * @return array 菜单配置数组
      *
      * 示例返回值:
@@ -59,6 +60,7 @@ interface PluginInterface
      * 注册插件路由
      *
      * @param string $pluginSlug 插件标识
+     *
      * @return array 路由配置数组
      *
      * 示例返回值:

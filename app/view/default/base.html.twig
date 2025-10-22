@@ -39,6 +39,28 @@
             max-width: 1200px;
         }
 
+        /* 添加对topbarTitle元素的样式 */
+        #topbarTitle {
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            mask-image: linear-gradient(to right, black 85%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
+        }
+
+        @media (min-width: 768px) {
+            #topbarTitle {
+                max-width: 300px;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            #topbarTitle {
+                max-width: 400px;
+            }
+        }
+
         /* 添加平滑过渡效果 */
         body {
             transition: all 0.3s ease;
@@ -508,18 +530,18 @@
                     // 获取DOM元素
                     pjaxConfig.progressBar = document.getElementById('pjax-progress');
                     pjaxConfig.container = document.getElementById('pjax-container');
-                    
+
                     console.log('PJAX: 进度条元素:', pjaxConfig.progressBar);
                     console.log('PJAX: 容器元素:', pjaxConfig.container);
-                    
+
                     // 确保容器存在
                     if (!pjaxConfig.container) {
                         console.error('PJAX Container not found!');
                         return;
                     }
-                    
+
                     console.log('PJAX: 初始化完成，开始绑定事件');
-                    
+
                     // 捕获阶段原生拦截（优先级最高），确保同源链接走 PJAX
                     document.addEventListener('click', function (e) {
                         try {
@@ -627,7 +649,7 @@
                         return;
                     }
                     pjaxConfig.isLoading = true;
-                    
+
                     try {
                         document.dispatchEvent(new CustomEvent('pjax:start'));
                         document.dispatchEvent(new CustomEvent('pjax:send'));
@@ -660,7 +682,7 @@
                 // 使用PJAX加载内容
                 function loadContentWithPJAX(url, pushState) {
                     console.log('使用PJAX加载:', url);
-                    
+
                     // 统一构造带 _pjax=1 的请求地址，帮助服务端返回 content 模板
                     const fetchUrl = (function(u){
                         try {
@@ -686,7 +708,7 @@
                         },
                         success: function(response) {
                             console.log('PJAX请求成功');
-                            
+
                             // 更新进度条
                             if (pjaxConfig.progressBar) {
                                 pjaxConfig.progressBar.style.width = '70%';
@@ -706,7 +728,7 @@
                             if (!newContent) {
                                 newContent = $resp.find('#pjax-container').html();
                             }
-                            
+
                             if (newContent) {
                                 try {
                                     document.dispatchEvent(new CustomEvent('pjax:beforeReplace', { detail: { url: url, contents: byId } }));
@@ -811,7 +833,11 @@
                                         if (!shouldEval) return;
 
                                         const newScript = document.createElement('script');
-                                        if (oldScript.type) newScript.type = oldScript.type;
+                                        // 复制所有属性，而不仅仅是type
+                                        for (let i = 0; i < oldScript.attributes.length; i++) {
+                                            const attr = oldScript.attributes[i];
+                                            newScript.setAttribute(attr.name, attr.value);
+                                        }
                                         newScript.textContent = oldScript.textContent || '';
                                         oldScript.parentNode.replaceChild(newScript, oldScript);
                                     });
@@ -830,7 +856,7 @@
                                         }
                                     }
                                 } catch (e) {}
-                                
+
                                 // 更新页面标题
                                 const newTitle = $resp.filter('title').text();
                                 if (newTitle) {
@@ -924,12 +950,12 @@
                         },
                         error: function(xhr, status, error) {
                             console.error('PJAX请求失败:', status, error);
-                            
+
                             // 重置进度条
                             if (pjaxConfig.progressBar) {
                                 pjaxConfig.progressBar.style.width = '0';
                             }
-                            
+
                             // 重置容器样式
                             pjaxConfig.container.style.opacity = '1';
                             document.body.classList.remove('pjax-loading');
@@ -941,7 +967,9 @@
                                 if (window.$) {
                                     $(document).trigger('pjax:error', [xhr]);
                                 }
-                            } catch (e) {}
+                            } catch (e) {
+
+                            }
 
                             // 显示错误通知
                             if (window.AnimationUtils) {

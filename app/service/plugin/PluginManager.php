@@ -3,6 +3,11 @@
 namespace app\service\plugin;
 
 use app\service\CacheService;
+use ReflectionClass;
+use support\Log;
+use support\Redis;
+use support\Response;
+use Throwable;
 use Webman\Route;
 
 /**
@@ -114,7 +119,7 @@ class PluginManager
             } elseif ($prevVersion !== '' && $curVersion !== '' && $prevVersion !== $curVersion && method_exists($entry['instance'], 'onUpgrade') && is_callable([$entry['instance'], 'onUpgrade'])) {
                 $entry['instance']->onUpgrade($prevVersion, $curVersion, $this->hooks);
             }
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // 安装/升级异常不影响后续 activate，但可记录日志/统计
         }
 
@@ -142,7 +147,7 @@ class PluginManager
         $this->hooks->beginRegistering($slug, $this);
         try {
             $entry['instance']->activate($this->hooks);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return false;
         } finally {
             $this->hooks->endRegistering();
@@ -198,7 +203,7 @@ class PluginManager
 
             // 注册路由（仅在首次启用时注册）
             $this->registerPluginRoutes($slug, $entry['instance']);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // 插件菜单或路由注册异常不影响启用
             // 可以记录日志但不中断流程
         }
@@ -345,8 +350,8 @@ class PluginManager
     private function redis()
     {
         try {
-            return \support\Redis::connection('default');
-        } catch (\Throwable $e) {
+            return Redis::connection('default');
+        } catch (Throwable $e) {
             // 回退：使用内存式简易对象（Redis不可用时，统计不持久）
             static $dummy = null;
             if ($dummy === null) {
@@ -511,8 +516,8 @@ class PluginManager
 
         // 日志：记录拒绝事件（包含插件与权限）
         try {
-            \support\Log::warning("[plugin-permission-denied] slug={$slug} perm={$permission} denied={$denied}");
-        } catch (\Throwable $e) {
+            Log::warning("[plugin-permission-denied] slug={$slug} perm={$permission} denied={$denied}");
+        } catch (Throwable $e) {
             // 忽略日志异常，保持主流程
         }
 
@@ -560,7 +565,7 @@ class PluginManager
         if ($entry['instance']) {
             try {
                 $entry['instance']->deactivate($this->hooks);
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 // 忽略异常以保证流程继续
             }
             // 清空实例引用，下次启用时重新实例化
@@ -594,7 +599,7 @@ class PluginManager
         if ($entry['instance']) {
             try {
                 $entry['instance']->uninstall($this->hooks);
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 // 忽略异常
             }
         }
@@ -667,14 +672,14 @@ class PluginManager
         foreach (array_reverse($declared) as $cls) {
             if (is_subclass_of($cls, PluginInterface::class)) {
                 try {
-                    $ref = new \ReflectionClass($cls);
+                    $ref = new ReflectionClass($cls);
                     if ($ref->isInstantiable() && $ref->getConstructor()?->getNumberOfRequiredParameters() === 0) {
                         $inst = $ref->newInstance();
                         if ($inst instanceof PluginInterface) {
                             return $inst;
                         }
                     }
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     // 忽略并继续
                 }
             }
@@ -766,7 +771,7 @@ class PluginManager
 
                     // 不执行原始处理器，直接返回拒绝访问响应
                     $handler = function () use ($slug, $permission) {
-                        return new \support\Response(403, [], 'Access denied to plugin route. Plugin: ' . $slug . ', Permission: ' . $permission);
+                        return new Response(403, [], 'Access denied to plugin route. Plugin: ' . $slug . ', Permission: ' . $permission);
                     };
                 }
 
@@ -793,12 +798,12 @@ class PluginManager
             }
 
             $this->routesRegistered[$slug] = true;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // 插件路由注册异常不影响启用
             // 可以记录日志但不中断流程
             try {
-                \support\Log::warning("[plugin-route-registration-failed] slug={$slug} error=" . $e->getMessage());
-            } catch (\Throwable $logError) {
+                Log::warning("[plugin-route-registration-failed] slug={$slug} error=" . $e->getMessage());
+            } catch (Throwable $logError) {
                 // 忽略日志异常
             }
         }
@@ -880,8 +885,8 @@ class PluginManager
             // 回退：出现依赖错误时，按原顺序启用但跳过失败项
             $order = $enabled;
             try {
-                \support\Log::warning('[plugin-deps] ' . $e->getMessage());
-            } catch (\Throwable $x) {
+                Log::warning('[plugin-deps] ' . $e->getMessage());
+            } catch (Throwable $x) {
             }
         }
         foreach ($order as $slug) {
@@ -889,8 +894,8 @@ class PluginManager
             $vr = $this->validate($slug);
             if (!empty($vr['errors'])) {
                 try {
-                    \support\Log::warning('[plugin-validate] ' . $slug . ' ' . implode('; ', $vr['errors']));
-                } catch (\Throwable $x) {
+                    Log::warning('[plugin-validate] ' . $slug . ' ' . implode('; ', $vr['errors']));
+                } catch (Throwable $x) {
                 }
                 continue;
             }
@@ -920,8 +925,8 @@ class PluginManager
             foreach ($deps as $d => $c) {
                 if (!isset($metas[$d])) {
                     try {
-                        \support\Log::warning("[plugin-deps] {$s} requires missing plugin {$d}");
-                    } catch (\Throwable $x) {
+                        Log::warning("[plugin-deps] {$s} requires missing plugin {$d}");
+                    } catch (Throwable $x) {
                     }
 
                     return false;
@@ -936,8 +941,8 @@ class PluginManager
             $order = $resolver->resolve($metas, $enabled);
         } catch (PluginDependencyException $e) {
             try {
-                \support\Log::warning('[plugin-deps] ' . $e->getMessage());
-            } catch (\Throwable $x) {
+                Log::warning('[plugin-deps] ' . $e->getMessage());
+            } catch (Throwable $x) {
             }
 
             return false;
@@ -946,8 +951,8 @@ class PluginManager
             $vr = $this->validate($s);
             if (!empty($vr['errors'])) {
                 try {
-                    \support\Log::warning('[plugin-validate] ' . $s . ' ' . implode('; ', $vr['errors']));
-                } catch (\Throwable $x) {
+                    Log::warning('[plugin-validate] ' . $s . ' ' . implode('; ', $vr['errors']));
+                } catch (Throwable $x) {
                 }
                 if ($s === $slug) {
                     return false;

@@ -12,13 +12,12 @@ use Exception;
 use support\Log;
 use support\Request;
 use support\Response;
-use Webman\RateLimiter\Annotation\RateLimiter;
 
 class PostController
 {
     protected array $noNeedLogin = ['index'];
 
-    #[EnableInstantFirstPaint]
+    //    #[EnableInstantFirstPaint]
     public function index(Request $request, mixed $keyword = null): Response
     {
         // 移除URL参数中的 .html 后缀

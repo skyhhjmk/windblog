@@ -17,6 +17,7 @@ class WindConnectController
      * 处理友链互联请求
      *
      * @param Request $request HTTP请求对象
+     *
      * @return Response JSON响应
      */
     public function index(Request $request): Response

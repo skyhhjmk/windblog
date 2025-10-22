@@ -4,10 +4,13 @@ namespace app\model;
 
 use app\service\BlogService;
 use app\service\ElasticSyncService;
+use Exception;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
+use support\Log;
 use support\Model;
 use Throwable;
 
@@ -61,8 +64,8 @@ class Post extends Model
                 } else {
                     ElasticSyncService::indexPost($post);
                 }
-            } catch (\Throwable $e) {
-                \support\Log::warning('[Post.saved] ES sync failed: ' . $e->getMessage());
+            } catch (Throwable $e) {
+                Log::warning('[Post.saved] ES sync failed: ' . $e->getMessage());
             }
         });
 
@@ -75,8 +78,8 @@ class Post extends Model
             try {
                 // 硬删除或软删除后的 delete 事件都确保 ES 文档移除
                 ElasticSyncService::deletePost((int) $post->id);
-            } catch (\Throwable $e) {
-                \support\Log::warning('[Post.deleted] ES delete failed: ' . $e->getMessage());
+            } catch (Throwable $e) {
+                Log::warning('[Post.deleted] ES delete failed: ' . $e->getMessage());
             }
         });
 
@@ -208,7 +211,7 @@ class Post extends Model
      * 获取文章关联的所有作者。
      * 通过 post_author 中间表建立多对多关系。
      *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     * @return BelongsToMany
      */
     public function authors()
     {
@@ -220,7 +223,7 @@ class Post extends Model
      * 获取文章的主要作者。
      * 通过 post_author 中间表，筛选出 is_primary = true 的作者。
      *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     * @return BelongsToMany
      */
     public function primaryAuthor()
     {
@@ -232,7 +235,7 @@ class Post extends Model
      * 获取文章关联的所有分类。
      * 通过 post_category 中间表建立多对多关系。
      *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     * @return BelongsToMany
      */
     public function categories()
     {
@@ -243,7 +246,7 @@ class Post extends Model
      * 获取文章关联的所有标签。
      * 通过 post_tag 中间表建立多对多关系。
      *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     * @return BelongsToMany
      */
     public function tags()
     {
@@ -340,45 +343,45 @@ class Post extends Model
     {
         // 判断是否启用软删除，除非强制硬删除
         $useSoftDelete = blog_config('soft_delete', true);
-        \support\Log::debug('Soft delete config value: ' . var_export($useSoftDelete, true));
-        \support\Log::debug('Force delete flag: ' . var_export($forceDelete, true));
+        Log::debug('Soft delete config value: ' . var_export($useSoftDelete, true));
+        Log::debug('Force delete flag: ' . var_export($forceDelete, true));
 
         // 修复逻辑：当$forceDelete为true时，无论配置如何都应该执行硬删除
         if ($forceDelete || ($useSoftDelete && !$forceDelete)) {
             if ($forceDelete) {
                 // 硬删除：直接从数据库中删除记录
-                \support\Log::debug('Executing hard delete for post ID: ' . $this->id);
+                Log::debug('Executing hard delete for post ID: ' . $this->id);
                 try {
                     return $this->delete();
-                } catch (\Exception $e) {
-                    \support\Log::error('Hard delete failed for post ID ' . $this->id . ': ' . $e->getMessage());
+                } catch (Exception $e) {
+                    Log::error('Hard delete failed for post ID ' . $this->id . ': ' . $e->getMessage());
 
                     return false;
                 }
             } else {
                 // 软删除：设置 deleted_at 字段
                 try {
-                    \support\Log::debug('Executing soft delete for post ID: ' . $this->id);
+                    Log::debug('Executing soft delete for post ID: ' . $this->id);
                     // 使用save方法而不是update方法，确保模型状态同步
                     $this->deleted_at = date('Y-m-d H:i:s');
                     $result = $this->save();
-                    \support\Log::debug('Soft delete result: ' . var_export($result, true));
-                    \support\Log::debug('Post deleted_at value after save: ' . var_export($this->deleted_at, true));
+                    Log::debug('Soft delete result: ' . var_export($result, true));
+                    Log::debug('Post deleted_at value after save: ' . var_export($this->deleted_at, true));
 
                     return $result !== false; // 确保返回布尔值
-                } catch (\Exception $e) {
-                    \support\Log::error('Soft delete failed for post ID ' . $this->id . ': ' . $e->getMessage());
+                } catch (Exception $e) {
+                    Log::error('Soft delete failed for post ID ' . $this->id . ': ' . $e->getMessage());
 
                     return false;
                 }
             }
         } else {
             // 硬删除：直接从数据库中删除记录
-            \support\Log::debug('Executing hard delete for post ID: ' . $this->id);
+            Log::debug('Executing hard delete for post ID: ' . $this->id);
             try {
                 return $this->delete();
-            } catch (\Exception $e) {
-                \support\Log::error('Hard delete failed for post ID ' . $this->id . ': ' . $e->getMessage());
+            } catch (Exception $e) {
+                Log::error('Hard delete failed for post ID ' . $this->id . ': ' . $e->getMessage());
 
                 return false;
             }
@@ -398,8 +401,8 @@ class Post extends Model
             $result = $this->save();
 
             return $result !== false;
-        } catch (\Exception $e) {
-            \support\Log::error('Restore failed for post ID ' . $this->id . ': ' . $e->getMessage());
+        } catch (Exception $e) {
+            Log::error('Restore failed for post ID ' . $this->id . ': ' . $e->getMessage());
 
             return false;
         }

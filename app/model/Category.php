@@ -2,6 +2,7 @@
 
 namespace app\model;
 
+use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
@@ -9,24 +10,25 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
+use support\Log;
 use Throwable;
 
 /**
  * 分类模型
  *
- * @property int $id 分类ID
- * @property string $name 分类名称
- * @property string $slug 分类别名 (用于URL)
- * @property string|null $description 分类描述
- * @property int|null $parent_id 父分类ID (NULL表示顶级分类)
- * @property int $sort_order 排序权重
- * @property Carbon|null $created_at 创建时间
- * @property Carbon|null $updated_at 更新时间
- * @property Carbon|null $deleted_at 软删除时间
+ * @property int                        $id          分类ID
+ * @property string                     $name        分类名称
+ * @property string                     $slug        分类别名 (用于URL)
+ * @property string|null                $description 分类描述
+ * @property int|null                   $parent_id   父分类ID (NULL表示顶级分类)
+ * @property int                        $sort_order  排序权重
+ * @property Carbon|null                $created_at  创建时间
+ * @property Carbon|null                $updated_at  更新时间
+ * @property Carbon|null                $deleted_at  软删除时间
  *
- * @property-read Collection|Post[] $posts 该分类下的所有文章
- * @property-read Category|null $parent 父分类
- * @property-read Collection|Category[] $children 子分类
+ * @property-read Collection|Post[]     $posts       该分类下的所有文章
+ * @property-read Category|null         $parent      父分类
+ * @property-read Collection|Category[] $children    子分类
  *
  * @method static Builder|Category withTrashed() 包含软删除的记录
  * @method static Builder|Category onlyTrashed() 只查询软删除的记录
@@ -92,6 +94,7 @@ class Category extends Model
      * 查询作用域：包含软删除的记录。
      *
      * @param Builder $query
+     *
      * @return Builder
      */
     public function scopeWithTrashed(Builder $query): Builder
@@ -103,6 +106,7 @@ class Category extends Model
      * 查询作用域：只查询软删除的记录。
      *
      * @param Builder $query
+     *
      * @return Builder
      */
     public function scopeOnlyTrashed(Builder $query): Builder
@@ -114,6 +118,7 @@ class Category extends Model
      * 软删除方法，根据配置决定是软删除还是硬删除
      *
      * @param bool $forceDelete 是否强制删除（绕过软删除配置）
+     *
      * @return bool|null
      * @throws Throwable
      */
@@ -121,32 +126,32 @@ class Category extends Model
     {
         // 判断是否启用软删除，除非强制硬删除
         $useSoftDelete = blog_config('soft_delete', true);
-        \support\Log::debug('Soft delete config value: ' . var_export($useSoftDelete, true));
-        \support\Log::debug('Force delete flag: ' . var_export($forceDelete, true));
+        Log::debug('Soft delete config value: ' . var_export($useSoftDelete, true));
+        Log::debug('Force delete flag: ' . var_export($forceDelete, true));
 
         if (!$forceDelete && $useSoftDelete) {
             // 软删除：设置 deleted_at 字段
             try {
-                \support\Log::debug('Executing soft delete for category ID: ' . $this->id);
+                Log::debug('Executing soft delete for category ID: ' . $this->id);
                 // 使用save方法而不是update方法，确保模型状态同步
                 $this->deleted_at = date('Y-m-d H:i:s');
                 $result = $this->save();
-                \support\Log::debug('Soft delete result: ' . var_export($result, true));
-                \support\Log::debug('Category deleted_at value after save: ' . var_export($this->deleted_at, true));
+                Log::debug('Soft delete result: ' . var_export($result, true));
+                Log::debug('Category deleted_at value after save: ' . var_export($this->deleted_at, true));
 
                 return $result !== false; // 确保返回布尔值
-            } catch (\Exception $e) {
-                \support\Log::error('Soft delete failed for category ID ' . $this->id . ': ' . $e->getMessage());
+            } catch (Exception $e) {
+                Log::error('Soft delete failed for category ID ' . $this->id . ': ' . $e->getMessage());
 
                 return false;
             }
         } else {
             // 硬删除：直接从数据库中删除记录
-            \support\Log::debug('Executing hard delete for category ID: ' . $this->id);
+            Log::debug('Executing hard delete for category ID: ' . $this->id);
             try {
                 return $this->delete();
-            } catch (\Exception $e) {
-                \support\Log::error('Hard delete failed for category ID ' . $this->id . ': ' . $e->getMessage());
+            } catch (Exception $e) {
+                Log::error('Hard delete failed for category ID ' . $this->id . ': ' . $e->getMessage());
 
                 return false;
             }
@@ -166,8 +171,8 @@ class Category extends Model
             $result = $this->save();
 
             return $result !== false;
-        } catch (\Exception $e) {
-            \support\Log::error('Restore failed for category ID ' . $this->id . ': ' . $e->getMessage());
+        } catch (Exception $e) {
+            Log::error('Restore failed for category ID ' . $this->id . ': ' . $e->getMessage());
 
             return false;
         }
@@ -214,6 +219,7 @@ class Category extends Model
      * 查询顶级分类（即没有父分类的分类）。
      *
      * @param Builder $query
+     *
      * @return Builder
      */
     public function scopeTopLevel(Builder $query): Builder
@@ -225,6 +231,7 @@ class Category extends Model
      * 按排序权重升序排列。
      *
      * @param Builder $query
+     *
      * @return Builder
      */
     public function scopeOrdered(Builder $query): Builder

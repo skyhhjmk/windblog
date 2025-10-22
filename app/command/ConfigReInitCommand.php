@@ -2,6 +2,8 @@
 
 namespace app\command;
 
+use Exception;
+use PDO;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\QuestionHelper;
 use Symfony\Component\Console\Input\InputInterface;
@@ -167,22 +169,22 @@ class ConfigReInitCommand extends Command
                             mkdir($dir, 0o777, true);
                         }
                     }
-                    $pdo = new \PDO('sqlite:' . $dbPath);
+                    $pdo = new PDO('sqlite:' . $dbPath);
                     break;
 
                 case 'mysql':
                     $dsn = "mysql:host={$config['host']};port={$config['port']};dbname={$config['database']}";
-                    $pdo = new \PDO($dsn, $config['username'], $config['password'], [
-                        \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
-                        \PDO::ATTR_TIMEOUT => 5,
+                    $pdo = new PDO($dsn, $config['username'], $config['password'], [
+                        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                        PDO::ATTR_TIMEOUT => 5,
                     ]);
                     break;
 
                 case 'pgsql':
                     $dsn = "pgsql:host={$config['host']};port={$config['port']};dbname={$config['database']}";
-                    $pdo = new \PDO($dsn, $config['username'], $config['password'], [
-                        \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
-                        \PDO::ATTR_TIMEOUT => 5,
+                    $pdo = new PDO($dsn, $config['username'], $config['password'], [
+                        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                        PDO::ATTR_TIMEOUT => 5,
                     ]);
                     break;
             }
@@ -194,7 +196,7 @@ class ConfigReInitCommand extends Command
             $pdo = null; // 关闭连接
 
             return true;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $output->writeln('<error>连接失败: ' . $e->getMessage() . '</error>');
 
             return false;
@@ -220,15 +222,15 @@ class ConfigReInitCommand extends Command
                             mkdir($dir, 0o777, true);
                         }
                     }
-                    $pdo = new \PDO('sqlite:' . $dbPath);
+                    $pdo = new PDO('sqlite:' . $dbPath);
                     // 为 SQLite 启用外键约束
                     $pdo->exec('PRAGMA foreign_keys = ON');
                     break;
 
                 case 'mysql':
                     $dsn = "mysql:host={$config['host']};port={$config['port']};dbname={$config['database']}";
-                    $pdo = new \PDO($dsn, $config['username'], $config['password'], [
-                        \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
+                    $pdo = new PDO($dsn, $config['username'], $config['password'], [
+                        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                     ]);
                     // 设置字符集
                     $pdo->exec('SET NAMES utf8mb4');
@@ -236,8 +238,8 @@ class ConfigReInitCommand extends Command
 
                 case 'pgsql':
                     $dsn = "pgsql:host={$config['host']};port={$config['port']};dbname={$config['database']}";
-                    $pdo = new \PDO($dsn, $config['username'], $config['password'], [
-                        \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
+                    $pdo = new PDO($dsn, $config['username'], $config['password'], [
+                        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                     ]);
                     break;
             }
@@ -250,7 +252,7 @@ class ConfigReInitCommand extends Command
             };
 
             if (!file_exists($sqlFile)) {
-                throw new \Exception("SQL 文件不存在: $sqlFile");
+                throw new Exception("SQL 文件不存在: $sqlFile");
             }
 
             // 读取并执行SQL文件
@@ -278,7 +280,7 @@ class ConfigReInitCommand extends Command
                     try {
                         $pdo->exec($statement);
                         $successCount++;
-                    } catch (\Exception $e) {
+                    } catch (Exception $e) {
                         $errorCount++;
                         $output->writeln('<error>执行SQL语句失败: ' . $e->getMessage() . '</error>');
                         $output->writeln('<comment>语句: ' . substr($statement, 0, 100) . '...</comment>');
@@ -294,15 +296,17 @@ class ConfigReInitCommand extends Command
             if ($errorCount > 0) {
                 $output->writeln("<comment>有 {$errorCount} 条语句执行失败</comment>");
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $output->writeln('<error>数据库初始化失败: ' . $e->getMessage() . '</error>');
         }
     }
 
     /**
      * 分割sql文件
+     *
      * @param $sql
      * @param $delimiter
+     *
      * @return array
      */
     private function splitSqlFile($sql, $delimiter): array
@@ -495,13 +499,13 @@ class ConfigReInitCommand extends Command
     /**
      * 添加菜单
      *
-     * @param \PDO $pdo
+     * @param PDO   $pdo
      * @param string $type 数据库类型
      * @param OutputInterface $output
      *
      * @return int
      */
-    private function addMenu(array $menu, \PDO $pdo, string $type, OutputInterface $output): int
+    private function addMenu(array $menu, PDO $pdo, string $type, OutputInterface $output): int
     {
         $allow_columns = ['title', 'key', 'icon', 'href', 'pid', 'weight', 'type'];
         $data = [];
@@ -538,13 +542,13 @@ class ConfigReInitCommand extends Command
     /**
      * 导入菜单
      *
-     * @param \PDO $pdo
+     * @param PDO   $pdo
      * @param string $type 数据库类型
      * @param OutputInterface $output
      *
      * @return void
      */
-    private function importMenu(\PDO $pdo, string $type, OutputInterface $output): void
+    private function importMenu(PDO $pdo, string $type, OutputInterface $output): void
     {
         $output->writeln('<comment>正在导入菜单...</comment>');
 
@@ -565,15 +569,15 @@ class ConfigReInitCommand extends Command
     /**
      * 递归导入菜单
      *
-     * @param array $menu_tree
-     * @param \PDO $pdo
+     * @param array  $menu_tree
+     * @param PDO   $pdo
      * @param string $type
-     * @param int $parent_id
+     * @param int    $parent_id
      * @param OutputInterface $output
      *
      * @return void
      */
-    private function importMenuRecursive(array $menu_tree, \PDO $pdo, string $type, int $parent_id, OutputInterface $output): void
+    private function importMenuRecursive(array $menu_tree, PDO $pdo, string $type, int $parent_id, OutputInterface $output): void
     {
         if (empty($menu_tree)) {
             return;

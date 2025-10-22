@@ -2,6 +2,8 @@
 
 namespace app\service;
 
+use Exception;
+
 /**
  * 增强型缓存服务类
  * 提供更高级的缓存功能，包括缓存命中率监控、二级缓存支持、缓存预热和分组管理
@@ -102,7 +104,7 @@ class EnhancedCacheService
             if ($handler) {
                 $value = CacheService::cache($fullKey);
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // 忽略任何缓存操作异常
         }
 
@@ -149,7 +151,7 @@ class EnhancedCacheService
             if ($handler) {
                 $result = CacheService::cache($fullKey, $value, true, $ttl);
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // 忽略任何缓存操作异常
         }
 
@@ -386,7 +388,7 @@ class EnhancedCacheService
             $handler = CacheService::getCacheHandler();
             $prefixedKey = CacheService::prefixKey($fullKey);
             $result = $handler && $handler->incr($prefixedKey, $step);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // 忽略任何缓存操作异常
         }
 
@@ -416,7 +418,7 @@ class EnhancedCacheService
             $handler = CacheService::getCacheHandler();
             $prefixedKey = CacheService::prefixKey($fullKey);
             $result = $handler && $handler->decr($prefixedKey, $step);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // 忽略任何缓存操作异常
         }
 

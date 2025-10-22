@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace app\service;
 
+use Throwable;
 use function app_path;
 use function array_merge;
 use function base_path;
@@ -77,7 +78,7 @@ class TwigTemplateService implements View
             if (is_string($t) && $t !== '') {
                 $theme = $t;
             }
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // ignore and fallback to default
         }
         // 构建主题与回退路径
@@ -97,7 +98,7 @@ class TwigTemplateService implements View
         }
 
         // 过滤器：模板变量（需权限 template:filter.vars）
-        $vars = \app\service\PluginService::apply_filters('template.vars_filter', [
+        $vars = PluginService::apply_filters('template.vars_filter', [
             'template' => $template,
             'vars' => $vars,
             'app' => $app,
@@ -105,7 +106,7 @@ class TwigTemplateService implements View
         ])['vars'] ?? $vars;
 
         // 动作：渲染开始（需权限 template:action.render_start）
-        \app\service\PluginService::do_action('template.render_start', [
+        PluginService::do_action('template.render_start', [
             'template' => $template,
             'app' => $app,
             'plugin' => $plugin,
@@ -116,7 +117,7 @@ class TwigTemplateService implements View
         $html = $views[$viewsKey]->render("$template.$viewSuffix", $vars);
 
         // 动作：渲染结束（需权限 template:action.render_end）
-        \app\service\PluginService::do_action('template.render_end', [
+        PluginService::do_action('template.render_end', [
             'template' => $template,
             'app' => $app,
             'plugin' => $plugin,
@@ -124,7 +125,7 @@ class TwigTemplateService implements View
         ]);
 
         // 过滤器：HTML输出（需权限 template:filter.html）
-        $html = \app\service\PluginService::apply_filters('template.html_filter', [
+        $html = PluginService::apply_filters('template.html_filter', [
             'template' => $template,
             'html' => $html,
             'app' => $app,

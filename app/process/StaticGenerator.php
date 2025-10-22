@@ -3,9 +3,18 @@
 namespace app\process;
 
 use app\model\Post;
+use app\service\MQService;
+use MatthiasMullie\Minify\CSS;
+use MatthiasMullie\Minify\JS;
+use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
+use PhpAmqpLib\Exception\AMQPTimeoutException;
 use PhpAmqpLib\Message\AMQPMessage;
+use PhpAmqpLib\Wire\AMQPTable;
+use RuntimeException;
 use support\Log;
+use Throwable;
+use Workerman\Timer;
 
 /**
  * 全站静态化生成进程
@@ -18,7 +27,7 @@ class StaticGenerator
     /** @var AMQPStreamConnection|null */
     protected ?AMQPStreamConnection $mqConnection = null;
 
-    /** @var \PhpAmqpLib\Channel\AMQPChannel|null */
+    /** @var AMQPChannel|null */
     protected $mqChannel = null;
 
     // MQ 命名
@@ -45,16 +54,16 @@ class StaticGenerator
         $this->startConsumer();
 
         // 周期增量：每小时执行一次
-        if (class_exists(\Workerman\Timer::class)) {
-            \Workerman\Timer::add(3600, function () {
+        if (class_exists(Timer::class)) {
+            Timer::add(3600, function () {
                 $this->enqueueIncrementalPosts(24);
             });
             // 每60秒进行一次 MQ 健康检查
-            \Workerman\Timer::add(60, function () {
+            Timer::add(60, function () {
                 try {
-                    \app\service\MQService::checkAndHeal();
-                } catch (\Throwable $e) {
-                    \support\Log::warning('MQ 健康检查异常(StaticGenerator): ' . $e->getMessage());
+                    MQService::checkAndHeal();
+                } catch (Throwable $e) {
+                    Log::warning('MQ 健康检查异常(StaticGenerator): ' . $e->getMessage());
                 }
             });
         }
@@ -64,7 +73,7 @@ class StaticGenerator
     {
         try {
             // 使用 MQService 通道
-            $this->mqChannel = \app\service\MQService::getChannel();
+            $this->mqChannel = MQService::getChannel();
 
             // 允许通过配置覆盖命名
             $this->exchange = (string) blog_config('rabbitmq_static_exchange', $this->exchange, true) ?: $this->exchange;
@@ -74,11 +83,11 @@ class StaticGenerator
             $this->dlxQueue = (string) blog_config('rabbitmq_static_dlx_queue', $this->dlxQueue, true) ?: $this->dlxQueue;
 
             // 使用 MQService 的通用初始化（专属 DLX/DLQ）
-            \app\service\MQService::declareDlx($this->mqChannel, $this->dlxExchange, $this->dlxQueue);
-            \app\service\MQService::setupQueueWithDlx($this->mqChannel, $this->exchange, $this->routingKey, $this->queueName, $this->dlxExchange, $this->dlxQueue);
+            MQService::declareDlx($this->mqChannel, $this->dlxExchange, $this->dlxQueue);
+            MQService::setupQueueWithDlx($this->mqChannel, $this->exchange, $this->routingKey, $this->queueName, $this->dlxExchange, $this->dlxQueue);
 
             Log::info('StaticGenerator MQ 初始化成功');
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('StaticGenerator MQ 初始化失败: ' . $e->getMessage());
         }
     }
@@ -93,15 +102,15 @@ class StaticGenerator
             $this->handleMessage($message);
         });
         // 在 worker 循环中轮询消费
-        if (class_exists(\Workerman\Timer::class)) {
-            \Workerman\Timer::add(1, function () {
+        if (class_exists(Timer::class)) {
+            Timer::add(1, function () {
                 if ($this->mqChannel) {
                     try {
                         // 增大超时时间并忽略超时异常
                         $this->mqChannel->wait(null, false, 1.0);
-                    } catch (\PhpAmqpLib\Exception\AMQPTimeoutException $e) {
+                    } catch (AMQPTimeoutException $e) {
                         // 无数据到达的正常超时，忽略
-                    } catch (\Throwable $e) {
+                    } catch (Throwable $e) {
                         Log::warning('StaticGenerator 消费轮询异常: ' . $e->getMessage());
                     }
                 }
@@ -114,7 +123,7 @@ class StaticGenerator
         try {
             $payload = json_decode($message->getBody(), true);
             if (!is_array($payload)) {
-                throw new \RuntimeException('消息体不是有效JSON');
+                throw new RuntimeException('消息体不是有效JSON');
             }
             $type = $payload['type'] ?? 'url';
             $options = $payload['options'] ?? [];
@@ -129,11 +138,11 @@ class StaticGenerator
                 $pages = (int) ($options['pages'] ?? 1);
                 $this->generateByScope($scope, $pages, $force, $jobId);
             } else {
-                throw new \RuntimeException('未知消息类型: ' . $type);
+                throw new RuntimeException('未知消息类型: ' . $type);
             }
 
             $message->ack();
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('静态化消息处理失败: ' . $e->getMessage());
             $this->handleFailedMessage($message);
         }
@@ -143,12 +152,12 @@ class StaticGenerator
     {
         $headers = $message->has('application_headers') ? $message->get('application_headers') : null;
         $retry = 0;
-        if ($headers instanceof \PhpAmqpLib\Wire\AMQPTable) {
+        if ($headers instanceof AMQPTable) {
             $native = method_exists($headers, 'getNativeData') ? $headers->getNativeData() : (array) $headers;
             $retry = (int) ($native['x-retry-count'] ?? 0);
         }
         if ($retry < 2) { // 第1、2次失败重试；第3次进入死信
-            $newHeaders = $headers ? clone $headers : new \PhpAmqpLib\Wire\AMQPTable();
+            $newHeaders = $headers ? clone $headers : new AMQPTable();
             $newHeaders->set('x-retry-count', $retry + 1);
             $newMsg = new AMQPMessage($message->getBody(), [
                 'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT,
@@ -192,9 +201,9 @@ class StaticGenerator
             $total = (int) Post::where('status', 'published')->count('*');
         } elseif ($scope === 'all') {
             $total = (max(1, $pages) + 1) // index
-                   + (max(1, $pages) + 1) // list
-                   + (int) Post::where('status', 'published')->count('*')
-                   + 1; // /search
+                + (max(1, $pages) + 1) // list
+                + (int) Post::where('status', 'published')->count('*')
+                + 1; // /search
         }
         if ($jobId) {
             $this->progressStart($jobId, $scope, $total);
@@ -349,7 +358,7 @@ class StaticGenerator
                 return $html;
             }
 
-            if (!class_exists(\MatthiasMullie\Minify\JS::class) || !class_exists(\MatthiasMullie\Minify\CSS::class)) {
+            if (!class_exists(JS::class) || !class_exists(CSS::class)) {
                 Log::warning('minify库未安装，已跳过JS/CSS压缩（composer require matthiasmullie/minify）');
 
                 return $html;
@@ -380,9 +389,9 @@ class StaticGenerator
 
                 if (!file_exists($outPath)) {
                     try {
-                        $minifier = new \MatthiasMullie\Minify\JS($srcPath);
+                        $minifier = new JS($srcPath);
                         $minifier->minify($outPath);
-                    } catch (\Throwable $e) {
+                    } catch (Throwable $e) {
                         Log::warning('JS压缩失败，回退原始: ' . $e->getMessage());
 
                         return $m[0];
@@ -406,9 +415,9 @@ class StaticGenerator
 
                 if (!file_exists($outPath)) {
                     try {
-                        $minifier = new \MatthiasMullie\Minify\CSS($hrefPath);
+                        $minifier = new CSS($hrefPath);
                         $minifier->minify($outPath);
-                    } catch (\Throwable $e) {
+                    } catch (Throwable $e) {
                         Log::warning('CSS压缩失败，回退原始: ' . $e->getMessage());
 
                         return $m[0];
@@ -419,7 +428,7 @@ class StaticGenerator
             }, $replaced);
 
             return $replaced;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::warning('HTML压缩替换异常，已回退原始: ' . $e->getMessage());
 
             return $html;
@@ -464,6 +473,8 @@ class StaticGenerator
         $headers = [
             'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
             'User-Agent: StaticGenerator/1.0',
+            // 添加绕过首屏快速加载的请求头
+            'X-INSTANT-BYPASS: 1',
         ];
         curl_setopt_array($ch, [
             CURLOPT_URL => $url,
@@ -522,7 +533,7 @@ class StaticGenerator
             ]);
 
             Log::info('增量静态化任务入队: ' . count($posts) . ' 篇（含首页/友链及其分页2-5刷新）');
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('增量入队失败: ' . $e->getMessage());
         }
     }
@@ -608,10 +619,10 @@ class StaticGenerator
                 $this->mqChannel->close();
             }
             // 统一通过 MQService 关闭
-            \app\service\MQService::closeConnection();
+            MQService::closeConnection();
             Log::info('StaticGenerator MQ连接已关闭');
-        } catch (\Throwable $e) {
-            Log::warning('关闭MQ连接失败: ' . $e->Message());
+        } catch (Throwable $e) {
+            Log::warning('关闭MQ连接失败: ' . $e->getMessage());
         }
     }
 }

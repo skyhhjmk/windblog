@@ -4,8 +4,10 @@ namespace plugin\admin\app\controller;
 
 use app\model\ImportJob;
 use app\service\MQService;
+use Exception;
 use PhpAmqpLib\Message\AMQPMessage;
 use support\exception\BusinessException;
+use support\Log;
 use support\Request;
 use support\Response;
 use Throwable;
@@ -207,9 +209,9 @@ class WpImportController extends Base
                 'code' => 0,
                 'msg' => trans('Import job enqueued'),
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // 记录错误日志
-            \support\Log::error('导入提交错误: ' . $e->getMessage(), ['exception' => $e]);
+            Log::error('导入提交错误: ' . $e->getMessage(), ['exception' => $e]);
 
             // 错误响应格式兼容layui
             return json([
@@ -243,8 +245,8 @@ class WpImportController extends Base
                     'message' => $job->message,
                 ],
             ]);
-        } catch (\Exception $e) {
-            \support\Log::error('获取导入状态错误: ' . $e->getMessage(), ['exception' => $e]);
+        } catch (Exception $e) {
+            Log::error('获取导入状态错误: ' . $e->getMessage(), ['exception' => $e]);
 
             return json(['code' => 500, 'msg' => '服务器内部错误']);
         }
@@ -278,8 +280,8 @@ class WpImportController extends Base
             ]);
 
             return json(['code' => 200, 'msg' => '任务重置成功']);
-        } catch (\Exception $e) {
-            \support\Log::error('重置导入任务错误: ' . $e->getMessage(), ['exception' => $e]);
+        } catch (Exception $e) {
+            Log::error('重置导入任务错误: ' . $e->getMessage(), ['exception' => $e]);
 
             return json(['code' => 500, 'msg' => '服务器内部错误']);
         }
@@ -310,8 +312,8 @@ class WpImportController extends Base
             $job->delete();
 
             return json(['code' => 200, 'msg' => '任务删除成功']);
-        } catch (\Exception $e) {
-            \support\Log::error('删除导入任务错误: ' . $e->getMessage(), ['exception' => $e]);
+        } catch (Exception $e) {
+            Log::error('删除导入任务错误: ' . $e->getMessage(), ['exception' => $e]);
 
             return json(['code' => 500, 'msg' => '服务器内部错误']);
         }

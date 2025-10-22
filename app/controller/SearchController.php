@@ -2,9 +2,13 @@
 
 namespace app\controller;
 
+use app\model\Category;
+use app\model\Tag;
 use app\service\BlogService;
 use app\service\ElasticService;
+use app\service\PaginationService;
 use app\service\SidebarService;
+use Exception;
 use League\CommonMark\Exception\CommonMarkException;
 use support\Request;
 use support\Response;
@@ -54,7 +58,7 @@ class SearchController
 
         // ES启用且指定类型时：在ES命中集合基础上按标签/分类名称进行二次过滤
         try {
-            $esEnabled = (bool) \app\service\BlogService::getConfig('es.enabled', false);
+            $esEnabled = (bool) BlogService::getConfig('es.enabled', false);
             $degraded = !empty(($result['esMeta']['signals']['degraded'] ?? false));
             if ($esEnabled && !empty($keyword) && in_array($type, ['tag', 'category'], true)) {
                 $posts = $result['posts'];
@@ -62,8 +66,8 @@ class SearchController
                 if (!$degraded) {
                     // 正常ES路径：用ES返回的标签/分类列表来筛选文章，空结果不算失败（将得到空集合）
                     $targets = $type === 'tag'
-                        ? \app\service\ElasticService::searchTags($keyword, 100)
-                        : \app\service\ElasticService::searchCategories($keyword, 100);
+                        ? ElasticService::searchTags($keyword, 100)
+                        : ElasticService::searchCategories($keyword, 100);
 
                     // 构建可匹配集合（id 优先，其次 name/slug，统一小写）
                     $idsSet = [];
@@ -141,10 +145,10 @@ class SearchController
                 // 覆盖结果集与计数，并重新生成分页（保留每页条数）
                 $result['posts'] = $filtered;
                 $result['totalCount'] = count($filtered);
-                $result['pagination'] = \app\service\PaginationService::generatePagination(
+                $result['pagination'] = PaginationService::generatePagination(
                     $page,
                     (int) $result['totalCount'],
-                    (int) ($result['postsPerPage'] ?? \app\service\BlogService::getPostsPerPage()),
+                    (int) ($result['postsPerPage'] ?? BlogService::getPostsPerPage()),
                     'search.page',
                     [
                         'q' => $keyword,
@@ -154,7 +158,7 @@ class SearchController
                     ]
                 );
             }
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // 过滤过程中出错不影响主流程
         }
 
@@ -174,10 +178,10 @@ class SearchController
         $viewName = $isPjax ? 'search/index.content' : 'search/index';
 
         // 为搜索页生成正确的分页HTML，携带查询参数，避免跳转到首页分页
-        $pagination_html = \app\service\PaginationService::generatePagination(
+        $pagination_html = PaginationService::generatePagination(
             $page,
             (int) ($result['totalCount'] ?? 0),
-            (int) ($result['postsPerPage'] ?? \app\service\BlogService::getPostsPerPage()),
+            (int) ($result['postsPerPage'] ?? BlogService::getPostsPerPage()),
             'search.page',
             [
                 'q' => $keyword,
@@ -271,21 +275,21 @@ class SearchController
 
             // 标签与分类匹配：ES启用时调用 ElasticService 专用方法，未启用时回退DB模糊匹配
             $mixedItems = $postItems;
-            $esEnabled = (bool) \app\service\BlogService::getConfig('es.enabled', false);
+            $esEnabled = (bool) BlogService::getConfig('es.enabled', false);
             if ($esEnabled) {
                 // 仅在 ES 服务降级时才对标签进行数据库回退；空结果不视为失败
                 if ($type === 'all' || $type === 'tag') {
-                    $tags = \app\service\ElasticService::searchTags($keyword, 10);
+                    $tags = ElasticService::searchTags($keyword, 10);
                     $degraded = !empty($signals['degraded']);
                     if ($degraded && empty($tags)) {
                         try {
-                            $tagModel = \app\model\Tag::where('name', 'like', '%' . $keyword . '%')
+                            $tagModel = Tag::where('name', 'like', '%' . $keyword . '%')
                                 ->orWhere('slug', 'like', '%' . $keyword . '%')
                                 ->limit(10)->get(['id', 'name', 'slug']);
                             foreach ($tagModel as $t) {
                                 $tags[] = ['id' => (int) $t->id, 'name' => (string) $t->name, 'slug' => (string) $t->slug];
                             }
-                        } catch (\Throwable $e) {
+                        } catch (Throwable $e) {
                         }
                     }
                     foreach ($tags as $t) {
@@ -299,17 +303,17 @@ class SearchController
                 }
                 // 仅在 ES 服务降级时才对分类进行数据库回退；空结果不视为失败
                 if ($type === 'all' || $type === 'category') {
-                    $cats = \app\service\ElasticService::searchCategories($keyword, 10);
+                    $cats = ElasticService::searchCategories($keyword, 10);
                     $degraded = !empty($signals['degraded']);
                     if ($degraded && empty($cats)) {
                         try {
-                            $catModel = \app\model\Category::where('name', 'like', '%' . $keyword . '%')
+                            $catModel = Category::where('name', 'like', '%' . $keyword . '%')
                                 ->orWhere('slug', 'like', '%' . $keyword . '%')
                                 ->limit(10)->get(['id', 'name', 'slug']);
                             foreach ($catModel as $c) {
                                 $cats[] = ['id' => (int) $c->id, 'name' => (string) $c->name, 'slug' => (string) $c->slug];
                             }
-                        } catch (\Throwable $e) {
+                        } catch (Throwable $e) {
                         }
                     }
                     foreach ($cats as $c) {
@@ -325,7 +329,7 @@ class SearchController
                 // ES未启用：沿用DB模糊匹配
                 if ($type === 'all' || $type === 'tag') {
                     try {
-                        $tagModel = \app\model\Tag::where('name', 'like', '%' . $keyword . '%')
+                        $tagModel = Tag::where('name', 'like', '%' . $keyword . '%')
                             ->orWhere('slug', 'like', '%' . $keyword . '%')
                             ->limit(10)->get(['id', 'name', 'slug']);
                         foreach ($tagModel as $t) {
@@ -336,12 +340,12 @@ class SearchController
                                 'url' => '/tag/' . (string) $t->slug . '.html',
                             ];
                         }
-                    } catch (\Throwable $e) {
+                    } catch (Throwable $e) {
                     }
                 }
                 if ($type === 'all' || $type === 'category') {
                     try {
-                        $catModel = \app\model\Category::where('name', 'like', '%' . $keyword . '%')
+                        $catModel = Category::where('name', 'like', '%' . $keyword . '%')
                             ->orWhere('slug', 'like', '%' . $keyword . '%')
                             ->limit(10)->get(['id', 'name', 'slug']);
                         foreach ($catModel as $c) {
@@ -352,7 +356,7 @@ class SearchController
                                 'url' => '/category/' . (string) $c->slug . '.html',
                             ];
                         }
-                    } catch (\Throwable $e) {
+                    } catch (Throwable $e) {
                     }
                 }
             }
@@ -383,7 +387,7 @@ class SearchController
             return response(json_encode($response, JSON_UNESCAPED_UNICODE), 200)
                 ->withHeader('Content-Type', 'application/json');
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             error_log('SearchController ajax error: ' . $e->getMessage());
 
             return response(json_encode(['success' => false, 'message' => '搜索失败: ' . $e->getMessage()]), 500)

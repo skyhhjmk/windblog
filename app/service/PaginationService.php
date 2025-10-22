@@ -7,12 +7,13 @@ class PaginationService
     /**
      * 生成分页HTML
      *
-     * @param int $currentPage 当前页码
-     * @param int $totalItems 总条目数
-     * @param int $itemsPerPage 每页条目数
-     * @param string $routeName 路由名称 - 用于拼接分页链接
-     * @param array $routeParams 路由参数
-     * @param int $maxDisplayPages 最大显示页码数
+     * @param int    $currentPage     当前页码
+     * @param int    $totalItems      总条目数
+     * @param int    $itemsPerPage    每页条目数
+     * @param string $routeName       路由名称 - 用于拼接分页链接
+     * @param array  $routeParams     路由参数
+     * @param int    $maxDisplayPages 最大显示页码数
+     *
      * @return string 分页HTML
      */
     public static function generatePagination(
@@ -120,7 +121,7 @@ class PaginationService
         $paginationHtml .= '</div>';
 
         // 动作：分页构建完成（需权限 pagination:action.built）
-        \app\service\PluginService::do_action('pagination.built', [
+        PluginService::do_action('pagination.built', [
             'currentPage' => $currentPage,
             'totalItems' => $totalItems,
             'itemsPerPage' => $itemsPerPage,
@@ -129,7 +130,7 @@ class PaginationService
         ]);
 
         // 过滤器：分页HTML（需权限 pagination:filter.html）
-        $paginationHtml = \app\service\PluginService::apply_filters('pagination.html_filter', [
+        $paginationHtml = PluginService::apply_filters('pagination.html_filter', [
             'routeName' => $routeName,
             'html' => $paginationHtml,
         ])['html'] ?? $paginationHtml;

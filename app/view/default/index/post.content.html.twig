@@ -52,9 +52,9 @@
 
         <!-- 文章内容 -->
         <div class="p-6">
-            <div class="prose max-w-none fade-in-on-scroll no-animation" 
-                 id="post-container" 
-                 data-post-id="{{ post.id }}" 
+            <div class="prose max-w-none fade-in-on-scroll no-animation"
+                 id="post-container"
+                 data-post-id="{{ post.id }}"
                  data-post-slug="{{ post.slug }}">
                 <!-- 内容将由 Vditor 渲染 -->
             </div>
@@ -83,7 +83,7 @@
     <!-- 评论区域 -->
     <div class="mt-8 bg-white rounded-xl shadow-md p-6" id="comments-section">
         <h2 class="text-2xl font-bold text-gray-800 mb-4">评论</h2>
-        
+
         <!-- 评论列表 -->
         <div id="comments-list" class="mb-8">
             <!-- 评论将通过JavaScript动态加载 -->
@@ -148,8 +148,16 @@
     window.__postContentCache = window.__postContentCache || {};
     // 加载状态标记（防止重复请求）
     window.__postLoadingState = window.__postLoadingState || {};
+    // 添加一个标志来防止重复初始化
+    window.__postRendered = window.__postRendered || false;
 
     function renderPost() {
+        // 检查是否已经渲染过，防止重复执行
+        if (window.__postRendered) {
+            console.log('[Post.content] 文章内容已渲染，跳过重复渲染');
+            return;
+        }
+
         const container = document.getElementById('post-container');
         if (!container) {
             console.warn('[Post.content] 容器不存在');
@@ -157,8 +165,36 @@
         }
 
         // 从嵌入的 JSON 数据中读取内容
-        const contentDataEl = document.getElementById('post-content-data');
+        // 首先尝试通过ID查找
+        let contentDataEl = document.getElementById('post-content-data');
+        console.log('[Post.content] 通过ID查找内容数据元素:', contentDataEl);
+
+        // 如果通过ID找不到，则尝试通过类型查找
         if (!contentDataEl) {
+            console.log('[Post.content] 通过ID未找到，尝试通过类型查找');
+            const allScripts = document.querySelectorAll('script[type="application/json"]');
+            for (let i = 0; i < allScripts.length; i++) {
+                // 查找内容长度较大的JSON脚本，这很可能是文章内容
+                if (allScripts[i].textContent && allScripts[i].textContent.length > 100) {
+                    contentDataEl = allScripts[i];
+                    console.log('[Post.content] 通过类型找到内容数据元素，索引:', i, '内容长度:', allScripts[i].textContent.length);
+                    break;
+                }
+            }
+        }
+
+        console.log('[Post.content] 最终查找到的内容数据元素:', contentDataEl);
+        console.log('[Post.content] 当前document状态:', document.readyState);
+        console.log('[Post.content] 当前页面URL:', window.location.href);
+
+        if (!contentDataEl) {
+            // 添加更多调试信息
+            console.log('[Post.content] 页面中的所有script标签:');
+            const allScripts = document.querySelectorAll('script');
+            allScripts.forEach((script, index) => {
+                console.log(`  [${index}] type: ${script.type}, id: ${script.id}, content length: ${script.textContent ? script.textContent.length : 0}`);
+            });
+
             console.error('[Post.content] 内容数据不存在');
             container.innerHTML = '<div class="text-red-500 p-4 border border-red-300 rounded">' +
                 '⚠️ 文章内容加载失败：数据丢失<br>' +
@@ -169,8 +205,10 @@
 
         try {
             const content = JSON.parse(contentDataEl.textContent || '""');
-            console.log('[Post.content] 从模板数据加载内容');
+            console.log('[Post.content] 从模板数据加载内容，内容长度:', content.length);
             renderContent(container, content);
+            // 标记已渲染
+            window.__postRendered = true;
         } catch (error) {
             console.error('[Post.content] 解析内容数据失败:', error);
             container.innerHTML = '<div class="text-red-500 p-4 border border-red-300 rounded">' +
@@ -196,7 +234,7 @@
                 return;
             }
 
-            console.log('[Post.content] Vditor 已加载，开始渲染内容');
+            console.log('[Post.content] Vditor 已加载，开始渲染内容，内容长度:', content.length);
             Vditor.preview(container, content, {
                 mode: 'light',
                 lang: 'zh_CN',
@@ -236,9 +274,11 @@
         }
         console.log('[Post.content] DOMContentLoaded 触发');
         window.__rpTry = 0;
+        // 重置渲染状态
+        window.__postRendered = false;
         renderPost();
     });
-    
+
     document.addEventListener('page:ready', function() {
         // 检查是否在文章页
         if (!document.getElementById('post-container')) {
@@ -246,18 +286,44 @@
         }
         console.log('[Post.content] page:ready 触发');
         window.__rpTry = 0;
+        // 重置渲染状态
+        window.__postRendered = false;
         renderPost();
     });
-    
+
     // 立即执行一次（用于 PJAX 加载）
     (function () {
         // 检查是否在文章页
-        if (!document.getElementById('post-container')) {
+        const container = document.getElementById('post-container');
+        if (!container) {
             return;
         }
-        
+
         console.log('[Post.content] 脚本开始执行');
-        
+        console.log('[Post.content] 当前document状态:', document.readyState);
+
+        // 确保DOM已加载完成
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function () {
+                console.log('[Post.content] DOMContentLoaded事件回调执行');
+                window.__rpTry = 0;
+                // 重置渲染状态
+                window.__postRendered = false;
+                injectSidebar();
+                renderPost();
+            });
+        } else {
+            // 使用setTimeout确保在PJAX完全加载后再执行
+            setTimeout(function () {
+                console.log('[Post.content] setTimeout回调执行');
+                window.__rpTry = 0;
+                // 重置渲染状态
+                window.__postRendered = false;
+                injectSidebar();
+                renderPost();
+            }, 0);
+        }
+
         function injectSidebar() {
             var t = document.getElementById('pjax-sidebar-html');
             var c = document.getElementById('sidebar-container');
@@ -268,17 +334,13 @@
                 c.innerHTML = t.innerHTML || '';
             }
         }
-        
-        window.__rpTry = 0;
-        injectSidebar();
-        renderPost();
     })();
 
     // 初始化评论功能
     function initComments() {
         const postId = {{ post.id }};
         const allowComments = {{ post.allow_comments|default(true) ? 'true' : 'false' }};
-        
+
         // 始终加载已有评论（无论是否允许评论）
         loadComments(postId);
 
@@ -313,7 +375,7 @@
                 const parentId = document.getElementById('parent-id');
                 const quotedText = document.getElementById('quoted-text');
                 const quotedCommentId = document.getElementById('quoted-comment-id');
-                
+
                 if (selectedTextQuote) selectedTextQuote.classList.add('hidden');
                 if (parentId) parentId.value = '0';
                 if (quotedText) quotedText.value = '';
@@ -514,22 +576,22 @@
     // 格式化日期
     function formatDate(dateString) {
         console.log('[formatDate] 原始时间字符串:', dateString);
-        
+
         // 处理带微秒的 ISO 8601 格式 (例如: 2025-10-16T04:02:30.000000Z)
         // 移除微秒部分，只保留到秒: 2025-10-16T04:02:30Z
         const normalizedDateString = dateString.replace(/(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(\.\d+)?(Z?)/, '$1$3');
         console.log('[formatDate] 规范化后:', normalizedDateString);
-        
+
         // 正确处理：保留Z，让JavaScript自动转换为UTC时间
         // 数据库存储的是UTC时间，new Date()会自动转换为本地时间
         const date = new Date(normalizedDateString);
         console.log('[formatDate] 解析的日期对象:', date);
         console.log('[formatDate] 日期时间戳:', date.getTime());
-        
+
         const now = new Date();
         console.log('[formatDate] 当前时间:', now);
         console.log('[formatDate] 当前时间戳:', now.getTime());
-        
+
         const diff = now - date;
         console.log('[formatDate] 时间差(毫秒):', diff);
         console.log('[formatDate] 时间差(分钟):', Math.floor(diff / 60000));

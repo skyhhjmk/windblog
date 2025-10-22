@@ -5,6 +5,7 @@ namespace app\middleware;
 use app\annotation\EnableInstantFirstPaint;
 use ReflectionClass;
 use ReflectionMethod;
+use Throwable;
 use Webman\Http\Request;
 use Webman\Http\Response;
 use Webman\MiddlewareInterface;
@@ -20,6 +21,52 @@ use Webman\MiddlewareInterface;
  */
 class InstantFirstPaint implements MiddlewareInterface
 {
+    // 定义已知的合法搜索引擎爬虫 User-Agent 关键词
+    protected const KNOWN_SEARCH_ENGINES = [
+        'googlebot',
+        'bingbot',
+        'baiduspider',
+        'yandexbot',
+        'yahoo! slurp',
+        'sogou',
+        'yisouspider',
+        'bytespider',
+        'petalbot',
+        'duckduckbot',
+        'facebookexternalhit',
+        'twitterbot',
+        'linkedinbot',
+        'applebot',
+        '360spider',
+        'semrushbot',
+        'ahrefsbot',
+        'amazonbot',
+        'archive.org_bot',
+        'ia_archiver',
+        'heritrix',
+        'wget',
+        'curl',
+        'feedly',
+        'feedburner',
+        'mediapartners-google',
+        'adsbot-google',
+    ];
+
+    // 定义需要拦截的其他爬虫关键词
+    protected const OTHER_CRAWLERS = [
+        'bot',
+        'spider',
+        'crawler',
+        'scraper',
+        'scrapy',
+        'httrack',
+        'java/',
+        'python-requests',
+        'go-http-client',
+        'axios',
+        'seo',
+    ];
+
     public function process(Request $request, callable $handler): Response
     {
         // 检查是否有控制器方法标记了 EnableInstantFirstPaint 注解
@@ -39,9 +86,11 @@ class InstantFirstPaint implements MiddlewareInterface
 
         // 允许通过 Header/Query 显式绕过（防递归/调试）
         // Query 参数会被 CDN 转发，更可靠
+        // 添加对静态化生成请求的检测，自动绕过骨架屏逻辑
         if ($request->header('X-INSTANT-BYPASS') === '1' ||
             $request->get('no_instant') == '1' ||
-            $request->get('_instant_bypass') === '1') {
+            $request->get('_instant_bypass') === '1' ||
+            $request->header('User-Agent') === 'StaticGenerator/1.0') {
             // 绕过骨架页，返回完整页面
             // 完整页面应该被 CDN 缓存，添加缓存头
             $response = $handler($request);
@@ -80,10 +129,16 @@ class InstantFirstPaint implements MiddlewareInterface
             return $handler($request);
         }
 
-        // 跳过常见爬虫，避免只见 Loading 影响 SEO
+        // 检查 User-Agent，确保合法搜索引擎爬虫能获取完整页面
         $ua = strtolower((string) $request->header('User-Agent'));
         if ($ua) {
-            if (array_any(['bot', 'spider', 'crawler', 'bingpreview', 'slurp', 'duckduckbot', 'baiduspider', 'sogou', 'yisouspider', 'bytespider', 'petalbot', 'google'], fn ($kw) => str_contains($ua, $kw))) {
+            // 如果是已知的合法搜索引擎爬虫，直接返回完整页面
+            if ($this->isKnownSearchEngine($ua)) {
+                return $handler($request);
+            }
+
+            // 如果是其他可疑的爬虫，跳过首屏优化
+            if ($this->isOtherCrawler($ua)) {
                 return $handler($request);
             }
         }
@@ -107,6 +162,42 @@ class InstantFirstPaint implements MiddlewareInterface
             'Cloudflare-CDN-Cache-Control' => 'no-store',
             'X-Instant' => '1',
         ], $html);
+    }
+
+    /**
+     * 检查是否为已知的合法搜索引擎
+     *
+     * @param string $userAgent
+     *
+     * @return bool
+     */
+    protected function isKnownSearchEngine(string $userAgent): bool
+    {
+        foreach (self::KNOWN_SEARCH_ENGINES as $searchEngine) {
+            if (str_contains($userAgent, $searchEngine)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * 检查是否为其他可疑爬虫
+     *
+     * @param string $userAgent
+     *
+     * @return bool
+     */
+    protected function isOtherCrawler(string $userAgent): bool
+    {
+        foreach (self::OTHER_CRAWLERS as $crawler) {
+            if (str_contains($userAgent, $crawler)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -158,7 +249,7 @@ class InstantFirstPaint implements MiddlewareInterface
                 .then(function(h){
                 // 检测是否又返回了骨架页（含有特定标记）
                 if(h.indexOf('_ilc')!==-1&&h.length<2000){sessionStorage.removeItem('_ilc');location.href=location.href.split('?')[0]+'?no_instant=1&t='+Date.now();return}
-                p(100);try{sessionStorage.removeItem('_ilc')}catch(e){};setTimeout(function(){try{document.open();document.write(h);document.close()}catch(e){location.reload()}},50)
+                p(100);try{sessionStorage.removeItem('_ilc')}catch(e){}setTimeout(function(){try{document.open();document.write(h);document.close()}catch(e){location.reload()}},50)
                 })
                 .catch(function(){location.reload()})
                 }catch(e){location.reload()}
@@ -217,7 +308,7 @@ class InstantFirstPaint implements MiddlewareInterface
             $annotation = $annotations[0]->newInstance();
 
             return $annotation->enabled;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // 出现异常时，返回 false
             return false;
         }

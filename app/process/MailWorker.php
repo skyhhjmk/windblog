@@ -4,13 +4,19 @@ declare(strict_types=1);
 
 namespace app\process;
 
+use app\service\MQService;
+use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
+use PhpAmqpLib\Exception\AMQPTimeoutException;
 use PhpAmqpLib\Message\AMQPMessage;
 use PhpAmqpLib\Wire\AMQPTable;
 use PHPMailer\PHPMailer\DSNConfigurator;
 use PHPMailer\PHPMailer\Exception as MailException;
 use PHPMailer\PHPMailer\PHPMailer;
+use RuntimeException;
 use support\Log;
+use Throwable;
+use Workerman\Timer;
 
 class MailWorker
 {
@@ -26,7 +32,7 @@ class MailWorker
     /** @var AMQPStreamConnection|null */
     protected ?AMQPStreamConnection $mqConnection = null;
 
-    /** @var \PhpAmqpLib\Channel\AMQPChannel|null */
+    /** @var AMQPChannel|null */
     protected $mqChannel = null;
 
     protected string $exchange = 'mail_exchange';
@@ -54,12 +60,12 @@ class MailWorker
         return $this->mqConnection;
     }
 
-    protected function getMqChannel(): \PhpAmqpLib\Channel\AMQPChannel
+    protected function getMqChannel(): AMQPChannel
     {
         if ($this->mqChannel === null) {
 
             // 使用 MQService 通道
-            $this->mqChannel = \app\service\MQService::getChannel();
+            $this->mqChannel = MQService::getChannel();
 
             // 初始化命名（从配置覆盖）
             $this->exchange = (string) blog_config('rabbitmq_mail_exchange', $this->exchange, true) ?: $this->exchange;
@@ -69,8 +75,8 @@ class MailWorker
             $this->mailDlxQueue = (string) blog_config('rabbitmq_mail_dlx_queue', $this->mailDlxQueue, true) ?: $this->mailDlxQueue;
 
             // 使用 MQService 的通用初始化（专属 DLX/DLQ）
-            \app\service\MQService::declareDlx($this->mqChannel, $this->dlxExchange, $this->mailDlxQueue);
-            \app\service\MQService::setupQueueWithDlx($this->mqChannel, $this->exchange, $this->routingKey, $this->queueName, $this->dlxExchange, $this->mailDlxQueue);
+            MQService::declareDlx($this->mqChannel, $this->dlxExchange, $this->mailDlxQueue);
+            MQService::setupQueueWithDlx($this->mqChannel, $this->exchange, $this->routingKey, $this->queueName, $this->dlxExchange, $this->mailDlxQueue);
         }
 
         return $this->mqChannel;
@@ -85,11 +91,11 @@ class MailWorker
         $channel = $this->getMqChannel();
 
         // 每60秒进行一次 MQ 健康检查
-        \Workerman\Timer::add(60, function () {
+        Timer::add(60, function () {
             try {
-                \app\service\MQService::checkAndHeal();
-            } catch (\Throwable $e) {
-                \support\Log::warning('MQ 健康检查异常: ' . $e->getMessage());
+                MQService::checkAndHeal();
+            } catch (Throwable $e) {
+                Log::warning('MQ 健康检查异常: ' . $e->getMessage());
             }
         });
 
@@ -108,9 +114,9 @@ class MailWorker
         while (true) {
             try {
                 $channel->wait(null, false, 1.0);
-            } catch (\PhpAmqpLib\Exception\AMQPTimeoutException $e) {
+            } catch (AMQPTimeoutException $e) {
                 // 正常超时，无消息到达
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 //                Log::error('MailWorker wait error: ' . $e->getMessage());
             }
         }
@@ -121,11 +127,11 @@ class MailWorker
         try {
             $raw = $message->getBody();
             if ($raw === '' || $raw === null) {
-                throw new \RuntimeException('Message body empty');
+                throw new RuntimeException('Message body empty');
             }
             $data = json_decode($raw, true);
             if (!is_array($data)) {
-                throw new \RuntimeException('Message body invalid JSON');
+                throw new RuntimeException('Message body invalid JSON');
             }
 
             // 指定平台优先
@@ -140,14 +146,14 @@ class MailWorker
                         if ($this->lastError) {
                             $msg .= ' | last=' . $this->lastError;
                         }
-                        throw new \RuntimeException($msg);
+                        throw new RuntimeException($msg);
                     }
                 }
             } else {
                 // 策略选择平台
                 $chosen = $this->chooseProvider();
                 if ($chosen === null) {
-                    throw new \RuntimeException('No available provider');
+                    throw new RuntimeException('No available provider');
                 }
                 $ok = $this->sendViaProvider($data, $chosen);
                 if (!$ok) {
@@ -160,20 +166,20 @@ class MailWorker
                             if ($this->lastError) {
                                 $msg .= ' | last=' . $this->lastError;
                             }
-                            throw new \RuntimeException($msg);
+                            throw new RuntimeException($msg);
                         }
                     } else {
                         $msg = 'No alternative provider for failover';
                         if ($this->lastError) {
                             $msg .= ' | last=' . $this->lastError;
                         }
-                        throw new \RuntimeException($msg);
+                        throw new RuntimeException($msg);
                     }
                 }
             }
 
             $message->ack();
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $extra = $this->lastError ? (' | last=' . $this->lastError) : '';
             Log::error('Send mail failed: ' . $e->getMessage() . $extra);
             $this->handleFailedMessage($message);
@@ -467,7 +473,7 @@ class MailWorker
             $this->recordFailure($providerId);
 
             return false;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $this->lastError = $e->getMessage();
             $this->recordFailure($providerId);
 
@@ -477,6 +483,7 @@ class MailWorker
 
     /**
      * 选择平台（加权随机/轮询），排除禁用与 ban 中的平台
+     *
      * @param array<int,string> $exclude
      */
     protected function chooseProvider(array $exclude = []): ?string
@@ -647,7 +654,7 @@ class MailWorker
             $arr = json_decode($txt, true);
 
             return is_array($arr) ? $arr : [];
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return [];
         }
     }
@@ -657,7 +664,7 @@ class MailWorker
         $file = $this->failFile;
         try {
             @file_put_contents($file, json_encode($state, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // 忽略
         }
     }

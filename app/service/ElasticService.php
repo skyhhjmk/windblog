@@ -4,7 +4,9 @@ namespace app\service;
 
 use Elastic\Elasticsearch\ClientBuilder;
 use Elastic\Elasticsearch\ClientInterface;
+use stdClass;
 use support\Log;
+use Throwable;
 
 class ElasticService
 {
@@ -29,7 +31,7 @@ class ElasticService
             return $cached;
         }
 
-        $analyzer = (string) \app\service\BlogService::getConfig('es.analyzer', 'standard');
+        $analyzer = (string) BlogService::getConfig('es.analyzer', 'standard');
         $payload = [
             'size' => max(10, $limit),
             'query' => [
@@ -70,7 +72,7 @@ class ElasticService
             }
         }
         $total = isset($resp['body']['hits']['total']['value']) ? (int) $resp['body']['hits']['total']['value'] : count($hits);
-        \support\Log::debug(sprintf('[ElasticService] searchTags kw="%s" total=%d results=%d', $kw, $total, count($results)));
+        Log::debug(sprintf('[ElasticService] searchTags kw="%s" total=%d results=%d', $kw, $total, count($results)));
         CacheService::cache($ckey, $results, true, 45);
 
         return $results;
@@ -95,7 +97,7 @@ class ElasticService
             return $cached;
         }
 
-        $analyzer = (string) \app\service\BlogService::getConfig('es.analyzer', 'standard');
+        $analyzer = (string) BlogService::getConfig('es.analyzer', 'standard');
         $payload = [
             'size' => max(10, $limit),
             'query' => [
@@ -136,7 +138,7 @@ class ElasticService
             }
         }
         $total = isset($resp['body']['hits']['total']['value']) ? (int) $resp['body']['hits']['total']['value'] : count($hits);
-        \support\Log::debug(sprintf('[ElasticService] searchCategories kw="%s" total=%d results=%d', $kw, $total, count($results)));
+        Log::debug(sprintf('[ElasticService] searchCategories kw="%s" total=%d results=%d', $kw, $total, count($results)));
         CacheService::cache($ckey, $results, true, 45);
 
         return $results;
@@ -231,7 +233,7 @@ class ElasticService
             $ssl_client_key_content = (string) BlogService::getConfig('es.ssl.client_key_content', '');
 
             return compact('enabled', 'host', 'index', 'timeout', 'basic_user', 'basic_pass', 'ssl_ca_content', 'ssl_ignore', 'ssl_client_cert_content', 'ssl_client_key_content');
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('[ElasticService] Read config failed: ' . $e->getMessage());
 
             return [
@@ -371,7 +373,7 @@ class ElasticService
                                 'fields' => ['title^5', 'excerpt^3', 'content^1', 'categories_names^2', 'tags_names^2'],
                                 'type' => 'best_fields',
                                 'operator' => 'and',
-                                'analyzer' => (string) \app\service\BlogService::getConfig('es.analyzer', 'standard'),
+                                'analyzer' => (string) BlogService::getConfig('es.analyzer', 'standard'),
                                 'fuzziness' => 'AUTO',
                             ],
                         ],
@@ -403,10 +405,10 @@ class ElasticService
                 'pre_tags' => ['<em class="hl">'],
                 'post_tags' => ['</em>'],
                 'fields' => [
-                    'title' => new \stdClass(),
-                    'content' => new \stdClass(),
-                    'categories_names' => new \stdClass(),
-                    'tags_names' => new \stdClass(),
+                    'title' => new stdClass(),
+                    'content' => new stdClass(),
+                    'categories_names' => new stdClass(),
+                    'tags_names' => new stdClass(),
                 ],
             ],
         ];
@@ -443,7 +445,7 @@ class ElasticService
                 }
             }
         }
-        $analyzerUsed = (string) \app\service\BlogService::getConfig('es.analyzer', 'standard');
+        $analyzerUsed = (string) BlogService::getConfig('es.analyzer', 'standard');
         $signals = [
             'highlighted' => !empty($highlights),
             'synonym' => str_contains(mb_strtolower($analyzerUsed), 'synonym'),

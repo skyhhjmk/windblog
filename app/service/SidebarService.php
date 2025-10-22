@@ -3,6 +3,8 @@
 namespace app\service;
 
 use app\model\Setting;
+use InvalidArgumentException;
+use RuntimeException;
 use support\Log;
 use support\Request;
 use Throwable;
@@ -106,6 +108,7 @@ class SidebarService
      * 获取默认侧边栏配置
      *
      * @param string $pageKey 页面标识
+     *
      * @return array 默认侧边栏配置数组
      */
     protected static function getDefaultSidebar(string $pageKey = 'default'): array
@@ -174,7 +177,7 @@ class SidebarService
                     $widget['html'] = WidgetService::renderToHtml($widget);
 
                     // 过滤器：侧边栏单个小工具HTML（需权限 sidebar:filter.widget_html）
-                    $widget['html'] = \app\service\PluginService::apply_filters('sidebar.widget_html_filter', [
+                    $widget['html'] = PluginService::apply_filters('sidebar.widget_html_filter', [
                         'page_key' => $sidebarConfig['page_key'] ?? 'default',
                         'widget' => $widget,
                         'html' => $widget['html'],
@@ -194,8 +197,8 @@ class SidebarService
     /**
      * 保存侧边栏配置
      *
-     * @param string $pageKey 页面标识
-     * @param array $sidebarConfig 侧边栏配置
+     * @param string $pageKey       页面标识
+     * @param array  $sidebarConfig 侧边栏配置
      *
      * @return bool 是否保存成功
      * @throws Throwable
@@ -205,12 +208,12 @@ class SidebarService
         try {
             // 验证页面标识
             if (empty($pageKey)) {
-                throw new \InvalidArgumentException('Page key cannot be empty');
+                throw new InvalidArgumentException('Page key cannot be empty');
             }
 
             // 确保sidebarConfig是数组
             if (!is_array($sidebarConfig)) {
-                throw new \InvalidArgumentException('Sidebar config must be an array');
+                throw new InvalidArgumentException('Sidebar config must be an array');
             }
 
             // 清理不必要的字段
@@ -244,7 +247,7 @@ class SidebarService
             // 转换为JSON
             $jsonConfig = json_encode($allConfigs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             if ($jsonConfig === false) {
-                throw new \RuntimeException('Failed to encode sidebar config to JSON: ' . json_last_error_msg());
+                throw new RuntimeException('Failed to encode sidebar config to JSON: ' . json_last_error_msg());
             }
 
             if ($setting) {

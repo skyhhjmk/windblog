@@ -49,6 +49,7 @@ class Monitor
 
     /**
      * Pause monitor
+     *
      * @return void
      */
     public static function pause(): void
@@ -58,6 +59,7 @@ class Monitor
 
     /**
      * Resume monitor
+     *
      * @return void
      */
     public static function resume(): void
@@ -70,6 +72,7 @@ class Monitor
 
     /**
      * Whether monitor is paused
+     *
      * @return bool
      */
     public static function isPaused(): bool
@@ -81,6 +84,7 @@ class Monitor
 
     /**
      * Lock file
+     *
      * @return string
      */
     protected static function lockFile(): string
@@ -90,8 +94,9 @@ class Monitor
 
     /**
      * FileMonitor constructor.
-     * @param $monitorDir
-     * @param $monitorExtensions
+     *
+     * @param       $monitorDir
+     * @param       $monitorExtensions
      * @param array $options
      */
     public function __construct($monitorDir, $monitorExtensions, array $options = [])
@@ -128,6 +133,7 @@ class Monitor
 
     /**
      * @param $monitorDir
+     *
      * @return bool
      */
     public function checkFilesChange($monitorDir): bool
@@ -234,6 +240,7 @@ class Monitor
 
     /**
      * @param $memoryLimit
+     *
      * @return void
      */
     public function checkMemory($memoryLimit): void
@@ -271,7 +278,9 @@ class Monitor
 
     /**
      * Get memory limit
+     *
      * @param $memoryLimit
+     *
      * @return int
      */
     protected function getMemoryLimit($memoryLimit): int

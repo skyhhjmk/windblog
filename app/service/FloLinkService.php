@@ -3,6 +3,11 @@
 namespace app\service;
 
 use app\model\FloLink;
+use DOMDocument;
+use DOMXPath;
+use Exception;
+use support\Log;
+use Throwable;
 
 /**
  * FloLink 服务类
@@ -24,6 +29,7 @@ class FloLinkService
      * 处理文章内容，替换关键词为浮动链接
      *
      * @param string $content HTML内容
+     *
      * @return string 处理后的内容
      */
     public static function processContent(string $content): string
@@ -45,7 +51,7 @@ class FloLinkService
         // 即使没有任何 FloLink 规则，也继续解析 DOM，以便执行通用链接改写（如 rainyun 联盟链接）
 
         // 解析HTML，避免替换标签内的内容
-        $dom = new \DOMDocument('1.0', 'UTF-8');
+        $dom = new DOMDocument('1.0', 'UTF-8');
 
         // 抑制HTML解析错误
         libxml_use_internal_errors(true);
@@ -67,7 +73,7 @@ class FloLinkService
         // 对现有超链接执行特殊改写（可配置）
         try {
             $enableAffiliateRewrite = blog_config('flolink_affiliate_rewrite', true, true);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $enableAffiliateRewrite = true;
         }
         if ($enableAffiliateRewrite) {
@@ -86,12 +92,12 @@ class FloLinkService
     /**
      * 在DOM中替换关键词
      *
-     * @param \DOMDocument $dom
+     * @param DOMDocument $dom
      * @param FloLink $floLink
      */
-    private static function replaceKeywordInDOM(\DOMDocument $dom, FloLink $floLink): void
+    private static function replaceKeywordInDOM(DOMDocument $dom, FloLink $floLink): void
     {
-        $xpath = new \DOMXPath($dom);
+        $xpath = new DOMXPath($dom);
 
         // 只处理文本节点，排除 script、style、pre、code、a 以及任何含有 mermaid 相关类名的容器内的文本
         // 说明：部分渲染器会把 mermaid 流程图输出为 <div class="language-mermaid"> 或 <div class="mermaid"> 等
@@ -159,14 +165,15 @@ class FloLinkService
     /**
      * 保护敏感节点，防止在 DOM 序列化与替换过程中破坏其文本格式（如 mermaid、代码块等）
      *
-     * @param \DOMDocument $dom
+     * @param DOMDocument $dom
+     *
      * @return array<string,string> [placeholder => originalOuterHTML]
      */
-    private static function protectSensitiveNodes(\DOMDocument $dom): array
+    private static function protectSensitiveNodes(DOMDocument $dom): array
     {
         $placeholders = [];
         try {
-            $xpath = new \DOMXPath($dom);
+            $xpath = new DOMXPath($dom);
             // 保护包含 mermaid / language-* 的容器以及 pre/code 节点
             $nodes = $xpath->query('//*[contains(@class, "mermaid") or contains(@class, "language-") or self::pre or self::code]');
             if (!$nodes) {
@@ -191,7 +198,7 @@ class FloLinkService
                 $textNode = $dom->createTextNode($ph);
                 $node->parentNode->replaceChild($textNode, $node);
             }
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // 忽略，返回已收集的占位符
         }
 
@@ -203,6 +210,7 @@ class FloLinkService
      *
      * @param string $html
      * @param array<string,string> $placeholders
+     *
      * @return string
      */
     private static function restorePlaceholders(string $html, array $placeholders): string
@@ -220,7 +228,7 @@ class FloLinkService
     /**
      * 提取通过包装 <div> 处理后的内部 HTML，避免输出 XML 声明/外层 div
      */
-    private static function extractInnerHtmlFromRootDiv(\DOMDocument $dom): string
+    private static function extractInnerHtmlFromRootDiv(DOMDocument $dom): string
     {
         try {
             $root = $dom->documentElement; // 可能就是 div
@@ -243,7 +251,7 @@ class FloLinkService
             }
 
             return $html;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return $dom->saveHTML();
         }
     }
@@ -253,6 +261,7 @@ class FloLinkService
      *
      * @param string $content
      * @param array $floLinks
+     *
      * @return string
      */
     private static function processMarkdown(string $content, array $floLinks): string
@@ -264,7 +273,7 @@ class FloLinkService
         // 先对 Markdown 中已有的链接做联盟改写（rainyun 等）
         try {
             $enableAffiliateRewrite = blog_config('flolink_affiliate_rewrite', true, true);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $enableAffiliateRewrite = true;
         }
         if ($enableAffiliateRewrite) {
@@ -316,7 +325,7 @@ class FloLinkService
             // 联盟改写（可配置）
             try {
                 $enableAffiliateRewrite = blog_config('flolink_affiliate_rewrite', true);
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 $enableAffiliateRewrite = true;
             }
             if ($enableAffiliateRewrite) {
@@ -358,6 +367,7 @@ class FloLinkService
      *
      * @param string $content
      * @param FloLink $floLink
+     *
      * @return string
      */
     private static function replaceExistingLinks(string $content, FloLink $floLink): string
@@ -382,6 +392,7 @@ class FloLinkService
      * 创建链接HTML
      *
      * @param FloLink $floLink
+     *
      * @return string
      */
     private static function createLinkHTML(FloLink $floLink): string
@@ -390,7 +401,7 @@ class FloLinkService
         $preparedUrl = (string) $floLink->url;
         try {
             $enableAffiliateRewrite = blog_config('flolink_affiliate_rewrite', true);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $enableAffiliateRewrite = true;
         }
         if ($enableAffiliateRewrite) {
@@ -481,7 +492,7 @@ class FloLinkService
                 if (is_string($conf) && $conf !== '') {
                     $suffix = $conf;
                 }
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
             }
             $segments[$idx] = $suffix;
             $newPath = implode('/', $segments);
@@ -508,7 +519,7 @@ class FloLinkService
             $fragment = isset($parts['fragment']) && $parts['fragment'] !== '' ? ('#' . $parts['fragment']) : '';
 
             return $scheme . '://' . $auth . $host . $port . $newPath . $query . $fragment;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return $url;
         }
     }
@@ -516,10 +527,10 @@ class FloLinkService
     /**
      * 遍历 DOM 中的链接并应用联盟改写
      */
-    private static function rewriteSpecialLinksInDOM(\DOMDocument $dom): void
+    private static function rewriteSpecialLinksInDOM(DOMDocument $dom): void
     {
         try {
-            $xpath = new \DOMXPath($dom);
+            $xpath = new DOMXPath($dom);
             $anchors = $xpath->query('//a[@href]');
             if (!$anchors) {
                 return;
@@ -534,7 +545,7 @@ class FloLinkService
                     $a->setAttribute('href', $newHref);
                 }
             }
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // 忽略
         }
     }
@@ -555,8 +566,8 @@ class FloLinkService
             if (is_array($cached)) {
                 return $cached;
             }
-        } catch (\Exception $e) {
-            \support\Log::warning('FloLink cache get failed: ' . $e->getMessage());
+        } catch (Exception $e) {
+            Log::warning('FloLink cache get failed: ' . $e->getMessage());
         }
 
         // 从数据库获取
@@ -571,13 +582,13 @@ class FloLinkService
             try {
                 $cache = CacheService::getPsr16Adapter();
                 $cache->set($cacheKey, $floLinks, self::CACHE_TTL);
-            } catch (\Exception $e) {
-                \support\Log::warning('FloLink cache set failed: ' . $e->getMessage());
+            } catch (Exception $e) {
+                Log::warning('FloLink cache set failed: ' . $e->getMessage());
             }
 
             return $floLinks;
-        } catch (\Exception $e) {
-            \support\Log::error('Get active FloLinks failed: ' . $e->getMessage());
+        } catch (Exception $e) {
+            Log::error('Get active FloLinks failed: ' . $e->getMessage());
 
             return [];
         }
@@ -595,8 +606,8 @@ class FloLinkService
             // 使用 PSR-16 适配器，内部会正确调用底层 del，并处理前缀
             $cache = CacheService::getPsr16Adapter();
             $cache->delete($cacheKey);
-        } catch (\Exception $e) {
-            \support\Log::warning('FloLink cache clear failed: ' . $e->getMessage());
+        } catch (Exception $e) {
+            Log::warning('FloLink cache clear failed: ' . $e->getMessage());
         }
     }
 
@@ -604,6 +615,7 @@ class FloLinkService
      * 获取单个FloLink的悬浮窗数据（用于AJAX请求）
      *
      * @param int $id
+     *
      * @return array|null
      */
     public static function getFloLinkData(int $id): ?array
@@ -624,8 +636,8 @@ class FloLinkService
                 'image' => $floLink->image,
                 'enable_hover' => $floLink->enable_hover,
             ];
-        } catch (\Exception $e) {
-            \support\Log::error('Get FloLink data failed: ' . $e->getMessage());
+        } catch (Exception $e) {
+            Log::error('Get FloLink data failed: ' . $e->getMessage());
 
             return null;
         }

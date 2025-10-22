@@ -3,9 +3,14 @@
 namespace app\process;
 
 use app\service\MQService;
+use Exception;
+use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
+use PhpAmqpLib\Exception\AMQPTimeoutException;
 use PhpAmqpLib\Message\AMQPMessage;
+use PhpAmqpLib\Wire\AMQPTable;
 use support\Log;
+use Throwable;
 use Workerman\Timer;
 use Workerman\Worker;
 
@@ -120,7 +125,7 @@ class HttpCallback
     /**
      * RabbitMQ通道
      *
-     * @var \PhpAmqpLib\Channel\AMQPChannel|null
+     * @var AMQPChannel|null
      */
     protected $mqChannel = null;
 
@@ -146,7 +151,7 @@ class HttpCallback
     /**
      * 获取RabbitMQ通道
      *
-     * @return \PhpAmqpLib\Channel\AMQPChannel
+     * @return AMQPChannel
      */
     protected function getMqChannel()
     {
@@ -162,6 +167,7 @@ class HttpCallback
      * 进程启动时执行
      *
      * @param Worker $worker
+     *
      * @return void
      */
     public function onWorkerStart(Worker $worker): void
@@ -192,7 +198,7 @@ class HttpCallback
 
             $this->mqChannel = $channel;
             Log::info('RabbitMQ连接初始化成功(HttpCallback)');
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('RabbitMQ连接初始化失败(HttpCallback): ' . $e->getMessage());
         }
 
@@ -205,8 +211,8 @@ class HttpCallback
         // 每60秒进行一次 MQ 健康检查
         Timer::add(60, function () {
             try {
-                \app\service\MQService::checkAndHeal();
-            } catch (\Throwable $e) {
+                MQService::checkAndHeal();
+            } catch (Throwable $e) {
                 Log::warning('MQ 健康检查异常(HttpCallback): ' . $e->getMessage());
             }
         });
@@ -247,15 +253,15 @@ class HttpCallback
             while ($channel->is_consuming()) {
                 try {
                     $channel->wait(null, false, 1.0);
-                } catch (\PhpAmqpLib\Exception\AMQPTimeoutException $e) {
+                } catch (AMQPTimeoutException $e) {
                     // 正常超时，无消息到达，忽略
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     Log::warning('HttpCallback 消费轮询异常: ' . $e->getMessage());
                     break;
                 }
             }
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('处理HTTP回调消息时出错: ' . $e->getMessage());
         }
     }
@@ -264,6 +270,7 @@ class HttpCallback
      * 处理回调消息
      *
      * @param AMQPMessage $message
+     *
      * @return void
      */
     public function handleCallbackMessage(AMQPMessage $message): void
@@ -323,7 +330,7 @@ class HttpCallback
                 $this->handleFailedMessage($message, $url);
             }
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('处理HTTP回调消息时发生异常: ' . $e->getMessage());
             // 记录失败统计
             $this->recordFailure($url, $e->getMessage());
@@ -337,6 +344,7 @@ class HttpCallback
      * @param string $url
      * @param array $params
      * @param array $headers
+     *
      * @return array
      */
     protected function executeGetRequest(string $url, array $params = [], array $headers = []): array
@@ -407,7 +415,7 @@ class HttpCallback
                 'http_code' => $httpCode,
             ];
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return ['success' => false, 'error' => $e->getMessage()];
         }
     }
@@ -417,6 +425,7 @@ class HttpCallback
      *
      * @param resource $ch
      * @param string $data
+     *
      * @return int
      */
     public function writeCallback($ch, string $data): int
@@ -444,6 +453,7 @@ class HttpCallback
      * @param int $downloaded
      * @param int $uploadSize
      * @param int $uploaded
+     *
      * @return int
      */
     public function progressCallback($ch, int $downloadSize, int $downloaded, int $uploadSize, int $uploaded): int
@@ -463,6 +473,7 @@ class HttpCallback
      *
      * @param string $url
      * @param string $error
+     *
      * @return void
      */
     protected function recordFailure(string $url, string $error): void
@@ -489,6 +500,7 @@ class HttpCallback
      * 清除失败统计
      *
      * @param string $url
+     *
      * @return void
      */
     protected function clearFailureStats(string $url): void
@@ -504,6 +516,7 @@ class HttpCallback
      * 检查是否应该发送到死信队列
      *
      * @param string $url
+     *
      * @return bool
      */
     protected function shouldSendToDeadLetter(string $url): bool
@@ -534,6 +547,7 @@ class HttpCallback
      *
      * @param AMQPMessage $message
      * @param string $url
+     *
      * @return void
      */
     protected function handleFailedMessage(AMQPMessage $message, string $url): void
@@ -543,7 +557,7 @@ class HttpCallback
             $retryCount = 0;
             $headers = $message->has('application_headers') ? $message->get('application_headers') : null;
 
-            if ($headers instanceof \PhpAmqpLib\Wire\AMQPTable) {
+            if ($headers instanceof AMQPTable) {
                 $native = method_exists($headers, 'getNativeData') ? $headers->getNativeData() : (array) $headers;
                 $retryCount = (int) ($native['x-retry-count'] ?? 0);
             }
@@ -559,7 +573,7 @@ class HttpCallback
             // 消息级别重试：只有执行3次都失败才进入死信队列
             if ($retryCount < 2) { // 0,1,2 共3次尝试
                 // 增加重试次数并重新入队
-                $newHeaders = $headers ? clone $headers : new \PhpAmqpLib\Wire\AMQPTable();
+                $newHeaders = $headers ? clone $headers : new AMQPTable();
                 $newHeaders->set('x-retry-count', $retryCount + 1);
                 $message->set('application_headers', $newHeaders);
                 $message->nack(true); // 重新入队
@@ -569,7 +583,7 @@ class HttpCallback
                 $message->nack(false);
                 Log::error('消息重试次数超过限制（3次），进入死信队列');
             }
-        } catch (\Exception $headerException) {
+        } catch (Exception $headerException) {
             // 如果头信息处理失败，直接进入死信队列
             $message->nack(false);
             Log::error('处理消息头信息失败，进入死信队列: ' . $headerException->getMessage());
@@ -595,7 +609,7 @@ class HttpCallback
             }
 
             Log::info('RabbitMQ连接已关闭');
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('关闭MQ连接时出错: ' . $e->getMessage());
         }
     }
@@ -604,6 +618,7 @@ class HttpCallback
      * 进程停止时执行
      *
      * @param Worker $worker
+     *
      * @return void
      */
     public function onWorkerStop(Worker $worker): void

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace app\service;
 
+use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
 use PhpAmqpLib\Wire\AMQPTable;
@@ -17,7 +18,7 @@ class MailService
     /** @var AMQPStreamConnection|null */
     private static ?AMQPStreamConnection $connection = null;
 
-    /** @var \PhpAmqpLib\Channel\AMQPChannel|null */
+    /** @var AMQPChannel|null */
     private static $channel = null;
 
     /** @var bool */
@@ -99,19 +100,19 @@ class MailService
                 }
             }
             // 过滤器：允许插件调整邮件payload（需权限 mail:filter.payload）
-            $payload = \app\service\PluginService::apply_filters('mail.payload_filter', $payload);
+            $payload = PluginService::apply_filters('mail.payload_filter', $payload);
             // 动作：入队前（需权限 mail:action.before_enqueue）
-            \app\service\PluginService::do_action('mail.before_enqueue', $payload);
+            PluginService::do_action('mail.before_enqueue', $payload);
 
             $msg = new AMQPMessage(json_encode($payload, JSON_UNESCAPED_UNICODE), [
-                'content_type'  => 'application/json',
+                'content_type' => 'application/json',
                 'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT,
-                'priority'      => $priority,
+                'priority' => $priority,
             ]);
             $channel->basic_publish($msg, $exchange, $routingKey);
 
             // 动作：入队后（需权限 mail:action.after_enqueue）
-            \app\service\PluginService::do_action('mail.after_enqueue', [
+            PluginService::do_action('mail.after_enqueue', [
                 'payload' => $payload,
                 'priority' => $priority,
                 'exchange' => $exchange,
@@ -119,10 +120,10 @@ class MailService
             ]);
 
             Log::debug('Mail enqueued: ' . json_encode([
-                'to' => $payload['to'] ?? null,
-                'subject' => $payload['subject'] ?? null,
-                'priority' => $priority,
-            ], JSON_UNESCAPED_UNICODE));
+                    'to' => $payload['to'] ?? null,
+                    'subject' => $payload['subject'] ?? null,
+                    'priority' => $priority,
+                ], JSON_UNESCAPED_UNICODE));
 
             return true;
         } catch (Throwable $e) {
@@ -147,7 +148,7 @@ class MailService
         return self::$connection;
     }
 
-    private static function getChannel(): \PhpAmqpLib\Channel\AMQPChannel
+    private static function getChannel(): AMQPChannel
     {
         if (!self::$channel) {
             self::$channel = self::getConnection()->channel();
@@ -181,13 +182,13 @@ class MailService
             // 主交换机 & 队列（带死信参数）
             $ch->exchange_declare($exchange, 'direct', false, true, false);
             $args = new AMQPTable([
-                'x-dead-letter-exchange'    => $dlxExchange,
+                'x-dead-letter-exchange' => $dlxExchange,
                 'x-dead-letter-routing-key' => $mailDlxQueue,
-                'x-max-priority'            => 10, // 开启队列优先级（0-9）
+                'x-max-priority' => 10, // 开启队列优先级（0-9）
             ]);
             try {
                 $ch->queue_declare($queueName, false, true, false, false, false, $args);
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 Log::warning('mail_queue 声明失败，尝试无参重建: ' . $e->getMessage());
                 $ch->queue_declare($queueName, false, true, false, false, false);
             }
@@ -236,7 +237,7 @@ class MailService
             blog_config('mail_from_address', 'no-reply@example.com', true);
             blog_config('mail_from_name', 'WindBlog', true);
             blog_config('mail_reply_to', '', true);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::warning('ensureMailDefaults warn: ' . $e->getMessage());
         }
     }

@@ -4,6 +4,7 @@ namespace app\process;
 
 use support\Log;
 use support\Redis;
+use Throwable;
 use Workerman\Timer;
 use Workerman\Worker;
 
@@ -128,7 +129,7 @@ class Performance
             }
 
             Log::debug("Performance 采集完成: {$t}");
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('Performance 采集失败: ' . $e->getMessage());
         }
     }
@@ -165,7 +166,7 @@ class Performance
                             $keys = (int) $res;
                             $method = 'dbSize()';
                         }
-                    } catch (\Throwable $e) {
+                    } catch (Throwable $e) {
                     }
                     try {
                         if ($keys === null) {
@@ -175,10 +176,10 @@ class Performance
                                 $method = 'dbsize()';
                             }
                         }
-                    } catch (\Throwable $e) {
+                    } catch (Throwable $e) {
                     }
                 }
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 // 忽略，进入兜底
             }
             // 兜底：若仍无法获取，置为 null，避免误用所有库总和
@@ -195,7 +196,7 @@ class Performance
                 'keys' => $keys,
                 'keys_method' => $method,
             ];
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return ['error' => $e->getMessage(), 't' => date('Y-m-d H:i:s')];
         }
     }
@@ -223,7 +224,7 @@ class Performance
                 'hit_rate' => is_numeric($hitRate) ? round($hitRate, 2) : null,
                 'cached_scripts' => $stats['cached_scripts'] ?? null,
             ];
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return ['error' => $e->getMessage(), 't' => date('Y-m-d H:i:s')];
         }
     }
@@ -235,7 +236,7 @@ class Performance
             if ($len > $max) {
                 $redis->lTrim($key, $len - $max, -1);
             }
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // ignore
         }
     }

@@ -7,6 +7,7 @@ class DependencyResolver
     /**
      * @param array<string, PluginMetadata> $metas
      * @param array<int, string> $enabledSlugs
+     *
      * @return array<int, string> sorted slugs
      */
     public function resolve(array $metas, array $enabledSlugs): array

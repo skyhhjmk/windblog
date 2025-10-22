@@ -2,6 +2,7 @@
 
 namespace plugin\admin\app\controller;
 
+use Exception;
 use plugin\admin\app\common\Auth;
 use plugin\admin\app\common\Tree;
 use plugin\admin\app\model\Role;
@@ -192,7 +193,7 @@ class RoleController extends Crud
      * 获取角色权限
      * @param Request $request
      * @return Response
-     * @throws \Exception
+     * @throws Exception
      */
     public function rules(Request $request): Response
     {
