@@ -2,6 +2,8 @@
 
 namespace plugin\admin\api;
 
+use ReflectionClass;
+use ReflectionException;
 use function admin;
 
 use plugin\admin\app\model\Role;
@@ -19,7 +21,7 @@ class Auth
      * @param string $controller
      * @param string $action
      * @return void
-     * @throws \ReflectionException|BusinessException
+     * @throws ReflectionException|BusinessException
      */
     public static function access(string $controller, string $action)
     {
@@ -37,7 +39,7 @@ class Auth
      * @param int $code
      * @param string $msg
      * @return bool
-     * @throws \ReflectionException|BusinessException
+     * @throws ReflectionException|BusinessException
      */
     public static function canAccess(string $controller, string $action, int &$code = 0, string &$msg = ''): bool
     {
@@ -46,7 +48,7 @@ class Auth
             return true;
         }
         // 获取控制器鉴权信息
-        $class = new \ReflectionClass($controller);
+        $class = new ReflectionClass($controller);
         $properties = $class->getDefaultProperties();
         $noNeedLogin = $properties['noNeedLogin'] ?? [];
         $noNeedAuth = $properties['noNeedAuth'] ?? [];

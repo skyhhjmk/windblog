@@ -2,6 +2,8 @@
 
 namespace app\service\plugin;
 
+use Throwable;
+
 /**
  * 插件元数据
  */
@@ -64,13 +66,13 @@ class PluginMetadata
         $meta->file = $file;
 
         $fields = [
-            'Plugin Name'        => 'name',
-            'Plugin Slug'        => 'slug',
-            'Version'            => 'version',
-            'Description'        => 'description',
-            'Author'             => 'author',
-            'Requires PHP'       => 'requires_php',
-            'Requires at least'  => 'requires_at_least',
+            'Plugin Name' => 'name',
+            'Plugin Slug' => 'slug',
+            'Version' => 'version',
+            'Description' => 'description',
+            'Author' => 'author',
+            'Requires PHP' => 'requires_php',
+            'Requires at least' => 'requires_at_least',
         ];
 
         foreach ($fields as $label => $prop) {
@@ -100,7 +102,7 @@ class PluginMetadata
                     $meta->dependencies = is_array($json['dependencies'] ?? null) ? $json['dependencies'] : ($json['requires']['plugins'] ?? []);
                     $meta->conflicts = is_array($json['conflicts'] ?? null) ? $json['conflicts'] : [];
                 }
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 // 忽略 plugin.json 解析错误，保持兼容
             }
         }

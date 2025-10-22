@@ -2,6 +2,8 @@
 
 namespace plugin\admin\app\controller;
 
+use PhpAmqpLib\Connection\AMQPStreamConnection;
+use Throwable;
 use function blog_config;
 use function json;
 
@@ -81,13 +83,13 @@ class MqController
             $pass = (string) blog_config('rabbitmq_password', 'guest', true);
             $vhost = (string) blog_config('rabbitmq_vhost', '/', true);
 
-            $conn = new \PhpAmqpLib\Connection\AMQPStreamConnection($host, $port, $user, $pass, $vhost);
+            $conn = new AMQPStreamConnection($host, $port, $user, $pass, $vhost);
             $ch = $conn->channel();
             $ch->close();
             $conn->close();
 
             return json(['success' => true, 'message' => 'RabbitMQ 连接成功']);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return json(['success' => false, 'message' => '连接失败：' . $e->getMessage()]);
         }
     }

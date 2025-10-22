@@ -5,6 +5,7 @@ namespace app\middleware;
 use app\annotation\EnableInstantFirstPaint;
 use ReflectionClass;
 use ReflectionMethod;
+use Throwable;
 use Webman\Http\Request;
 use Webman\Http\Response;
 use Webman\MiddlewareInterface;
@@ -158,7 +159,7 @@ class InstantFirstPaint implements MiddlewareInterface
                 .then(function(h){
                 // 检测是否又返回了骨架页（含有特定标记）
                 if(h.indexOf('_ilc')!==-1&&h.length<2000){sessionStorage.removeItem('_ilc');location.href=location.href.split('?')[0]+'?no_instant=1&t='+Date.now();return}
-                p(100);try{sessionStorage.removeItem('_ilc')}catch(e){};setTimeout(function(){try{document.open();document.write(h);document.close()}catch(e){location.reload()}},50)
+                p(100);try{sessionStorage.removeItem('_ilc')}catch(e){}setTimeout(function(){try{document.open();document.write(h);document.close()}catch(e){location.reload()}},50)
                 })
                 .catch(function(){location.reload()})
                 }catch(e){location.reload()}
@@ -217,7 +218,7 @@ class InstantFirstPaint implements MiddlewareInterface
             $annotation = $annotations[0]->newInstance();
 
             return $annotation->enabled;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // 出现异常时，返回 false
             return false;
         }

@@ -10,6 +10,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Console\Question\Question;
+use Throwable;
 
 class ConfigAdminReInitCommand extends Command
 {
@@ -20,6 +21,7 @@ class ConfigAdminReInitCommand extends Command
     /**
      * @param InputInterface $input
      * @param OutputInterface $output
+     *
      * @return int
      */
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -81,7 +83,7 @@ class ConfigAdminReInitCommand extends Command
             $output->writeln('<info>管理员账户信息重新初始化成功!</info>');
 
             return Command::SUCCESS;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $output->writeln('<error>发生错误: ' . $e->getMessage() . '</error>');
 
             return Command::FAILURE;
@@ -95,6 +97,7 @@ class ConfigAdminReInitCommand extends Command
      * @param string $password
      * @param string $nickname
      * @param OutputInterface $output
+     *
      * @return void
      */
     private function reInitAdmin(string $username, string $password, string $nickname, OutputInterface $output)

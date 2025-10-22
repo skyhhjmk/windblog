@@ -19,6 +19,7 @@ use plugin\admin\app\controller\DictController;
 use plugin\admin\app\controller\EditorController;
 use plugin\admin\app\controller\ElasticController;
 use plugin\admin\app\controller\FloLinkController;
+use plugin\admin\app\controller\LinkConnectController;
 use plugin\admin\app\controller\LinkController;
 use plugin\admin\app\controller\MailController;
 use plugin\admin\app\controller\MediaController;
@@ -29,6 +30,7 @@ use plugin\admin\app\controller\SidebarController;
 use plugin\admin\app\controller\StaticCacheController;
 use plugin\admin\app\controller\WpImportController;
 use support\Request;
+use support\Response;
 use Webman\Route;
 
 Route::group('/app/admin', function () {
@@ -86,37 +88,37 @@ Route::group('/app/admin', function () {
 
     // 互联协议路由（保留原 /link/connect）
     Route::group('/link/connect', function () {
-        Route::get('', [\plugin\admin\app\controller\LinkConnectController::class, 'index']);
-        Route::get('/', [\plugin\admin\app\controller\LinkConnectController::class, 'index']);
-        Route::get('/index', [\plugin\admin\app\controller\LinkConnectController::class, 'index']);
-        Route::get('/getConfig', [\plugin\admin\app\controller\LinkConnectController::class, 'getConfig']);
-        Route::post('/saveConfig', [\plugin\admin\app\controller\LinkConnectController::class, 'saveConfig']);
-        Route::get('/getExample', [\plugin\admin\app\controller\LinkConnectController::class, 'getExample']);
-        Route::post('/testConnection', [\plugin\admin\app\controller\LinkConnectController::class, 'testConnection']);
+        Route::get('', [LinkConnectController::class, 'index']);
+        Route::get('/', [LinkConnectController::class, 'index']);
+        Route::get('/index', [LinkConnectController::class, 'index']);
+        Route::get('/getConfig', [LinkConnectController::class, 'getConfig']);
+        Route::post('/saveConfig', [LinkConnectController::class, 'saveConfig']);
+        Route::get('/getExample', [LinkConnectController::class, 'getExample']);
+        Route::post('/testConnection', [LinkConnectController::class, 'testConnection']);
         // 兼容新增接口
-        Route::get('/generateLink', [\plugin\admin\app\controller\LinkConnectController::class, 'generateLink']);
-        Route::post('/applyToPeer', [\plugin\admin\app\controller\LinkConnectController::class, 'applyToPeer']);
+        Route::get('/generateLink', [LinkConnectController::class, 'generateLink']);
+        Route::post('/applyToPeer', [LinkConnectController::class, 'applyToPeer']);
         // Token 管理（策略B）
-        Route::get('/tokens', [\plugin\admin\app\controller\LinkConnectController::class, 'tokens']);
-        Route::post('/generateToken', [\plugin\admin\app\controller\LinkConnectController::class, 'generateToken']);
-        Route::post('/invalidateToken', [\plugin\admin\app\controller\LinkConnectController::class, 'invalidateToken']);
+        Route::get('/tokens', [LinkConnectController::class, 'tokens']);
+        Route::post('/generateToken', [LinkConnectController::class, 'generateToken']);
+        Route::post('/invalidateToken', [LinkConnectController::class, 'invalidateToken']);
     });
 
     // 新增 /linkconnect 路由组（前端使用该前缀）
     Route::group('/linkconnect', function () {
-        Route::get('', [\plugin\admin\app\controller\LinkConnectController::class, 'index']);
-        Route::get('/', [\plugin\admin\app\controller\LinkConnectController::class, 'index']);
-        Route::get('/index', [\plugin\admin\app\controller\LinkConnectController::class, 'index']);
-        Route::get('/getConfig', [\plugin\admin\app\controller\LinkConnectController::class, 'getConfig']);
-        Route::post('/saveConfig', [\plugin\admin\app\controller\LinkConnectController::class, 'saveConfig']);
-        Route::get('/getExample', [\plugin\admin\app\controller\LinkConnectController::class, 'getExample']);
-        Route::post('/testConnection', [\plugin\admin\app\controller\LinkConnectController::class, 'testConnection']);
-        Route::get('/generateLink', [\plugin\admin\app\controller\LinkConnectController::class, 'generateLink']);
-        Route::post('/applyToPeer', [\plugin\admin\app\controller\LinkConnectController::class, 'applyToPeer']);
+        Route::get('', [LinkConnectController::class, 'index']);
+        Route::get('/', [LinkConnectController::class, 'index']);
+        Route::get('/index', [LinkConnectController::class, 'index']);
+        Route::get('/getConfig', [LinkConnectController::class, 'getConfig']);
+        Route::post('/saveConfig', [LinkConnectController::class, 'saveConfig']);
+        Route::get('/getExample', [LinkConnectController::class, 'getExample']);
+        Route::post('/testConnection', [LinkConnectController::class, 'testConnection']);
+        Route::get('/generateLink', [LinkConnectController::class, 'generateLink']);
+        Route::post('/applyToPeer', [LinkConnectController::class, 'applyToPeer']);
         // Token 管理（策略B）
-        Route::get('/tokens', [\plugin\admin\app\controller\LinkConnectController::class, 'tokens']);
-        Route::post('/generateToken', [\plugin\admin\app\controller\LinkConnectController::class, 'generateToken']);
-        Route::post('/invalidateToken', [\plugin\admin\app\controller\LinkConnectController::class, 'invalidateToken']);
+        Route::get('/tokens', [LinkConnectController::class, 'tokens']);
+        Route::post('/generateToken', [LinkConnectController::class, 'generateToken']);
+        Route::post('/invalidateToken', [LinkConnectController::class, 'invalidateToken']);
     });
 
     // Post 路由
@@ -277,10 +279,10 @@ Route::group('/app/admin', function () {
         Route::get('/config-page', function () {
             $path = base_path() . DIRECTORY_SEPARATOR . 'plugin' . DIRECTORY_SEPARATOR . 'admin' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'view' . DIRECTORY_SEPARATOR . 'mail' . DIRECTORY_SEPARATOR . 'config.html';
             if (is_file($path)) {
-                return new \support\Response(200, ['Content-Type' => 'text/html; charset=utf-8'], (string) file_get_contents($path));
+                return new Response(200, ['Content-Type' => 'text/html; charset=utf-8'], (string) file_get_contents($path));
             }
 
-            return new \support\Response(404, ['Content-Type' => 'text/plain; charset=utf-8'], 'mail config template not found');
+            return new Response(404, ['Content-Type' => 'text/plain; charset=utf-8'], 'mail config template not found');
         });
         Route::get('/send', [MailController::class, 'pageSend']);
         Route::get('/preview-render', [MailController::class, 'previewRender']);

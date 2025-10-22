@@ -15,6 +15,7 @@ class PJAXHelper
      * 检测是否为PJAX请求
      *
      * @param Request $request 请求对象
+     *
      * @return bool 是否为PJAX请求
      */
     public static function isPJAX(Request $request): bool
@@ -34,6 +35,7 @@ class PJAXHelper
      * 检测是否为AJAX请求
      *
      * @param Request $request 请求对象
+     *
      * @return bool 是否为AJAX请求
      */
     public static function isAjax(Request $request): bool
@@ -50,10 +52,11 @@ class PJAXHelper
     /**
      * 为PJAX请求生成缓存键
      *
-     * @param string $route 路由名称
-     * @param array $params 参数数组
-     * @param int $page 页码
+     * @param string $route  路由名称
+     * @param array  $params 参数数组
+     * @param int    $page   页码
      * @param string $locale 语言区域
+     *
      * @return string 缓存键
      */
     public static function generateCacheKey(string $route, array $params = [], int $page = 1, string $locale = 'zh-CN'): string
@@ -68,6 +71,7 @@ class PJAXHelper
      *
      * @param string $baseView 基础视图名称
      * @param bool $isPjax 是否为PJAX请求
+     *
      * @return string 完整的视图名称
      */
     public static function getViewName(string $baseView, bool $isPjax): string
@@ -128,9 +132,10 @@ class PJAXHelper
     /**
      * 创建PJAX错误响应
      *
-     * @param int $status 状态码
+     * @param int   $status  状态码
      * @param string $message 错误消息
      * @param array $headers 额外的响应头
+     *
      * @return Response 响应对象
      */
     public static function createErrorResponse(int $status = 400, string $message = 'Bad Request', array $headers = []): Response

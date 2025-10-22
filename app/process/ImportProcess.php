@@ -5,8 +5,11 @@ namespace app\process;
 use app\model\ImportJob;
 use app\service\MQService;
 use app\service\WordpressImporter;
+use Exception;
+use PhpAmqpLib\Exception\AMQPTimeoutException;
 use PhpAmqpLib\Message\AMQPMessage;
 use support\Log;
+use Throwable;
 use Workerman\Timer;
 use Workerman\Worker;
 
@@ -59,13 +62,14 @@ class ImportProcess
      * 进程启动时执行
      *
      * @param Worker $worker
+     *
      * @return void
      */
     public function onWorkerStart(Worker $worker): void
     {
         // 检查系统是否已安装
         if (!is_installed()) {
-            \support\Log::info('系统未安装，跳过导入队列消费');
+            Log::info('系统未安装，跳过导入队列消费');
 
             return;
         }
@@ -95,45 +99,45 @@ class ImportProcess
             );
 
             // 轮询消费消息队列（实时处理）
-            if (class_exists(\Workerman\Timer::class)) {
+            if (class_exists(Timer::class)) {
                 $this->timerId = Timer::add(1, function () {
                     try {
                         if ($this->mqChannel && $this->mqChannel->is_consuming()) {
                             $this->mqChannel->wait(null, false, 1.0);
                         }
-                    } catch (\PhpAmqpLib\Exception\AMQPTimeoutException $e) {
+                    } catch (AMQPTimeoutException $e) {
                         // 正常超时
-                    } catch (\Throwable $e) {
+                    } catch (Throwable $e) {
                         Log::warning('ImportProcess 消费轮询异常: ' . $e->getMessage());
                     }
                 });
             }
 
             // 每60分钟进行一次数据库轮询（兜底机制）
-            if (class_exists(\Workerman\Timer::class)) {
-                \Workerman\Timer::add(3600, function () { // 60分钟 = 3600秒
+            if (class_exists(Timer::class)) {
+                Timer::add(3600, function () { // 60分钟 = 3600秒
                     try {
                         $this->pollDatabaseForPendingJobs();
-                    } catch (\Throwable $e) {
-                        \support\Log::warning('数据库轮询异常: ' . $e->getMessage());
+                    } catch (Throwable $e) {
+                        Log::warning('数据库轮询异常: ' . $e->getMessage());
                     }
                 });
             }
 
             // 每60秒进行一次 MQ 健康检查
-            if (class_exists(\Workerman\Timer::class)) {
-                \Workerman\Timer::add(60, function () {
+            if (class_exists(Timer::class)) {
+                Timer::add(60, function () {
                     try {
-                        \app\service\MQService::checkAndHeal();
-                    } catch (\Throwable $e) {
-                        \support\Log::warning('MQ 健康检查异常(ImportProcess): ' . $e->getMessage());
+                        MQService::checkAndHeal();
+                    } catch (Throwable $e) {
+                        Log::warning('MQ 健康检查异常(ImportProcess): ' . $e->getMessage());
                     }
                 });
             }
 
-            \support\Log::info('ImportProcess 队列初始化成功，数据库轮询已启动');
-        } catch (\Throwable $e) {
-            \support\Log::error('ImportProcess 队列初始化失败: ' . $e->getMessage());
+            Log::info('ImportProcess 队列初始化成功，数据库轮询已启动');
+        } catch (Throwable $e) {
+            Log::error('ImportProcess 队列初始化失败: ' . $e->getMessage());
         }
 
         // 保留历史卡住任务检查
@@ -154,14 +158,14 @@ class ImportProcess
                 ->get();
 
             foreach ($stuckJobs as $job) {
-                \support\Log::warning('发现卡住的导入任务，重置状态为pending: ID=' . $job->id . ', 文件=' . $job->name);
+                Log::warning('发现卡住的导入任务，重置状态为pending: ID=' . $job->id . ', 文件=' . $job->name);
                 $job->update([
                     'status' => 'pending',
                     'message' => '长时间处于processing状态，任务被重置',
                 ]);
             }
-        } catch (\Exception $e) {
-            \support\Log::error('检查卡住的任务时出错: ' . $e->getMessage(), ['exception' => $e]);
+        } catch (Exception $e) {
+            Log::error('检查卡住的任务时出错: ' . $e->getMessage(), ['exception' => $e]);
         }
     }
 
@@ -173,7 +177,7 @@ class ImportProcess
     protected function pollDatabaseForPendingJobs(): void
     {
         try {
-            \support\Log::info('开始数据库轮询检查待处理导入任务');
+            Log::info('开始数据库轮询检查待处理导入任务');
 
             // 查找所有pending状态的任务
             $pendingJobs = ImportJob::where('status', 'pending')
@@ -181,12 +185,12 @@ class ImportProcess
                 ->get();
 
             if ($pendingJobs->isEmpty()) {
-                \support\Log::info('数据库轮询：未发现待处理任务');
+                Log::info('数据库轮询：未发现待处理任务');
 
                 return;
             }
 
-            \support\Log::info('数据库轮询：发现 ' . $pendingJobs->count() . ' 个待处理任务');
+            Log::info('数据库轮询：发现 ' . $pendingJobs->count() . ' 个待处理任务');
 
             foreach ($pendingJobs as $job) {
                 try {
@@ -196,7 +200,7 @@ class ImportProcess
                         ->first();
 
                     if (!$currentProcessing) {
-                        \support\Log::info("任务 {$job->id} 已被其他进程处理，跳过");
+                        Log::info("任务 {$job->id} 已被其他进程处理，跳过");
                         continue;
                     }
 
@@ -206,13 +210,13 @@ class ImportProcess
                         'message' => '数据库轮询开始处理',
                     ]);
 
-                    \support\Log::info('数据库轮询开始处理任务: ID=' . $job->id . ', 文件=' . $job->name);
+                    Log::info('数据库轮询开始处理任务: ID=' . $job->id . ', 文件=' . $job->name);
 
                     // 执行导入任务
                     $this->executeImportJob($job);
 
-                } catch (\Throwable $e) {
-                    \support\Log::error('数据库轮询处理任务失败: ID=' . $job->id . ', 错误: ' . $e->getMessage());
+                } catch (Throwable $e) {
+                    Log::error('数据库轮询处理任务失败: ID=' . $job->id . ', 错误: ' . $e->getMessage());
 
                     // 更新任务状态为failed
                     $job->update([
@@ -222,10 +226,10 @@ class ImportProcess
                 }
             }
 
-            \support\Log::info('数据库轮询处理完成');
+            Log::info('数据库轮询处理完成');
 
-        } catch (\Throwable $e) {
-            \support\Log::error('数据库轮询异常: ' . $e->getMessage());
+        } catch (Throwable $e) {
+            Log::error('数据库轮询异常: ' . $e->getMessage());
         }
     }
 
@@ -233,6 +237,7 @@ class ImportProcess
      * 执行导入任务
      *
      * @param ImportJob $job 导入任务对象
+     *
      * @return bool 执行结果
      */
     protected function executeImportJob(ImportJob $job): bool
@@ -267,7 +272,7 @@ class ImportProcess
             $this->currentJob = null;
 
             return $result;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('导入任务执行错误: ' . $e->getMessage());
 
             // 更新任务状态为failed
@@ -326,7 +331,7 @@ class ImportProcess
             $this->executeImportJob($job);
 
             $message->ack();
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('导入任务执行错误: ' . $e->getMessage());
             // 简易处理：进入 DLX（队列已配置DLX），避免阻塞
             $message->nack(false);
@@ -337,6 +342,7 @@ class ImportProcess
      * 进程停止时执行
      *
      * @param Worker $worker
+     *
      * @return void
      */
     public function onWorkerStop(Worker $worker): void

@@ -2,6 +2,7 @@
 
 namespace app\service;
 
+use support\Log;
 use support\Request;
 use support\Response;
 
@@ -104,9 +105,10 @@ class SecurityService
     /**
      * 深度清理输入数据，防止XSS攻击
      *
-     * @param mixed $data 输入数据
-     * @param bool $stripTags 是否移除HTML标签
-     * @param bool $encodeQuotes 是否编码引号
+     * @param mixed $data         输入数据
+     * @param bool  $stripTags    是否移除HTML标签
+     * @param bool  $encodeQuotes 是否编码引号
+     *
      * @return mixed 清理后的数据
      */
     public static function sanitizeInput(mixed $data, bool $stripTags = true, bool $encodeQuotes = true): mixed
@@ -150,6 +152,7 @@ class SecurityService
      * 验证输入数据是否包含SQL注入特征
      *
      * @param string $input 输入字符串
+     *
      * @return bool 是否包含SQL注入特征
      */
     public static function containsSqlInjection(string $input): bool
@@ -169,6 +172,7 @@ class SecurityService
      * @param string $filename 文件名
      * @param string $mimeType MIME类型
      * @param int $fileSize 文件大小（字节）
+     *
      * @return array [是否安全, 错误信息]
      */
     public static function validateFileSecurity(string $filename, string $mimeType, int $fileSize): array
@@ -213,6 +217,7 @@ class SecurityService
      * 生成安全的文件名
      *
      * @param string $originalName 原始文件名
+     *
      * @return string 安全的文件名
      */
     public static function generateSecureFilename(string $originalName): string
@@ -237,8 +242,9 @@ class SecurityService
     /**
      * 验证请求是否来自合法来源
      *
-     * @param Request $request 请求对象
-     * @param array $allowedOrigins 允许的来源域名
+     * @param Request $request        请求对象
+     * @param array   $allowedOrigins 允许的来源域名
+     *
      * @return bool 是否合法
      */
     public static function validateOrigin(Request $request, array $allowedOrigins = []): bool
@@ -271,8 +277,9 @@ class SecurityService
     /**
      * 生成安全的随机字符串
      *
-     * @param int $length 长度
-     * @param string $type 类型：alphanum, numeric, alpha, hex
+     * @param int    $length 长度
+     * @param string $type   类型：alphanum, numeric, alpha, hex
+     *
      * @return string 随机字符串
      */
     public static function generateSecureRandom(int $length = 32, string $type = 'alphanum'): string
@@ -297,6 +304,7 @@ class SecurityService
      *
      * @param string $password 密码
      * @param array $options 选项：min_length, require_uppercase, require_lowercase, require_numbers, require_symbols
+     *
      * @return array [是否通过, 错误信息]
      */
     public static function validatePasswordStrength(string $password, array $options = []): array
@@ -349,8 +357,9 @@ class SecurityService
      * 创建安全的JSON响应
      *
      * @param mixed $data 响应数据
-     * @param int $code 状态码
+     * @param int   $code 状态码
      * @param string $message 消息
+     *
      * @return Response JSON响应
      */
     public static function jsonResponse(mixed $data = null, int $code = 200, string $message = 'success'): Response
@@ -371,9 +380,9 @@ class SecurityService
     /**
      * 记录安全事件日志
      *
-     * @param string $event 事件类型
+     * @param string $event   事件类型
      * @param string $details 详细信息
-     * @param array $context 上下文信息
+     * @param array  $context 上下文信息
      */
     public static function logSecurityEvent(string $event, string $details, array $context = []): void
     {
@@ -386,6 +395,6 @@ class SecurityService
             'context' => $context,
         ];
 
-        \support\Log::warning('Security Event: ' . json_encode($logData));
+        Log::warning('Security Event: ' . json_encode($logData));
     }
 }

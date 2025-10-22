@@ -76,12 +76,12 @@ class ApiPostController
     /**
      * 获取文章内容（用于前端异步加载）
      *
-     * @deprecated 不再使用，内容已直接嵌入到模板中以优化 SEO
      * @param Request $request
      * @param mixed   $keyword
      *
      * @return Response
      * @throws Throwable
+     * @deprecated 不再使用，内容已直接嵌入到模板中以优化 SEO
      */
     #[RateLimiter(limit: 10, ttl: 3)]
     public function content(Request $request, mixed $keyword = null): Response

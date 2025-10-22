@@ -11,8 +11,9 @@ class URLHelper
     /**
      * 生成文章页面URL
      *
-     * @param string $slug 文章的slug
-     * @param bool $withHtmlSuffix 是否添加.html后缀
+     * @param string $slug           文章的slug
+     * @param bool   $withHtmlSuffix 是否添加.html后缀
+     *
      * @return string 格式化后的文章URL
      */
     public static function generatePostUrl(string $slug, bool $withHtmlSuffix = true): string
@@ -22,7 +23,7 @@ class URLHelper
             $url .= '.html';
         }
         // 过滤器：文章URL（需权限 url:filter.post）
-        $url = \app\service\PluginService::apply_filters('url.post_filter', ['url' => $url])['url'] ?? $url;
+        $url = PluginService::apply_filters('url.post_filter', ['url' => $url])['url'] ?? $url;
 
         return $url;
     }
@@ -30,8 +31,9 @@ class URLHelper
     /**
      * 生成页面URL
      *
-     * @param string $slug 页面的slug
-     * @param bool $withHtmlSuffix 是否添加.html后缀
+     * @param string $slug           页面的slug
+     * @param bool   $withHtmlSuffix 是否添加.html后缀
+     *
      * @return string 格式化后的页面URL
      */
     public static function generatePageUrl(string $slug, bool $withHtmlSuffix = true): string
@@ -41,7 +43,7 @@ class URLHelper
             $url .= '.html';
         }
         // 过滤器：页面URL（需权限 url:filter.page）
-        $url = \app\service\PluginService::apply_filters('url.page_filter', ['url' => $url])['url'] ?? $url;
+        $url = PluginService::apply_filters('url.page_filter', ['url' => $url])['url'] ?? $url;
 
         return $url;
     }
@@ -49,8 +51,9 @@ class URLHelper
     /**
      * 生成分类页面URL
      *
-     * @param string $slug 分类的slug
-     * @param bool $withHtmlSuffix 是否添加.html后缀
+     * @param string $slug           分类的slug
+     * @param bool   $withHtmlSuffix 是否添加.html后缀
+     *
      * @return string 格式化后的分类URL
      */
     public static function generateCategoryUrl(string $slug, bool $withHtmlSuffix = true): string
@@ -62,7 +65,7 @@ class URLHelper
             $url .= '.html';
         }
         // 过滤器：分类URL（需权限 url:filter.category）
-        $url = \app\service\PluginService::apply_filters('url.category_filter', ['url' => $url])['url'] ?? $url;
+        $url = PluginService::apply_filters('url.category_filter', ['url' => $url])['url'] ?? $url;
 
         return $url;
     }
@@ -70,8 +73,9 @@ class URLHelper
     /**
      * 生成标签页面URL
      *
-     * @param string $slug 标签的slug
-     * @param bool $withHtmlSuffix 是否添加.html后缀
+     * @param string $slug           标签的slug
+     * @param bool   $withHtmlSuffix 是否添加.html后缀
+     *
      * @return string 格式化后的标签URL
      */
     public static function generateTagUrl(string $slug, bool $withHtmlSuffix = true): string
@@ -83,7 +87,7 @@ class URLHelper
             $url .= '.html';
         }
         // 过滤器：标签URL（需权限 url:filter.tag）
-        $url = \app\service\PluginService::apply_filters('url.tag_filter', ['url' => $url])['url'] ?? $url;
+        $url = PluginService::apply_filters('url.tag_filter', ['url' => $url])['url'] ?? $url;
 
         return $url;
     }
@@ -91,8 +95,9 @@ class URLHelper
     /**
      * 生成搜索结果页面URL
      *
-     * @param string $keyword 搜索关键词
-     * @param bool $withHtmlSuffix 是否添加.html后缀
+     * @param string $keyword        搜索关键词
+     * @param bool   $withHtmlSuffix 是否添加.html后缀
+     *
      * @return string 格式化后的搜索URL
      */
     public static function generateSearchUrl(string $keyword, bool $withHtmlSuffix = false): string
@@ -102,7 +107,7 @@ class URLHelper
             $url .= '.html';
         }
         // 过滤器：搜索URL（需权限 url:filter.search）
-        $url = \app\service\PluginService::apply_filters('url.search_filter', ['url' => $url])['url'] ?? $url;
+        $url = PluginService::apply_filters('url.search_filter', ['url' => $url])['url'] ?? $url;
 
         return $url;
     }
@@ -111,6 +116,7 @@ class URLHelper
      * 从URL中移除.html后缀
      *
      * @param string $url 原始URL或slug
+     *
      * @return string 移除后缀后的URL或slug
      */
     public static function removeHtmlSuffix(string $url): string
@@ -126,6 +132,7 @@ class URLHelper
      * 检查URL是否包含.html后缀
      *
      * @param string $url 要检查的URL
+     *
      * @return bool 是否包含.html后缀
      */
     public static function hasHtmlSuffix(string $url): bool
@@ -137,6 +144,7 @@ class URLHelper
      * 确保URL包含.html后缀
      *
      * @param string $url 原始URL
+     *
      * @return string 确保包含.html后缀的URL
      */
     public static function ensureHtmlSuffix(string $url): string

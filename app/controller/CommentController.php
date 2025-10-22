@@ -9,7 +9,6 @@ use support\Log;
 use support\Request;
 use support\Response;
 use Throwable;
-use Webman\RateLimiter\Annotation\RateLimiter;
 
 class CommentController
 {

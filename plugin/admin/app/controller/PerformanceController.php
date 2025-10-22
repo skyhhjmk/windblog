@@ -5,6 +5,7 @@ namespace plugin\admin\app\controller;
 use app\service\EnhancedCacheService;
 use support\Redis;
 use support\Request;
+use Throwable;
 
 /**
  * 性能监控控制器
@@ -57,7 +58,7 @@ class PerformanceController extends Base
                     $snapshot = $redis->get($snapshotKey);
                     $series = $redis->lRange($seriesKey, -100, -1);
                 }
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 // 忽略Redis操作异常
             }
 
@@ -80,11 +81,11 @@ class PerformanceController extends Base
                                 ];
                                 $snapshot = json_encode($currentStats);
                             }
-                        } catch (\Throwable $e) {
+                        } catch (Throwable $e) {
                             // 忽略Redis info获取异常
                         }
                     }
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     // 忽略直接获取Redis状态的异常
                 }
             }
@@ -100,7 +101,7 @@ class PerformanceController extends Base
             ];
 
             return $this->success('ok', $data, count($data['series']));
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return $this->fail('获取Redis状态失败: ' . $e->getMessage());
         }
     }
@@ -139,7 +140,7 @@ class PerformanceController extends Base
                 if ($default) {
                     $series = $default->lRange($seriesKey, -100, -1);
                 }
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 // 忽略Redis操作异常
             }
 
@@ -162,11 +163,11 @@ class PerformanceController extends Base
                                 ];
                                 $snapshot = json_encode($currentStats);
                             }
-                        } catch (\Throwable $e) {
+                        } catch (Throwable $e) {
                             // 忽略OPcache状态获取异常
                         }
                     }
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     // 忽略直接获取OPcache状态的异常
                 }
             }
@@ -188,7 +189,7 @@ class PerformanceController extends Base
             ];
 
             return $this->success('ok', $data, count($data['series']));
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return $this->fail('获取OPcache状态失败: ' . $e->getMessage());
         }
     }
@@ -234,7 +235,7 @@ class PerformanceController extends Base
             ];
 
             return $this->success('ok', $data, count($data['series']));
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return $this->fail('获取缓存统计失败: ' . $e->getMessage());
         }
     }
@@ -263,7 +264,7 @@ class PerformanceController extends Base
             ];
 
             return $this->success('ok', $data, max(count($data['redis']), count($data['opcache'])));
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return $this->fail('获取序列失败: ' . $e->getMessage());
         }
     }

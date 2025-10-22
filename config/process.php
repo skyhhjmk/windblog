@@ -14,6 +14,7 @@
  */
 
 use app\process\Http;
+use app\process\Performance;
 use support\Log;
 use support\Request;
 
@@ -71,7 +72,7 @@ $__processes = [
 // 仅在 CACHE_DRIVER=redis 时注册性能采集进程
 if (strtolower(trim((string) $__cacheDriver)) === 'redis') {
     $__processes['performance'] = [
-        'handler' => \app\process\Performance::class,
+        'handler' => Performance::class,
         'count' => 1,
         'reloadable' => true,
         'constructor' => [60, 500],

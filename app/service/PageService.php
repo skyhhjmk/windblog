@@ -15,6 +15,7 @@ class PageService
      * 根据URL关键字获取页面内容
      *
      * @param string $keyword URL关键字（slug）
+     *
      * @return array|null 页面数据或null（如果页面不存在）
      * @throws Throwable
      */
@@ -38,6 +39,7 @@ class PageService
      * 根据ID获取页面内容
      *
      * @param int $id 页面ID
+     *
      * @return array|null 页面数据或null（如果页面不存在）
      * @throws Throwable
      */
@@ -61,6 +63,7 @@ class PageService
      * 处理页面内容
      *
      * @param Page $page 页面模型实例
+     *
      * @return array 处理后的页面数据
      */
     protected static function processPageContent(Page $page): array
@@ -84,6 +87,7 @@ class PageService
      * 生成Meta描述
      *
      * @param string $content 内容
+     *
      * @return string 生成的描述
      */
     protected static function generateMetaDescription(string $content): string
@@ -97,6 +101,7 @@ class PageService
      * 渲染页面
      *
      * @param array $pageData 页面数据
+     *
      * @return string 渲染后的HTML
      */
     public static function renderPage(array $pageData): string
@@ -117,6 +122,7 @@ class PageService
      * 根据URL关键字获取并渲染页面
      *
      * @param string $keyword URL关键字
+     *
      * @return string|null 渲染后的页面内容或null（如果页面不存在）
      * @throws Throwable
      */
@@ -135,6 +141,7 @@ class PageService
      * 根据ID获取并渲染页面
      *
      * @param int $id 页面ID
+     *
      * @return string|null 渲染后的页面内容或null（如果页面不存在）
      * @throws Throwable
      */

@@ -2,12 +2,19 @@
 
 namespace plugin\admin\app\controller;
 
+use app\model\Category;
+use app\model\Post;
+use app\model\Tag;
+use app\service\BlogService;
 use app\service\ElasticRebuildService;
 use app\service\ElasticService;
 use app\service\ElasticSyncService;
+use Elastic\Elasticsearch\Exception\ClientResponseException;
 use support\Log;
+use support\Redis;
 use support\Request;
 use support\Response;
+use Throwable;
 
 /**
  * 搜索设置（Elasticsearch）
@@ -101,7 +108,7 @@ class ElasticController extends Base
             // 同步标签
             $tpage = 1;
             while (true) {
-                $tBatch = \app\model\Tag::orderBy('id')->forPage($tpage, $pageSize)->get(['id', 'name', 'slug', 'description']);
+                $tBatch = Tag::orderBy('id')->forPage($tpage, $pageSize)->get(['id', 'name', 'slug', 'description']);
                 if ($tBatch->isEmpty()) {
                     break;
                 }
@@ -114,7 +121,7 @@ class ElasticController extends Base
             // 同步分类
             $cpage = 1;
             while (true) {
-                $cBatch = \app\model\Category::orderBy('id')->forPage($cpage, $pageSize)->get(['id', 'name', 'slug', 'description']);
+                $cBatch = Category::orderBy('id')->forPage($cpage, $pageSize)->get(['id', 'name', 'slug', 'description']);
                 if ($cBatch->isEmpty()) {
                     break;
                 }
@@ -125,14 +132,14 @@ class ElasticController extends Base
             }
 
             // 同步最近文章页（按 id 倒序取前两页）
-            $pp = \app\service\BlogService::getPostsPerPage();
-            $recent = \app\model\Post::published()->orderByDesc('id')->forPage(1, max(1, $pp * 2))->get();
+            $pp = BlogService::getPostsPerPage();
+            $recent = Post::published()->orderByDesc('id')->forPage(1, max(1, $pp * 2))->get();
             foreach ($recent as $post) {
                 ElasticSyncService::indexPost($post);
             }
 
             return json(['success' => true, 'message' => '同步完成']);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::warning('[ElasticController] sync error: ' . $e->getMessage());
 
             return json(['success' => false, 'error' => $e->getMessage()]);
@@ -161,7 +168,7 @@ class ElasticController extends Base
                 'unassigned_shards' => $body['unassigned_shards'] ?? null,
                 'error' => null,
             ]);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::warning('[ElasticController] Elastic connection test failed: ' . $e);
             Log::debug('[ElasticController] Elastic connection test using config: ' . var_export(ElasticService::getConfigProxy(), true));
 
@@ -196,10 +203,10 @@ class ElasticController extends Base
         } elseif ($limit > 500) {
             $limit = 500;
         }
-        $total = (int) (\support\Redis::lLen('es:sync:logs') ?: 0);
+        $total = (int) (Redis::lLen('es:sync:logs') ?: 0);
         $start = $offset;
         $end = $offset + $limit - 1;
-        $logs = \support\Redis::lRange('es:sync:logs', $start, $end) ?: [];
+        $logs = Redis::lRange('es:sync:logs', $start, $end) ?: [];
 
         return json([
             'success' => true,
@@ -213,7 +220,7 @@ class ElasticController extends Base
     // 清空同步日志
     public function clearLogs(Request $request): Response
     {
-        \support\Redis::del('es:sync:logs');
+        Redis::del('es:sync:logs');
 
         return json(['success' => true]);
     }
@@ -281,7 +288,7 @@ class ElasticController extends Base
         try {
             $client = ElasticService::client();
             $client->indices()->close(['index' => $index]);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return json(['success' => false, 'step' => 'close', 'status' => 0, 'error' => $e->getMessage()]);
         }
 
@@ -309,10 +316,10 @@ class ElasticController extends Base
                     ],
                 ],
             ]);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             try {
                 $client->indices()->open(['index' => $index]);
-            } catch (\Throwable $ignore) {
+            } catch (Throwable $ignore) {
             }
 
             return $this->applySynonymsRebuild($request);
@@ -321,7 +328,7 @@ class ElasticController extends Base
         // 3) 打开索引（官方客户端）
         try {
             $client->indices()->open(['index' => $index]);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return json(['success' => false, 'step' => 'open', 'status' => 0, 'error' => $e->getMessage()]);
         }
 
@@ -358,7 +365,7 @@ class ElasticController extends Base
                 'tokens' => $body['tokens'] ?? [],
                 'error' => null,
             ]);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return json([
                 'success' => false,
                 'status' => 0,
@@ -380,7 +387,7 @@ class ElasticController extends Base
         try {
             $client = ElasticService::client();
             $client->indices()->close(['index' => $index]);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return json(['success' => false, 'step' => 'close', 'status' => 0, 'error' => $e->getMessage()]);
         }
 
@@ -398,10 +405,10 @@ class ElasticController extends Base
                     ],
                 ],
             ]);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             try {
                 $client->indices()->open(['index' => $index]);
-            } catch (\Throwable $ignore) {
+            } catch (Throwable $ignore) {
             }
 
             return json(['success' => false, 'step' => 'settings', 'status' => 0, 'error' => $e->getMessage()]);
@@ -410,7 +417,7 @@ class ElasticController extends Base
         // 3) 打开索引（官方客户端）
         try {
             $client->indices()->open(['index' => $index]);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return json(['success' => false, 'step' => 'open', 'status' => 0, 'error' => $e->getMessage()]);
         }
 
@@ -443,7 +450,7 @@ class ElasticController extends Base
             $mapResponse = $client->indices()->getMapping(['index' => $index]);
             $mapBody = $mapResponse->asArray();
             $mapping = $mapBody[$index]['mappings'] ?? ($mapBody['mappings'] ?? []);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::warning("[ElasticController] getMapping failed for index={$index}: {$e->getMessage()}");
 
             return json(['success' => false, 'step' => 'get_mapping', 'status' => 0, 'error' => $e->getMessage()]);
@@ -482,7 +489,7 @@ class ElasticController extends Base
                     'mappings' => $mapping,
                 ],
             ]);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::warning("[ElasticController] create index failed newIndex={$newIndex}: {$e->getMessage()}");
 
             return json(['success' => false, 'step' => 'create_index', 'status' => 0, 'error' => $e->getMessage()]);
@@ -498,7 +505,7 @@ class ElasticController extends Base
                     'conflicts' => 'proceed',
                 ],
             ]);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::warning("[ElasticController] reindex failed from {$index} to {$newIndex}: {$e->getMessage()}");
 
             return json(['success' => false, 'step' => 'reindex', 'status' => 0, 'error' => $e->getMessage()]);
@@ -521,10 +528,10 @@ class ElasticController extends Base
             } else {
                 blog_config('es.index', $newIndex, true, true, true);
             }
-        } catch (\Elastic\Elasticsearch\Exception\ClientResponseException $e) {
+        } catch (ClientResponseException $e) {
             Log::info("[ElasticController] getAlias/updateAliases degraded to config update: {$e->getMessage()}");
             blog_config('es.index', $newIndex, true, true, true);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::warning("[ElasticController] switch_alias failed: {$e->getMessage()}");
 
             return json(['success' => false, 'step' => 'switch_alias', 'status' => 0, 'error' => $e->getMessage()]);
@@ -533,7 +540,7 @@ class ElasticController extends Base
         // 删除旧索引
         try {
             $client->indices()->delete(['index' => $index]);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::info("[ElasticController] old index delete failed index={$index}: {$e->getMessage()}");
 
             return json(['success' => true, 'warning' => 'old index not deleted', 'status' => 0, 'error' => $e->getMessage(), 'new_index' => $newIndex]);

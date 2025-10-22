@@ -11,7 +11,6 @@ use app\service\PJAXHelper;
 use app\service\SidebarService;
 use support\Request;
 use support\Response;
-use Webman\RateLimiter\Annotation\RateLimiter;
 
 class TagController
 {

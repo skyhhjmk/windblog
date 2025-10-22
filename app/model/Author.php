@@ -2,9 +2,12 @@
 
 namespace app\model;
 
+use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use support\Log;
 use support\Model;
 use Throwable;
 
@@ -145,32 +148,32 @@ class Author extends Model
     {
         // 判断是否启用软删除，除非强制硬删除
         $useSoftDelete = blog_config('soft_delete', true);
-        \support\Log::debug('Soft delete config value: ' . var_export($useSoftDelete, true));
-        \support\Log::debug('Force delete flag: ' . var_export($forceDelete, true));
+        Log::debug('Soft delete config value: ' . var_export($useSoftDelete, true));
+        Log::debug('Force delete flag: ' . var_export($forceDelete, true));
 
         if (!$forceDelete && $useSoftDelete) {
             // 软删除：设置 deleted_at 字段
             try {
-                \support\Log::debug('Executing soft delete for author ID: ' . $this->id);
+                Log::debug('Executing soft delete for author ID: ' . $this->id);
                 // 使用save方法而不是update方法，确保模型状态同步
                 $this->deleted_at = date('Y-m-d H:i:s');
                 $result = $this->save();
-                \support\Log::debug('Soft delete result: ' . var_export($result, true));
-                \support\Log::debug('Author deleted_at value after save: ' . var_export($this->deleted_at, true));
+                Log::debug('Soft delete result: ' . var_export($result, true));
+                Log::debug('Author deleted_at value after save: ' . var_export($this->deleted_at, true));
 
                 return $result !== false; // 确保返回布尔值
-            } catch (\Exception $e) {
-                \support\Log::error('Soft delete failed for author ID ' . $this->id . ': ' . $e->getMessage());
+            } catch (Exception $e) {
+                Log::error('Soft delete failed for author ID ' . $this->id . ': ' . $e->getMessage());
 
                 return false;
             }
         } else {
             // 硬删除：直接从数据库中删除记录
-            \support\Log::debug('Executing hard delete for author ID: ' . $this->id);
+            Log::debug('Executing hard delete for author ID: ' . $this->id);
             try {
                 return $this->delete();
-            } catch (\Exception $e) {
-                \support\Log::error('Hard delete failed for author ID ' . $this->id . ': ' . $e->getMessage());
+            } catch (Exception $e) {
+                Log::error('Hard delete failed for author ID ' . $this->id . ': ' . $e->getMessage());
 
                 return false;
             }
@@ -190,8 +193,8 @@ class Author extends Model
             $result = $this->save();
 
             return $result !== false;
-        } catch (\Exception $e) {
-            \support\Log::error('Restore failed for author ID ' . $this->id . ': ' . $e->getMessage());
+        } catch (Exception $e) {
+            Log::error('Restore failed for author ID ' . $this->id . ': ' . $e->getMessage());
 
             return false;
         }
@@ -205,7 +208,7 @@ class Author extends Model
      * 获取作者的所有文章。
      * 通过 post_author 中间表建立多对多关系。
      *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     * @return BelongsToMany
      */
     public function posts()
     {

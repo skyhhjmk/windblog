@@ -3,8 +3,11 @@
 namespace plugin\admin\app\controller;
 
 use app\service\PluginService;
+use ReflectionClass;
+use ReflectionProperty;
 use support\Request;
 use support\Response;
+use Throwable;
 
 /**
  * 独立插件系统管理页与API（纯HTML+API）
@@ -260,7 +263,7 @@ class PluginSystemController extends Base
     public function pluginMenus(Request $request): Response
     {
         // 通过反射获取 PluginService 中的 manager 实例
-        $pluginServiceRef = new \ReflectionClass(\app\service\PluginService::class);
+        $pluginServiceRef = new ReflectionClass(PluginService::class);
         $managerProp = $pluginServiceRef->getProperty('manager');
         $managerProp->setAccessible(true);
         $manager = $managerProp->getValue(null);
@@ -298,7 +301,7 @@ class PluginSystemController extends Base
         }
 
         // 获取插件管理器
-        $pluginServiceRef = new \ReflectionClass(\app\service\PluginService::class);
+        $pluginServiceRef = new ReflectionClass(PluginService::class);
         $managerProp = $pluginServiceRef->getProperty('manager');
         $managerProp->setAccessible(true);
         $manager = $managerProp->getValue(null);
@@ -321,7 +324,7 @@ class PluginSystemController extends Base
 
         // 获取插件实例
         $pluginEntry = null;
-        $pluginsProperty = new \ReflectionProperty($manager, 'plugins');
+        $pluginsProperty = new ReflectionProperty($manager, 'plugins');
         $pluginsProperty->setAccessible(true);
         $pluginData = $pluginsProperty->getValue($manager);
 
@@ -355,7 +358,7 @@ class PluginSystemController extends Base
             // 检查路径是否匹配
             if ($routePath === $originalPath) {
                 // 检查权限
-                if ($permission && !\app\service\PluginService::ensurePermission($slug, $permission)) {
+                if ($permission && !PluginService::ensurePermission($slug, $permission)) {
                     return new Response(403, [], 'Access denied to plugin route. Plugin: ' . $slug . ', Permission: ' . $permission);
                 }
 
@@ -367,7 +370,7 @@ class PluginSystemController extends Base
                     }
 
                     return new Response(200, [], (string) $response);
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     return new Response(500, [], 'Internal Server Error: ' . $e->getMessage());
                 }
             }

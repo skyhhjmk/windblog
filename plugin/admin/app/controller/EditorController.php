@@ -2,9 +2,13 @@
 
 namespace plugin\admin\app\controller;
 
+use app\model\Author;
+use app\model\Media;
 use app\model\Post;
 use app\service\MediaLibraryService;
+use Exception;
 use support\Db;
+use support\Log;
 use support\Request;
 use support\Response;
 
@@ -81,7 +85,7 @@ class EditorController
         ];
 
         // 调试日志
-        \support\Log::info('EditorController::save - 接收到的数据', [
+        Log::info('EditorController::save - 接收到的数据', [
             'allow_comments_raw' => $allow_comments,
             'allow_comments_processed' => $data['allow_comments'],
             'featured_raw' => $featured,
@@ -190,7 +194,7 @@ class EditorController
                 'msg' => '保存成功',
                 'data' => ['id' => $post_id],
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // 捕获异常并返回错误信息
             return json(['code' => 1, 'msg' => '保存失败：' . $e->getMessage()]);
         }
@@ -217,7 +221,7 @@ class EditorController
             $page = $request->get('page', 1);
             $limit = $request->get('limit', 10);
 
-            $query = \app\model\Author::query();
+            $query = Author::query();
 
             // 如果是普通用户，只能查看自己
             if ($role !== 'administrator') {
@@ -259,7 +263,7 @@ class EditorController
                 ],
             ]);
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return json(['code' => 1, 'msg' => '获取失败：' . $e->getMessage()]);
         }
     }
@@ -303,7 +307,7 @@ class EditorController
                     'message' => $result['msg'],
                 ]);
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // 捕获异常并返回错误信息
             return json([
                 'success' => 0,
@@ -348,7 +352,7 @@ class EditorController
 
         try {
             // 直接使用Media模型获取媒体信息
-            $media = \app\model\Media::find($mediaId);
+            $media = Media::find($mediaId);
 
             if (!$media) {
                 return json(['code' => 1, 'msg' => '媒体文件不存在']);
@@ -371,7 +375,7 @@ class EditorController
                     'mime_type' => $media->mime_type,
                 ],
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return json(['code' => 1, 'msg' => '获取失败：' . $e->getMessage()]);
         }
     }
@@ -415,8 +419,8 @@ class EditorController
             ]);
 
             return $userId;
-        } catch (\Exception $e) {
-            \support\Log::error('创建默认作者失败: ' . $e->getMessage());
+        } catch (Exception $e) {
+            Log::error('创建默认作者失败: ' . $e->getMessage());
 
             return null;
         }

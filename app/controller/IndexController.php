@@ -10,7 +10,6 @@ use League\CommonMark\Exception\CommonMarkException;
 use support\Request;
 use support\Response;
 use Throwable;
-use Webman\RateLimiter\Annotation\RateLimiter;
 
 /**
  * 博客首页控制器

@@ -20,7 +20,6 @@ use support\Log;
 use support\Request;
 use support\Response;
 use Throwable;
-use Webman\RateLimiter\Annotation\RateLimiter;
 
 /**
  * 链接广场控制器

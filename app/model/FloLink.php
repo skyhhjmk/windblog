@@ -2,8 +2,10 @@
 
 namespace app\model;
 
+use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
+use support\Log;
 use support\Model;
 
 /**
@@ -146,7 +148,7 @@ class FloLink extends Model
     public function scopeOrdered(Builder $query): Builder
     {
         return $query->orderBy('priority', 'asc')
-                     ->orderBy('sort_order', 'asc');
+            ->orderBy('sort_order', 'asc');
     }
 
     /**
@@ -192,8 +194,8 @@ class FloLink extends Model
                 $result = $this->save();
 
                 return $result !== false;
-            } catch (\Exception $e) {
-                \support\Log::error('Soft delete failed for FloLink ID ' . $this->id . ': ' . $e->getMessage());
+            } catch (Exception $e) {
+                Log::error('Soft delete failed for FloLink ID ' . $this->id . ': ' . $e->getMessage());
 
                 return false;
             }
@@ -201,8 +203,8 @@ class FloLink extends Model
             // 硬删除：直接从数据库中删除记录
             try {
                 return $this->delete();
-            } catch (\Exception $e) {
-                \support\Log::error('Hard delete failed for FloLink ID ' . $this->id . ': ' . $e->getMessage());
+            } catch (Exception $e) {
+                Log::error('Hard delete failed for FloLink ID ' . $this->id . ': ' . $e->getMessage());
 
                 return false;
             }
@@ -221,8 +223,8 @@ class FloLink extends Model
             $result = $this->save();
 
             return $result !== false;
-        } catch (\Exception $e) {
-            \support\Log::error('Restore failed for FloLink ID ' . $this->id . ': ' . $e->getMessage());
+        } catch (Exception $e) {
+            Log::error('Restore failed for FloLink ID ' . $this->id . ': ' . $e->getMessage());
 
             return false;
         }
@@ -233,6 +235,7 @@ class FloLink extends Model
      *
      * @param string $key
      * @param mixed $default
+     *
      * @return mixed
      */
     public function getCustomField(string $key, $default = null)
@@ -245,6 +248,7 @@ class FloLink extends Model
      *
      * @param string $key
      * @param mixed $value
+     *
      * @return void
      */
     public function setCustomField(string $key, $value): void
@@ -262,6 +266,7 @@ class FloLink extends Model
      * 批量设置自定义字段
      *
      * @param array $fields
+     *
      * @return void
      */
     public function setCustomFields(array $fields): void

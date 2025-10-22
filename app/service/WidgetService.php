@@ -6,6 +6,7 @@ use app\model\Category;
 use app\model\Post;
 use app\model\Setting;
 use app\model\Tag;
+use Illuminate\Support\Collection;
 use support\Log;
 use Throwable;
 
@@ -17,24 +18,28 @@ class WidgetService
 {
     /**
      * 已注册的小工具类型
+     *
      * @var array
      */
     protected static $registeredWidgets = [];
 
     /**
      * 小工具渲染器映射
+     *
      * @var array
      */
     protected static $widgetRenderers = [];
 
     /**
      * 小工具HTML渲染器映射
+     *
      * @var array
      */
     protected static $widgetHtmlRenderers = [];
 
     /**
      * 小工具类型默认标题映射
+     *
      * @var array
      */
     protected static $defaultTitles = [
@@ -51,11 +56,12 @@ class WidgetService
     /**
      * 注册小工具类型
      *
-     * @param string $type 小工具类型
-     * @param string $name 小工具名称
-     * @param string $description 小工具描述
-     * @param callable|null $renderer 数据渲染器
+     * @param string        $type        小工具类型
+     * @param string        $name        小工具名称
+     * @param string        $description 小工具描述
+     * @param callable|null $renderer    数据渲染器
      * @param callable|null $htmlRenderer HTML渲染器
+     *
      * @return bool 是否注册成功
      */
     public static function registerWidget(string $type, string $name, string $description = '', ?callable $renderer = null, ?callable $htmlRenderer = null): bool
@@ -105,6 +111,7 @@ class WidgetService
      *
      * @param array $widget 小工具配置
      * @param string $pageType 页面类型
+     *
      * @return array 渲染后的小工具数据
      */
     public static function renderWidget(array $widget, string $pageType = 'default'): array
@@ -158,6 +165,7 @@ class WidgetService
      *
      * @param string $widgetType 小工具类型
      * @param string $pageType 页面类型
+     *
      * @return array 小工具配置
      */
     public static function getWidgetConfig(string $widgetType, string $pageType = 'default'): array
@@ -203,6 +211,7 @@ class WidgetService
      * 渲染小工具为HTML
      *
      * @param array $widget 小工具数据
+     *
      * @return string 渲染后的HTML
      */
     public static function renderToHtml(array $widget): string
@@ -217,12 +226,12 @@ class WidgetService
 
             // 获取渲染后的小工具数据
             // 动作：小工具渲染开始（需权限 widget:action.render_start）
-            \app\service\PluginService::do_action('widget.render_start', $widget);
+            PluginService::do_action('widget.render_start', $widget);
 
             $widgetData = self::renderWidget($widget);
 
             // 动作：小工具渲染结束（需权限 widget:action.render_end）
-            \app\service\PluginService::do_action('widget.render_end', $widgetData);
+            PluginService::do_action('widget.render_end', $widgetData);
 
             // 优先使用自定义HTML渲染器
             if (isset(self::$widgetHtmlRenderers[$widgetType]) && is_callable(self::$widgetHtmlRenderers[$widgetType])) {
@@ -240,7 +249,7 @@ class WidgetService
 
             if (method_exists(__CLASS__, $htmlMethod)) {
                 $content = self::{$htmlMethod}($widgetData);
-                $content = \app\service\PluginService::apply_filters('widget.output_filter', [
+                $content = PluginService::apply_filters('widget.output_filter', [
                     'type' => $widgetType,
                     'content' => $content,
                     'title' => $title,
@@ -250,7 +259,7 @@ class WidgetService
             }
 
             $unknown = '<div class="text-gray-500 text-sm italic">未知的小工具类型</div>';
-            $unknown = \app\service\PluginService::apply_filters('widget.output_filter', [
+            $unknown = PluginService::apply_filters('widget.output_filter', [
                 'type' => $widgetType,
                 'content' => $unknown,
                 'title' => $title,
@@ -270,6 +279,7 @@ class WidgetService
      *
      * @param string $title 小工具标题
      * @param string $content 小工具内容
+     *
      * @return string 包装后的HTML
      */
     protected static function wrapWidgetHtml(string $title, string $content): string
@@ -285,6 +295,7 @@ class WidgetService
      *
      * @param array $widgets 小工具配置列表
      * @param string $pageType 页面类型
+     *
      * @return array 渲染后的小工具数据列表
      */
     public static function renderBatchWidgets(array $widgets, string $pageType = 'default'): array
@@ -338,9 +349,10 @@ class WidgetService
     /**
      * 渲染小工具为HTML并缓存
      *
-     * @param array $widget 小工具配置
+     * @param array  $widget   小工具配置
      * @param int|null $cacheMinutes 缓存分钟数，null表示使用默认缓存
      * @param string $pageType 页面类型
+     *
      * @return string 渲染后的HTML
      */
     public static function renderWidgetToHtmlWithCache(array $widget, ?int $cacheMinutes = null, string $pageType = 'default'): string
@@ -580,7 +592,7 @@ class WidgetService
     protected static function renderTagsHtml(array $widget): string
     {
         $tags = $widget['tags'] ?? [];
-        if ($tags instanceof \Illuminate\Support\Collection) {
+        if ($tags instanceof Collection) {
             $tags = $tags->all();
         }
         if (empty($tags)) {
@@ -756,10 +768,11 @@ class WidgetService
     /**
      * 数据获取包装器 - 统一错误处理和数据设置
      *
-     * @param callable $callback 数据获取回调函数
-     * @param array $widget 小工具配置
-     * @param string $dataKey 数据键名
-     * @param mixed $defaultValue 默认值
+     * @param callable $callback     数据获取回调函数
+     * @param array    $widget       小工具配置
+     * @param string   $dataKey      数据键名
+     * @param mixed    $defaultValue 默认值
+     *
      * @return array 处理后的小工具数据
      */
     protected static function getDataWrapper(callable $callback, array $widget, string $dataKey, $defaultValue): array

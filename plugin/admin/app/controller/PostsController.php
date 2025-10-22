@@ -3,6 +3,7 @@
 namespace plugin\admin\app\controller;
 
 use app\model\Post;
+use support\Log;
 use support\Request;
 use support\Response;
 use Throwable;
@@ -95,12 +96,12 @@ class PostsController extends Base
 
         // 记录软删除前的状态
         $useSoftDelete = blog_config('soft_delete', true);
-        \support\Log::debug('Soft delete config: ' . var_export($useSoftDelete, true));
-        \support\Log::debug('Post before soft delete: ' . var_export($post->toArray(), true));
+        Log::debug('Soft delete config: ' . var_export($useSoftDelete, true));
+        Log::debug('Post before soft delete: ' . var_export($post->toArray(), true));
 
         // 执行软删除并检查结果
         $result = $post->softDelete();
-        \support\Log::debug('Soft delete result: ' . var_export($result, true));
+        Log::debug('Soft delete result: ' . var_export($result, true));
 
         if ($result === false) {
             return $this->fail('删除失败');
@@ -109,7 +110,7 @@ class PostsController extends Base
         // 检查删除后的状态
         $updatedPost = Post::withTrashed()->find($id);
         if ($updatedPost) {
-            \support\Log::debug('Post after soft delete: ' . var_export($updatedPost->toArray(), true));
+            Log::debug('Post after soft delete: ' . var_export($updatedPost->toArray(), true));
         }
 
         return $this->success('文章已移至垃圾箱');

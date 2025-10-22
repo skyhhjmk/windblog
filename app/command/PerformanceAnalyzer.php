@@ -2,8 +2,13 @@
 
 namespace app\command;
 
+use app\model\Category;
+use app\model\Comment;
+use app\model\Tag;
+use app\service\BlogService;
 use app\service\EnhancedCacheService;
 use app\service\QueryOptimizer;
+use Exception;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -25,10 +30,10 @@ class PerformanceAnalyzer extends Command
     protected function configure()
     {
         $this->addOption('detail', 'd', InputOption::VALUE_NONE, 'Show detailed analysis')
-             ->addOption('queries', 'u', InputOption::VALUE_NONE, 'Analyze database queries')
-             ->addOption('cache', 'c', InputOption::VALUE_NONE, 'Analyze cache performance')
-             ->addOption('indexes', 'i', InputOption::VALUE_NONE, 'Generate index suggestions')
-             ->addOption('monitor', 'm', InputOption::VALUE_NONE, 'Monitor current performance');
+            ->addOption('queries', 'u', InputOption::VALUE_NONE, 'Analyze database queries')
+            ->addOption('cache', 'c', InputOption::VALUE_NONE, 'Analyze cache performance')
+            ->addOption('indexes', 'i', InputOption::VALUE_NONE, 'Generate index suggestions')
+            ->addOption('monitor', 'm', InputOption::VALUE_NONE, 'Monitor current performance');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -127,18 +132,18 @@ class PerformanceAnalyzer extends Command
     {
         try {
             // 首页查询
-            \app\service\BlogService::getBlogPosts(1, []);
+            BlogService::getBlogPosts(1, []);
 
             // 分类查询
-            \app\model\Category::where('status', true)->limit(10)->get();
+            Category::where('status', true)->limit(10)->get();
 
             // 标签查询
-            \app\model\Tag::limit(20)->get();
+            Tag::limit(20)->get();
 
             // 评论查询
-            \app\model\Comment::where('status', 'approved')->limit(10)->get();
+            Comment::where('status', 'approved')->limit(10)->get();
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // 忽略示例查询中的错误
         }
     }

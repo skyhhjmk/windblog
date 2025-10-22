@@ -4,9 +4,13 @@ namespace app\process;
 
 use app\model\Link;
 use app\service\MQService;
+use Exception;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
+use PhpAmqpLib\Exception\AMQPTimeoutException;
 use PhpAmqpLib\Message\AMQPMessage;
+use PhpAmqpLib\Wire\AMQPTable;
 use support\Log;
+use Throwable;
 use Workerman\Timer;
 use Workerman\Worker;
 
@@ -89,7 +93,7 @@ class LinkMonitor
 
             $this->mqChannel = $channel;
             Log::info('RabbitMQ连接初始化成功(LinkMonitor)');
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('RabbitMQ连接初始化失败(LinkMonitor): ' . $e->getMessage());
         }
 
@@ -101,8 +105,8 @@ class LinkMonitor
         // 每60秒进行一次 MQ 健康检查
         Timer::add(60, function () {
             try {
-                \app\service\MQService::checkAndHeal();
-            } catch (\Throwable $e) {
+                MQService::checkAndHeal();
+            } catch (Throwable $e) {
                 Log::warning('MQ 健康检查异常(LinkMonitor): ' . $e->getMessage());
             }
         });
@@ -130,14 +134,14 @@ class LinkMonitor
             while ($channel->is_consuming()) {
                 try {
                     $channel->wait(null, false, 1.0);
-                } catch (\PhpAmqpLib\Exception\AMQPTimeoutException $e) {
+                } catch (AMQPTimeoutException $e) {
                     // 正常超时，无消息到达，忽略
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     Log::warning('LinkMonitor 消费轮询异常: ' . $e->getMessage());
                     break;
                 }
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('LinkMonitor 消费异常: ' . $e->getMessage());
         }
     }
@@ -199,14 +203,14 @@ class LinkMonitor
                         $model->setCustomField('monitor', $summary);
                         $model->save();
                     }
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     Log::warning('LinkMonitor 保存概要失败: ' . $e->getMessage());
                 }
             }
 
             $this->clearFailureStats($url);
             $message->ack();
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('LinkMonitor 处理异常: ' . $e->getMessage());
             $this->recordFailure($url, $e->getMessage());
             $this->handleFailedMessage($message, $url);
@@ -258,7 +262,7 @@ class LinkMonitor
             }
 
             return ['success' => true, 'html' => $html ?: '', 'load_time' => $loadMs];
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return ['success' => false, 'error' => $e->getMessage()];
         }
     }
@@ -335,7 +339,7 @@ class LinkMonitor
         try {
             $retry = 0;
             $headers = $message->has('application_headers') ? $message->get('application_headers') : null;
-            if ($headers instanceof \PhpAmqpLib\Wire\AMQPTable) {
+            if ($headers instanceof AMQPTable) {
                 $native = method_exists($headers, 'getNativeData') ? $headers->getNativeData() : (array) $headers;
                 $retry = (int) ($native['x-retry-count'] ?? 0);
             }
@@ -348,7 +352,7 @@ class LinkMonitor
             }
 
             if ($retry < 2) {
-                $newHeaders = $headers ? clone $headers : new \PhpAmqpLib\Wire\AMQPTable();
+                $newHeaders = $headers ? clone $headers : new AMQPTable();
                 $newHeaders->set('x-retry-count', $retry + 1);
                 $message->set('application_headers', $newHeaders);
                 $message->nack(true); // 重新入队
@@ -357,7 +361,7 @@ class LinkMonitor
                 $message->nack(false);
                 Log::error('LinkMonitor 重试超限(3)，进入DLX');
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $message->nack(false);
             Log::error('LinkMonitor 处理失败消息异常，DLX: ' . $e->getMessage());
         }
@@ -375,7 +379,7 @@ class LinkMonitor
                 $this->mqConnection = null;
             }
             Log::info('RabbitMQ连接已关闭(LinkMonitor)');
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('关闭MQ连接异常(LinkMonitor): ' . $e->getMessage());
         }
     }

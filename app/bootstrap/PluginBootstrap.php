@@ -24,4 +24,4 @@ class PluginBootstrap
     }
 }
 
-\app\bootstrap\PluginBootstrap::init();
+PluginBootstrap::init();

@@ -5,6 +5,7 @@ namespace app\service;
 use app\model\Link;
 use app\model\Post;
 use app\model\Setting;
+use Exception;
 use support\Log;
 use Throwable;
 
@@ -80,7 +81,7 @@ class LinkConnectService
      */
     public static function listTokens(): array
     {
-        $row = \app\model\Setting::where('key', 'link_connect_tokens')->first();
+        $row = Setting::where('key', 'link_connect_tokens')->first();
         if (!$row) {
             return [];
         }
@@ -91,9 +92,9 @@ class LinkConnectService
 
     protected static function saveTokens(array $tokens): bool
     {
-        $row = \app\model\Setting::where('key', 'link_connect_tokens')->first();
+        $row = Setting::where('key', 'link_connect_tokens')->first();
         if (!$row) {
-            $row = new \app\model\Setting();
+            $row = new Setting();
             $row->key = 'link_connect_tokens';
         }
         $row->value = json_encode(array_values($tokens), JSON_UNESCAPED_UNICODE);
@@ -187,7 +188,7 @@ class LinkConnectService
 
                 return $setting->save();
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return false;
         }
     }
@@ -331,7 +332,7 @@ class LinkConnectService
                 'message' => '连接测试成功',
                 'data' => $data,
             ];
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return ['success' => false, 'message' => '测试失败：' . $e->getMessage()];
         }
     }
@@ -351,12 +352,12 @@ class LinkConnectService
         // 记录接收到的请求参数
         $debugId = uniqid('link_apply_', true);
         Log::debug("友链申请开始 [{$debugId}] - 参数: " . json_encode([
-            'peerApi' => substr((string) ($input['peer_api'] ?? ''), 0, 50) . (strlen((string) ($input['peer_api'] ?? '')) > 50 ? '...' : ''),
-            'name' => (string) ($input['name'] ?? ''),
-            'url' => (string) ($input['url'] ?? ''),
-            'icon' => substr((string) ($input['icon'] ?? ''), 0, 50) . (strlen((string) ($input['icon'] ?? '')) > 50 ? '...' : ''),
-            'hasEmail' => !empty((string) ($input['email'] ?? '')),
-        ]));
+                'peerApi' => substr((string)($input['peer_api'] ?? ''), 0, 50) . (strlen((string)($input['peer_api'] ?? '')) > 50 ? '...' : ''),
+                'name' => (string)($input['name'] ?? ''),
+                'url' => (string)($input['url'] ?? ''),
+                'icon' => substr((string)($input['icon'] ?? ''), 0, 50) . (strlen((string)($input['icon'] ?? '')) > 50 ? '...' : ''),
+                'hasEmail' => !empty((string)($input['email'] ?? '')),
+            ]));
 
         // 获取配置
         $config = self::getConfig();
@@ -432,10 +433,10 @@ class LinkConnectService
             $responseTime = round(($endTime - $startTime) * 1000, 2);
 
             Log::debug("友链申请 [{$debugId}] - 对外请求完成 (耗时: {$responseTime}ms, 成功: " . ($res['success'] ? '是' : '否') . ', 响应: ' . json_encode([
-                'code' => $res['code'] ?? null,
-                'hasData' => isset($res['data']),
-                'error' => $res['error'] ?? null,
-            ]));
+                    'code' => $res['code'] ?? null,
+                    'hasData' => isset($res['data']),
+                    'error' => $res['error'] ?? null,
+                ]));
 
             // 根据请求结果返回相应消息
             if (!$res['success']) {
@@ -447,7 +448,7 @@ class LinkConnectService
             Log::debug("友链申请 [{$debugId}] - 完成，状态: 成功发送到对方站点");
 
             return ['code' => 0, 'msg' => '申请已发送，对方将自动创建等待记录'];
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error("友链申请异常 [{$debugId}] - 错误: " . $e->getMessage() . ', 堆栈: ' . $e->getTraceAsString());
             throw $e;
         }

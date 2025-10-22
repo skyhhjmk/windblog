@@ -2,9 +2,12 @@
 
 namespace app\service\plugin;
 
-class PluginException extends \RuntimeException
+use RuntimeException;
+
+class PluginException extends RuntimeException
 {
 }
+
 class PluginValidationException extends PluginException
 {
     /** @var array<int, string> */
@@ -25,6 +28,7 @@ class PluginValidationException extends PluginException
 class PluginDependencyException extends PluginException
 {
 }
+
 class PluginConflictException extends PluginException
 {
 }

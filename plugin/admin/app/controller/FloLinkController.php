@@ -5,6 +5,7 @@ namespace plugin\admin\app\controller;
 use app\model\FloLink;
 use app\service\FloLinkService;
 use Exception;
+use support\Log;
 use support\Request;
 use support\Response;
 use Throwable;
@@ -232,7 +233,7 @@ class FloLinkController extends Base
 
             return $this->fail($id ? 'FloLink更新失败' : 'FloLink添加失败');
         } catch (Exception $e) {
-            \support\Log::error('FloLink保存失败: ' . $e->getMessage());
+            Log::error('FloLink保存失败: ' . $e->getMessage());
 
             return $this->fail('系统错误，请稍后再试');
         }
@@ -260,7 +261,7 @@ class FloLinkController extends Base
                 return $this->success('FloLink已移至垃圾箱');
             }
         } catch (Exception $e) {
-            \support\Log::error('FloLink删除失败: ' . $e->getMessage());
+            Log::error('FloLink删除失败: ' . $e->getMessage());
 
             return $this->fail('系统错误，请稍后再试');
         }
@@ -289,7 +290,7 @@ class FloLinkController extends Base
                 return $this->success('FloLink已恢复');
             }
         } catch (Exception $e) {
-            \support\Log::error('FloLink恢复失败: ' . $e->getMessage());
+            Log::error('FloLink恢复失败: ' . $e->getMessage());
 
             return $this->fail('系统错误，请稍后再试');
         }
@@ -319,7 +320,7 @@ class FloLinkController extends Base
                 return $this->success('FloLink已永久删除');
             }
         } catch (Exception $e) {
-            \support\Log::error('FloLink永久删除失败: ' . $e->getMessage());
+            Log::error('FloLink永久删除失败: ' . $e->getMessage());
 
             return $this->fail('系统错误，请稍后再试');
         }
@@ -355,7 +356,7 @@ class FloLinkController extends Base
                 FloLinkService::clearCache();
             }
         } catch (Exception $e) {
-            \support\Log::error('批量恢复FloLink失败: ' . $e->getMessage());
+            Log::error('批量恢复FloLink失败: ' . $e->getMessage());
 
             return $this->fail('系统错误，请稍后再试');
         }
@@ -392,7 +393,7 @@ class FloLinkController extends Base
                 FloLinkService::clearCache();
             }
         } catch (Exception $e) {
-            \support\Log::error('批量永久删除FloLink失败: ' . $e->getMessage());
+            Log::error('批量永久删除FloLink失败: ' . $e->getMessage());
 
             return $this->fail('系统错误，请稍后再试');
         }
@@ -429,7 +430,7 @@ class FloLinkController extends Base
                 FloLinkService::clearCache();
             }
         } catch (Exception $e) {
-            \support\Log::error('批量删除FloLink失败: ' . $e->getMessage());
+            Log::error('批量删除FloLink失败: ' . $e->getMessage());
 
             return $this->fail('系统错误，请稍后再试');
         }
@@ -484,7 +485,7 @@ class FloLinkController extends Base
                 ]);
             }
         } catch (Exception $e) {
-            \support\Log::error('FloLink状态切换失败: ' . $e->getMessage());
+            Log::error('FloLink状态切换失败: ' . $e->getMessage());
 
             return $this->fail('系统错误，请稍后再试');
         }
@@ -505,7 +506,7 @@ class FloLinkController extends Base
 
             return $this->success('缓存清除成功');
         } catch (Exception $e) {
-            \support\Log::error('FloLink缓存清除失败: ' . $e->getMessage());
+            Log::error('FloLink缓存清除失败: ' . $e->getMessage());
 
             return $this->fail('缓存清除失败');
         }

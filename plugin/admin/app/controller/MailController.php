@@ -4,9 +4,13 @@ declare(strict_types=1);
 
 namespace plugin\admin\app\controller;
 
+use app\process\MailWorker;
 use app\service\MailService;
+use PhpAmqpLib\Connection\AMQPStreamConnection;
+use ReflectionClass;
 use support\Request;
 use support\Response;
+use Throwable;
 
 /**
  * 后台-邮件管理（重构版）
@@ -97,7 +101,7 @@ class MailController
             blog_config('mail_strategy', $strategy, false, true, true);
 
             return json(['code' => 0, 'msg' => '保存成功']);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return json(['code' => 1, 'msg' => $e->getMessage()]);
         }
     }
@@ -118,15 +122,15 @@ class MailController
             // 测试发信不使用任何模板字段，仅使用 subject/text/html；不做模板渲染
             // 若仅有 text，可由前端或调用方自行构造 html
             // 直接调用 MailWorker 的发送方法（构造一次实例）
-            $worker = new \app\process\MailWorker();
-            $ref = new \ReflectionClass($worker);
+            $worker = new MailWorker();
+            $ref = new ReflectionClass($worker);
             $method = $ref->getMethod('sendViaProvider');
             $method->setAccessible(true);
             $ok = (bool) $method->invoke($worker, $data, $provider);
             $err = method_exists($worker, 'getLastError') ? (string) $worker->getLastError() : '';
 
             return json(['code' => $ok ? 0 : 1, 'msg' => $ok ? 'ok' : ($err !== '' ? $err : 'failed')]);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return json(['code' => 1, 'msg' => $e->getMessage()]);
         }
     }
@@ -194,7 +198,7 @@ class MailController
             }
 
             return json(['code' => 0, 'msg' => '保存成功']);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return json(['code' => 1, 'msg' => $e->getMessage()]);
         }
     }
@@ -229,7 +233,7 @@ class MailController
             blog_config('mail_strategy', $st, false, true, true);
 
             return json(['code' => 0, 'msg' => '保存成功']);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return json(['code' => 1, 'msg' => $e->getMessage()]);
         }
     }
@@ -287,7 +291,7 @@ class MailController
             $html = MailService::renderView($view, $vars, app: null, plugin: null);
 
             return new Response(200, ['Content-Type' => 'text/html; charset=utf-8'], $html);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return json(['code' => 1, 'msg' => $e->getMessage()]);
         }
     }
@@ -329,7 +333,7 @@ class MailController
             $ok = MailService::enqueue($data);
 
             return json(['code' => $ok ? 0 : 1, 'msg' => $ok ? 'enqueued' : 'failed']);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return json(['code' => 1, 'msg' => $e->getMessage()]);
         }
     }
@@ -353,7 +357,7 @@ class MailController
             $pass = (string) blog_config('rabbitmq_password', 'guest', true);
             $vhost = (string) blog_config('rabbitmq_vhost', '/', true);
 
-            $conn = new \PhpAmqpLib\Connection\AMQPStreamConnection($host, $port, $user, $pass, $vhost);
+            $conn = new AMQPStreamConnection($host, $port, $user, $pass, $vhost);
             $ch = $conn->channel();
 
             // 被动声明获取队列深度（返回[queue, messageCount, consumerCount]）
@@ -362,7 +366,7 @@ class MailController
                     $result = $ch->queue_declare($queue, true, true, false, false);
 
                     return [$result[0] ?? $queue, (int) ($result[1] ?? 0)];
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     return [$queue, 0];
                 }
             })();
@@ -372,7 +376,7 @@ class MailController
                     $result = $ch->queue_declare($dlq, true, true, false, false);
 
                     return [$result[0] ?? $dlq, (int) ($result[1] ?? 0)];
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     return [$dlq, 0];
                 }
             })();
@@ -392,7 +396,7 @@ class MailController
                     'dlq_depth' => $dlqCount,
                 ],
             ]);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return json(['code' => 1, 'msg' => $e->getMessage()]);
         }
     }
@@ -424,7 +428,7 @@ class MailController
             }
 
             return json(['code' => 1, 'msg' => $errstr ?: '连接失败']);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return json(['code' => 1, 'msg' => $e->getMessage()]);
         }
     }

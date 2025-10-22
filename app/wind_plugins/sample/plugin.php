@@ -12,6 +12,8 @@
 
 use app\service\plugin\HookManager;
 use app\service\plugin\PluginInterface;
+use app\service\PluginService;
+use support\Log;
 use support\Response;
 
 return new class () implements PluginInterface {
@@ -24,8 +26,8 @@ return new class () implements PluginInterface {
     {
         // 示例：记录插件安装日志
         try {
-            \support\Log::info('[sample-plugin] 插件已安装');
-        } catch (\Throwable $e) {
+            Log::info('[sample-plugin] 插件已安装');
+        } catch (Throwable $e) {
             // 忽略日志异常
         }
 
@@ -44,8 +46,8 @@ return new class () implements PluginInterface {
     {
         // 示例：记录插件升级日志
         try {
-            \support\Log::info("[sample-plugin] 插件已从版本 {$prevVersion} 升级到 {$curVersion}");
-        } catch (\Throwable $e) {
+            Log::info("[sample-plugin] 插件已从版本 {$prevVersion} 升级到 {$curVersion}");
+        } catch (Throwable $e) {
             // 忽略日志异常
         }
 
@@ -58,32 +60,32 @@ return new class () implements PluginInterface {
     public function activate(HookManager $hooks): void
     {
         // 请求进入动作：权限已在注册阶段检查，此处无需重复检查
-        \app\service\PluginService::add_action('request_enter', function ($request) {
+        PluginService::add_action('request_enter', function ($request) {
             // 演示：在请求对象上添加一个属性标记
             try {
                 $request->sample_flag = true;
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 // 保持演示最小侵入，忽略异常
             }
         }, 10, 1);
 
         // 响应发出前动作：权限已在注册阶段检查
-        \app\service\PluginService::add_action('response_exit', function ($response) {
+        PluginService::add_action('response_exit', function ($response) {
             // 演示：为响应头添加一个示例标记
             try {
                 $response->header('X-Sample-Action', '1');
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 // 忽略异常
             }
         }, 10, 1);
 
         // 响应过滤器：注意 plugin.json 中未声明 "request:filter" 权限
         // 如果需要使用此过滤器，需在 plugin.json 中添加并由管理员授权
-        \app\service\PluginService::add_filter('response_filter', function ($resp) {
+        PluginService::add_filter('response_filter', function ($resp) {
             // 示例：添加响应头
             try {
                 $resp->header('X-Sample-Filter', '2');
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 // 忽略异常
             }
 

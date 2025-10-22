@@ -4,6 +4,7 @@ namespace plugin\admin\app\controller;
 
 use app\model\Media;
 use app\service\MediaLibraryService;
+use Exception;
 use support\Request;
 use support\Response;
 
@@ -86,7 +87,7 @@ class MediaController extends Base
                 'page' => $params['page'],
                 'limit' => $params['limit'],
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return json(['code' => 1, 'msg' => $e->getMessage()]);
         }
     }
@@ -146,7 +147,7 @@ class MediaController extends Base
             } else {
                 return json(['code' => 1, 'msg' => $result['msg']]);
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return json(['code' => 1, 'msg' => '上传失败: ' . $e->getMessage()]);
         }
     }
@@ -189,7 +190,7 @@ class MediaController extends Base
             } else {
                 return json(['code' => 1, 'msg' => $result['msg']]);
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return json(['code' => 1, 'msg' => $e->getMessage()]);
         }
     }
@@ -227,7 +228,7 @@ class MediaController extends Base
             } else {
                 return json(['code' => 1, 'msg' => $result['msg']]);
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return json(['code' => 1, 'msg' => $e->getMessage()]);
         }
     }
@@ -264,7 +265,7 @@ class MediaController extends Base
                     } else {
                         $errors[] = "ID {$id}: " . $result['msg'];
                     }
-                } catch (\Exception $e) {
+                } catch (Exception $e) {
                     $errors[] = "ID {$id}: " . $e->getMessage();
                 }
             }
@@ -279,7 +280,7 @@ class MediaController extends Base
             } else {
                 return json(['code' => 1, 'msg' => '批量删除失败', 'errors' => $errors]);
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return json(['code' => 1, 'msg' => $e->getMessage()]);
         }
     }
@@ -305,7 +306,7 @@ class MediaController extends Base
             } else {
                 return json(['code' => 1, 'msg' => $result['msg']]);
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return json(['code' => 1, 'msg' => '操作失败: ' . $e->getMessage()]);
         }
     }
@@ -370,7 +371,7 @@ class MediaController extends Base
                     'mime_type' => $media->mime_type,
                 ],
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return json(['code' => 1, 'msg' => '预览失败: ' . $e->getMessage()]);
         }
     }
@@ -428,7 +429,7 @@ class MediaController extends Base
             $media->save();
 
             return json(['code' => 0, 'msg' => '保存成功']);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return json(['code' => 1, 'msg' => '保存失败: ' . $e->getMessage()]);
         }
     }

@@ -2,6 +2,7 @@
 
 namespace app\controller;
 
+use app\service\SidebarService;
 use support\Request;
 use support\Response;
 
@@ -34,7 +35,7 @@ class RainyunController
             || strtolower((string) $request->header('X-Requested-With')) === 'xmlhttprequest';
 
         // 获取侧边栏内容（PJAX 与非 PJAX 均获取）
-        $sidebar = \app\service\SidebarService::getSidebarContent($request, 'rainyun');
+        $sidebar = SidebarService::getSidebarContent($request, 'rainyun');
 
         // 动态选择模板：PJAX 返回片段，非 PJAX 返回完整页面
         $viewName = $isPjax ? 'rainyun/index.content' : 'rainyun/index';

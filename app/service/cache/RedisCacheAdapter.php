@@ -3,8 +3,10 @@
 namespace app\service\cache;
 
 use DateInterval;
+use DateTimeImmutable;
 use Psr\SimpleCache\CacheInterface;
 use support\Redis;
+use Throwable;
 
 class RedisCacheAdapter implements CacheInterface
 {
@@ -34,8 +36,8 @@ class RedisCacheAdapter implements CacheInterface
     private function normTtl($ttl): int
     {
         if ($ttl instanceof DateInterval) {
-            $now = new \DateTimeImmutable();
-            $future = (new \DateTimeImmutable())->add($ttl);
+            $now = new DateTimeImmutable();
+            $future = (new DateTimeImmutable())->add($ttl);
 
             return max(0, $future->getTimestamp() - $now->getTimestamp());
         }
@@ -58,7 +60,7 @@ class RedisCacheAdapter implements CacheInterface
         }
         try {
             return unserialize($payload);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return null;
         }
     }

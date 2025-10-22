@@ -2,8 +2,10 @@
 
 namespace app\service;
 
+use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use support\Db;
+use support\Log;
 
 /**
  * 数据库查询优化助手
@@ -179,8 +181,8 @@ class QueryOptimizer
 
         // 执行分页查询
         $items = $query->select($columns)
-                      ->forPage(request()->input($pageName, 1), $perPage)
-                      ->get();
+            ->forPage(request()->input($pageName, 1), $perPage)
+            ->get();
 
         return [
             'items' => $items,
@@ -305,8 +307,8 @@ class QueryOptimizer
         foreach ($chunks as $chunk) {
             try {
                 Db::table($table)->insert($chunk);
-            } catch (\Exception $e) {
-                \support\Log::error('Batch insert failed: ' . $e->getMessage());
+            } catch (Exception $e) {
+                Log::error('Batch insert failed: ' . $e->getMessage());
 
                 return false;
             }

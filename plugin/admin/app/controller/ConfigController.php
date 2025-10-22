@@ -3,6 +3,7 @@
 namespace plugin\admin\app\controller;
 
 use app\model\Setting;
+use app\service\MediaLibraryService;
 use plugin\admin\app\common\Util;
 use support\exception\BusinessException;
 use support\Request;
@@ -362,7 +363,7 @@ class ConfigController extends Base
             }
 
             // 使用媒体库服务生成 favicon
-            $mediaService = new \app\service\MediaLibraryService();
+            $mediaService = new MediaLibraryService();
             $result = $mediaService->generateFavicon($imageUrl, $faviconPath);
 
             // 如果使用了临时文件，删除它

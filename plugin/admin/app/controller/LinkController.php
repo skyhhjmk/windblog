@@ -5,8 +5,11 @@ namespace plugin\admin\app\controller;
 use app\model\Link;
 use app\service\CacheService;
 use app\service\MQService;
+use DOMDocument;
+use DOMXPath;
 use Exception;
 use PhpAmqpLib\Message\AMQPMessage;
+use support\Log;
 use support\Request;
 use support\Response;
 use Throwable;
@@ -241,7 +244,7 @@ class LinkController extends Base
             ]);
 
             // 调试信息
-            \support\Log::info('Link save data: ', [
+            Log::info('Link save data: ', [
                 'id' => $link->id ?? 'new',
                 'name' => $link->name,
                 'status' => $link->status,
@@ -266,7 +269,7 @@ class LinkController extends Base
             $saved = $link->save();
 
             // 调试保存结果
-            \support\Log::info('Link save result: ', [
+            Log::info('Link save result: ', [
                 'saved' => $saved,
                 'id' => $link->id,
                 'status_after_save' => $link->status,
@@ -282,8 +285,8 @@ class LinkController extends Base
                 if ($link->status) {
                     try {
                         $this->pushExtendedInfoInternal($link);
-                    } catch (\Throwable $e) {
-                        \support\Log::warning('CAT5 auto push on save failed: ' . $e->getMessage());
+                    } catch (Throwable $e) {
+                        Log::warning('CAT5 auto push on save failed: ' . $e->getMessage());
                     }
                 }
 
@@ -308,7 +311,7 @@ class LinkController extends Base
 
             return $this->fail($id ? '链接更新失败' : '链接添加失败');
         } catch (Exception $e) {
-            \support\Log::error('链接保存失败: ' . $e->getMessage());
+            Log::error('链接保存失败: ' . $e->getMessage());
 
             return $this->fail('系统错误，请稍后再试');
         }
@@ -338,7 +341,7 @@ class LinkController extends Base
                 return $this->success('链接已移至垃圾箱');
             }
         } catch (Exception $e) {
-            \support\Log::error('链接删除失败: ' . $e->getMessage());
+            Log::error('链接删除失败: ' . $e->getMessage());
 
             return $this->fail('系统错误，请稍后再试');
         }
@@ -369,7 +372,7 @@ class LinkController extends Base
                 return $this->success('链接已恢复');
             }
         } catch (Exception $e) {
-            \support\Log::error('链接恢复失败: ' . $e->getMessage());
+            Log::error('链接恢复失败: ' . $e->getMessage());
 
             return $this->fail('系统错误，请稍后再试');
         }
@@ -401,7 +404,7 @@ class LinkController extends Base
                 return $this->success('链接已永久删除');
             }
         } catch (Exception $e) {
-            \support\Log::error('链接永久删除失败: ' . $e->getMessage());
+            Log::error('链接永久删除失败: ' . $e->getMessage());
 
             return $this->fail('系统错误，请稍后再试');
         }
@@ -439,7 +442,7 @@ class LinkController extends Base
                 $this->clearLinkCache();
             }
         } catch (Exception $e) {
-            \support\Log::error('批量恢复链接失败: ' . $e->getMessage());
+            Log::error('批量恢复链接失败: ' . $e->getMessage());
 
             return $this->fail('系统错误，请稍后再试');
         }
@@ -478,7 +481,7 @@ class LinkController extends Base
                 $this->clearLinkCache();
             }
         } catch (Exception $e) {
-            \support\Log::error('批量永久删除链接失败: ' . $e->getMessage());
+            Log::error('批量永久删除链接失败: ' . $e->getMessage());
 
             return $this->fail('系统错误，请稍后再试');
         }
@@ -517,7 +520,7 @@ class LinkController extends Base
                 $this->clearLinkCache();
             }
         } catch (Exception $e) {
-            \support\Log::error('批量删除链接失败: ' . $e->getMessage());
+            Log::error('批量删除链接失败: ' . $e->getMessage());
 
             return $this->fail('系统错误，请稍后再试');
         }
@@ -610,8 +613,8 @@ class LinkController extends Base
                         // 审核通过后自动静默推送扩展信息
                         try {
                             $this->pushExtendedInfoInternal($link);
-                        } catch (\Throwable $e) {
-                            \support\Log::warning('CAT5 auto push(batch) failed: ' . $e->getMessage());
+                        } catch (Throwable $e) {
+                            Log::warning('CAT5 auto push(batch) failed: ' . $e->getMessage());
                         }
                     }
                 }
@@ -622,7 +625,7 @@ class LinkController extends Base
                 $this->clearLinkCache();
             }
         } catch (Exception $e) {
-            \support\Log::error('批量审核链接失败: ' . $e->getMessage());
+            Log::error('批量审核链接失败: ' . $e->getMessage());
 
             return $this->fail('系统错误，请稍后再试');
         }
@@ -672,7 +675,7 @@ class LinkController extends Base
                 }
             }
         } catch (Exception $e) {
-            \support\Log::error('批量拒绝链接失败: ' . $e->getMessage());
+            Log::error('批量拒绝链接失败: ' . $e->getMessage());
 
             return $this->fail('系统错误，请稍后再试');
         }
@@ -809,7 +812,7 @@ class LinkController extends Base
                 'load_time' => $loadTime,
             ];
         } catch (Exception $e) {
-            \support\Log::error('获取网页内容失败: ' . $e->getMessage());
+            Log::error('获取网页内容失败: ' . $e->getMessage());
 
             return [
                 'success' => false,
@@ -824,9 +827,9 @@ class LinkController extends Base
     private function parseHtmlContent(string $html): array
     {
         try {
-            $dom = new \DOMDocument();
+            $dom = new DOMDocument();
             @$dom->loadHTML($html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
-            $xpath = new \DOMXPath($dom);
+            $xpath = new DOMXPath($dom);
 
             return [
                 'success' => true,
@@ -834,7 +837,7 @@ class LinkController extends Base
                 'xpath' => $xpath,
             ];
         } catch (Exception $e) {
-            \support\Log::error('HTML解析失败: ' . $e->getMessage());
+            Log::error('HTML解析失败: ' . $e->getMessage());
 
             return [
                 'success' => false,
@@ -855,7 +858,7 @@ class LinkController extends Base
 
             return $this->extractSiteInfo($dom, $xpath, $url);
         } catch (Exception $e) {
-            \support\Log::error('网站信息检测失败: ' . $e->getMessage());
+            Log::error('网站信息检测失败: ' . $e->getMessage());
 
             return ['error' => '网站信息检测失败: ' . $e->getMessage()];
         }
@@ -873,7 +876,7 @@ class LinkController extends Base
                 'response_headers' => $this->getResponseHeaders($url),
             ];
         } catch (Exception $e) {
-            \support\Log::error('性能检测失败: ' . $e->getMessage());
+            Log::error('性能检测失败: ' . $e->getMessage());
 
             return ['error' => '性能检测失败: ' . $e->getMessage()];
         }
@@ -891,7 +894,7 @@ class LinkController extends Base
 
             return $this->extractSeoInfo($dom, $xpath);
         } catch (Exception $e) {
-            \support\Log::error('SEO检测失败: ' . $e->getMessage());
+            Log::error('SEO检测失败: ' . $e->getMessage());
 
             return ['error' => 'SEO检测失败: ' . $e->getMessage()];
         }
@@ -905,7 +908,7 @@ class LinkController extends Base
         try {
             return $this->checkSecurity($url, $html);
         } catch (Exception $e) {
-            \support\Log::error('安全检测失败: ' . $e->getMessage());
+            Log::error('安全检测失败: ' . $e->getMessage());
 
             return ['error' => '安全检测失败: ' . $e->getMessage()];
         }
@@ -919,7 +922,7 @@ class LinkController extends Base
         try {
             return $this->checkBacklink($html, $myDomain, $url);
         } catch (Exception $e) {
-            \support\Log::error('反向链接检测失败: ' . $e->getMessage());
+            Log::error('反向链接检测失败: ' . $e->getMessage());
 
             return ['error' => '反向链接检测失败: ' . $e->getMessage()];
         }
@@ -928,7 +931,7 @@ class LinkController extends Base
     /**
      * 提取网站基本信息
      */
-    private function extractSiteInfo(\DOMDocument $dom, \DOMXPath $xpath, string $url): array
+    private function extractSiteInfo(DOMDocument $dom, DOMXPath $xpath, string $url): array
     {
         $info = [];
 
@@ -975,7 +978,7 @@ class LinkController extends Base
     /**
      * 提取SEO信息
      */
-    private function extractSeoInfo(\DOMDocument $dom, \DOMXPath $xpath): array
+    private function extractSeoInfo(DOMDocument $dom, DOMXPath $xpath): array
     {
         $seo = [];
 
@@ -1151,7 +1154,7 @@ class LinkController extends Base
                 CacheService::clearCache('blog_links_page_*');
             }
         } catch (Exception $e) {
-            \support\Log::warning('清除链接缓存失败: ' . $e->getMessage());
+            Log::warning('清除链接缓存失败: ' . $e->getMessage());
         }
     }
 
@@ -1224,8 +1227,8 @@ class LinkController extends Base
                 ]);
                 $channel->basic_publish($msg, $exchange, $routingKey);
                 $accepted++;
-            } catch (\Throwable $e) {
-                \support\Log::warning('enqueue link monitor failed: ' . $e->getMessage());
+            } catch (Throwable $e) {
+                Log::warning('enqueue link monitor failed: ' . $e->getMessage());
             }
         }
 
@@ -1313,7 +1316,7 @@ class LinkController extends Base
                 'peer_api' => $ok['peer_api'] ?? '',
                 'status' => 'ok',
             ]);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return $this->fail('推送异常：' . $e->getMessage());
         }
     }
@@ -1404,7 +1407,7 @@ class LinkController extends Base
             }
 
             return ['success' => true, 'body' => (string) $result];
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return ['success' => false, 'error' => $e->getMessage()];
         }
     }

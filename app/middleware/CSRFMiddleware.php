@@ -4,6 +4,7 @@ namespace app\middleware;
 
 use app\annotation\CSRFVerify;
 use app\service\CSRFService;
+use Exception;
 use ReflectionClass;
 use ReflectionMethod;
 use support\view\Raw;
@@ -12,6 +13,7 @@ use Throwable;
 use Webman\Http\Request;
 use Webman\Http\Response;
 use Webman\MiddlewareInterface;
+use function config;
 
 /**
  * CSRF验证中间件
@@ -153,7 +155,7 @@ class CSRFMiddleware implements MiddlewareInterface
                     switch ($responseType ?? 'json') {
                         case 'view':
                             [$template, $vars, $app, $plugin] = template_inputs($responseBody ?? 'error/403', $args ?? [], null, null);
-                            $handler = \config($plugin ? "plugin.$plugin.view.handler" : 'view.handler');
+                            $handler = config($plugin ? "plugin.$plugin.view.handler" : 'view.handler');
 
                             return new Response(200, [], $handler::render($template, $vars, $app, $plugin));
 
@@ -221,7 +223,7 @@ class CSRFMiddleware implements MiddlewareInterface
             // 验证通过，继续处理请求
             return $handler($request);
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // 反射异常或其他错误，记录日志并继续处理
             // 在实际生产环境中应该记录这个异常
             return $handler($request);

@@ -7,6 +7,8 @@ use plugin\admin\app\common\Tree;
 use plugin\admin\app\common\Util;
 use plugin\admin\app\model\Role;
 use plugin\admin\app\model\Rule;
+use ReflectionClass;
+use ReflectionMethod;
 use support\exception\BusinessException;
 use support\Request;
 use support\Response;
@@ -155,12 +157,12 @@ class RuleController extends Crud
                 continue;
             }
             if (class_exists($class)) {
-                $reflection = new \ReflectionClass($class);
+                $reflection = new ReflectionClass($class);
                 $properties = $reflection->getDefaultProperties();
                 $no_need_auth = array_merge($properties['noNeedLogin'] ?? [], $properties['noNeedAuth'] ?? []);
                 $class = $reflection->getName();
                 $pid = $item->id;
-                $methods = $reflection->getMethods(\ReflectionMethod::IS_PUBLIC);
+                $methods = $reflection->getMethods(ReflectionMethod::IS_PUBLIC);
                 foreach ($methods as $method) {
                     $method_name = $method->getName();
                     if (strtolower($method_name) === 'index' || strpos($method_name, '__') === 0 || in_array($method_name, $no_need_auth)) {

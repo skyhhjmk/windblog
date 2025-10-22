@@ -4,6 +4,7 @@ namespace plugin\admin\app\controller;
 
 use app\model\Post;
 
+use Throwable;
 use function publish_static;
 
 use support\Request;
@@ -131,7 +132,7 @@ class StaticCacheController extends Base
             }
 
             return json(['success' => true, 'job_id' => $jobId]);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return json(['success' => false, 'message' => $e->getMessage()]);
         }
     }

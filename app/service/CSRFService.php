@@ -135,8 +135,9 @@ class CSRFService
     /**
      * 从请求中获取token
      *
-     * @param Request $request 请求对象
-     * @param string $tokenName token名称
+     * @param Request $request   请求对象
+     * @param string  $tokenName token名称
+     *
      * @return string|null
      */
     public function getTokenFromRequest(Request $request, string $tokenName): ?string
@@ -186,6 +187,7 @@ class CSRFService
      * 设置token过期时间
      *
      * @param int $seconds 过期时间（秒）
+     *
      * @return $this
      */
     public function setTokenExpire(int $seconds): self
@@ -199,6 +201,7 @@ class CSRFService
      * 设置是否使用一次性token
      *
      * @param bool $oneTime 是否一次性
+     *
      * @return $this
      */
     public function setOneTimeToken(bool $oneTime): self
@@ -213,6 +216,7 @@ class CSRFService
      *
      * @param bool $bind 是否绑定
      * @param string $field 绑定字段名
+     *
      * @return $this
      */
     public function setBindToValue(bool $bind, string $field = 'user_id'): self

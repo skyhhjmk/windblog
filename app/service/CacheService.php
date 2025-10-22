@@ -2,8 +2,14 @@
 
 namespace app\service;
 
+use APCUIterator;
+use DateInterval;
+use DateTimeImmutable;
+use Error;
 use Exception;
+use Memcached;
 use support\Log;
+use support\Redis;
 
 class CacheService
 {
@@ -104,7 +110,7 @@ class CacheService
 
                     public function __construct()
                     {
-                        $this->redis = \support\Redis::connection('cache');
+                        $this->redis = Redis::connection('cache');
                     }
 
                     public function get(string $key)
@@ -218,7 +224,7 @@ class CacheService
 
                     public function __construct()
                     {
-                        $this->memcached = new \Memcached();
+                        $this->memcached = new Memcached();
                         $this->memcached->addServer(
                             getenv('MEMCACHED_HOST') ?: '127.0.0.1',
                             (int) (getenv('MEMCACHED_PORT') ?: 11211)
@@ -229,7 +235,7 @@ class CacheService
                     {
                         $result = $this->memcached->get($key);
 
-                        return $this->memcached->getResultCode() === \Memcached::RES_SUCCESS ? $result : false;
+                        return $this->memcached->getResultCode() === Memcached::RES_SUCCESS ? $result : false;
                     }
 
                     public function setex(string $key, int $ttl, string $value): bool
@@ -255,7 +261,7 @@ class CacheService
                     {
                         $result = $this->memcached->get($key);
 
-                        return $this->memcached->getResultCode() === \Memcached::RES_SUCCESS;
+                        return $this->memcached->getResultCode() === Memcached::RES_SUCCESS;
                     }
                 };
 
@@ -487,7 +493,7 @@ class CacheService
                     try {
                         $lockKey = self::prefixKey('__cache_lock:' . $key);
                         if ($cache_driver === 'redis') {
-                            $redis = \support\Redis::connection('cache');
+                            $redis = Redis::connection('cache');
                             $redis->del($lockKey);
                         } elseif (function_exists('apcu_delete') && apcu_enabled()) {
                             apcu_delete($lockKey);
@@ -517,7 +523,7 @@ class CacheService
                 try {
                     $lockKey = self::prefixKey('__cache_lock:' . $key);
                     if ($cache_driver === 'redis') {
-                        $redis = \support\Redis::connection('cache');
+                        $redis = Redis::connection('cache');
                         $redis->del($lockKey);
                     } elseif (function_exists('apcu_delete') && apcu_enabled()) {
                         apcu_delete($lockKey);
@@ -549,7 +555,7 @@ class CacheService
                     try {
                         $acquired = false;
                         if ($cache_driver === 'redis') {
-                            $redis = \support\Redis::connection('cache');
+                            $redis = Redis::connection('cache');
                             // 尝试设置计算锁，若失败说明已有计算者
                             $acquired = (bool) $redis->set($lockKey, '1', ['nx', 'px' => $lockTtlMs]);
                             if (!$acquired) {
@@ -658,7 +664,7 @@ class CacheService
         } catch (Exception $e) {
             Log::error('[cache] exception: ' . $e->getMessage());
             $return = null;
-        } catch (\Error $e) {
+        } catch (Error $e) {
             Log::error('[cache] error: ' . $e->getMessage());
             $return = null;
         }
@@ -690,7 +696,7 @@ class CacheService
 
                 switch ($cache_driver) {
                     case 'redis':
-                        $redis = \support\Redis::connection('cache');
+                        $redis = Redis::connection('cache');
                         // 使用非阻塞 SCAN 代替 KEYS，按前缀化正则匹配
                         $regex = '/^' . str_replace('*', '.*', preg_quote($patternWithPrefix, '/')) . '$/';
                         $cursor = 0;
@@ -711,7 +717,7 @@ class CacheService
 
                     case 'apcu':
                         $regex = '/^' . str_replace('*', '.*', preg_quote($patternWithPrefix, '/')) . '$/';
-                        $iterator = new \APCUIterator($regex, APC_ITER_KEY);
+                        $iterator = new APCUIterator($regex, APC_ITER_KEY);
                         $success = true;
                         foreach ($iterator as $key => $value) {
                             if (!apcu_delete($key)) {
@@ -771,7 +777,7 @@ class CacheService
 
             // Redis
             try {
-                $redis = \support\Redis::connection('cache');
+                $redis = Redis::connection('cache');
                 if ($redis) {
                     $regex = '/^' . str_replace('*', '.*', preg_quote($patternWithPrefix, '/')) . '$/';
                     $cursor = 0;
@@ -796,7 +802,7 @@ class CacheService
             try {
                 if (function_exists('apcu_enabled') && apcu_enabled()) {
                     $regex = '/^' . str_replace('*', '.*', preg_quote($patternWithPrefix, '/')) . '$/';
-                    $iterator = new \APCUIterator($regex, APC_ITER_KEY);
+                    $iterator = new APCUIterator($regex, APC_ITER_KEY);
                     foreach ($iterator as $key => $value) {
                         apcu_delete($key);
                     }
@@ -809,7 +815,7 @@ class CacheService
             // Memcached
             try {
                 if (extension_loaded('memcached')) {
-                    $memcached = new \Memcached();
+                    $memcached = new Memcached();
                     $memcached->addServer(getenv('MEMCACHED_HOST') ?: '127.0.0.1', (int) (getenv('MEMCACHED_PORT') ?: 11211));
                     // Memcached不支持模式删除，只能选择flush（风险较大）；这里按前缀无法精准删除，选择跳过
                     Log::warning('[clear_cache_all] Memcached pattern clearing not supported; consider flush if needed');
@@ -861,10 +867,10 @@ class CacheService
                 return $val !== false ? $val : $default;
             }
 
-            public function set(string $key, mixed $value, null|int|\DateInterval $ttl = null): bool
+            public function set(string $key, mixed $value, null|int|DateInterval $ttl = null): bool
             {
                 $seconds = null;
-                if ($ttl instanceof \DateInterval) {
+                if ($ttl instanceof DateInterval) {
                     $seconds = (int) $this->intervalToSeconds($ttl);
                 } elseif (is_int($ttl)) {
                     $seconds = $ttl;
@@ -896,7 +902,7 @@ class CacheService
                 return $results;
             }
 
-            public function setMultiple(iterable $values, null|int|\DateInterval $ttl = null): bool
+            public function setMultiple(iterable $values, null|int|DateInterval $ttl = null): bool
             {
                 $ok = true;
                 foreach ($values as $key => $value) {
@@ -927,9 +933,9 @@ class CacheService
                 return $val !== false;
             }
 
-            private function intervalToSeconds(\DateInterval $interval): int
+            private function intervalToSeconds(DateInterval $interval): int
             {
-                $ref = new \DateTimeImmutable();
+                $ref = new DateTimeImmutable();
                 $end = $ref->add($interval);
 
                 return max(0, (int) ($end->getTimestamp() - $ref->getTimestamp()));

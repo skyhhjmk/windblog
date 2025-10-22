@@ -66,7 +66,7 @@ if ($defaultConnection === 'sqlite') {
             mkdir($dir, 0o777, true);
         }
         // 创建空的 SQLite 数据库文件
-        $pdo = new \PDO('sqlite:' . $dbPath);
+        $pdo = new PDO('sqlite:' . $dbPath);
         $pdo = null; // 关闭连接
     }
 }
