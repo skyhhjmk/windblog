@@ -244,6 +244,7 @@ class InstantFirstPaint implements MiddlewareInterface
                 // 同时使用 Header + Query 参数，CDN 至少会转发 Query
                 var sep=location.href.indexOf('?')===-1?'?':'&';
                 var bypassUrl=location.href+sep+'_instant_bypass=1&t='+Date.now();
+                // 添加 bypass 参数，让 Service Worker 能识别并正确处理请求
                 fetch(bypassUrl,{headers:{'X-INSTANT-BYPASS':'1'},signal:c.signal,credentials:'same-origin'})
                 .then(function(r){p(70);return r.text()})
                 .then(function(h){
@@ -257,6 +258,7 @@ class InstantFirstPaint implements MiddlewareInterface
                 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',load);else load()
                 })()
             </script>
+            <!-- skeleton_page -->
             </body>
             </html>
             HTML;

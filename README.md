@@ -227,3 +227,14 @@ php ./console config:redis
 # Windows
 php ./console check:requirements
 ```
+
+## 清除内存缓存
+
+```shell
+
+# Linux
+./console cache:clear
+
+# Windows
+php ./console cache:clear
+```

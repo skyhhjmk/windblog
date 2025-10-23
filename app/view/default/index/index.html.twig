@@ -7,7 +7,7 @@
         <!-- 页面标题区域 - 优化响应式字体大小 -->
         <div class="text-center mb-8 sm:mb-12 fade-in-on-scroll">
             <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-800 mb-3 sm:mb-4">{{ page_title|default('风屿雨博客') }}</h1>
-            <p class="text-gray-600 text-base sm:text-lg md:text-xl">欢迎来到我的博客，这里记录了我的技术分享和生活感悟</p>
+            <p class="text-gray-600 text-base sm:text-lg md:text-xl">不知名海域的知名岛屿</p>
         </div>
 
         <!-- 博客文章列表 - 优化移动端间距和内边距 -->
@@ -51,7 +51,8 @@
                                 <a href="/post/{{ post.slug }}.html"
                                    class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium transition-colors duration-200 tap-highlight">
                                     阅读更多
-                                    <svg class="w-4 h-4 ml-1 transition-transform duration-200 group-hover:translate-x-1" 
+                                    <svg
+                                        class="w-4 h-4 ml-1 transition-transform duration-200 group-hover:translate-x-1"
                                          fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                               d="M9 5l7 7-7 7"></path>
@@ -97,7 +98,7 @@
             </div>
         {% endif %}
     </div>
-    
+
     <style>
         /* 优化移动端文章标题的行高 */
         @media (max-width: 640px) {
@@ -105,7 +106,7 @@
                 line-height: 1.4;
             }
         }
-        
+
         /* 为小屏幕设备优化分页输入框的大小和交互 */
         @media (max-width: 640px) {
             #page-input {
@@ -122,7 +123,7 @@
             // 此函数已经在base.html.twig中被重写，使用PJAX实现
             console.warn('jumpToPage 函数已由全局PJAX配置处理');
         }
-        
+
         // 滚动触发动画完全由全局动画工具库管理
         // 移除本地实现以避免冲突
     </script>

@@ -23,17 +23,14 @@
     {# <script src="{{ asset('/assets/js/common.js') }}" defer></script> #}
     <!-- 动画工具库 -->
     <script src="{{ asset('/assets/js/animation-utils.js') }}" defer></script>
-    <!-- 统一前后台 Mermaid 版本，避免语法兼容差异 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.9.0/mermaid.min.js" integrity="sha512-OAr6bl1pt/FD0oVcuPzJ9VIMso+HQhHoodVI7mnDst19p8rNkNiraPLsDCYVhit3Mjd6B7AUHFsoDhq3dDeI7g==" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
     <!-- Vditor 必须同步加载以支持 PJAX -->
     <script src="{{ asset('/assets/vditor/method.min.js') }}"></script>
     <!-- FloLink 悬浮链接脚本 -->
-    <script src="{{ asset('/assets/flolink/flolink.js') }}" defer></script>
+    <script src="{{ asset('/assets/flolink/flolink.js') }}"></script>
 
-    <script async src="https://cdnjs.cloudflare.com/ajax/libs/pangu/7.2.0/pangu.umd.js"
-            integrity="sha512-er1ryC6I6mvQLB6cEcyDj9MYKdSXwuvdqFuir5fzcPlzqagv3Swng87sIPcib8Spm4BTIT5PNTmRaMSdM1QVxQ=="
-            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="{{ asset('/assets/js/pangu.umd.js') }}" defer></script>
 
+    <script src="{{ asset('/assets/js/sweetalert2.all.min.js') }}"></script>
     <style>
         .blog-container {
             max-width: 1200px;
@@ -395,8 +392,12 @@
                         docObj.querySelectorAll('link[rel="stylesheet"][href]').forEach(l => links.push(l.getAttribute('href')));
                     }
                     if ($respObj && $respObj.length) {
-                        $respObj.find('script[src]').each(function(){ scripts.push(this.getAttribute('src')); });
-                        $respObj.find('link[rel="stylesheet"][href]').each(function(){ links.push(this.getAttribute('href')); });
+                        $respObj.find('script[src]').each(function () {
+                            scripts.push(this.getAttribute('src'));
+                        });
+                        $respObj.find('link[rel="stylesheet"][href]').each(function () {
+                            links.push(this.getAttribute('href'));
+                        });
                     }
 
                     const uniq = (arr) => Array.from(new Set(arr.filter(Boolean)));
@@ -423,19 +424,20 @@
                             link.href = href;
                             link.dataset.pjaxLoaded = '1';
                             document.head.appendChild(link);
-                        } catch (_) {}
+                        } catch (_) {
+                        }
                     });
 
                     // 顺序加载JS，保证依赖顺序
-                    (function loadNext(i){
+                    (function loadNext(i) {
                         if (i >= needJs.length) return;
                         const src = needJs[i];
                         const s = document.createElement('script');
                         s.src = src;
                         s.async = false;
                         s.dataset.pjaxLoaded = '1';
-                        s.onload = () => loadNext(i+1);
-                        s.onerror = () => loadNext(i+1);
+                        s.onload = () => loadNext(i + 1);
+                        s.onerror = () => loadNext(i + 1);
                         document.head.appendChild(s);
                     })(0);
                 } catch (e) {
@@ -458,7 +460,8 @@
                     if (initialHeight && isFinite(initialHeight)) {
                         sidebarEl.style.minHeight = initialHeight + 'px';
                     }
-                } catch (_) {}
+                } catch (_) {
+                }
 
                 const duration = 400;
                 const ease = 'cubic-bezier(0.22, 1, 0.36, 1)';
@@ -499,7 +502,8 @@
                                 sidebarEl.style.opacity = '1';
                             }
                         }, 0);
-                    } catch (_) {}
+                    } catch (_) {
+                    }
 
                     // 统一入场：新侧栏元素从右向左滑入并淡入
                     newChildren.forEach((el, idx) => {
@@ -524,404 +528,392 @@
                 }, outTotal);
             }
 
-                // 初始化
-                function initPJAX() {
-                    console.log('PJAX: 开始初始化');
-                    // 获取DOM元素
-                    pjaxConfig.progressBar = document.getElementById('pjax-progress');
-                    pjaxConfig.container = document.getElementById('pjax-container');
+            // 初始化
+            function initPJAX() {
+                console.log('PJAX: 开始初始化');
+                // 获取DOM元素
+                pjaxConfig.progressBar = document.getElementById('pjax-progress');
+                pjaxConfig.container = document.getElementById('pjax-container');
 
-                    console.log('PJAX: 进度条元素:', pjaxConfig.progressBar);
-                    console.log('PJAX: 容器元素:', pjaxConfig.container);
+                console.log('PJAX: 进度条元素:', pjaxConfig.progressBar);
+                console.log('PJAX: 容器元素:', pjaxConfig.container);
 
-                    // 确保容器存在
-                    if (!pjaxConfig.container) {
-                        console.error('PJAX Container not found!');
-                        return;
-                    }
+                // 确保容器存在
+                if (!pjaxConfig.container) {
+                    console.error('PJAX Container not found!');
+                    return;
+                }
 
-                    console.log('PJAX: 初始化完成，开始绑定事件');
+                console.log('PJAX: 初始化完成，开始绑定事件');
 
-                    // 捕获阶段原生拦截（优先级最高），确保同源链接走 PJAX
-                    document.addEventListener('click', function (e) {
-                        try {
-                            const a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
-                            if (!a) return;
-                            const href = a.getAttribute('href') || '';
-                            // 允许快捷键行为
-                            if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
-                            // 忽略锚点、显式禁用、在新窗口打开
-                            if (href.startsWith('#') || a.hasAttribute('data-no-pjax') || a.target === '_blank') return;
-                            const url = new URL(href, window.location.origin);
-                            // 非同源或下载资源放行
-                            if (url.origin !== window.location.origin) return;
-                            if (url.pathname.match(/\.(pdf|doc|docx|xls|xlsx|zip)$/i)) return;
-                            // 当前页不动作
-                            if (url.href === window.location.href) {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                return;
-                            }
-                            // 统一走 PJAX
+                // 捕获阶段原生拦截（优先级最高），确保同源链接走 PJAX
+                document.addEventListener('click', function (e) {
+                    try {
+                        const a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+                        if (!a) return;
+                        const href = a.getAttribute('href') || '';
+                        // 允许快捷键行为
+                        if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+                        // 忽略锚点、显式禁用、在新窗口打开
+                        if (href.startsWith('#') || a.hasAttribute('data-no-pjax') || a.target === '_blank') return;
+                        const url = new URL(href, window.location.origin);
+                        // 非同源或下载资源放行
+                        if (url.origin !== window.location.origin) return;
+                        if (url.pathname.match(/\.(pdf|doc|docx|xls|xlsx|zip)$/i)) return;
+                        // 当前页不动作
+                        if (url.href === window.location.href) {
                             e.preventDefault();
                             e.stopPropagation();
-                            navigateWithPJAX(url.href);
-                        } catch (_) {
-                            // 解析失败，放行
+                            return;
                         }
-                    }, true);
-
-                    // 设置进度条样式
-                    if (pjaxConfig.progressBar) {
-                        pjaxConfig.progressBar.style.position = 'fixed';
-                        pjaxConfig.progressBar.style.top = '0';
-                        pjaxConfig.progressBar.style.left = '0';
-                        pjaxConfig.progressBar.style.width = '0';
-                        pjaxConfig.progressBar.style.zIndex = '9999';
-                        pjaxConfig.progressBar.style.pointerEvents = 'none';
+                        // 统一走 PJAX
+                        e.preventDefault();
+                        e.stopPropagation();
+                        navigateWithPJAX(url.href);
+                    } catch (_) {
+                        // 解析失败，放行
                     }
+                }, true);
 
-                    // 绑定所有同源内部链接的点击事件（更鲁棒）
-                    $(document).on('click', 'a[href]:not([target="_blank"]):not([data-no-pjax]):not([href^="#"])', function(e) {
-                        try {
-                            const href = this.getAttribute('href') || '';
-                            // 允许快捷键打开新标签或其他行为
-                            if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+                // 设置进度条样式
+                if (pjaxConfig.progressBar) {
+                    pjaxConfig.progressBar.style.position = 'fixed';
+                    pjaxConfig.progressBar.style.top = '0';
+                    pjaxConfig.progressBar.style.left = '0';
+                    pjaxConfig.progressBar.style.width = '0';
+                    pjaxConfig.progressBar.style.zIndex = '9999';
+                    pjaxConfig.progressBar.style.pointerEvents = 'none';
+                }
 
-                            // 解析为绝对URL以判定同源
-                            const url = new URL(href, window.location.origin);
+                // 绑定所有同源内部链接的点击事件（更鲁棒）
+                $(document).on('click', 'a[href]:not([target="_blank"]):not([data-no-pjax]):not([href^="#"])', function (e) {
+                    try {
+                        const href = this.getAttribute('href') || '';
+                        // 允许快捷键打开新标签或其他行为
+                        if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
 
-                            // 非同源或下载等，放行
-                            if (url.origin !== window.location.origin) return;
-                            if (url.pathname.match(/\.(pdf|doc|docx|xls|xlsx|zip)$/i)) return;
+                        // 解析为绝对URL以判定同源
+                        const url = new URL(href, window.location.origin);
 
-                            // 当前页则不动作
-                            if (url.href === window.location.href) {
-                                e.preventDefault();
-                                e.stopImmediatePropagation();
-                                return;
-                            }
+                        // 非同源或下载等，放行
+                        if (url.origin !== window.location.origin) return;
+                        if (url.pathname.match(/\.(pdf|doc|docx|xls|xlsx|zip)$/i)) return;
 
-                            // PJAX导航
+                        // 当前页则不动作
+                        if (url.href === window.location.href) {
                             e.preventDefault();
                             e.stopImmediatePropagation();
-                            navigateWithPJAX(url.href);
-                        } catch (err) {
-                            // 解析失败时放行
-                        }
-                    });
-
-                    // 处理页码跳转功能
-                    $(document).on('click', '#page-jump-btn', function(e) {
-                        e.preventDefault();
-                        const maxPage = parseInt($(this).data('max-page') || 1);
-                        const input = document.getElementById('page-input');
-                        const page = parseInt(input.value);
-
-                        if (isNaN(page) || page < 1 || page > maxPage) {
-                            alert('请输入有效的页码 (1-' + maxPage + ')');
                             return;
                         }
 
-                        navigateWithPJAX('/page/' + page + '.html');
-                    });
+                        // PJAX导航
+                        e.preventDefault();
+                        e.stopImmediatePropagation();
+                        navigateWithPJAX(url.href);
+                    } catch (err) {
+                        // 解析失败时放行
+                    }
+                });
 
-                    // 监听页码输入框的回车事件
-                    $(document).on('keydown', '#page-input', function(e) {
-                        if (e.key === 'Enter') {
-                            e.preventDefault();
-                            $(this).next('#page-jump-btn').click();
-                        }
-                    });
+                // 处理页码跳转功能
+                $(document).on('click', '#page-jump-btn', function (e) {
+                    e.preventDefault();
+                    const maxPage = parseInt($(this).data('max-page') || 1);
+                    const input = document.getElementById('page-input');
+                    const page = parseInt(input.value);
 
-                    // 监听浏览器历史记录导航
-                    $(window).on('popstate', function(e) {
-                        // 无论 state 是否存在，都应该加载内容以响应浏览器前进/后退操作
-                        loadContentWithPJAX(window.location.href, false);
-                    });
-                }
-
-                // 执行PJAX导航
-                function navigateWithPJAX(url) {
-                    // 如果正在加载，忽略新请求
-                    if (pjaxConfig.isLoading) {
-                        console.log('PJAX: 正在加载中，忽略新请求');
+                    if (isNaN(page) || page < 1 || page > maxPage) {
+                        alert('请输入有效的页码 (1-' + maxPage + ')');
                         return;
                     }
-                    pjaxConfig.isLoading = true;
 
-                    try {
-                        document.dispatchEvent(new CustomEvent('pjax:start'));
-                        document.dispatchEvent(new CustomEvent('pjax:send'));
-                        if (window.$) {
-                            $(document).trigger('pjax:start');
-                            $(document).trigger('pjax:send');
-                        }
-                    } catch (e) {}
-                    // 添加页面淡出效果
-                    pjaxConfig.container.style.opacity = '0';
-                    pjaxConfig.container.style.transition = `opacity ${pjaxConfig.transitionSpeed}ms ease-out`;
+                    navigateWithPJAX('/page/' + page + '.html');
+                });
 
-                    // 更新进度条
-                    if (pjaxConfig.progressBar) {
-                        pjaxConfig.progressBar.style.transition = 'none';
-                        pjaxConfig.progressBar.style.width = '0';
-                        // 触发重绘
-                        void pjaxConfig.progressBar.offsetWidth;
-                        pjaxConfig.progressBar.style.transition = 'width 0.3s ease';
-                        pjaxConfig.progressBar.style.width = '10%';
+                // 监听页码输入框的回车事件
+                $(document).on('keydown', '#page-input', function (e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        $(this).next('#page-jump-btn').click();
                     }
-                    document.body.classList.add('pjax-loading');
+                });
 
-                    // 延迟加载内容，等待淡出动画完成
-                    setTimeout(function() {
-                        loadContentWithPJAX(url, true);
-                    }, pjaxConfig.transitionSpeed);
+                // 监听浏览器历史记录导航
+                $(window).on('popstate', function (e) {
+                    // 无论 state 是否存在，都应该加载内容以响应浏览器前进/后退操作
+                    loadContentWithPJAX(window.location.href, false);
+                });
+            }
+
+            // 执行PJAX导航
+            function navigateWithPJAX(url) {
+                // 如果正在加载，忽略新请求
+                if (pjaxConfig.isLoading) {
+                    console.log('PJAX: 正在加载中，忽略新请求');
+                    return;
+                }
+                pjaxConfig.isLoading = true;
+
+                try {
+                    document.dispatchEvent(new CustomEvent('pjax:start'));
+                    document.dispatchEvent(new CustomEvent('pjax:send'));
+                    if (window.$) {
+                        $(document).trigger('pjax:start');
+                        $(document).trigger('pjax:send');
+                    }
+                } catch (e) {
+                }
+                // 添加页面淡出效果
+                pjaxConfig.container.style.opacity = '0';
+                pjaxConfig.container.style.transition = `opacity ${pjaxConfig.transitionSpeed}ms ease-out`;
+
+                // 更新进度条
+                if (pjaxConfig.progressBar) {
+                    pjaxConfig.progressBar.style.transition = 'none';
+                    pjaxConfig.progressBar.style.width = '0';
+                    // 触发重绘
+                    void pjaxConfig.progressBar.offsetWidth;
+                    pjaxConfig.progressBar.style.transition = 'width 0.3s ease';
+                    pjaxConfig.progressBar.style.width = '10%';
+                }
+                document.body.classList.add('pjax-loading');
+
+                // 延迟加载内容，等待淡出动画完成
+                setTimeout(function () {
+                    loadContentWithPJAX(url, true);
+                }, pjaxConfig.transitionSpeed);
+            }
+
+            // 使用PJAX加载内容
+            function loadContentWithPJAX(url, pushState) {
+                console.log('使用PJAX加载:', url);
+
+                // 统一构造带 _pjax=1 的请求地址，帮助服务端返回 content 模板
+                const fetchUrl = (function (u) {
+                    try {
+                        return u + (u.indexOf('?') === -1 ? '?_pjax=1' : '&_pjax=1');
+                    } catch (_) {
+                        return u;
+                    }
+                })(url);
+
+                // 更新进度条
+                if (pjaxConfig.progressBar) {
+                    pjaxConfig.progressBar.style.width = '30%';
                 }
 
-                // 使用PJAX加载内容
-                function loadContentWithPJAX(url, pushState) {
-                    console.log('使用PJAX加载:', url);
+                // 发送Ajax请求
+                $.ajax({
+                    url: fetchUrl,
+                    type: 'GET',
+                    timeout: 10000,
+                    headers: {
+                        'X-PJAX': 'true',
+                        'X-PJAX-Container': '#pjax-container',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'text/html'
+                    },
+                    success: function (response) {
+                        console.log('PJAX请求成功');
 
-                    // 统一构造带 _pjax=1 的请求地址，帮助服务端返回 content 模板
-                    const fetchUrl = (function(u){
+                        // 更新进度条
+                        if (pjaxConfig.progressBar) {
+                            pjaxConfig.progressBar.style.width = '70%';
+                        }
+
+                        // 解析HTML获取内容（更鲁棒）
+                        const $resp = $(response);
+                        let newContent = '';
                         try {
-                            return u + (u.indexOf('?') === -1 ? '?_pjax=1' : '&_pjax=1');
-                        } catch (_) { return u; }
-                    })(url);
-
-                    // 更新进度条
-                    if (pjaxConfig.progressBar) {
-                        pjaxConfig.progressBar.style.width = '30%';
-                    }
-
-                    // 发送Ajax请求
-                    $.ajax({
-                        url: fetchUrl,
-                        type: 'GET',
-                        timeout: 10000,
-                        headers: {
-                            'X-PJAX': 'true',
-                            'X-PJAX-Container': '#pjax-container',
-                            'X-Requested-With': 'XMLHttpRequest',
-                            'Accept': 'text/html'
-                        },
-                        success: function(response) {
-                            console.log('PJAX请求成功');
-
-                            // 更新进度条
-                            if (pjaxConfig.progressBar) {
-                                pjaxConfig.progressBar.style.width = '70%';
+                            const parser = new DOMParser();
+                            const doc = parser.parseFromString(response, 'text/html');
+                            const byId = doc.getElementById('pjax-container');
+                            if (byId) {
+                                newContent = byId.innerHTML || '';
                             }
+                        } catch (e) {
+                        }
+                        if (!newContent) {
+                            newContent = $resp.find('#pjax-container').html();
+                        }
 
-                            // 解析HTML获取内容（更鲁棒）
-                            const $resp = $(response);
-                            let newContent = '';
+                        if (newContent) {
                             try {
-                                const parser = new DOMParser();
-                                const doc = parser.parseFromString(response, 'text/html');
-                                const byId = doc.getElementById('pjax-container');
-                                if (byId) {
-                                    newContent = byId.innerHTML || '';
+                                document.dispatchEvent(new CustomEvent('pjax:beforeReplace', {
+                                    detail: {
+                                        url: url,
+                                        contents: byId
+                                    }
+                                }));
+                                if (window.$) {
+                                    $(document).trigger('pjax:beforeReplace', [byId]);
                                 }
-                            } catch (e) {}
-                            if (!newContent) {
-                                newContent = $resp.find('#pjax-container').html();
+                            } catch (e) {
+                            }
+                            // 更新内容
+                            pjaxConfig.container.innerHTML = newContent;
+
+                            // 进入新页面时滚动到顶部（立即滚动，避免首屏元素在平滑期间不可见）
+                            try {
+                                // 立即滚动到顶部
+                                window.scrollTo(0, 0);
+                                document.documentElement.scrollTop = 0;
+                                document.body.scrollTop = 0;
+                            } catch (_) {
                             }
 
-                            if (newContent) {
-                                try {
-                                    document.dispatchEvent(new CustomEvent('pjax:beforeReplace', { detail: { url: url, contents: byId } }));
-                                    if (window.$) {
-                                        $(document).trigger('pjax:beforeReplace', [byId]);
+                            // 动画可见性修复：确保首屏区域标题等元素立即可见
+                            try {
+                                const vh = window.innerHeight || document.documentElement.clientHeight || 800;
+                                const threshold = Math.floor(vh * 1.2);
+                                const elems = pjaxConfig.container.querySelectorAll('.fade-in-on-scroll, h1, h2');
+                                elems.forEach(function (el) {
+                                    const r = el.getBoundingClientRect();
+                                    if (!r) return;
+                                    // 首屏区域内的元素立即设为可见
+                                    if (r.top < threshold && r.bottom > 0) {
+                                        el.classList.add('visible');
+                                        el.style.opacity = '';
+                                        el.style.transform = '';
                                     }
-                                } catch (e) {}
-                                // 更新内容
-                                pjaxConfig.container.innerHTML = newContent;
-
-                                // 进入新页面时滚动到顶部（立即滚动，避免首屏元素在平滑期间不可见）
+                                });
+                                // 连续触发两次滚动事件，确保所有基于scroll的监听被唤醒
                                 try {
-                                    // 立即滚动到顶部
-                                    window.scrollTo(0, 0);
-                                    document.documentElement.scrollTop = 0;
-                                    document.body.scrollTop = 0;
-                                } catch (_) {}
-
-                                // 动画可见性修复：确保首屏区域标题等元素立即可见
+                                    window.dispatchEvent(new Event('scroll'));
+                                } catch (_) {
+                                }
                                 try {
-                                    const vh = window.innerHeight || document.documentElement.clientHeight || 800;
-                                    const threshold = Math.floor(vh * 1.2);
-                                    const elems = pjaxConfig.container.querySelectorAll('.fade-in-on-scroll, h1, h2');
-                                    elems.forEach(function (el) {
-                                        const r = el.getBoundingClientRect();
-                                        if (!r) return;
-                                        // 首屏区域内的元素立即设为可见
-                                        if (r.top < threshold && r.bottom > 0) {
-                                            el.classList.add('visible');
-                                            el.style.opacity = '';
-                                            el.style.transform = '';
-                                        }
+                                    requestAnimationFrame(function () {
+                                        window.dispatchEvent(new Event('scroll'));
                                     });
-                                    // 连续触发两次滚动事件，确保所有基于scroll的监听被唤醒
-                                    try { window.dispatchEvent(new Event('scroll')); } catch (_) {}
-                                    try { requestAnimationFrame(function(){ window.dispatchEvent(new Event('scroll')); }); } catch (_) {}
-                                    // 重新初始化动画系统
-                                    if (window.AnimationUtils && typeof AnimationUtils.reinit === 'function') {
-                                        AnimationUtils.reinit();
-                                    }
-                                } catch (e) {}
+                                } catch (_) {
+                                }
+                                // 重新初始化动画系统
+                                if (window.AnimationUtils && typeof AnimationUtils.reinit === 'function') {
+                                    AnimationUtils.reinit();
+                                }
+                            } catch (e) {
+                            }
 
-                                // 处理片段容器内的外部脚本与样式（script[src]、link[rel=stylesheet]）
-                                try {
-                                    // 将片段中的样式移动到 head（避免重复）
-                                    const fragLinks = Array.from(pjaxConfig.container.querySelectorAll('link[rel="stylesheet"][href]'));
-                                    const existingLinks = Array.from(document.querySelectorAll('link[rel="stylesheet"][href]')).map(l => l.getAttribute('href'));
-                                    fragLinks.forEach(function (l) {
-                                        const href = l.getAttribute('href') || '';
-                                        if (!href) return;
-                                        if (existingLinks.includes(href)) {
-                                            // 已存在则从片段移除，避免重复
-                                            if (l.parentNode) l.parentNode.removeChild(l);
-                                        } else {
-                                            const link = document.createElement('link');
-                                            link.rel = 'stylesheet';
-                                            link.href = href;
-                                            link.dataset.pjaxLoaded = '1';
-                                            document.head.appendChild(link);
-                                            if (l.parentNode) l.parentNode.removeChild(l);
-                                        }
+                            // 处理片段容器内的外部脚本与样式（script[src]、link[rel=stylesheet]）
+                            try {
+                                // 将片段中的样式移动到 head（避免重复）
+                                const fragLinks = Array.from(pjaxConfig.container.querySelectorAll('link[rel="stylesheet"][href]'));
+                                const existingLinks = Array.from(document.querySelectorAll('link[rel="stylesheet"][href]')).map(l => l.getAttribute('href'));
+                                fragLinks.forEach(function (l) {
+                                    const href = l.getAttribute('href') || '';
+                                    if (!href) return;
+                                    if (existingLinks.includes(href)) {
+                                        // 已存在则从片段移除，避免重复
+                                        if (l.parentNode) l.parentNode.removeChild(l);
+                                    } else {
+                                        const link = document.createElement('link');
+                                        link.rel = 'stylesheet';
+                                        link.href = href;
+                                        link.dataset.pjaxLoaded = '1';
+                                        document.head.appendChild(link);
+                                        if (l.parentNode) l.parentNode.removeChild(l);
+                                    }
+                                });
+
+                                // 顺序加载片段中的外链脚本，确保依赖顺序
+                                const fragScripts = Array.from(pjaxConfig.container.querySelectorAll('script[src]'));
+                                const existingScripts = Array.from(document.querySelectorAll('script[src]')).map(s => s.getAttribute('src'));
+                                const queue = fragScripts
+                                    .map(function (s) {
+                                        return s.getAttribute('src') || '';
+                                    })
+                                    .filter(function (src) {
+                                        return !!src && !existingScripts.includes(src);
                                     });
 
-                                    // 顺序加载片段中的外链脚本，确保依赖顺序
-                                    const fragScripts = Array.from(pjaxConfig.container.querySelectorAll('script[src]'));
-                                    const existingScripts = Array.from(document.querySelectorAll('script[src]')).map(s => s.getAttribute('src'));
-                                    const queue = fragScripts
-                                        .map(function (s) { return s.getAttribute('src') || ''; })
-                                        .filter(function (src) { return !!src && !existingScripts.includes(src); });
+                                (function loadSeq(i) {
+                                    if (i >= queue.length) return;
+                                    const src = queue[i];
+                                    const s = document.createElement('script');
+                                    s.src = src;
+                                    // 保留原 type（支持 module）
+                                    const orig = fragScripts.find(x => (x.getAttribute('src') || '') === src);
+                                    const type = orig && orig.getAttribute('type');
+                                    if (type) s.type = type;
+                                    s.async = false;
+                                    s.dataset.pjaxLoaded = '1';
+                                    s.onload = function () {
+                                        loadSeq(i + 1);
+                                    };
+                                    s.onerror = function () {
+                                        loadSeq(i + 1);
+                                    };
+                                    document.head.appendChild(s);
+                                })(0);
+                            } catch (e) {
+                                console.warn('PJAX: 片段外部资源加载失败', e);
+                            }
 
-                                    (function loadSeq(i) {
-                                        if (i >= queue.length) return;
-                                        const src = queue[i];
-                                        const s = document.createElement('script');
-                                        s.src = src;
-                                        // 保留原 type（支持 module）
-                                        const orig = fragScripts.find(x => (x.getAttribute('src') || '') === src);
-                                        const type = orig && orig.getAttribute('type');
-                                        if (type) s.type = type;
-                                        s.async = false;
-                                        s.dataset.pjaxLoaded = '1';
-                                        s.onload = function () { loadSeq(i + 1); };
-                                        s.onerror = function () { loadSeq(i + 1); };
-                                        document.head.appendChild(s);
-                                    })(0);
-                                } catch (e) {
-                                    console.warn('PJAX: 片段外部资源加载失败', e);
-                                }
+                            // 加载外部资源（脚本与样式），确保新页面依赖就绪
+                            try {
+                                loadExternalAssets(response, doc, $resp);
+                            } catch (e) {
+                            }
 
-                                // 加载外部资源（脚本与样式），确保新页面依赖就绪
-                                try {
-                                    loadExternalAssets(response, doc, $resp);
-                                } catch (e) {}
+                            // 执行片段中的内联脚本（避免外部脚本重复加载）
+                            try {
+                                const inlineScripts = pjaxConfig.container.querySelectorAll('script:not([src])');
+                                inlineScripts.forEach(function (oldScript) {
+                                    // 可选控制：data-pjax-eval="false" 跳过
+                                    const attr = oldScript.getAttribute('data-pjax-eval');
+                                    const shouldEval = (attr == null) ? true : (attr !== 'false');
+                                    if (!shouldEval) return;
 
-                                // 执行片段中的内联脚本（避免外部脚本重复加载）
-                                try {
-                                    const inlineScripts = pjaxConfig.container.querySelectorAll('script:not([src])');
-                                    inlineScripts.forEach(function (oldScript) {
-                                        // 可选控制：data-pjax-eval="false" 跳过
-                                        const attr = oldScript.getAttribute('data-pjax-eval');
-                                        const shouldEval = (attr == null) ? true : (attr !== 'false');
-                                        if (!shouldEval) return;
+                                    const newScript = document.createElement('script');
+                                    // 复制所有属性，而不仅仅是type
+                                    for (let i = 0; i < oldScript.attributes.length; i++) {
+                                        const attr = oldScript.attributes[i];
+                                        newScript.setAttribute(attr.name, attr.value);
+                                    }
+                                    newScript.textContent = oldScript.textContent || '';
+                                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                                });
+                            } catch (e) {
+                                console.warn('PJAX: 执行内联脚本失败', e);
+                            }
 
-                                        const newScript = document.createElement('script');
-                                        // 复制所有属性，而不仅仅是type
-                                        for (let i = 0; i < oldScript.attributes.length; i++) {
-                                            const attr = oldScript.attributes[i];
-                                            newScript.setAttribute(attr.name, attr.value);
+                            // 注入侧栏（若存在）
+                            try {
+                                const sidebarHtml = $resp.find('#pjax-sidebar-html').html();
+                                if (sidebarHtml != null) {
+                                    const sidebar = document.getElementById('sidebar-container');
+                                    if (sidebar) {
+                                        applySidebarDiff(sidebar, sidebarHtml);
+                                        try {
+                                            document.dispatchEvent(new Event('sidebar:updated'));
+                                        } catch (_) {
                                         }
-                                        newScript.textContent = oldScript.textContent || '';
-                                        oldScript.parentNode.replaceChild(newScript, oldScript);
-                                    });
-                                } catch (e) {
-                                    console.warn('PJAX: 执行内联脚本失败', e);
-                                }
-
-                                // 注入侧栏（若存在）
-                                try {
-                                    const sidebarHtml = $resp.find('#pjax-sidebar-html').html();
-                                    if (sidebarHtml != null) {
-                                        const sidebar = document.getElementById('sidebar-container');
-                                        if (sidebar) {
-                                            applySidebarDiff(sidebar, sidebarHtml);
-                                            try { document.dispatchEvent(new Event('sidebar:updated')); } catch (_) {}
-                                        }
-                                    }
-                                } catch (e) {}
-
-                                // 更新页面标题
-                                const newTitle = $resp.filter('title').text();
-                                if (newTitle) {
-                                    document.title = newTitle;
-                                    const topbar = document.getElementById('topbarTitle');
-                                    if (topbar) {
-                                        topbar.textContent = newTitle;
                                     }
                                 }
+                            } catch (e) {
+                            }
 
-                                // 添加到历史记录
-                                if (pushState) {
-                                    history.pushState({ path: url }, '', url);
+                            // 更新页面标题
+                            const newTitle = $resp.filter('title').text();
+                            if (newTitle) {
+                                document.title = newTitle;
+                                const topbar = document.getElementById('topbarTitle');
+                                if (topbar) {
+                                    topbar.textContent = newTitle;
                                 }
+                            }
 
-                                // 内容加载完成后的处理
-                                setTimeout(function() {
-                                    // 显示内容
-                                    pjaxConfig.container.style.opacity = '1';
+                            // 添加到历史记录
+                            if (pushState) {
+                                history.pushState({path: url}, '', url);
+                            }
 
-                                    // 完成进度条
-                                    if (pjaxConfig.progressBar) {
-                                        pjaxConfig.progressBar.style.width = '100%';
-                                        setTimeout(() => {
-                                            pjaxConfig.progressBar.style.width = '0';
-                                        }, 200);
-                                    }
-
-                                    // 移除加载状态
-                                    document.body.classList.remove('pjax-loading');
-                                    pjaxConfig.isLoading = false;  // 重置加载标志
-
-                                    // 统一发送完成事件
-                                    try {
-                                        document.dispatchEvent(new CustomEvent('pjax:complete'));
-                                        document.dispatchEvent(new CustomEvent('pjax:end'));
-                                        if (window.$) {
-                                            $(document).trigger('pjax:complete');
-                                            $(document).trigger('pjax:end');
-                                        }
-                                    } catch (e) {}
-
-                                    // 触发页面就绪事件
-                                    document.dispatchEvent(new CustomEvent('page:ready'));
-
-                                    // 重新初始化动画
-                                    if (window.AnimationUtils) {
-                                        AnimationUtils.reinit();
-                                    }
-
-                                    // 进度条收尾（到100并隐藏）
-                                    if (window.PjaxProgress && typeof window.PjaxProgress.complete === 'function') {
-                                        window.PjaxProgress.complete();
-                                    }
-                                }, 50);
-                            } else {
-                                console.error('PJAX: 未能找到内容容器，采用非刷新降级注入');
-                                try {
-                                    const bodyHtml = $resp.find('body').html();
-                                    pjaxConfig.container.innerHTML = bodyHtml || String(response || '');
-                                } catch (e) {
-                                    pjaxConfig.container.innerHTML = String(response || '');
-                                }
+                            // 内容加载完成后的处理
+                            setTimeout(function () {
                                 // 显示内容
                                 pjaxConfig.container.style.opacity = '1';
+
                                 // 完成进度条
                                 if (pjaxConfig.progressBar) {
                                     pjaxConfig.progressBar.style.width = '100%';
@@ -929,10 +921,12 @@
                                         pjaxConfig.progressBar.style.width = '0';
                                     }, 200);
                                 }
+
                                 // 移除加载状态
                                 document.body.classList.remove('pjax-loading');
                                 pjaxConfig.isLoading = false;  // 重置加载标志
-                                // 统一发送完成事件（不刷新）
+
+                                // 统一发送完成事件
                                 try {
                                     document.dispatchEvent(new CustomEvent('pjax:complete'));
                                     document.dispatchEvent(new CustomEvent('pjax:end'));
@@ -940,78 +934,133 @@
                                         $(document).trigger('pjax:complete');
                                         $(document).trigger('pjax:end');
                                     }
-                                } catch (e) {}
-                                // 触发页面就绪事件与动画重建
+                                } catch (e) {
+                                }
+
+                                // 触发页面就绪事件
                                 document.dispatchEvent(new CustomEvent('page:ready'));
+
+                                // 重新初始化动画
                                 if (window.AnimationUtils) {
                                     AnimationUtils.reinit();
                                 }
-                            }
-                        },
-                        error: function(xhr, status, error) {
-                            console.error('PJAX请求失败:', status, error);
 
-                            // 重置进度条
-                            if (pjaxConfig.progressBar) {
-                                pjaxConfig.progressBar.style.width = '0';
+                                // 进度条收尾（到100并隐藏）
+                                if (window.PjaxProgress && typeof window.PjaxProgress.complete === 'function') {
+                                    window.PjaxProgress.complete();
+                                }
+                            }, 50);
+                        } else {
+                            console.error('PJAX: 未能找到内容容器，采用非刷新降级注入');
+                            try {
+                                const bodyHtml = $resp.find('body').html();
+                                pjaxConfig.container.innerHTML = bodyHtml || String(response || '');
+                            } catch (e) {
+                                pjaxConfig.container.innerHTML = String(response || '');
                             }
-
-                            // 重置容器样式
+                            // 显示内容
                             pjaxConfig.container.style.opacity = '1';
+                            // 完成进度条
+                            if (pjaxConfig.progressBar) {
+                                pjaxConfig.progressBar.style.width = '100%';
+                                setTimeout(() => {
+                                    pjaxConfig.progressBar.style.width = '0';
+                                }, 200);
+                            }
+                            // 移除加载状态
                             document.body.classList.remove('pjax-loading');
                             pjaxConfig.isLoading = false;  // 重置加载标志
-
-                            // 统一错误事件
+                            // 统一发送完成事件（不刷新）
                             try {
-                                document.dispatchEvent(new CustomEvent('pjax:error', { detail: { xhr: xhr, status: status, error: error } }));
+                                document.dispatchEvent(new CustomEvent('pjax:complete'));
+                                document.dispatchEvent(new CustomEvent('pjax:end'));
                                 if (window.$) {
-                                    $(document).trigger('pjax:error', [xhr]);
+                                    $(document).trigger('pjax:complete');
+                                    $(document).trigger('pjax:end');
                                 }
                             } catch (e) {
-
                             }
-
-                            // 显示错误通知
+                            // 触发页面就绪事件与动画重建
+                            document.dispatchEvent(new CustomEvent('page:ready'));
                             if (window.AnimationUtils) {
-                                if (xhr.status === 0) {
-                                    AnimationUtils.showNotification('网络连接错误，请检查网络设置', 'error');
-                                } else if (xhr.status >= 500) {
-                                    AnimationUtils.showNotification('服务器错误，请稍后再试', 'error');
-                                } else {
-                                    AnimationUtils.showNotification('加载页面失败', 'error');
-                                }
+                                AnimationUtils.reinit();
                             }
                         }
-                    });
-                }
+                    },
+                    error: function (xhr, status, error) {
+                        console.error('PJAX请求失败:', status, error);
 
-                // 回退到普通页面加载
-                function fallbackToNormalLoad(url) {
-                    console.log('回退到普通页面加载:', url);
-                    window.location.href = url;
-                }
+                        // 重置进度条
+                        if (pjaxConfig.progressBar) {
+                            pjaxConfig.progressBar.style.width = '0';
+                        }
 
-                // 添加键盘导航支持
-                $(document).on('keydown', function(e) {
-                    // Alt+左箭头或后退键返回上一页
-                    if ((e.altKey && e.key === 'ArrowLeft') || e.key === 'Backspace') {
-                        e.preventDefault();
-                        window.history.back();
-                    }
-                    // Alt+右箭头前进到下一页
-                    else if (e.altKey && e.key === 'ArrowRight') {
-                        e.preventDefault();
-                        window.history.forward();
+                        // 重置容器样式
+                        pjaxConfig.container.style.opacity = '1';
+                        document.body.classList.remove('pjax-loading');
+                        pjaxConfig.isLoading = false;  // 重置加载标志
+
+                        // 统一错误事件
+                        try {
+                            document.dispatchEvent(new CustomEvent('pjax:error', {
+                                detail: {
+                                    xhr: xhr,
+                                    status: status,
+                                    error: error
+                                }
+                            }));
+                            if (window.$) {
+                                $(document).trigger('pjax:error', [xhr]);
+                            }
+                        } catch (e) {
+
+                        }
+
+                        // 显示错误通知
+                        if (window.AnimationUtils) {
+                            if (xhr.status === 0) {
+                                AnimationUtils.showNotification('网络连接错误，请检查网络设置', 'error');
+                            } else if (xhr.status >= 500) {
+                                AnimationUtils.showNotification('服务器错误，请稍后再试', 'error');
+                            } else {
+                                AnimationUtils.showNotification('加载页面失败', 'error');
+                            }
+                        }
                     }
                 });
+            }
 
-                // 向外暴露统一的 PJAX API
-                window.PJAX = {
-                    loadUrl: function (url) { navigateWithPJAX(url); },
-                    back: function () { window.history.back(); }
-                };
-                // 初始化PJAX
-                initPJAX();
+            // 回退到普通页面加载
+            function fallbackToNormalLoad(url) {
+                console.log('回退到普通页面加载:', url);
+                window.location.href = url;
+            }
+
+            // 添加键盘导航支持
+            $(document).on('keydown', function (e) {
+                // Alt+左箭头或后退键返回上一页
+                if ((e.altKey && e.key === 'ArrowLeft') || e.key === 'Backspace') {
+                    e.preventDefault();
+                    window.history.back();
+                }
+                // Alt+右箭头前进到下一页
+                else if (e.altKey && e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    window.history.forward();
+                }
+            });
+
+            // 向外暴露统一的 PJAX API
+            window.PJAX = {
+                loadUrl: function (url) {
+                    navigateWithPJAX(url);
+                },
+                back: function () {
+                    window.history.back();
+                }
+            };
+            // 初始化PJAX
+            initPJAX();
         });
     })();
 </script>
@@ -1472,27 +1521,51 @@
         if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
             window.addEventListener('load', function () {
                 navigator.serviceWorker.register('/sw.js').then(function (reg) {
-                    // 可选：新版本就绪时尝试立即启用
+
+                    // 检查是否已有等待中的 SW
                     if (reg.waiting) {
-                        reg.waiting.postMessage({type: 'SKIP_WAITING'});
+                        showUpdatePrompt(reg.waiting);
                     }
+
                     reg.addEventListener('updatefound', function () {
                         const nw = reg.installing;
                         if (nw) {
                             nw.addEventListener('statechange', function () {
                                 if (nw.state === 'installed' && navigator.serviceWorker.controller) {
-                                    // 新SW已安装，提示或自动刷新策略可在此扩展
-                                    // 这里保持静默以最小侵入
+                                    // 新SW已安装，提示用户刷新
+                                    showUpdatePrompt(nw);
                                 }
                             });
                         }
                     });
+
                 }).catch(function (err) {
                     console.warn('SW register failed:', err);
                 });
+
+                // 显示 SweetAlert 更新提示
+                function showUpdatePrompt(worker) {
+                    Swal.fire({
+                        title: '发现新版本 ✨',
+                        text: '页面新版本可用，是否立即刷新？',
+                        icon: 'info',
+                        showCancelButton: true,
+                        confirmButtonText: '立即更新',
+                        cancelButtonText: '稍后',
+                        reverseButtons: true,
+                        confirmButtonColor: '#3085d6',
+                        cancelButtonColor: '#aaa'
+                    }).then(result => {
+                        if (result.isConfirmed) {
+                            worker.postMessage({type: 'SKIP_WAITING'});
+                            window.location.reload();
+                        }
+                    });
+                }
             });
         }
     })();
+
 </script>
 <script src="{{ asset('/assets/js/offline-notice.js') }}"></script>
 <!-- 顶部 PJAX 进度条 -->
