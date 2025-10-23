@@ -37,6 +37,7 @@ Route::any('/page/{page}.html', [app\controller\IndexController::class, 'index']
 
 // 首页路由
 Route::any('/', [app\controller\IndexController::class, 'index'])->name('index.index');
+Route::any('/index.html', [app\controller\IndexController::class, 'index'])->name('index.index.html');
 
 // 搜索路由
 Route::any('/search', [app\controller\SearchController::class, 'index'])->name('search.index');
