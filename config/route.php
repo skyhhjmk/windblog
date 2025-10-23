@@ -23,8 +23,8 @@ Route::disableDefaultRoute();
 //});
 
 // 文章阅读页路由 - 支持 .html 后缀
-Route::any('/post/{keyword}', [app\controller\PostController::class, 'index']);
-Route::any('/post/{keyword}.html', [app\controller\PostController::class, 'index']);
+Route::any('/post/{keyword}', [app\controller\PostController::class, 'index'])->name('post.index');
+Route::any('/post/{keyword}.html', [app\controller\PostController::class, 'index'])->name('post.index.html');
 
 // 评论相关路由
 Route::any('/comment/submit/{postId}', [app\controller\CommentController::class, 'submit']);
@@ -84,25 +84,20 @@ Route::any('/t/{slug}.html', [app\controller\TagController::class, 'index'])->na
 Route::any('/t/{slug}/page/{page}', [app\controller\TagController::class, 'index'])->name('t.page');
 Route::any('/t/{slug}/page/{page}.html', [app\controller\TagController::class, 'index'])->name('t.page.html');
 
-// 调试 API
-Route::get('/api/hello', function () {
-    return json(['hello' => 'webman']);
-});
-
 // Rainyun API工具路由
 Route::any('/rainyun', [app\controller\RainyunController::class, 'index'])->name('rainyun.index');
 
 // REST API v1
-Route::group('/api/v1', function () {
+/*Route::group('/api/v1', function () {
     // 文章相关API
     Route::get('/post/{id}', [ApiPostController::class, 'get']);
     Route::get('/posts', [ApiPostController::class, 'index']);
     // 文章内容API（支持 GET 和 POST）
     Route::any('/post/content/{keyword}', [ApiPostController::class, 'content']);
-});
+});*/
 
 // 友链互联API
-Route::post('/api/wind-connect', [app\controller\LinkController::class, 'windConnect']);
+Route::post('/api/wind-connect', [app\controller\LinkController::class, 'windConnect'])->name('wind.connect');
 
 // 动画演示页面路由
 Route::any('/animation-demo', [app\controller\AnimationDemoController::class, 'index'])->name('animation.demo');
@@ -119,5 +114,5 @@ Route::get('/g_sitemap', [app\controller\SitemapController::class, 'graphical'])
 Route::get('/g_sitemap.html', [app\controller\SitemapController::class, 'graphical'])->name('sitemap.graphical.html');
 
 Route::fallback(function () {
-    return view('error/404');
+    return view('error/404')->withStatus(404);
 });

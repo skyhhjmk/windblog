@@ -1,595 +1,620 @@
 <title>{{ page_title|default('申请友链') }}</title>
 <div id="pjax-container">
-<!-- PJAX 隐藏侧栏片段：完成后注入到布局右侧栏 -->
-<div id="pjax-sidebar-html" style="display:none">
-    {% if sidebar is defined and sidebar.widgets is defined %}
-        {% for widget in sidebar.widgets %}
-            {% if widget.enabled and widget.html is defined %}
-                <div class="sidebar-widget" data-widget-key="{{ widget.key ?? widget.id ?? widget.slug ?? widget.name ?? loop.index }}" data-widget-type="{{ widget.type ?? '' }}">
-                    {{ widget.html|raw }}
+    <!-- PJAX 隐藏侧栏片段：完成后注入到布局右侧栏 -->
+    <div id="pjax-sidebar-html" style="display:none">
+        {% if sidebar is defined and sidebar.widgets is defined %}
+            {% for widget in sidebar.widgets %}
+                {% if widget.enabled and widget.html is defined %}
+                    <div class="sidebar-widget"
+                         data-widget-key="{{ widget.key ?? widget.id ?? widget.slug ?? widget.name ?? loop.index }}"
+                         data-widget-type="{{ widget.type ?? '' }}">
+                        {{ widget.html|raw }}
+                    </div>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    </div>
+    <div class="max-w-4xl mx-auto px-4">
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+            <div class="p-8">
+                <div class="text-center mb-8">
+                    <h1 class="text-3xl font-bold text-gray-800 mb-2">申请友链</h1>
+                    <p class="text-gray-600">填写以下信息申请友情链接，我们会尽快审核</p>
                 </div>
-            {% endif %}
-        {% endfor %}
-    {% endif %}
-</div>
-<div class="max-w-4xl mx-auto px-4">
-    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
-        <div class="p-8">
-            <div class="text-center mb-8">
-                <h1 class="text-3xl font-bold text-gray-800 mb-2">申请友链</h1>
-                <p class="text-gray-600">填写以下信息申请友情链接，我们会尽快审核</p>
-            </div>
 
-            <!-- 友链申请规则卡片 -->
-            <div id="link-rules"
-                 class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8 transition-all duration-300">
-                <div class="flex items-start">
-                    <i class="fas fa-info-circle text-blue-500 text-xl mr-3 mt-1"></i>
-                    <div>
-                        <h2 class="text-lg font-semibold text-blue-800 mb-3">友链申请规则</h2>
-                        <ul class="text-gray-700 space-y-2">
-                            <li class="flex items-start">
-                                <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
-                                <div>
-                                    <span>网站内容合法、健康，不包含任何违法不良信息</span>
-                                    <div class="text-xs text-gray-500 mt-1">网站应遵守相关法律法规，不传播违法信息
+                <!-- 友链申请规则卡片 -->
+                <div id="link-rules"
+                     class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8 transition-all duration-300">
+                    <div class="flex items-start">
+                        <i class="fas fa-info-circle text-blue-500 text-xl mr-3 mt-1"></i>
+                        <div>
+                            <h2 class="text-lg font-semibold text-blue-800 mb-3">友链申请规则</h2>
+                            <ul class="text-gray-700 space-y-2">
+                                <li class="flex items-start">
+                                    <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
+                                    <div>
+                                        <span>网站内容合法、健康，不包含任何违法不良信息</span>
+                                        <div class="text-xs text-gray-500 mt-1">网站应遵守相关法律法规，不传播违法信息
+                                        </div>
                                     </div>
-                                </div>
-                            </li>
-                            <li class="flex items-start">
-                                <i class="fas fa fa-shield text-green-500 mt-1 mr-2"></i>
-                                <div>
-                                    <span>网站有至少三篇原创内容</span>
-                                    <div class="text-xs text-gray-500 mt-1">
-                                        原创内容指由网站主体创作的非转载、非采集内容。
-                                    </div>
-                                </div>
-                            </li>
-                            <li class="flex items-start">
-                                <i class="fas fa-link text-purple-500 mt-1 mr-2"></i>
-                                <div>
-                                    <span>已将本站添加至贵站友情链接中</span>
-                                    <div class="text-xs text-gray-500 mt-1">支持风屿互联协议至少 CAT3
-                                        运行级别可忽略此要求。
-                                    </div>
-                                </div>
-                            </li>
-                            <li class="flex items-start">
-                                <i class="fas fa-ban text-red-500 mt-1 mr-2"></i>
-                                <div>
-                                    <span>不接受广告站、采集站、AI 站、违法网站的申请</span>
-                                    <div class="text-xs text-gray-500 mt-1">
-                                        为保证友链质量，仅接受原创内容占比高且合法的网站。
-                                    </div>
-                                </div>
-                            </li>
-                            <li class="flex items-start">
-                                <i class="fas fa-sync-alt text-blue-500 mt-1 mr-2"></i>
-                                <div>
-                                    <span>申请提交后，会有爬虫前往贵站</span>
-                                    <div class="text-xs text-gray-500 mt-1">
-                                        用于定期检查友链站点可用性，支持风屿互联协议会优先走协议。
-                                    </div>
-                                </div>
-                            </li>
-                            <li class="flex items-start">
-                                <i class="fas fa-clock text-yellow-500 mt-1 mr-2"></i>
-                                <div>
-                                    <span>申请通过后，会不定期有爬虫光顾贵站</span>
-                                    <div class="text-xs text-gray-500 mt-1">
-                                        本功能为可选功能-采集内容用于获取友链站点内容摘要等供展示使用。
-                                    </div>
-                                </div>
-                            </li>
-                        </ul>
-                        <div class="mt-4 text-xs text-gray-500">
-                            <p>补充说明：</p>
-                            <ul class="list-disc pl-5 space-y-1 mt-1">
-                                <li>原创内容：指由网站主体创作的非转载、非采集内容。</li>
-                                <li>风屿互联协议：基于 HTTP/WS/MQTT 的信息交换协议，CAT 后的数字即代表运行级别，运行级别的区别在于功能不同，例如
-                                    CAT1 仅提供解析 peer 数据的功能。
                                 </li>
-                                <li>状态采集爬虫：用于定期检查友链站点可用性的自动化程序。</li>
-                                <li>信息采集爬虫：可选功能，用于获取友链站点 SSR/文章列表进行聚合显示。</li>
+                                <li class="flex items-start">
+                                    <i class="fas fa fa-shield text-green-500 mt-1 mr-2"></i>
+                                    <div>
+                                        <span>网站有至少三篇原创内容</span>
+                                        <div class="text-xs text-gray-500 mt-1">
+                                            原创内容指由网站主体创作的非转载、非采集内容。
+                                        </div>
+                                    </div>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-link text-purple-500 mt-1 mr-2"></i>
+                                    <div>
+                                        <span>已将本站添加至贵站友情链接中</span>
+                                        <div class="text-xs text-gray-500 mt-1">支持风屿互联协议至少 CAT3
+                                            运行级别可忽略此要求。
+                                        </div>
+                                    </div>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-ban text-red-500 mt-1 mr-2"></i>
+                                    <div>
+                                        <span>不接受广告站、采集站、AI 站、违法网站的申请</span>
+                                        <div class="text-xs text-gray-500 mt-1">
+                                            为保证友链质量，仅接受原创内容占比高且合法的网站。
+                                        </div>
+                                    </div>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-sync-alt text-blue-500 mt-1 mr-2"></i>
+                                    <div>
+                                        <span>申请提交后，会有爬虫前往贵站</span>
+                                        <div class="text-xs text-gray-500 mt-1">
+                                            用于定期检查友链站点可用性，支持风屿互联协议会优先走协议。
+                                        </div>
+                                    </div>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-clock text-yellow-500 mt-1 mr-2"></i>
+                                    <div>
+                                        <span>申请通过后，会不定期有爬虫光顾贵站</span>
+                                        <div class="text-xs text-gray-500 mt-1">
+                                            本功能为可选功能-采集内容用于获取友链站点内容摘要等供展示使用。
+                                        </div>
+                                    </div>
+                                </li>
                             </ul>
+                            <div class="mt-4 text-xs text-gray-500">
+                                <p>补充说明：</p>
+                                <ul class="list-disc pl-5 space-y-1 mt-1">
+                                    <li>原创内容：指由网站主体创作的非转载、非采集内容。</li>
+                                    <li>风屿互联协议：基于 HTTP/WS/MQTT 的信息交换协议，CAT 后的数字即代表运行级别，运行级别的区别在于功能不同，例如
+                                        CAT1 仅提供解析 peer 数据的功能。
+                                    </li>
+                                    <li>状态采集爬虫：用于定期检查友链站点可用性的自动化程序。</li>
+                                    <li>信息采集爬虫：可选功能，用于获取友链站点 SSR/文章列表进行聚合显示。</li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- 本站信息卡片 -->
-            <div class="bg-gray-50 border border-gray-200 rounded-lg p-6 mb-8">
-                <div class="flex items-start">
-                    <i class="fas fa-home text-gray-500 text-xl mr-3 mt-1"></i>
-                    <div class="flex-1">
-                        <h2 class="text-lg font-semibold text-gray-800 mb-3">本站信息</h2>
-                        <div class="space-y-2 text-gray-700 mb-4">
-                            <p><span class="font-medium">风屿互联协议级别：CAT3E</span></p>
-                            <p><span class="font-medium">网站名称：</span></p>
-                            <p><span class="font-medium">网站描述：</span></p>
-                        </div>
-                        <button id="toggleConfig"
-                                class="flex items-center text-blue-600 hover:text-blue-800 font-medium">
-                            <i class="fas fa-code mr-2"></i>
-                            点击展开JSON配置
-                            <i class="fas fa-chevron-down ml-2 transition-transform duration-300"></i>
-                        </button>
-                        <div id="configSection" class="hidden mt-4">
-                            <div class="relative">
+                <!-- 本站信息卡片 -->
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-6 mb-8">
+                    <div class="flex items-start">
+                        <i class="fas fa-home text-gray-500 text-xl mr-3 mt-1"></i>
+                        <div class="flex-1">
+                            <h2 class="text-lg font-semibold text-gray-800 mb-3">本站信息</h2>
+                            <div class="space-y-2 text-gray-700 mb-4">
+                                <p><span class="font-medium">风屿互联协议级别：CAT3E</span></p>
+                                <p><span class="font-medium">网站名称：</span></p>
+                                <p><span class="font-medium">网站描述：</span></p>
+                            </div>
+                            <button id="toggleConfig"
+                                    class="flex items-center text-blue-600 hover:text-blue-800 font-medium">
+                                <i class="fas fa-code mr-2"></i>
+                                点击展开JSON配置
+                                <i class="fas fa-chevron-down ml-2 transition-transform duration-300"></i>
+                            </button>
+                            <div id="configSection" class="hidden mt-4">
+                                <div class="relative">
                                 <pre class="bg-gray-800 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm"
                                      style="max-width: 100%;"><code
-                                            id="configCode">{{ site_info_json_config|default('{}') }}</code></pre>
-                                <button id="copyConfig"
-                                        class="absolute top-2 right-2 bg-gray-700 hover:bg-gray-600 text-white px-3 py-1 rounded text-sm transition-colors duration-200 opacity-0 group-hover:opacity-100">
-                                    <i class="fas fa-copy mr-1"></i>复制
-                                </button>
+                                        id="configCode">{{ site_info_json_config|default('{}') }}</code></pre>
+                                    <button id="copyConfig"
+                                            class="absolute top-2 right-2 bg-gray-700 hover:bg-gray-600 text-white px-3 py-1 rounded text-sm transition-colors duration-200 opacity-0 group-hover:opacity-100">
+                                        <i class="fas fa-copy mr-1"></i>复制
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- CAT3* 快速互联 -->
-            <div class="border border-green-200 rounded-lg p-4 mb-8 bg-green-50">
-                <div class="flex items-start">
-                    <i class="fas fa-plug text-green-500 text-xl mr-3 mt-1"></i>
-                    <div class="flex-1">
-                        <h3 class="text-lg font-semibold text-green-800 mb-2">快速互联（CAT3*）</h3>
-                        <p class="text-gray-600 text-sm mb-3">
-                            如果您的站点支持风屿互联协议，请填写其接收 API（peer_api），系统将自动在您的站点创建友链记录。
-                        </p>
-                        <div class="flex flex-col sm:flex-row gap-3">
-                            <input type="url"
-                                   id="peer_api"
-                                   class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-200"
-                                   placeholder="https://peer.example.com/link/connect/receive?key=xxx"
-                                   pattern="https?://.+">
-                            <button id="quickConnectBtn"
-                                    class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors duration-200 relative overflow-hidden">
-                                <span id="quickConnectBtnText">一键互联</span>
-                                <span id="quickConnectBtnLoader" class="hidden absolute inset-0 flex items-center justify-center bg-green-700">
+                <!-- CAT3* 快速互联 -->
+                <div class="border border-green-200 rounded-lg p-4 mb-8 bg-green-50">
+                    <div class="flex items-start">
+                        <i class="fas fa-plug text-green-500 text-xl mr-3 mt-1"></i>
+                        <div class="flex-1">
+                            <h3 class="text-lg font-semibold text-green-800 mb-2">快速互联（CAT3*）</h3>
+                            <p class="text-gray-600 text-sm mb-3">
+                                如果您的站点支持风屿互联协议，请填写其接收 API（peer_api），系统将自动在您的站点创建友链记录。
+                            </p>
+                            <div class="flex flex-col sm:flex-row gap-3">
+                                <input type="url"
+                                       id="peer_api"
+                                       class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-200"
+                                       placeholder="https://peer.example.com/link/connect/receive?key=xxx"
+                                       pattern="https?://.+">
+                                <button id="quickConnectBtn"
+                                        class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors duration-200 relative overflow-hidden">
+                                    <span id="quickConnectBtnText">一键互联</span>
+                                    <span id="quickConnectBtnLoader"
+                                          class="hidden absolute inset-0 flex items-center justify-center bg-green-700">
                                     <i class="fas fa-spinner fa-spin mr-2"></i>处理中...
                                 </span>
-                            </button>
-                        </div>
-                        <p class="text-xs text-gray-500 mt-2">提示：将复用你在下方表单中已填写的基本信息一并发送给本站。</p>
-                        <div id="quickConnectResult" class="hidden mt-3 p-3 rounded text-sm"></div>
-                    </div>
-                </div>
-            </div>
-
-            <form id="linkRequestForm" class="space-y-6">
-                <input type="hidden" name="_link_request_token" value="{{ csrf }}">
-                <div>
-                    <label for="name" class="block text-sm font-medium text-gray-700 mb-1">网站名称 <span
-                                class="text-red-500">*</span></label>
-                    <input type="text"
-                           id="name"
-                           name="name"
-                           required
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                           placeholder="请输入网站名称">
-                </div>
-
-                <div>
-                    <label for="url" class="block text-sm font-medium text-gray-700 mb-1">网站地址 <span
-                                class="text-red-500">*</span></label>
-                    <input type="url"
-                           id="url"
-                           name="url"
-                           required
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                           placeholder="https://example.com">
-                </div>
-
-                <div>
-                    <label for="icon" class="block text-sm font-medium text-gray-700 mb-1">网站图标地址（不填则尝试自动获取）</label>
-                    <input type="url"
-                           id="icon"
-                           name="icon"
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                           placeholder="https://example.com/favicon.ico">
-                </div>
-
-                <div>
-                    <label for="description" class="block text-sm font-medium text-gray-700 mb-1">网站描述<span
-                                class="text-red-500">*</span></label>
-                    <textarea id="description"
-                              name="description"
-                              rows="3"
-                              required
-                              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                              placeholder="请简单描述您的网站内容"></textarea>
-                </div>
-
-                <div>
-                    <label for="email" class="block text-sm font-medium text-gray-700 mb-1">邮箱</label>
-                    <input type="text"
-                           id="email"
-                           name="email"
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                           placeholder="邮箱联系方式（可选，用于审核结果通知）">
-                </div>
-
-                <div>
-                    <label for="full_description" class="block text-sm font-medium text-gray-700 mb-1">网站详细介绍（支持 Markdown 语法）</label>
-                    <textarea id="full_description"
-                              name="full_description"
-                              rows="3"
-                              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                              placeholder="当使用 info 方式跳转时，内容会被渲染在页面上"></textarea>
-                </div>
-
-                <div>
-                    <label for="contact" class="block text-sm font-medium text-gray-700 mb-1">联系方式</label>
-                    <input type="text"
-                           id="contact"
-                           name="contact"
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                           placeholder="微信/QQ等联系方式（可选）">
-                </div>
-
-                <div style="position:absolute; left:-9999px; top:-9999px;">
-                    <label for="fullname" class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                    <input type="text"
-                           id="fullname"
-                           name="fullname"
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                           placeholder="Please input your fullname">
-                </div>
-
-                <div class="border border-gray-200 rounded-lg p-4">
-                    <h3 class="text-lg font-medium text-gray-800 mb-3">其他可选功能</h3>
-                    <div class="space-y-4">
-                        <div class="flex items-start">
-                            <div class="flex items-center h-5">
-                                <input id="supports_wind_connect"
-                                       name="supports_wind_connect"
-                                       type="checkbox"
-                                       class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
+                                </button>
                             </div>
-                            <div class="ml-3 text-sm">
-                                <label for="supports_wind_connect" class="font-medium text-gray-700">支持风屿互联协议</label>
-                                <p class="text-gray-500 mt-1">您的网站是否支持风屿互联协议，支持后可实现更高效的通信</p>
-                            </div>
-                        </div>
-                        
-                        <div class="flex items-start">
-                            <div class="flex items-center h-5">
-                                <input id="allows_crawling"
-                                       name="allows_crawling"
-                                       type="checkbox"
-                                       class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
-                            </div>
-                            <div class="ml-3 text-sm">
-                                <label for="allows_crawling" class="font-medium text-gray-700">允许资源爬虫访问</label>
-                                <p class="text-gray-500 mt-1">是否允许我们的爬虫定期访问您的网站以获取内容摘要用于展示</p>
-                            </div>
-                        </div>
-
-                        <div class="flex items-start">
-                            <div class="flex items-center h-5">
-                                <input id="hide_url"
-                                       name="hide_url"
-                                       type="checkbox"
-                                       class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
-                            </div>
-                            <div class="ml-3 text-sm">
-                                <label for="hide_url" class="font-medium text-gray-700">隐藏链接</label>
-                                <p class="text-gray-500 mt-1">选中后将在前端友链页面中隐藏您的网站链接，使用 goto/301 重定向方式跳转</p>
-                            </div>
-                        </div>
-
-                        <div class="pt-4 border-t border-gray-200">
-                            <label for="callback_url" class="block text-sm font-medium text-gray-700 mb-2">回调地址（可选）</label>
-                            <input type="url"
-                                   id="callback_url"
-                                   name="callback_url"
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                                   placeholder="https://example.com/callback"
-                                   pattern="https?://.+">
-                            <p class="text-gray-500 text-sm mt-2">每当用户访问您的链接时，该地址会被 GET 请求访问一次，可用于统计访问量等（使用消息队列异步处理，可能遗漏，不会多调）</p>
+                            <p class="text-xs text-gray-500 mt-2">
+                                提示：将复用你在下方表单中已填写的基本信息一并发送给本站。</p>
+                            <div id="quickConnectResult" class="hidden mt-3 p-3 rounded text-sm"></div>
                         </div>
                     </div>
                 </div>
 
-                <div class="flex items-center">
-                    <input id="agreement"
-                           type="checkbox"
-                           required
-                           class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
-                    <label for="agreement" class="ml-2 text-sm text-gray-700">
-                        我已阅读并同意 <a href="#link-rules" class="text-blue-600 hover:underline">友链申请规则</a>
-                    </label>
-                </div>
+                <form id="linkRequestForm" class="space-y-6">
+                    <input type="hidden" name="_link_request_token" value="{{ csrf }}">
+                    <div>
+                        <label for="name" class="block text-sm font-medium text-gray-700 mb-1">网站名称 <span
+                                class="text-red-500">*</span></label>
+                        <input type="text"
+                               id="name"
+                               name="name"
+                               required
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                               placeholder="请输入网站名称">
+                    </div>
 
-                <div>
-                    <button type="submit"
-                            class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 relative overflow-hidden">
-                        <span id="submitBtnText">提交申请</span>
-                        <span id="submitBtnLoader" class="hidden absolute inset-0 flex items-center justify-center bg-blue-700">
+                    <div>
+                        <label for="url" class="block text-sm font-medium text-gray-700 mb-1">网站地址 <span
+                                class="text-red-500">*</span></label>
+                        <input type="url"
+                               id="url"
+                               name="url"
+                               required
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                               placeholder="https://example.com">
+                    </div>
+
+                    <div>
+                        <label for="icon"
+                               class="block text-sm font-medium text-gray-700 mb-1">网站图标地址（不填则尝试自动获取）</label>
+                        <input type="url"
+                               id="icon"
+                               name="icon"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                               placeholder="https://example.com/favicon.ico">
+                    </div>
+
+                    <div>
+                        <label for="description" class="block text-sm font-medium text-gray-700 mb-1">网站描述<span
+                                class="text-red-500">*</span></label>
+                        <textarea id="description"
+                                  name="description"
+                                  rows="3"
+                                  required
+                                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                                  placeholder="请简单描述您的网站内容"></textarea>
+                    </div>
+
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-gray-700 mb-1">邮箱</label>
+                        <input type="text"
+                               id="email"
+                               name="email"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                               placeholder="邮箱联系方式（可选，用于审核结果通知）">
+                    </div>
+
+                    <div>
+                        <label for="full_description" class="block text-sm font-medium text-gray-700 mb-1">网站详细介绍（支持
+                            Markdown 语法）</label>
+                        <textarea id="full_description"
+                                  name="full_description"
+                                  rows="3"
+                                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                                  placeholder="当使用 info 方式跳转时，内容会被渲染在页面上"></textarea>
+                    </div>
+
+                    <div>
+                        <label for="contact" class="block text-sm font-medium text-gray-700 mb-1">联系方式</label>
+                        <input type="text"
+                               id="contact"
+                               name="contact"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                               placeholder="微信/QQ等联系方式（可选）">
+                    </div>
+
+                    <div style="position:absolute; left:-9999px; top:-9999px;">
+                        <label for="fullname" class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                        <input type="text"
+                               id="fullname"
+                               name="fullname"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                               placeholder="Please input your fullname">
+                    </div>
+
+                    <div class="border border-gray-200 rounded-lg p-4">
+                        <h3 class="text-lg font-medium text-gray-800 mb-3">其他可选功能</h3>
+                        <div class="space-y-4">
+                            <div class="flex items-start">
+                                <div class="flex items-center h-5">
+                                    <input id="supports_wind_connect"
+                                           name="supports_wind_connect"
+                                           type="checkbox"
+                                           class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
+                                </div>
+                                <div class="ml-3 text-sm">
+                                    <label for="supports_wind_connect"
+                                           class="font-medium text-gray-700">支持风屿互联协议</label>
+                                    <p class="text-gray-500 mt-1">
+                                        您的网站是否支持风屿互联协议，支持后可实现更高效的通信</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start">
+                                <div class="flex items-center h-5">
+                                    <input id="allows_crawling"
+                                           name="allows_crawling"
+                                           type="checkbox"
+                                           class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
+                                </div>
+                                <div class="ml-3 text-sm">
+                                    <label for="allows_crawling"
+                                           class="font-medium text-gray-700">允许资源爬虫访问</label>
+                                    <p class="text-gray-500 mt-1">
+                                        是否允许我们的爬虫定期访问您的网站以获取内容摘要用于展示</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start">
+                                <div class="flex items-center h-5">
+                                    <input id="hide_url"
+                                           name="hide_url"
+                                           type="checkbox"
+                                           class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
+                                </div>
+                                <div class="ml-3 text-sm">
+                                    <label for="hide_url" class="font-medium text-gray-700">隐藏链接</label>
+                                    <p class="text-gray-500 mt-1">选中后将在前端友链页面中隐藏您的网站链接，使用 goto/301
+                                        重定向方式跳转</p>
+                                </div>
+                            </div>
+
+                            <div class="pt-4 border-t border-gray-200">
+                                <label for="callback_url"
+                                       class="block text-sm font-medium text-gray-700 mb-2">回调地址（可选）</label>
+                                <input type="url"
+                                       id="callback_url"
+                                       name="callback_url"
+                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                                       placeholder="https://example.com/callback"
+                                       pattern="https?://.+">
+                                <p class="text-gray-500 text-sm mt-2">每当用户访问您的链接时，该地址会被 GET
+                                    请求访问一次，可用于统计访问量等（使用消息队列异步处理，可能遗漏，不会多调）</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center">
+                        <input id="agreement"
+                               type="checkbox"
+                               required
+                               class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                        <label for="agreement" class="ml-2 text-sm text-gray-700">
+                            我已阅读并同意 <a href="#link-rules" class="text-blue-600 hover:underline">友链申请规则</a>
+                        </label>
+                    </div>
+
+                    <div>
+                        <button type="submit"
+                                class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 relative overflow-hidden">
+                            <span id="submitBtnText">提交申请</span>
+                            <span id="submitBtnLoader"
+                                  class="hidden absolute inset-0 flex items-center justify-center bg-blue-700">
                             <i class="fas fa-spinner fa-spin mr-2"></i>提交中...
                         </span>
-                    </button>
-                </div>
-            </form>
+                        </button>
+                    </div>
+                </form>
 
-            <div id="resultMessage" class="hidden mt-6 p-4 rounded-lg"></div>
+                <div id="resultMessage" class="hidden mt-6 p-4 rounded-lg"></div>
+            </div>
         </div>
     </div>
-</div>
 
-<script>
-    // 处理锚点跳转和闪烁效果
-    document.addEventListener('DOMContentLoaded', function () {
-        if (window.location.hash) {
-            const target = document.querySelector(window.location.hash);
-            if (target) {
-                scrollToCenter(target);
-                triggerBlinkEffect(target);
-            }
-        }
-
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const targetId = this.getAttribute('href');
-                const target = document.querySelector(targetId);
+    <script>
+        // 处理锚点跳转和闪烁效果
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.location.hash) {
+                const target = document.querySelector(window.location.hash);
                 if (target) {
                     scrollToCenter(target);
                     triggerBlinkEffect(target);
                 }
+            }
+
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href');
+                    const target = document.querySelector(targetId);
+                    if (target) {
+                        scrollToCenter(target);
+                        triggerBlinkEffect(target);
+                    }
+                });
             });
+
+            const toggleConfig = document.getElementById('toggleConfig');
+            const configSection = document.getElementById('configSection');
+            const chevronIcon = toggleConfig ? toggleConfig.querySelector('i.fa-chevron-down') : null;
+
+            if (toggleConfig && configSection && chevronIcon) {
+                toggleConfig.addEventListener('click', function () {
+                    const isHidden = configSection.classList.contains('hidden');
+                    if (isHidden) {
+                        configSection.classList.remove('hidden');
+                        chevronIcon.classList.add('rotate-180');
+                    } else {
+                        configSection.classList.add('hidden');
+                        chevronIcon.classList.remove('rotate-180');
+                    }
+                });
+            }
+
+            const copyConfig = document.getElementById('copyConfig');
+            const configCode = document.getElementById('configCode');
+            if (copyConfig && configCode) {
+                const codeContainer = copyConfig.parentElement;
+                codeContainer.classList.add('group');
+                copyConfig.addEventListener('click', function () {
+                    const textArea = document.createElement('textarea');
+                    textArea.value = configCode.textContent;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    const originalText = copyConfig.innerHTML;
+                    copyConfig.innerHTML = '<i class="fas fa-check mr-1"></i>已复制';
+                    setTimeout(() => {
+                        copyConfig.innerHTML = originalText;
+                    }, 2000);
+                });
+            }
         });
 
-        const toggleConfig = document.getElementById('toggleConfig');
-        const configSection = document.getElementById('configSection');
-        const chevronIcon = toggleConfig ? toggleConfig.querySelector('i.fa-chevron-down') : null;
+        function scrollToCenter(element) {
+            const elementRect = element.getBoundingClientRect();
+            const absoluteElementTop = elementRect.top + window.pageYOffset;
+            const middle = absoluteElementTop - (window.innerHeight / 2);
+            window.scrollTo({top: middle, behavior: 'smooth'});
+        }
 
-        if (toggleConfig && configSection && chevronIcon) {
-            toggleConfig.addEventListener('click', function () {
-                const isHidden = configSection.classList.contains('hidden');
-                if (isHidden) {
-                    configSection.classList.remove('hidden');
-                    chevronIcon.classList.add('rotate-180');
-                } else {
-                    configSection.classList.add('hidden');
-                    chevronIcon.classList.remove('rotate-180');
+        function triggerBlinkEffect(element) {
+            element.classList.add('blink-border');
+            setTimeout(() => {
+                element.classList.remove('blink-border');
+            }, 3000);
+        }
+    </script>
+
+    <script>
+        // CAT3* 快速互联：向本机 /link/connect/apply 发起 - 支持 PJAX
+        function setupQuickConnect() {
+            const btn = document.getElementById('quickConnectBtn');
+            if (!btn) return;
+
+            // 移除之前的事件监听器，避免重复绑定
+            const newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+
+            newBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                const resBox = document.getElementById('quickConnectResult');
+                const peerApi = (document.getElementById('peer_api') || {}).value || '';
+                if (!peerApi || !/^https?:\/\//i.test(peerApi)) {
+                    showQuickResult(resBox, false, '请输入有效的 peer_api 地址');
+                    return;
                 }
-            });
-        }
+                const name = (document.getElementById('name') || {}).value || '';
+                const url = (document.getElementById('url') || {}).value || '';
+                const icon = (document.getElementById('icon') || {}).value || '';
+                const description = (document.getElementById('description') || {}).value || '';
+                const callback_url = (document.getElementById('callback_url') || {}).value || '';
+                const email = (document.getElementById('email') || {}).value || '';
 
-        const copyConfig = document.getElementById('copyConfig');
-        const configCode = document.getElementById('configCode');
-        if (copyConfig && configCode) {
-            const codeContainer = copyConfig.parentElement;
-            codeContainer.classList.add('group');
-            copyConfig.addEventListener('click', function () {
-                const textArea = document.createElement('textarea');
-                textArea.value = configCode.textContent;
-                document.body.appendChild(textArea);
-                textArea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textArea);
-                const originalText = copyConfig.innerHTML;
-                copyConfig.innerHTML = '<i class="fas fa-check mr-1"></i>已复制';
-                setTimeout(() => {
-                    copyConfig.innerHTML = originalText;
-                }, 2000);
-            });
-        }
-    });
+                const payload = {
+                    peer_api: peerApi,
+                    name: name,
+                    url: url,
+                    icon: icon,
+                    description: description,
+                    email: email,
+                    callback_url: callback_url
+                };
 
-    function scrollToCenter(element) {
-        const elementRect = element.getBoundingClientRect();
-        const absoluteElementTop = elementRect.top + window.pageYOffset;
-        const middle = absoluteElementTop - (window.innerHeight / 2);
-        window.scrollTo({ top: middle, behavior: 'smooth' });
-    }
+                // 禁用按钮并显示加载状态（加强版）
+                newBtn.disabled = true;
+                newBtn.classList.add('opacity-70', 'cursor-not-allowed');
+                document.getElementById('quickConnectBtnText').classList.add('hidden');
+                document.getElementById('quickConnectBtnLoader').classList.remove('hidden');
 
-    function triggerBlinkEffect(element) {
-        element.classList.add('blink-border');
-        setTimeout(() => { element.classList.remove('blink-border'); }, 3000);
-    }
-</script>
-
-<script>
-    // CAT3* 快速互联：向本机 /link/connect/apply 发起 - 支持 PJAX
-    function setupQuickConnect() {
-        const btn = document.getElementById('quickConnectBtn');
-        if (!btn) return;
-        
-        // 移除之前的事件监听器，避免重复绑定
-        const newBtn = btn.cloneNode(true);
-        btn.parentNode.replaceChild(newBtn, btn);
-        
-        newBtn.addEventListener('click', function (e) {
-            e.preventDefault();
-            const resBox = document.getElementById('quickConnectResult');
-            const peerApi = (document.getElementById('peer_api') || {}).value || '';
-            if (!peerApi || !/^https?:\/\//i.test(peerApi)) {
-                showQuickResult(resBox, false, '请输入有效的 peer_api 地址');
-                return;
-            }
-            const name = (document.getElementById('name') || {}).value || '';
-            const url = (document.getElementById('url') || {}).value || '';
-            const icon = (document.getElementById('icon') || {}).value || '';
-            const description = (document.getElementById('description') || {}).value || '';
-            const callback_url = (document.getElementById('callback_url') || {}).value || '';
-            const email = (document.getElementById('email') || {}).value || '';
-
-            const payload = {
-                peer_api: peerApi,
-                name: name,
-                url: url,
-                icon: icon,
-                description: description,
-                email: email,
-                callback_url: callback_url
-            };
-
-            // 禁用按钮并显示加载状态（加强版）
-            newBtn.disabled = true;
-            newBtn.classList.add('opacity-70', 'cursor-not-allowed');
-            document.getElementById('quickConnectBtnText').classList.add('hidden');
-            document.getElementById('quickConnectBtnLoader').classList.remove('hidden');
-            
-            // 添加临时样式增强视觉反馈
-            const tempStyle = document.createElement('style');
-            tempStyle.textContent = `
+                // 添加临时样式增强视觉反馈
+                const tempStyle = document.createElement('style');
+                tempStyle.textContent = `
                 #quickConnectBtn:disabled {
                     transform: scale(0.98);
                     transition: all 0.2s ease;
                 }
             `;
-            document.head.appendChild(tempStyle);
+                document.head.appendChild(tempStyle);
 
-            fetch('/link/connect/apply', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: JSON.stringify(payload)
-            })
-                .then(r => {
-                    if (!r.ok) throw new Error(`HTTP错误: ${r.status}`);
-                    return r.json();
+                fetch('/link/connect/apply', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify(payload)
                 })
-                .then(data => {
-                    if (data && data.code === 0) {
-                        showQuickResult(resBox, true, data.msg || '已发起互联申请');
-                    } else {
-                        showQuickResult(resBox, false, (data && data.msg) ? data.msg : '互联申请失败');
-                    }
-                })
-                .catch(error => {
-                    console.error('互联申请错误:', error);
-                    showQuickResult(resBox, false, '互联申请请求失败，请稍后重试');
-                })
-                .finally(() => {
-                    // 恢复按钮状态
-                    newBtn.disabled = false;
-                    newBtn.classList.remove('opacity-70', 'cursor-not-allowed');
-                    document.getElementById('quickConnectBtnText').classList.remove('hidden');
-                    document.getElementById('quickConnectBtnLoader').classList.add('hidden');
-                    
-                    // 移除临时样式
-                    if (tempStyle.parentNode) {
-                        document.head.removeChild(tempStyle);
-                    }
-                });
+                    .then(r => {
+                        if (!r.ok) throw new Error(`HTTP错误: ${r.status}`);
+                        return r.json();
+                    })
+                    .then(data => {
+                        if (data && data.code === 0) {
+                            showQuickResult(resBox, true, data.msg || '已发起互联申请');
+                        } else {
+                            showQuickResult(resBox, false, (data && data.msg) ? data.msg : '互联申请失败');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('互联申请错误:', error);
+                        showQuickResult(resBox, false, '互联申请请求失败，请稍后重试');
+                    })
+                    .finally(() => {
+                        // 恢复按钮状态
+                        newBtn.disabled = false;
+                        newBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+                        document.getElementById('quickConnectBtnText').classList.remove('hidden');
+                        document.getElementById('quickConnectBtnLoader').classList.add('hidden');
 
-            function showQuickResult(el, ok, text) {
-                if (!el) return;
-                el.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
-                el.classList.add(ok ? 'bg-green-100' : 'bg-red-100', ok ? 'text-green-700' : 'text-red-700');
-                el.innerHTML = (ok ? '<i class="fas fa-check-circle mr-2"></i>' : '<i class="fas fa-exclamation-circle mr-2"></i>') + text;
-                
-                // 添加淡入动画
-                el.style.opacity = '0';
-                el.style.transition = 'opacity 0.3s ease';
-                setTimeout(() => { el.style.opacity = '1'; }, 10);
-                
-                setTimeout(() => {
+                        // 移除临时样式
+                        if (tempStyle.parentNode) {
+                            document.head.removeChild(tempStyle);
+                        }
+                    });
+
+                function showQuickResult(el, ok, text) {
+                    if (!el) return;
+                    el.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
+                    el.classList.add(ok ? 'bg-green-100' : 'bg-red-100', ok ? 'text-green-700' : 'text-red-700');
+                    el.innerHTML = (ok ? '<i class="fas fa-check-circle mr-2"></i>' : '<i class="fas fa-exclamation-circle mr-2"></i>') + text;
+
+                    // 添加淡入动画
                     el.style.opacity = '0';
-                    setTimeout(() => el.classList.add('hidden'), 300);
-                }, 4000);
-            }
-        });
-    }
-    
-    // 初始加载时设置
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', setupQuickConnect);
-    } else {
-        setupQuickConnect();
-    }
-    
-    // PJAX环境下重新设置
-    document.addEventListener('page:ready', setupQuickConnect);
-</script>
+                    el.style.transition = 'opacity 0.3s ease';
+                    setTimeout(() => {
+                        el.style.opacity = '1';
+                    }, 10);
 
-<script>
-    // 表单提交处理
-    (function () {
-        const form = document.getElementById('linkRequestForm');
-        if (!form) return;
-
-        form.addEventListener('submit', function (e) {
-            e.preventDefault();
-
-            const formData = new FormData(this);
-            const submitBtn = form.querySelector('button[type="submit"]');
-            
-            // 禁用按钮并显示加载状态
-            submitBtn.disabled = true;
-            document.getElementById('submitBtnText').classList.add('hidden');
-            document.getElementById('submitBtnLoader').classList.remove('hidden');
-
-            fetch('/link/request', { method: 'POST', body: formData })
-                .then(response => response.json())
-                .then(data => {
-                    const resultMessage = document.getElementById('resultMessage');
-                    resultMessage.classList.remove('hidden');
-
-                    if (data.code === 0) {
-                        resultMessage.classList.add('bg-green-100', 'text-green-700');
-                        resultMessage.innerHTML = '<i class="fas fa-check-circle mr-2"></i>' + (data.msg || '申请成功');
-                        form.reset();
-                    } else {
-                        resultMessage.classList.add('bg-red-100', 'text-red-700');
-                        resultMessage.innerHTML = '<i class="fas fa-exclamation-circle mr-2"></i>' + (data.msg || '申请失败');
-                    }
-
-                    setTimeout(() => { resultMessage.classList.add('hidden'); }, 3000);
-                })
-                .catch(() => {
-                    const resultMessage = document.getElementById('resultMessage');
-                    resultMessage.classList.remove('hidden');
-                    resultMessage.classList.add('bg-red-100', 'text-red-700');
-                    resultMessage.innerHTML = '<i class="fas fa-exclamation-circle mr-2"></i>提交失败，请稍后重试';
-                    setTimeout(() => { resultMessage.classList.add('hidden'); }, 3000);
-                })
-                .finally(() => {
-                    // 恢复按钮状态
-                    submitBtn.disabled = false;
-                    document.getElementById('submitBtnText').classList.remove('hidden');
-                    document.getElementById('submitBtnLoader').classList.add('hidden');
-                });
-        });
-    })();
-</script>
-
-<script>
-    (function () {
-        function injectSidebar() {
-            var t = document.getElementById('pjax-sidebar-html');
-            var c = document.getElementById('sidebar-container');
-            if (t && c) {
-                if (window.PJAX || window.jQuery) {
-                    try { document.dispatchEvent(new CustomEvent('pjax:sidebarReady')); } catch (_) {}
-                } else {
-                    c.innerHTML = t.innerHTML || '';
+                    setTimeout(() => {
+                        el.style.opacity = '0';
+                        setTimeout(() => el.classList.add('hidden'), 300);
+                    }, 4000);
                 }
-            }
+            });
+        }
+
+        // 初始加载时设置
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setupQuickConnect);
+        } else {
+            setupQuickConnect();
+        }
+
+        // PJAX环境下重新设置
+        document.addEventListener('page:ready', setupQuickConnect);
+    </script>
+
+    <script>
+        // 表单提交处理
+        (function () {
+            const form = document.getElementById('linkRequestForm');
+            if (!form) return;
+
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+
+                const formData = new FormData(this);
+                const submitBtn = form.querySelector('button[type="submit"]');
+
+                // 禁用按钮并显示加载状态
+                submitBtn.disabled = true;
+                document.getElementById('submitBtnText').classList.add('hidden');
+                document.getElementById('submitBtnLoader').classList.remove('hidden');
+
+                fetch('/link/request', {method: 'POST', body: formData})
+                    .then(response => response.json())
+                    .then(data => {
+                        const resultMessage = document.getElementById('resultMessage');
+                        resultMessage.classList.remove('hidden');
+
+                        if (data.code === 0) {
+                            resultMessage.classList.add('bg-green-100', 'text-green-700');
+                            resultMessage.innerHTML = '<i class="fas fa-check-circle mr-2"></i>' + (data.msg || '申请成功');
+                            form.reset();
+                        } else {
+                            resultMessage.classList.add('bg-red-100', 'text-red-700');
+                            resultMessage.innerHTML = '<i class="fas fa-exclamation-circle mr-2"></i>' + (data.msg || '申请失败');
+                        }
+
+                        setTimeout(() => {
+                            resultMessage.classList.add('hidden');
+                        }, 3000);
+                    })
+                    .catch(() => {
+                        const resultMessage = document.getElementById('resultMessage');
+                        resultMessage.classList.remove('hidden');
+                        resultMessage.classList.add('bg-red-100', 'text-red-700');
+                        resultMessage.innerHTML = '<i class="fas fa-exclamation-circle mr-2"></i>提交失败，请稍后重试';
+                        setTimeout(() => {
+                            resultMessage.classList.add('hidden');
+                        }, 3000);
+                    })
+                    .finally(() => {
+                        // 恢复按钮状态
+                        submitBtn.disabled = false;
+                        document.getElementById('submitBtnText').classList.remove('hidden');
+                        document.getElementById('submitBtnLoader').classList.add('hidden');
+                    });
+            });
+        })();
+    </script>
+
+    <script>
+        (function () {
+            function injectSidebar() {
+                var t = document.getElementById('pjax-sidebar-html');
+                var c = document.getElementById('sidebar-container');
+                if (t && c) {
+                    if (window.PJAX || window.jQuery) {
+                        try {
+                            document.dispatchEvent(new CustomEvent('pjax:sidebarReady'));
+                        } catch (_) {
+                        }
+                    } else {
+                        c.innerHTML = t.innerHTML || '';
+                    }
+                }
                 c.innerHTML = t.innerHTML || '';
             }
+
+            injectSidebar();
+            document.addEventListener('page:ready', injectSidebar);
+        })();
+    </script>
+
+    <style>
+        /* 闪烁边框动画 */
+        /* 使用全局动画系统 */
+        .blink-border {
+            animation: blink 0.5s ease-in-out 3;
         }
-        injectSidebar();
-        document.addEventListener('page:ready', injectSidebar);
-    })();
-</script>
 
-<style>
-    /* 闪烁边框动画 */
-    /* 使用全局动画系统 */
-    .blink-border {
-        animation: blink 0.5s ease-in-out 3;
-    }
-
-    .rotate-180 {
-        transform: rotate(180deg);
-    }
-</style>
+        .rotate-180 {
+            transform: rotate(180deg);
+        }
+    </style>
 </div>

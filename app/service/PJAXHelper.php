@@ -107,8 +107,8 @@ class PJAXHelper
         $isPjax = self::isPJAX($request);
         $enhancedCache = null;
 
-        // 如果提供了缓存键，尝试从缓存获取
-        if ($cacheKey) {
+        // 如果提供了缓存键且密码为空，尝试从缓存获取
+        if ($cacheKey && !empty($request->get('password', null))) {
             $enhancedCache = new EnhancedCacheService();
             $cached = $enhancedCache->get($cacheKey, $cacheGroup, null, $ttl);
 

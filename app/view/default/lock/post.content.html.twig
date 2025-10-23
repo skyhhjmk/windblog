@@ -1,0 +1,162 @@
+<title>{{ page_title|default('风屿雨博客') }}</title>
+<div id="pjax-container">
+    <div class="max-w-full mx-auto">
+        <!-- PJAX 隐藏侧栏片段：完成后注入到布局右侧栏 -->
+        <div id="pjax-sidebar-html" style="display:none">
+            {% if sidebar is defined and sidebar.widgets is defined %}
+                {% for widget in sidebar.widgets %}
+                    {% if widget.enabled and widget.html is defined %}
+                        <div class="sidebar-widget"
+                             data-widget-key="{{ widget.key ?? widget.id ?? widget.slug ?? widget.name ?? loop.index }}"
+                             data-widget-type="{{ widget.type ?? '' }}">
+                            {{ widget.html|raw }}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+        </div>
+        <article class="bg-white rounded-xl shadow-md overflow-hidden no-animation">
+            <!-- 文章头部 -->
+            <div class="p-6 border-b border-gray-100">
+                <h1 class="text-3xl font-bold text-gray-800 mb-4">{{ post.title }}</h1>
+                <div class="flex items-center text-gray-500 text-sm space-x-4">
+                <span class="flex items-center">
+                    <i class="far fa-calendar-alt mr-1"></i>
+                    {{ post.created_at|date('Y-m-d') }}
+                </span>
+                    <span class="flex items-center">
+                    <i class="far fa-user mr-1"></i>
+                    <span class="font-medium text-blue-600 hover:text-blue-800 transition-colors cursor-pointer"
+                          title="查看作者详情">
+                        {{ author }}
+                    </span>
+                </span>
+                    {% if post.primaryAuthor.first().avatar %}
+                        <span class="flex items-center">
+                    <img src="{{ post.primaryAuthor.first().avatar }}" alt="{{ author }}"
+                         class="w-6 h-6 rounded-full mr-1 object-cover" loading="lazy" decoding="async"
+                         fetchpriority="low">
+                </span>
+                    {% endif %}
+                </div>
+                <div class="mt-3 text-sm text-gray-600 space-x-2 flex flex-wrap px-6">
+                    {% if post.categories|length > 0 %}
+                        <span class="text-gray-500">分类：</span>
+                        {% for c in post.categories %}
+                            <a href="/category/{{ c.slug }}.html"
+                               class="inline-flex items-center px-2 py-1 bg-blue-50 text-blue-700 rounded hover:bg-blue-100 mr-2">#{{ c.name }}</a>
+                        {% endfor %}
+                    {% endif %}
+                    {% if post.tags|length > 0 %}
+                        <span class="text-gray-500 ml-3">标签：</span>
+                        {% for t in post.tags %}
+                            <a href="/tag/{{ t.slug }}.html"
+                               class="inline-flex items-center px-2 py-1 bg-purple-50 text-purple-700 rounded hover:bg-purple-100 mr-2">#{{ t.name }}</a>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- 文章内容 -->
+            <div class="p-6">
+                <div class="prose max-w-none fade-in-on-scroll no-animation"
+                     id="post-container"
+                     data-post-id="{{ post.id }}"
+                     data-post-slug="{{ post.slug }}">
+                    <h2>Oops: {{ note|default('当前文章需要密码才能阅读') }}</h2>
+                    <form action="" method="get">
+                        <div class="mb-4">
+                            <label for="password" class="block text-sm font-medium text-gray-700">密码</label>
+                            <input type="password" name="password" id="password" autocomplete="off"
+                                   class="pl-10 pr-4 py-2 border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-64">
+                        </div>
+                        <button type="submit"
+                                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            提交
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 文章底部 -->
+            <div class="p-6 border-t border-gray-100">
+                <div class="flex justify-between items-center">
+                    <a href="/"
+                       class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium">
+                        <i class="fas fa-arrow-left mr-1"></i>
+                        返回首页
+                    </a>
+                    <div class="text-sm text-gray-500">
+                        <i class="far fa-clock mr-1"></i>
+                        最后更新: {{ post.updated_at|date('Y-m-d') }}
+                    </div>
+                </div>
+            </div>
+        </article>
+
+    </div>
+
+    <script data-pjax-eval="true">
+        // 防止普通文章页面的JavaScript代码执行
+        window.__isLockedPost = true;
+
+        // 重置文章渲染状态，确保在PJAX导航中正确处理密码保护页面
+        if (typeof window.__postRendered !== 'undefined') {
+            window.__postRendered = false;
+        }
+
+        // 清理文章内容缓存和加载状态
+        if (typeof window.__postContentCache !== 'undefined') {
+            window.__postContentCache = {};
+        }
+
+        if (typeof window.__postLoadingState !== 'undefined') {
+            window.__postLoadingState = {};
+        }
+
+        // 阻止普通文章页面的渲染函数执行
+        if (typeof renderPost !== 'undefined') {
+            // 保存原始函数
+            const originalRenderPost = renderPost;
+
+            // 替换renderPost函数
+            renderPost = function () {
+                // 如果是密码保护页面，直接返回，不执行普通文章的渲染逻辑
+                if (window.__isLockedPost) {
+                    console.log('[Lock.post.content] 检测到密码保护页面，跳过普通文章渲染逻辑');
+                    return;
+                }
+                // 否则执行原始函数
+                return originalRenderPost.apply(this, arguments);
+            };
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // 检查是否在文章页
+            if (!document.getElementById('post-container')) {
+                return;
+            }
+            console.log('[Lock.post.content] DOMContentLoaded 触发');
+            // 重置渲染状态
+            window.__postRendered = false;
+        });
+
+        document.addEventListener('page:ready', function () {
+            // 检查是否在文章页
+            if (!document.getElementById('post-container')) {
+                return;
+            }
+            console.log('[Lock.post.content] page:ready 触发');
+            // 重置渲染状态
+            window.__postRendered = false;
+            // 确保标记仍然设置
+            window.__isLockedPost = true;
+        });
+
+        // 确保在PJAX加载后正确设置标记
+        setTimeout(function () {
+            window.__isLockedPost = true;
+        }, 0);
+    </script>
+</div>
+</div>

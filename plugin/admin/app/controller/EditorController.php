@@ -20,8 +20,10 @@ class EditorController
 {
     /**
      * 编辑器页面
+     *
      * @param Request $request
      * @param int $id 可选的文章ID，用于编辑已有文章
+     *
      * @return Response
      */
     public function vditor(Request $request, int $id = 0): Response
@@ -41,8 +43,11 @@ class EditorController
 
     /**
      * 保存文章
+     *
      * @param Request $request
+     *
      * @return Response
+     * @throws Exception
      */
     public function save(Request $request): Response
     {
@@ -96,7 +101,11 @@ class EditorController
 
         // 如果可见性是密码保护，处理密码字段
         if ($visibility === 'password') {
-            $data['password'] = $password;
+            if (!empty($password)) {
+                // 只有修改或添加密码时才处理
+                $data['password'] = password_hash($password, PASSWORD_DEFAULT);
+            }
+            // 为空代表不修改密码，则不操作密码字段
         } else {
             $data['password'] = null; // 清空密码
         }
@@ -202,8 +211,11 @@ class EditorController
 
     /**
      * 获取作者列表
+     *
      * @param Request $request
+     *
      * @return Response
+     * @throws Exception
      */
     public function getAuthors(Request $request): Response
     {
@@ -232,8 +244,8 @@ class EditorController
             if (!empty($search)) {
                 $query->where(function ($q) use ($search) {
                     $q->where('username', 'like', "%{$search}%")
-                      ->orWhere('nickname', 'like', "%{$search}%")
-                      ->orWhere('email', 'like', "%{$search}%");
+                        ->orWhere('nickname', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
                 });
             }
 
@@ -270,7 +282,9 @@ class EditorController
 
     /**
      * 上传图片
+     *
      * @param Request $request
+     *
      * @return Response
      */
     public function uploadImage(Request $request): Response
@@ -318,7 +332,9 @@ class EditorController
 
     /**
      * 打开媒体选择器
+     *
      * @param Request $request
+     *
      * @return Response
      */
     public function mediaSelector(Request $request): Response
@@ -338,7 +354,9 @@ class EditorController
 
     /**
      * 处理媒体选择
+     *
      * @param Request $request
+     *
      * @return Response
      */
     public function selectMedia(Request $request): Response
@@ -382,7 +400,9 @@ class EditorController
 
     /**
      * 获取或创建默认作者
+     *
      * @param int $adminId 管理员ID
+     *
      * @return int|null 返回用户ID，如果创建失败返回null
      */
     private function getOrCreateDefaultAuthor(int $adminId): ?int
@@ -424,5 +444,52 @@ class EditorController
 
             return null;
         }
+    }
+
+    public function post(Request $request, ?int $id = null): Response
+    {
+        // 验证ID
+        if (empty($id) || !is_numeric($id) || $id < 1 || $id > 2147483646/* int最大值-1 */) {
+            return json([
+                'code' => 400,
+                'message' => trans('Missing input parameter :parameter', ['parameter' => 'id']), // 缺少输入参数 id
+            ]);
+        }
+
+        // 查询文章及作者信息
+        $post = Post::with(['authors' => function ($query) {
+            $query->select('wa_users.id', 'username', 'nickname', 'email', 'avatar');
+        }])->find($id);
+
+        if (!$post) {
+            return json([
+                'code' => 404,
+                'message' => trans('Post not found'),
+            ]);
+        }
+
+        // 返回文章详情
+        return json([
+            'code' => 200,
+            'message' => trans('Success'),
+            'data' => [
+                'id' => $post->id,
+                'title' => $post->title,
+                'slug' => $post->slug,
+                'content' => $post->content,
+                'content_type' => $post->content_type ?? 'markdown',
+                'summary' => $post->summary,
+                'status' => $post->status,
+                'visibility' => $post->visibility ?? 'public',
+                'password' => $post->password,
+                'featured' => (bool) $post->featured,
+                'allow_comments' => (bool) $post->allow_comments,
+                'comment_count' => $post->comment_count ?? 0,
+                'published_at' => $post->published_at,
+                'created_at' => $post->created_at,
+                'updated_at' => $post->updated_at,
+                'authors' => $post->authors ? $post->authors->toArray() : [],
+            ],
+        ]);
     }
 }

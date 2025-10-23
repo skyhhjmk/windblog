@@ -155,6 +155,7 @@ Route::group('/app/admin', function () {
     Route::group('/editor', function () {
         Route::get('/vditor', [EditorController::class, 'vditor']);
         Route::get('/vditor/{id}', [EditorController::class, 'vditor']);
+        Route::get('/post/{id}', [EditorController::class, 'post']);
         Route::post('/save', [EditorController::class, 'save']);
         Route::post('/upload-image', [EditorController::class, 'uploadImage']);
         Route::get('/authors', [EditorController::class, 'getAuthors']);

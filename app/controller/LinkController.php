@@ -7,6 +7,7 @@
 namespace app\controller;
 
 use app\annotation\CSRFVerify;
+use app\annotation\EnableInstantFirstPaint;
 use app\model\Link;
 use app\service\CSRFHelper;
 use app\service\LinkConnectService;
@@ -31,6 +32,7 @@ class LinkController
      */
     protected array $noNeedLogin = ['index', 'goto', 'info', 'request'];
 
+    #[EnableInstantFirstPaint]
     public function index(Request $request, int $page = 1)
     {
         $count = Link::where('status', 'true')->count('*');
@@ -527,9 +529,9 @@ class LinkController
                     }
                     $opts = [
                         'http' => [
-                            'method'  => 'GET',
+                            'method' => 'GET',
                             'timeout' => 10,
-                            'header'  => $headers,
+                            'header' => $headers,
                         ],
                         'ssl' => [
                             'verify_peer' => true,
@@ -578,8 +580,7 @@ class LinkController
                             }
                         }
                     }
-                }
-                // 如果快速互联失败或不是快速互联URL，尝试使用原有的自动补全逻辑
+                } // 如果快速互联失败或不是快速互联URL，尝试使用原有的自动补全逻辑
                 elseif (empty($name) || empty($url)) {
                     Log::info('尝试使用原有自动补全逻辑');
                     $headersArr = ['Accept: application/json'];
@@ -590,9 +591,9 @@ class LinkController
                     }
                     $opts = [
                         'http' => [
-                            'method'  => 'GET',
+                            'method' => 'GET',
                             'timeout' => 10,
-                            'header'  => $headers,
+                            'header' => $headers,
                         ],
                         'ssl' => [
                             'verify_peer' => true,
@@ -696,7 +697,9 @@ class LinkController
     /**
      * 快速互联API接口
      * 用于处理其他站点通过token快速连接并获取本站信息
+     *
      * @param Request $request
+     *
      * @return Response
      */
     public function quickConnect(Request $request): Response
@@ -769,6 +772,7 @@ class LinkController
      * 处理来自其他站点的友链互联请求
      *
      * @param Request $request HTTP请求对象
+     *
      * @return Response JSON响应
      */
     public function windConnect(Request $request): Response
