@@ -3,7 +3,9 @@
     {% if sidebar is defined and sidebar.widgets is defined %}
         {% for widget in sidebar.widgets %}
             {% if widget.enabled and widget.html is defined %}
-                <div class="sidebar-widget" data-widget-key="{{ widget.key ?? widget.id ?? widget.slug ?? widget.name ?? loop.index }}" data-widget-type="{{ widget.type ?? '' }}">
+                <div class="sidebar-widget"
+                     data-widget-key="{{ widget.key ?? widget.id ?? widget.slug ?? widget.name ?? loop.index }}"
+                     data-widget-type="{{ widget.type ?? '' }}">
                     {{ widget.html|raw }}
                 </div>
             {% endif %}
@@ -17,14 +19,19 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
                 <label for="appId" class="block text-sm font-medium text-gray-700 mb-1">App ID</label>
-                <input type="number" id="appId" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" placeholder="输入应用ID">
+                <input type="number" id="appId"
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                       placeholder="输入应用ID">
             </div>
             <div>
                 <label for="apiKey" class="block text-sm font-medium text-gray-700 mb-1">API Key</label>
-                <input type="text" id="apiKey" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" placeholder="输入API密钥">
+                <input type="text" id="apiKey"
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                       placeholder="输入API密钥">
             </div>
         </div>
-        <button id="fetchAppData" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors flex items-center">
+        <button id="fetchAppData"
+                class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors flex items-center">
             <i class="fas fa-download mr-2"></i> 获取应用详情
         </button>
     </div>
@@ -34,11 +41,13 @@
         <h2 class="text-xl font-semibold text-gray-800 mb-4">版本选择</h2>
         <div class="mb-4">
             <label for="appVersion" class="block text-sm font-medium text-gray-700 mb-1">选择版本</label>
-            <select id="appVersion" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+            <select id="appVersion"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
                 <option value="">请选择版本</option>
             </select>
         </div>
-        <button id="fetchVersionDetails" class="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-6 rounded-lg transition-colors flex items-center">
+        <button id="fetchVersionDetails"
+                class="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-6 rounded-lg transition-colors flex items-center">
             <i class="fas fa-info-circle mr-2"></i> 获取版本详细配置
         </button>
     </div>
@@ -48,10 +57,12 @@
         <div class="flex justify-between items-center mb-4">
             <h2 class="text-xl font-semibold text-gray-800">版本详细配置</h2>
             <div class="flex space-x-3">
-                <button id="addConfigField" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-1 px-4 rounded-lg transition-colors text-sm flex items-center">
+                <button id="addConfigField"
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-1 px-4 rounded-lg transition-colors text-sm flex items-center">
                     <i class="fas fa-plus mr-1"></i> 新增字段
                 </button>
-                <button id="saveVersionConfig" class="bg-green-600 hover:bg-green-700 text-white font-medium py-1 px-4 rounded-lg transition-colors text-sm flex items-center">
+                <button id="saveVersionConfig"
+                        class="bg-green-600 hover:bg-green-700 text-white font-medium py-1 px-4 rounded-lg transition-colors text-sm flex items-center">
                     <i class="fas fa-save mr-1"></i> 保存配置
                 </button>
             </div>
@@ -68,8 +79,11 @@
             <div class="config-field bg-gray-50 p-4 rounded-lg border border-gray-200">
                 <div class="flex justify-between items-start mb-2">
                     <div class="flex items-center space-x-4">
-                        <input type="text" class="field-name px-3 py-2 border border-gray-300 rounded-lg w-48 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="字段名">
-                        <select class="field-type px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <input type="text"
+                               class="field-name px-3 py-2 border border-gray-300 rounded-lg w-48 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                               placeholder="字段名">
+                        <select
+                            class="field-type px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                             <option value="string">字符串</option>
                             <option value="number">数字</option>
                             <option value="boolean">布尔值</option>
@@ -83,14 +97,17 @@
                     </button>
                 </div>
                 <div class="field-value-container">
-                    <input type="text" class="field-value px-3 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="字段值">
+                    <input type="text"
+                           class="field-value px-3 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="字段值">
                 </div>
             </div>
         </div>
     </div>
 
     <!-- 加载状态 -->
-    <div id="loadingIndicator" class="hidden fixed inset-0 bg-black bg-opacity-20 flex items-center justify-center z-50">
+    <div id="loadingIndicator"
+         class="hidden fixed inset-0 bg-black bg-opacity-20 flex items-center justify-center z-50">
         <div class="bg-white p-6 rounded-xl shadow-xl flex flex-col items-center">
             <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
             <p id="loadingMessage" class="text-gray-700">正在处理，请稍候...</p>
@@ -104,38 +121,51 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="col-span-1 md:col-span-2">
                 <label for="title" class="block text-sm font-medium text-gray-700 mb-1">应用标题</label>
-                <input type="text" id="title" name="title" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" required>
+                <input type="text" id="title" name="title"
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                       required>
             </div>
 
             <div class="col-span-1 md:col-span-2">
                 <label for="description" class="block text-sm font-medium text-gray-700 mb-1">应用描述</label>
-                <textarea id="description" name="description" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" required></textarea>
+                <textarea id="description" name="description" rows="3"
+                          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                          required></textarea>
             </div>
 
             <div>
                 <label for="name" class="block text-sm font-medium text-gray-700 mb-1">应用名称（英文标识）</label>
-                <input type="text" id="name" name="name" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" required>
+                <input type="text" id="name" name="name"
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                       required>
             </div>
 
             <div>
                 <label for="website" class="block text-sm font-medium text-gray-700 mb-1">应用官方网站</label>
-                <input type="url" id="website" name="website" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" required>
+                <input type="url" id="website" name="website"
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                       required>
             </div>
 
             <div>
                 <label for="project_link" class="block text-sm font-medium text-gray-700 mb-1">应用项目链接</label>
-                <input type="url" id="project_link" name="project_link" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" required>
+                <input type="url" id="project_link" name="project_link"
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                       required>
             </div>
 
             <div>
-                <label for="cross_version_update" class="block text-sm font-medium text-gray-700 mb-1">是否支持跨版本更新</label>
+                <label for="cross_version_update"
+                       class="block text-sm font-medium text-gray-700 mb-1">是否支持跨版本更新</label>
                 <div class="flex items-center space-x-4">
                     <label class="inline-flex items-center">
-                        <input type="radio" name="cross_version_update" value="true" class="form-radio text-blue-600 focus:ring-blue-500">
+                        <input type="radio" name="cross_version_update" value="true"
+                               class="form-radio text-blue-600 focus:ring-blue-500">
                         <span class="ml-2">是</span>
                     </label>
                     <label class="inline-flex items-center">
-                        <input type="radio" name="cross_version_update" value="false" class="form-radio text-blue-600 focus:ring-blue-500">
+                        <input type="radio" name="cross_version_update" value="false"
+                               class="form-radio text-blue-600 focus:ring-blue-500">
                         <span class="ml-2">否</span>
                     </label>
                 </div>
@@ -143,27 +173,35 @@
 
             <div class="col-span-1 md:col-span-2">
                 <label for="tags" class="block text-sm font-medium text-gray-700 mb-1">标签（用逗号分隔）</label>
-                <input type="text" id="tags" name="tags" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" placeholder="如: web,tools,development">
+                <input type="text" id="tags" name="tags"
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                       placeholder="如: web,tools,development">
                 <p class="text-xs text-gray-500 mt-1">提示：多个标签请用逗号分隔</p>
             </div>
 
             <div class="col-span-1 md:col-span-2">
                 <label for="readme" class="block text-sm font-medium text-gray-700 mb-1">应用介绍（Markdown格式）</label>
-                <textarea id="readme" name="readme" rows="8" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" required></textarea>
+                <textarea id="readme" name="readme" rows="8"
+                          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                          required></textarea>
             </div>
 
             <div class="col-span-1 md:col-span-2">
                 <label for="logo" class="block text-sm font-medium text-gray-700 mb-1">Logo（Base64格式，可选）</label>
-                <textarea id="logo" name="logo" rows="4" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" placeholder="输入Base64编码的图片数据（最大50KB）"></textarea>
+                <textarea id="logo" name="logo" rows="4"
+                          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                          placeholder="输入Base64编码的图片数据（最大50KB）"></textarea>
             </div>
         </div>
 
         <!-- 操作按钮 -->
         <div class="flex justify-end space-x-4 pt-4 border-t border-gray-200">
-            <button type="button" id="resetForm" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+            <button type="button" id="resetForm"
+                    class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
                 重置
             </button>
-            <button type="submit" id="updateAppData" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-6 rounded-lg transition-colors flex items-center">
+            <button type="submit" id="updateAppData"
+                    class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-6 rounded-lg transition-colors flex items-center">
                 <i class="fas fa-save mr-2"></i> 保存更新
             </button>
         </div>
@@ -178,11 +216,13 @@
     <h2 class="text-xl font-semibold text-gray-800 mb-4">版本选择</h2>
     <div class="mb-4">
         <label for="appVersion" class="block text-sm font-medium text-gray-700 mb-1">选择版本</label>
-        <select id="appVersion" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+        <select id="appVersion"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
             <option value="">请选择版本</option>
         </select>
     </div>
-    <button id="fetchVersionDetails" class="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-6 rounded-lg transition-colors flex items-center">
+    <button id="fetchVersionDetails"
+            class="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-6 rounded-lg transition-colors flex items-center">
         <i class="fas fa-info-circle mr-2"></i> 获取版本详细配置
     </button>
 </div>
@@ -192,10 +232,12 @@
     <div class="flex justify-between items-center mb-4">
         <h2 class="text-xl font-semibold text-gray-800">版本详细配置</h2>
         <div class="flex space-x-3">
-            <button id="addConfigField" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-1 px-4 rounded-lg transition-colors text-sm flex items-center">
+            <button id="addConfigField"
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-1 px-4 rounded-lg transition-colors text-sm flex items-center">
                 <i class="fas fa-plus mr-1"></i> 新增字段
             </button>
-            <button id="saveVersionConfig" class="bg-green-600 hover:bg-green-700 text-white font-medium py-1 px-4 rounded-lg transition-colors text-sm flex items-center">
+            <button id="saveVersionConfig"
+                    class="bg-green-600 hover:bg-green-700 text-white font-medium py-1 px-4 rounded-lg transition-colors text-sm flex items-center">
                 <i class="fas fa-save mr-1"></i> 保存配置
             </button>
         </div>
@@ -212,8 +254,11 @@
         <div class="config-field bg-gray-50 p-4 rounded-lg border border-gray-200">
             <div class="flex justify-between items-start mb-2">
                 <div class="flex items-center space-x-4">
-                    <input type="text" class="field-name px-3 py-2 border border-gray-300 rounded-lg w-48 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="字段名">
-                    <select class="field-type px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <input type="text"
+                           class="field-name px-3 py-2 border border-gray-300 rounded-lg w-48 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="字段名">
+                    <select
+                        class="field-type px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                         <option value="string">字符串</option>
                         <option value="number">数字</option>
                         <option value="boolean">布尔值</option>
@@ -227,14 +272,16 @@
                 </button>
             </div>
             <div class="field-value-container">
-                <input type="text" class="field-value px-3 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="字段值">
+                <input type="text"
+                       class="field-value px-3 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                       placeholder="字段值">
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         // DOM元素引用
         const appIdInput = document.getElementById('appId');
         const apiKeyInput = document.getElementById('apiKey');
@@ -296,7 +343,7 @@
         }
 
         // 获取应用详情
-        fetchAppDataBtn.addEventListener('click', function() {
+        fetchAppDataBtn.addEventListener('click', function () {
             const appId = appIdInput.value.trim();
             const apiKey = apiKeyInput.value.trim();
 
@@ -317,7 +364,7 @@
             xhr.setRequestHeader('Content-Type', 'application/json');
 
             // 处理响应
-            xhr.onload = function() {
+            xhr.onload = function () {
                 hideLoading();
                 if (xhr.status === 200) {
                     try {
@@ -374,7 +421,7 @@
             };
 
             // 处理网络错误
-            xhr.onerror = function() {
+            xhr.onerror = function () {
                 hideLoading();
                 showResult('网络请求错误，请检查网络连接或API服务是否可用。', false);
                 console.error('获取应用详情网络错误');
@@ -382,7 +429,7 @@
 
             // 处理超时
             xhr.timeout = 10000; // 10秒超时
-            xhr.ontimeout = function() {
+            xhr.ontimeout = function () {
                 hideLoading();
                 showResult('请求超时，请稍后重试。', false);
                 console.error('获取应用详情请求超时');
@@ -405,7 +452,7 @@
         }
 
         // 获取版本详细配置
-        fetchVersionDetailsBtn.addEventListener('click', function() {
+        fetchVersionDetailsBtn.addEventListener('click', function () {
             const appId = appIdInput.value.trim();
             const apiKey = apiKeyInput.value.trim();
             const selectedVersion = appVersionSelect.value;
@@ -425,7 +472,7 @@
             xhr.setRequestHeader('Content-Type', 'application/json');
 
             // 处理响应
-            xhr.onload = function() {
+            xhr.onload = function () {
                 hideLoading();
                 if (xhr.status === 200) {
                     try {
@@ -467,7 +514,7 @@
             };
 
             // 处理网络错误
-            xhr.onerror = function() {
+            xhr.onerror = function () {
                 hideLoading();
                 showResult('网络请求错误，请检查网络连接', false);
                 console.error('获取版本配置网络错误');
@@ -475,7 +522,7 @@
 
             // 处理超时
             xhr.timeout = 10000; // 10秒超时
-            xhr.ontimeout = function() {
+            xhr.ontimeout = function () {
                 hideLoading();
                 showResult('请求超时，请稍后重试', false);
                 console.error('获取版本配置请求超时');
@@ -498,14 +545,14 @@
             tabsNav.className = 'sticky top-0 z-10 bg-white flex flex-wrap gap-2 mb-4 border-b border-gray-200';
 
             const tabDefs = [
-                { id: 'commands', label: '命令与参数' },
-                { id: 'scripts', label: '脚本设定' },
-                { id: 'configmaps', label: '配置文件' },
-                { id: 'env', label: '环境变量' },
-                { id: 'volumes', label: '持久化卷' },
-                { id: 'resources', label: '资源限制' },
-                { id: 'services', label: '服务配置' },
-                { id: 'options', label: '选项配置' },
+                {id: 'commands', label: '命令与参数'},
+                {id: 'scripts', label: '脚本设定'},
+                {id: 'configmaps', label: '配置文件'},
+                {id: 'env', label: '环境变量'},
+                {id: 'volumes', label: '持久化卷'},
+                {id: 'resources', label: '资源限制'},
+                {id: 'services', label: '服务配置'},
+                {id: 'options', label: '选项配置'},
             ];
 
             const tabsBody = document.createElement('div');
@@ -540,6 +587,7 @@
                     else pane.classList.add('hidden');
                 });
             }
+
             tabsNav.addEventListener('click', (e) => {
                 const btn = e.target.closest('button[data-tab]');
                 if (!btn) return;
@@ -558,14 +606,14 @@
 
             // 定义要处理的分组（按 Tab 分类）
             const groups = [
-                { id: 'commands',   title: '命令与参数',              fields: ['command', 'args'] },
-                { id: 'scripts',    title: '脚本设定',                fields: ['scripts'] },
-                { id: 'configmaps', title: '配置文件（configmap）',   fields: ['config_maps'] },
-                { id: 'env',        title: '环境变量',                fields: ['env'] },
-                { id: 'volumes',    title: '持久化卷',                fields: ['volume_mounts'] },
-                { id: 'resources',  title: '资源限制',                fields: ['resource_request'] },
-                { id: 'services',   title: '服务配置',                fields: ['services'] },
-                { id: 'options',    title: '选项配置',                fields: ['options'] }
+                {id: 'commands', title: '命令与参数', fields: ['command', 'args']},
+                {id: 'scripts', title: '脚本设定', fields: ['scripts']},
+                {id: 'configmaps', title: '配置文件（configmap）', fields: ['config_maps']},
+                {id: 'env', title: '环境变量', fields: ['env']},
+                {id: 'volumes', title: '持久化卷', fields: ['volume_mounts']},
+                {id: 'resources', title: '资源限制', fields: ['resource_request']},
+                {id: 'services', title: '服务配置', fields: ['services']},
+                {id: 'options', title: '选项配置', fields: ['options']}
             ];
 
             // 跟踪已处理的字段
@@ -627,7 +675,7 @@
                 const countArray = v => Array.isArray(v) ? v.length : 0;
                 const countScripts = scr => {
                     if (!scr || typeof scr !== 'object') return 0;
-                    return ['install','install_image','post_start','pre_stop'].reduce((n,k)=> n + (scr[k] ? 1 : 0), 0);
+                    return ['install', 'install_image', 'post_start', 'pre_stop'].reduce((n, k) => n + (scr[k] ? 1 : 0), 0);
                 };
                 const countCmdArgs = data => {
                     const c = Array.isArray(data.command) ? data.command.length : (data.command ? 1 : 0);
@@ -636,19 +684,19 @@
                 };
 
                 const counts = {
-                    commands:   countCmdArgs(configData),
-                    scripts:    countScripts(configData.scripts),
+                    commands: countCmdArgs(configData),
+                    scripts: countScripts(configData.scripts),
                     configmaps: countArray(configData.config_maps),
-                    env:        countArray(configData.env),
-                    volumes:    countArray(configData.volume_mounts),
-                    resources:  configData.resource_request ? 1 : 0,
-                    services:   countArray(configData.services),
-                    options:    countArray(configData.options)
+                    env: countArray(configData.env),
+                    volumes: countArray(configData.volume_mounts),
+                    resources: configData.resource_request ? 1 : 0,
+                    services: countArray(configData.services),
+                    options: countArray(configData.options)
                 };
 
                 Object.entries(counts).forEach(([id, num]) => {
                     const btn = tabButtons[id];
-                    if (btn) btn.textContent = `${tabDefs.find(t=>t.id===id)?.label || id} (${num})`;
+                    if (btn) btn.textContent = `${tabDefs.find(t => t.id === id)?.label || id} (${num})`;
                 });
             })();
 
@@ -708,7 +756,7 @@
                 typeLabel.textContent = '类型';
                 const typeSelect = document.createElement('select');
                 typeSelect.className = 'opt-type-original px-3 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
-                ['apps','select','text','password','number'].forEach(t => {
+                ['apps', 'select', 'text', 'password', 'number'].forEach(t => {
                     const optEl = document.createElement('option');
                     optEl.value = t;
                     optEl.textContent = t;
@@ -800,8 +848,10 @@
                 disCb.type = 'checkbox';
                 disCb.className = 'opt-disabled-original';
                 disCb.checked = !!option.disabled;
-                const disText = document.createElement('span'); disText.textContent = '禁用 disabled';
-                disLab.appendChild(disCb); disLab.appendChild(disText);
+                const disText = document.createElement('span');
+                disText.textContent = '禁用 disabled';
+                disLab.appendChild(disCb);
+                disLab.appendChild(disText);
 
                 const rndLab = document.createElement('label');
                 rndLab.className = 'inline-flex items-center gap-2 text-gray-700';
@@ -809,8 +859,10 @@
                 rndCb.type = 'checkbox';
                 rndCb.className = 'opt-random-original';
                 rndCb.checked = !!option.random;
-                const rndText = document.createElement('span'); rndText.textContent = '随机生成 random';
-                rndLab.appendChild(rndCb); rndLab.appendChild(rndText);
+                const rndText = document.createElement('span');
+                rndText.textContent = '随机生成 random';
+                rndLab.appendChild(rndCb);
+                rndLab.appendChild(rndText);
 
                 flagsRow.appendChild(disLab);
                 flagsRow.appendChild(rndLab);
@@ -844,7 +896,7 @@
                     list.className = 'vals-list space-y-2';
                     editor.appendChild(list);
 
-                    function addValRow(item={label:'', value:''}) {
+                    function addValRow(item = {label: '', value: ''}) {
                         const row = document.createElement('div');
                         row.className = 'val-row flex items-center gap-2';
                         row.innerHTML = `
@@ -852,7 +904,10 @@
                             <input type="text" class="val-value px-3 py-2 border border-gray-300 rounded-lg flex-1" placeholder="value" value="${item.value || ''}">
                             <button type="button" class="val-del text-red-500 hover:text-red-700"><i class="fas fa-trash-alt"></i></button>
                         `;
-                        row.querySelector('.val-del').addEventListener('click', () => { row.remove(); rebuildSelect(); });
+                        row.querySelector('.val-del').addEventListener('click', () => {
+                            row.remove();
+                            rebuildSelect();
+                        });
                         list.appendChild(row);
                     }
 
@@ -867,7 +922,10 @@
                     addBtn.type = 'button';
                     addBtn.className = 'mt-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-1 px-3 rounded-lg text-sm';
                     addBtn.innerHTML = '<i class="fas fa-plus mr-1"></i> 添加选项';
-                    addBtn.addEventListener('click', () => { addValRow(); rebuildSelect(); });
+                    addBtn.addEventListener('click', () => {
+                        addValRow();
+                        rebuildSelect();
+                    });
 
                     editor.appendChild(addBtn);
                     valuesWrap.appendChild(editor);
@@ -907,6 +965,7 @@
                             if (found2) select.value = String(option.value);
                         }
                     }
+
                     function validateDup() {
                         const valueInputs = list.querySelectorAll('.val-value');
                         const counts = {};
@@ -921,10 +980,12 @@
                             else inp.classList.remove('border-red-500');
                         });
                     }
+
                     function rebuildAndValidate() {
                         rebuildSelect();
                         validateDup();
                     }
+
                     rebuildAndValidate();
                     // 当编辑器行变化时，尝试更新下拉并校验
                     list.addEventListener('input', rebuildAndValidate);
@@ -940,7 +1001,7 @@
 
                     const input = document.createElement('input');
                     input.type = option.type === 'password' ? 'password' :
-                                option.type === 'number' ? 'number' : 'text';
+                        option.type === 'number' ? 'number' : 'text';
                     input.className = 'field-value px-3 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
                     input.value = option.value || option.default || '';
                     inputContainer.appendChild(input);
@@ -957,7 +1018,9 @@
                 deleteBtn.type = 'button';
                 deleteBtn.className = 'text-red-500 hover:text-red-700 transition-colors text-sm';
                 deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
-                deleteBtn.addEventListener('click', function() { optionCard.remove(); });
+                deleteBtn.addEventListener('click', function () {
+                    optionCard.remove();
+                });
 
                 optionCard.appendChild(optionForm);
                 optionCard.appendChild(deleteBtn);
@@ -969,7 +1032,7 @@
             addOptionBtn.type = 'button';
             addOptionBtn.className = 'mt-3 bg-blue-600 hover:bg-blue-700 text-white font-medium py-1 px-4 rounded-lg transition-colors text-sm';
             addOptionBtn.innerHTML = '<i class="fas fa-plus mr-1"></i> 新增选项';
-            addOptionBtn.addEventListener('click', function() {
+            addOptionBtn.addEventListener('click', function () {
                 addOptionItem(optionsContainer);
             });
 
@@ -1024,7 +1087,9 @@
                 deleteBtn.type = 'button';
                 deleteBtn.className = 'text-red-500 hover:text-red-700 transition-colors text-sm';
                 deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
-                deleteBtn.addEventListener('click', function() { envRow.remove(); });
+                deleteBtn.addEventListener('click', function () {
+                    envRow.remove();
+                });
 
                 envRow.appendChild(keyInput);
                 envRow.appendChild(valueInput);
@@ -1037,7 +1102,7 @@
             addEnvBtn.type = 'button';
             addEnvBtn.className = 'mt-3 bg-blue-600 hover:bg-blue-700 text-white font-medium py-1 px-4 rounded-lg transition-colors text-sm';
             addEnvBtn.innerHTML = '<i class="fas fa-plus mr-1"></i> 新增环境变量';
-            addEnvBtn.addEventListener('click', function() {
+            addEnvBtn.addEventListener('click', function () {
                 addEnvVar(envContainer);
             });
 
@@ -1083,7 +1148,9 @@
                 deleteBtn.type = 'button';
                 deleteBtn.className = 'text-red-500 hover:text-red-700 transition-colors text-sm';
                 deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
-                deleteBtn.addEventListener('click', function() { volumeCard.remove(); });
+                deleteBtn.addEventListener('click', function () {
+                    volumeCard.remove();
+                });
 
                 volumeCard.appendChild(volumeDetails);
                 volumeCard.appendChild(deleteBtn);
@@ -1095,7 +1162,7 @@
             addVolBtn.type = 'button';
             addVolBtn.className = 'mt-3 bg-blue-600 hover:bg-blue-700 text-white font-medium py-1 px-4 rounded-lg transition-colors text-sm';
             addVolBtn.innerHTML = '<i class="fas fa-plus mr-1"></i> 新增卷挂载';
-            addVolBtn.addEventListener('click', function() {
+            addVolBtn.addEventListener('click', function () {
                 addVolumeMount(volumesContainer);
             });
 
@@ -1131,7 +1198,7 @@
                 deleteBtn.type = 'button';
                 deleteBtn.className = 'text-gray-400 hover:text-red-600 transition-colors';
                 deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
-                deleteBtn.addEventListener('click', function() {
+                deleteBtn.addEventListener('click', function () {
                     if (confirm('确定删除此服务吗？')) {
                         serviceCard.remove();
                     }
@@ -1180,7 +1247,7 @@
             addServiceBtn.type = 'button';
             addServiceBtn.className = 'mt-3 bg-blue-600 hover:bg-blue-700 text-white font-medium py-1 px-4 rounded-lg transition-colors text-sm';
             addServiceBtn.innerHTML = '<i class="fas fa-plus mr-1"></i> 新增服务';
-            addServiceBtn.addEventListener('click', function() {
+            addServiceBtn.addEventListener('click', function () {
                 addServiceItem(servicesContainer);
             });
 
@@ -1319,10 +1386,10 @@
             wrap.appendChild(title);
 
             const defs = [
-                { key: 'install', label: 'install' },
-                { key: 'install_image', label: 'install_image' },
-                { key: 'post_start', label: 'post_start' },
-                { key: 'pre_stop', label: 'pre_stop' }
+                {key: 'install', label: 'install'},
+                {key: 'install_image', label: 'install_image'},
+                {key: 'post_start', label: 'post_start'},
+                {key: 'pre_stop', label: 'pre_stop'}
             ];
 
             defs.forEach(def => {
@@ -1387,12 +1454,12 @@
 
             // 添加删除按钮事件
             const removeBtn = newField.querySelector('.remove-field');
-            removeBtn.addEventListener('click', function() {
+            removeBtn.addEventListener('click', function () {
                 newField.remove();
             });
 
             // 添加类型变更事件
-            typeSelect.addEventListener('change', function() {
+            typeSelect.addEventListener('change', function () {
                 const currentValue = getFieldValue(newField);
                 updateFieldInputType(newField, typeSelect.value, currentValue);
             });
@@ -1468,7 +1535,9 @@
             `;
 
             const delBtn = card.querySelector('button');
-            delBtn.addEventListener('click', function() { card.remove(); });
+            delBtn.addEventListener('click', function () {
+                card.remove();
+            });
 
             const typeSel = card.querySelector('.opt-type');
             const dynamic = card.querySelector('.opt-dynamic');
@@ -1491,7 +1560,7 @@
                     list.className = 'vals-list space-y-2';
                     editor.appendChild(list);
 
-                    function addValRow(item = { label: '', value: '' }) {
+                    function addValRow(item = {label: '', value: ''}) {
                         const row = document.createElement('div');
                         row.className = 'val-row flex items-center gap-2';
                         row.innerHTML = `
@@ -1499,7 +1568,10 @@
                             <input type="text" class="val-value px-3 py-2 border border-gray-300 rounded-lg flex-1" placeholder="value" value="${item.value || ''}">
                             <button type="button" class="val-del text-red-500 hover:text-red-700"><i class="fas fa-trash-alt"></i></button>
                         `;
-                        row.querySelector('.val-del').addEventListener('click', () => { row.remove(); rebuildSelect(); });
+                        row.querySelector('.val-del').addEventListener('click', () => {
+                            row.remove();
+                            rebuildSelect();
+                        });
                         list.appendChild(row);
                     }
 
@@ -1510,7 +1582,10 @@
                     addBtn.type = 'button';
                     addBtn.className = 'mt-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-1 px-3 rounded-lg text-sm';
                     addBtn.innerHTML = '<i class="fas fa-plus mr-1"></i> 添加选项';
-                    addBtn.addEventListener('click', () => { addValRow(); rebuildSelect(); });
+                    addBtn.addEventListener('click', () => {
+                        addValRow();
+                        rebuildSelect();
+                    });
                     editor.appendChild(addBtn);
                     valuesWrap.appendChild(editor);
                     dynamic.appendChild(valuesWrap);
@@ -1543,6 +1618,7 @@
                             select.value = cur;
                         }
                     }
+
                     function validateDup() {
                         const valueInputs = list.querySelectorAll('.val-value');
                         const counts = {};
@@ -1557,10 +1633,12 @@
                             else inp.classList.remove('border-red-500');
                         });
                     }
+
                     function rebuildAndValidate() {
                         rebuildSelect();
                         validateDup();
                     }
+
                     list.addEventListener('input', rebuildAndValidate);
                     rebuildAndValidate();
                 } else {
@@ -1578,6 +1656,7 @@
                     dynamic.appendChild(inputContainer);
                 }
             }
+
             typeSel.addEventListener('change', renderDynamic);
             renderDynamic();
 
@@ -1593,7 +1672,9 @@
                 <input type="text" class="field-value px-3 py-1 border border-gray-300 rounded-lg flex-grow" placeholder="VALUE">
                 <button type="button" class="text-red-500 hover:text-red-700 transition-colors text-sm"><i class="fas fa-trash-alt"></i></button>
             `;
-            row.querySelector('button').addEventListener('click', function() { row.remove(); });
+            row.querySelector('button').addEventListener('click', function () {
+                row.remove();
+            });
             envContainer.appendChild(row);
         }
 
@@ -1613,7 +1694,9 @@
                     <input type="text" class="vol-pre-content px-3 py-2 border border-gray-300 rounded-lg" placeholder="预置内容 pre_content">
                 </div>
             `;
-            card.querySelector('button').addEventListener('click', function() { card.remove(); });
+            card.querySelector('button').addEventListener('click', function () {
+                card.remove();
+            });
             volumesContainer.appendChild(card);
         }
 
@@ -1634,7 +1717,9 @@
                     <input type="text" class="svc-protocol px-3 py-2 border border-gray-300 rounded-lg" placeholder="协议 protocol（如 tcp）">
                 </div>
             `;
-            card.querySelector('button').addEventListener('click', function() { card.remove(); });
+            card.querySelector('button').addEventListener('click', function () {
+                card.remove();
+            });
             servicesContainer.appendChild(card);
         }
 
@@ -1662,7 +1747,7 @@
         // 获取所有配置字段数据
         function getConfigData() {
             // 创建一个基于原始数据的配置对象，确保保留所有字段
-            const configData = currentVersionData ? { ...currentVersionData } : {};
+            const configData = currentVersionData ? {...currentVersionData} : {};
 
             // 1. 更新从普通配置字段中收集的数据
             const fields = document.querySelectorAll('.config-field');
@@ -1688,7 +1773,8 @@
                                 opt.value = valueInput.value;
                             }
                             options.push(opt);
-                        } catch (e) {}
+                        } catch (e) {
+                        }
                     }
                 });
                 // 新增卡片
@@ -1703,7 +1789,11 @@
                     let values = null;
                     const valuesText = card.querySelector('.opt-values')?.value || '';
                     if (valuesText.trim()) {
-                        try { values = JSON.parse(valuesText); } catch (e) { values = null; }
+                        try {
+                            values = JSON.parse(valuesText);
+                        } catch (e) {
+                            values = null;
+                        }
                     }
                     options.push({
                         label,
@@ -1751,7 +1841,9 @@
                     if (keyInput && valInput) {
                         const key = keyInput.value.trim();
                         const value = valInput.value;
-                        if (key) { envVars.push({ key, value }); }
+                        if (key) {
+                            envVars.push({key, value});
+                        }
                     }
                 });
 
@@ -1771,7 +1863,7 @@
                     const sub_path = card.querySelector('.vol-sub-path')?.value || '';
                     const mount_content_type = card.querySelector('.vol-type')?.value || '';
                     const pre_content = card.querySelector('.vol-pre-content')?.value || '';
-                    mounts.push({ name, mount_path, sub_path, mount_content_type, pre_content });
+                    mounts.push({name, mount_path, sub_path, mount_content_type, pre_content});
                 });
                 if (mounts.length) {
                     const original = Array.isArray(configData.volume_mounts) ? configData.volume_mounts : [];
@@ -1791,7 +1883,7 @@
                     const internal_port = card.querySelector('.svc-internal')?.value || '';
                     const external_port = card.querySelector('.svc-external')?.value || '';
                     const protocol = card.querySelector('.svc-protocol')?.value || '';
-                    servicesArr.push({ name, label, type, internal_port, external_port, protocol });
+                    servicesArr.push({name, label, type, internal_port, external_port, protocol});
                 });
                 if (servicesArr.length) {
                     const original = Array.isArray(configData.services) ? configData.services : [];
@@ -1860,7 +1952,7 @@
                     min_memory: isNaN(min_memory) ? (currentVersionData?.resource_request?.min_memory ?? 0) : min_memory
                 };
             } else {
-                payload.resource_request = currentVersionData?.resource_request ?? { min_cpu: 0, min_memory: 0 };
+                payload.resource_request = currentVersionData?.resource_request ?? {min_cpu: 0, min_memory: 0};
             }
 
             // command / args
@@ -1877,7 +1969,12 @@
                 });
                 payload.scripts = vals;
             } else {
-                payload.scripts = currentVersionData?.scripts ?? { install: '', install_image: '', post_start: '', pre_stop: '' };
+                payload.scripts = currentVersionData?.scripts ?? {
+                    install: '',
+                    install_image: '',
+                    post_start: '',
+                    pre_stop: ''
+                };
             }
 
             // volume_mounts
@@ -1892,12 +1989,13 @@
                         const sub_path = card.querySelector('.vol-sub-path')?.value || '';
                         const mount_content_type = card.querySelector('.vol-type')?.value || '';
                         const pre_content = card.querySelector('.vol-pre-content')?.value || '';
-                        payload.volume_mounts.push({ name, mount_path, sub_path, mount_content_type, pre_content });
+                        payload.volume_mounts.push({name, mount_path, sub_path, mount_content_type, pre_content});
                     } else if (card.dataset.volumeJson) {
                         try {
                             const v = JSON.parse(card.dataset.volumeJson);
                             payload.volume_mounts.push(v);
-                        } catch (e) {}
+                        } catch (e) {
+                        }
                     }
                 });
             }
@@ -1936,7 +2034,7 @@
                         const internal_port = card.querySelector('.svc-internal')?.value || '';
                         const external_port = card.querySelector('.svc-external')?.value || '';
                         const protocol = card.querySelector('.svc-protocol')?.value || '';
-                        payload.services.push({ name, label, type, internal_port, external_port, protocol });
+                        payload.services.push({name, label, type, internal_port, external_port, protocol});
                     } else if (card.dataset.serviceJson) {
                         // 从编辑框读取值
                         const name = card.querySelector('.svc-name-edit')?.value || '';
@@ -1945,7 +2043,7 @@
                         const internal_port = card.querySelector('.svc-internal-edit')?.value || '';
                         const external_port = card.querySelector('.svc-external-edit')?.value || '';
                         const protocol = card.querySelector('.svc-protocol-edit')?.value || '';
-                        payload.services.push({ name, label, type, internal_port, external_port, protocol });
+                        payload.services.push({name, label, type, internal_port, external_port, protocol});
                     }
                 });
             }
@@ -1973,7 +2071,7 @@
                         rows.forEach(r => {
                             const lbl = r.querySelector('.val-label')?.value || '';
                             const val = r.querySelector('.val-value')?.value || '';
-                            if (lbl || val) vals.push({ label: lbl, value: val });
+                            if (lbl || val) vals.push({label: lbl, value: val});
                         });
                         if (vals.length) values = vals;
                         const currentSel = card.querySelector('.field-value');
@@ -1982,13 +2080,17 @@
                         if (!values) {
                             const valuesText = card.querySelector('.opt-values')?.value || '';
                             if (valuesText.trim()) {
-                                try { values = JSON.parse(valuesText); } catch (e) { values = null; }
+                                try {
+                                    values = JSON.parse(valuesText);
+                                } catch (e) {
+                                    values = null;
+                                }
                             }
                         }
                     } else {
                         // 单值文本框
                         value = card.querySelector('.field-value')?.value
-                             || card.querySelector('.opt-value')?.value || '';
+                            || card.querySelector('.opt-value')?.value || '';
                     }
 
                     payload.options.push({
@@ -2054,7 +2156,7 @@
                                 rows.forEach(r => {
                                     const lbl = r.querySelector('.val-label')?.value || '';
                                     const val = r.querySelector('.val-value')?.value || '';
-                                    if (lbl || val) vals.push({ label: lbl, value: val });
+                                    if (lbl || val) vals.push({label: lbl, value: val});
                                 });
                                 if (vals.length) {
                                     opt.values = vals;
@@ -2063,7 +2165,8 @@
                                 }
                             }
                             payload.options.push(opt);
-                        } catch (e) {}
+                        } catch (e) {
+                        }
                     }
                 });
             }
@@ -2075,12 +2178,12 @@
         }
 
         // 新增字段按钮事件
-        addConfigFieldBtn.addEventListener('click', function() {
+        addConfigFieldBtn.addEventListener('click', function () {
             addConfigField();
         });
 
         // 保存版本配置按钮事件
-        saveVersionConfigBtn.addEventListener('click', function() {
+        saveVersionConfigBtn.addEventListener('click', function () {
             const appId = appIdInput.value.trim();
             const apiKey = apiKeyInput.value.trim();
             const selectedVersion = appVersionSelect.value;
@@ -2269,7 +2372,7 @@
             xhr.setRequestHeader('Content-Type', 'application/json');
 
             // 处理响应
-            xhr.onload = function() {
+            xhr.onload = function () {
                 hideLoading();
                 if (xhr.status === 200) {
                     try {
@@ -2288,7 +2391,7 @@
             };
 
             // 处理网络错误
-            xhr.onerror = function() {
+            xhr.onerror = function () {
                 hideLoading();
                 showResult('网络请求错误，请检查网络连接', false);
                 console.error('保存版本配置网络错误');
@@ -2296,7 +2399,7 @@
 
             // 处理超时
             xhr.timeout = 15000; // 15秒超时
-            xhr.ontimeout = function() {
+            xhr.ontimeout = function () {
                 hideLoading();
                 showResult('请求超时，请稍后重试', false);
                 console.error('保存版本配置请求超时');
@@ -2307,12 +2410,12 @@
         });
 
         // 重置表单
-        resetFormBtn.addEventListener('click', function() {
+        resetFormBtn.addEventListener('click', function () {
             appForm.reset();
         });
 
         // 提交表单更新应用数据
-        appForm.addEventListener('submit', function(event) {
+        appForm.addEventListener('submit', function (event) {
             event.preventDefault();
 
             const appId = appIdInput.value.trim();
@@ -2351,7 +2454,7 @@
             xhr.setRequestHeader('Content-Type', 'application/json');
 
             // 处理响应
-            xhr.onload = function() {
+            xhr.onload = function () {
                 hideLoading();
                 if (xhr.status === 200) {
                     try {
@@ -2371,7 +2474,7 @@
             };
 
             // 处理网络错误
-            xhr.onerror = function() {
+            xhr.onerror = function () {
                 hideLoading();
                 showResult('网络请求错误，请检查网络连接或API服务是否可用。', false);
                 console.error('更新应用信息网络错误');
@@ -2379,7 +2482,7 @@
 
             // 处理超时
             xhr.timeout = 15000; // 15秒超时
-            xhr.ontimeout = function() {
+            xhr.ontimeout = function () {
                 hideLoading();
                 showResult('请求超时，请稍后重试。', false);
                 console.error('更新应用信息请求超时');
@@ -2397,14 +2500,17 @@
             var c = document.getElementById('sidebar-container');
             if (t && c) {
                 if (window.PJAX || window.jQuery) {
-                    try { document.dispatchEvent(new CustomEvent('pjax:sidebarReady')); } catch (_) {}
+                    try {
+                        document.dispatchEvent(new CustomEvent('pjax:sidebarReady'));
+                    } catch (_) {
+                    }
                 } else {
                     c.innerHTML = t.innerHTML || '';
                 }
             }
-                c.innerHTML = t.innerHTML || '';
-            }
+            c.innerHTML = t.innerHTML || '';
         }
+
         injectSidebar();
         document.addEventListener('page:ready', injectSidebar);
     })();

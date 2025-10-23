@@ -2,6 +2,7 @@
 
 namespace app\controller;
 
+use app\annotation\EnableInstantFirstPaint;
 use app\model\Category;
 use app\model\Tag;
 use app\service\BlogService;
@@ -32,6 +33,7 @@ class SearchController
      * @throws CommonMarkException
      * @throws Throwable
      */
+    #[EnableInstantFirstPaint]
     public function index(Request $request, int $page = 1): Response
     {
         $keyword = $request->get('q', '');

@@ -2,6 +2,7 @@
 
 namespace app\controller;
 
+use app\annotation\EnableInstantFirstPaint;
 use app\service\PJAXHelper;
 use app\service\SidebarService;
 use support\Request;
@@ -23,8 +24,10 @@ class RainyunController
      * 显示API交互界面
      *
      * @param Request $request 请求对象
+     *
      * @return Response
      */
+    #[EnableInstantFirstPaint]
     public function index(Request $request): Response
     {
         // 获取页面标题

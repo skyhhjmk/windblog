@@ -16,7 +16,7 @@ class ApiPostController
     /**
      * 不需要登录的方法
      */
-    protected array $noNeedLogin = ['index', 'get', 'content'];
+    protected array $noNeedLogin = [];
 
     public function index(Request $request): Response
     {

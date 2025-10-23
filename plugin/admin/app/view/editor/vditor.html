@@ -102,7 +102,7 @@
                         <label for="post-password" class="block text-sm text-gray-600 mb-1">文章密码</label>
                         <input type="text" id="post-password"
                                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                               placeholder="设置文章密码">
+                               placeholder="设置文章密码，不修改请留空">
                     </div>
 
                     <!-- 评论设置 -->
@@ -208,62 +208,16 @@
         // 安全性检查：确保ID是有效的正整数
         postId = postId > 0 ? postId : 0;
 
-        // 获取DOM元素 - 使用防御性编程
+        // 获取DOM元素
         const postTitle = document.getElementById('post-title') || {value: ''};
         const postStatus = document.getElementById('post-status') || {value: 'draft'};
         const postVisibility = document.getElementById('post-visibility') || {value: 'public'};
-        const postPassword = document.getElementById('post-password') || {value: ''};
+        // const postPassword = document.getElementById('post-password') || {value: ''};
         const passwordField = document.getElementById('password-field');
         const allowComments = document.getElementById('allow-comments') || {checked: true};
         const postFeatured = document.getElementById('post-featured') || {checked: false};
         const pageTitle = document.getElementById('page-title') || {textContent: '文章编辑'};
-        let defaultContent = `# 请输入文章标题
-
-## 章节标题
-
-请在这里输入文章内容...
-
-支持 Markdown 语法：
-
-- 列表项
-- 列表项
-- 列表项
-
-**粗体文本** *斜体文本* [链接文本](https://example.com)
-
-![图片描述](https://example.com/image.jpg)
-
-\`\`\`php
-// 代码示例
-function example() {
-    return '代码块';
-}
-
-\`\`\`
-
-## 任务列表示例
-
-- [ ] 待办事项 A
-- [x] 已完成事项 B
-- [ ] 待办事项 C
-
-## 表格示例
-
-| 列1 | 列2 | 列3 |
-| --- | --- | --- |
-| A1  | B1  | C1  |
-| A2  | B2  | C2  |
-
-## Mermaid 流程图示例
-
-\`\`\`mermaid
-flowchart TD
-    A[开始] --> B{条件?}
-    B -- 是 --> C[执行路径1]
-    B -- 否 --> D[执行路径2]
-    C --> E[结束]
-    D --> E[结束]
-\`\`\``;
+        let defaultContent = ``;
 
         // 初始化 Vditor
         console.log('初始化编辑器，当前URL:', window.location.href);
@@ -275,7 +229,9 @@ flowchart TD
                 minHeight: 500,
                 // cdn: 'https://cdnjs.cloudflare.com/ajax/libs/vditor/3.11.1', // 无法使用cf公共cdn，没有dist目录
                 mode: 'sv', // 分屏
-                input(value) { updateStats(value); },
+                input(value) {
+                    updateStats(value);
+                },
                 toolbarConfig: {
                     pin: true,
                 },
@@ -497,7 +453,7 @@ flowchart TD
 
             if (postId && isVditorReady) {
                 // 编辑模式，从API获取文章内容 - 修正URL以匹配路由配置
-                const apiUrl = `/api/v1/post/${postId}`;
+                const apiUrl = `/app/admin/editor/post/${postId}`;
                 console.log('准备发送API请求，URL:', apiUrl);
                 // 添加重试计数和最大重试次数
                 let retryCount = 0;
@@ -550,10 +506,10 @@ flowchart TD
                                 }
 
                                 // 设置密码
-                                const passwordInput = document.getElementById('post-password');
+                                /*const passwordInput = document.getElementById('post-password');
                                 if (passwordInput && data.data.password) {
                                     passwordInput.value = data.data.password;
-                                }
+                                }*/
 
                                 // 设置评论允许
                                 const allowCommentsCheckbox = document.getElementById('allow-comments');
@@ -725,8 +681,16 @@ flowchart TD
             });
 
             // 搜索功能
+            let debounceTimer = null;
+
             authorsSearch.addEventListener('input', function () {
-                loadAuthorsList(this.value);
+                // 每次输入时先清除之前的定时器
+                clearTimeout(debounceTimer);
+
+                // 设置新的定时器，延迟执行请求（这里设置为500毫秒，可根据需求调整）
+                debounceTimer = setTimeout(() => {
+                    loadAuthorsList(this.value);
+                }, 500); // 500ms是等待时间，用户停止输入500ms后才会执行请求
             });
 
             // 点击其他地方关闭下拉框
@@ -782,6 +746,9 @@ flowchart TD
             authors.forEach(author => {
                 const isSelected = selectedAuthors.some(a => a.id === author.id);
                 const authorItem = document.createElement('div');
+                if (!author.email) {
+                    author.email = '无邮件地址';
+                }
                 authorItem.className = `p-2 cursor-pointer hover:bg-gray-100 rounded ${isSelected ? 'bg-blue-50 text-blue-600' : ''}`;
                 authorItem.innerHTML = `
                     <div class="flex items-center justify-between">
@@ -829,7 +796,7 @@ flowchart TD
         function loadPostAuthors() {
             if (!postId) return;
 
-            fetch(`/api/v1/post/${postId}`)
+            fetch(`/app/admin/editor/post/${postId}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.code === 200 && data.data && data.data.authors) {
@@ -915,7 +882,7 @@ flowchart TD
 
         // 可见性字段变化监听，显示/隐藏密码输入框
         if (postVisibility && passwordField) {
-            postVisibility.addEventListener('change', function() {
+            postVisibility.addEventListener('change', function () {
                 if (this.value === 'password') {
                     passwordField.classList.remove('hidden');
                 } else {

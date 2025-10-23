@@ -41,7 +41,7 @@ class IndexController
      * @throws CommonMarkException
      * @throws Throwable
      */
-    //    #[EnableInstantFirstPaint]
+    #[EnableInstantFirstPaint]
     public function index(Request $request, int $page = 1): Response
     {
 

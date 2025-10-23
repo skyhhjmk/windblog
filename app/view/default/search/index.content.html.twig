@@ -1,234 +1,257 @@
 <title>{{ page_title|default('搜索') }}</title>
 <div id="pjax-container">
-<!-- PJAX 隐藏侧栏片段：完成后注入到布局右侧栏 -->
-<div id="pjax-sidebar-html" style="display:none">
-    {% if sidebar is defined and sidebar.widgets is defined %}
-        {% for widget in sidebar.widgets %}
-            {% if widget.enabled and widget.html is defined %}
-                <div class="sidebar-widget" data-widget-key="{{ widget.key ?? widget.id ?? widget.slug ?? widget.name ?? loop.index }}" data-widget-type="{{ widget.type ?? '' }}">
-                    {{ widget.html|raw }}
-                </div>
-            {% endif %}
-        {% endfor %}
-    {% endif %}
-</div>
-<div class="max-w-full mx-auto px-4">
-    <!-- 搜索标题区域 -->
-    <div class="text-center mb-12 fade-in-on-scroll" data-animation-delay="0">
-        <h1 class="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
-            <i class="fas fa-search text-blue-600 mr-3"></i>
-            搜索结果
-        </h1>
-        {% if search_keyword %}
-            <p class="text-gray-600 text-lg md:text-xl">
-                搜索关键词: <span class="font-semibold text-blue-600">"{{ search_keyword }}"</span>
-            </p>
-            {% if esMeta is defined and esMeta.signals is defined %}
-                <p class="text-sm text-blue-600 mt-2">
-                    {% if esMeta.signals.synonym %}已应用同义词扩展匹配{% endif %}
-                    {% if esMeta.signals.highlighted %}{% if esMeta.signals.synonym %}、{% endif %}已为关键词提供高亮{% endif %}
-                    {% if esMeta.signals.analyzer %}{% if esMeta.signals.synonym or esMeta.signals.highlighted %}、{% endif %}使用分词器: {{ esMeta.signals.analyzer }}{% endif %}
+    <!-- PJAX 隐藏侧栏片段：完成后注入到布局右侧栏 -->
+    <div id="pjax-sidebar-html" style="display:none">
+        {% if sidebar is defined and sidebar.widgets is defined %}
+            {% for widget in sidebar.widgets %}
+                {% if widget.enabled and widget.html is defined %}
+                    <div class="sidebar-widget"
+                         data-widget-key="{{ widget.key ?? widget.id ?? widget.slug ?? widget.name ?? loop.index }}"
+                         data-widget-type="{{ widget.type ?? '' }}">
+                        {{ widget.html|raw }}
+                    </div>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    </div>
+    <div class="max-w-full mx-auto px-4">
+        <!-- 搜索标题区域 -->
+        <div class="text-center mb-12 fade-in-on-scroll" data-animation-delay="0">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-search text-blue-600 mr-3"></i>
+                搜索结果
+            </h1>
+            {% if search_keyword %}
+                <p class="text-gray-600 text-lg md:text-xl">
+                    搜索关键词: <span class="font-semibold text-blue-600">"{{ search_keyword }}"</span>
                 </p>
-                {% if esMeta.signals.degraded %}
-                    <div class="mt-3 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-xl px-4 py-2 inline-flex items-center">
-                        <i class="fas fa-exclamation-triangle mr-2"></i>
-                        服务降级：ES 搜索优化失效
+                {% if esMeta is defined and esMeta.signals is defined %}
+                    <p class="text-sm text-blue-600 mt-2">
+                        {% if esMeta.signals.synonym %}已应用同义词扩展匹配{% endif %}
+                        {% if esMeta.signals.highlighted %}{% if esMeta.signals.synonym %}、{% endif %}已为关键词提供高亮{% endif %}
+                        {% if esMeta.signals.analyzer %}{% if esMeta.signals.synonym or esMeta.signals.highlighted %}、{% endif %}使用分词器: {{ esMeta.signals.analyzer }}{% endif %}
+                    </p>
+                    {% if esMeta.signals.degraded %}
+                        <div
+                            class="mt-3 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-xl px-4 py-2 inline-flex items-center">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>
+                            服务降级：ES 搜索优化失效
+                        </div>
+                    {% endif %}
+                {% endif %}
+                <div class="mt-4">
+                    <div
+                        class="inline-flex items-center bg-blue-50 border border-blue-100 text-blue-700 rounded-xl px-4 py-2">
+                        <i class="fas fa-list-ol mr-2"></i>
+                        共 {{ totalCount|default(0) }} 条结果
+                    </div>
+                </div>
+                {% if suggest_titles is defined and suggest_titles|length > 0 %}
+                    <div class="mt-4 text-left bg-gray-50 border border-gray-100 rounded-2xl p-4">
+                        <div class="text-gray-700 font-medium mb-2">猜你想搜</div>
+                        <div class="flex flex-wrap gap-2">
+                            {% for t in suggest_titles %}
+                                <a href="/search?q={{ t|url_encode }}"
+                                   class="px-3 py-1 bg-white hover:bg-blue-50 text-gray-700 hover:text-blue-700 border border-gray-200 rounded-full text-sm transition-colors hover-lift accelerated">
+                                    {{ t }}
+                                </a>
+                            {% endfor %}
+                        </div>
                     </div>
                 {% endif %}
             {% endif %}
-            <div class="mt-4">
-                <div class="inline-flex items-center bg-blue-50 border border-blue-100 text-blue-700 rounded-xl px-4 py-2">
-                    <i class="fas fa-list-ol mr-2"></i>
-                    共 {{ totalCount|default(0) }} 条结果
-                </div>
-            </div>
-            {% if suggest_titles is defined and suggest_titles|length > 0 %}
-                <div class="mt-4 text-left bg-gray-50 border border-gray-100 rounded-2xl p-4">
-                    <div class="text-gray-700 font-medium mb-2">猜你想搜</div>
-                    <div class="flex flex-wrap gap-2">
-                        {% for t in suggest_titles %}
-                            <a href="/search?q={{ t|url_encode }}" class="px-3 py-1 bg-white hover:bg-blue-50 text-gray-700 hover:text-blue-700 border border-gray-200 rounded-full text-sm transition-colors hover-lift accelerated">
-                                {{ t }}
-                            </a>
-                        {% endfor %}
-                    </div>
-                </div>
-            {% endif %}
-        {% endif %}
-    </div>
-
-    <!-- 搜索表单（统一宽度为内容区宽度） -->
-    <div class="mt-4 mb-2">
-        <div class="max-w-3xl mx-auto">
-            <form action="/search" method="get" class="flex flex-wrap gap-3 items-center">
-                <input type="text" name="q" value="{{ search_keyword|default('') }}" placeholder="搜索关键词" class="flex-1 min-w-[240px] px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
-
-                <button type="submit" class="px-5 py-2 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-700 hover-lift accelerated">
-                    搜索
-                </button>
-            </form>
         </div>
-    </div>
 
-    <!-- 美化后的筛选区域（置于搜索表单下方） -->
-    <div class="mt-4 mb-12 md:mb-16">
-        <div class="max-w-3xl mx-auto">
-            <div class="bg-white border border-gray-200 rounded-2xl p-3 sm:p-4 shadow-sm fade-in-on-scroll" data-animation-delay="0.1">
-                <div class="flex flex-wrap gap-2 items-center">
-                    {% set currentType = search_type|default('all') %}
-                    {% set types = {'all':'全部','post':'文章','tag':'标签','category':'分类'} %}
-                    {% for key,label in types %}
-                        <a href="/search?q={{ search_keyword|url_encode }}&type={{ key }}{% if search_sort is defined and search_sort %}&sort={{ search_sort }}{% endif %}{% if search_date is defined and search_date %}&date={{ search_date }}{% endif %}"
-                           class="inline-flex items-center px-3 py-1.5 rounded-full border text-sm transition-colors hover-lift accelerated {{ currentType==key ? 'bg-blue-600 text-white border-blue-600 shadow' : 'bg-white text-gray-700 border-gray-300 hover:bg-blue-50 hover:text-blue-700' }}">
-                            {{ label }}
-                        </a>
-                    {% endfor %}
+        <!-- 搜索表单（统一宽度为内容区宽度） -->
+        <div class="mt-4 mb-2">
+            <div class="max-w-3xl mx-auto">
+                <form action="/search" method="get" class="flex flex-wrap gap-3 items-center">
+                    <input type="text" name="q" value="{{ search_keyword|default('') }}" placeholder="搜索关键词"
+                           class="flex-1 min-w-[240px] px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"/>
 
-                    <!-- 排序 -->
-                    <div class="ml-2 inline-flex items-center gap-2">
-                        <span class="text-xs text-gray-500">排序</span>
-                        {% set sorts = {'':'默认','latest':'最新','hot':'热度'} %}
-                        {% for sk,sl in sorts %}
-                            <a href="/search?q={{ search_keyword|url_encode }}&type={{ currentType }}{% if sk %}&sort={{ sk }}{% endif %}{% if search_date is defined and search_date %}&date={{ search_date }}{% endif %}"
-                               class="inline-flex items-center px-3 py-1.5 rounded-full border text-xs transition-colors hover-lift accelerated {{ (search_sort|default('')==sk) ? 'bg-purple-600 text-white border-purple-600 shadow' : 'bg-white text-gray-700 border-gray-300 hover:bg-purple-50 hover:text-purple-700' }}">
-                                {{ sl }}
+                    <button type="submit"
+                            class="px-5 py-2 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-700 hover-lift accelerated">
+                        搜索
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- 美化后的筛选区域（置于搜索表单下方） -->
+        <div class="mt-4 mb-12 md:mb-16">
+            <div class="max-w-3xl mx-auto">
+                <div class="bg-white border border-gray-200 rounded-2xl p-3 sm:p-4 shadow-sm fade-in-on-scroll"
+                     data-animation-delay="0.1">
+                    <div class="flex flex-wrap gap-2 items-center">
+                        {% set currentType = search_type|default('all') %}
+                        {% set types = {'all':'全部','post':'文章','tag':'标签','category':'分类'} %}
+                        {% for key,label in types %}
+                            <a href="/search?q={{ search_keyword|url_encode }}&type={{ key }}{% if search_sort is defined and search_sort %}&sort={{ search_sort }}{% endif %}{% if search_date is defined and search_date %}&date={{ search_date }}{% endif %}"
+                               class="inline-flex items-center px-3 py-1.5 rounded-full border text-sm transition-colors hover-lift accelerated {{ currentType==key ? 'bg-blue-600 text-white border-blue-600 shadow' : 'bg-white text-gray-700 border-gray-300 hover:bg-blue-50 hover:text-blue-700' }}">
+                                {{ label }}
                             </a>
                         {% endfor %}
-                    </div>
 
-                    <!-- 时间范围 -->
-                    <div class="ml-2 inline-flex items-center gap-2">
-                        <span class="text-xs text-gray-500">时间</span>
-                        {% set dates = {'':'全部','7d':'近7天','30d':'近30天','365d':'近一年'} %}
-                        {% for dk,dl in dates %}
-                            <a href="/search?q={{ search_keyword|url_encode }}&type={{ currentType }}{% if search_sort is defined and search_sort %}&sort={{ search_sort }}{% endif %}{% if dk %}&date={{ dk }}{% endif %}"
-                               class="inline-flex items-center px-3 py-1.5 rounded-full border text-xs transition-colors hover-lift accelerated {{ (search_date|default('')==dk) ? 'bg-green-600 text-white border-green-600 shadow' : 'bg-white text-gray-700 border-gray-300 hover:bg-green-50 hover:text-green-700' }}">
-                                {{ dl }}
-                            </a>
-                        {% endfor %}
+                        <!-- 排序 -->
+                        <div class="ml-2 inline-flex items-center gap-2">
+                            <span class="text-xs text-gray-500">排序</span>
+                            {% set sorts = {'':'默认','latest':'最新','hot':'热度'} %}
+                            {% for sk,sl in sorts %}
+                                <a href="/search?q={{ search_keyword|url_encode }}&type={{ currentType }}{% if sk %}&sort={{ sk }}{% endif %}{% if search_date is defined and search_date %}&date={{ search_date }}{% endif %}"
+                                   class="inline-flex items-center px-3 py-1.5 rounded-full border text-xs transition-colors hover-lift accelerated {{ (search_sort|default('')==sk) ? 'bg-purple-600 text-white border-purple-600 shadow' : 'bg-white text-gray-700 border-gray-300 hover:bg-purple-50 hover:text-purple-700' }}">
+                                    {{ sl }}
+                                </a>
+                            {% endfor %}
+                        </div>
+
+                        <!-- 时间范围 -->
+                        <div class="ml-2 inline-flex items-center gap-2">
+                            <span class="text-xs text-gray-500">时间</span>
+                            {% set dates = {'':'全部','7d':'近7天','30d':'近30天','365d':'近一年'} %}
+                            {% for dk,dl in dates %}
+                                <a href="/search?q={{ search_keyword|url_encode }}&type={{ currentType }}{% if search_sort is defined and search_sort %}&sort={{ search_sort }}{% endif %}{% if dk %}&date={{ dk }}{% endif %}"
+                                   class="inline-flex items-center px-3 py-1.5 rounded-full border text-xs transition-colors hover-lift accelerated {{ (search_date|default('')==dk) ? 'bg-green-600 text-white border-green-600 shadow' : 'bg-white text-gray-700 border-gray-300 hover:bg-green-50 hover:text-green-700' }}">
+                                    {{ dl }}
+                                </a>
+                            {% endfor %}
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
 
 
-
-    <!-- 博客文章列表 -->
-    {% if posts|length > 0 %}
-        <div class="space-y-8">
-            {% for post in posts %}
-                <div class="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 group hover-lift accelerated fade-in-on-scroll" data-animation-delay="{{ loop.index0 * 0.1 }}">
-                    <div class="p-6">
-                        <h2 class="text-2xl font-bold text-gray-800 mb-2 group-hover:text-blue-600 transition-colors duration-200">
-                            <a href="/post/{{ post.slug }}.html" target="_blank"
-                               class="block hover-lift accelerated">
-                                {{ (esMeta.highlights[post.id].title[0] ?? post.title)|raw }}
-                            </a>
-                        </h2>
-                        <div class="flex items-center text-gray-500 text-sm mb-4">
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full border bg-green-50 text-green-700 border-green-100 mr-3 text-xs">
+        <!-- 博客文章列表 -->
+        {% if posts|length > 0 %}
+            <div class="space-y-8">
+                {% for post in posts %}
+                    <div
+                        class="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 group hover-lift accelerated fade-in-on-scroll"
+                        data-animation-delay="{{ loop.index0 * 0.1 }}">
+                        <div class="p-6">
+                            <h2 class="text-2xl font-bold text-gray-800 mb-2 group-hover:text-blue-600 transition-colors duration-200">
+                                <a href="/post/{{ post.slug }}.html" target="_blank"
+                                   class="block hover-lift accelerated">
+                                    {{ (esMeta.highlights[post.id].title[0] ?? post.title)|raw }}
+                                </a>
+                            </h2>
+                            <div class="flex items-center text-gray-500 text-sm mb-4">
+                            <span
+                                class="inline-flex items-center px-2 py-0.5 rounded-full border bg-green-50 text-green-700 border-green-100 mr-3 text-xs">
                                 文章
                             </span>
-                            <span class="mr-4">
+                                <span class="mr-4">
                                 <i class="far fa-calendar-alt mr-1"></i>
                                 {{ post.created_at|date('Y-m-d') }}
                             </span>
-                            <span>
+                                <span>
                                 <i class="far fa-user mr-1"></i>
                                 {{ post.author.name }}
                             </span>
-                        </div>
-                        <p class="text-gray-600 mb-4 leading-relaxed">
-                            {{ (esMeta.highlights[post.id].content[0] ?? (post.excerpt ~ '...'))|raw }}
-                        </p>
-                        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                            <div class="flex flex-wrap gap-2">
-                                {% if post.categories is defined and post.categories|length > 0 %}
-                                    {% for c in post.categories %}
-                                        <a href="/category/{{ c.slug }}.html" class="px-2 py-1 text-xs rounded-full bg-blue-50 text-blue-700 border border-blue-100 hover:bg-blue-100 transition-colors hover-lift accelerated">
-                                            <i class="fas fa-folder-open mr-1"></i>{{ c.name }}
-                                        </a>
-                                    {% endfor %}
-                                {% endif %}
-                                {% if post.tags is defined and post.tags|length > 0 %}
-                                    {% for t in post.tags %}
-                                        <a href="/tag/{{ t.slug }}.html" class="px-2 py-1 text-xs rounded-full bg-purple-50 text-purple-700 border-purple-100 hover:bg-purple-100 transition-colors hover-lift accelerated">
-                                            <i class="fas fa-hashtag mr-1"></i>{{ t.name }}
-                                        </a>
-                                    {% endfor %}
-                                {% endif %}
                             </div>
-                            <a href="/post/{{ post.slug }}.html"
-                               class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium transition-colors duration-200 hover-lift accelerated">
-                                阅读更多
-                                <svg class="w-4 h-4 ml-1 transition-transform duration-200 group-hover:translate-x-1" 
-                                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                          d="M9 5l7 7-7 7"></path>
-                                </svg>
-                            </a>
+                            <p class="text-gray-600 mb-4 leading-relaxed">
+                                {{ (esMeta.highlights[post.id].content[0] ?? (post.excerpt ~ '...'))|raw }}
+                            </p>
+                            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                                <div class="flex flex-wrap gap-2">
+                                    {% if post.categories is defined and post.categories|length > 0 %}
+                                        {% for c in post.categories %}
+                                            <a href="/category/{{ c.slug }}.html"
+                                               class="px-2 py-1 text-xs rounded-full bg-blue-50 text-blue-700 border border-blue-100 hover:bg-blue-100 transition-colors hover-lift accelerated">
+                                                <i class="fas fa-folder-open mr-1"></i>{{ c.name }}
+                                            </a>
+                                        {% endfor %}
+                                    {% endif %}
+                                    {% if post.tags is defined and post.tags|length > 0 %}
+                                        {% for t in post.tags %}
+                                            <a href="/tag/{{ t.slug }}.html"
+                                               class="px-2 py-1 text-xs rounded-full bg-purple-50 text-purple-700 border-purple-100 hover:bg-purple-100 transition-colors hover-lift accelerated">
+                                                <i class="fas fa-hashtag mr-1"></i>{{ t.name }}
+                                            </a>
+                                        {% endfor %}
+                                    {% endif %}
+                                </div>
+                                <a href="/post/{{ post.slug }}.html"
+                                   class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium transition-colors duration-200 hover-lift accelerated">
+                                    阅读更多
+                                    <svg
+                                        class="w-4 h-4 ml-1 transition-transform duration-200 group-hover:translate-x-1"
+                                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                              d="M9 5l7 7-7 7"></path>
+                                    </svg>
+                                </a>
+                            </div>
                         </div>
                     </div>
+                {% endfor %}
+            </div>
+
+            <!-- 分页 -->
+            <div class="mt-12 flex justify-center fade-in-on-scroll" data-animation-delay="0.3">
+                {{ pagination|raw }}
+            </div>
+        {% else %}
+            <div class="bg-white rounded-2xl shadow-lg p-12 text-center fade-in-on-scroll" data-animation-delay="0.2">
+                <div class="text-gray-400 mb-4">
+                    <svg class="w-24 h-24 mx-auto opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
                 </div>
-            {% endfor %}
-        </div>
-
-        <!-- 分页 -->
-        <div class="mt-12 flex justify-center fade-in-on-scroll" data-animation-delay="0.3">
-            {{ pagination|raw }}
-        </div>
-    {% else %}
-        <div class="bg-white rounded-2xl shadow-lg p-12 text-center fade-in-on-scroll" data-animation-delay="0.2">
-            <div class="text-gray-400 mb-4">
-                <svg class="w-24 h-24 mx-auto opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                </svg>
+                <h3 class="text-2xl font-medium text-gray-700 mb-2">没有找到相关文章</h3>
+                <p class="text-gray-500 max-w-md mx-auto">
+                    {% if search_keyword %}
+                        没有找到与 "<span class="font-semibold">{{ search_keyword }}</span>" 相关的文章
+                    {% else %}
+                        请输入搜索关键词
+                    {% endif %}
+                </p>
+                <div class="mt-6">
+                    <a href="/"
+                       class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium transition-colors duration-200 hover-lift accelerated">
+                        <i class="fas fa-home mr-2"></i>
+                        返回首页
+                    </a>
+                </div>
             </div>
-            <h3 class="text-2xl font-medium text-gray-700 mb-2">没有找到相关文章</h3>
-            <p class="text-gray-500 max-w-md mx-auto">
-                {% if search_keyword %}
-                    没有找到与 "<span class="font-semibold">{{ search_keyword }}</span>" 相关的文章
-                {% else %}
-                    请输入搜索关键词
-                {% endif %}
-            </p>
-            <div class="mt-6">
-                <a href="/" class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium transition-colors duration-200 hover-lift accelerated">
-                    <i class="fas fa-home mr-2"></i>
-                    返回首页
-                </a>
-            </div>
-        </div>
-    {% endif %}
-</div>
+        {% endif %}
+    </div>
 
-<style>
-    .hl { background-color: #ffea7a; color: #7c2d12; padding: 0 2px; border-radius: 2px; font-weight: 700; }
-</style>
+    <style>
+        .hl {
+            background-color: #ffea7a;
+            color: #7c2d12;
+            padding: 0 2px;
+            border-radius: 2px;
+            font-weight: 700;
+        }
+    </style>
 
-<script>
+    <script>
 
 
-</script>
-<script>
-    (function () {
-        function injectSidebar() {
-            var t = document.getElementById('pjax-sidebar-html');
-            var c = document.getElementById('sidebar-container');
-            if (t && c) {
-                if (window.PJAX || window.jQuery) {
-                    try { document.dispatchEvent(new CustomEvent('pjax:sidebarReady')); } catch (_) {}
-                } else {
-                    c.innerHTML = t.innerHTML || '';
+    </script>
+    <script>
+        (function () {
+            function injectSidebar() {
+                var t = document.getElementById('pjax-sidebar-html');
+                var c = document.getElementById('sidebar-container');
+                if (t && c) {
+                    if (window.PJAX || window.jQuery) {
+                        try {
+                            document.dispatchEvent(new CustomEvent('pjax:sidebarReady'));
+                        } catch (_) {
+                        }
+                    } else {
+                        c.innerHTML = t.innerHTML || '';
+                    }
                 }
-            }
                 c.innerHTML = t.innerHTML || '';
             }
-        }
-        injectSidebar();
-        document.addEventListener('page:ready', injectSidebar);
-    })();
-</script>
+
+            injectSidebar();
+            document.addEventListener('page:ready', injectSidebar);
+        })();
+    </script>
 </div>

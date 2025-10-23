@@ -17,7 +17,7 @@ class PostController
 {
     protected array $noNeedLogin = ['index'];
 
-    //    #[EnableInstantFirstPaint]
+    #[EnableInstantFirstPaint]
     public function index(Request $request, mixed $keyword = null): Response
     {
         // 移除URL参数中的 .html 后缀
@@ -56,7 +56,6 @@ class PostController
                 break;
             default:
                 return view('error/404');
-                break;
         }
 
         // 使用PJAXHelper检测是否为PJAX请求
@@ -70,54 +69,129 @@ class PostController
         $primaryAuthor = $post->primaryAuthor->first();
         $authorName = $primaryAuthor ? $primaryAuthor->nickname : ($post->authors->first() ? $post->authors->first()->nickname : '未知作者');
 
-        // 使用FloLink处理文章内容
-        if (blog_config('flolink_enabled', true)) {
-            try {
-                $post->content = FloLinkService::processContent($post->content);
-            } catch (Exception $e) {
-                Log::error('FloLink处理失败: ' . $e->getMessage());
-                // 处理失败时使用原始内容
+        if ($post->visibility === 'public') {
+
+            // 使用FloLink处理文章内容
+            if (blog_config('flolink_enabled', true)) {
+                try {
+                    $post->content = FloLinkService::processContent($post->content);
+                } catch (Exception $e) {
+                    Log::error('FloLink处理失败: ' . $e->getMessage());
+                    // 处理失败时使用原始内容
+                }
+            }
+
+            // 动态选择模板：PJAX 返回片段，非 PJAX 返回完整页面
+            $viewName = PJAXHelper::getViewName('index/post', $isPjax);
+
+            // 非 PJAX 请求启用页面级缓存（TTL=120）
+            $cacheKey = null;
+            if (!$isPjax) {
+                $locale = $request->header('Accept-Language') ?? 'zh-CN';
+                $route = 'post.index';
+                $params = [
+                    'keyword' => $keyword,
+                    'mode' => blog_config('url_mode', 'mix', true),
+                ];
+                $cacheKey = PJAXHelper::generateCacheKey($route, $params, 1, $locale);
+            }
+
+            // 创建带缓存的PJAX响应
+            $resp = PJAXHelper::createResponse(
+                $request,
+                $viewName,
+                [
+                    'page_title' => $post['title'] . ' - ' . blog_config('title', 'WindBlog', true),
+                    'post' => $post,
+                    'author' => $authorName,
+                    'sidebar' => $sidebar,
+                ],
+                $cacheKey,
+                120,
+                'page'
+            );
+
+            // 动作：文章内容渲染完成（需权限 content:action.post_rendered）
+            PluginService::do_action('content.post_rendered', [
+                'slug' => is_string($keyword) ? $keyword : null,
+                'id' => is_numeric($keyword) ? (int) $keyword : null,
+            ]);
+
+            // 过滤器：文章响应（需权限 content:filter.post_response）
+            $resp = PluginService::apply_filters('content.post_response_filter', $resp);
+        } elseif ($post->visibility === 'password') {
+            $accessble = false;
+            $current_password = $request->get('password');
+            if ($current_password) {
+                if (password_verify($current_password, $post->password)) {
+                    $accessble = true;
+                } else {
+                    $note = '密码错误';
+                }
+            }
+            if ($accessble) {
+                // 使用FloLink处理文章内容
+                if (blog_config('flolink_enabled', true)) {
+                    try {
+                        $post->content = FloLinkService::processContent($post->content);
+                    } catch (Exception $e) {
+                        Log::error('FloLink处理失败: ' . $e->getMessage());
+                        // 处理失败时使用原始内容
+                    }
+                }
+
+                // 动态选择模板：PJAX 返回片段，非 PJAX 返回完整页面
+                $viewName = PJAXHelper::getViewName('index/post', $isPjax);
+
+                // 非 PJAX 请求启用页面级缓存（TTL=120）
+                $cacheKey = null;
+                if (!$isPjax) {
+                    $locale = $request->header('Accept-Language') ?? 'zh-CN';
+                    $route = 'post.index';
+                    $params = [
+                        'keyword' => $keyword,
+                        'mode' => blog_config('url_mode', 'mix', true),
+                    ];
+                    $cacheKey = PJAXHelper::generateCacheKey($route, $params, 1, $locale);
+                }
+
+                // 创建带缓存的PJAX响应
+                $resp = PJAXHelper::createResponse(
+                    $request,
+                    $viewName,
+                    [
+                        'page_title' => $post['title'] . ' - ' . blog_config('title', 'WindBlog', true),
+                        'post' => $post,
+                        'author' => $authorName,
+                        'sidebar' => $sidebar,
+                    ],
+                    $cacheKey,
+                    120,
+                    'page'
+                );
+
+                // 动作：文章内容渲染完成（需权限 content:action.post_rendered）
+                PluginService::do_action('content.post_rendered', [
+                    'slug' => is_string($keyword) ? $keyword : null,
+                    'id' => is_numeric($keyword) ? (int) $keyword : null,
+                ]);
+
+                // 过滤器：文章响应（需权限 content:filter.post_response）
+                $resp = PluginService::apply_filters('content.post_response_filter', $resp);
+            } else {
+                $viewName = PJAXHelper::getViewName('lock/post', $isPjax);
+                $resp = view($viewName, [
+                    'note' => $note ?? null,
+                    'post' => $post,
+                    'author' => $authorName,
+                    'sidebar' => $sidebar,
+                ]);
             }
         }
 
-        // 动态选择模板：PJAX 返回片段，非 PJAX 返回完整页面
-        $viewName = PJAXHelper::getViewName('index/post', $isPjax);
-
-        // 非 PJAX 请求启用页面级缓存（TTL=120）
-        $cacheKey = null;
-        if (!$isPjax) {
-            $locale = $request->header('Accept-Language') ?? 'zh-CN';
-            $route = 'post:index';
-            $params = [
-                'keyword' => $keyword,
-                'mode' => blog_config('url_mode', 'mix', true),
-            ];
-            $cacheKey = PJAXHelper::generateCacheKey($route, $params, 1, $locale);
+        if (empty($resp)) {
+            $resp = view('error/404');
         }
-
-        // 创建带缓存的PJAX响应
-        $resp = PJAXHelper::createResponse(
-            $request,
-            $viewName,
-            [
-                'page_title' => $post['title'] . ' - ' . blog_config('title', 'WindBlog', true),
-                'post' => $post,
-                'author' => $authorName,
-                'sidebar' => $sidebar,
-            ],
-            $cacheKey,
-            120,
-            'page'
-        );
-
-        // 动作：文章内容渲染完成（需权限 content:action.post_rendered）
-        PluginService::do_action('content.post_rendered', [
-            'slug' => is_string($keyword) ? $keyword : null,
-            'id' => is_numeric($keyword) ? (int) $keyword : null,
-        ]);
-
-        // 过滤器：文章响应（需权限 content:filter.post_response）
-        $resp = PluginService::apply_filters('content.post_response_filter', $resp);
 
         return $resp;
     }

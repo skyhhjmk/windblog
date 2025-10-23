@@ -1,0 +1,8 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ post.title }} - {{ page_title|default('风屿雨博客') }}{% endblock %}
+
+{% block content %}
+    {# 引入文章内容模板，确保与PJAX加载的内容一致 #}
+    {% include 'lock/post.content.html.twig' %}
+{% endblock %}
