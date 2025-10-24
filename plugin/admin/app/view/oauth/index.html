@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>OAuth平台管理</title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css"/>
+    <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+    <script src="/app/admin/component/pear/pear.js"></script>
+</head>
+<body class="pear-container">
+<div class="layui-fluid">
+    <div class="layui-card">
+        <div class="layui-card-header">
+            <button class="layui-btn layui-btn-sm" id="addOAuthProvider">
+                <i class="layui-icon layui-icon-add-1"></i> 新增OAuth平台
+            </button>
+            <button class="layui-btn layui-btn-sm layui-btn-normal" id="refreshTable">
+                <i class="layui-icon layui-icon-refresh"></i> 刷新
+            </button>
+        </div>
+        <div class="layui-card-body">
+            <table id="oauthTable" lay-filter="oauthTable"></table>
+        </div>
+    </div>
+</div>
+
+<!-- 工具栏模板 -->
+<script type="text/html" id="oauthBarTpl">
+    <a class="layui-btn layui-btn-xs" lay-event="edit"><i class="layui-icon layui-icon-edit"></i>编辑</a>
+    {{# if(d.enabled){ }}
+    <a class="layui-btn layui-btn-xs layui-btn-warm" lay-event="toggle"><i class="layui-icon layui-icon-pause"></i>禁用</a>
+    {{# } else { }}
+    <a class="layui-btn layui-btn-xs layui-btn-normal" lay-event="toggle"><i class="layui-icon layui-icon-play"></i>启用</a>
+    {{# } }}
+    <a class="layui-btn layui-btn-xs layui-btn-danger" lay-event="delete"><i class="layui-icon layui-icon-delete"></i>删除</a>
+</script>
+
+<!-- 状态模板 -->
+<script type="text/html" id="statusTpl">
+    {{# if(d.enabled){ }}
+    <span class="layui-badge layui-bg-green">已启用</span>
+    {{# } else { }}
+    <span class="layui-badge layui-bg-gray">已禁用</span>
+    {{# } }}
+</script>
+
+<!-- 类型模板 -->
+<script type="text/html" id="typeTpl">
+    {{# if(d.has_base_url){ }}
+    <span class="layui-badge layui-bg-blue">通用平台</span>
+    {{# } else { }}
+    <span class="layui-badge layui-bg-cyan">内置平台</span>
+    {{# } }}
+</script>
+
+<script>
+    layui.use(['table', 'layer', 'form'], function () {
+        var table = layui.table;
+        var layer = layui.layer;
+        var form = layui.form;
+        var $ = layui.$;
+
+        // 渲染表格
+        table.render({
+            elem: '#oauthTable',
+            url: '/app/admin/oauth/list',
+            page: false,
+            cols: [[
+                {field: 'name', title: '平台名称', width: 150},
+                {field: 'key', title: '标识符', width: 120},
+                {field: 'enabled', title: '状态', width: 100, templet: '#statusTpl', align: 'center'},
+                {field: 'has_base_url', title: '类型', width: 120, templet: '#typeTpl', align: 'center'},
+                {field: 'base_url', title: 'Base URL', minWidth: 200},
+                {field: 'client_id', title: 'Client ID', minWidth: 180},
+                {fixed: 'right', title: '操作', width: 220, align: 'center', toolbar: '#oauthBarTpl'}
+            ]],
+            response: {
+                statusCode: 0
+            },
+            parseData: function (res) {
+                return {
+                    code: res.code,
+                    msg: res.msg,
+                    count: res.data ? res.data.length : 0,
+                    data: res.data || []
+                };
+            }
+        });
+
+        // 刷新表格
+        $('#refreshTable').on('click', function () {
+            table.reload('oauthTable');
+        });
+
+        // 新增平台
+        $('#addOAuthProvider').on('click', function () {
+            showEditDialog(null);
+        });
+
+        // 工具栏事件
+        table.on('tool(oauthTable)', function (obj) {
+            var data = obj.data;
+
+            if (obj.event === 'edit') {
+                // 编辑平台
+                $.get('/app/admin/oauth/get', {provider: data.key}, function (res) {
+                    if (res.code === 0) {
+                        showEditDialog(res.data);
+                    } else {
+                        layer.msg('获取配置失败: ' + res.msg, {icon: 2});
+                    }
+                });
+            } else if (obj.event === 'delete') {
+                // 删除平台
+                layer.confirm('确定删除该OAuth平台吗？<br><span style="color:red">删除后将无法恢复！</span>', {
+                    icon: 3,
+                    title: '警告'
+                }, function (index) {
+                    $.post('/app/admin/oauth/delete', {provider: data.key}, function (res) {
+                        if (res.code === 0) {
+                            layer.msg('删除成功', {icon: 1});
+                            table.reload('oauthTable');
+                        } else {
+                            layer.msg('删除失败: ' + res.msg, {icon: 2});
+                        }
+                    });
+                    layer.close(index);
+                });
+            } else if (obj.event === 'toggle') {
+                // 切换状态
+                var action = data.enabled ? '禁用' : '启用';
+                layer.confirm('确定' + action + '该OAuth平台吗？', function (index) {
+                    $.post('/app/admin/oauth/toggle', {
+                        provider: data.key,
+                        enabled: !data.enabled
+                    }, function (res) {
+                        if (res.code === 0) {
+                            layer.msg(action + '成功', {icon: 1});
+                            table.reload('oauthTable');
+                        } else {
+                            layer.msg('操作失败: ' + res.msg, {icon: 2});
+                        }
+                    });
+                    layer.close(index);
+                });
+            }
+        });
+
+        // 显示编辑对话框
+        function showEditDialog(data) {
+            var isEdit = data !== null;
+            var title = isEdit ? '编辑OAuth平台' : '新增OAuth平台';
+
+            var content = `
+                    <form class="layui-form" lay-filter="oauthForm" style="padding: 20px 20px 0 0;">
+                        <!-- 基础信息 -->
+                        <fieldset class="layui-elem-field" style="margin-bottom: 15px;">
+                            <legend>基础信息</legend>
+                            <div class="layui-field-box" style="padding: 15px;">
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label" style="width: 110px;"><span style="color: red;">*</span>平台标识符</label>
+                                    <div class="layui-input-block" style="margin-left: 130px;">
+                                        <input type="text" name="key" placeholder="例如: gitlab (仅小写字母、数字、下划线)"
+                                               class="layui-input" required lay-verify="required" ${isEdit ? 'readonly' : ''}>
+                                        ${!isEdit ? '<div class="layui-form-mid layui-word-aux">添加后不可修改</div>' : ''}
+                                    </div>
+                                </div>
+
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label" style="width: 110px;"><span style="color: red;">*</span>显示名称</label>
+                                    <div class="layui-input-block" style="margin-left: 130px;">
+                                        <input type="text" name="name" placeholder="例如: GitLab"
+                                               class="layui-input" required lay-verify="required">
+                                    </div>
+                                </div>
+
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label" style="width: 110px;">图标类名</label>
+                                    <div class="layui-input-block" style="margin-left: 130px;">
+                                        <input type="text" name="icon" placeholder="例如: fab fa-gitlab (Font Awesome)"
+                                               class="layui-input">
+                                    </div>
+                                </div>
+
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label" style="width: 110px;">主题色</label>
+                                    <div class="layui-input-block" style="margin-left: 130px;">
+                                        <input type="text" name="color" placeholder="例如: #fc6d26"
+                                               class="layui-input">
+                                    </div>
+                                </div>
+                            </div>
+                        </fieldset>
+
+                        <!-- OAuth配置 -->
+                        <fieldset class="layui-elem-field" style="margin-bottom: 15px;">
+                            <legend>OAuth配置</legend>
+                            <div class="layui-field-box" style="padding: 15px;">
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label" style="width: 110px;">Base URL</label>
+                                    <div class="layui-input-block" style="margin-left: 130px;">
+                                        <input type="text" name="base_url"
+                                               placeholder="例如: https://gitlab.com (通用平台必填)"
+                                               class="layui-input">
+                                        <div class="layui-form-mid layui-word-aux">通用平台必填，内置平台留空</div>
+                                    </div>
+                                </div>
+
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label" style="width: 110px;"><span style="color: red;">*</span>Client ID</label>
+                                    <div class="layui-input-block" style="margin-left: 130px;">
+                                        <input type="text" name="client_id" class="layui-input" required lay-verify="required">
+                                    </div>
+                                </div>
+
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label" style="width: 110px;"><span style="color: red;">*</span>Client Secret</label>
+                                    <div class="layui-input-block" style="margin-left: 130px;">
+                                        <input type="text" name="client_secret" class="layui-input"
+                                               placeholder="${isEdit ? '不修改请留空' : ''}" ${isEdit ? '' : 'required lay-verify="required"'}>
+                                        ${isEdit ? '<div class="layui-form-mid layui-word-aux">不修改请留空</div>' : ''}
+                                    </div>
+                                </div>
+
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label" style="width: 110px;">Scopes</label>
+                                    <div class="layui-input-block" style="margin-left: 130px;">
+                                        <input type="text" name="scopes"
+                                               placeholder="用逗号分隔，例如: read_user,email"
+                                               class="layui-input">
+                                    </div>
+                                </div>
+
+                                <div class="layui-form-item">
+                                    <div class="layui-input-block" style="margin-left: 130px;">
+                                        <input type="checkbox" name="enabled" title="启用该平台" lay-skin="switch">
+                                    </div>
+                                </div>
+                            </div>
+                        </fieldset>
+
+                        <!-- 高级配置（可折叠） -->
+                        <fieldset class="layui-elem-field">
+                            <legend>高级配置（可选）</legend>
+                            <div class="layui-field-box" style="padding: 15px;">
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label" style="width: 110px;">授权端点</label>
+                                    <div class="layui-input-block" style="margin-left: 130px;">
+                                        <input type="text" name="authorize_path"
+                                               placeholder="默认: /oauth/authorize"
+                                               class="layui-input">
+                                    </div>
+                                </div>
+
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label" style="width: 110px;">令牌端点</label>
+                                    <div class="layui-input-block" style="margin-left: 130px;">
+                                        <input type="text" name="token_path"
+                                               placeholder="默认: /oauth/token"
+                                               class="layui-input">
+                                    </div>
+                                </div>
+
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label" style="width: 110px;">用户信息端点</label>
+                                    <div class="layui-input-block" style="margin-left: 130px;">
+                                        <input type="text" name="userinfo_path"
+                                               placeholder="默认: /oauth/userinfo"
+                                               class="layui-input">
+                                    </div>
+                                </div>
+
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label" style="width: 110px;">撤销端点</label>
+                                    <div class="layui-input-block" style="margin-left: 130px;">
+                                        <input type="text" name="revoke_path"
+                                               placeholder="默认: /oauth/revoke"
+                                               class="layui-input">
+                                    </div>
+                                </div>
+
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label" style="width: 110px;">用户ID字段</label>
+                                    <div class="layui-input-block" style="margin-left: 130px;">
+                                        <input type="text" name="user_id_field"
+                                               placeholder="默认: id"
+                                               class="layui-input">
+                                    </div>
+                                </div>
+
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label" style="width: 110px;">用户名字段</label>
+                                    <div class="layui-input-block" style="margin-left: 130px;">
+                                        <input type="text" name="username_field"
+                                               placeholder="默认: username"
+                                               class="layui-input">
+                                    </div>
+                                </div>
+
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label" style="width: 110px;">邮箱字段</label>
+                                    <div class="layui-input-block" style="margin-left: 130px;">
+                                        <input type="text" name="email_field"
+                                               placeholder="默认: email"
+                                               class="layui-input">
+                                    </div>
+                                </div>
+
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label" style="width: 110px;">昵称字段</label>
+                                    <div class="layui-input-block" style="margin-left: 130px;">
+                                        <input type="text" name="nickname_field"
+                                               placeholder="默认: nickname"
+                                               class="layui-input">
+                                    </div>
+                                </div>
+
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label" style="width: 110px;">头像字段</label>
+                                    <div class="layui-input-block" style="margin-left: 130px;">
+                                        <input type="text" name="avatar_field"
+                                               placeholder="默认: avatar"
+                                               class="layui-input">
+                                    </div>
+                                </div>
+                            </div>
+                        </fieldset>
+
+                        <div class="layui-form-item" style="margin-top: 20px;">
+                            <div class="layui-input-block" style="margin-left: 130px;">
+                                <button class="layui-btn" lay-submit lay-filter="oauthSubmit">保存</button>
+                                <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+                            </div>
+                        </div>
+                    </form>
+                `;
+
+            var index = layer.open({
+                type: 1,
+                title: title,
+                area: ['850px', '90%'],
+                content: content,
+                success: function (layero, index) {
+                    // 填充表单数据
+                    if (isEdit && data) {
+                        form.val('oauthForm', {
+                            key: data.key,
+                            name: data.name,
+                            icon: data.icon,
+                            color: data.color,
+                            base_url: data.base_url,
+                            client_id: data.client_id,
+                            scopes: Array.isArray(data.scopes) ? data.scopes.join(',') : data.scopes,
+                            enabled: data.enabled,
+                            authorize_path: data.authorize_path,
+                            token_path: data.token_path,
+                            userinfo_path: data.userinfo_path,
+                            revoke_path: data.revoke_path,
+                            user_id_field: data.user_id_field,
+                            username_field: data.username_field,
+                            email_field: data.email_field,
+                            nickname_field: data.nickname_field,
+                            avatar_field: data.avatar_field
+                        });
+                    }
+
+                    // 提交事件
+                    form.on('submit(oauthSubmit)', function (formData) {
+                        var submitData = formData.field;
+
+                        // 处理密钥字段
+                        if (isEdit && !submitData.client_secret) {
+                            delete submitData.client_secret;
+                        }
+
+                        // 处理scopes
+                        if (submitData.scopes) {
+                            submitData.scopes = submitData.scopes.split(',').map(s => s.trim()).filter(s => s);
+                        }
+
+                        // 处理enabled
+                        submitData.enabled = submitData.enabled === 'on';
+
+                        $.ajax({
+                            url: '/app/admin/oauth/save',
+                            type: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify(submitData),
+                            success: function (res) {
+                                if (res.code === 0) {
+                                    layer.msg('保存成功', {icon: 1});
+                                    layer.close(index);
+                                    table.reload('oauthTable');
+                                } else {
+                                    layer.msg('保存失败: ' + res.msg, {icon: 2});
+                                }
+                            },
+                            error: function () {
+                                layer.msg('网络请求失败', {icon: 2});
+                            }
+                        });
+
+                        return false;
+                    });
+                }
+            });
+        }
+    });
+</script>
+</body>
+</html>

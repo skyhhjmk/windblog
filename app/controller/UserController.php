@@ -706,13 +706,18 @@ class UserController
     {
         $oauthService = new OAuthService();
 
-        // 使用 OAuthService 获取授权 URL
-        $scopes = match ($provider) {
-            'wind' => ['basic', 'profile'],
-            'github' => ['user:email'],
-            'google' => ['openid', 'email', 'profile'],
-            default => [],
-        };
+        // 从配置中读取scopes，如果没有则使用默认值
+        $scopes = $config['scopes'] ?? [];
+
+        // 如果配置中没有scopes，使用内置平台的默认值
+        if (empty($scopes)) {
+            $scopes = match ($provider) {
+                'wind' => ['basic', 'profile'],
+                'github' => ['user:email'],
+                'google' => ['openid', 'email', 'profile'],
+                default => [],
+            };
+        }
 
         $authUrl = $oauthService->getAuthorizationUrl($provider, $config, $state, $scopes);
 

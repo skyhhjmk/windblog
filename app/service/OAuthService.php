@@ -2,10 +2,14 @@
 
 namespace app\service;
 
+use app\oauth\GenericOAuthProvider;
 use app\oauth\WindOAuthProvider;
+use Exception;
 use League\OAuth2\Client\Provider\AbstractProvider;
 use League\OAuth2\Client\Provider\Github;
 use League\OAuth2\Client\Provider\Google;
+use League\OAuth2\Client\Token\AccessToken;
+use support\Log;
 
 /**
  * OAuth 服务类
@@ -23,12 +27,23 @@ class OAuthService
      */
     public function createProvider(string $provider, array $config): ?AbstractProvider
     {
-        return match ($provider) {
-            'wind' => $this->createWindProvider($config),
-            'github' => $this->createGithubProvider($config),
-            'google' => $this->createGoogleProvider($config),
-            default => null,
-        };
+        // 内置平台处理
+        $builtInProviders = [
+            'wind' => fn () => $this->createWindProvider($config),
+            'github' => fn () => $this->createGithubProvider($config),
+            'google' => fn () => $this->createGoogleProvider($config),
+        ];
+
+        if (isset($builtInProviders[$provider])) {
+            return $builtInProviders[$provider]();
+        }
+
+        // 通用 OAuth Provider（适用于自定义平台）
+        if (!empty($config['base_url'])) {
+            return $this->createGenericProvider($config);
+        }
+
+        return null;
     }
 
     /**
@@ -81,6 +96,61 @@ class OAuthService
     }
 
     /**
+     * 创建通用 OAuth Provider
+     *
+     * @param array $config
+     *
+     * @return GenericOAuthProvider
+     */
+    protected function createGenericProvider(array $config): GenericOAuthProvider
+    {
+        $options = [
+            'clientId' => $config['client_id'],
+            'clientSecret' => $config['client_secret'],
+            'redirectUri' => $config['redirect_uri'],
+            'baseUrl' => $config['base_url'],
+        ];
+
+        // 可选端点配置
+        if (!empty($config['authorize_path'])) {
+            $options['authorizePath'] = $config['authorize_path'];
+        }
+        if (!empty($config['token_path'])) {
+            $options['tokenPath'] = $config['token_path'];
+        }
+        if (!empty($config['userinfo_path'])) {
+            $options['userInfoPath'] = $config['userinfo_path'];
+        }
+        if (!empty($config['revoke_path'])) {
+            $options['revokePath'] = $config['revoke_path'];
+        }
+
+        // 字段映射配置
+        if (!empty($config['user_id_field'])) {
+            $options['userIdField'] = $config['user_id_field'];
+        }
+        if (!empty($config['username_field'])) {
+            $options['usernameField'] = $config['username_field'];
+        }
+        if (!empty($config['email_field'])) {
+            $options['emailField'] = $config['email_field'];
+        }
+        if (!empty($config['nickname_field'])) {
+            $options['nicknameField'] = $config['nickname_field'];
+        }
+        if (!empty($config['avatar_field'])) {
+            $options['avatarField'] = $config['avatar_field'];
+        }
+
+        // 默认权限范围
+        if (!empty($config['scopes']) && is_array($config['scopes'])) {
+            $options['defaultScopes'] = $config['scopes'];
+        }
+
+        return new GenericOAuthProvider($options);
+    }
+
+    /**
      * 获取用户信息
      *
      * @param string $provider 提供商名称
@@ -108,8 +178,8 @@ class OAuthService
 
             // 统一返回格式
             return $this->normalizeUserData($provider, $userData, $accessToken);
-        } catch (\Exception $e) {
-            \support\Log::error('OAuth getUserData failed: ' . $e->getMessage());
+        } catch (Exception $e) {
+            Log::error('OAuth getUserData failed: ' . $e->getMessage());
 
             return null;
         }
@@ -120,23 +190,20 @@ class OAuthService
      *
      * @param string                                  $provider
      * @param array                                   $userData
-     * @param \League\OAuth2\Client\Token\AccessToken $accessToken
+     * @param AccessToken $accessToken
      *
      * @return array
      */
     protected function normalizeUserData(string $provider, array $userData, $accessToken): array
     {
-        return match ($provider) {
+        // 内置平台的特殊处理
+        $specialMapping = [
             'wind' => [
-                'id' => (string) ($userData['user_id'] ?? ''),
+                'id' => (string) ($userData['user_id'] ?? $userData['id'] ?? ''),
                 'username' => $userData['username'] ?? '',
                 'email' => $userData['email'] ?? null,
                 'name' => $userData['name'] ?? $userData['nickname'] ?? null,
                 'avatar' => $userData['avatar'] ?? null,
-                'access_token' => $accessToken->getToken(),
-                'refresh_token' => $accessToken->getRefreshToken(),
-                'expires_at' => $accessToken->getExpires() ? date('Y-m-d H:i:s', $accessToken->getExpires()) : null,
-                'extra' => $userData,
             ],
             'github' => [
                 'id' => (string) ($userData['id'] ?? ''),
@@ -144,10 +211,6 @@ class OAuthService
                 'email' => $userData['email'] ?? null,
                 'name' => $userData['name'] ?? null,
                 'avatar' => $userData['avatar_url'] ?? null,
-                'access_token' => $accessToken->getToken(),
-                'refresh_token' => $accessToken->getRefreshToken(),
-                'expires_at' => $accessToken->getExpires() ? date('Y-m-d H:i:s', $accessToken->getExpires()) : null,
-                'extra' => $userData,
             ],
             'google' => [
                 'id' => (string) ($userData['sub'] ?? $userData['id'] ?? ''),
@@ -155,23 +218,25 @@ class OAuthService
                 'email' => $userData['email'] ?? null,
                 'name' => $userData['name'] ?? null,
                 'avatar' => $userData['picture'] ?? null,
-                'access_token' => $accessToken->getToken(),
-                'refresh_token' => $accessToken->getRefreshToken(),
-                'expires_at' => $accessToken->getExpires() ? date('Y-m-d H:i:s', $accessToken->getExpires()) : null,
-                'extra' => $userData,
             ],
-            default => [
-                'id' => (string) ($userData['id'] ?? ''),
-                'username' => $userData['username'] ?? '',
-                'email' => $userData['email'] ?? null,
-                'name' => $userData['name'] ?? null,
-                'avatar' => $userData['avatar'] ?? null,
-                'access_token' => $accessToken->getToken(),
-                'refresh_token' => $accessToken->getRefreshToken(),
-                'expires_at' => $accessToken->getExpires() ? date('Y-m-d H:i:s', $accessToken->getExpires()) : null,
-                'extra' => $userData,
-            ],
-        };
+        ];
+
+        // 使用特殊映射或默认映射
+        $mapped = $specialMapping[$provider] ?? [
+            'id' => (string) ($userData['id'] ?? ''),
+            'username' => $userData['username'] ?? '',
+            'email' => $userData['email'] ?? null,
+            'name' => $userData['name'] ?? $userData['nickname'] ?? null,
+            'avatar' => $userData['avatar'] ?? null,
+        ];
+
+        // 添加通用字段
+        return array_merge($mapped, [
+            'access_token' => $accessToken->getToken(),
+            'refresh_token' => $accessToken->getRefreshToken(),
+            'expires_at' => $accessToken->getExpires() ? date('Y-m-d H:i:s', $accessToken->getExpires()) : null,
+            'extra' => $userData,
+        ]);
     }
 
     /**
@@ -199,8 +264,8 @@ class OAuthService
             }
 
             return $oauthProvider->getAuthorizationUrl($options);
-        } catch (\Exception $e) {
-            \support\Log::error('OAuth getAuthorizationUrl failed: ' . $e->getMessage());
+        } catch (Exception $e) {
+            Log::error('OAuth getAuthorizationUrl failed: ' . $e->getMessage());
 
             return null;
         }

@@ -4,6 +4,8 @@ namespace app\model;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use support\Db;
+use support\Log;
 use Throwable;
 
 /**
@@ -129,30 +131,42 @@ class UserOAuthBinding extends Model
 
     /**
      * 获取支持的OAuth提供商列表
-     * 从数据库读取配置，仅返回已启用的平台
+     * 从数据库动态读取所有oauth_*配置，仅返回已启用的平台
      *
      * @return array
      */
     public static function getSupportedProviders(): array
     {
         $providers = [];
-        $platformKeys = ['wind', 'github', 'google'];
 
-        foreach ($platformKeys as $key) {
-            try {
-                $config = blog_config('oauth_' . $key, null, false, true);
-                if ($config && is_array($config)) {
-                    $providers[$key] = [
-                        'name' => $config['name'] ?? ucfirst($key),
-                        'icon' => $config['icon'] ?? 'fab fa-' . $key,
-                        'color' => $config['color'] ?? '#666',
-                        'enabled' => $config['enabled'] ?? false,
-                    ];
+        try {
+            // 从数据库动态读取所有oauth_*配置
+            $allSettings = Db::table('settings')
+                ->where('key', 'like', 'oauth_%')
+                ->get();
+
+            foreach ($allSettings as $setting) {
+                // 提取provider名称 (oauth_xxx => xxx)
+                $providerKey = str_replace('oauth_', '', $setting->key);
+
+                try {
+                    $config = json_decode($setting->value, true);
+
+                    if ($config && is_array($config)) {
+                        $providers[$providerKey] = [
+                            'name' => $config['name'] ?? ucfirst($providerKey),
+                            'icon' => $config['icon'] ?? 'fab fa-' . $providerKey,
+                            'color' => $config['color'] ?? '#666',
+                            'enabled' => $config['enabled'] ?? false,
+                        ];
+                    }
+                } catch (Throwable $e) {
+                    // 忽略错误，继续处理下一个
+                    continue;
                 }
-            } catch (Throwable $e) {
-                // 忽略错误，继续处理下一个
-                continue;
             }
+        } catch (Throwable $e) {
+            Log::error('Get supported providers failed: ' . $e->getMessage());
         }
 
         return $providers;
