@@ -1,6 +1,6 @@
 {% extends "base.html.twig" %}
 
-{% block title %}用户登录 - {{ page_title|default('风屿雨博客') }}{% endblock %}
+{% block title %}用户登录 - {{ page_title|default('WindBlog') }}{% endblock %}
 
 {% block content %}
     <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -64,32 +64,40 @@
                 </div>
             </form>
 
-            <!-- OAuth登录预留区域 -->
+            <!-- OAuth登录区域 -->
+            {% set oauthProviders = constant('app\\model\\UserOAuthBinding')::getSupportedProviders() %}
+
+            {% set hasEnabledProvider = false %}
+            {% for provider, providerInfo in oauthProviders %}
+                {% if providerInfo.enabled %}
+                    {% set hasEnabledProvider = true %}
+                {% endif %}
+            {% endfor %}
+
+            {% if hasEnabledProvider %}
             <div class="mt-6">
                 <div class="relative">
                     <div class="absolute inset-0 flex items-center">
                         <div class="w-full border-t border-gray-300"></div>
                     </div>
                     <div class="relative flex justify-center text-sm">
-                        <span class="px-2 bg-gray-50 text-gray-500">或使用第三方账号登录（即将推出）</span>
+                        <span class="px-2 bg-gray-50 text-gray-500">或使用第三方账号登录</span>
                     </div>
                 </div>
 
-                <div class="mt-6 grid grid-cols-3 gap-3 opacity-50 cursor-not-allowed">
-                    <div
-                        class="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500">
-                        <i class="fab fa-github text-xl"></i>
-                    </div>
-                    <div
-                        class="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500">
-                        <i class="fab fa-google text-xl"></i>
-                    </div>
-                    <div
-                        class="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500">
-                        <i class="fab fa-qq text-xl"></i>
-                    </div>
+                <div class="mt-6 grid grid-cols-3 gap-3">
+                    {% for provider, providerInfo in oauthProviders %}
+                        {% if providerInfo.enabled %}
+                            <a href="/oauth/{{ provider }}/redirect"
+                               class="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+                               title="使用 {{ providerInfo.name }} 登录">
+                                <i class="{{ providerInfo.icon }} text-xl" style="color: {{ providerInfo.color }}"></i>
+                            </a>
+                        {% endif %}
+                    {% endfor %}
                 </div>
             </div>
+            {% endif %}
         </div>
     </div>
 

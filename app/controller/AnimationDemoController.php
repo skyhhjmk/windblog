@@ -44,7 +44,7 @@ class AnimationDemoController
             $request,
             'animation-demo',
             [
-                'page_title' => '动画效果演示 - 风屿雨博客',
+                'page_title' => '动画效果演示 - WindBlog',
                 'sidebar' => $sidebar,
             ],
             null, // 不使用缓存

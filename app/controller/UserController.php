@@ -656,18 +656,20 @@ class UserController
     private function getOAuthConfig(string $provider): ?array
     {
         try {
+            // 从数据库读取配置
             $config = blog_config('oauth_' . $provider, null, false, true);
+
             if (!$config || !is_array($config)) {
                 return null;
             }
 
+            // 检查是否启用
+            if (isset($config['enabled']) && !$config['enabled']) {
+                return null;
+            }
+
             // 验证必要字段
-            $requiredFields = match ($provider) {
-                'github', 'google' => ['client_id', 'client_secret'],
-                'wechat' => ['app_id', 'app_secret'],
-                'qq' => ['app_id', 'app_key'],
-                default => [],
-            };
+            $requiredFields = ['client_id', 'client_secret'];
 
             foreach ($requiredFields as $field) {
                 if (empty($config[$field])) {
@@ -675,8 +677,10 @@ class UserController
                 }
             }
 
-            // 添加回调URL
-            $config['redirect_uri'] = request()->host() . '/oauth/' . $provider . '/callback';
+            // 确保有回调URL
+            if (empty($config['redirect_uri'])) {
+                $config['redirect_uri'] = request()->host() . '/oauth/' . $provider . '/callback';
+            }
 
             return $config;
         } catch (Throwable $e) {
@@ -697,44 +701,23 @@ class UserController
      */
     private function getAuthorizationUrl(string $provider, array $config, string $state): string
     {
-        switch ($provider) {
-            case 'github':
-                return 'https://github.com/login/oauth/authorize?' . http_build_query([
-                        'client_id' => $config['client_id'],
-                        'redirect_uri' => $config['redirect_uri'],
-                        'state' => $state,
-                        'scope' => 'user:email',
-                    ]);
+        $oauthService = new \app\service\OAuthService();
 
-            case 'google':
-                return 'https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query([
-                        'client_id' => $config['client_id'],
-                        'redirect_uri' => $config['redirect_uri'],
-                        'response_type' => 'code',
-                        'scope' => 'openid email profile',
-                        'state' => $state,
-                    ]);
+        // 使用 OAuthService 获取授权 URL
+        $scopes = match ($provider) {
+            'wind' => ['basic', 'profile'],
+            'github' => ['user:email'],
+            'google' => ['openid', 'email', 'profile'],
+            default => [],
+        };
 
-            case 'wechat':
-                return 'https://open.weixin.qq.com/connect/qrconnect?' . http_build_query([
-                        'appid' => $config['app_id'],
-                        'redirect_uri' => urlencode($config['redirect_uri']),
-                        'response_type' => 'code',
-                        'scope' => 'snsapi_login',
-                        'state' => $state,
-                    ]) . '#wechat_redirect';
+        $authUrl = $oauthService->getAuthorizationUrl($provider, $config, $state, $scopes);
 
-            case 'qq':
-                return 'https://graph.qq.com/oauth2.0/authorize?' . http_build_query([
-                        'client_id' => $config['app_id'],
-                        'redirect_uri' => $config['redirect_uri'],
-                        'response_type' => 'code',
-                        'state' => $state,
-                    ]);
-
-            default:
-                throw new Exception('不支持的OAuth平台');
+        if (!$authUrl) {
+            throw new Exception('不支持的OAuth平台');
         }
+
+        return $authUrl;
     }
 
     /**
@@ -747,18 +730,22 @@ class UserController
      */
     private function getOAuthUserData(string $provider, string $code): ?array
     {
-        // TODO: 实际项目中应使用league/oauth2-client包来处理
-        // 这里仅提供示例结构
-        return [
-            'id' => 'example_' . uniqid(),
-            'username' => 'example_user',
-            'email' => 'example@example.com',
-            'avatar' => null,
-            'access_token' => null,
-            'refresh_token' => null,
-            'expires_at' => null,
-            'extra' => [],
-        ];
+        try {
+            // 获取 OAuth 配置
+            $config = $this->getOAuthConfig($provider);
+            if (!$config) {
+                return null;
+            }
+
+            // 使用 OAuthService 获取用户数据
+            $oauthService = new \app\service\OAuthService();
+
+            return $oauthService->getUserData($provider, $code, $config);
+        } catch (\Throwable $e) {
+            Log::error('Get OAuth user data failed: ' . $e->getMessage());
+
+            return null;
+        }
     }
 
     /**

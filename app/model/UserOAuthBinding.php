@@ -4,6 +4,7 @@ namespace app\model;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Throwable;
 
 /**
  * 用户OAuth绑定模型
@@ -135,7 +136,7 @@ class UserOAuthBinding extends Model
     public static function getSupportedProviders(): array
     {
         $providers = [];
-        $platformKeys = ['github', 'google', 'wechat', 'qq'];
+        $platformKeys = ['wind', 'github', 'google'];
 
         foreach ($platformKeys as $key) {
             try {
@@ -148,7 +149,7 @@ class UserOAuthBinding extends Model
                         'enabled' => $config['enabled'] ?? false,
                     ];
                 }
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 // 忽略错误，继续处理下一个
                 continue;
             }

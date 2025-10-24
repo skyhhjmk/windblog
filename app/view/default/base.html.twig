@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
     <link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
     <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
-    <title>{% block title %}{{ page_title|default('风屿雨博客') }}{% endblock %}</title>
+    <title>{% block title %}{{ page_title|default('WindBlog') }}{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com/3.4.17"></script>
     {# 本地资产预加载与指纹化（零编译） #}
     <link rel="preload" as="style" href="{{ asset('/assets/css/font-awesome.css') }}">
@@ -235,7 +235,7 @@
     <div class="container mx-auto px-4 py-4 flex justify-between items-center">
         <a href="/" class="text-2xl font-bold text-gray-800 flex items-center hover-animate tap-highlight">
             <i class="fas fa-blog text-blue-600 mr-2"></i>
-            <span id="topbarTitle">{{ page_title|default('风屿雨博客') }}</span>
+            <span id="topbarTitle">{{ page_title|default('WindBlog') }}</span>
         </a>
         <!-- 搜索表单 -->
         <div class="relative hidden md:block mr-6">
@@ -459,7 +459,7 @@
         <div class="flex flex-col md:flex-row justify-between items-center">
             <div class="mb-4 md:mb-0 text-center md:text-left">
                 <p class="text-gray-600">
-                    &copy; {{ 'now'|date('Y') }} {{ page_title|default('风屿雨博客') }} - 基于 Webman 框架构建
+                    &copy; {{ 'now'|date('Y') }} {{ page_title|default('WindBlog') }} - 基于 Webman 框架构建
                 </p>
             </div>
             <div class="flex space-x-4">
