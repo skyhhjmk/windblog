@@ -302,6 +302,37 @@
         const addConfigFieldBtn = document.getElementById('addConfigField');
         const saveVersionConfigBtn = document.getElementById('saveVersionConfig');
 
+        // 从本地存储加载保存的appId和apiKey
+        function loadSavedCredentials() {
+            const savedAppId = localStorage.getItem('rainyun_appId');
+            const savedApiKey = localStorage.getItem('rainyun_apiKey');
+
+            if (savedAppId) {
+                appIdInput.value = savedAppId;
+            }
+
+            if (savedApiKey) {
+                apiKeyInput.value = savedApiKey;
+            }
+        }
+
+        // 保存appId和apiKey到本地存储
+        function saveCredentials() {
+            const appId = appIdInput.value.trim();
+            const apiKey = apiKeyInput.value.trim();
+
+            if (appId) {
+                localStorage.setItem('rainyun_appId', appId);
+            }
+
+            if (apiKey) {
+                localStorage.setItem('rainyun_apiKey', apiKey);
+            }
+        }
+
+        // 页面加载时尝试加载已保存的凭据
+        loadSavedCredentials();
+
         // 全局变量存储版本数据
         let versionsData = [];
         let currentVersionData = null;
@@ -352,6 +383,9 @@
                 return;
             }
 
+            // 保存凭据到本地存储
+            saveCredentials();
+
             showLoading('正在获取应用详情...');
 
             // 创建请求对象，避免直接fetch的跨域问题
@@ -394,7 +428,7 @@
                             logoInput.value = appData.logo || '';
 
                             // 显示表单
-                            // 保持“应用信息”表单隐藏，仅使用下方版本详细配置
+                            // 保持"应用信息"表单隐藏，仅使用下方版本详细配置
                             // appForm.classList.remove('hidden');
 
                             // 处理版本数据
@@ -461,6 +495,9 @@
                 showResult('请先输入App ID、API Key并选择版本', false);
                 return;
             }
+
+            // 保存凭据到本地存储
+            saveCredentials();
 
             showLoading('正在获取版本详细配置...');
 
@@ -573,6 +610,7 @@
                 tabContainers[t.id] = pane;
                 tabsBody.appendChild(pane);
             });
+
 
             function activateTab(id) {
                 // nav
@@ -1130,29 +1168,52 @@
                 volumeTitle.textContent = volume.name || `卷挂载 ${index + 1}`;
                 volumeCard.appendChild(volumeTitle);
 
-                const volumeDetails = document.createElement('div');
-                volumeDetails.className = 'space-y-1 text-sm text-gray-600';
+                const volumeForm = document.createElement('div');
+                volumeForm.className = 'space-y-2';
 
-                if (volume.mount_path) {
-                    volumeDetails.innerHTML += `<div><span class="font-medium">挂载路径:</span> ${volume.mount_path}</div>`;
+                // 创建可编辑的输入字段
+                const createField = (label, value, className) => {
+                    const fieldDiv = document.createElement('div');
+                    fieldDiv.className = 'space-y-1';
+
+                    const labelEl = document.createElement('label');
+                    labelEl.className = 'block text-xs font-medium text-gray-600';
+                    labelEl.textContent = label;
+
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = `${className} w-full px-3 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500`;
+                    input.value = value || '';
+
+                    fieldDiv.appendChild(labelEl);
+                    fieldDiv.appendChild(input);
+                    return fieldDiv;
+                };
+
+                // 添加可编辑字段
+                if (volume.name !== undefined) {
+                    volumeForm.appendChild(createField('卷名称', volume.name, 'vol-name-edit'));
                 }
-                if (volume.sub_path) {
-                    volumeDetails.innerHTML += `<div><span class="font-medium">子路径:</span> ${volume.sub_path}</div>`;
+                if (volume.mount_path !== undefined) {
+                    volumeForm.appendChild(createField('挂载路径', volume.mount_path, 'vol-mount-path-edit'));
                 }
-                if (volume.mount_content_type) {
-                    volumeDetails.innerHTML += `<div><span class="font-medium">类型:</span> ${volume.mount_content_type}</div>`;
+                if (volume.sub_path !== undefined) {
+                    volumeForm.appendChild(createField('子路径', volume.sub_path, 'vol-sub-path-edit'));
+                }
+                if (volume.mount_content_type !== undefined) {
+                    volumeForm.appendChild(createField('类型', volume.mount_content_type, 'vol-type-edit'));
                 }
 
                 // 删除按钮
                 const deleteBtn = document.createElement('button');
                 deleteBtn.type = 'button';
-                deleteBtn.className = 'text-red-500 hover:text-red-700 transition-colors text-sm';
-                deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+                deleteBtn.className = 'mt-2 text-red-500 hover:text-red-700 transition-colors text-sm';
+                deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i> 删除';
                 deleteBtn.addEventListener('click', function () {
                     volumeCard.remove();
                 });
 
-                volumeCard.appendChild(volumeDetails);
+                volumeCard.appendChild(volumeForm);
                 volumeCard.appendChild(deleteBtn);
                 volumesContainer.appendChild(volumeCard);
             });
@@ -1854,21 +1915,39 @@
 
             // 4. 采集新增的 volume_mounts
             const volumesContainerRef = document.querySelector('.volumes-container');
+            payload.volume_mounts = [];
             if (volumesContainerRef) {
-                const mounts = [];
-                const volumeCards = volumesContainerRef.querySelectorAll('.volume-new-card');
+                const volumeCards = volumesContainerRef.querySelectorAll('.bg-gray-50, .volume-new-card');
                 volumeCards.forEach(card => {
-                    const name = card.querySelector('.vol-name')?.value || '';
-                    const mount_path = card.querySelector('.vol-mount-path')?.value || '';
-                    const sub_path = card.querySelector('.vol-sub-path')?.value || '';
-                    const mount_content_type = card.querySelector('.vol-type')?.value || '';
-                    const pre_content = card.querySelector('.vol-pre-content')?.value || '';
-                    mounts.push({name, mount_path, sub_path, mount_content_type, pre_content});
+                    if (card.classList.contains('volume-new-card')) {
+                        const name = card.querySelector('.vol-name')?.value || '';
+                        const mount_path = card.querySelector('.vol-mount-path')?.value || '';
+                        const sub_path = card.querySelector('.vol-sub-path')?.value || '';
+                        const mount_content_type = card.querySelector('.vol-type')?.value || '';
+                        const pre_content = card.querySelector('.vol-pre-content')?.value || '';
+                        payload.volume_mounts.push({name, mount_path, sub_path, mount_content_type, pre_content});
+                    } else if (card.dataset.volumeJson) {
+                        // 从编辑框读取值
+                        const nameInput = card.querySelector('.vol-name-edit');
+                        const mountPathInput = card.querySelector('.vol-mount-path-edit');
+                        const subPathInput = card.querySelector('.vol-sub-path-edit');
+                        const typeInput = card.querySelector('.vol-type-edit');
+
+                        let volume;
+                        try {
+                            volume = JSON.parse(card.dataset.volumeJson);
+                        } catch (e) {
+                            volume = {};
+                        }
+
+                        if (nameInput) volume.name = nameInput.value;
+                        if (mountPathInput) volume.mount_path = mountPathInput.value;
+                        if (subPathInput) volume.sub_path = subPathInput.value;
+                        if (typeInput) volume.mount_content_type = typeInput.value;
+
+                        payload.volume_mounts.push(volume);
+                    }
                 });
-                if (mounts.length) {
-                    const original = Array.isArray(configData.volume_mounts) ? configData.volume_mounts : [];
-                    configData.volume_mounts = [...original, ...mounts];
-                }
             }
 
             // 5. 采集新增的 services
@@ -2193,6 +2272,9 @@
                 return;
             }
 
+            // 保存凭据到本地存储
+            saveCredentials();
+
             // apps/select 的可选项 value 唯一性校验（同一组内不可重复）
             {
                 const editors = document.querySelectorAll('.opt-values-editor');
@@ -2425,6 +2507,9 @@
                 showResult('请填写App ID和API Key', false);
                 return;
             }
+
+            // 保存凭据到本地存储
+            saveCredentials();
 
             // 构建请求数据
             const formData = {
