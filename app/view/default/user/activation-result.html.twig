@@ -1,0 +1,59 @@
+{% extends "base.html.twig" %}
+
+{% block title %}账户激活 - {{ page_title|default('风屿雨博客') }}{% endblock %}
+
+{% block content %}
+    <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-md w-full space-y-8 text-center">
+            {% if success %}
+                <div class="flex flex-col items-center">
+                    <div class="rounded-full bg-green-100 p-6 mb-6">
+                        <i class="fas fa-check-circle text-6xl text-green-500"></i>
+                    </div>
+                    <h2 class="text-3xl font-extrabold text-gray-900 mb-4">
+                        激活成功！
+                    </h2>
+                    <p class="text-lg text-gray-600 mb-8">
+                        {{ message }}
+                    </p>
+                    <div class="space-x-4">
+                        <a href="/user/login"
+                           class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            <i class="fas fa-sign-in-alt mr-2"></i>
+                            立即登录
+                        </a>
+                        <a href="/"
+                           class="inline-flex items-center px-6 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            <i class="fas fa-home mr-2"></i>
+                            返回首页
+                        </a>
+                    </div>
+                </div>
+            {% else %}
+                <div class="flex flex-col items-center">
+                    <div class="rounded-full bg-red-100 p-6 mb-6">
+                        <i class="fas fa-times-circle text-6xl text-red-500"></i>
+                    </div>
+                    <h2 class="text-3xl font-extrabold text-gray-900 mb-4">
+                        激活失败
+                    </h2>
+                    <p class="text-lg text-gray-600 mb-8">
+                        {{ message }}
+                    </p>
+                    <div class="space-x-4">
+                        <a href="/user/register"
+                           class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            <i class="fas fa-user-plus mr-2"></i>
+                            重新注册
+                        </a>
+                        <a href="/user/login"
+                           class="inline-flex items-center px-6 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            <i class="fas fa-envelope mr-2"></i>
+                            重发激活邮件
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

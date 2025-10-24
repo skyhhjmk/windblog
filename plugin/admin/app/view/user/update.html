@@ -12,35 +12,35 @@
 
             <div class="mainBox">
                 <div class="main-container mr-5">
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label required">用户名</label>
                         <div class="layui-input-block">
                             <input type="text" name="username" value="" required lay-verify="required" class="layui-input">
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label required">昵称</label>
                         <div class="layui-input-block">
                             <input type="text" name="nickname" value="" required lay-verify="required" class="layui-input">
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">密码</label>
                         <div class="layui-input-block">
                             <input type="text" name="password" value="" class="layui-input">
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">性别</label>
                         <div class="layui-input-block">
                             <div name="sex" id="sex" value="" ></div>
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">头像</label>
                         <div class="layui-input-block">
@@ -54,77 +54,77 @@
                             </button>
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">邮箱</label>
                         <div class="layui-input-block">
                             <input type="text" name="email" value="" class="layui-input">
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">手机</label>
                         <div class="layui-input-block">
                             <input type="text" name="mobile" value="" class="layui-input">
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">等级</label>
                         <div class="layui-input-block">
                             <input type="number" name="level" value="" class="layui-input">
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">生日</label>
                         <div class="layui-input-block">
                             <input type="text" name="birthday" id="birthday" autocomplete="off" class="layui-input">
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">余额(元)</label>
                         <div class="layui-input-block">
                             <input type="number" name="money" value="" class="layui-input">
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">积分</label>
                         <div class="layui-input-block">
                             <input type="number" name="score" value="" class="layui-input">
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">登录时间</label>
                         <div class="layui-input-block">
                             <input type="text" name="last_time" id="last_time" autocomplete="off" class="layui-input">
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">登录ip</label>
                         <div class="layui-input-block">
                             <input type="text" name="last_ip" value="" class="layui-input">
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">注册时间</label>
                         <div class="layui-input-block">
                             <input type="text" name="join_time" id="join_time" autocomplete="off" class="layui-input">
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">注册ip</label>
                         <div class="layui-input-block">
                             <input type="text" name="join_ip" value="" class="layui-input">
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">禁用</label>
                         <div class="layui-input-block">
@@ -132,7 +132,46 @@
                             <input type="text" style="display:none" name="status" value="0" />
                         </div>
                     </div>
-                    
+
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">邮箱验证时间</label>
+                        <div class="layui-input-block">
+                            <input type="text" name="email_verified_at" id="email_verified_at" autocomplete="off"
+                                   class="layui-input" readonly>
+                            <div class="layui-form-mid layui-word-aux" id="email_verified_status"></div>
+                        </div>
+                    </div>
+
+                    <div class="layui-form-item" id="activation_actions" style="display:none">
+                        <label class="layui-form-label">激活操作</label>
+                        <div class="layui-input-block">
+                            <button type="button" class="pear-btn pear-btn-primary pear-btn-sm" id="activate-user">
+                                <i class="layui-icon layui-icon-ok"></i>激活账户
+                            </button>
+                            <button type="button" class="pear-btn pear-btn-sm" id="reset-activation-token">
+                                <i class="layui-icon layui-icon-refresh"></i>重置激活令牌
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">OAuth提供商</label>
+                        <div class="layui-input-block">
+                            <input type="text" name="oauth_provider" value="" placeholder="如: github, google, qq 等"
+                                   class="layui-input">
+                            <div class="layui-form-mid layui-word-aux">第三方登录提供商（功能预留）</div>
+                        </div>
+                    </div>
+
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">OAuth用户ID</label>
+                        <div class="layui-input-block">
+                            <input type="text" name="oauth_id" value="" placeholder="第三方平台的用户ID"
+                                   class="layui-input">
+                            <div class="layui-form-mid layui-word-aux">OAuth绑定的用户ID（功能预留）</div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
@@ -146,7 +185,7 @@
                     </button>
                 </div>
             </div>
-            
+
         </form>
 
         <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
@@ -166,7 +205,7 @@
                     url: SELECT_API,
                     dataType: "json",
                     success: function (res) {
-                        
+
                         // 给表单初始化数据
                         layui.each(res.data[0], function (key, value) {
                             let obj = $('*[name="'+key+'"]');
@@ -181,7 +220,7 @@
                                 obj.attr("value", value);
                             }
                         });
-                        
+
                         // 字段 性别 sex
                         layui.use(["jquery", "xmSelect", "popup"], function() {
                             layui.$.ajax({
@@ -205,7 +244,7 @@
                                 }
                             });
                         });
-                        
+
                         // 字段 头像 avatar
                         layui.use(["upload", "layer"], function() {
                             let input = layui.$("#avatar").prev();
@@ -234,14 +273,14 @@
                                 }
                             });
                         });
-                        
+
                         // 字段 生日 birthday
                         layui.use(["laydate"], function() {
                             layui.laydate.render({
                                 elem: "#birthday",
                             });
                         })
-                        
+
                         // 字段 登录时间 last_time
                         layui.use(["laydate"], function() {
                             layui.laydate.render({
@@ -249,7 +288,7 @@
                                 type: "datetime",
                             });
                         })
-                        
+
                         // 字段 注册时间 join_time
                         layui.use(["laydate"], function() {
                             layui.laydate.render({
@@ -257,7 +296,7 @@
                                 type: "datetime",
                             });
                         })
-                        
+
                         // 字段 禁用 status
                         layui.use(["form"], function() {
                             layui.$("#status").attr("checked", layui.$('input[name="status"]').val() != 0);
@@ -266,6 +305,65 @@
                                 layui.$('input[name="status"]').val(this.checked ? 1 : 0);
                             });
                         })
+
+                        // 字段 邮箱验证时间 email_verified_at
+                        layui.use(["laydate"], function () {
+                            layui.laydate.render({
+                                elem: "#email_verified_at",
+                                type: "datetime",
+                            });
+                        })
+
+                        // 检查邮箱验证状态
+                        let emailVerifiedAt = layui.$('input[name="email_verified_at"]').val();
+                        let statusField = layui.$('input[name="status"]').val();
+                        if (!emailVerifiedAt && statusField == 0) {
+                            layui.$("#email_verified_status").html('<span style="color: #ff5722;">未激活</span>');
+                            layui.$("#activation_actions").show();
+                        } else if (emailVerifiedAt) {
+                            layui.$("#email_verified_status").html('<span style="color: #16b777;">已激活</span>');
+                        }
+
+                        // 激活账户
+                        layui.$("#activate-user").on("click", function () {
+                            layui.layer.confirm('确认要激活此账户吗？', {icon: 3, title: '提示'}, function (index) {
+                                layui.$.ajax({
+                                    url: "/app/admin/user/activate",
+                                    type: "POST",
+                                    data: {id: layui.url().search[PRIMARY_KEY]},
+                                    success: function (res) {
+                                        if (res.code === 0) {
+                                            layui.layer.msg('激活成功', {icon: 1});
+                                            setTimeout(function () {
+                                                location.reload();
+                                            }, 1000);
+                                        } else {
+                                            layui.layer.msg(res.msg, {icon: 2});
+                                        }
+                                    }
+                                });
+                                layui.layer.close(index);
+                            });
+                        });
+
+                        // 重置激活令牌
+                        layui.$("#reset-activation-token").on("click", function () {
+                            layui.layer.confirm('确认要重置激活令牌吗？', {icon: 3, title: '提示'}, function (index) {
+                                layui.$.ajax({
+                                    url: "/app/admin/user/resetActivationToken",
+                                    type: "POST",
+                                    data: {id: layui.url().search[PRIMARY_KEY]},
+                                    success: function (res) {
+                                        if (res.code === 0) {
+                                            layui.layer.alert('重置成功<br>激活链接：<br><textarea style="width:100%;height:60px;" readonly>' + res.data.activation_url + '</textarea>', {icon: 1});
+                                        } else {
+                                            layui.layer.msg(res.msg, {icon: 2});
+                                        }
+                                    }
+                                });
+                                layui.layer.close(index);
+                            });
+                        });
 
                         // ajax产生错误
                         if (res.code) {

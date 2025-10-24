@@ -30,6 +30,28 @@ Route::any('/post/{keyword}.html', [app\controller\PostController::class, 'index
 Route::any('/comment/submit/{postId}', [app\controller\CommentController::class, 'submit']);
 Route::any('/comment/list/{postId}', [app\controller\CommentController::class, 'getList']);
 
+// 用户相关路由
+Route::get('/user/register', function () {
+    return view('user/register');
+})->name('user.register.page');
+Route::post('/user/register', [app\controller\UserController::class, 'register'])->name('user.register');
+Route::get('/user/login', function () {
+    return view('user/login');
+})->name('user.login.page');
+Route::post('/user/login', [app\controller\UserController::class, 'login'])->name('user.login');
+Route::any('/user/logout', [app\controller\UserController::class, 'logout'])->name('user.logout');
+Route::get('/user/activate', [app\controller\UserController::class, 'activate'])->name('user.activate');
+Route::post('/user/resend-activation', [app\controller\UserController::class, 'resendActivation'])->name('user.resend.activation');
+Route::get('/user/profile', [app\controller\UserController::class, 'profile'])->name('user.profile');
+Route::get('/user/profile/api', [app\controller\UserController::class, 'profileApi'])->name('user.profile.api');
+Route::get('/user/center', [app\controller\UserController::class, 'center'])->name('user.center');
+
+// OAuth 2.0 预留路由
+Route::get('/oauth/{provider}/redirect', [app\controller\UserController::class, 'oauthRedirect'])->name('oauth.redirect');
+Route::get('/oauth/{provider}/callback', [app\controller\UserController::class, 'oauthCallback'])->name('oauth.callback');
+Route::post('/oauth/{provider}/bind', [app\controller\UserController::class, 'bindOAuth'])->name('oauth.bind');
+Route::post('/oauth/{provider}/unbind', [app\controller\UserController::class, 'unbindOAuth'])->name('oauth.unbind');
+
 // 页面路由 - 支持 .html 后缀
 // 首页分页路由 -> IndexController
 Route::any('/page/{page}', [app\controller\IndexController::class, 'index'])->name('index.page');

@@ -1,0 +1,203 @@
+{% extends "base.html.twig" %}
+
+{% block title %}用户登录 - {{ page_title|default('风屿雨博客') }}{% endblock %}
+
+{% block content %}
+    <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-md w-full space-y-8">
+            <div>
+                <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                    登录您的账户
+                </h2>
+                <p class="mt-2 text-center text-sm text-gray-600">
+                    还没有账户？
+                    <a href="/user/register" class="font-medium text-blue-600 hover:text-blue-500">
+                        立即注册
+                    </a>
+                </p>
+            </div>
+            <form class="mt-8 space-y-6" id="loginForm">
+                <div class="rounded-md shadow-sm space-y-4">
+                    <div>
+                        <label for="username" class="block text-sm font-medium text-gray-700">
+                            用户名或邮箱 <span class="text-red-500">*</span>
+                        </label>
+                        <input id="username" name="username" type="text" required
+                               class="mt-1 appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                               placeholder="请输入用户名或邮箱">
+                    </div>
+                    <div>
+                        <label for="password" class="block text-sm font-medium text-gray-700">
+                            密码 <span class="text-red-500">*</span>
+                        </label>
+                        <input id="password" name="password" type="password" required
+                               class="mt-1 appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                               placeholder="请输入密码">
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <input id="remember" name="remember" type="checkbox" value="1"
+                               class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                        <label for="remember" class="ml-2 block text-sm text-gray-900">
+                            记住我
+                        </label>
+                    </div>
+
+                    <div class="text-sm">
+                        <a href="#" class="font-medium text-blue-600 hover:text-blue-500"
+                           onclick="resendActivation(); return false;">
+                            重发激活邮件
+                        </a>
+                    </div>
+                </div>
+
+                <div>
+                    <button type="submit" id="submitBtn"
+                            class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+                        <i class="fas fa-sign-in-alt"></i>
+                    </span>
+                        登录
+                    </button>
+                </div>
+            </form>
+
+            <!-- OAuth登录预留区域 -->
+            <div class="mt-6">
+                <div class="relative">
+                    <div class="absolute inset-0 flex items-center">
+                        <div class="w-full border-t border-gray-300"></div>
+                    </div>
+                    <div class="relative flex justify-center text-sm">
+                        <span class="px-2 bg-gray-50 text-gray-500">或使用第三方账号登录（即将推出）</span>
+                    </div>
+                </div>
+
+                <div class="mt-6 grid grid-cols-3 gap-3 opacity-50 cursor-not-allowed">
+                    <div
+                        class="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500">
+                        <i class="fab fa-github text-xl"></i>
+                    </div>
+                    <div
+                        class="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500">
+                        <i class="fab fa-google text-xl"></i>
+                    </div>
+                    <div
+                        class="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500">
+                        <i class="fab fa-qq text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 登录表单提交
+        document.getElementById('loginForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const submitBtn = document.getElementById('submitBtn');
+            const formData = new FormData(this);
+
+            // 禁用提交按钮
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 登录中...';
+
+            try {
+                const response = await fetch('/user/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams(formData)
+                });
+
+                const result = await response.json();
+
+                if (result.code === 0) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '登录成功',
+                        text: result.msg || '欢迎回来！',
+                        timer: 1500,
+                        showConfirmButton: false,
+                    }).then(() => {
+                        window.location.href = '/';
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: '登录失败',
+                        text: result.msg || '未知错误',
+                        confirmButtonText: '确定',
+                    });
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<span class="absolute left-0 inset-y-0 flex items-center pl-3"><i class="fas fa-sign-in-alt"></i></span>登录';
+                }
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: '网络错误',
+                    text: '请检查网络连接后重试',
+                    confirmButtonText: '确定',
+                });
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<span class="absolute left-0 inset-y-0 flex items-center pl-3"><i class="fas fa-sign-in-alt"></i></span>登录';
+            }
+        });
+
+        // 重发激活邮件
+        async function resendActivation() {
+            const {value: email} = await Swal.fire({
+                title: '重发激活邮件',
+                input: 'email',
+                inputLabel: '请输入您的注册邮箱',
+                inputPlaceholder: '请输入邮箱地址',
+                showCancelButton: true,
+                confirmButtonText: '发送',
+                cancelButtonText: '取消',
+                inputValidator: (value) => {
+                    if (!value) {
+                        return '请输入邮箱地址！'
+                    }
+                }
+            });
+
+            if (email) {
+                try {
+                    const response = await fetch('/user/resend-activation', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: new URLSearchParams({email})
+                    });
+
+                    const result = await response.json();
+
+                    if (result.code === 0) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: '发送成功',
+                            text: result.msg || '激活邮件已发送，请查收',
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: '发送失败',
+                            text: result.msg || '未知错误',
+                        });
+                    }
+                } catch (error) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: '网络错误',
+                        text: '请检查网络连接后重试',
+                    });
+                }
+            }
+        }
+    </script>
+{% endblock %}

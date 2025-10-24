@@ -4,6 +4,7 @@ namespace app\controller;
 
 use app\model\Comment;
 use app\model\Post;
+use app\model\User;
 use Exception;
 use support\Log;
 use support\Request;
@@ -39,11 +40,29 @@ class CommentController
             return json(['code' => 403, 'msg' => '该文章已关闭评论']);
         }
 
+        // 检查用户登录状态
+        $session = $request->session();
+        $userId = $session->get('user_id');
+
+        if (!$userId) {
+            return json(['code' => 401, 'msg' => '请先登录再评论']);
+        }
+
+        // 检查用户是否已激活
+        $user = User::find($userId);
+        if (!$user) {
+            return json(['code' => 401, 'msg' => '用户不存在，请重新登录']);
+        }
+
+        if (!$user->canComment()) {
+            return json(['code' => 403, 'msg' => '您的账户未激活或已被禁用，无法评论']);
+        }
+
         // 获取评论数据
         $content = trim($request->post('content', ''));
         $parentId = (int) $request->post('parent_id', 0);
-        $guestName = trim($request->post('guest_name', ''));
-        $guestEmail = trim($request->post('guest_email', ''));
+        $guestName = $user->nickname; // 使用用户昵称
+        $guestEmail = $user->email; // 使用用户邮箱
         $quotedText = trim($request->post('quoted_text', ''));
         $quotedCommentId = (int) $request->post('quoted_comment_id', 0);
 
@@ -62,29 +81,7 @@ class CommentController
             return json(['code' => 400, 'msg' => '评论内容不能超过1000个字符']);
         }
 
-        // 2. 游客信息验证
-        if (empty($guestName)) {
-            return json(['code' => 400, 'msg' => '姓名不能为空']);
-        }
-
-        if (mb_strlen($guestName, 'UTF-8') > 50) {
-            return json(['code' => 400, 'msg' => '姓名不能超过50个字符']);
-        }
-
-        if (empty($guestEmail)) {
-            return json(['code' => 400, 'msg' => '邮箱不能为空']);
-        }
-
-        if (!filter_var($guestEmail, FILTER_VALIDATE_EMAIL)) {
-            return json(['code' => 400, 'msg' => '邮箱格式不正确']);
-        }
-
-        // 验证邮箱长度
-        if (strlen($guestEmail) > 100) {
-            return json(['code' => 400, 'msg' => '邮箱地址过长']);
-        }
-
-        // 3. 检查父评论是否存在
+        // 2. 检查父评论是否存在
         $parentComment = null;
         if ($parentId > 0) {
             $parentComment = Comment::where('id', $parentId)
@@ -155,10 +152,11 @@ class CommentController
             return json(['code' => 400, 'msg' => '请不要重复提交相同的评论']);
         }
 
-        // 7. 创建评论
+        // 6. 创建评论
         try {
             $comment = new Comment();
             $comment->post_id = $postId;
+            $comment->user_id = $userId; // 关联用户ID
             $comment->content = $sanitizedContent;
             $comment->guest_name = htmlspecialchars($guestName, ENT_QUOTES, 'UTF-8');
             $comment->guest_email = $guestEmail;

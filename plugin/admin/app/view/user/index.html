@@ -8,61 +8,61 @@
         <link rel="stylesheet" href="/app/admin/admin/css/reset.css" />
     </head>
     <body class="pear-container">
-    
+
         <!-- 顶部查询表单 -->
         <div class="layui-card">
             <div class="layui-card-body">
                 <form class="layui-form top-search-from">
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">主键</label>
                         <div class="layui-input-block">
                             <input type="number" name="id" value="" class="layui-input">
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">用户名</label>
                         <div class="layui-input-block">
                             <input type="text" name="username" value="" class="layui-input">
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">昵称</label>
                         <div class="layui-input-block">
                             <input type="text" name="nickname" value="" class="layui-input">
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">性别</label>
                         <div class="layui-input-block">
                             <div name="sex" id="sex" value="" ></div>
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">邮箱</label>
                         <div class="layui-input-block">
                             <input type="text" name="email" value="" class="layui-input">
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">手机</label>
                         <div class="layui-input-block">
                             <input type="text" name="mobile" value="" class="layui-input">
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">等级</label>
                         <div class="layui-input-block">
                             <input type="number" name="level" value="" class="layui-input">
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">生日</label>
                         <div class="layui-input-block">
@@ -73,21 +73,21 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">余额(元)</label>
                         <div class="layui-input-block">
                             <input type="number" name="money" value="" class="layui-input">
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">积分</label>
                         <div class="layui-input-block">
                             <input type="number" name="score" value="" class="layui-input">
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">登录时间</label>
                         <div class="layui-input-block">
@@ -98,14 +98,14 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">登录ip</label>
                         <div class="layui-input-block">
                             <input type="text" name="last_ip" value="" class="layui-input">
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">注册时间</label>
                         <div class="layui-input-block">
@@ -116,14 +116,14 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">注册ip</label>
                         <div class="layui-input-block">
                             <input type="text" name="join_ip" value="" class="layui-input">
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item layui-inline">
                         <label class="layui-form-label"></label>
                         <button class="pear-btn pear-btn-md pear-btn-primary" lay-submit lay-filter="table-query">
@@ -140,7 +140,7 @@
                 </form>
             </div>
         </div>
-        
+
         <!-- 数据表格 -->
         <div class="layui-card">
             <div class="layui-card-body">
@@ -177,7 +177,7 @@
             const DELETE_API = "/app/admin/user/delete";
             const INSERT_URL = "/app/admin/user/insert";
             const UPDATE_URL = "/app/admin/user/update";
-            
+
             // 字段 性别 sex
             layui.use(["jquery", "xmSelect", "popup"], function() {
                 layui.$.ajax({
@@ -201,7 +201,7 @@
                     }
                 });
             });
-            
+
             // 字段 生日 birthday
             layui.use(["laydate"], function() {
                 layui.laydate.render({
@@ -209,7 +209,7 @@
                     range: ["#birthday-date-start", "#birthday-date-end"],
                 });
             })
-            
+
             // 字段 登录时间 last_time
             layui.use(["laydate"], function() {
                 layui.laydate.render({
@@ -218,7 +218,7 @@
                     type: "datetime",
                 });
             })
-            
+
             // 字段 注册时间 join_time
             layui.use(["laydate"], function() {
                 layui.laydate.render({
@@ -227,7 +227,7 @@
                     type: "datetime",
                 });
             })
-            
+
             // 表格渲染
             layui.use(["table", "form", "common", "popup", "util"], function() {
                 let table = layui.table;
@@ -235,7 +235,7 @@
                 let $ = layui.$;
                 let common = layui.common;
                 let util = layui.util;
-                
+
 				// 表头参数
 				let cols = [
 					{
@@ -327,8 +327,32 @@
 						field: "role",
 						hide: true,
 					},{
+                        title: "激活状态",
+                        field: "email_verified_at",
+                        width: 100,
+                        templet: function (d) {
+                            if (d.email_verified_at) {
+                                return '<span style="color: #16b777;"><i class="layui-icon layui-icon-ok-circle"></i> 已激活</span>';
+                            } else {
+                                return '<span style="color: #ff5722;"><i class="layui-icon layui-icon-close-fill"></i> 未激活</span>';
+                            }
+                        }
+                    }, {
+                        title: "OAuth",
+                        field: "oauth_provider",
+                        width: 100,
+                        hide: true,
+                        templet: function (d) {
+                            if (d.oauth_provider && d.oauth_id) {
+                                return '<span style="color: #1e9fff;"><i class="layui-icon layui-icon-login-qq"></i> ' + util.escape(d.oauth_provider) + '</span>';
+                            } else {
+                                return '<span style="color: #999;">未绑定</span>';
+                            }
+                        }
+                    }, {
 						title: "禁用",
 						field: "status",
+                        width: 90,
 						templet: function (d) {
 							let field = "status";
 							form.on("switch("+field+")", function (data) {
@@ -358,7 +382,7 @@
                         width: 130,
 					}
 				];
-				
+
 				// 渲染表格
 				function render()
 				{
@@ -381,7 +405,7 @@
 				        }
 				    });
 				}
-				
+
 				// 获取表格中下拉或树形组件数据
 				let apis = [];
 				apis.push(["sex", "/app/admin/dict/get/sex"]);
@@ -418,7 +442,7 @@
 				if (!count) {
 				    render();
 				}
-				
+
                 // 编辑或删除行事件
                 table.on("tool(data-table)", function(obj) {
                     if (obj.event === "remove") {
@@ -449,7 +473,7 @@
                     })
                     return false;
                 });
-                
+
                 // 表格顶部搜索重置事件
                 form.on("submit(table-reset)", function(data) {
                     table.reload("data-table", {
