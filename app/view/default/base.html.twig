@@ -319,7 +319,7 @@
                             <span>我的评论</span>
                         </a>
                         <hr>
-                        <a href="/user/logout" onclick="return confirmLogout();">
+                        <a href="/user/logout" onclick="return confirmLogout();" data-no-pjax>
                             <i class="fas fa-sign-out-alt"></i>
                             <span>退出登录</span>
                         </a>
@@ -420,7 +420,7 @@
                     </a>
                 </li>
                 <li id="mobileUserLogout" class="hidden">
-                    <a href="/user/logout" onclick="return confirmLogout();"
+                    <a href="/user/logout" onclick="return confirmLogout();" data-no-pjax
                        class="block text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center py-2 tap-highlight">
                         <i class="fas fa-sign-out-alt mr-3 w-5 text-center"></i>
                         退出登录

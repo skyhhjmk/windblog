@@ -377,6 +377,117 @@ class ConfigController extends Base
     }
 
     /**
+     * 获取OAuth配置
+     *
+     * @return Response
+     */
+    public function get_oauth_config(): Response
+    {
+        try {
+            // 从现有配置中读取
+            $github = blog_config('oauth_github', [], true) ?: [];
+            $google = blog_config('oauth_google', [], true) ?: [];
+            $wind = blog_config('oauth_wind', [], true) ?: [];
+
+            $oauthConfig = [
+                'github' => [
+                    'enabled' => $github['enabled'] ?? false,
+                    'client_id' => $github['client_id'] ?? '',
+                    'client_secret' => $github['client_secret'] ?? '',
+                    'name' => $github['name'] ?? 'GitHub',
+                    'icon' => $github['icon'] ?? 'fab fa-github',
+                    'color' => $github['color'] ?? '#333',
+                ],
+                'google' => [
+                    'enabled' => $google['enabled'] ?? false,
+                    'client_id' => $google['client_id'] ?? '',
+                    'client_secret' => $google['client_secret'] ?? '',
+                    'name' => $google['name'] ?? 'Google',
+                    'icon' => $google['icon'] ?? 'fab fa-google',
+                    'color' => $google['color'] ?? '#DB4437',
+                ],
+                'wind' => [
+                    'enabled' => $wind['enabled'] ?? false,
+                    'base_url' => $wind['base_url'] ?? '',
+                    'client_id' => $wind['client_id'] ?? '',
+                    'client_secret' => $wind['client_secret'] ?? '',
+                    'name' => $wind['name'] ?? 'Wind OAuth',
+                    'icon' => $wind['icon'] ?? 'fas fa-wind',
+                    'color' => $wind['color'] ?? '#4a90e2',
+                ],
+            ];
+
+            return json($oauthConfig);
+        } catch (Throwable $e) {
+            return $this->json(1, $e->getMessage());
+        }
+    }
+
+    /**
+     * 设置OAuth配置
+     *
+     * @param Request $request
+     *
+     * @return Response
+     */
+    public function set_oauth_config(Request $request): Response
+    {
+        try {
+            // 接收JSON数据
+            $body = $request->rawBody();
+            $oauthConfig = json_decode($body, true);
+
+            if (!$oauthConfig || !is_array($oauthConfig)) {
+                return $this->json(1, '无效的请求数据');
+            }
+
+            // 保存GitHub配置
+            if (isset($oauthConfig['github'])) {
+                $github = $oauthConfig['github'];
+                $currentGithub = blog_config('oauth_github', [], true) ?: [];
+
+                // 正确处理布尔值：只有明确为true时才启用
+                $currentGithub['enabled'] = isset($github['enabled']) && $github['enabled'] === true;
+                $currentGithub['client_id'] = $github['client_id'] ?? '';
+                $currentGithub['client_secret'] = $github['client_secret'] ?? '';
+
+                blog_config('oauth_github', $currentGithub, true, true, true);
+            }
+
+            // 保存Google配置
+            if (isset($oauthConfig['google'])) {
+                $google = $oauthConfig['google'];
+                $currentGoogle = blog_config('oauth_google', [], true) ?: [];
+
+                // 正确处理布尔值：只有明确为true时才启用
+                $currentGoogle['enabled'] = isset($google['enabled']) && $google['enabled'] === true;
+                $currentGoogle['client_id'] = $google['client_id'] ?? '';
+                $currentGoogle['client_secret'] = $google['client_secret'] ?? '';
+
+                blog_config('oauth_google', $currentGoogle, true, true, true);
+            }
+
+            // 保存Wind OAuth配置
+            if (isset($oauthConfig['wind'])) {
+                $wind = $oauthConfig['wind'];
+                $currentWind = blog_config('oauth_wind', [], true) ?: [];
+
+                // 正确处理布尔值：只有明确为true时才启用
+                $currentWind['enabled'] = isset($wind['enabled']) && $wind['enabled'] === true;
+                $currentWind['base_url'] = $wind['base_url'] ?? '';
+                $currentWind['client_id'] = $wind['client_id'] ?? '';
+                $currentWind['client_secret'] = $wind['client_secret'] ?? '';
+
+                blog_config('oauth_wind', $currentWind, true, true, true);
+            }
+
+            return $this->json(0);
+        } catch (Throwable $e) {
+            return $this->json(1, $e->getMessage());
+        }
+    }
+
+    /**
      * 颜色格式验证
      *
      * @param string $color 颜色值

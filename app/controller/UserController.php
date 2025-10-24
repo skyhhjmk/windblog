@@ -5,6 +5,7 @@ namespace app\controller;
 use app\model\User;
 use app\model\UserOAuthBinding;
 use app\service\MQService;
+use app\service\OAuthService;
 use Exception;
 use support\Log;
 use support\Request;
@@ -679,7 +680,9 @@ class UserController
 
             // 确保有回调URL
             if (empty($config['redirect_uri'])) {
-                $config['redirect_uri'] = request()->host() . '/oauth/' . $provider . '/callback';
+                $scheme = request()->header('x-forwarded-proto') ?: (request()->connection->transport === 'ssl' ? 'https' : 'http');
+                $host = request()->host();
+                $config['redirect_uri'] = $scheme . '://' . $host . '/oauth/' . $provider . '/callback';
             }
 
             return $config;
@@ -701,7 +704,7 @@ class UserController
      */
     private function getAuthorizationUrl(string $provider, array $config, string $state): string
     {
-        $oauthService = new \app\service\OAuthService();
+        $oauthService = new OAuthService();
 
         // 使用 OAuthService 获取授权 URL
         $scopes = match ($provider) {
@@ -738,10 +741,10 @@ class UserController
             }
 
             // 使用 OAuthService 获取用户数据
-            $oauthService = new \app\service\OAuthService();
+            $oauthService = new OAuthService();
 
             return $oauthService->getUserData($provider, $code, $config);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('Get OAuth user data failed: ' . $e->getMessage());
 
             return null;

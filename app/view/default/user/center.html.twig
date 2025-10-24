@@ -186,48 +186,59 @@
 
                     <div class="space-y-4">
                         {% for providerKey, providerInfo in supportedProviders %}
-                            {% set isBound = false %}
-                            {% set binding = null %}
-                            {% for b in bindings %}
-                                {% if b.provider == providerKey %}
-                                    {% set isBound = true %}
-                                    {% set binding = b %}
-                                {% endif %}
-                            {% endfor %}
+                            {% if providerInfo.enabled %}
+                                {% set isBound = false %}
+                                {% set binding = null %}
+                                {% for b in bindings %}
+                                    {% if b.provider == providerKey %}
+                                        {% set isBound = true %}
+                                        {% set binding = b %}
+                                    {% endif %}
+                                {% endfor %}
 
-                            <div
-                                class="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition">
-                                <div class="flex items-center space-x-4">
-                                    <i class="{{ providerInfo.icon }} text-3xl"
-                                       style="color: {{ providerInfo.color }}"></i>
-                                    <div>
-                                        <p class="font-medium text-lg">{{ providerInfo.name }}</p>
-                                        {% if isBound and binding %}
-                                            <p class="text-sm text-green-600">
-                                                <i class="fas fa-check-circle mr-1"></i>
-                                                已绑定: {{ binding.provider_username ?? binding.provider_email ?? binding.provider_user_id }}
-                                            </p>
+                                <div
+                                    class="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition">
+                                    <div class="flex items-center space-x-4">
+                                        {% if providerKey == 'wind' %}
+                                            <div class="w-12 h-12 flex items-center justify-center rounded-full"
+                                                 style="background-color: {{ providerInfo.color }}20;">
+                                                <span class="font-bold"
+                                                      style="color: {{ providerInfo.color }}; font-size: 14px;">Wind</span>
+                                            </div>
                                         {% else %}
-                                            <p class="text-sm text-gray-500">未绑定</p>
+                                            <i class="{{ providerInfo.icon }} text-3xl"
+                                               style="color: {{ providerInfo.color }}"></i>
+                                        {% endif %}
+                                        <div>
+                                            <p class="font-medium text-lg">{{ providerInfo.name }}</p>
+                                            {% if isBound and binding %}
+                                                <p class="text-sm text-green-600">
+                                                    <i class="fas fa-check-circle mr-1"></i>
+                                                    已绑定: {{ binding.provider_username ?? binding.provider_email ?? binding.provider_user_id }}
+                                                </p>
+                                            {% else %}
+                                                <p class="text-sm text-gray-500">未绑定</p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        {% if isBound %}
+                                            <button
+                                                onclick="unbindOAuth('{{ providerKey }}')"
+                                                class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition">
+                                                <i class="fas fa-unlink mr-1"></i>解绑
+                                            </button>
+                                        {% else %}
+                                            <a
+                                                href="/oauth/{{ providerKey }}/redirect"
+                                                data-no-pjax
+                                                class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 inline-block transition">
+                                                <i class="fas fa-link mr-1"></i>绑定
+                                            </a>
                                         {% endif %}
                                     </div>
                                 </div>
-                                <div>
-                                    {% if isBound %}
-                                        <button
-                                            onclick="unbindOAuth('{{ providerKey }}')"
-                                            class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition">
-                                            <i class="fas fa-unlink mr-1"></i>解绑
-                                        </button>
-                                    {% else %}
-                                        <a
-                                            href="/oauth/{{ providerKey }}/redirect"
-                                            class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 inline-block transition">
-                                            <i class="fas fa-link mr-1"></i>绑定
-                                        </a>
-                                    {% endif %}
-                                </div>
-                            </div>
+                            {% endif %}
                         {% endfor %}
                     </div>
                 </div>

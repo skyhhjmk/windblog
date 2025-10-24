@@ -14,6 +14,7 @@
  */
 
 use app\api\controller\v1\ApiPostController;
+use app\model\UserOAuthBinding;
 use Webman\Route;
 
 Route::disableDefaultRoute();
@@ -32,11 +33,17 @@ Route::any('/comment/list/{postId}', [app\controller\CommentController::class, '
 
 // 用户相关路由
 Route::get('/user/register', function () {
-    return view('user/register');
+    // 获取OAuth配置
+    $oauthProviders = UserOAuthBinding::getSupportedProviders();
+
+    return view('user/register', ['oauthProviders' => $oauthProviders]);
 })->name('user.register.page');
 Route::post('/user/register', [app\controller\UserController::class, 'register'])->name('user.register');
 Route::get('/user/login', function () {
-    return view('user/login');
+    // 获取OAuth配置
+    $oauthProviders = UserOAuthBinding::getSupportedProviders();
+
+    return view('user/login', ['oauthProviders' => $oauthProviders]);
 })->name('user.login.page');
 Route::post('/user/login', [app\controller\UserController::class, 'login'])->name('user.login');
 Route::any('/user/logout', [app\controller\UserController::class, 'logout'])->name('user.logout');
