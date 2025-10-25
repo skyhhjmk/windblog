@@ -1155,8 +1155,14 @@
 
             // 添加键盘导航支持
             $(document).on('keydown', function (e) {
-                // Alt+左箭头或后退键返回上一页
-                if ((e.altKey && e.key === 'ArrowLeft') || e.key === 'Backspace') {
+                // 检查是否在可编辑元素中（输入框、文本域等）
+                const target = e.target;
+                const isEditable = target.tagName === 'INPUT' ||
+                    target.tagName === 'TEXTAREA' ||
+                    target.isContentEditable;
+
+                // Alt+左箭头返回上一页
+                if (e.altKey && e.key === 'ArrowLeft') {
                     e.preventDefault();
                     window.history.back();
                 }

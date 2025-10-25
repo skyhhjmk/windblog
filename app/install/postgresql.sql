@@ -25,8 +25,6 @@ CREATE TABLE IF NOT EXISTS wa_users
     email_verified_at           TIMESTAMP WITH TIME ZONE DEFAULT NULL,
     activation_token            VARCHAR(64)              DEFAULT NULL,
     activation_token_expires_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
-    oauth_provider              VARCHAR(50)              DEFAULT NULL,
-    oauth_id                    VARCHAR(255)             DEFAULT NULL,
     created_at                  TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at                  TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     deleted_at                  TIMESTAMP WITH TIME ZONE DEFAULT NULL,
@@ -37,7 +35,6 @@ CREATE TABLE IF NOT EXISTS wa_users
 
 CREATE INDEX IF NOT EXISTS idx_wa_users_email ON wa_users (email);
 CREATE INDEX IF NOT EXISTS idx_wa_users_activation_token ON wa_users (activation_token);
-CREATE INDEX IF NOT EXISTS idx_wa_users_oauth ON wa_users (oauth_provider, oauth_id);
 
 COMMENT ON TABLE wa_users IS '用户表';
 COMMENT ON COLUMN wa_users.username IS '用户名';
@@ -59,8 +56,6 @@ COMMENT ON COLUMN wa_users.token IS 'token';
 COMMENT ON COLUMN wa_users.email_verified_at IS '邮箱验证时间';
 COMMENT ON COLUMN wa_users.activation_token IS '激活令牌';
 COMMENT ON COLUMN wa_users.activation_token_expires_at IS '激活令牌过期时间';
-COMMENT ON COLUMN wa_users.oauth_provider IS 'OAuth提供商(预留)';
-COMMENT ON COLUMN wa_users.oauth_id IS 'OAuth用户ID(预留)';
 COMMENT ON COLUMN wa_users.created_at IS '创建时间';
 COMMENT ON COLUMN wa_users.updated_at IS '更新时间';
 COMMENT ON COLUMN wa_users.deleted_at IS '删除时间';

@@ -88,7 +88,7 @@ class UserController
             $user->username = $username;
             $user->nickname = $nickname;
             $user->email = $email;
-            $user->password = password_hash($password, PASSWORD_BCRYPT);
+            $user->password = password_hash($password, PASSWORD_DEFAULT);
             $user->status = 0; // 未激活状态
             $user->join_time = date('Y-m-d H:i:s');
             $user->join_ip = $request->getRealIp();
@@ -789,7 +789,7 @@ class UserController
             $user->username = $provider . '_' . substr($userData['id'], 0, 16) . '_' . substr(uniqid(), -4);
             $user->nickname = $userData['username'] ?? '用户' . substr(uniqid(), -6);
             $user->email = $userData['email'] ?? null;
-            $user->password = password_hash(bin2hex(random_bytes(16)), PASSWORD_BCRYPT);
+            $user->password = password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT);
             $user->avatar = $userData['avatar'] ?? null;
             $user->status = 1; // 直接激活
             $user->email_verified_at = !empty($userData['email']) ? date('Y-m-d H:i:s') : null;

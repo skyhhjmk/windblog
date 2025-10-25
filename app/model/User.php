@@ -18,8 +18,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $email_verified_at
  * @property string|null $activation_token
  * @property string|null $activation_token_expires_at
- * @property string|null $oauth_provider
- * @property string|null $oauth_id
  * @property int         $status 0=未激活, 1=正常, 2=禁用
  * @property string|null $created_at
  * @property string|null $updated_at
@@ -81,8 +79,6 @@ class User extends Model
         'email_verified_at',
         'activation_token',
         'activation_token_expires_at',
-        'oauth_provider',
-        'oauth_id',
         'status',
         'join_time',
         'join_ip',
@@ -254,22 +250,6 @@ class User extends Model
     public function getOAuthBinding(string $provider): ?UserOAuthBinding
     {
         return $this->oauthBindings()->where('provider', $provider)->first();
-    }
-
-    /**
-     * 通过OAuth提供商和ID查找用户
-     *
-     * @param string $provider
-     * @param string $oauthId
-     *
-     * @return User|null
-     * @deprecated 使用UserOAuthBinding模型查询
-     */
-    public static function findByOAuth(string $provider, string $oauthId): ?User
-    {
-        return self::where('oauth_provider', $provider)
-            ->where('oauth_id', $oauthId)
-            ->first();
     }
 
     /**

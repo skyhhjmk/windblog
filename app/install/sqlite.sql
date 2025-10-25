@@ -19,11 +19,9 @@ CREATE TABLE IF NOT EXISTS wa_users (
   join_time DATETIME DEFAULT NULL,
   join_ip TEXT DEFAULT NULL,
   token TEXT DEFAULT NULL,
-  email_verified_at           DATETIME DEFAULT NULL,
-  activation_token            TEXT     DEFAULT NULL,
+  email_verified_at DATETIME DEFAULT NULL,
+  activation_token  TEXT     DEFAULT NULL,
   activation_token_expires_at DATETIME DEFAULT NULL,
-  oauth_provider              TEXT     DEFAULT NULL,
-  oauth_id                    TEXT     DEFAULT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   role INTEGER NOT NULL DEFAULT 1,
@@ -32,7 +30,6 @@ CREATE TABLE IF NOT EXISTS wa_users (
 
 CREATE INDEX IF NOT EXISTS idx_wa_users_email ON wa_users (email);
 CREATE INDEX IF NOT EXISTS idx_wa_users_activation_token ON wa_users (activation_token);
-CREATE INDEX IF NOT EXISTS idx_wa_users_oauth ON wa_users (oauth_provider, oauth_id);
 
 -- 创建用户OAuth绑定表
 CREATE TABLE IF NOT EXISTS user_oauth_bindings

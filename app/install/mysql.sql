@@ -25,14 +25,6 @@ CREATE TABLE IF NOT EXISTS `wa_users` (
     64
 ) DEFAULT NULL COMMENT '激活令牌',
     ` activation_token_expires_at ` datetime DEFAULT NULL COMMENT '激活令牌过期时间',
-    ` oauth_provider ` varchar
-(
-    50
-) DEFAULT NULL COMMENT 'OAuth提供商(预留)',
-    ` oauth_id ` varchar
-(
-    255
-) DEFAULT NULL COMMENT 'OAuth用户ID(预留)',
   `created_at` datetime DEFAULT NULL COMMENT '创建时间',
   `updated_at` datetime DEFAULT NULL COMMENT '更新时间',
   `role` int(11) NOT NULL DEFAULT '1' COMMENT '角色',
@@ -51,15 +43,6 @@ CREATE TABLE IF NOT EXISTS `wa_users` (
 (
     `
     activation_token
-    `
-),
-    KEY ` idx_oauth `
-(
-    `
-    oauth_provider
-    `,
-    `
-    oauth_id
     `
 )
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户表';
