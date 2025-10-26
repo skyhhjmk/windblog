@@ -4,7 +4,7 @@
     "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
     "This file is @generated automatically"
   ],
-  "content-hash": "ec215c5810223cba9d294476298f190b",
+  "content-hash": "7a9a4699067103cffe3c43fb34ec4035",
   "packages": [
     {
       "name": "brick/math",
@@ -2307,6 +2307,127 @@
         "source": "https://github.com/thephpleague/oauth2-client/tree/2.8.1"
       },
       "time": "2025-02-26T04:37:30+00:00"
+    },
+    {
+      "name": "league/oauth2-github",
+      "version": "3.1.1",
+      "source": {
+        "type": "git",
+        "url": "https://github.com/thephpleague/oauth2-github.git",
+        "reference": "84211f62b757f7266fe605a0aa874a32f52c24fd"
+      },
+      "dist": {
+        "type": "zip",
+        "url": "https://api.github.com/repos/thephpleague/oauth2-github/zipball/84211f62b757f7266fe605a0aa874a32f52c24fd",
+        "reference": "84211f62b757f7266fe605a0aa874a32f52c24fd",
+        "shasum": ""
+      },
+      "require": {
+        "ext-json": "*",
+        "league/oauth2-client": "^2.0",
+        "php": "^7.3 || ^8.0"
+      },
+      "require-dev": {
+        "mockery/mockery": "^1.4",
+        "phpunit/phpunit": "^9.5",
+        "squizlabs/php_codesniffer": "^3.6"
+      },
+      "type": "library",
+      "extra": {
+        "branch-alias": {
+          "dev-master": "1.0.x-dev"
+        }
+      },
+      "autoload": {
+        "psr-4": {
+          "League\\OAuth2\\Client\\": "src/"
+        }
+      },
+      "notification-url": "https://packagist.org/downloads/",
+      "license": [
+        "MIT"
+      ],
+      "authors": [
+        {
+          "name": "Steven Maguire",
+          "email": "stevenmaguire@gmail.com",
+          "homepage": "https://github.com/stevenmaguire"
+        },
+        {
+          "name": "Woody Gilk",
+          "email": "woody.gilk@gmail.com",
+          "homepage": "https://github.com/shadowhand"
+        }
+      ],
+      "description": "Github OAuth 2.0 Client Provider for The PHP League OAuth2-Client",
+      "keywords": [
+        "authorisation",
+        "authorization",
+        "client",
+        "github",
+        "oauth",
+        "oauth2"
+      ],
+      "support": {
+        "issues": "https://github.com/thephpleague/oauth2-github/issues",
+        "source": "https://github.com/thephpleague/oauth2-github/tree/3.1.1"
+      },
+      "time": "2024-09-03T10:42:10+00:00"
+    },
+    {
+      "name": "league/oauth2-google",
+      "version": "4.0.1",
+      "source": {
+        "type": "git",
+        "url": "https://github.com/thephpleague/oauth2-google.git",
+        "reference": "1b01ba18ba31b29e88771e3e0979e5c91d4afe76"
+      },
+      "dist": {
+        "type": "zip",
+        "url": "https://api.github.com/repos/thephpleague/oauth2-google/zipball/1b01ba18ba31b29e88771e3e0979e5c91d4afe76",
+        "reference": "1b01ba18ba31b29e88771e3e0979e5c91d4afe76",
+        "shasum": ""
+      },
+      "require": {
+        "league/oauth2-client": "^2.0",
+        "php": "^7.3 || ^8.0"
+      },
+      "require-dev": {
+        "eloquent/phony-phpunit": "^6.0 || ^7.1",
+        "phpunit/phpunit": "^8.0 || ^9.0",
+        "squizlabs/php_codesniffer": "^3.0"
+      },
+      "type": "library",
+      "autoload": {
+        "psr-4": {
+          "League\\OAuth2\\Client\\": "src/"
+        }
+      },
+      "notification-url": "https://packagist.org/downloads/",
+      "license": [
+        "MIT"
+      ],
+      "authors": [
+        {
+          "name": "Woody Gilk",
+          "email": "hello@shadowhand.com",
+          "homepage": "https://shadowhand.com"
+        }
+      ],
+      "description": "Google OAuth 2.0 Client Provider for The PHP League OAuth2-Client",
+      "keywords": [
+        "Authentication",
+        "authorization",
+        "client",
+        "google",
+        "oauth",
+        "oauth2"
+      ],
+      "support": {
+        "issues": "https://github.com/thephpleague/oauth2-google/issues",
+        "source": "https://github.com/thephpleague/oauth2-google/tree/4.0.1"
+      },
+      "time": "2023-03-17T15:20:52+00:00"
     },
     {
       "name": "lorenzo/pinky",

@@ -7,16 +7,17 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 use support\Log;
 use Throwable;
 
 /**
  * comments 评论表
  *
- * @property int                    $id          评论ID，主键(主键)
- * @property int                    $post_id     文章ID
- * @property int                    $user_id     用户ID
- * @property int                    $parent_id   父评论ID
+ * @property int $id          评论ID，主键(主键)
+ * @property int $post_id     文章ID
+ * @property int $user_id     用户ID
+ * @property int $parent_id   父评论ID
  * @property string      $guest_name  访客姓名
  * @property string      $guest_email 访客邮箱
  * @property string      $content     评论内容
@@ -142,37 +143,34 @@ class Comment extends Model
         Log::debug('Soft delete config value: ' . var_export($useSoftDelete, true));
         Log::debug('Force delete flag: ' . var_export($forceDelete, true));
 
-        // 修复逻辑：当$forceDelete为true时，无论配置如何都应该执行硬删除
-        if ($forceDelete || ($useSoftDelete && !$forceDelete)) {
-            if ($forceDelete) {
-                // 硬删除：直接从数据库中删除记录
-                Log::debug('Executing hard delete for comment ID: ' . $this->id);
-                try {
-                    return $this->delete();
-                } catch (Exception $e) {
-                    Log::error('Hard delete failed for comment ID ' . $this->id . ': ' . $e->getMessage());
+        // 修复逻辑：先判断强制删除，再判断软删除配置
+        if ($forceDelete) {
+            // 硬删除：直接从数据库中删除记录
+            Log::debug('Executing hard delete for comment ID: ' . $this->id);
+            try {
+                return $this->delete();
+            } catch (Exception $e) {
+                Log::error('Hard delete failed for comment ID ' . $this->id . ': ' . $e->getMessage());
 
-                    return false;
-                }
-            } else {
-                // 软删除：设置 deleted_at 字段
-                try {
-                    Log::debug('Executing soft delete for comment ID: ' . $this->id);
-                    // 使用save方法而不是update方法，确保模型状态同步
-                    $this->deleted_at = date('Y-m-d H:i:s');
-                    $result = $this->save();
-                    Log::debug('Soft delete result: ' . var_export($result, true));
-                    Log::debug('Comment deleted_at value after save: ' . var_export($this->deleted_at, true));
+                return false;
+            }
+        } elseif ($useSoftDelete) {
+            // 软删除：设置 deleted_at 字段
+            try {
+                Log::debug('Executing soft delete for comment ID: ' . $this->id);
 
-                    return $result !== false; // 确保返回布尔值
-                } catch (Exception $e) {
-                    Log::error('Soft delete failed for comment ID ' . $this->id . ': ' . $e->getMessage());
+                $this->deleted_at = Carbon::now();
+                $result = $this->save();
+                Log::debug('Soft delete result: ' . var_export($result, true));
 
-                    return false;
-                }
+                return $result !== false;
+            } catch (Exception $e) {
+                Log::error('Soft delete failed for comment ID ' . $this->id . ': ' . $e->getMessage());
+
+                return false;
             }
         } else {
-            // 硬删除：直接从数据库中删除记录
+            // 配置为不使用软删除，执行硬删除
             Log::debug('Executing hard delete for comment ID: ' . $this->id);
             try {
                 return $this->delete();

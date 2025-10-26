@@ -217,24 +217,33 @@ class Link extends Model
         Log::debug('Soft delete config value: ' . var_export($useSoftDelete, true));
         Log::debug('Force delete flag: ' . var_export($forceDelete, true));
 
-        if (!$forceDelete && $useSoftDelete) {
+        if ($forceDelete) {
+            // 硬删除：直接从数据库中删除记录
+            Log::debug('Executing hard delete for link ID: ' . $this->id);
+            try {
+                return $this->delete();
+            } catch (Exception $e) {
+                Log::error('Hard delete failed for link ID ' . $this->id . ': ' . $e->getMessage());
+
+                return false;
+            }
+        } elseif ($useSoftDelete) {
             // 软删除：设置 deleted_at 字段
             try {
                 Log::debug('Executing soft delete for link ID: ' . $this->id);
-                // 使用save方法而不是update方法，确保模型状态同步
-                $this->deleted_at = date('Y-m-d H:i:s');
+
+                $this->deleted_at = Carbon::now();
                 $result = $this->save();
                 Log::debug('Soft delete result: ' . var_export($result, true));
-                Log::debug('Link deleted_at value after save: ' . var_export($this->deleted_at, true));
 
-                return $result !== false; // 确保返回布尔值
+                return $result !== false;
             } catch (Exception $e) {
                 Log::error('Soft delete failed for link ID ' . $this->id . ': ' . $e->getMessage());
 
                 return false;
             }
         } else {
-            // 硬删除：直接从数据库中删除记录
+            // 配置为不使用软删除，执行硬删除
             Log::debug('Executing hard delete for link ID: ' . $this->id);
             try {
                 return $this->delete();

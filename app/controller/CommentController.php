@@ -142,14 +142,25 @@ class CommentController
             return json(['code' => 400, 'msg' => '评论中包含过多链接']);
         }
 
-        // 检查是否重复评论（简单防刷）
+        // 检查是否重复评论（增强防刷）
+        // 1. 检查相同内容的重复评论（5分钟内）
         $recentComment = Comment::where('post_id', $postId)
             ->where('guest_email', $guestEmail)
-            ->where('created_at', '>', date('Y-m-d H:i:s', time() - 60))
+            ->where('created_at', '>', date('Y-m-d H:i:s', time() - 300))
             ->first();
 
         if ($recentComment && $recentComment->content === $sanitizedContent) {
             return json(['code' => 400, 'msg' => '请不要重复提交相同的评论']);
+        }
+
+        // 2. 检查评论频率（1分钟内最多3条）
+        $recentCommentCount = Comment::where('post_id', $postId)
+            ->where('guest_email', $guestEmail)
+            ->where('created_at', '>', date('Y-m-d H:i:s', time() - 60))
+            ->count();
+
+        if ($recentCommentCount >= 3) {
+            return json(['code' => 429, 'msg' => '评论过于频繁,请稍后再试']);
         }
 
         // 6. 创建评论
@@ -207,6 +218,7 @@ class CommentController
      *
      * @param Request $request
      * @param int $postId
+     *
      * @return Response
      */
     public function getList(Request $request, int $postId): Response
@@ -222,8 +234,10 @@ class CommentController
         // 获取分页参数
         $page = max(1, (int) $request->get('page', 1));
         $perPage = min(50, max(10, (int) $request->get('per_page', 20)));
-        $sortOrder = $request->get('sort', 'asc'); // asc 或 desc
-        $sortOrder = in_array($sortOrder, ['asc', 'desc']) ? $sortOrder : 'asc';
+
+        // 排序参数白名单验证（防止SQL注入）
+        $sortOrder = $request->get('sort', 'asc');
+        $sortOrder = in_array(strtolower($sortOrder), ['asc', 'desc']) ? strtolower($sortOrder) : 'asc';
 
         // 获取评论列表，包含回复
         $query = Comment::where('post_id', $postId)
@@ -268,6 +282,7 @@ class CommentController
      * 净化评论内容（防止XSS）
      *
      * @param string $content
+     *
      * @return string
      */
     private function sanitizeContent(string $content): string
@@ -302,6 +317,7 @@ class CommentController
      * 净化引用文本（更严格的处理）
      *
      * @param string $text
+     *
      * @return string
      */
     private function sanitizeQuotedText(string $text): string
@@ -322,6 +338,7 @@ class CommentController
      * 格式化评论数据（包含引用信息）
      *
      * @param Comment $comment
+     *
      * @return array
      */
     private function formatComment(Comment $comment): array
