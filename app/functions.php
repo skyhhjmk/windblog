@@ -285,8 +285,47 @@ function blog_config_normalize_default(mixed $value): mixed
 }
 
 /**
- * 格式化日期时间
+ * 获取UTC当前时间（Carbon对象）
  *
+ * @return \Illuminate\Support\Carbon
+ */
+function utc_now(): \Illuminate\Support\Carbon
+{
+    return \Illuminate\Support\Carbon::now('UTC');
+}
+
+/**
+ * 获取UTC当前时间字符串
+ *
+ * @param string $format 格式化模板
+ *
+ * @return string
+ */
+function utc_now_string(string $format = 'Y-m-d H:i:s'): string
+{
+    return \Illuminate\Support\Carbon::now('UTC')->format($format);
+}
+
+/**
+ * 解析UTC时间字符串为Carbon对象
+ *
+ * @param string|null $time 时间字符串
+ *
+ * @return \Illuminate\Support\Carbon|null
+ */
+function utc_parse(?string $time): ?\Illuminate\Support\Carbon
+{
+    if (empty($time)) {
+        return null;
+    }
+
+    return \Illuminate\Support\Carbon::parse($time, 'UTC');
+}
+
+/**
+ * 格式化日期时间（已废弃，使用 utc_now_string 或 Carbon）
+ *
+ * @deprecated 使用 utc_now_string() 或 Carbon::now('UTC')->format()
  * @param string $time   时间字符串
  * @param string $format 格式化模板
  *
@@ -294,7 +333,10 @@ function blog_config_normalize_default(mixed $value): mixed
  */
 function format_time(string $time, string $format = 'Y-m-d H:i:s'): string
 {
-    return date($format, strtotime($time));
+    // 修复：强制按UTC解析时间
+    $carbon = \Illuminate\Support\Carbon::parse($time, 'UTC');
+
+    return $carbon->format($format);
 }
 
 /**

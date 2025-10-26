@@ -4,6 +4,7 @@ namespace plugin\admin\app\common;
 
 use Illuminate\Database\Connection;
 use Illuminate\Database\Schema\Builder;
+use Illuminate\Support\Carbon;
 use PDO;
 use plugin\admin\app\model\Setting;
 use support\Db;
@@ -87,31 +88,33 @@ class Util
      */
     public static function humanDate($time)
     {
-        $timestamp = is_numeric($time) ? $time : strtotime($time);
-        $dur = time() - $timestamp;
-        if ($dur < 0) {
-            return date('Y-m-d', $timestamp);
+        // 强制按UTC解析时间
+        if (is_string($time)) {
+            $carbon = Carbon::parse($time, 'UTC');
+            $timestamp = $carbon->timestamp;
         } else {
-            if ($dur < 60) {
-                return $dur . '秒前';
-            } else {
-                if ($dur < 3600) {
-                    return floor($dur / 60) . '分钟前';
-                } else {
-                    if ($dur < 86400) {
-                        return floor($dur / 3600) . '小时前';
-                    } else {
-                        if ($dur < 2592000) { // 30天内
-                            return floor($dur / 86400) . '天前';
-                        } else {
-                            return date('Y-m-d', $timestamp);
-                        }
-                    }
-                }
-            }
+            $timestamp = $time;
         }
 
-        return date('Y-m-d', $timestamp);
+        // 使用UTC当前时间计算
+        $now = Carbon::now('UTC')->timestamp;
+        $dur = $now - $timestamp;
+
+        if ($dur < 0) {
+            return date('Y-m-d', $timestamp);
+        }
+
+        if ($dur < 60) {
+            return $dur . '秒前';
+        } elseif ($dur < 3600) {
+            return floor($dur / 60) . '分钟前';
+        } elseif ($dur < 86400) {
+            return floor($dur / 3600) . '小时前';
+        } elseif ($dur < 2592000) { // 30天内
+            return floor($dur / 86400) . '天前';
+        } else {
+            return date('Y-m-d', $timestamp);
+        }
     }
 
     /**

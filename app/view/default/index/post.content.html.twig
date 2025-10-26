@@ -20,7 +20,7 @@
             <div class="flex items-center text-gray-500 text-sm space-x-4">
                 <span class="flex items-center">
                     <i class="far fa-calendar-alt mr-1"></i>
-                    {{ post.created_at|date('Y-m-d') }}
+                    {{ post.created_at|local_date('Y-m-d') }}
                 </span>
                 <span class="flex items-center">
                     <i class="far fa-user mr-1"></i>
@@ -74,7 +74,7 @@
                 </a>
                 <div class="text-sm text-gray-500">
                     <i class="far fa-clock mr-1"></i>
-                    最后更新: {{ post.updated_at|date('Y-m-d') }}
+                    最后更新: {{ post.updated_at|local_date('Y-m-d') }}
                 </div>
             </div>
         </div>

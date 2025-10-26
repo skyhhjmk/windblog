@@ -136,7 +136,7 @@ class User extends Model
     {
         $token = bin2hex(random_bytes(32));
         $this->activation_token = $token;
-        $this->activation_token_expires_at = date('Y-m-d H:i:s', time() + $expiresInHours * 3600);
+        $this->activation_token_expires_at = utc_now()->addHours($expiresInHours);
         $this->save();
 
         return $token;
@@ -149,7 +149,7 @@ class User extends Model
      */
     public function activate(): bool
     {
-        $this->email_verified_at = date('Y-m-d H:i:s');
+        $this->email_verified_at = utc_now();
         $this->activation_token = null;
         $this->activation_token_expires_at = null;
         $this->status = 1; // 设置为正常状态

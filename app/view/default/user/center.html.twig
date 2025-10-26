@@ -154,14 +154,14 @@
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">注册时间</label>
                                 <div
-                                    class="px-4 py-3 bg-gray-50 rounded-lg text-gray-700">{{ user.join_time|date('Y-m-d H:i:s') }}</div>
+                                    class="px-4 py-3 bg-gray-50 rounded-lg text-gray-700">{{ user.join_time|local_date('Y-m-d H:i:s') }}</div>
                             </div>
 
                             {% if user.last_time %}
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">最后登录</label>
                                     <div
-                                        class="px-4 py-3 bg-gray-50 rounded-lg text-gray-700">{{ user.last_time|date('Y-m-d H:i:s') }}</div>
+                                        class="px-4 py-3 bg-gray-50 rounded-lg text-gray-700">{{ user.last_time|local_date('Y-m-d H:i:s') }}</div>
                                 </div>
                             {% endif %}
                         </div>

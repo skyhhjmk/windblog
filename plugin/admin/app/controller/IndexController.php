@@ -67,12 +67,12 @@ class IndexController
      */
     public function dashboard(Request $request): Response
     {
-        // 今日新增用户数
-        $today_user_count = User::where('created_at', '>', date('Y-m-d') . ' 00:00:00')->count();
+        // 今日新增用户数（UTC时间）
+        $today_user_count = User::where('created_at', '>', utc_now()->startOfDay())->count();
         // 7天内新增用户数
-        $day7_user_count = User::where('created_at', '>', date('Y-m-d H:i:s', time() - 7 * 24 * 60 * 60))->count();
+        $day7_user_count = User::where('created_at', '>', utc_now()->subDays(7))->count();
         // 30天内新增用户数
-        $day30_user_count = User::where('created_at', '>', date('Y-m-d H:i:s', time() - 30 * 24 * 60 * 60))->count();
+        $day30_user_count = User::where('created_at', '>', utc_now()->subDays(30))->count();
         // 总用户数
         $user_count = User::count();
         // 总文章数
@@ -105,11 +105,12 @@ class IndexController
         }
 
         $day7_detail = [];
-        $now = time();
+        $now = utc_now();
         for ($i = 0; $i < 7; $i++) {
-            $date = date('Y-m-d', $now - 24 * 60 * 60 * $i);
-            $day7_detail[substr($date, 5)] = User::where('created_at', '>', "$date 00:00:00")
-                ->where('created_at', '<', "$date 23:59:59")->count();
+            $date = $now->copy()->subDays($i);
+            $dateStr = $date->format('Y-m-d');
+            $day7_detail[substr($dateStr, 5)] = User::where('created_at', '>=', $date->startOfDay())
+                ->where('created_at', '<=', $date->endOfDay())->count();
         }
 
         return raw_view('index/dashboard', [

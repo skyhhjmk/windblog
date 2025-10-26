@@ -90,7 +90,7 @@ class UserController
             $user->email = $email;
             $user->password = password_hash($password, PASSWORD_DEFAULT);
             $user->status = 0; // 未激活状态
-            $user->join_time = date('Y-m-d H:i:s');
+            $user->join_time = utc_now();
             $user->join_ip = $request->getRealIp();
 
             if ($user->save()) {
@@ -164,7 +164,7 @@ class UserController
         }
 
         // 5. 更新登录信息
-        $user->last_time = date('Y-m-d H:i:s');
+        $user->last_time = utc_now();
         $user->last_ip = $request->getRealIp();
         $user->save();
 
@@ -792,8 +792,8 @@ class UserController
             $user->password = password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT);
             $user->avatar = $userData['avatar'] ?? null;
             $user->status = 1; // 直接激活
-            $user->email_verified_at = !empty($userData['email']) ? date('Y-m-d H:i:s') : null;
-            $user->join_time = date('Y-m-d H:i:s');
+            $user->email_verified_at = !empty($userData['email']) ? utc_now() : null;
+            $user->join_time = utc_now();
             $user->join_ip = request()->getRealIp();
             $user->save();
 
