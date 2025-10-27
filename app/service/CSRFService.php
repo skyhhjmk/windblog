@@ -60,13 +60,13 @@ class CSRFService
         try {
             $token = bin2hex(random_bytes(32));
         } catch (Exception $e) {
-            $token = bin2hex(md5(time() . $e->getCode()));
+            $token = bin2hex(md5(utc_now()->timestamp . $e->getCode()));
         }
 
         // 存储token信息到session
         $tokenData = [
             'value' => $token,
-            'expire' => time() + $options['expire'],
+            'expire' => utc_now()->timestamp + $options['expire'],
             'one_time' => $options['one_time'],
             'bind_value' => $options['bind_value'],
         ];
@@ -97,7 +97,7 @@ class CSRFService
         }
 
         // 检查token是否过期
-        if (isset($tokenData['expire']) && time() > $tokenData['expire']) {
+        if (isset($tokenData['expire']) && utc_now()->timestamp > $tokenData['expire']) {
             $request->session()->delete($tokenName);
 
             return false;

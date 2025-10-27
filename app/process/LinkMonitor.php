@@ -181,7 +181,7 @@ class LinkMonitor
             $loadTime = $fetch['load_time'];
 
             $summary = [
-                'time' => date('Y-m-d H:i:s'),
+                'time' => utc_now_string('Y-m-d H:i:s'),
                 'ok' => true,
                 'load_time' => $loadTime . 'ms',
                 'backlink' => ['found' => false, 'count' => 0],
@@ -298,14 +298,14 @@ class LinkMonitor
         if (!isset($this->failureStats[$key])) {
             $this->failureStats[$key] = [
                 'count' => 0,
-                'first_failure' => time(),
+                'first_failure' => utc_now()->timestamp,
                 'last_error' => '',
                 'url' => $url,
             ];
         }
         $this->failureStats[$key]['count']++;
         $this->failureStats[$key]['last_error'] = $error;
-        $this->failureStats[$key]['last_failure'] = time();
+        $this->failureStats[$key]['last_failure'] = utc_now()->timestamp;
         Log::warning("LinkMonitor 失败统计: {$url}, 次数: " . $this->failureStats[$key]['count'] . " 错误: {$error}");
     }
 
@@ -327,7 +327,7 @@ class LinkMonitor
         if ($stats['count'] >= 3) {
             return true;
         }
-        if ($stats['count'] >= 3 && (time() - $stats['first_failure']) < 3600) {
+        if ($stats['count'] >= 3 && (utc_now()->timestamp - $stats['first_failure']) < 3600) {
             return true;
         }
 

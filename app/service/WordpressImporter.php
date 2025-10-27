@@ -560,7 +560,7 @@ class WordpressImporter
                     $existingPost->excerpt = $excerpt;
                     $existingPost->status = $status;
                     $existingPost->slug = $slug;
-                    $existingPost->updated_at = date('Y-m-d H:i:s');
+                    $existingPost->updated_at = utc_now_string('Y-m-d H:i:s');
                     $existingPost->save();
 
                     // 更新作者关联
@@ -574,8 +574,8 @@ class WordpressImporter
                             // 再添加新的关联，并设置额外字段
                             $existingPost->authors()->attach($author, [
                                 'is_primary' => 1,
-                                'created_at' => date('Y-m-d H:i:s'),
-                                'updated_at' => date('Y-m-d H:i:s'),
+                                'created_at' => utc_now_string('Y-m-d H:i:s'),
+                                'updated_at' => utc_now_string('Y-m-d H:i:s'),
                             ]);
                         }
                     }
@@ -638,7 +638,7 @@ class WordpressImporter
         $post->status = $status;
         $post->slug = $slug;
         $post->created_at = $postDate && $postDate !== '0000-00-00 00:00:00' ? date('Y-m-d H:i:s', strtotime($postDate)) : date('Y-m-d H:i:s');
-        $post->updated_at = date('Y-m-d H:i:s');
+        $post->updated_at = utc_now_string('Y-m-d H:i:s');
 
         Log::debug('保存文章: ' . $post->title);
         try {
@@ -674,8 +674,8 @@ class WordpressImporter
                 // 使用attach方法保存文章作者关联
                 $post->authors()->attach($author, [
                     'is_primary' => 1,
-                    'created_at' => date('Y-m-d H:i:s'),
-                    'updated_at' => date('Y-m-d H:i:s'),
+                    'created_at' => utc_now_string('Y-m-d H:i:s'),
+                    'updated_at' => utc_now_string('Y-m-d H:i:s'),
                 ]);
                 Log::debug('文章作者关联已保存，文章ID: ' . $post->id . '，作者ID: ' . $authorId);
             }
@@ -882,8 +882,8 @@ class WordpressImporter
                 $category->slug = $slug;
                 $category->parent_id = null;
                 $category->sort_order = 0;
-                $category->created_at = date('Y-m-d H:i:s');
-                $category->updated_at = date('Y-m-d H:i:s');
+                $category->created_at = utc_now_string('Y-m-d H:i:s');
+                $category->updated_at = utc_now_string('Y-m-d H:i:s');
                 $category->save();
                 $ids[] = (int) $category->id;
                 Log::debug('新分类创建完成，ID: ' . $category->id);
@@ -956,8 +956,8 @@ class WordpressImporter
                 $tag = new Tag();
                 $tag->name = $name;
                 $tag->slug = $slug;
-                $tag->created_at = date('Y-m-d H:i:s');
-                $tag->updated_at = date('Y-m-d H:i:s');
+                $tag->created_at = utc_now_string('Y-m-d H:i:s');
+                $tag->updated_at = utc_now_string('Y-m-d H:i:s');
                 $tag->save();
                 $ids[] = (int) $tag->id;
                 Log::debug('新标签创建完成，ID: ' . $tag->id);
@@ -1665,8 +1665,8 @@ class WordpressImporter
                 $comment->user_agent = $commentUserAgent ?: '';
                 $comment->created_at = $commentDate && $commentDate !== '0000-00-00 00:00:00'
                     ? date('Y-m-d H:i:s', strtotime($commentDate))
-                    : date('Y-m-d H:i:s');
-                $comment->updated_at = date('Y-m-d H:i:s');
+                    : utc_now_string('Y-m-d H:i:s');
+                $comment->updated_at = utc_now_string('Y-m-d H:i:s');
 
                 $comment->save();
 

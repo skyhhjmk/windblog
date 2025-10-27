@@ -845,9 +845,9 @@
                 };
 
                 // 如果是密码保护，添加密码字段
-                if (postVisibility.value === 'password' && postPassword.value) {
-                    saveData.password = postPassword.value;
-                }
+                // if (postVisibility.value === 'password' && postPassword.value) {
+                //     saveData.password = postPassword.value;
+                // }
 
                 // 发送到服务器保存
                 fetch('/app/admin/editor/save', {

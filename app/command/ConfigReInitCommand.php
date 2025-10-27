@@ -514,7 +514,7 @@ class ConfigReInitCommand extends Command
                 $data[$column] = $menu[$column];
             }
         }
-        $time = date('Y-m-d H:i:s');
+        $time = utc_now_string('Y-m-d H:i:s');
         $data['created_at'] = $data['updated_at'] = $time;
         $values = [];
         foreach ($data as $k => $v) {

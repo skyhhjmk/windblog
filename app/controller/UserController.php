@@ -486,7 +486,7 @@ class UserController
             $session->delete('oauth_state');
 
             // 更新登录信息
-            $user->last_time = date('Y-m-d H:i:s');
+            $user->last_time = utc_now();
             $user->last_ip = $request->getRealIp();
             $user->save();
 

@@ -1455,7 +1455,7 @@ class TableController extends Base
                 $data[$col] = Util::passwordHash($item);
             }
         }
-        $datetime = date('Y-m-d H:i:s');
+        $datetime = utc_now_string('Y-m-d H:i:s');
         if (isset($columns['created_at']) && empty($data['created_at'])) {
             $data['created_at'] = $datetime;
         }
@@ -1537,7 +1537,7 @@ class TableController extends Base
                 $data[$col] = Util::passwordHash($item);
             }
         }
-        $datetime = date('Y-m-d H:i:s');
+        $datetime = utc_now_string('Y-m-d H:i:s');
         if (isset($columns['updated_at']) && empty($data['updated_at'])) {
             $data['updated_at'] = $datetime;
         }

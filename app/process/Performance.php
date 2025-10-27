@@ -85,7 +85,7 @@ class Performance
 
     public function collect(): void
     {
-        $t = date('Y-m-d H:i:s');
+        $t = utc_now_string('Y-m-d H:i:s');
         try {
             $conns = ['default', 'cache'];
             $statsByConn = [];
@@ -188,7 +188,7 @@ class Performance
             }
 
             return [
-                't' => date('Y-m-d H:i:s'),
+                't' => utc_now_string('Y-m-d H:i:s'),
                 'version' => $info['redis_version'] ?? null,
                 'used_memory_mb' => isset($info['used_memory']) ? round($info['used_memory'] / 1024 / 1024, 2) : null,
                 'connected_clients' => $info['connected_clients'] ?? null,
@@ -197,7 +197,7 @@ class Performance
                 'keys_method' => $method,
             ];
         } catch (Throwable $e) {
-            return ['error' => $e->getMessage(), 't' => date('Y-m-d H:i:s')];
+            return ['error' => $e->getMessage(), 't' => utc_now_string('Y-m-d H:i:s')];
         }
     }
 
@@ -205,7 +205,7 @@ class Performance
     {
         try {
             if (!function_exists('opcache_get_status')) {
-                return ['enabled' => false, 't' => date('Y-m-d H:i:s')];
+                return ['enabled' => false, 't' => utc_now_string('Y-m-d H:i:s')];
             }
             $status = opcache_get_status(false);
             $mem = $status['memory_usage'] ?? [];
@@ -215,7 +215,7 @@ class Performance
             $hitRate = $stats['opcache_hit_rate'] ?? null;
 
             return [
-                't' => date('Y-m-d H:i:s'),
+                't' => utc_now_string('Y-m-d H:i:s'),
                 'enabled' => $status['opcache_enabled'] ?? null,
                 'memory_free_mb' => $freeMb,
                 'memory_used_mb' => $usedMb,
@@ -225,7 +225,7 @@ class Performance
                 'cached_scripts' => $stats['cached_scripts'] ?? null,
             ];
         } catch (Throwable $e) {
-            return ['error' => $e->getMessage(), 't' => date('Y-m-d H:i:s')];
+            return ['error' => $e->getMessage(), 't' => utc_now_string('Y-m-d H:i:s')];
         }
     }
 

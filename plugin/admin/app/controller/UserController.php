@@ -108,7 +108,7 @@ class UserController extends Crud
         }
 
         // 激活账户
-        $user->email_verified_at = date('Y-m-d H:i:s');
+        $user->email_verified_at = utc_now_string('Y-m-d H:i:s');
         $user->activation_token = null;
         $user->activation_token_expires_at = null;
         $user->status = 1; // 设置为正常状态

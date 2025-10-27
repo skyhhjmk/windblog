@@ -260,7 +260,7 @@ class LinkController extends Base
                 // 更新审核记录
                 $link->content = str_replace(
                     '### 审核记录',
-                    "### 审核记录\n\n> 已审核通过 - {$adminName} - " . date('Y-m-d H:i:s'),
+                    "### 审核记录\n\n> 已审核通过 - {$adminName} - " . utc_now_string('Y-m-d H:i:s'),
                     $link->content
                 );
             }
@@ -602,7 +602,7 @@ class LinkController extends Base
                     if (str_contains($link->note, '## 申请信息')) {
                         $link->note = str_replace(
                             '### 审核记录',
-                            "### 审核记录\n\n> 已审核通过 - {$adminName} - " . date('Y-m-d H:i:s'),
+                            "### 审核记录\n\n> 已审核通过 - {$adminName} - " . utc_now_string('Y-m-d H:i:s'),
                             $link->note
                         );
                     }
@@ -662,7 +662,7 @@ class LinkController extends Base
                     if (str_contains($link->note, '## 申请信息')) {
                         $link->note = str_replace(
                             '### 审核记录',
-                            "### 审核记录\n\n> 已拒绝 - {$adminName} - " . date('Y-m-d H:i:s') . "\n> 原因：{$reason}",
+                            "### 审核记录\n\n> 已拒绝 - {$adminName} - " . utc_now_string('Y-m-d H:i:s') . "\n> 原因：{$reason}",
                             $link->note
                         );
                         $link->save();
@@ -1278,7 +1278,7 @@ class LinkController extends Base
             }
             $link->setCustomField('auto_audit', [
                 'score' => $score,
-                'time' => date('Y-m-d H:i:s'),
+                'time' => utc_now_string('Y-m-d H:i:s'),
             ]);
             $link->save();
             $this->clearLinkCache();
@@ -1351,7 +1351,7 @@ class LinkController extends Base
         ];
         $res = $this->httpPostJson($peerApi, $payload);
         if ($res['success']) {
-            $link->setCustomField('peer_last_push', date('Y-m-d H:i:s'));
+            $link->setCustomField('peer_last_push', utc_now_string('Y-m-d H:i:s'));
             $link->save();
 
             return ['success' => true, 'peer_api' => $peerApi];

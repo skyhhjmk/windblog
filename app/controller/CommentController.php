@@ -130,7 +130,7 @@ class CommentController
                 $quoteData = [
                     'type' => 'post',
                     'content' => $sanitizedQuotedText,
-                    'timestamp' => date('Y-m-d H:i:s'),
+                    'timestamp' => utc_now_string('Y-m-d H:i:s'),
                 ];
             }
         }
@@ -146,7 +146,7 @@ class CommentController
         // 1. 检查相同内容的重复评论（5分钟内）
         $recentComment = Comment::where('post_id', $postId)
             ->where('guest_email', $guestEmail)
-            ->where('created_at', '>', date('Y-m-d H:i:s', time() - 300))
+            ->where('created_at', '>', utc_now()->subSeconds(300))
             ->first();
 
         if ($recentComment && $recentComment->content === $sanitizedContent) {
@@ -156,7 +156,7 @@ class CommentController
         // 2. 检查评论频率（1分钟内最多3条）
         $recentCommentCount = Comment::where('post_id', $postId)
             ->where('guest_email', $guestEmail)
-            ->where('created_at', '>', date('Y-m-d H:i:s', time() - 60))
+            ->where('created_at', '>', utc_now()->subSeconds(60))
             ->count();
 
         if ($recentCommentCount >= 3) {

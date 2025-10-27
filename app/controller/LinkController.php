@@ -317,7 +317,7 @@ class LinkController
                     '',
                     '**邮箱**: ' . htmlspecialchars($email, ENT_QUOTES, 'UTF-8'),
                     '',
-                    '**申请时间**: ' . date('Y-m-d H:i:s'),
+                    '**申请时间**: ' . utc_now_string('Y-m-d H:i:s'),
                     '',
                     '**申请IP**: ' . $ipAddress,
                     '',
@@ -419,7 +419,7 @@ class LinkController
                 'link_name' => htmlspecialchars($link->name, ENT_QUOTES, 'UTF-8'),
                 'link_url' => $link->url,
                 'callback_url' => $link->callback_url,
-                'access_time' => date('Y-m-d H:i:s'),
+                'access_time' => utc_now_string('Y-m-d H:i:s'),
                 'access_ip' => request()->getRealIp(),
                 'user_agent' => htmlspecialchars(request()->header('User-Agent', ''), ENT_QUOTES, 'UTF-8'),
             ];

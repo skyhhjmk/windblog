@@ -233,7 +233,7 @@ class SecurityService
         }
 
         // 添加时间戳和随机数防止冲突
-        $timestamp = time();
+        $timestamp = utc_now()->timestamp;
         $random = bin2hex(random_bytes(4));
 
         return "{$timestamp}_{$random}_{$cleanName}";
@@ -367,7 +367,7 @@ class SecurityService
         $response = [
             'code' => $code,
             'message' => $message,
-            'timestamp' => time(),
+            'timestamp' => utc_now()->timestamp,
         ];
 
         if ($data !== null) {
@@ -389,7 +389,7 @@ class SecurityService
         $logData = [
             'event' => $event,
             'details' => $details,
-            'timestamp' => time(),
+            'timestamp' => utc_now()->timestamp,
             'ip' => request()->getRealIp(),
             'user_agent' => request()->header('User-Agent', ''),
             'context' => $context,

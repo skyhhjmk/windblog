@@ -102,7 +102,7 @@ class ConfigAdminReInitCommand extends Command
      */
     private function reInitAdmin(string $username, string $password, string $nickname, OutputInterface $output)
     {
-        $now = date('Y-m-d H:i:s');
+        $now = utc_now_string('Y-m-d H:i:s');
 
         $adminData = [
             'username' => $username,

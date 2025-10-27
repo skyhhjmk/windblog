@@ -190,7 +190,7 @@ class FloLink extends Model
         if (!$forceDelete && $useSoftDelete) {
             // 软删除：设置 deleted_at 字段
             try {
-                $this->deleted_at = date('Y-m-d H:i:s');
+                $this->deleted_at = utc_now_string('Y-m-d H:i:s');
                 $result = $this->save();
 
                 return $result !== false;

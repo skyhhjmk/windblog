@@ -425,7 +425,7 @@ class MediaController extends Base
 
             // 更新文件大小
             $media->file_size = filesize($filePath);
-            $media->updated_at = date('Y-m-d H:i:s');
+            $media->updated_at = utc_now_string('Y-m-d H:i:s');
             $media->save();
 
             return json(['code' => 0, 'msg' => '保存成功']);

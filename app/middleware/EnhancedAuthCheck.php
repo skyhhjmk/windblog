@@ -161,7 +161,7 @@ class EnhancedAuthCheck implements MiddlewareInterface
 
         $limit = $this->rateLimits[$limitType] ?? 60;
         $cacheKey = "rate_limit:{$limitType}:{$ip}";
-        $currentTime = time();
+        $currentTime = utc_now()->timestamp;
 
         $cache = cache();
 
@@ -232,7 +232,7 @@ class EnhancedAuthCheck implements MiddlewareInterface
 
         // 检查会话是否过期（24小时）
         $sessionTime = session('login_time');
-        if (!$sessionTime || (time() - $sessionTime) > 86400) {
+        if (!$sessionTime || (utc_now()->timestamp - $sessionTime) > 86400) {
             session(['admin' => null, 'login_time' => null]);
 
             return false;
@@ -400,7 +400,7 @@ class EnhancedAuthCheck implements MiddlewareInterface
                     'method' => $request->method(),
                     'route' => $request->route,
                     'user_agent' => $request->header('User-Agent', ''),
-                    'timestamp' => time(),
+                    'timestamp' => utc_now()->timestamp,
                 ]);
             }
         } catch (Exception $e) {

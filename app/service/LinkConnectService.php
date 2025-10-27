@@ -228,7 +228,7 @@ class LinkConnectService
         $example = [
             'protocol' => $config['protocol_name'],
             'version' => $config['version'],
-            'timestamp' => date('Y-m-d H:i:s'),
+            'timestamp' => utc_now_string('Y-m-d H:i:s'),
             'site_info' => $siteInfo,
             'statistics' => [
                 'article_count' => 0, // 实际应用中可以统计文章数量
@@ -352,11 +352,11 @@ class LinkConnectService
         // 记录接收到的请求参数
         $debugId = uniqid('link_apply_', true);
         Log::debug("友链申请开始 [{$debugId}] - 参数: " . json_encode([
-                'peerApi' => substr((string)($input['peer_api'] ?? ''), 0, 50) . (strlen((string)($input['peer_api'] ?? '')) > 50 ? '...' : ''),
-                'name' => (string)($input['name'] ?? ''),
-                'url' => (string)($input['url'] ?? ''),
-                'icon' => substr((string)($input['icon'] ?? ''), 0, 50) . (strlen((string)($input['icon'] ?? '')) > 50 ? '...' : ''),
-                'hasEmail' => !empty((string)($input['email'] ?? '')),
+                'peerApi' => substr((string) ($input['peer_api'] ?? ''), 0, 50) . (strlen((string) ($input['peer_api'] ?? '')) > 50 ? '...' : ''),
+                'name' => (string) ($input['name'] ?? ''),
+                'url' => (string) ($input['url'] ?? ''),
+                'icon' => substr((string) ($input['icon'] ?? ''), 0, 50) . (strlen((string) ($input['icon'] ?? '')) > 50 ? '...' : ''),
+                'hasEmail' => !empty((string) ($input['email'] ?? '')),
             ]));
 
         // 获取配置

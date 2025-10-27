@@ -88,7 +88,7 @@ class ElasticSyncService
             $resp = ['ok' => false, 'status' => 0, 'error' => $e->getMessage()];
         }
         $msg = sprintf('[ES] createIndex analyzer=%s status=%s', $analyzer, $resp['status'] ?? 'n/a');
-        redis()->lPush('es:sync:logs', date('Y-m-d H:i:s') . ' ' . $msg);
+        redis()->lPush('es:sync:logs', utc_now_string('Y-m-d H:i:s') . ' ' . $msg);
         if (!$resp['ok']) {
             Log::warning('[ElasticSyncService] createIndex failed status=' . $resp['status'] . ' error=' . ($resp['error'] ?? ''));
 
@@ -207,7 +207,7 @@ class ElasticSyncService
             $resp = ['ok' => false, 'status' => 0, 'error' => $e->getMessage()];
         }
         $msg = sprintf('[ES] indexPost id=%d status=%s', (int) $post->id, $resp['status'] ?? 'n/a');
-        redis()->lPush('es:sync:logs', date('Y-m-d H:i:s') . ' ' . $msg . (isset($resp['body']) ? ' body=' . json_encode($resp['body']) : ''));
+        redis()->lPush('es:sync:logs', utc_now_string('Y-m-d H:i:s') . ' ' . $msg . (isset($resp['body']) ? ' body=' . json_encode($resp['body']) : ''));
         if (!$resp['ok']) {
             Log::warning('[ElasticSyncService] indexPost failed id=' . $post->id . ' status=' . $resp['status'] . ' error=' . ($resp['error'] ?? '') . (isset($resp['body']) ? ' body=' . json_encode($resp['body']) : ''));
 
@@ -244,7 +244,7 @@ class ElasticSyncService
                 'body' => $body,
             ];
             $response = $client->index($params);
-            redis()->lPush('es:sync:logs', date('Y-m-d H:i:s') . ' [ES] indexTag id=' . (int) $tag->id . ' name=' . (string) $tag->name . ' status=200');
+            redis()->lPush('es:sync:logs', utc_now_string('Y-m-d H:i:s') . ' [ES] indexTag id=' . (int) $tag->id . ' name=' . (string) $tag->name . ' status=200');
 
             // 动作：完成索引标签（需权限 search:action.index_tag_done）
             PluginService::do_action('elastic.index_tag_done', ['id' => (int) $tag->id]);
@@ -318,7 +318,7 @@ class ElasticSyncService
             $resp = ['ok' => false, 'status' => 0, 'error' => $e->getMessage()];
         }
         $msg = sprintf('[ES] deletePost id=%d status=%s', $id, $resp['status'] ?? 'n/a');
-        redis()->lPush('es:sync:logs', date('Y-m-d H:i:s') . ' ' . $msg);
+        redis()->lPush('es:sync:logs', utc_now_string('Y-m-d H:i:s') . ' ' . $msg);
         if (!$resp['ok']) {
             Log::warning('[ElasticSyncService] deletePost failed id=' . $id . ' status=' . $resp['status'] . ' error=' . ($resp['error'] ?? ''));
 
