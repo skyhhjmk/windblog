@@ -27,6 +27,7 @@
                     <li>页面配置</li>
                     <li>扩展设置</li>
                     <li>OAuth设置</li>
+                    <li>Session设置</li>
                 </ul>
                 <div class="layui-tab-content">
 
@@ -438,6 +439,193 @@
                         </form>
                     </div>
 
+                    <!-- Session设置 -->
+                    <div class="layui-tab-item">
+                        <form class="layui-form" lay-filter="sessionInfo">
+
+                            <!-- Session基本配置 -->
+                            <fieldset class="layui-elem-field">
+                                <legend>基本配置</legend>
+                                <div class="layui-field-box">
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">Session类型</label>
+                                        <div class="layui-input-inline">
+                                            <select name="type" lay-verify="required" lay-filter="sessionType"
+                                                    class="layui-select">
+                                                <option value="file">文件存储</option>
+                                                <option value="redis">Redis存储</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">Session名称</label>
+                                        <div class="layui-input-inline">
+                                            <input type="text" name="session_name" value="PHPSID"
+                                                   placeholder="请输入Session名称" autocomplete="off"
+                                                   class="layui-input">
+                                        </div>
+                                        <div class="layui-form-mid layui-word-aux">存储session_id的cookie名</div>
+                                    </div>
+
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">Session过期时间</label>
+                                        <div class="layui-input-inline">
+                                            <input type="number" name="lifetime" value="604800" placeholder="请输入秒数"
+                                                   autocomplete="off" class="layui-input">
+                                        </div>
+                                        <div class="layui-form-mid layui-word-aux">秒，默认7天</div>
+                                    </div>
+
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">Cookie过期时间</label>
+                                        <div class="layui-input-inline">
+                                            <input type="number" name="cookie_lifetime" value="31536000"
+                                                   placeholder="请输入秒数" autocomplete="off" class="layui-input">
+                                        </div>
+                                        <div class="layui-form-mid layui-word-aux">秒，默认365天</div>
+                                    </div>
+
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">Cookie路径</label>
+                                        <div class="layui-input-inline">
+                                            <input type="text" name="cookie_path" value="/"
+                                                   placeholder="请输入Cookie路径" autocomplete="off"
+                                                   class="layui-input">
+                                        </div>
+                                    </div>
+
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">Cookie域名</label>
+                                        <div class="layui-input-inline">
+                                            <input type="text" name="domain" placeholder="请输入Cookie域名"
+                                                   autocomplete="off" class="layui-input">
+                                        </div>
+                                        <div class="layui-form-mid layui-word-aux">留空为当前域名</div>
+                                    </div>
+
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">自动刷新Session</label>
+                                        <div class="layui-input-inline">
+                                            <input type="checkbox" name="auto_update_timestamp" lay-skin="switch"/>
+                                        </div>
+                                    </div>
+
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">HttpOnly</label>
+                                        <div class="layui-input-inline">
+                                            <input type="checkbox" name="http_only" lay-skin="switch" checked/>
+                                        </div>
+                                    </div>
+
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">Secure</label>
+                                        <div class="layui-input-inline">
+                                            <input type="checkbox" name="secure" lay-skin="switch"/>
+                                        </div>
+                                        <div class="layui-form-mid layui-word-aux">仅HTTPS下生效</div>
+                                    </div>
+
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">SameSite</label>
+                                        <div class="layui-input-inline">
+                                            <select name="same_site" class="layui-select">
+                                                <option value="strict">Strict</option>
+                                                <option value="lax">Lax</option>
+                                                <option value="none">None</option>
+                                            </select>
+                                        </div>
+                                        <div class="layui-form-mid layui-word-aux">防CSRF攻击</div>
+                                    </div>
+                                </div>
+                            </fieldset>
+
+                            <!-- File存储配置 -->
+                            <fieldset class="layui-elem-field" id="file-config">
+                                <legend>文件存储配置</legend>
+                                <div class="layui-field-box">
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">存储路径</label>
+                                        <div class="layui-input-inline">
+                                            <input type="text" name="file_save_path" placeholder="留空使用默认路径"
+                                                   autocomplete="off" class="layui-input">
+                                        </div>
+                                        <div class="layui-form-mid layui-word-aux">默认: runtime/sessions</div>
+                                    </div>
+                                </div>
+                            </fieldset>
+
+                            <!-- Redis存储配置 -->
+                            <fieldset class="layui-elem-field" id="redis-config" style="display:none;">
+                                <legend>Redis存储配置</legend>
+                                <div class="layui-field-box">
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">Redis主机</label>
+                                        <div class="layui-input-inline">
+                                            <input type="text" name="redis_host" value="127.0.0.1"
+                                                   placeholder="请输入Redis主机" autocomplete="off" class="layui-input">
+                                        </div>
+                                    </div>
+
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">Redis端口</label>
+                                        <div class="layui-input-inline">
+                                            <input type="number" name="redis_port" value="6379"
+                                                   placeholder="请输入Redis端口" autocomplete="off" class="layui-input">
+                                        </div>
+                                    </div>
+
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">Redis密码</label>
+                                        <div class="layui-input-inline">
+                                            <input type="password" name="redis_auth" placeholder="请输入Redis密码"
+                                                   autocomplete="off" class="layui-input">
+                                        </div>
+                                        <div class="layui-form-mid layui-word-aux">留空表示无密码</div>
+                                    </div>
+
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">超时时间</label>
+                                        <div class="layui-input-inline">
+                                            <input type="number" name="redis_timeout" value="2"
+                                                   placeholder="请输入超时时间" autocomplete="off" class="layui-input">
+                                        </div>
+                                        <div class="layui-form-mid layui-word-aux">秒</div>
+                                    </div>
+
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">数据库编号</label>
+                                        <div class="layui-input-inline">
+                                            <input type="text" name="redis_database" placeholder="请输入数据库编号"
+                                                   autocomplete="off" class="layui-input">
+                                        </div>
+                                        <div class="layui-form-mid layui-word-aux">默认0</div>
+                                    </div>
+
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">键名前缀</label>
+                                        <div class="layui-input-inline">
+                                            <input type="text" name="redis_prefix" value="redis_session_"
+                                                   placeholder="请输入键名前缀" autocomplete="off" class="layui-input">
+                                        </div>
+                                    </div>
+                                </div>
+                            </fieldset>
+
+                            <div class="layui-form-item">
+                                <div class="layui-input-block">
+                                    <button type="submit" class="pear-btn pear-btn-primary pear-btn-md" lay-submit=""
+                                            lay-filter="saveSessionInfo">
+                                        提交
+                                    </button>
+                                    <div class="layui-form-mid layui-word-aux" style="color: #FF5722;">
+                                        <i class="layui-icon layui-icon-tips"></i> 修改Session配置后需要重启服务才能生效
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
                 </div>
             </div>
 
@@ -782,6 +970,20 @@
                             tab.href= index.href;
                             form.val("tabInfo", res.tab);
 
+                            // 获取Session配置
+                            $.ajax({
+                                url: "/app/admin/config/get_session_config",
+                                type: "GET",
+                                dataType: "json",
+                                success: function (sessionConfig) {
+                                    if (sessionConfig) {
+                                        form.val("sessionInfo", sessionConfig);
+                                        // 切换显示不同的存储配置
+                                        toggleSessionStorage(sessionConfig.type || 'file');
+                                    }
+                                }
+                            });
+
                             // 填充扩展设置表单
                             if (res.theme) {
                                 // 为主题设置单独赋值，确保正确处理
@@ -853,6 +1055,41 @@
                         }
                     });
                 }
+
+                function toggleSessionStorage(type) {
+                    if (type === 'redis') {
+                        $('#redis-config').show();
+                        $('#file-config').hide();
+                    } else {
+                        $('#file-config').show();
+                        $('#redis-config').hide();
+                    }
+                }
+
+                // 监听存储类型切换
+                form.on('select(sessionType)', function (data) {
+                    toggleSessionStorage(data.value);
+                });
+
+                // 提交Session设置
+                form.on('submit(saveSessionInfo)', function (data) {
+                    $.ajax({
+                        url: '/app/admin/config/set_session_config',
+                        type: 'POST',
+                        dataType: 'json',
+                        data: data.field,
+                        success: function (res) {
+                            if (res.code) {
+                                return layui.popup.failure(res.msg || '保存失败');
+                            }
+                            return layui.popup.success('保存成功，重启服务后生效');
+                        },
+                        error: function () {
+                            layui.popup.failure('请求失败');
+                        }
+                    });
+                    return false;
+                });
 
                 // 初始化加载配置
                 loadConfig();
