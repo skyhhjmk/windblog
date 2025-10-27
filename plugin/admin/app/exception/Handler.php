@@ -15,11 +15,12 @@
 
 namespace plugin\admin\app\exception;
 
+use function json_encode;
+use function nl2br;
+
 use Throwable;
 use Webman\Http\Request;
 use Webman\Http\Response;
-use function json_encode;
-use function nl2br;
 
 /**
  * Class Handler

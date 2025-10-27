@@ -113,7 +113,7 @@ class BlogService
                                     $q->where('categories.id', (int) $value);
                                 } else {
                                     $q->where('categories.slug', (string) $value)
-                                        ->orWhere('categories.name', (string)$value);
+                                        ->orWhere('categories.name', (string) $value);
                                 }
                             });
                         }
@@ -125,7 +125,7 @@ class BlogService
                                     $q->where('tags.id', (int) $value);
                                 } else {
                                     $q->where('tags.slug', (string) $value)
-                                        ->orWhere('tags.name', (string)$value);
+                                        ->orWhere('tags.name', (string) $value);
                                 }
                             });
                         }

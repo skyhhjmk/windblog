@@ -4,11 +4,11 @@ namespace plugin\admin\app\controller;
 
 use app\model\Post;
 
-use Throwable;
 use function publish_static;
 
 use support\Request;
 use support\Response;
+use Throwable;
 
 /**
  * 静态缓存设置

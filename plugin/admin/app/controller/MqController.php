@@ -2,13 +2,13 @@
 
 namespace plugin\admin\app\controller;
 
-use PhpAmqpLib\Connection\AMQPStreamConnection;
-use Throwable;
 use function blog_config;
 use function json;
 
+use PhpAmqpLib\Connection\AMQPStreamConnection;
 use support\Request;
 use support\Response;
+use Throwable;
 
 class MqController
 {

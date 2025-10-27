@@ -5,12 +5,12 @@ namespace app\middleware;
 use app\annotation\CSRFVerify;
 use app\service\CSRFService;
 
-use support\Log;
 use function config;
 
 use Exception;
 use ReflectionClass;
 use ReflectionMethod;
+use support\Log;
 use support\view\Raw;
 use support\view\Twig;
 use Throwable;
