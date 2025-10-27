@@ -5,6 +5,7 @@ namespace plugin\admin\app\controller;
 use app\model\Setting;
 use app\service\MediaLibraryService;
 use plugin\admin\app\common\Util;
+use support\Db;
 use support\exception\BusinessException;
 use support\Request;
 use support\Response;
@@ -373,6 +374,135 @@ class ConfigController extends Base
         } catch (Throwable $e) {
             // 静默处理错误，不中断主流程
             // 可以记录日志以便调试
+        }
+    }
+
+    /**
+     * 获取OAuth配置
+     *
+     * @return Response
+     */
+    public function get_oauth_config(): Response
+    {
+        try {
+            $oauthConfig = [];
+
+            // 从数据库动态读取所有oauth_*配置
+            $allSettings = Db::table('settings')
+                ->where('key', 'like', 'oauth_%')
+                ->get();
+
+            foreach ($allSettings as $setting) {
+                // 提取provider名称 (oauth_xxx => xxx)
+                $providerKey = str_replace('oauth_', '', $setting->key);
+
+                try {
+                    $config = json_decode($setting->value, true);
+
+                    if ($config && is_array($config)) {
+                        // 构建返回数据，包含所有字段
+                        $oauthConfig[$providerKey] = [
+                            'enabled' => $config['enabled'] ?? false,
+                            'name' => $config['name'] ?? ucfirst($providerKey),
+                            'icon' => $config['icon'] ?? 'fab fa-' . $providerKey,
+                            'color' => $config['color'] ?? '#666',
+                            'base_url' => $config['base_url'] ?? '',
+                            'client_id' => $config['client_id'] ?? '',
+                            'client_secret' => $config['client_secret'] ?? '',
+                            'scopes' => $config['scopes'] ?? [],
+
+                            // 可选端点配置
+                            'authorize_path' => $config['authorize_path'] ?? '',
+                            'token_path' => $config['token_path'] ?? '',
+                            'userinfo_path' => $config['userinfo_path'] ?? '',
+                            'revoke_path' => $config['revoke_path'] ?? '',
+
+                            // 字段映射配置
+                            'user_id_field' => $config['user_id_field'] ?? '',
+                            'username_field' => $config['username_field'] ?? '',
+                            'email_field' => $config['email_field'] ?? '',
+                            'nickname_field' => $config['nickname_field'] ?? '',
+                            'avatar_field' => $config['avatar_field'] ?? '',
+                        ];
+                    }
+                } catch (Throwable $e) {
+                    // 忽略错误，继续处理下一个
+                    continue;
+                }
+            }
+
+            return json($oauthConfig);
+        } catch (Throwable $e) {
+            return $this->json(1, $e->getMessage());
+        }
+    }
+
+    /**
+     * 设置OAuth配置
+     *
+     * @param Request $request
+     *
+     * @return Response
+     */
+    public function set_oauth_config(Request $request): Response
+    {
+        try {
+            // 接收JSON数据
+            $body = $request->rawBody();
+            $oauthConfig = json_decode($body, true);
+
+            if (!$oauthConfig || !is_array($oauthConfig)) {
+                return $this->json(1, '无效的请求数据');
+            }
+
+            // 动态保存所有平台配置
+            foreach ($oauthConfig as $provider => $config) {
+                if (!is_array($config)) {
+                    continue;
+                }
+
+                // 读取现有配置
+                $currentConfig = blog_config('oauth_' . $provider, [], true, true) ?: [];
+
+                // 更新配置字段
+                $currentConfig['enabled'] = isset($config['enabled']) && $config['enabled'] === true;
+                $currentConfig['name'] = $config['name'] ?? $currentConfig['name'] ?? ucfirst($provider);
+                $currentConfig['icon'] = $config['icon'] ?? $currentConfig['icon'] ?? 'fab fa-' . $provider;
+                $currentConfig['color'] = $config['color'] ?? $currentConfig['color'] ?? '#666';
+                $currentConfig['client_id'] = $config['client_id'] ?? '';
+                $currentConfig['client_secret'] = $config['client_secret'] ?? '';
+
+                // base_url（通用平台必须）
+                if (isset($config['base_url'])) {
+                    $currentConfig['base_url'] = $config['base_url'];
+                }
+
+                // scopes
+                if (isset($config['scopes'])) {
+                    $currentConfig['scopes'] = is_array($config['scopes']) ? $config['scopes'] : [];
+                }
+
+                // 端点配置
+                foreach (['authorize_path', 'token_path', 'userinfo_path', 'revoke_path'] as $field) {
+                    if (isset($config[$field])) {
+                        $currentConfig[$field] = $config[$field];
+                    }
+                }
+
+                // 字段映射配置
+                foreach (['user_id_field', 'username_field', 'email_field', 'nickname_field', 'avatar_field'] as $field) {
+                    if (isset($config[$field])) {
+                        $currentConfig[$field] = $config[$field];
+                    }
+                }
+
+                // 保存配置
+                blog_config('oauth_' . $provider, $currentConfig, false, true, true);
+            }
+
+            return $this->json(0);
+        } catch (Throwable $e) {
+            return $this->json(1, $e->getMessage());
         }
     }
 

@@ -1,5 +1,5 @@
 /* ==========================================================================
-   风屿雨博客 - 高级动画样式
+   WindBlog - 高级动画样式
    ========================================================================== */
 
 /* 基础动画变量定义 */
@@ -518,8 +518,8 @@ article .hover-rotate:hover,
   .touch-feedback {
     transition: transform 0.15s ease, opacity 0.15s ease;
   }
-  
-  .touch-feedback:active {
+
+    .touch-feedback:active {
     transform: scale(0.95);
     opacity: 0.8;
   }
@@ -566,8 +566,8 @@ article .hover-rotate:hover,
     --animation-duration-slow: 0.5s;
     --pjax-transition-duration: 0.2s;
   }
-  
-  /* 移动端导航栏优化 */
+
+    /* 移动端导航栏优化 */
   header.nav-hidden {
     transform: translateY(-120%);
   }
@@ -583,13 +583,13 @@ article .hover-rotate:hover,
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
-  
-  /* 禁用PJAX过渡动画 */
+
+    /* 禁用PJAX过渡动画 */
   #pjax-container {
     transition: none !important;
   }
-  
-  /* 禁用导航栏滚动效果 */
+
+    /* 禁用导航栏滚动效果 */
   header {
     transform: translateY(0) !important;
   }

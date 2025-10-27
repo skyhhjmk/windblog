@@ -5,30 +5,36 @@ SET client_encoding = 'UTF8';
 -- 创建用户表
 CREATE TABLE IF NOT EXISTS wa_users
 (
-    id         BIGSERIAL PRIMARY KEY,
-    username   VARCHAR(32)    NOT NULL,
-    nickname   VARCHAR(40)    NOT NULL,
-    password   VARCHAR(255)   NOT NULL,
-    sex        VARCHAR(1)     NOT NULL  DEFAULT '1',
-    avatar     VARCHAR(255)             DEFAULT NULL,
-    email      VARCHAR(128)             DEFAULT NULL,
-    mobile     VARCHAR(16)              DEFAULT NULL,
-    level      INTEGER        NOT NULL  DEFAULT 0,
-    birthday   DATE                     DEFAULT NULL,
-    money      DECIMAL(10, 2) NOT NULL  DEFAULT 0.00,
-    score      INTEGER        NOT NULL  DEFAULT 0,
-    last_time  TIMESTAMP WITH TIME ZONE DEFAULT NULL,
-    last_ip    VARCHAR(50)              DEFAULT NULL,
-    join_time  TIMESTAMP WITH TIME ZONE DEFAULT NULL,
-    join_ip    VARCHAR(50)              DEFAULT NULL,
-    token      VARCHAR(50)              DEFAULT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
-    "role"     INTEGER        NOT NULL  DEFAULT 1,
-    status     INTEGER        NOT NULL  DEFAULT 0,
+    id                          BIGSERIAL PRIMARY KEY,
+    username                    VARCHAR(32)    NOT NULL,
+    nickname                    VARCHAR(40)    NOT NULL,
+    password                    VARCHAR(255)   NOT NULL,
+    sex                         VARCHAR(1)     NOT NULL  DEFAULT '1',
+    avatar                      VARCHAR(255)             DEFAULT NULL,
+    email                       VARCHAR(128)             DEFAULT NULL,
+    mobile                      VARCHAR(16)              DEFAULT NULL,
+    level                       INTEGER        NOT NULL  DEFAULT 0,
+    birthday                    DATE                     DEFAULT NULL,
+    money                       DECIMAL(10, 2) NOT NULL  DEFAULT 0.00,
+    score                       INTEGER        NOT NULL  DEFAULT 0,
+    last_time                   TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+    last_ip                     VARCHAR(50)              DEFAULT NULL,
+    join_time                   TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+    join_ip                     VARCHAR(50)              DEFAULT NULL,
+    token                       VARCHAR(50)              DEFAULT NULL,
+    email_verified_at           TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+    activation_token            VARCHAR(64)              DEFAULT NULL,
+    activation_token_expires_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+    created_at                  TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at                  TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    deleted_at                  TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+    "role"                      INTEGER        NOT NULL  DEFAULT 1,
+    status                      INTEGER        NOT NULL  DEFAULT 0,
     UNIQUE (username)
 );
+
+CREATE INDEX IF NOT EXISTS idx_wa_users_email ON wa_users (email);
+CREATE INDEX IF NOT EXISTS idx_wa_users_activation_token ON wa_users (activation_token);
 
 COMMENT ON TABLE wa_users IS '用户表';
 COMMENT ON COLUMN wa_users.username IS '用户名';
@@ -47,11 +53,52 @@ COMMENT ON COLUMN wa_users.last_ip IS '登录ip';
 COMMENT ON COLUMN wa_users.join_time IS '注册时间';
 COMMENT ON COLUMN wa_users.join_ip IS '注册ip';
 COMMENT ON COLUMN wa_users.token IS 'token';
+COMMENT ON COLUMN wa_users.email_verified_at IS '邮箱验证时间';
+COMMENT ON COLUMN wa_users.activation_token IS '激活令牌';
+COMMENT ON COLUMN wa_users.activation_token_expires_at IS '激活令牌过期时间';
 COMMENT ON COLUMN wa_users.created_at IS '创建时间';
 COMMENT ON COLUMN wa_users.updated_at IS '更新时间';
 COMMENT ON COLUMN wa_users.deleted_at IS '删除时间';
 COMMENT ON COLUMN wa_users."role" IS '角色';
 COMMENT ON COLUMN wa_users.status IS '禁用';
+
+-- 创建用户OAuth绑定表
+CREATE TABLE IF NOT EXISTS user_oauth_bindings
+(
+    id                BIGSERIAL PRIMARY KEY,
+    user_id           INTEGER      NOT NULL,
+    provider          VARCHAR(50)  NOT NULL,
+    provider_user_id  VARCHAR(255) NOT NULL,
+    provider_username VARCHAR(255) DEFAULT NULL,
+    provider_email    VARCHAR(255) DEFAULT NULL,
+    provider_avatar   VARCHAR(500) DEFAULT NULL,
+    access_token      TEXT         DEFAULT NULL,
+    refresh_token     TEXT         DEFAULT NULL,
+    expires_at        TIMESTAMP    DEFAULT NULL,
+    extra_data        JSONB        DEFAULT NULL,
+    created_at        TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+    updated_at        TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_provider_user UNIQUE (provider, provider_user_id),
+    CONSTRAINT user_oauth_bindings_user_id_foreign FOREIGN KEY (user_id) REFERENCES wa_users (id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_oauth_user_id ON user_oauth_bindings (user_id);
+CREATE INDEX IF NOT EXISTS idx_user_oauth_provider ON user_oauth_bindings (provider);
+
+COMMENT ON TABLE user_oauth_bindings IS '用户OAuth绑定表';
+COMMENT ON COLUMN user_oauth_bindings.id IS '主键';
+COMMENT ON COLUMN user_oauth_bindings.user_id IS '用户ID';
+COMMENT ON COLUMN user_oauth_bindings.provider IS 'OAuth提供商(github, google, wechat等)';
+COMMENT ON COLUMN user_oauth_bindings.provider_user_id IS 'OAuth提供商的用户ID';
+COMMENT ON COLUMN user_oauth_bindings.provider_username IS 'OAuth提供商的用户名';
+COMMENT ON COLUMN user_oauth_bindings.provider_email IS 'OAuth提供商的邮箱';
+COMMENT ON COLUMN user_oauth_bindings.provider_avatar IS 'OAuth提供商的头像URL';
+COMMENT ON COLUMN user_oauth_bindings.access_token IS '访问令牌(加密存储)';
+COMMENT ON COLUMN user_oauth_bindings.refresh_token IS '刷新令牌(加密存储)';
+COMMENT ON COLUMN user_oauth_bindings.expires_at IS '令牌过期时间';
+COMMENT ON COLUMN user_oauth_bindings.extra_data IS '额外数据(JSON格式)';
+COMMENT ON COLUMN user_oauth_bindings.created_at IS '绑定时间';
+COMMENT ON COLUMN user_oauth_bindings.updated_at IS '更新时间';
 
 -- 创建分类表
 CREATE TABLE IF NOT EXISTS categories

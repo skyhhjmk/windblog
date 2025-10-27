@@ -159,13 +159,26 @@ function blog_config_get_from_db(string $cache_key): mixed
         return null;
     }
 
-    // RabbitMQ 端口必须为正整数（其余键使用全局规则）
+    // RabbitMQ 端口必须为有效端口号（1-65535）
     if ($cache_key === 'rabbitmq_port') {
         if (!is_numeric($val)) {
             return null;
         }
         $port = (int) $val;
-        if ($port <= 0) {
+        if ($port <= 0 || $port > 65535) {
+            return null;
+        }
+
+        return $port;
+    }
+
+    // 其他端口配置项的通用验证
+    if (strpos($cache_key, '_port') !== false && $cache_key !== 'rabbitmq_port') {
+        if (!is_numeric($val)) {
+            return null;
+        }
+        $port = (int) $val;
+        if ($port <= 0 || $port > 65535) {
             return null;
         }
 
@@ -186,13 +199,14 @@ function blog_config_handle_init(string $cache_key, string $fullCacheKey, mixed 
     }
 
     if (!$init) {
-        return blog_config_normalize_default($default); // 不初始化，直接返回默认值
+        return blog_config_normalize_default($default); // 不初始化,直接返回默认值
     }
 
     $default = blog_config_normalize_default($default);
 
     try {
-        // 使用 updateOrCreate 确保原子性，避免并发冲突
+        // 使用 updateOrCreate 确保原子性,避免并发冲突
+        // updateOrCreate 会在数据库层面加锁,避免竞态条件
         $setting = app\model\Setting::updateOrCreate(
             ['key' => $cache_key],
             ['value' => blog_config_convert_to_storage($default)]
@@ -205,11 +219,13 @@ function blog_config_handle_init(string $cache_key, string $fullCacheKey, mixed 
 
         return $default;
     } catch (Exception|Error $e) {
-        // 如果仍然失败（极少情况），记录日志并返回默认值
+        // 如果仍然失败（极少情况）,记录日志并返回默认值
         Log::error("[blog_config] 初始化失败 (key: {$cache_key}): " . $e->getMessage());
 
         // 尝试重新从数据库读取（可能其他进程已成功创建）
+        // 添加延迟重试机制以处理并发情况
         try {
+            usleep(50000); // 等待50ms,让其他进程完成创建
             $dbValue = blog_config_get_from_db($cache_key);
             if ($dbValue !== null) {
                 if ($use_cache) {
@@ -269,8 +285,47 @@ function blog_config_normalize_default(mixed $value): mixed
 }
 
 /**
- * 格式化日期时间
+ * 获取UTC当前时间（Carbon对象）
  *
+ * @return \Illuminate\Support\Carbon
+ */
+function utc_now(): \Illuminate\Support\Carbon
+{
+    return \Illuminate\Support\Carbon::now('UTC');
+}
+
+/**
+ * 获取UTC当前时间字符串
+ *
+ * @param string $format 格式化模板
+ *
+ * @return string
+ */
+function utc_now_string(string $format = 'Y-m-d H:i:s'): string
+{
+    return \Illuminate\Support\Carbon::now('UTC')->format($format);
+}
+
+/**
+ * 解析UTC时间字符串为Carbon对象
+ *
+ * @param string|null $time 时间字符串
+ *
+ * @return \Illuminate\Support\Carbon|null
+ */
+function utc_parse(?string $time): ?\Illuminate\Support\Carbon
+{
+    if (empty($time)) {
+        return null;
+    }
+
+    return \Illuminate\Support\Carbon::parse($time, 'UTC');
+}
+
+/**
+ * 格式化日期时间（已废弃，使用 utc_now_string 或 Carbon）
+ *
+ * @deprecated 使用 utc_now_string() 或 Carbon::now('UTC')->format()
  * @param string $time   时间字符串
  * @param string $format 格式化模板
  *
@@ -278,7 +333,10 @@ function blog_config_normalize_default(mixed $value): mixed
  */
 function format_time(string $time, string $format = 'Y-m-d H:i:s'): string
 {
-    return date($format, strtotime($time));
+    // 修复：强制按UTC解析时间
+    $carbon = \Illuminate\Support\Carbon::parse($time, 'UTC');
+
+    return $carbon->format($format);
 }
 
 /**
@@ -349,6 +407,8 @@ function random_string(int $length = 10, string $type = 'mix'): string
  */
 function publish_static(array $data): bool
 {
+    $conn = null;
+    $ch = null;
     try {
         $host = (string) blog_config('rabbitmq_host', '127.0.0.1', true);
         $port = (int) blog_config('rabbitmq_port', 5672, true);
@@ -416,14 +476,27 @@ function publish_static(array $data): bool
         ]);
         $ch->basic_publish($msg, $exchange, $routingKey);
 
-        $ch->close();
-        $conn->close();
-
         return true;
     } catch (\Throwable $e) {
         \support\Log::error('publish_static 失败: ' . $e->getMessage());
 
         return false;
+    } finally {
+        // 确保资源被正确关闭
+        try {
+            if ($ch !== null) {
+                $ch->close();
+            }
+        } catch (\Throwable $e) {
+            \support\Log::warning('publish_static 关闭通道失败: ' . $e->getMessage());
+        }
+        try {
+            if ($conn !== null) {
+                $conn->close();
+            }
+        } catch (\Throwable $e) {
+            \support\Log::warning('publish_static 关闭连接失败: ' . $e->getMessage());
+        }
     }
 }
 

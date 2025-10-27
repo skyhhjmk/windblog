@@ -19,7 +19,7 @@ class DebugController
         $serverInfo = [
             'PHP版本' => PHP_VERSION,
             '服务器软件' => $_SERVER['SERVER_SOFTWARE'] ?? 'N/A',
-            '服务器时间' => date('Y-m-d H:i:s'),
+            '服务器时间' => utc_now_string('Y-m-d H:i:s'),
             '内存使用' => round(memory_get_usage() / 1024 / 1024, 2) . ' MB',
             '峰值内存使用' => round(memory_get_peak_usage() / 1024 / 1024, 2) . ' MB',
             '操作系统' => php_uname(),
@@ -66,7 +66,7 @@ class DebugController
         $responseInfo = [
             '状态码' => 200,
             '内容类型' => 'application/json',
-            '响应时间' => date('Y-m-d H:i:s'),
+            '响应时间' => utc_now_string('Y-m-d H:i:s'),
             '框架版本' => 'Webman Framework',
         ];
 

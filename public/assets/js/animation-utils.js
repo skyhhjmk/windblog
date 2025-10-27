@@ -1,5 +1,5 @@
 /**
- * 风屿雨博客 - 动画工具库
+ * WindBlog - 动画工具库
  * 提供增强的动画效果和交互功能
  */
 
@@ -21,7 +21,7 @@ class ScrollAnimationManager {
     init() {
         // 收集所有需要滚动触发动画的元素
         this.animatedElements = document.querySelectorAll('.fade-in-on-scroll');
-        
+
         // 检查用户是否偏好减少动画
         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
             this.isActive = false;
@@ -33,28 +33,28 @@ class ScrollAnimationManager {
 
         // 初始检查可见性
         this.checkVisibility();
-        
+
         // 绑定滚动事件（使用节流函数优化性能）
         window.addEventListener('scroll', this.throttle(() => {
             if (this.isActive) {
                 this.checkVisibility();
             }
         }, this.throttleDelay));
-        
+
         // 绑定窗口调整事件
         window.addEventListener('resize', this.throttle(() => {
             if (this.isActive) {
                 this.checkVisibility();
             }
         }, this.throttleDelay));
-        
+
         // 绑定页面加载完成事件
         window.addEventListener('load', () => {
             if (this.isActive) {
                 this.checkVisibility();
             }
         });
-        
+
         // 绑定PJAX页面切换完成事件
         document.addEventListener('page:ready', () => {
             this.animatedElements = document.querySelectorAll('.fade-in-on-scroll');
@@ -73,14 +73,14 @@ class ScrollAnimationManager {
             if (el.classList.contains('visible')) {
                 return;
             }
-            
+
             const elementTop = el.getBoundingClientRect().top;
             const elementBottom = el.getBoundingClientRect().bottom;
             const isVisible = (
                 elementTop < window.innerHeight - 100 &&
                 elementBottom > 0
             );
-            
+
             if (isVisible) {
                 // 获取动画延迟
                 const animationDelay = el.dataset.animationDelay || 0;
@@ -124,7 +124,7 @@ class ScrollAnimationManager {
             this.checkVisibility();
         }
     }
-    
+
     /**
      * PJAX页面切换时重新初始化动画管理器
      */
@@ -135,20 +135,20 @@ class ScrollAnimationManager {
                 this.checkVisibility();
             }
         }, this.throttleDelay);
-        
+
         const resizeHandler = this.throttle(() => {
             if (this.isActive) {
                 this.checkVisibility();
             }
         }, this.throttleDelay);
-        
+
         window.removeEventListener('scroll', scrollHandler);
         window.removeEventListener('resize', resizeHandler);
-        
+
         // 重置属性
         this.animatedElements = [];
         this.throttleTimeout = null;
-        
+
         // 重新初始化
         this.init();
     }
@@ -160,33 +160,33 @@ class ScrollAnimationManager {
 const AnimationUtils = {
     // 滚动动画管理器实例
     scrollManager: null,
-    
+
     /**
      * 初始化所有动画功能
      */
     init() {
         // 初始化滚动动画管理器
         this.scrollManager = new ScrollAnimationManager();
-        
+
         // 增强按钮交互
         this.enhanceButtonInteractions();
-        
+
         // 增强卡片交互
         this.enhanceCardInteractions();
-        
+
         // 优化导航动画
         this.optimizeNavigationAnimation();
-        
+
         // 添加打字机效果支持
         this.initTypewriterEffect();
-        
+
         // 增强触摸设备交互
         this.enhanceTouchInteractions();
-        
+
         // 初始化PJAX动画集成
         this.initPJAXAnimations();
     },
-    
+
     /**
      * 初始化PJAX动画集成
      */
@@ -202,17 +202,17 @@ const AnimationUtils = {
                 return;
             }
                 // 仅为没有动画类的区块添加
-                if (!section.classList.contains('fade-in-on-scroll') && 
+                if (!section.classList.contains('fade-in-on-scroll') &&
                     !section.classList.contains('no-animation')) {
                     section.classList.add('fade-in-on-scroll');
-                    
+
                     // 添加动画延迟，创建层次感
                     if (!section.dataset.animationDelay) {
                         section.dataset.animationDelay = Math.min(index * 0.1, 0.5);
                     }
                 }
             });
-            
+
             // 确保新内容中的交互元素也有动画效果
             const interactiveElements = contents.querySelectorAll('button, a:not([href^="#"]), .card');
             interactiveElements.forEach(element => {
@@ -226,13 +226,13 @@ const AnimationUtils = {
                 }
             });
         });
-        
+
         // 监听PJAX完成事件
         document.addEventListener('pjax:end', () => {
             // 重新初始化动画系统
             this.reinit();
         });
-        
+
         // 监听PJAX错误事件
         document.addEventListener('pjax:error', (e) => {
             const xhr = (e && e.detail && e.detail.xhr) ? e.detail.xhr : null;
@@ -242,13 +242,13 @@ const AnimationUtils = {
             } else if (xhr && xhr.status >= 500) {
                 this.showNotification('服务器错误，请稍后再试', 'error');
             }
-            
+
             // 重置动画状态
             if (this.scrollManager) {
                 this.scrollManager.resume();
             }
         });
-        
+
         // 监听页面切换动画开始事件
         document.addEventListener('pjax:start', () => {
             // 暂停滚动动画以提高性能
@@ -257,7 +257,7 @@ const AnimationUtils = {
             }
         });
     },
-    
+
     /**
      * 重新初始化所有动画功能（用于PJAX页面切换后）
      */
@@ -268,18 +268,18 @@ const AnimationUtils = {
         } else {
             this.scrollManager = new ScrollAnimationManager();
         }
-        
+
         // 重新初始化其他动画功能
         this.enhanceButtonInteractions();
         this.enhanceCardInteractions();
         this.optimizeNavigationAnimation();
         this.initTypewriterEffect();
         this.enhanceTouchInteractions();
-        
+
         // 触发自定义事件，通知动画系统已准备就绪
         document.dispatchEvent(new CustomEvent('animations:ready'));
     },
-    
+
     /**
      * 增强按钮交互效果
      */
@@ -290,7 +290,7 @@ const AnimationUtils = {
             if (!button.classList.contains('touch-feedback')) {
                 button.classList.add('touch-feedback');
             }
-            
+
             // 为主要按钮添加涟漪效果
             if (button.classList.contains('btn-primary') || button.classList.contains('bg-blue-600')) {
                 if (!button.classList.contains('ripple-btn')) {
@@ -299,7 +299,7 @@ const AnimationUtils = {
             }
         });
     },
-    
+
     /**
      * 增强卡片交互效果
      */
@@ -311,12 +311,12 @@ const AnimationUtils = {
                 return;
             }
             // 检查是否已经有任何悬停效果类
-            const hasHoverEffect = card.classList.contains('hover-lift') || 
-                                  card.classList.contains('hover-scale') || 
-                                  card.classList.contains('hover-spin') || 
-                                  card.classList.contains('hover-rotate') || 
+            const hasHoverEffect = card.classList.contains('hover-lift') ||
+                card.classList.contains('hover-scale') ||
+                card.classList.contains('hover-spin') ||
+                card.classList.contains('hover-rotate') ||
                                   card.classList.contains('hover-animate');
-            
+
             // 只有在没有任何悬停效果类的情况下才添加默认的悬停提升效果
             if (!hasHoverEffect) {
                 card.classList.add('hover-lift', 'accelerated');
@@ -324,13 +324,13 @@ const AnimationUtils = {
                 // 如果已经有其他悬停效果，但没有硬件加速类，则添加硬件加速
                 card.classList.add('accelerated');
             }
-            
+
             // 为卡片添加交错动画延迟
             const delay = (index % 3) * 0.1;
             card.style.animationDelay = `${delay}s`;
         });
     },
-    
+
     /**
      * 优化导航动画
      */
@@ -342,15 +342,15 @@ const AnimationUtils = {
             progressBar.style.transition = 'width 0.3s ease-out, opacity 0.3s ease-out';
             progressBar.style.backgroundImage = 'linear-gradient(to right, #6366f1, #8b5cf6)';
         }
-        
+
         // 添加导航栏滚动效果
         const header = document.querySelector('header');
         if (header) {
             let lastScrollTop = 0;
-            
+
             window.addEventListener('scroll', this.throttle(() => {
                 const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-                
+
                 if (scrollTop > lastScrollTop && scrollTop > 100) {
                     // 向下滚动且已滚动一定距离，隐藏导航栏
                     header.classList.add('nav-hidden');
@@ -358,12 +358,12 @@ const AnimationUtils = {
                     // 向上滚动，显示导航栏
                     header.classList.remove('nav-hidden');
                 }
-                
+
                 lastScrollTop = scrollTop <= 0 ? 0 : scrollTop; // 避免负值
             }, 150));
         }
     },
-    
+
     /**
      * 节流函数（工具类内部使用）
      */
@@ -378,7 +378,7 @@ const AnimationUtils = {
             }
         };
     },
-    
+
     /**
      * 初始化打字机效果
      */
@@ -387,10 +387,10 @@ const AnimationUtils = {
         typewriters.forEach(element => {
             // 获取原始文本内容
             const originalText = element.textContent;
-            
+
             // 设置初始宽度为0
             element.style.width = '0';
-            
+
             // 绑定动画完成事件
             element.addEventListener('animationend', function(e) {
                 if (e.animationName === 'typing') {
@@ -400,7 +400,7 @@ const AnimationUtils = {
             });
         });
     },
-    
+
     /**
      * 增强触摸设备交互
      */
@@ -408,7 +408,7 @@ const AnimationUtils = {
         if ('ontouchstart' in document.documentElement) {
             // 为触摸设备添加特殊处理
             document.body.classList.add('touch-device');
-            
+
             // 为交互元素添加触摸事件处理
             const interactiveElements = document.querySelectorAll('.hover-lift, .hover-animate');
             interactiveElements.forEach(element => {
@@ -416,18 +416,18 @@ const AnimationUtils = {
                 element.addEventListener('touchstart', function() {
                     this.style.transform = 'translateY(-2px)';
                 }, { passive: true });
-                
+
                 element.addEventListener('touchend', function() {
                     this.style.transform = 'translateY(0)';
                 }, { passive: true });
-                
+
                 element.addEventListener('touchcancel', function() {
                     this.style.transform = 'translateY(0)';
                 }, { passive: true });
             });
         }
     },
-    
+
     /**
      * 为元素添加动画类
      * @param {HTMLElement} element - 目标元素
@@ -440,23 +440,23 @@ const AnimationUtils = {
             'animate-fade-in-left', 'animate-fade-in-right', 'animate-shake',
             'animate-bounce', 'animate-pulse'
         ];
-        
+
         animationClasses.forEach(cls => {
             element.classList.remove(cls);
         });
-        
+
         // 添加新的动画类
         element.classList.add(animationClass);
-        
+
         // 监听动画结束，清理类名以便下次使用
         const handleAnimationEnd = function() {
             element.classList.remove(animationClass);
             element.removeEventListener('animationend', handleAnimationEnd);
         };
-        
+
         element.addEventListener('animationend', handleAnimationEnd);
     },
-    
+
     /**
      * 显示通知消息（使用原生实现）
      * @param {string} message - 消息内容
@@ -472,11 +472,11 @@ const AnimationUtils = {
             notificationContainer.className = 'fixed top-4 right-4 z-50 flex flex-col items-end gap-4';
             document.body.appendChild(notificationContainer);
         }
-        
+
         // 创建通知元素
         const notification = document.createElement('div');
         notification.className = `px-4 py-3 rounded-lg shadow-lg transform transition-all duration-300 translate-x-full w-full max-w-sm`;
-        
+
         // 设置不同类型的样式
         const typeStyles = {
             success: 'bg-green-500 text-white',
@@ -484,11 +484,11 @@ const AnimationUtils = {
             info: 'bg-blue-500 text-white',
             warning: 'bg-yellow-500 text-white'
         };
-        
+
         // 应用样式
         notification.classList.add(...typeStyles[type]?.split(' ') || typeStyles.info.split(' '));
         notification.textContent = message;
-        
+
         // 添加关闭按钮
         const closeBtn = document.createElement('button');
         closeBtn.className = 'absolute top-2 right-2 text-white opacity-70 hover:opacity-100 transition-opacity';
@@ -504,26 +504,26 @@ const AnimationUtils = {
         };
         notification.style.position = 'relative';
         notification.appendChild(closeBtn);
-        
+
         // 添加到容器顶部，使新通知显示在上面
         notificationContainer.insertBefore(notification, notificationContainer.firstChild);
-        
+
         // 触发入场动画
         setTimeout(() => {
             notification.style.transform = 'translateX(0)';
         }, 10);
-        
+
         // 设置自动关闭
         const timer = setTimeout(() => {
             this.removeNotification(notification);
         }, duration);
-        
+
         // 存储计时器引用，以便需要时可以清除
         notification.dataset.timerId = timer;
-        
+
         return notification;
     },
-    
+
     /**
      * 移除通知并调整其他通知位置
      * @param {HTMLElement} notification - 要移除的通知元素
@@ -533,11 +533,11 @@ const AnimationUtils = {
         if (notification.dataset.timerId) {
             clearTimeout(parseInt(notification.dataset.timerId));
         }
-        
+
         // 触发退场动画
         notification.style.transform = 'translateX(100%)';
         notification.style.opacity = '0';
-        
+
         // 动画结束后移除元素
         setTimeout(() => {
             if (notification.parentNode) {

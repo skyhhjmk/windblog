@@ -86,7 +86,7 @@ class EditorController
             'visibility' => $visibility,
             'allow_comments' => $allow_comments ? 1 : 0,
             'featured' => $featured ? 1 : 0,
-            'updated_at' => date('Y-m-d H:i:s'),
+            'updated_at' => utc_now_string('Y-m-d H:i:s'),
         ];
 
         // 调试日志
@@ -123,7 +123,7 @@ class EditorController
                 Db::table('post_author')->where('post_id', $post_id)->delete();
             } else {
                 // 创建新文章，并设置 author_id
-                $data['created_at'] = date('Y-m-d H:i:s');
+                $data['created_at'] = utc_now_string('Y-m-d H:i:s');
                 $data['author_id'] = $adminId;
                 $post = Post::create($data);
                 $post_id = $post->id;
@@ -150,8 +150,8 @@ class EditorController
                             'post_id' => $post_id,
                             'author_id' => $authorId,
                             'is_primary' => $isPrimary ? 1 : 0,
-                            'created_at' => date('Y-m-d H:i:s'),
-                            'updated_at' => date('Y-m-d H:i:s'),
+                            'created_at' => utc_now_string('Y-m-d H:i:s'),
+                            'updated_at' => utc_now_string('Y-m-d H:i:s'),
                         ];
 
                         if ($isPrimary) {
@@ -178,8 +178,8 @@ class EditorController
                         'post_id' => $post_id,
                         'author_id' => $adminId,
                         'is_primary' => 1,
-                        'created_at' => date('Y-m-d H:i:s'),
-                        'updated_at' => date('Y-m-d H:i:s'),
+                        'created_at' => utc_now_string('Y-m-d H:i:s'),
+                        'updated_at' => utc_now_string('Y-m-d H:i:s'),
                     ]);
                 } else {
                     // 如果管理员在wa_users表中不存在，查找或创建一个默认用户
@@ -432,9 +432,9 @@ class EditorController
                 'password' => password_hash('default_password_' . time(), PASSWORD_DEFAULT),
                 'email' => $admin->email ?? '',
                 'avatar' => $admin->avatar ?? '',
-                'created_at' => date('Y-m-d H:i:s'),
-                'updated_at' => date('Y-m-d H:i:s'),
-                'join_time' => date('Y-m-d H:i:s'),
+                'created_at' => utc_now_string('Y-m-d H:i:s'),
+                'updated_at' => utc_now_string('Y-m-d H:i:s'),
+                'join_time' => utc_now_string('Y-m-d H:i:s'),
                 'status' => 0, // 启用状态
             ]);
 

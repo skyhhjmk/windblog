@@ -23,15 +23,15 @@ class AuthCheck implements MiddlewareInterface
 
         // 访问的方法需要登录
         if (!in_array($request->action, $noNeedLogin)) {
-            // 拦截请求，返回一个重定向响应，请求停止向洋葱芯穿越
+            // 拦截请求,返回一个重定向响应,请求停止向洋葱芯穿越
             return redirect('/app/admin/login');
         }
 
         // 访问的方法需要管理员权限
-        if (!in_array($request->action, $adminOnly)) {
-            // 如果已登录但非管理员
-            if (session('login')) {
-                // 拦截请求，返回一个403响应，请求停止向洋葱芯穿越
+        if (in_array($request->action, $adminOnly)) {
+            // 如果不是管理员
+            if (!session('admin')) {
+                // 拦截请求,返回一个403响应,请求停止向洋葱芯穿越
                 return view('admin/code/403');
             }
         }

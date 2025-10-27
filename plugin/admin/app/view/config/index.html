@@ -26,6 +26,7 @@
                     <li>菜单配置</li>
                     <li>页面配置</li>
                     <li>扩展设置</li>
+                    <li>OAuth设置</li>
                 </ul>
                 <div class="layui-tab-content">
 
@@ -225,7 +226,7 @@
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <!-- 主题设置 -->
                             <fieldset class="layui-elem-field">
                                 <legend>主题设置</legend>
@@ -286,6 +287,157 @@
 
                     </div>
 
+                    <!-- OAuth设置 -->
+                    <div class="layui-tab-item">
+                        <div class="layui-card" style="margin-bottom: 20px;">
+                            <div class="layui-card-body">
+                                <blockquote class="layui-elem-quote" style="border-left: 5px solid #1E9FFF;">
+                                    <p style="margin: 0; padding: 5px 0;">
+                                        <i class="layui-icon layui-icon-tips"
+                                           style="font-size: 18px; color: #1E9FFF;"></i>
+                                        <strong>回调地址 (Callback URL):</strong>
+                                    </p>
+                                    <div style="margin-top: 10px; padding-left: 24px;">
+                                        <p style="margin: 5px 0; color: #666;">
+                                            Wind OAuth: <code id="callback-wind"
+                                                              style="background: #f6f6f6; padding: 2px 8px; border-radius: 3px; color: #FF5722;"></code>
+                                            <button type="button" class="layui-btn layui-btn-xs layui-btn-normal"
+                                                    onclick="copyCallback('wind')" style="margin-left: 10px;">
+                                                <i class="layui-icon layui-icon-file"></i>复制
+                                            </button>
+                                        </p>
+                                        <p style="margin: 5px 0; color: #666;">
+                                            GitHub: <code id="callback-github"
+                                                          style="background: #f6f6f6; padding: 2px 8px; border-radius: 3px; color: #FF5722;"></code>
+                                            <button type="button" class="layui-btn layui-btn-xs layui-btn-normal"
+                                                    onclick="copyCallback('github')" style="margin-left: 10px;">
+                                                <i class="layui-icon layui-icon-file"></i>复制
+                                            </button>
+                                        </p>
+                                        <p style="margin: 5px 0; color: #666;">
+                                            Google: <code id="callback-google"
+                                                          style="background: #f6f6f6; padding: 2px 8px; border-radius: 3px; color: #FF5722;"></code>
+                                            <button type="button" class="layui-btn layui-btn-xs layui-btn-normal"
+                                                    onclick="copyCallback('google')" style="margin-left: 10px;">
+                                                <i class="layui-icon layui-icon-file"></i>复制
+                                            </button>
+                                        </p>
+                                        <p style="margin-top: 10px; font-size: 12px; color: #999;">
+                                            <i class="layui-icon layui-icon-about"></i>
+                                            请在对应的OAuth平台应用设置中配置上述回调地址
+                                        </p>
+                                    </div>
+                                </blockquote>
+                            </div>
+                        </div>
+
+                        <form class="layui-form" lay-filter="oauthInfo">
+
+                            <!-- Wind OAuth -->
+                            <fieldset class="layui-elem-field">
+                                <legend>Wind OAuth</legend>
+                                <div class="layui-field-box">
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">启用</label>
+                                        <div class="layui-input-inline">
+                                            <input type="checkbox" name="wind.enabled" lay-skin="switch"/>
+                                        </div>
+                                    </div>
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">Base URL</label>
+                                        <div class="layui-input-inline">
+                                            <input type="text" name="wind.base_url"
+                                                   placeholder="请输入Wind OAuth服务地址" autocomplete="off"
+                                                   class="layui-input">
+                                        </div>
+                                    </div>
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">Client ID</label>
+                                        <div class="layui-input-inline">
+                                            <input type="text" name="wind.client_id" placeholder="请输入Wind Client ID"
+                                                   autocomplete="off" class="layui-input">
+                                        </div>
+                                    </div>
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">Client Secret</label>
+                                        <div class="layui-input-inline">
+                                            <input type="text" name="wind.client_secret"
+                                                   placeholder="请输入Wind Client Secret" autocomplete="off"
+                                                   class="layui-input">
+                                        </div>
+                                    </div>
+                                </div>
+                            </fieldset>
+
+                            <!-- GitHub OAuth -->
+                            <fieldset class="layui-elem-field">
+                                <legend>GitHub OAuth</legend>
+                                <div class="layui-field-box">
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">启用</label>
+                                        <div class="layui-input-inline">
+                                            <input type="checkbox" name="github.enabled" lay-skin="switch"/>
+                                        </div>
+                                    </div>
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">Client ID</label>
+                                        <div class="layui-input-inline">
+                                            <input type="text" name="github.client_id"
+                                                   placeholder="请输入GitHub Client ID" autocomplete="off"
+                                                   class="layui-input">
+                                        </div>
+                                    </div>
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">Client Secret</label>
+                                        <div class="layui-input-inline">
+                                            <input type="text" name="github.client_secret"
+                                                   placeholder="请输入GitHub Client Secret" autocomplete="off"
+                                                   class="layui-input">
+                                        </div>
+                                    </div>
+                                </div>
+                            </fieldset>
+
+                            <!-- Google OAuth -->
+                            <fieldset class="layui-elem-field">
+                                <legend>Google OAuth</legend>
+                                <div class="layui-field-box">
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">启用</label>
+                                        <div class="layui-input-inline">
+                                            <input type="checkbox" name="google.enabled" lay-skin="switch"/>
+                                        </div>
+                                    </div>
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">Client ID</label>
+                                        <div class="layui-input-inline">
+                                            <input type="text" name="google.client_id"
+                                                   placeholder="请输入Google Client ID" autocomplete="off"
+                                                   class="layui-input">
+                                        </div>
+                                    </div>
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">Client Secret</label>
+                                        <div class="layui-input-inline">
+                                            <input type="text" name="google.client_secret"
+                                                   placeholder="请输入Google Client Secret" autocomplete="off"
+                                                   class="layui-input">
+                                        </div>
+                                    </div>
+                                </div>
+                            </fieldset>
+
+                            <div class="layui-form-item">
+                                <div class="layui-input-block">
+                                    <button type="submit" class="pear-btn pear-btn-primary pear-btn-md" lay-submit=""
+                                            lay-filter="saveOAuthInfo">
+                                        提交
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
                 </div>
             </div>
 
@@ -297,9 +449,44 @@
         <script src="/app/admin/component/pear/pear.js"></script>
         <script src="/app/admin/admin/js/permission.js"></script>
         <script>
+            // 生成回调URL
+            (function () {
+                const protocol = window.location.protocol;
+                const host = window.location.host;
+                const baseUrl = protocol + '//' + host;
+
+                document.getElementById('callback-wind').textContent = baseUrl + '/oauth/wind/callback';
+                document.getElementById('callback-github').textContent = baseUrl + '/oauth/github/callback';
+                document.getElementById('callback-google').textContent = baseUrl + '/oauth/google/callback';
+            })();
+
+            // 复制回调URL到剪贴板
+            function copyCallback(provider) {
+                const element = document.getElementById('callback-' + provider);
+                const text = element.textContent;
+
+                // 创建临时输入框
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+
+                try {
+                    document.execCommand('copy');
+                    layui.layer.msg('复制成功！', {icon: 1, time: 1000});
+                } catch (err) {
+                    layui.layer.msg('复制失败，请手动复制', {icon: 2});
+                }
+
+                document.body.removeChild(textarea);
+            }
+        </script>
+        <script>
             // 全局变量，用于存储当前正在操作的输入框
             let currentMediaInput;
-            
+
             // 全局函数：更新favicon预览
             function updateFaviconPreview(url) {
                 // 确保在layui加载后再执行DOM操作
@@ -307,7 +494,7 @@
                     let $ = layui.$;
                     let previewText = $("#favicon-preview-text");
                     let previewImg = $("#favicon-preview-img");
-                    
+
                     if (url && url.trim() !== "") {
                         previewText.hide();
                         previewImg.attr("src", url).show();
@@ -317,7 +504,7 @@
                     }
                 });
             }
-            
+
             // 为新的媒体选择器添加全局回调函数，定义在全局作用域
             window.selectMedia = function(data) {
                 // 新的媒体选择器返回的数据结构是完整的媒体项目对象
@@ -331,7 +518,7 @@
                 // 关闭弹窗
                 parent.layer.closeAll();
             };
-            
+
             window.closeMediaSelector = function() {
                 parent.layer.closeAll();
             };
@@ -351,7 +538,7 @@
                         area: ["95%", "90%"]
                     });
                 });
-                
+
                 layui.$("#favicon-choose").on("click", function() {
                     currentMediaInput = $("[name='favicon']");
                     parent.layer.open({
@@ -451,12 +638,12 @@
             layui.use(["form", "layer", "popup"], function() {
                 let $ = layui.$;
                 let form = layui.form;
-                
+
                 form.on("submit(saveExtInfo)", function(data){
                     let formData = data.field;
                     let urlMode = formData.url_mode;
                     delete formData.url_mode;
-                    
+
                     // 构建主题设置数据结构
                     let themeData = {
                         theme: {
@@ -467,7 +654,7 @@
                             banner: !!formData['theme.banner']
                         }
                     };
-                    
+
                     // 保存主题设置
                     $.ajax({
                         url: "/app/admin/config/update",
@@ -478,7 +665,7 @@
                             if (res.code) {
                                 return layui.popup.failure(res.msg);
                             }
-                            
+
                             // 保存URL模式设置
                             $.ajax({
                                 url: "/app/admin/config/set_url_mode",
@@ -501,10 +688,59 @@
                 });
             });
 
+            // OAuth设置
+            layui.use(["form", "layer", "popup"], function () {
+                let $ = layui.$;
+                let form = layui.form;
+
+                // 提交OAuth设置
+                form.on("submit(saveOAuthInfo)", function (data) {
+                    let formData = data.field;
+
+                    // 构建OAuth设置数据结构
+                    let oauthData = {
+                        wind: {
+                            enabled: !!formData['wind.enabled'],
+                            base_url: formData['wind.base_url'] || '',
+                            client_id: formData['wind.client_id'] || '',
+                            client_secret: formData['wind.client_secret'] || ''
+                        },
+                        github: {
+                            enabled: !!formData['github.enabled'],
+                            client_id: formData['github.client_id'] || '',
+                            client_secret: formData['github.client_secret'] || ''
+                        },
+                        google: {
+                            enabled: !!formData['google.enabled'],
+                            client_id: formData['google.client_id'] || '',
+                            client_secret: formData['google.client_secret'] || ''
+                        }
+                    };
+
+                    $.ajax({
+                        url: "/app/admin/config/set_oauth_config",
+                        dataType: "json",
+                        type: "POST",
+                        contentType: "application/json",
+                        data: JSON.stringify(oauthData),
+                        success: function (res) {
+                            if (res.code) {
+                                return layui.popup.failure(res.msg);
+                            }
+                            return layui.popup.success("操作成功");
+                        },
+                        error: function () {
+                            layui.popup.failure("设置保存失败");
+                        }
+                    });
+                    return false;
+                });
+            });
+
             layui.use(["form", "jquery"], function () {
                 let form = layui.form;
                 let $ = layui.$;
-                
+
                 // 获取配置数据
                 function loadConfig() {
                     // 获取网站信息
@@ -514,7 +750,7 @@
                         success: function (res) {
                             // 填充网站信息表单
                             form.val("siteInfo", res);
-                            
+
                             // 更新favicon预览
                             updateFaviconPreview(res.favicon);
                         },
@@ -523,19 +759,20 @@
                             layui.popup.failure("获取网站信息失败: " + error);
                         }
                     });
-                    
+
                     // 获取系统配置
                     $.ajax({
                         url: "/app/admin/config/get",
                         dataType: "json",
                         success: function (res) {
-                            if (res.code) {
-                                return layui.popup.failure(res.msg);
+                            // /app/admin/config/get 接口直接返回配置对象，不包含 code 字段
+                            if (!res || typeof res !== 'object') {
+                                return layui.popup.failure('获取系统配置失败');
                             }
-                            
+
                             // 填充菜单设置表单
                             form.val("menuInfo", res.menu);
-                            
+
                             // 填充标签设置表单
                             let tab = res.tab;
                             let index = tab.index;
@@ -544,14 +781,14 @@
                             tab.title = index.title;
                             tab.href= index.href;
                             form.val("tabInfo", res.tab);
-                            
+
                             // 填充扩展设置表单
                             if (res.theme) {
                                 // 为主题设置单独赋值，确保正确处理
                                 $("[name='theme.defaultColor']").val(res.theme.defaultColor || '2');
                                 $("[name='theme.defaultMenu']").val(res.theme.defaultMenu || 'light-theme');
                                 $("[name='theme.defaultHeader']").val(res.theme.defaultHeader || 'light-theme');
-                                
+
                                 // 处理开关状态
                                 if (res.theme.allowCustom) {
                                     $("[name='theme.allowCustom']").prop('checked', true);
@@ -560,7 +797,7 @@
                                     $("[name='theme.banner']").prop('checked', true);
                                 }
                             }
-                            
+
                             // 获取URL模式配置
                             $.ajax({
                                 url: "/app/admin/config/get_url_mode",
@@ -570,14 +807,53 @@
                                     if (urlMode) {
                                         $("[name='url_mode']").val(urlMode);
                                     }
-                                    // 最后渲染表单，确保所有设置都生效
-                                    form.render();
+
+                                    // 获取OAuth配置
+                                    $.ajax({
+                                        url: "/app/admin/config/get_oauth_config",
+                                        type: "GET",
+                                        dataType: "json",
+                                        success: function (oauthConfig) {
+                                            if (oauthConfig) {
+                                                // 填充Wind OAuth配置
+                                                if (oauthConfig.wind) {
+                                                    if (oauthConfig.wind.enabled) {
+                                                        $("[name='wind.enabled']").prop('checked', true);
+                                                    }
+                                                    $("[name='wind.base_url']").val(oauthConfig.wind.base_url || '');
+                                                    $("[name='wind.client_id']").val(oauthConfig.wind.client_id || '');
+                                                    $("[name='wind.client_secret']").val(oauthConfig.wind.client_secret || '');
+                                                }
+
+                                                // 填充GitHub配置
+                                                if (oauthConfig.github) {
+                                                    if (oauthConfig.github.enabled) {
+                                                        $("[name='github.enabled']").prop('checked', true);
+                                                    }
+                                                    $("[name='github.client_id']").val(oauthConfig.github.client_id || '');
+                                                    $("[name='github.client_secret']").val(oauthConfig.github.client_secret || '');
+                                                }
+
+                                                // 填充Google配置
+                                                if (oauthConfig.google) {
+                                                    if (oauthConfig.google.enabled) {
+                                                        $("[name='google.enabled']").prop('checked', true);
+                                                    }
+                                                    $("[name='google.client_id']").val(oauthConfig.google.client_id || '');
+                                                    $("[name='google.client_secret']").val(oauthConfig.google.client_secret || '');
+                                                }
+                                            }
+
+                                            // 最后渲染表单，确保所有设置都生效
+                                            form.render();
+                                        }
+                                    });
                                 }
                             });
                         }
                     });
                 }
-                
+
                 // 初始化加载配置
                 loadConfig();
             });

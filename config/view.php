@@ -20,6 +20,7 @@ use app\service\cache\RedisCacheAdapter;
 use app\service\TwigTemplateService;
 use app\view\extension\CsrfExtension;
 use app\view\extension\PathExtension;
+use app\view\extension\TimezoneExtension;
 //use app\view\extension\TranslateExtension;
 use Twig\Extra\Cache\CacheExtension;
 use Twig\Extra\Cache\CacheRuntime;
@@ -49,6 +50,8 @@ return [
         $twig->addExtension(new PathExtension());
         // 添加自定义csrf_token函数扩展
         $twig->addExtension(new CsrfExtension());
+        // 添加时区转换扩展
+        $twig->addExtension(new TimezoneExtension());
         // 添加自定义trans函数扩展
         //        $twig->addExtension(new TranslateExtension());
         // 添加缓存扩展

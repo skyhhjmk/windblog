@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace app\service;
 
-use Throwable;
 use function app_path;
 use function array_merge;
 use function base_path;
@@ -12,6 +11,7 @@ use function config;
 use function is_array;
 use function request;
 
+use Throwable;
 use Twig\Environment;
 use Twig\Error\LoaderError;
 use Twig\Error\RuntimeError;

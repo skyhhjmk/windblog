@@ -178,6 +178,13 @@ return [
                 ],
                 'weight' => 470,
             ],
+            [
+                'title' => '自定义 OAuth',
+                'key' => 'plugin\\admin\\app\\controller\\OAuthController',
+                'href' => '/app/admin/oauth',
+                'type' => 1,
+                'weight' => 460,
+            ],
         ],
     ],
     [

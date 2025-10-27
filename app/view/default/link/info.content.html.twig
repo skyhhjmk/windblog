@@ -27,7 +27,7 @@
                         <div class="flex items-center text-gray-500 text-sm gap-2 flex-wrap">
                         <span class="mr-2 flex items-center">
                             <i class="far fa-calendar-alt mr-1"></i>
-                            {{ link.created_at|date('Y-m-d H:i') }}
+                            {{ link.created_at|local_date('Y-m-d H:i') }}
                         </span>
                             <span class="flex items-center">
                             <i class="fas fa-mouse-pointer mr-1"></i>
@@ -141,7 +141,7 @@
                     </button>
                     <div class="text-sm text-gray-500">
                         <i class="far fa-clock mr-1"></i>
-                        更新时间: {{ link.updated_at|date('Y-m-d H:i') }}
+                        更新时间: {{ link.updated_at|local_date('Y-m-d H:i') }}
                     </div>
                 </div>
             </div>

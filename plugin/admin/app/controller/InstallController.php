@@ -489,7 +489,7 @@ class InstallController extends Base
             }
 
             $smt = $pdo->prepare("insert into {$quoteChar}wa_admins{$quoteChar} ({$quoteChar}username{$quoteChar}, {$quoteChar}password{$quoteChar}, {$quoteChar}nickname{$quoteChar}, {$quoteChar}created_at{$quoteChar}, {$quoteChar}updated_at{$quoteChar}) values (:username, :password, :nickname, :created_at, :updated_at)");
-            $time = date('Y-m-d H:i:s');
+            $time = utc_now_string('Y-m-d H:i:s');
             $data = [
                 'username' => $username,
                 'password' => Util::passwordHash($password),
@@ -510,7 +510,7 @@ class InstallController extends Base
             $smt->execute();
 
             $smt = $pdo->prepare("insert into {$quoteChar}wa_users{$quoteChar} ({$quoteChar}username{$quoteChar}, {$quoteChar}password{$quoteChar}, {$quoteChar}nickname{$quoteChar}, {$quoteChar}created_at{$quoteChar}, {$quoteChar}updated_at{$quoteChar}) values (:username, :password, :nickname, :created_at, :updated_at)");
-            $time = date('Y-m-d H:i:s');
+            $time = utc_now_string('Y-m-d H:i:s');
             $data = [
                 'username' => $username,
                 'password' => Util::passwordHash($password),
@@ -538,7 +538,7 @@ class InstallController extends Base
                 mkdir($lockDir, 0o755, true);
             }
             file_put_contents($lockFile, json_encode([
-                'installed_at' => date('Y-m-d H:i:s'),
+                'installed_at' => utc_now_string('Y-m-d H:i:s'),
             ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
 
             return $this->json(0);
@@ -565,7 +565,7 @@ class InstallController extends Base
                 $data[$column] = $menu[$column];
             }
         }
-        $time = date('Y-m-d H:i:s');
+        $time = utc_now_string('Y-m-d H:i:s');
         $data['created_at'] = $data['updated_at'] = $time;
         $values = [];
         foreach ($data as $k => $v) {

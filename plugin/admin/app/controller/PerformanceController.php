@@ -42,7 +42,7 @@ class PerformanceController extends Base
             $snapshot = null;
             $series = [];
             $defaultSnapshot = [
-                't' => date('Y-m-d H:i:s'),
+                't' => utc_now_string('Y-m-d H:i:s'),
                 'version' => '未知',
                 'used_memory_mb' => 0,
                 'connected_clients' => 0,
@@ -123,7 +123,7 @@ class PerformanceController extends Base
             $snapshot = null;
             $series = [];
             $defaultSnapshot = [
-                't' => date('Y-m-d H:i:s'),
+                't' => utc_now_string('Y-m-d H:i:s'),
                 'hits' => 0,
                 'misses' => 0,
                 'memory_free_mb' => 0,
@@ -154,7 +154,7 @@ class PerformanceController extends Base
                             if (is_array($status) && isset($status['opcache_statistics'])) {
                                 $stats = $status['opcache_statistics'];
                                 $currentStats = [
-                                    't' => date('Y-m-d H:i:s'),
+                                    't' => utc_now_string('Y-m-d H:i:s'),
                                     'hits' => $stats['hits'] ?? 0,
                                     'misses' => $stats['misses'] ?? 0,
                                     'memory_free_mb' => isset($stats['free_memory']) ? round($stats['free_memory'] / 1024 / 1024, 2) : 0,
@@ -210,7 +210,7 @@ class PerformanceController extends Base
             $redis = Redis::connection('cache');
             if ($redis) {
                 // 添加时间戳
-                $stats['t'] = date('Y-m-d H:i:s');
+                $stats['t'] = utc_now_string('Y-m-d H:i:s');
 
                 // 保存当前快照
                 $redis->set($snapshotKey, json_encode($stats));

@@ -1,0 +1,176 @@
+{% extends "base.html.twig" %}
+
+{% block title %}用户注册 - {{ page_title|default('WindBlog') }}{% endblock %}
+
+{% block content %}
+    <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-md w-full space-y-8">
+            <div>
+                <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                    创建您的账户
+                </h2>
+                <p class="mt-2 text-center text-sm text-gray-600">
+                    或者
+                    <a href="/user/login" class="font-medium text-blue-600 hover:text-blue-500">
+                        登录已有账户
+                    </a>
+                </p>
+            </div>
+            <form class="mt-8 space-y-6" id="registerForm">
+                <div class="rounded-md shadow-sm space-y-4">
+                    <div>
+                        <label for="username" class="block text-sm font-medium text-gray-700">
+                            用户名 <span class="text-red-500">*</span>
+                        </label>
+                        <input id="username" name="username" type="text" required
+                               class="mt-1 appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                               placeholder="请输入用户名（3-32个字符）">
+                        <p class="mt-1 text-xs text-gray-500">只能包含字母、数字和下划线</p>
+                    </div>
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-gray-700">
+                            邮箱 <span class="text-red-500">*</span>
+                        </label>
+                        <input id="email" name="email" type="email" required
+                               class="mt-1 appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                               placeholder="请输入邮箱">
+                        <p class="mt-1 text-xs text-gray-500">用于接收激活邮件和找回密码</p>
+                    </div>
+                    <div>
+                        <label for="nickname" class="block text-sm font-medium text-gray-700">
+                            昵称
+                        </label>
+                        <input id="nickname" name="nickname" type="text"
+                               class="mt-1 appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                               placeholder="请输入昵称（可选，默认为用户名）">
+                    </div>
+                    <div>
+                        <label for="password" class="block text-sm font-medium text-gray-700">
+                            密码 <span class="text-red-500">*</span>
+                        </label>
+                        <input id="password" name="password" type="password" required
+                               class="mt-1 appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                               placeholder="请输入密码（至少6个字符）">
+                    </div>
+                    <div>
+                        <label for="password_confirm" class="block text-sm font-medium text-gray-700">
+                            确认密码 <span class="text-red-500">*</span>
+                        </label>
+                        <input id="password_confirm" name="password_confirm" type="password" required
+                               class="mt-1 appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                               placeholder="请再次输入密码">
+                    </div>
+                </div>
+
+                <div>
+                    <button type="submit" id="submitBtn"
+                            class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+                        <i class="fas fa-user-plus"></i>
+                    </span>
+                        注册
+                    </button>
+                </div>
+
+                <div class="text-center text-sm text-gray-600">
+                    <p>注册即表示您同意我们的服务条款和隐私政策</p>
+                </div>
+            </form>
+
+            <!-- OAuth登录区域 -->
+            {% set hasEnabledProvider = false %}
+            {% if oauthProviders is defined %}
+                {% for provider, providerInfo in oauthProviders %}
+                    {% if providerInfo.enabled %}
+                        {% set hasEnabledProvider = true %}
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+
+            {% if hasEnabledProvider %}
+            <div class="mt-6">
+                <div class="relative">
+                    <div class="absolute inset-0 flex items-center">
+                        <div class="w-full border-t border-gray-300"></div>
+                    </div>
+                    <div class="relative flex justify-center text-sm">
+                        <span class="px-2 bg-gray-50 text-gray-500">或使用第三方账号登录</span>
+                    </div>
+                </div>
+
+                <div class="mt-6 grid grid-cols-3 gap-3">
+                    {% for provider, providerInfo in oauthProviders %}
+                        {% if providerInfo.enabled %}
+                            <a href="/oauth/{{ provider }}/redirect"
+                               data-no-pjax
+                               class="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+                               title="使用 {{ providerInfo.name }} 登录">
+                                {% if provider == 'wind' %}
+                                    <span style="color: {{ providerInfo.color }}; font-weight: 600;">Wind OAuth</span>
+                                {% else %}
+                                    <i class="{{ providerInfo.icon }} text-xl"
+                                       style="color: {{ providerInfo.color }}"></i>
+                                {% endif %}
+                            </a>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('registerForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const submitBtn = document.getElementById('submitBtn');
+            const formData = new FormData(this);
+
+            // 禁用提交按钮
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 注册中...';
+
+            try {
+                const response = await fetch('/user/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams(formData)
+                });
+
+                const result = await response.json();
+
+                if (result.code === 0) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '注册成功',
+                        text: result.msg || '激活邮件已发送到您的邮箱，请在24小时内完成激活',
+                        confirmButtonText: '前往登录',
+                    }).then(() => {
+                        window.location.href = '/user/login';
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: '注册失败',
+                        text: result.msg || '未知错误',
+                        confirmButtonText: '确定',
+                    });
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-user-plus"></i> 注册';
+                }
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: '网络错误',
+                    text: '请检查网络连接后重试',
+                    confirmButtonText: '确定',
+                });
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-user-plus"></i> 注册';
+            }
+        });
+    </script>
+{% endblock %}

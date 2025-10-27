@@ -2,6 +2,9 @@
 
 namespace plugin\admin\app\model;
 
+use app\model\UserOAuthBinding;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
 /**
  * @property int $id 主键(主键)
  * @property string $username 用户名
@@ -40,4 +43,14 @@ class User extends Base
      * @var string
      */
     protected $primaryKey = 'id';
+
+    /**
+     * 获取用户的OAuth绑定
+     *
+     * @return HasMany
+     */
+    public function oauthBindings(): HasMany
+    {
+        return $this->hasMany(UserOAuthBinding::class, 'user_id', 'id');
+    }
 }

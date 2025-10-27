@@ -12,35 +12,35 @@
 
             <div class="mainBox">
                 <div class="main-container mr-5">
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label required">用户名</label>
                         <div class="layui-input-block">
                             <input type="text" name="username" value="" required lay-verify="required" class="layui-input">
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label required">昵称</label>
                         <div class="layui-input-block">
                             <input type="text" name="nickname" value="" required lay-verify="required" class="layui-input">
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">密码</label>
                         <div class="layui-input-block">
                             <input type="text" name="password" value="" class="layui-input">
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">性别</label>
                         <div class="layui-input-block">
                             <div name="sex" id="sex" value="" ></div>
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">头像</label>
                         <div class="layui-input-block">
@@ -54,77 +54,77 @@
                             </button>
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">邮箱</label>
                         <div class="layui-input-block">
                             <input type="text" name="email" value="" class="layui-input">
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">手机</label>
                         <div class="layui-input-block">
                             <input type="text" name="mobile" value="" class="layui-input">
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">等级</label>
                         <div class="layui-input-block">
                             <input type="number" name="level" value="" class="layui-input">
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">生日</label>
                         <div class="layui-input-block">
                             <input type="text" name="birthday" id="birthday" autocomplete="off" class="layui-input">
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">余额(元)</label>
                         <div class="layui-input-block">
                             <input type="number" name="money" value="" class="layui-input">
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">积分</label>
                         <div class="layui-input-block">
                             <input type="number" name="score" value="" class="layui-input">
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">登录时间</label>
                         <div class="layui-input-block">
                             <input type="text" name="last_time" id="last_time" autocomplete="off" class="layui-input">
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">登录ip</label>
                         <div class="layui-input-block">
                             <input type="text" name="last_ip" value="" class="layui-input">
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">注册时间</label>
                         <div class="layui-input-block">
                             <input type="text" name="join_time" id="join_time" autocomplete="off" class="layui-input">
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">注册ip</label>
                         <div class="layui-input-block">
                             <input type="text" name="join_ip" value="" class="layui-input">
                         </div>
                     </div>
-                    
+
                     <div class="layui-form-item">
                         <label class="layui-form-label">禁用</label>
                         <div class="layui-input-block">
@@ -132,7 +132,40 @@
                             <input type="text" style="display:none" name="status" value="0" />
                         </div>
                     </div>
-                    
+
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">邮箱验证时间</label>
+                        <div class="layui-input-block">
+                            <input type="text" name="email_verified_at" id="email_verified_at" autocomplete="off"
+                                   class="layui-input" readonly>
+                            <div class="layui-form-mid layui-word-aux" id="email_verified_status"></div>
+                        </div>
+                    </div>
+
+                    <div class="layui-form-item" id="activation_actions" style="display:none">
+                        <label class="layui-form-label">激活操作</label>
+                        <div class="layui-input-block">
+                            <button type="button" class="pear-btn pear-btn-primary pear-btn-sm" id="activate-user">
+                                <i class="layui-icon layui-icon-ok"></i>激活账户
+                            </button>
+                            <button type="button" class="pear-btn pear-btn-sm" id="reset-activation-token">
+                                <i class="layui-icon layui-icon-refresh"></i>重置激活令牌
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">OAuth绑定</label>
+                        <div class="layui-input-block">
+                            <div id="oauth-bindings-list" style="margin-bottom: 10px;">
+                                <div style="color: #999;">加载中...</div>
+                            </div>
+                            <button type="button" class="pear-btn pear-btn-primary pear-btn-sm" id="add-oauth-binding">
+                                <i class="layui-icon layui-icon-add-1"></i>添加OAuth绑定
+                            </button>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
@@ -146,7 +179,7 @@
                     </button>
                 </div>
             </div>
-            
+
         </form>
 
         <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
@@ -159,6 +192,88 @@
             const SELECT_API = "/app/admin/user/select" + location.search;
             const UPDATE_API = "/app/admin/user/update";
 
+            // 获取OAuth提供商的图标和颜色
+            function getOAuthIcon(provider) {
+                const iconMap = {
+                    'github': {icon: 'layui-icon-app', color: '#24292e'},
+                    'google': {icon: 'layui-icon-username', color: '#4285f4'},
+                    'qq': {icon: 'layui-icon-face-smile', color: '#12b7f5'},
+                    'wechat': {icon: 'layui-icon-dialogue', color: '#07c160'},
+                    'weibo': {icon: 'layui-icon-fire', color: '#e6162d'},
+                    'facebook': {icon: 'layui-icon-friends', color: '#1877f2'},
+                    'twitter': {icon: 'layui-icon-tweet', color: '#1da1f2'},
+                    'linkedin': {icon: 'layui-icon-user', color: '#0a66c2'},
+                };
+
+                return iconMap[provider.toLowerCase()] || {icon: 'layui-icon-link', color: '#1e9fff'};
+            }
+
+            // 加载OAuth绑定列表
+            function loadOAuthBindings() {
+                let userId = layui.url().search[PRIMARY_KEY];
+                layui.$.ajax({
+                    url: "/app/admin/user/oauthBindings",
+                    type: "GET",
+                    data: {user_id: userId},
+                    success: function (res) {
+                        if (res.code === 0) {
+                            let html = '';
+                            if (res.data && res.data.length > 0) {
+                                res.data.forEach(function (binding) {
+                                    // 根据提供商选择图标和颜色
+                                    let iconInfo = getOAuthIcon(binding.provider);
+
+                                    html += '<div style="padding: 8px; margin-bottom: 5px; background: #f8f8f8; border-radius: 3px; display: flex; justify-content: space-between; align-items: center;">';
+                                    html += '<div>';
+                                    html += '<i class="layui-icon ' + iconInfo.icon + '" style="color: ' + iconInfo.color + ';"></i> ';
+                                    html += '<strong>' + layui.util.escape(binding.provider) + '</strong>';
+                                    html += ' | ID: ' + layui.util.escape(binding.provider_user_id);
+                                    if (binding.provider_username) {
+                                        html += ' | 用户名: ' + layui.util.escape(binding.provider_username);
+                                    }
+                                    if (binding.provider_email) {
+                                        html += ' | 邮箱: ' + layui.util.escape(binding.provider_email);
+                                    }
+                                    html += '</div>';
+                                    html += '<button type="button" class="pear-btn pear-btn-danger pear-btn-xs unbind-oauth-btn" data-binding-id="' + binding.id + '">';
+                                    html += '<i class="layui-icon layui-icon-delete"></i>解绑</button>';
+                                    html += '</div>';
+                                });
+                            } else {
+                                html = '<div style="color: #999;">暂无OAuth绑定</div>';
+                            }
+                            layui.$("#oauth-bindings-list").html(html);
+
+                            // 绑定解绑按钮事件
+                            layui.$(".unbind-oauth-btn").on("click", function () {
+                                let bindingId = layui.$(this).data('binding-id');
+                                layui.layer.confirm('确认要解绑此OAuth绑定吗？', {
+                                    icon: 3,
+                                    title: '提示'
+                                }, function (index) {
+                                    layui.$.ajax({
+                                        url: "/app/admin/user/unbindOAuth",
+                                        type: "POST",
+                                        data: {binding_id: bindingId},
+                                        success: function (res) {
+                                            if (res.code === 0) {
+                                                layui.layer.msg('解绑成功', {icon: 1});
+                                                loadOAuthBindings();
+                                            } else {
+                                                layui.layer.msg(res.msg, {icon: 2});
+                                            }
+                                        }
+                                    });
+                                    layui.layer.close(index);
+                                });
+                            });
+                        } else {
+                            layui.$("#oauth-bindings-list").html('<div style="color: #f00;">加载失败: ' + res.msg + '</div>');
+                        }
+                    }
+                });
+            }
+
             // 获取数据库记录
             layui.use(["form", "util", "popup"], function () {
                 let $ = layui.$;
@@ -166,7 +281,7 @@
                     url: SELECT_API,
                     dataType: "json",
                     success: function (res) {
-                        
+
                         // 给表单初始化数据
                         layui.each(res.data[0], function (key, value) {
                             let obj = $('*[name="'+key+'"]');
@@ -181,7 +296,7 @@
                                 obj.attr("value", value);
                             }
                         });
-                        
+
                         // 字段 性别 sex
                         layui.use(["jquery", "xmSelect", "popup"], function() {
                             layui.$.ajax({
@@ -205,7 +320,7 @@
                                 }
                             });
                         });
-                        
+
                         // 字段 头像 avatar
                         layui.use(["upload", "layer"], function() {
                             let input = layui.$("#avatar").prev();
@@ -234,14 +349,14 @@
                                 }
                             });
                         });
-                        
+
                         // 字段 生日 birthday
                         layui.use(["laydate"], function() {
                             layui.laydate.render({
                                 elem: "#birthday",
                             });
                         })
-                        
+
                         // 字段 登录时间 last_time
                         layui.use(["laydate"], function() {
                             layui.laydate.render({
@@ -249,7 +364,7 @@
                                 type: "datetime",
                             });
                         })
-                        
+
                         // 字段 注册时间 join_time
                         layui.use(["laydate"], function() {
                             layui.laydate.render({
@@ -257,7 +372,7 @@
                                 type: "datetime",
                             });
                         })
-                        
+
                         // 字段 禁用 status
                         layui.use(["form"], function() {
                             layui.$("#status").attr("checked", layui.$('input[name="status"]').val() != 0);
@@ -266,6 +381,130 @@
                                 layui.$('input[name="status"]').val(this.checked ? 1 : 0);
                             });
                         })
+
+                        // 字段 邮箱验证时间 email_verified_at
+                        layui.use(["laydate"], function () {
+                            layui.laydate.render({
+                                elem: "#email_verified_at",
+                                type: "datetime",
+                            });
+                        })
+
+                        // 检查邮箱验证状态
+                        let emailVerifiedAt = layui.$('input[name="email_verified_at"]').val();
+                        let statusField = layui.$('input[name="status"]').val();
+                        if (!emailVerifiedAt && statusField == 0) {
+                            layui.$("#email_verified_status").html('<span style="color: #ff5722;">未激活</span>');
+                            layui.$("#activation_actions").show();
+                        } else if (emailVerifiedAt) {
+                            layui.$("#email_verified_status").html('<span style="color: #16b777;">已激活</span>');
+                        }
+
+                        // 激活账户
+                        layui.$("#activate-user").on("click", function () {
+                            layui.layer.confirm('确认要激活此账户吗？', {icon: 3, title: '提示'}, function (index) {
+                                layui.$.ajax({
+                                    url: "/app/admin/user/activate",
+                                    type: "POST",
+                                    data: {id: layui.url().search[PRIMARY_KEY]},
+                                    success: function (res) {
+                                        if (res.code === 0) {
+                                            layui.layer.msg('激活成功', {icon: 1});
+                                            setTimeout(function () {
+                                                location.reload();
+                                            }, 1000);
+                                        } else {
+                                            layui.layer.msg(res.msg, {icon: 2});
+                                        }
+                                    }
+                                });
+                                layui.layer.close(index);
+                            });
+                        });
+
+                        // 重置激活令牌
+                        layui.$("#reset-activation-token").on("click", function () {
+                            layui.layer.confirm('确认要重置激活令牌吗？', {icon: 3, title: '提示'}, function (index) {
+                                layui.$.ajax({
+                                    url: "/app/admin/user/resetActivationToken",
+                                    type: "POST",
+                                    data: {id: layui.url().search[PRIMARY_KEY]},
+                                    success: function (res) {
+                                        if (res.code === 0) {
+                                            layui.layer.alert('重置成功<br>激活链接：<br><textarea style="width:100%;height:60px;" readonly>' + res.data.activation_url + '</textarea>', {icon: 1});
+                                        } else {
+                                            layui.layer.msg(res.msg, {icon: 2});
+                                        }
+                                    }
+                                });
+                                layui.layer.close(index);
+                            });
+                        });
+
+                        // 加载OAuth绑定列表
+                        loadOAuthBindings();
+
+                        // 添加OAuth绑定
+                        layui.$("#add-oauth-binding").on("click", function () {
+                            layui.layer.prompt({
+                                formType: 0,
+                                title: '添加OAuth绑定',
+                                area: ['500px', 'auto'],
+                                btn: ['确定', '取消'],
+                                content: `
+                                    <div style="padding: 15px;">
+                                        <div style="margin-bottom: 10px;">
+                                            <label>提供商 (provider):</label>
+                                            <input type="text" id="add-provider" class="layui-input" placeholder="如: github, google, qq">
+                                        </div>
+                                        <div style="margin-bottom: 10px;">
+                                            <label>用户ID (provider_user_id):</label>
+                                            <input type="text" id="add-provider-user-id" class="layui-input" placeholder="OAuth平台的用户ID">
+                                        </div>
+                                        <div style="margin-bottom: 10px;">
+                                            <label>用户名 (可选):</label>
+                                            <input type="text" id="add-provider-username" class="layui-input">
+                                        </div>
+                                        <div style="margin-bottom: 10px;">
+                                            <label>邮箱 (可选):</label>
+                                            <input type="text" id="add-provider-email" class="layui-input">
+                                        </div>
+                                    </div>
+                                `
+                            }, function (value, index) {
+                                let provider = layui.$("#add-provider").val();
+                                let providerUserId = layui.$("#add-provider-user-id").val();
+                                let providerUsername = layui.$("#add-provider-username").val();
+                                let providerEmail = layui.$("#add-provider-email").val();
+
+                                if (!provider || !providerUserId) {
+                                    layui.layer.msg('请填写提供商和用户ID', {icon: 2});
+                                    return false;
+                                }
+
+                                layui.$.ajax({
+                                    url: "/app/admin/user/addOAuthBinding",
+                                    type: "POST",
+                                    data: {
+                                        user_id: layui.url().search[PRIMARY_KEY],
+                                        provider: provider,
+                                        provider_user_id: providerUserId,
+                                        provider_username: providerUsername,
+                                        provider_email: providerEmail
+                                    },
+                                    success: function (res) {
+                                        if (res.code === 0) {
+                                            layui.layer.msg('绑定成功', {icon: 1});
+                                            layui.layer.close(index);
+                                            loadOAuthBindings();
+                                        } else {
+                                            layui.layer.msg(res.msg, {icon: 2});
+                                        }
+                                    }
+                                });
+                                return false;
+                            });
+                        });
 
                         // ajax产生错误
                         if (res.code) {

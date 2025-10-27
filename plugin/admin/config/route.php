@@ -301,6 +301,18 @@ Route::group('/app/admin', function () {
         Route::get('/get_site_info', [plugin\admin\app\controller\ConfigController::class, 'get_site_info']);
     });
 
+    // OAuth平台管理路由
+    Route::group('/oauth', function () {
+        Route::get('', [plugin\admin\app\controller\OAuthController::class, 'index']);
+        Route::get('/', [plugin\admin\app\controller\OAuthController::class, 'index']);
+        Route::get('/index', [plugin\admin\app\controller\OAuthController::class, 'index']);
+        Route::get('/list', [plugin\admin\app\controller\OAuthController::class, 'list']);
+        Route::get('/get', [plugin\admin\app\controller\OAuthController::class, 'get']);
+        Route::post('/save', [plugin\admin\app\controller\OAuthController::class, 'save']);
+        Route::post('/delete', [plugin\admin\app\controller\OAuthController::class, 'delete']);
+        Route::post('/toggle', [plugin\admin\app\controller\OAuthController::class, 'toggle']);
+    });
+
     // 插件沙箱路由
     Route::any('/pluginsandbox[/{slug}[/{action}]]', [plugin\admin\app\controller\PluginSystemController::class, 'handlePluginRequest']);
 });

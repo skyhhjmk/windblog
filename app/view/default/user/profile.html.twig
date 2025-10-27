@@ -1,0 +1,112 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}个人资料 - {{ site.name }}{% endblock %}
+
+{% block content %}
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-3xl mx-auto">
+            <h1 class="text-3xl font-bold mb-8">个人资料</h1>
+
+            <div class="bg-white shadow rounded-lg p-6 space-y-6">
+                {# 头像 #}
+                <div class="flex items-center space-x-4">
+                    <div>
+                        {% if user.avatar %}
+                            <img src="{{ user.avatar }}" alt="{{ user.nickname }}" class="w-24 h-24 rounded-full">
+                        {% else %}
+                            <div
+                                class="w-24 h-24 rounded-full bg-gray-300 flex items-center justify-center text-3xl text-white">
+                                {{ user.nickname|slice(0, 1)|upper }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-semibold">{{ user.nickname }}</h2>
+                        <p class="text-gray-600">@{{ user.username }}</p>
+                    </div>
+                </div>
+
+                <hr>
+
+                {# 基本信息 #}
+                <div class="space-y-4">
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="text-gray-600">用户名</div>
+                        <div class="col-span-2 font-medium">{{ user.username }}</div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="text-gray-600">昵称</div>
+                        <div class="col-span-2 font-medium">{{ user.nickname }}</div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="text-gray-600">邮箱</div>
+                        <div class="col-span-2 font-medium">
+                            {{ user.email }}
+                            {% if user.email_verified_at %}
+                                <span class="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">已验证</span>
+                            {% else %}
+                                <span class="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">未验证</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if user.mobile %}
+                        <div class="grid grid-cols-3 gap-4">
+                            <div class="text-gray-600">手机</div>
+                            <div class="col-span-2 font-medium">{{ user.mobile }}</div>
+                        </div>
+                    {% endif %}
+
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="text-gray-600">等级</div>
+                        <div class="col-span-2 font-medium">LV.{{ user.level }}</div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="text-gray-600">积分</div>
+                        <div class="col-span-2 font-medium">{{ user.score }}</div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="text-gray-600">注册时间</div>
+                        <div class="col-span-2 font-medium">{{ user.join_time|local_date('Y-m-d H:i:s') }}</div>
+                    </div>
+
+                    {% if user.last_time %}
+                        <div class="grid grid-cols-3 gap-4">
+                            <div class="text-gray-600">最后登录</div>
+                            <div class="col-span-2 font-medium">{{ user.last_time|local_date('Y-m-d H:i:s') }}</div>
+                        </div>
+                    {% endif %}
+
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="text-gray-600">账户状态</div>
+                        <div class="col-span-2 font-medium">
+                            {% if user.status == 0 %}
+                                <span class="text-yellow-600">未激活</span>
+                            {% elseif user.status == 1 %}
+                                <span class="text-green-600">正常</span>
+                            {% elseif user.status == 2 %}
+                                <span class="text-red-600">已禁用</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <hr>
+
+                {# 操作按钮 #}
+                <div class="flex space-x-4">
+                    <a href="/user/center" class="px-6 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                        用户中心
+                    </a>
+                    <a href="/" class="px-6 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400">
+                        返回首页
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
