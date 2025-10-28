@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>AI 轮询组管理</title>
+    <link rel="stylesheet" href="/app/admin/component/layui/css/layui.css?v=2.8.12"/>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .card {
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            background: #fff;
+        }
+
+        .card-header {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .card-body {
+            padding: 1.25rem;
+        }
+
+        .btn {
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.375rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+<div class="max-w-7xl mx-auto p-6">
+    <div class="card shadow-sm">
+        <div class="card-header flex items-center justify-between">
+            <div>
+                <h1 class="text-xl font-bold text-gray-800">AI 轮询组管理</h1>
+                <p class="text-sm text-gray-500 mt-1">创建和管理轮询组，组内添加多个提供方并设置策略</p>
+            </div>
+            <div>
+                <button id="btn-create-group" class="btn bg-blue-600 text-white hover:bg-blue-700">+ 创建轮询组</button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            名称
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            策略
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            提供方数
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            启用
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            更新时间
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            操作
+                        </th>
+                    </tr>
+                    </thead>
+                    <tbody id="groupsTable" class="bg-white divide-y divide-gray-200">
+                    <tr>
+                        <td class="px-6 py-4 text-sm text-gray-500" colspan="6">加载中...</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+<script>
+    layui.use(['layer', 'form'], function () {
+        var layer = layui.layer, $ = layui.$, form = layui.form;
+
+        // 全局变量保存可用提供方
+        window.availableProviders = [];
+
+        // 加载可用提供方列表
+        function loadAvailableProviders(callback) {
+            $.get('/app/admin/ai/providers/list', function (res) {
+                if (res && res.code === 0 && res.data) {
+                    window.availableProviders = res.data;
+                }
+                if (callback) callback();
+            });
+        }
+
+        function loadGroups() {
+            $.get('/app/admin/ai/polling-groups/list', function (res) {
+                var tbody = $('#groupsTable');
+                tbody.html('');
+                if (!res || res.code !== 0 || !res.data || res.data.length === 0) {
+                    tbody.append('<tr><td class="px-6 py-4 text-sm text-gray-500" colspan="6">暂无数据</td></tr>');
+                    return;
+                }
+                res.data.forEach(function (g) {
+                    var tr = $('<tr></tr>');
+                    tr.append('<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">' + (g.name || '-') + '</td>');
+                    tr.append('<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">' + (g.strategy === 'failover' ? '主备' : '轮询') + '</td>');
+                    tr.append('<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">' + (g.providers ? g.providers.length : 0) + '</td>');
+                    tr.append('<td class="px-6 py-4 whitespace-nowrap text-sm">' + (g.enabled ? '<span class="text-green-600">是</span>' : '<span class="text-gray-400">否</span>') + '</td>');
+                    tr.append('<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">' + (g.updated_at || '-') + '</td>');
+
+                    var actions = $('<td class="px-6 py-4 whitespace-nowrap text-sm"></td>');
+                    var btnEdit = $('<button class="btn bg-gray-100 hover:bg-gray-200 mr-2">编辑</button>');
+                    btnEdit.on('click', function () {
+                        loadAvailableProviders(function () {
+                            openEditDialog(g);
+                        });
+                    });
+                    var btnToggle = $('<button class="btn ' + (g.enabled ? 'bg-yellow-100 hover:bg-yellow-200' : 'bg-green-100 hover:bg-green-200') + ' mr-2">' + (g.enabled ? '禁用' : '启用') + '</button>');
+                    btnToggle.on('click', function () {
+                        toggleEnabled(g.id);
+                    });
+                    var btnDelete = $('<button class="btn bg-red-600 text-white hover:bg-red-700">删除</button>');
+                    btnDelete.on('click', function () {
+                        removeGroup(g.id);
+                    });
+                    actions.append(btnEdit).append(btnToggle).append(btnDelete);
+                    tr.append(actions);
+
+                    tbody.append(tr);
+                });
+            });
+        }
+
+        function toggleEnabled(id) {
+            $.post('/app/admin/ai/polling-groups/toggle-enabled', {id: id}, function (res) {
+                if (res && res.code === 0) {
+                    layer.msg('操作成功', {icon: 1});
+                    loadGroups();
+                } else {
+                    layer.msg(res.msg || '操作失败', {icon: 2});
+                }
+            });
+        }
+
+        function removeGroup(id) {
+            layer.confirm('确定要删除该轮询组吗？', function (index) {
+                $.ajax({
+                    url: '/app/admin/ai/polling-groups/delete',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({id: id}),
+                    success: function (res) {
+                        if (res && res.code === 0) {
+                            layer.msg('删除成功', {icon: 1});
+                            loadGroups();
+                        } else {
+                            layer.msg(res.msg || '删除失败', {icon: 2});
+                        }
+                    }
+                });
+                layer.close(index);
+            });
+        }
+
+        function openEditDialog(group) {
+            // 确保提供方列表已加载
+            if (!window.availableProviders || window.availableProviders.length === 0) {
+                loadAvailableProviders(function () {
+                    openEditDialog(group);
+                });
+                return;
+            }
+
+            var isEdit = !!group;
+            var title = isEdit ? '编辑轮询组' : '创建轮询组';
+            var name = isEdit ? (group.name || '') : '';
+            var description = isEdit ? (group.description || '') : '';
+            var strategy = isEdit ? (group.strategy || 'polling') : 'polling';
+            var providers = isEdit ? (group.providers || []) : [];
+
+            var html = '<div class="p-4 space-y-4" style="max-width: 720px">'
+                + '<div><label class="block text-sm font-medium text-gray-700 mb-1">名称</label>'
+                + '<input type="text" id="dlg-name" value="' + name + '" class="w-full px-3 py-2 border rounded" placeholder="请输入轮询组名称"/></div>'
+                + '<div><label class="block text-sm font-medium text-gray-700 mb-1">描述</label>'
+                + '<textarea id="dlg-desc" class="w-full px-3 py-2 border rounded" rows="3" placeholder="可选">' + description + '</textarea></div>'
+                + '<div><label class="block text-sm font-medium text-gray-700 mb-1">策略</label>'
+                + '<select id="dlg-strategy" class="w-full px-3 py-2 border rounded">'
+                + '<option value="polling"' + (strategy === 'polling' ? ' selected' : '') + '>轮询</option>'
+                + '<option value="failover"' + (strategy === 'failover' ? ' selected' : '') + '>主备</option>'
+                + '</select></div>'
+                + '<div><label class="block text-sm font-medium text-gray-700 mb-2">提供方</label>'
+                + '<div id="dlg-providers" class="space-y-2"></div>'
+                + '<button id="btn-add-provider" class="btn bg-gray-100 hover:bg-gray-200 mt-2">+ 添加提供方</button>'
+                + '</div>'
+                + '</div>';
+
+            var idx = layer.open({
+                type: 1,
+                title: title,
+                area: ['760px', '620px'],
+                content: html,
+                btn: ['保存', '取消'],
+                yes: function () {
+                    saveGroup();
+                },
+                btn2: function () {
+                    layer.close(idx);
+                }
+            });
+
+            function renderProviderRows() {
+                var wrap = $('#dlg-providers');
+                wrap.html('');
+                if (!providers || providers.length === 0) {
+                    providers = [];
+                }
+                providers.forEach(function (p, i) {
+                    var row = $('<div class="grid grid-cols-12 gap-2 items-center mb-2 p-3 border rounded bg-gray-50"></div>');
+
+                    // 提供方选择器
+                    var selectCol = $('<div class="col-span-6"></div>');
+                    var select = $('<select class="w-full px-3 py-2 border rounded provider-id"></select>');
+                    select.append('<option value="">请选择提供方...</option>');
+
+                    // 从全局 availableProviders 填充
+                    if (window.availableProviders && window.availableProviders.length > 0) {
+                        window.availableProviders.forEach(function (ap) {
+                            var opt = $('<option></option>').val(ap.id).text(ap.name + ' (' + ap.id + ')');
+                            if (p.provider_id === ap.id) opt.attr('selected', 'selected');
+                            select.append(opt);
+                        });
+                    }
+                    selectCol.append(select);
+                    row.append(selectCol);
+
+                    row.append('<div class="col-span-3"><input type="number" min="0" class="w-full px-3 py-2 border rounded provider-weight" placeholder="权重" value="' + (p.weight || 1) + '"/></div>');
+                    row.append('<div class="col-span-2 flex items-center"><label class="inline-flex items-center"><input type="checkbox" class="provider-enabled" ' + (p.enabled ? 'checked' : '') + ' /> <span class="ml-2 text-sm">启用</span></label></div>');
+                    var btnDel = $('<button class="col-span-1 btn bg-red-50 hover:bg-red-100 text-red-600 border border-red-200">删</button>');
+                    (function (index) {
+                        btnDel.on('click', function () {
+                            providers.splice(index, 1);
+                            renderProviderRows();
+                        });
+                    })(i);
+                    row.append(btnDel);
+                    wrap.append(row);
+                });
+            }
+
+            $('#btn-add-provider').on('click', function () {
+                providers.push({provider_id: '', weight: 1, enabled: true});
+                renderProviderRows();
+            });
+
+            renderProviderRows();
+
+            function saveGroup() {
+                var payload = {
+                    name: $('#dlg-name').val(),
+                    description: $('#dlg-desc').val(),
+                    strategy: $('#dlg-strategy').val(),
+                    providers: []
+                };
+                $('#dlg-providers .grid').each(function () {
+                    var pid = $(this).find('.provider-id').val();
+                    var wt = parseInt($(this).find('.provider-weight').val() || '1', 10);
+                    var en = $(this).find('.provider-enabled').is(':checked');
+                    if (pid) {
+                        payload.providers.push({provider_id: pid, weight: wt, enabled: en});
+                    }
+                });
+                if (!payload.name) {
+                    layer.msg('名称不能为空', {icon: 2});
+                    return;
+                }
+                if (payload.providers.length === 0) {
+                    layer.msg('请至少添加一个提供方', {icon: 2});
+                    return;
+                }
+
+                var url = isEdit ? '/app/admin/ai/polling-groups/update' : '/app/admin/ai/polling-groups/create';
+                if (isEdit) payload.id = group.id;
+
+                $.ajax({
+                    url: url,
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(payload),
+                    success: function (res) {
+                        if (res && res.code === 0) {
+                            layer.msg('保存成功', {icon: 1});
+                            layer.close(idx);
+                            loadGroups();
+                        } else {
+                            layer.msg(res.msg || '保存失败', {icon: 2});
+                        }
+                    }
+                });
+            }
+        }
+
+        $('#btn-create-group').on('click', function () {
+            // 先加载提供方列表，然后打开对话框
+            loadAvailableProviders(function () {
+                openEditDialog(null);
+            });
+        });
+
+        // 初始化加载
+        loadAvailableProviders(function () {
+            loadGroups();
+        });
+    });
+</script>
+</body>
+</html>

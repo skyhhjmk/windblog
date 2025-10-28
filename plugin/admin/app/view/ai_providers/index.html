@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 提供方管理</title>
+    <link rel="stylesheet" href="/app/admin/component/layui/css/layui.css?v=2.8.12"/>
+    <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css"/>
+    <link rel="stylesheet" href="/app/admin/admin/css/reset.css"/>
+    <!-- Tailwind CDN（禁用preflight，避免影响Layui全局样式） -->
+    <script>window.tailwind = window.tailwind || {};
+    tailwind.config = {corePlugins: {preflight: false}};</script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .provider-card {
+            transition: all 0.3s ease;
+        }
+
+        .provider-card:hover {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .template-icon {
+            font-size: 2rem;
+        }
+
+        .config-field {
+            transition: all 0.2s ease;
+        }
+
+        .config-field:focus-within {
+            background-color: #f0f9ff;
+        }
+
+        .dragging {
+            opacity: 0.5;
+            border: 2px dashed #3b82f6;
+        }
+
+        .template-card:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+<div class="container mx-auto px-4 py-8 max-w-7xl">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">AI 提供方管理</h1>
+        <p class="text-gray-600">配置多个 AI 提供方，支持同一类型配置不同模型或参数（如两个 OpenAI，分别使用 GPT-4 和
+            GPT-3.5）</p>
+    </div>
+
+    <!-- Action Bar -->
+    <div class="bg-white rounded-lg shadow-sm p-4 mb-6">
+        <div class="flex flex-wrap gap-3">
+            <button id="btn-add-provider"
+                    class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2">
+                <span>➕</span>
+                <span>添加提供方</span>
+            </button>
+            <button id="btn-save-all"
+                    class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center gap-2">
+                <span>💾</span>
+                <span>保存所有</span>
+            </button>
+            <button id="btn-load"
+                    class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition flex items-center gap-2">
+                <span>🔄</span>
+                <span>重新加载</span>
+            </button>
+            <div class="flex-1"></div>
+            <div class="text-sm text-gray-600 flex items-center gap-2">
+                <span>提供方总数：</span>
+                <span id="provider-count" class="font-bold text-blue-600">0</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Provider Cards List -->
+    <div id="provider-cards-list" class="space-y-4">
+        <!-- Cards will be rendered here -->
+    </div>
+
+    <!-- Empty State -->
+    <div id="empty-state" class="bg-white rounded-lg shadow-sm p-12 text-center" style="display: none;">
+        <div class="text-6xl mb-4">🤖</div>
+        <h3 class="text-xl font-semibold text-gray-700 mb-2">还没有配置 AI 提供方</h3>
+        <p class="text-gray-500 mb-6">点击"添加提供方"按钮开始配置，您可以添加多个相同类型的提供方</p>
+        <button onclick="document.getElementById('btn-add-provider').click()"
+                class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+            立即添加
+        </button>
+    </div>
+</div>
+
+<script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+<script src="/app/admin/component/pear/pear.js"></script>
+<script src="/app/admin/admin/js/permission.js"></script>
+<script>
+    layui.use(["layer", "form"], function () {
+        var layer = layui.layer;
+        var form = layui.form;
+
+        var providerCards = []; // [{id, name, template, type, config, weight, enabled}]
+        var templates = []; // Available templates
+
+        function post(url, data) {
+            return fetch(url, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            }).then(function (r) {
+                return r.json();
+            });
+        }
+
+        function generateId() {
+            return 'ai_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+
+        // Load templates
+        function loadTemplates() {
+            return fetch('/app/admin/ai/providers/templates')
+                .then(function (r) {
+                    return r.json();
+                })
+                .then(function (res) {
+                    if (res.code === 0) {
+                        templates = res.data || [];
+                        return templates;
+                    }
+                    throw new Error(res.msg || 'Failed to load templates');
+                });
+        }
+
+        // Load providers
+        function loadProviders() {
+            fetch('/app/admin/ai/providers/list')
+                .then(function (r) {
+                    return r.json();
+                })
+                .then(function (res) {
+                    if (res.code === 0) {
+                        providerCards = (res.data || []).map(function (p) {
+                            return {
+                                id: p.id,
+                                name: p.name,
+                                template: p.template,
+                                type: p.type,
+                                config: {},
+                                weight: p.weight,
+                                enabled: p.enabled,
+                                _savedBefore: true
+                            };
+                        });
+
+                        // Load config for each provider
+                        var promises = providerCards.map(function (card) {
+                            return fetch('/app/admin/ai/providers/detail?id=' + card.id)
+                                .then(function (r) {
+                                    return r.json();
+                                })
+                                .then(function (res) {
+                                    if (res.code === 0) {
+                                        card.config = res.data.config || {};
+                                    }
+                                });
+                        });
+
+                        Promise.all(promises).then(function () {
+                            renderCards();
+                            updateCount();
+                        });
+                    } else {
+                        layer.msg(res.msg || '加载失败');
+                    }
+                });
+        }
+
+        // Show template selection modal
+        function showTemplateModal(callback) {
+            var html = '<div class="p-6"><h3 class="text-xl font-semibold mb-4">选择提供方模板</h3>' +
+                '<div class="grid grid-cols-2 gap-4 max-h-96 overflow-y-auto">';
+
+            templates.forEach(function (tpl) {
+                html += '<div class="template-card border-2 border-gray-200 rounded-lg p-4 hover:border-blue-500 cursor-pointer transition" data-template-id="' + tpl.id + '" style="transition: all 0.2s;">' +
+                    '<div class="template-icon text-center mb-2">' + (tpl.icon || '🤖') + '</div>' +
+                    '<h4 class="font-semibold text-center mb-1">' + tpl.name + '</h4>' +
+                    '<p class="text-xs text-gray-500 text-center">' + (tpl.description || '') + '</p>' +
+                    '</div>';
+            });
+
+            html += '</div></div>';
+
+            layer.open({
+                type: 1,
+                title: false,
+                closeBtn: 1,
+                area: ['600px', '500px'],
+                content: html,
+                success: function (layero, index) {
+                    layero.find('.template-card').on('click', function () {
+                        var templateId = this.getAttribute('data-template-id');
+                        layer.close(index);
+                        callback(templateId);
+                    });
+                }
+            });
+        }
+
+        // Add new provider
+        function addProvider() {
+            showTemplateModal(function (templateId) {
+                // Load template details
+                fetch('/app/admin/ai/providers/template-detail?template=' + templateId)
+                    .then(function (r) {
+                        return r.json();
+                    })
+                    .then(function (res) {
+                        if (res.code === 0) {
+                            var template = res.data;
+                            var newCard = {
+                                id: generateId(),
+                                name: template.name + ' (' + new Date().toLocaleTimeString() + ')',
+                                template: templateId,
+                                type: template.type,
+                                config: template.config_template || {},
+                                weight: 1,
+                                enabled: true,
+                                _isNew: true
+                            };
+                            providerCards.push(newCard);
+                            renderCards();
+                            updateCount();
+
+                            // Scroll to new card
+                            setTimeout(function () {
+                                var newCardEl = document.querySelector('[data-card-id="' + newCard.id + '"]');
+                                if (newCardEl) {
+                                    newCardEl.scrollIntoView({behavior: 'smooth', block: 'center'});
+                                }
+                            }, 100);
+                        }
+                    });
+            });
+        }
+
+        // Render all cards
+        function renderCards() {
+            var list = document.getElementById('provider-cards-list');
+            var emptyState = document.getElementById('empty-state');
+
+            if (!list) return;
+
+            if (providerCards.length === 0) {
+                list.style.display = 'none';
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            list.style.display = 'block';
+            emptyState.style.display = 'none';
+            list.innerHTML = '';
+
+            providerCards.forEach(function (card, idx) {
+                var cardEl = createCardElement(card, idx);
+                list.appendChild(cardEl);
+            });
+        }
+
+        // Create card element
+        function createCardElement(card, idx) {
+            var cardEl = document.createElement('div');
+            cardEl.className = 'provider-card bg-white rounded-xl border-2 border-gray-200 shadow-sm p-6';
+            cardEl.dataset.cardId = card.id;
+            cardEl.draggable = true;
+
+            // Drag & Drop
+            cardEl.addEventListener('dragstart', function (e) {
+                cardEl.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', card.id);
+            });
+
+            cardEl.addEventListener('dragend', function () {
+                cardEl.classList.remove('dragging');
+            });
+
+            cardEl.addEventListener('dragover', function (e) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+            });
+
+            cardEl.addEventListener('drop', function (e) {
+                e.preventDefault();
+                var draggedId = e.dataTransfer.getData('text/plain');
+                if (draggedId === card.id) return;
+
+                var draggedIdx = providerCards.findIndex(function (c) {
+                    return c.id === draggedId;
+                });
+                var targetIdx = providerCards.findIndex(function (c) {
+                    return c.id === card.id;
+                });
+
+                if (draggedIdx !== -1 && targetIdx !== -1) {
+                    var temp = providerCards[draggedIdx];
+                    providerCards.splice(draggedIdx, 1);
+                    providerCards.splice(targetIdx, 0, temp);
+                    renderCards();
+                }
+            });
+
+            // Header
+            var header = document.createElement('div');
+            header.className = 'flex items-center justify-between mb-4 pb-4 border-b border-gray-200';
+
+            var leftSide = document.createElement('div');
+            leftSide.className = 'flex items-center gap-3';
+
+            // Template Icon
+            var template = templates.find(function (t) {
+                return t.id === card.template;
+            });
+            var icon = document.createElement('div');
+            icon.className = 'template-icon';
+            icon.textContent = (template && template.icon) || '🤖';
+            leftSide.appendChild(icon);
+
+            // Title & Badge
+            var titleGroup = document.createElement('div');
+            var title = document.createElement('input');
+            title.type = 'text';
+            title.className = 'text-lg font-semibold bg-transparent border-none focus:outline-none focus:bg-gray-50 px-2 py-1 rounded';
+            title.value = card.name;
+            title.addEventListener('input', function (e) {
+                card.name = e.target.value;
+            });
+            titleGroup.appendChild(title);
+
+            var badge = document.createElement('span');
+            badge.className = 'ml-2 inline-block px-2 py-1 text-xs rounded ' +
+                (card.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600');
+            badge.textContent = card.enabled ? '✓ 已启用' : '✗ 已禁用';
+            badge.dataset.statusBadge = '1';
+            titleGroup.appendChild(badge);
+
+            leftSide.appendChild(titleGroup);
+            header.appendChild(leftSide);
+
+            // Actions
+            var actions = document.createElement('div');
+            actions.className = 'flex gap-2';
+
+            // Enable/Disable Toggle
+            var toggleLabel = document.createElement('label');
+            toggleLabel.className = 'flex items-center gap-2 text-sm cursor-pointer px-3 py-1 bg-gray-50 rounded hover:bg-gray-100 transition';
+            var toggleInput = document.createElement('input');
+            toggleInput.type = 'checkbox';
+            toggleInput.checked = card.enabled;
+            toggleInput.className = 'w-4 h-4';
+            toggleInput.addEventListener('change', function (e) {
+                card.enabled = e.target.checked;
+                badge.className = 'ml-2 inline-block px-2 py-1 text-xs rounded ' +
+                    (card.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600');
+                badge.textContent = card.enabled ? '✓ 已启用' : '✗ 已禁用';
+            });
+            toggleLabel.appendChild(toggleInput);
+            toggleLabel.appendChild(document.createTextNode('启用'));
+            actions.appendChild(toggleLabel);
+
+            // Move Up
+            var btnUp = document.createElement('button');
+            btnUp.className = 'px-3 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200 transition';
+            btnUp.textContent = '↑';
+            btnUp.title = '上移';
+            btnUp.addEventListener('click', function () {
+                if (idx > 0) {
+                    var temp = providerCards[idx - 1];
+                    providerCards[idx - 1] = providerCards[idx];
+                    providerCards[idx] = temp;
+                    renderCards();
+                }
+            });
+            actions.appendChild(btnUp);
+
+            // Move Down
+            var btnDown = document.createElement('button');
+            btnDown.className = 'px-3 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200 transition';
+            btnDown.textContent = '↓';
+            btnDown.title = '下移';
+            btnDown.addEventListener('click', function () {
+                if (idx < providerCards.length - 1) {
+                    var temp = providerCards[idx + 1];
+                    providerCards[idx + 1] = providerCards[idx];
+                    providerCards[idx] = temp;
+                    renderCards();
+                }
+            });
+            actions.appendChild(btnDown);
+
+            // Test
+            var btnTest = document.createElement('button');
+            btnTest.className = 'px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition';
+            btnTest.textContent = '🧪 测试';
+            btnTest.addEventListener('click', function () {
+                testProvider(card);
+            });
+            actions.appendChild(btnTest);
+
+            // Duplicate
+            var btnDup = document.createElement('button');
+            btnDup.className = 'px-3 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition';
+            btnDup.textContent = '📋 复制';
+            btnDup.title = '复制此提供方';
+            btnDup.addEventListener('click', function () {
+                var newCard = JSON.parse(JSON.stringify(card));
+                newCard.id = generateId();
+                newCard.name = card.name + ' (副本)';
+                newCard._isNew = true;
+                providerCards.push(newCard);
+                renderCards();
+                updateCount();
+                layer.msg('已复制');
+            });
+            actions.appendChild(btnDup);
+
+            // Delete
+            var btnDelete = document.createElement('button');
+            btnDelete.className = 'px-3 py-1 text-xs bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 rounded transition';
+            btnDelete.innerHTML = '<span style="margin-right: 4px;">🗑</span>删除';
+            btnDelete.addEventListener('click', function () {
+                layer.confirm('确定删除提供方 "' + card.name + '" 吗？', {
+                    icon: 3,
+                    title: '确认删除'
+                }, function (index) {
+                    providerCards = providerCards.filter(function (c) {
+                        return c.id !== card.id;
+                    });
+                    renderCards();
+                    updateCount();
+                    layer.close(index);
+                    layer.msg('已删除', {icon: 1});
+                });
+            });
+            actions.appendChild(btnDelete);
+
+            header.appendChild(actions);
+            cardEl.appendChild(header);
+
+            // ID & Template Info
+            var infoBar = document.createElement('div');
+            infoBar.className = 'mb-4 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-100 flex items-center justify-between';
+
+            var leftInfo = document.createElement('div');
+            leftInfo.className = 'flex items-center gap-4';
+
+            // ID Display
+            var idSection = document.createElement('div');
+            idSection.className = 'flex items-center gap-2';
+            idSection.innerHTML = '<span class="text-xs text-gray-500">ID:</span>' +
+                '<code class="text-xs bg-white px-2 py-1 rounded border border-gray-200 font-mono text-gray-700">' + card.id + '</code>' +
+                '<button class="text-xs text-blue-600 hover:text-blue-800" onclick="navigator.clipboard.writeText(\'' + card.id + '\');layer.msg(\'ID已复制\', {icon:1, time:1000})" title="复制ID">📋</button>';
+            leftInfo.appendChild(idSection);
+
+            // Template Info
+            if (template) {
+                var templateSection = document.createElement('div');
+                templateSection.innerHTML = '<span class="text-sm text-gray-600">📦 模板：</span>' +
+                    '<span class="text-sm font-medium text-blue-700">' + template.name + '</span>' +
+                    '<span class="text-xs text-gray-500 ml-1">(' + template.type + ')</span>';
+                leftInfo.appendChild(templateSection);
+            }
+
+            infoBar.appendChild(leftInfo);
+            cardEl.appendChild(infoBar);
+
+            // Config Fields
+            var configSection = document.createElement('div');
+            configSection.className = 'space-y-3';
+
+            // Weight
+            var weightRow = createConfigField('⚖️ 权重', 'number', card.weight, function (value) {
+                card.weight = parseInt(value) || 1;
+            }, {min: 0, placeholder: '权重值，用于轮询调度，数值越大优先级越高'});
+            configSection.appendChild(weightRow);
+
+            // Base URL (通用字段)
+            var baseUrlRow = createConfigField('🌐 Base URL', 'text', card.config.base_url || '', function (value) {
+                card.config.base_url = value;
+            }, {placeholder: 'API基础地址，如 https://api.openai.com/v1', required: true});
+            configSection.appendChild(baseUrlRow);
+
+            // API Key (通用字段)
+            var apiKeyRow = createConfigField('🔑 API Key', 'password', card.config.api_key || '', function (value) {
+                card.config.api_key = value;
+            }, {placeholder: 'API密钥', required: true});
+            configSection.appendChild(apiKeyRow);
+
+            // Model Selection with Fetch Button
+            var modelRow = document.createElement('div');
+            modelRow.className = 'config-field p-3 rounded-lg border border-gray-200 hover:border-blue-300 transition';
+
+            var modelLabel = document.createElement('label');
+            modelLabel.className = 'block text-sm font-medium text-gray-700 mb-2';
+            modelLabel.textContent = '🤖 模型';
+            modelRow.appendChild(modelLabel);
+
+            var modelInputGroup = document.createElement('div');
+            modelInputGroup.className = 'flex gap-2';
+
+            var modelSelect = document.createElement('select');
+            modelSelect.className = 'flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent';
+            modelSelect.innerHTML = '<option value="">选择模型...</option>';
+
+            // 添加当前模型值
+            if (card.config.model) {
+                var currentOption = document.createElement('option');
+                currentOption.value = card.config.model;
+                currentOption.textContent = card.config.model;
+                currentOption.selected = true;
+                modelSelect.appendChild(currentOption);
+            }
+
+            modelSelect.addEventListener('change', function (e) {
+                card.config.model = e.target.value;
+                customModelInput.value = e.target.value;
+            });
+            modelInputGroup.appendChild(modelSelect);
+
+            // Fetch Models Button
+            var fetchBtn = document.createElement('button');
+            fetchBtn.type = 'button';
+            fetchBtn.className = 'px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition';
+            fetchBtn.textContent = '🔄 获取';
+            fetchBtn.title = '从API获取可用模型列表';
+            fetchBtn.addEventListener('click', function () {
+                fetchModels(card, modelSelect);
+            });
+            modelInputGroup.appendChild(fetchBtn);
+
+            modelRow.appendChild(modelInputGroup);
+
+            // Custom Model ID Input
+            var customModelInput = document.createElement('input');
+            customModelInput.type = 'text';
+            customModelInput.className = 'w-full px-3 py-2 border border-gray-300 rounded-lg mt-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent';
+            customModelInput.placeholder = '或输入自定义模型ID';
+            customModelInput.value = card.config.model || '';
+            customModelInput.addEventListener('input', function (e) {
+                card.config.model = e.target.value;
+                // Update select if value matches an option
+                for (var i = 0; i < modelSelect.options.length; i++) {
+                    if (modelSelect.options[i].value === e.target.value) {
+                        modelSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+            });
+            modelRow.appendChild(customModelInput);
+
+            configSection.appendChild(modelRow);
+
+            // Deep Thinking Support
+            var deepThinkingRow = document.createElement('div');
+            deepThinkingRow.className = 'config-field p-3 rounded-lg border border-gray-200 hover:border-blue-300 transition';
+
+            var deepLabel = document.createElement('label');
+            deepLabel.className = 'flex items-center gap-2 cursor-pointer';
+
+            var deepCheckbox = document.createElement('input');
+            deepCheckbox.type = 'checkbox';
+            deepCheckbox.className = 'w-4 h-4';
+            deepCheckbox.checked = !!card.config.deep_thinking;
+            deepCheckbox.addEventListener('change', function (e) {
+                card.config.deep_thinking = e.target.checked;
+            });
+
+            deepLabel.appendChild(deepCheckbox);
+            deepLabel.appendChild(document.createTextNode('🧠 支持深度思考（如 o1 系列模型）'));
+            deepThinkingRow.appendChild(deepLabel);
+
+            configSection.appendChild(deepThinkingRow);
+
+            // Additional Template fields (跳过已处理的通用字段)
+            if (template && template.fields) {
+                var processedFields = ['base_url', 'api_key', 'model', 'custom_model_id', 'deep_thinking'];
+                template.fields.forEach(function (field) {
+                    // 跳过已处理的字段
+                    if (processedFields.indexOf(field.key) !== -1) {
+                        return;
+                    }
+
+                    var value = card.config[field.key] || field.default || '';
+                    var icon = field.key === 'temperature' ? '🌡️' :
+                        field.key === 'max_tokens' ? '📊' :
+                            field.key === 'timeout' ? '⏱️' : '⚙️';
+
+                    var fieldEl = createConfigField(
+                        icon + ' ' + field.label,
+                        field.type,
+                        value,
+                        function (newValue) {
+                            card.config[field.key] = newValue;
+                        },
+                        {
+                            placeholder: field.placeholder || '',
+                            required: field.required || false,
+                            options: field.options,
+                            min: field.min,
+                            max: field.max,
+                            step: field.step
+                        }
+                    );
+                    configSection.appendChild(fieldEl);
+                });
+            }
+
+            cardEl.appendChild(configSection);
+
+            // New card indicator
+            if (card._isNew) {
+                cardEl.classList.add('ring-2', 'ring-blue-500', 'ring-offset-2');
+                setTimeout(function () {
+                    cardEl.classList.remove('ring-2', 'ring-blue-500', 'ring-offset-2');
+                    delete card._isNew;
+                }, 2000);
+            }
+
+            return cardEl;
+        }
+
+        // Create config field
+        function createConfigField(label, type, value, onChange, options) {
+            options = options || {};
+
+            var row = document.createElement('div');
+            row.className = 'config-field p-3 rounded-lg border border-gray-200 hover:border-blue-300 transition';
+
+            var labelEl = document.createElement('label');
+            labelEl.className = 'block text-sm font-medium text-gray-700 mb-2';
+            labelEl.textContent = label + (options.required ? ' *' : '');
+            row.appendChild(labelEl);
+
+            var input;
+
+            if (type === 'select') {
+                input = document.createElement('select');
+                input.className = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent';
+
+                var opts = options.options || [];
+                if (opts === 'auto') {
+                    opts = ['gpt-4', 'gpt-4-turbo', 'gpt-3.5-turbo', 'claude-3-opus', 'claude-3-sonnet'];
+                }
+
+                if (Array.isArray(opts)) {
+                    opts.forEach(function (opt) {
+                        var optEl = document.createElement('option');
+                        optEl.value = typeof opt === 'string' ? opt : opt.value;
+                        optEl.textContent = typeof opt === 'string' ? opt : opt.label;
+                        if (optEl.value === value) optEl.selected = true;
+                        input.appendChild(optEl);
+                    });
+                }
+            } else if (type === 'password') {
+                var wrapper = document.createElement('div');
+                wrapper.className = 'relative';
+
+                input = document.createElement('input');
+                input.type = 'password';
+                input.className = 'w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent';
+                input.value = value;
+                input.placeholder = options.placeholder || '';
+
+                var toggleBtn = document.createElement('button');
+                toggleBtn.type = 'button';
+                toggleBtn.className = 'absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700';
+                toggleBtn.textContent = '👁';
+                toggleBtn.addEventListener('click', function () {
+                    input.type = input.type === 'password' ? 'text' : 'password';
+                    toggleBtn.textContent = input.type === 'password' ? '👁' : '🙈';
+                });
+
+                wrapper.appendChild(input);
+                wrapper.appendChild(toggleBtn);
+                row.appendChild(wrapper);
+
+                input.addEventListener('input', function (e) {
+                    onChange(e.target.value);
+                });
+
+                return row;
+            } else if (type === 'number') {
+                input = document.createElement('input');
+                input.type = 'number';
+                input.className = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent';
+                input.value = value;
+                input.placeholder = options.placeholder || '';
+                if (options.min !== undefined) input.min = options.min;
+                if (options.max !== undefined) input.max = options.max;
+                if (options.step !== undefined) input.step = options.step;
+            } else if (type === 'checkbox') {
+                input = document.createElement('input');
+                input.type = 'checkbox';
+                input.className = 'w-4 h-4';
+                input.checked = !!value;
+            } else {
+                input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent';
+                input.value = value;
+                input.placeholder = options.placeholder || '';
+            }
+
+            input.addEventListener(type === 'checkbox' ? 'change' : 'input', function (e) {
+                onChange(type === 'checkbox' ? e.target.checked : e.target.value);
+            });
+
+            row.appendChild(input);
+            return row;
+        }
+
+        // Test provider
+        function testProvider(card) {
+            var loadingIndex = layer.load(2, {shade: 0.3});
+
+            post('/app/admin/ai/providers/test', {
+                type: card.type,
+                config: card.config
+            }).then(function (res) {
+                layer.close(loadingIndex);
+                if (res.code === 0) {
+                    layer.msg('✅ 测试成功！提供方正常工作', {icon: 1, time: 2000});
+                } else {
+                    layer.alert('❌ 测试失败：' + (res.msg || 'Unknown error'), {icon: 2});
+                }
+            }).catch(function (err) {
+                layer.close(loadingIndex);
+                layer.alert('测试异常：' + err.message, {icon: 2});
+            });
+        }
+
+        // Save all providers
+        function saveAllProviders() {
+            var loadingIndex = layer.load(2, {shade: 0.3});
+
+            var promises = providerCards.map(function (card) {
+                var payload = {
+                    id: card.id,
+                    name: card.name,
+                    template: card.template,
+                    type: card.type,
+                    config: card.config,
+                    weight: card.weight,
+                    enabled: card.enabled
+                };
+
+                var isNew = !card._savedBefore;
+
+                if (isNew) {
+                    return post('/app/admin/ai/providers/create', payload)
+                        .then(function (res) {
+                            if (res.code === 0) {
+                                card._savedBefore = true;
+                                card.id = res.data.id;
+                                return {success: true, name: card.name};
+                            } else {
+                                return {success: false, name: card.name, error: res.msg};
+                            }
+                        });
+                } else {
+                    return post('/app/admin/ai/providers/update', payload)
+                        .then(function (res) {
+                            return {success: res.code === 0, name: card.name, error: res.msg};
+                        });
+                }
+            });
+
+            Promise.all(promises).then(function (results) {
+                layer.close(loadingIndex);
+
+                var successCount = results.filter(function (r) {
+                    return r.success;
+                }).length;
+                var failedCount = results.length - successCount;
+
+                if (failedCount === 0) {
+                    layer.msg('✅ 全部保存成功！共 ' + successCount + ' 个提供方', {icon: 1, time: 2000});
+                } else {
+                    var failedNames = results.filter(function (r) {
+                        return !r.success;
+                    })
+                        .map(function (r) {
+                            return r.name + ': ' + r.error;
+                        })
+                        .join('\n');
+                    layer.alert('保存完成：成功 ' + successCount + ' 个，失败 ' + failedCount + ' 个\n\n失败项：\n' + failedNames, {icon: 0});
+                }
+            }).catch(function (err) {
+                layer.close(loadingIndex);
+                layer.alert('保存异常：' + err.message, {icon: 2});
+            });
+        }
+
+        // Fetch models from API
+        function fetchModels(card, selectElement) {
+            if (!card.config.base_url || !card.config.api_key) {
+                layer.msg('请先配置 Base URL 和 API Key', {icon: 0});
+                return;
+            }
+
+            var loadingIndex = layer.load(2, {shade: 0.3});
+
+            post('/app/admin/ai/providers/fetch-models', {
+                type: card.type,
+                base_url: card.config.base_url,
+                api_key: card.config.api_key
+            }).then(function (res) {
+                layer.close(loadingIndex);
+                if (res.code === 0 && res.data && res.data.models) {
+                    // Clear existing options
+                    selectElement.innerHTML = '<option value="">选择模型...</option>';
+
+                    // Add new options
+                    res.data.models.forEach(function (model) {
+                        var option = document.createElement('option');
+                        option.value = model.id || model;
+                        option.textContent = model.id || model;
+                        selectElement.appendChild(option);
+                    });
+
+                    // Select current model if exists
+                    if (card.config.model) {
+                        selectElement.value = card.config.model;
+                    }
+
+                    layer.msg('已获取 ' + res.data.models.length + ' 个模型', {icon: 1});
+                } else {
+                    layer.msg('获取模型列表失败: ' + (res.msg || 'Unknown error'), {icon: 2});
+                }
+            }).catch(function (err) {
+                layer.close(loadingIndex);
+                layer.msg('请求失败: ' + err.message, {icon: 2});
+            });
+        }
+
+        // Update count
+        function updateCount() {
+            var countEl = document.getElementById('provider-count');
+            if (countEl) {
+                countEl.textContent = providerCards.length;
+            }
+        }
+
+        // Event listeners
+        document.getElementById('btn-add-provider').addEventListener('click', addProvider);
+        document.getElementById('btn-save-all').addEventListener('click', saveAllProviders);
+        document.getElementById('btn-load').addEventListener('click', function () {
+            loadProviders();
+            layer.msg('🔄 已重新加载');
+        });
+
+        // Initialize
+        loadTemplates().then(function () {
+            loadProviders();
+        }).catch(function (err) {
+            layer.alert('加载模板失败：' + err.message, {icon: 2});
+        });
+
+    }); // end layui.use
+</script>
+</body>
+</html>

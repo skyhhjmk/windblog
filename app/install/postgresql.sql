@@ -137,6 +137,7 @@ CREATE TABLE IF NOT EXISTS posts
     content_type   VARCHAR(10)              NOT NULL DEFAULT 'markdown',
     content        TEXT                     NOT NULL,
     excerpt        TEXT                              DEFAULT NULL,
+    ai_summary TEXT DEFAULT NULL,
     status         VARCHAR(15)              NOT NULL DEFAULT 'draft',
     visibility     VARCHAR(20)              NOT NULL DEFAULT 'public',
     password       VARCHAR(255)                      DEFAULT NULL,
@@ -655,6 +656,95 @@ COMMENT ON TABLE post_ext IS '文章扩展表';
 COMMENT ON COLUMN post_ext.post_id IS '文章ID';
 COMMENT ON COLUMN post_ext.key IS '键';
 COMMENT ON COLUMN post_ext.value IS '值';
+
+-- 创建AI提供方表
+CREATE TABLE IF NOT EXISTS ai_providers
+(
+    id         varchar(64)  NOT NULL PRIMARY KEY,
+    name       varchar(255) NOT NULL,
+    template   varchar(64),
+    type       varchar(64)  NOT NULL DEFAULT 'openai',
+    config     text,
+    weight     integer      NOT NULL DEFAULT 1,
+    enabled    boolean      NOT NULL DEFAULT true,
+    created_at timestamp             DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp             DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE ai_providers IS 'AI提供方配置表';
+COMMENT ON COLUMN ai_providers.id IS '提供方唯一标识（用户自定义或自动生成）';
+COMMENT ON COLUMN ai_providers.name IS '提供方名称';
+COMMENT ON COLUMN ai_providers.template IS '模板类型（openai/claude/azure/gemini/custom等）';
+COMMENT ON COLUMN ai_providers.type IS '提供方类型';
+COMMENT ON COLUMN ai_providers.config IS '配置JSON（包含api_key、base_url、model等）';
+COMMENT ON COLUMN ai_providers.weight IS '权重（用于加权选择）';
+COMMENT ON COLUMN ai_providers.enabled IS '是否启用';
+
+CREATE INDEX IF NOT EXISTS idx_ai_providers_enabled ON ai_providers (enabled);
+CREATE INDEX IF NOT EXISTS idx_ai_providers_template ON ai_providers (template);
+
+-- 创建更新时间触发器
+CREATE OR REPLACE FUNCTION update_ai_providers_updated_at()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_ai_providers_updated_at ON ai_providers;
+CREATE TRIGGER trigger_ai_providers_updated_at
+    BEFORE UPDATE
+    ON ai_providers
+    FOR EACH ROW
+EXECUTE FUNCTION update_ai_providers_updated_at();
+
+-- 创建AI轮询组表
+CREATE TABLE IF NOT EXISTS ai_polling_groups
+(
+    id          SERIAL PRIMARY KEY,
+    name        VARCHAR(100) NOT NULL UNIQUE,
+    description VARCHAR(500)          DEFAULT NULL,
+    strategy    VARCHAR(20)  NOT NULL DEFAULT 'polling' CHECK (strategy IN ('polling', 'failover')),
+    enabled     BOOLEAN      NOT NULL DEFAULT TRUE,
+    created_at  TIMESTAMP             DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMP             DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE ai_polling_groups IS 'AI轮询组表';
+COMMENT ON COLUMN ai_polling_groups.id IS '主键ID';
+COMMENT ON COLUMN ai_polling_groups.name IS '轮询组名称';
+COMMENT ON COLUMN ai_polling_groups.description IS '轮询组描述';
+COMMENT ON COLUMN ai_polling_groups.strategy IS '调度策略：polling=轮询, failover=主备';
+COMMENT ON COLUMN ai_polling_groups.enabled IS '是否启用';
+COMMENT ON COLUMN ai_polling_groups.created_at IS '创建时间';
+COMMENT ON COLUMN ai_polling_groups.updated_at IS '更新时间';
+
+-- 创建AI轮询组提供方关系表
+CREATE TABLE IF NOT EXISTS ai_polling_group_providers
+(
+    id          SERIAL PRIMARY KEY,
+    group_id    INTEGER     NOT NULL REFERENCES ai_polling_groups (id) ON DELETE CASCADE,
+    provider_id VARCHAR(64) NOT NULL,
+    weight      INTEGER     NOT NULL DEFAULT 1,
+    enabled     BOOLEAN     NOT NULL DEFAULT TRUE,
+    created_at  TIMESTAMP            DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMP            DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (group_id, provider_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_polling_group_id ON ai_polling_group_providers (group_id);
+CREATE INDEX IF NOT EXISTS idx_polling_provider_id ON ai_polling_group_providers (provider_id);
+
+COMMENT ON TABLE ai_polling_group_providers IS 'AI轮询组提供方关系表';
+COMMENT ON COLUMN ai_polling_group_providers.id IS '主键ID';
+COMMENT ON COLUMN ai_polling_group_providers.group_id IS '轮询组ID';
+COMMENT ON COLUMN ai_polling_group_providers.provider_id IS '提供方ID';
+COMMENT ON COLUMN ai_polling_group_providers.weight IS '权重（用于轮询和优先级）';
+COMMENT ON COLUMN ai_polling_group_providers.enabled IS '是否启用';
+COMMENT ON COLUMN ai_polling_group_providers.created_at IS '创建时间';
+COMMENT ON COLUMN ai_polling_group_providers.updated_at IS '更新时间';
 
 -- 添加索引
 CREATE INDEX idx_wa_users_join_time ON wa_users USING btree (join_time);

@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+    <title>AI效果测试</title>
+    <link rel="stylesheet" href="/app/admin/component/layui/css/layui.css?v=2.8.12"/>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .media-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 12px;
+        }
+
+        .media-item {
+            position: relative;
+            cursor: pointer;
+            border: 2px solid transparent;
+            border-radius: 8px;
+            overflow: hidden;
+            transition: all 0.2s;
+        }
+
+        .media-item:hover {
+            border-color: #3b82f6;
+            transform: scale(1.05);
+        }
+
+        .media-item.selected {
+            border-color: #10b981;
+            background-color: #d1fae5;
+        }
+
+        .media-item img {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+        }
+
+        .media-item .check-icon {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: #10b981;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .media-item.selected .check-icon {
+            display: flex;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+<div class="max-w-7xl mx-auto p-6">
+    <div class="bg-white rounded-lg shadow-md">
+        <div class="border-b border-gray-200 px-6 py-4">
+            <h1 class="text-2xl font-bold text-gray-800">AI 效果测试</h1>
+            <p class="text-sm text-gray-500 mt-1">选择AI提供者、修改提示词、附加媒体图片进行测试</p>
+        </div>
+
+        <div class="p-6 space-y-6">
+            <!-- 提供者选择 -->
+            <div class="space-y-3">
+                <label class="block text-sm font-medium text-gray-700">AI 提供者</label>
+                <select id="provider-select"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="">加载中...</option>
+                </select>
+            </div>
+
+            <!-- 任务类型 -->
+            <div class="space-y-3">
+                <label class="block text-sm font-medium text-gray-700">任务类型</label>
+                <select id="task-select"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="chat">对话 (Chat)</option>
+                    <option value="summarize">摘要 (Summarize)</option>
+                    <option value="translate">翻译 (Translate)</option>
+                    <option value="generate">生成 (Generate)</option>
+                </select>
+            </div>
+
+            <!-- 提示词模板 -->
+            <div class="space-y-3">
+                <label class="block text-sm font-medium text-gray-700">提示词模板</label>
+                <div class="flex gap-2">
+                    <select id="template-select"
+                            class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="">选择模板...</option>
+                    </select>
+                    <button id="btn-save-template"
+                            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+                        保存当前
+                    </button>
+                    <button id="btn-delete-template"
+                            class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
+                        删除
+                    </button>
+                </div>
+            </div>
+
+            <!-- 提示词输入 -->
+            <div class="space-y-3">
+                <label class="block text-sm font-medium text-gray-700">提示词</label>
+                <textarea id="prompt-input" rows="6" placeholder="输入你的提示词..."
+                          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"></textarea>
+            </div>
+
+            <!-- 媒体库图片选择 -->
+            <div class="space-y-3">
+                <div class="flex justify-between items-center">
+                    <label class="block text-sm font-medium text-gray-700">附加图片（多模态支持）</label>
+                    <button id="btn-toggle-media" class="text-sm text-blue-600 hover:text-blue-800">
+                        显示媒体库
+                    </button>
+                </div>
+
+                <div id="media-panel" class="hidden border border-gray-200 rounded-lg p-4 bg-gray-50">
+                    <div class="mb-3">
+                        <input type="text" id="media-search" placeholder="搜索图片..."
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    <div id="media-grid" class="media-grid max-h-96 overflow-y-auto">
+                        <div class="col-span-full text-center py-8 text-gray-500">加载中...</div>
+                    </div>
+                    <div class="mt-3 flex justify-between items-center">
+                        <div id="media-pagination" class="flex gap-2"></div>
+                        <button id="btn-clear-selection" class="text-sm text-red-600 hover:text-red-800">
+                            清除选择
+                        </button>
+                    </div>
+                </div>
+
+                <div id="selected-images" class="flex flex-wrap gap-2"></div>
+            </div>
+
+            <!-- 高级选项 -->
+            <details class="border border-gray-200 rounded-lg p-4">
+                <summary class="cursor-pointer font-medium text-gray-700">高级选项</summary>
+                <div class="mt-4 space-y-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">温度 (Temperature)</label>
+                        <input type="range" id="temperature" min="0" max="2" step="0.1" value="0.7" class="w-full">
+                        <div class="text-sm text-gray-500 text-center">
+                            <span id="temperature-value">0.7</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">最大 Tokens</label>
+                        <input type="number" id="max-tokens" value="1000"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                </div>
+            </details>
+
+            <!-- 测试按钮 -->
+            <div>
+                <button id="btn-test"
+                        class="w-full px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition shadow-md hover:shadow-lg">
+                    测试 AI 效果
+                </button>
+            </div>
+
+            <!-- 结果显示 -->
+            <div id="result-panel" class="hidden space-y-3">
+                <label class="block text-sm font-medium text-gray-700">AI 响应结果</label>
+                <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                    <div id="result-content" class="prose max-w-none"></div>
+                </div>
+                <div id="result-meta" class="text-xs text-gray-500 space-y-1"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+<script>
+    layui.use(['layer'], function () {
+        var layer = layui.layer, $ = layui.$;
+
+        var providers = [];
+        var selectedImages = [];
+        var templates = [];
+        var currentPage = 1;
+        var mediaList = [];
+
+        // 加载提供者列表
+        function loadProviders() {
+            $.get('/app/admin/ai/test/providers', function (res) {
+                if (res && res.code === 0 && res.data) {
+                    providers = res.data.available || [];
+                    var select = $('#provider-select');
+                    select.html('');
+                    providers.forEach(function (p) {
+                        select.append('<option value="' + p.id + '">' + p.name + ' (' + p.id + ')</option>');
+                    });
+                    if (res.data.current) {
+                        select.val(res.data.current);
+                    }
+                }
+            });
+        }
+
+        // 加载模板列表
+        function loadTemplates() {
+            $.get('/app/admin/ai/test/templates', function (res) {
+                if (res && res.code === 0 && res.data) {
+                    templates = res.data;
+                    var select = $('#template-select');
+                    select.html('<option value="">选择模板...</option>');
+                    templates.forEach(function (t) {
+                        select.append('<option value="' + t.id + '">' + t.name + '</option>');
+                    });
+                }
+            });
+        }
+
+        // 加载媒体库
+        function loadMedia(page) {
+            page = page || 1;
+            currentPage = page;
+            var search = $('#media-search').val();
+
+            $.get('/app/admin/ai/test/media', {page: page, limit: 20, search: search}, function (res) {
+                if (res && res.code === 0 && res.data) {
+                    mediaList = res.data.list || [];
+                    renderMediaGrid();
+                    renderPagination(res.data.total, res.data.page, res.data.limit);
+                }
+            });
+        }
+
+        // 渲染媒体网格
+        function renderMediaGrid() {
+            var grid = $('#media-grid');
+            grid.html('');
+
+            if (mediaList.length === 0) {
+                grid.html('<div class="col-span-full text-center py-8 text-gray-500">暂无图片</div>');
+                return;
+            }
+
+            mediaList.forEach(function (media) {
+                var isSelected = selectedImages.indexOf(media.id) >= 0;
+                var item = $('<div class="media-item ' + (isSelected ? 'selected' : '') + '" data-id="' + media.id + '"></div>');
+                item.append('<img src="' + media.thumb_url + '" alt="' + media.original_name + '">');
+                item.append('<div class="check-icon">✓</div>');
+                item.on('click', function () {
+                    toggleImageSelection(media.id);
+                });
+                grid.append(item);
+            });
+        }
+
+        // 渲染分页
+        function renderPagination(total, page, limit) {
+            var totalPages = Math.ceil(total / limit);
+            var pagination = $('#media-pagination');
+            pagination.html('');
+
+            if (totalPages <= 1) return;
+
+            for (var i = 1; i <= Math.min(totalPages, 5); i++) {
+                var btn = $('<button class="px-3 py-1 rounded ' + (i === page ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300') + '">' + i + '</button>');
+                btn.data('page', i);
+                btn.on('click', function () {
+                    loadMedia($(this).data('page'));
+                });
+                pagination.append(btn);
+            }
+        }
+
+        // 切换图片选择
+        function toggleImageSelection(id) {
+            var index = selectedImages.indexOf(id);
+            if (index >= 0) {
+                selectedImages.splice(index, 1);
+            } else {
+                selectedImages.push(id);
+            }
+            renderMediaGrid();
+            renderSelectedImages();
+        }
+
+        // 渲染已选图片
+        function renderSelectedImages() {
+            var container = $('#selected-images');
+            container.html('');
+
+            if (selectedImages.length === 0) {
+                container.html('<div class="text-sm text-gray-500">未选择图片</div>');
+                return;
+            }
+
+            selectedImages.forEach(function (id) {
+                var media = mediaList.find(function (m) {
+                    return m.id === id;
+                });
+                if (media) {
+                    var badge = $('<div class="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"></div>');
+                    badge.append('<span>' + media.original_name + '</span>');
+                    var removeBtn = $('<button class="text-blue-600 hover:text-blue-800">×</button>');
+                    removeBtn.on('click', function () {
+                        toggleImageSelection(id);
+                    });
+                    badge.append(removeBtn);
+                    container.append(badge);
+                }
+            });
+        }
+
+        // 显示/隐藏媒体库
+        $('#btn-toggle-media').on('click', function () {
+            var panel = $('#media-panel');
+            if (panel.is(':hidden')) {
+                panel.slideDown();
+                loadMedia(1);
+                $(this).text('隐藏媒体库');
+            } else {
+                panel.slideUp();
+                $(this).text('显示媒体库');
+            }
+        });
+
+        // 清除选择
+        $('#btn-clear-selection').on('click', function () {
+            selectedImages = [];
+            renderMediaGrid();
+            renderSelectedImages();
+        });
+
+        // 媒体搜索
+        var searchTimeout;
+        $('#media-search').on('input', function () {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(function () {
+                loadMedia(1);
+            }, 500);
+        });
+
+        // 模板选择
+        $('#template-select').on('change', function () {
+            var id = $(this).val();
+            if (!id) return;
+
+            var template = templates.find(function (t) {
+                return t.id === id;
+            });
+            if (template) {
+                $('#prompt-input').val(template.prompt);
+                $('#task-select').val(template.task);
+            }
+        });
+
+        // 保存模板
+        $('#btn-save-template').on('click', function () {
+            var prompt = $('#prompt-input').val();
+            if (!prompt) {
+                layer.msg('请输入提示词', {icon: 2});
+                return;
+            }
+
+            layer.prompt({title: '模板名称', formType: 0}, function (name, idx) {
+                layer.close(idx);
+
+                $.ajax({
+                    url: '/app/admin/ai/test/save-template',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        name: name,
+                        prompt: prompt,
+                        task: $('#task-select').val()
+                    }),
+                    success: function (res) {
+                        if (res && res.code === 0) {
+                            layer.msg('保存成功', {icon: 1});
+                            loadTemplates();
+                        } else {
+                            layer.msg(res.msg || '保存失败', {icon: 2});
+                        }
+                    }
+                });
+            });
+        });
+
+        // 删除模板
+        $('#btn-delete-template').on('click', function () {
+            var id = $('#template-select').val();
+            if (!id) {
+                layer.msg('请先选择模板', {icon: 2});
+                return;
+            }
+
+            layer.confirm('确定删除该模板？', {icon: 3}, function (idx) {
+                layer.close(idx);
+
+                $.ajax({
+                    url: '/app/admin/ai/test/delete-template',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({id: id}),
+                    success: function (res) {
+                        if (res && res.code === 0) {
+                            layer.msg('删除成功', {icon: 1});
+                            loadTemplates();
+                            $('#template-select').val('');
+                        } else {
+                            layer.msg(res.msg || '删除失败', {icon: 2});
+                        }
+                    }
+                });
+            });
+        });
+
+        // 温度滑块
+        $('#temperature').on('input', function () {
+            $('#temperature-value').text($(this).val());
+        });
+
+        // 测试AI
+        $('#btn-test').on('click', function () {
+            var provider = $('#provider-select').val();
+            var task = $('#task-select').val();
+            var prompt = $('#prompt-input').val();
+
+            if (!provider) {
+                layer.msg('请选择AI提供者', {icon: 2});
+                return;
+            }
+
+            if (!prompt) {
+                layer.msg('请输入提示词', {icon: 2});
+                return;
+            }
+
+            var options = {
+                temperature: parseFloat($('#temperature').val()),
+                max_tokens: parseInt($('#max-tokens').val())
+            };
+
+            var loading = layer.msg('AI处理中...', {icon: 16, shade: 0.3, time: 0});
+
+            $.ajax({
+                url: '/app/admin/ai/test/test',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    provider: provider,
+                    task: task,
+                    prompt: prompt,
+                    images: selectedImages,
+                    options: options
+                }),
+                success: function (res) {
+                    layer.close(loading);
+
+                    if (res && res.code === 0 && res.data) {
+                        $('#result-panel').removeClass('hidden');
+                        $('#result-content').html('<pre class="whitespace-pre-wrap">' + res.data.result + '</pre>');
+
+                        var meta = [];
+                        if (res.data.model) meta.push('模型: ' + res.data.model);
+                        if (res.data.usage) {
+                            if (res.data.usage.total_tokens) {
+                                meta.push('Tokens: ' + res.data.usage.total_tokens);
+                            }
+                            if (res.data.usage.prompt_tokens && res.data.usage.completion_tokens) {
+                                meta.push('(输入: ' + res.data.usage.prompt_tokens + ' / 输出: ' + res.data.usage.completion_tokens + ')');
+                            }
+                        }
+                        if (res.data.finish_reason) meta.push('完成原因: ' + res.data.finish_reason);
+
+                        $('#result-meta').html(meta.map(function (m) {
+                            return '<div>' + m + '</div>';
+                        }).join(''));
+
+                        layer.msg('测试完成', {icon: 1});
+                    } else {
+                        layer.msg(res.msg || '测试失败', {icon: 2});
+                    }
+                },
+                error: function () {
+                    layer.close(loading);
+                    layer.msg('请求失败', {icon: 2});
+                }
+            });
+        });
+
+        // 初始化
+        loadProviders();
+        loadTemplates();
+        renderSelectedImages();
+    });
+</script>
+</body>
+</html>

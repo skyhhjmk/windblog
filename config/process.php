@@ -116,6 +116,13 @@ if (is_installed()) {
         'reloadable' => false,
         'constructor' => [],
     ];
+
+    // AI 摘要生成处理进程（存在 .env 时注册）
+    $__processes['ai_summary_worker'] = [
+        'handler' => app\process\AiSummaryWorker::class,
+        'reloadable' => false,
+        'constructor' => [],
+    ];
 }
 
 return $__processes;

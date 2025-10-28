@@ -23,6 +23,7 @@ use Throwable;
  * @property string              $content_type    内容类型 (e.g., 'markdown', 'html')
  * @property string              $content         文章内容
  * @property string              $excerpt         文章摘要
+ * @property string|null $ai_summary      AI 摘要
  * @property string              $status          文章状态 (e.g., 'published', 'draft', 'archived')
  * @property string              $visibility      文章可见性 (e.g., 'public', 'private')
  * @property string              $password        文章密码
@@ -105,6 +106,7 @@ class Post extends Model
         'content_type',
         'content',
         'excerpt',
+        'ai_summary',
         'status',
         'visibility',
         'password',

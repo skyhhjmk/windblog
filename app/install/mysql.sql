@@ -154,6 +154,7 @@ CREATE TABLE IF NOT EXISTS `posts` (
   `content_type` varchar(10) NOT NULL DEFAULT 'markdown',
   `content` longtext NOT NULL,
   `excerpt` text DEFAULT NULL,
+    ` ai_summary ` longtext DEFAULT NULL COMMENT 'AI 摘要',
   `status` varchar(15) NOT NULL DEFAULT 'draft',
   `visibility` varchar(20) NOT NULL DEFAULT 'public' COMMENT '可见性: public=公开, private=私密, password=密码保护',
   `password` varchar(255) DEFAULT NULL COMMENT '文章密码（当visibility=password时使用）',
@@ -548,6 +549,185 @@ INSERT INTO `links` VALUES (default, '雨云',
         '超高性价比云服务商，使用优惠码github注册并绑定微信即可获得5折优惠',
         null, '2025-9-26 11:00:00', '2022-12-23 12:05:07',
         null);
+
+-- 创建AI提供方表
+CREATE TABLE IF NOT EXISTS ` ai_providers `
+(
+    `
+    id
+    `
+    varchar
+(
+    64
+) NOT NULL COMMENT '提供方唯一标识（用户自定义或自动生成）',
+    ` name ` varchar
+(
+    255
+) NOT NULL COMMENT '提供方名称',
+    ` template ` varchar
+(
+    64
+) DEFAULT NULL COMMENT '模板类型（openai/claude/azure/gemini/custom等）',
+    ` type ` varchar
+(
+    64
+) NOT NULL DEFAULT 'openai' COMMENT '提供方类型',
+    ` config ` text COMMENT '配置JSON（包含api_key、base_url、model等）',
+    ` weight ` int
+(
+    11
+) NOT NULL DEFAULT 1 COMMENT '权重（用于加权选择）',
+    ` enabled ` tinyint
+(
+    1
+) NOT NULL DEFAULT 1 COMMENT '是否启用',
+    ` created_at ` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+    ` updated_at ` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY
+(
+    `
+    id
+    `
+),
+    KEY ` idx_enabled `
+(
+    `
+    enabled
+    `
+),
+    KEY ` idx_template `
+(
+    `
+    template
+    `
+)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE =utf8mb4_unicode_ci COMMENT ='AI提供方配置表';
+
+-- 创建AI轮询组表
+CREATE TABLE IF NOT EXISTS ` ai_polling_groups `
+(
+    `
+    id
+    `
+    INT
+    UNSIGNED
+    NOT
+    NULL
+    AUTO_INCREMENT
+    COMMENT
+    '主键ID',
+    `
+    name
+    `
+    VARCHAR
+(
+    100
+) NOT NULL COMMENT '轮询组名称',
+    ` description ` VARCHAR
+(
+    500
+) DEFAULT NULL COMMENT '轮询组描述',
+    ` strategy ` ENUM
+(
+    'polling',
+    'failover'
+) NOT NULL DEFAULT 'polling' COMMENT '调度策略：polling=轮询, failover=主备',
+    ` enabled ` TINYINT
+(
+    1
+) NOT NULL DEFAULT 1 COMMENT '是否启用',
+    ` created_at ` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    ` updated_at ` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY
+(
+    `
+    id
+    `
+),
+    UNIQUE KEY ` uk_name `
+(
+    `
+    name
+    `
+)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE =utf8mb4_unicode_ci COMMENT ='AI轮询组表';
+
+-- 创建AI轮询组提供方关系表
+CREATE TABLE IF NOT EXISTS ` ai_polling_group_providers `
+(
+    `
+    id
+    `
+    INT
+    UNSIGNED
+    NOT
+    NULL
+    AUTO_INCREMENT
+    COMMENT
+    '主键ID',
+    `
+    group_id
+    `
+    INT
+    UNSIGNED
+    NOT
+    NULL
+    COMMENT
+    '轮询组ID',
+    `
+    provider_id
+    `
+    VARCHAR
+(
+    64
+) NOT NULL COMMENT '提供方ID（关联ai_providers.id）',
+    ` weight ` INT NOT NULL DEFAULT 1 COMMENT '权重（用于轮询和优先级）',
+    ` enabled ` TINYINT
+(
+    1
+) NOT NULL DEFAULT 1 COMMENT '是否启用',
+    ` created_at ` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    ` updated_at ` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY
+(
+    `
+    id
+    `
+),
+    KEY ` idx_group_id `
+(
+    `
+    group_id
+    `
+),
+    KEY ` idx_provider_id `
+(
+    `
+    provider_id
+    `
+),
+    UNIQUE KEY ` uk_group_provider `
+(
+    `
+    group_id
+    `,
+    `
+    provider_id
+    `
+),
+    CONSTRAINT ` fk_polling_group_providers_group ` FOREIGN KEY
+(
+    `
+    group_id
+    `
+) REFERENCES ` ai_polling_groups `
+(
+    `
+    id
+    `
+)
+                                                            ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE =utf8mb4_unicode_ci COMMENT ='AI轮询组提供方关系表';
 
 INSERT INTO `settings` (`key`, `value`, `created_at`, `updated_at`)
 VALUES ('table_form_schema_wa_users', '{

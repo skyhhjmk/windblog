@@ -127,6 +127,38 @@
                         </label>
                     </div>
 
+                    <!-- AI 摘要设置 -->
+                    <div class="p-3 bg-yellow-50 rounded border border-yellow-200 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <label class="text-sm text-gray-700">启用 AI 摘要</label>
+                            <div class="relative">
+                                <input type="checkbox" id="ai-enabled" class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-yellow-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-500"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="ai-status" class="block text-sm text-gray-600 mb-1">AI 摘要状态</label>
+                            <select id="ai-status" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                                <option value="none">未生成</option>
+                                <option value="done">已生成</option>
+                                <option value="failed">失败</option>
+                                <option value="refreshing">刷新中</option>
+                                <option value="persisted">持久化</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="ai-summary" class="block text-sm text-gray-600 mb-1">AI 摘要</label>
+                            <textarea id="ai-summary" rows="6"
+                                      class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                      placeholder="可手动编辑或留空由系统生成"></textarea>
+                        </div>
+                        <div class="flex gap-2">
+                            <button type="button" id="ai-generate"
+                                    class="w-full px-3 py-2 bg-yellow-500 text-white rounded-md">生成AI摘要
+                            </button>
+                        </div>
+                    </div>
+
                     <!-- 作者选择 -->
                     <div class="relative">
                         <label class="block text-sm text-gray-600 mb-1">作者</label>
@@ -841,7 +873,10 @@
                     visibility: postVisibility.value,
                     allow_comments: allowComments.checked ? 1 : 0,
                     featured: postFeatured.checked ? 1 : 0,
-                    authors: authorIds
+                    authors: authorIds,
+                    ai_enabled: (document.getElementById('ai-enabled')?.checked ? 1 : 0),
+                    ai_status: (document.getElementById('ai-status')?.value || ''),
+                    ai_summary: (document.getElementById('ai-summary')?.value || ''),
                 };
 
                 // 如果是密码保护，添加密码字段
@@ -879,6 +914,30 @@
 
         // 初始化作者选择器
         initAuthorsSelector();
+
+        // AI 生成按钮
+        const aiBtn = document.getElementById('ai-generate');
+        if (aiBtn) {
+            aiBtn.addEventListener('click', function () {
+                if (!postId) {
+                    alert('请先保存文章后再生成AI摘要');
+                    return;
+                }
+                const idx = layer && layer.msg ? layer.msg('生成中...', {icon: 16, shade: 0.1, time: 0}) : null;
+                fetch('/app/admin/ai-summary/enqueue', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({post_id: postId, force: true})
+                })
+                    .then(r => r.json()).then(res => {
+                    if (idx) layer.close(idx);
+                    alert(res.msg || (res.code === 0 ? '已入队' : '失败'));
+                }).catch(e => {
+                    if (idx) layer.close(idx);
+                    alert('失败:' + e.message);
+                });
+            });
+        }
 
         // 可见性字段变化监听，显示/隐藏密码输入框
         if (postVisibility && passwordField) {

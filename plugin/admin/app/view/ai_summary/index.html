@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+    <title>AI摘要管理</title>
+    <link rel="stylesheet" href="/app/admin/component/layui/css/layui.css?v=2.8.12"/>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .config-field {
+            margin-bottom: 1rem;
+        }
+
+        .provider-card {
+            border: 2px solid #e5e7eb;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+            background: white;
+        }
+
+        .provider-card:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 4px 6px rgba(59, 130, 246, 0.1);
+        }
+
+        .provider-card.active {
+            border-color: #10b981;
+            background-color: #d1fae5;
+        }
+
+        /* 统计表格行hover效果 */
+        #statsTable tr {
+            transition: background-color 0.2s;
+        }
+
+        #statsTable tr:hover {
+            background-color: #f9fafb;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+<div class="max-w-7xl mx-auto p-6">
+    <div class="bg-white rounded-lg shadow-md">
+        <div class="border-b border-gray-200 px-6 py-4">
+            <h1 class="text-2xl font-bold text-gray-800">AI 摘要管理</h1>
+            <p class="text-sm text-gray-500 mt-1">管理AI提供者、配置模型参数、设置提示词</p>
+        </div>
+        <div class="p-6">
+            <div class="border-b border-gray-200">
+                <nav class="-mb-px flex space-x-8">
+                    <button class="tab-btn border-b-2 border-blue-500 py-4 px-1 text-sm font-medium text-blue-600"
+                            data-tab="overview">概览
+                    </button>
+                    <button class="tab-btn border-b-2 border-transparent py-4 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                            data-tab="config">API配置
+                    </button>
+                    <button class="tab-btn border-b-2 border-transparent py-4 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                            data-tab="prompt">Prompt配置
+                    </button>
+                </nav>
+            </div>
+            <div class="mt-6">
+                <!-- Tab 1: Overview -->
+                <div class="tab-content" id="overview-tab">
+                    <div class="bg-white rounded-lg border border-gray-200 p-6">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">状态统计</h3>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        状态
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        数量
+                                    </th>
+                                </tr>
+                                </thead>
+                                <tbody id="statsTable" class="divide-y divide-gray-200">
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">无摘要 (none)</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">-</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">已生成 (done)</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">-</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">失败 (failed)</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">-</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">刷新中 (refreshing)
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">-</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">已固化 (persisted)
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">-</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <button type="button"
+                                class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                                id="btn-refresh-stats">刷新统计
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tab 2: API Configuration -->
+                <div class="tab-content hidden" id="config-tab">
+                    <div class="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">选择 AI 提供者</h3>
+                        <div id="providersContainer" class="space-y-4">
+                            <div class="text-gray-500">加载中...</div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg border border-gray-200 p-6" id="providerConfigSection"
+                         style="display:none;">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">提供者配置 <span id="currentProviderName"
+                                                                                              class="text-sm text-gray-500"></span>
+                        </h3>
+                        <form id="providerConfigForm" class="space-y-4">
+                            <!-- 动态生成配置字段 -->
+                        </form>
+                        <div class="mt-6 flex gap-3">
+                            <button type="button"
+                                    class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                                    id="btn-save-provider-config">保存配置
+                            </button>
+                            <button type="button"
+                                    class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                                    id="btn-fetch-models" style="display:none;">获取模型列表
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 3: Prompt Configuration -->
+                <div class="tab-content hidden" id="prompt-tab">
+                    <div class="bg-white rounded-lg border border-gray-200 p-6">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">摘要生成 Prompt</h3>
+                        <form class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">默认 Prompt</label>
+                                <textarea name="ai_summary_prompt" placeholder="请为以下内容生成一个简洁的摘要..."
+                                          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                                          rows="6"></textarea>
+                            </div>
+                            <div>
+                                <button type="button"
+                                        class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                                        id="btn-save-prompt">保存 Prompt
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+<script>
+    layui.use(['layer'], function () {
+        var layer = layui.layer, $ = layui.$;
+
+        // Tab switching
+        $('.tab-btn').on('click', function () {
+            var tab = $(this).data('tab');
+            $('.tab-btn').removeClass('border-blue-500 text-blue-600').addClass('border-transparent text-gray-500');
+            $(this).removeClass('border-transparent text-gray-500').addClass('border-blue-500 text-blue-600');
+            $('.tab-content').addClass('hidden');
+            $('#' + tab + '-tab').removeClass('hidden');
+        });
+
+        var currentProvider = null;
+        var providerConfig = {};
+
+        // Load stats
+        function loadStats() {
+            $.get('/app/admin/ai/summary/stats', function (res) {
+                if (res && res.code === 0 && res.data) {
+                    var stats = res.data;
+                    var tbody = $('#statsTable');
+                    tbody.html('');
+                    [
+                        ['无摘要 (none)', stats.none || 0],
+                        ['已生成 (done)', stats.done || 0],
+                        ['失败 (failed)', stats.failed || 0],
+                        ['刷新中 (refreshing)', stats.refreshing || 0],
+                        ['已固化 (persisted)', stats.persisted || 0]
+                    ].forEach(function (pair) {
+                        tbody.append('<tr><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">' + pair[0] + '</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">' + pair[1] + '</td></tr>');
+                    });
+                }
+            });
+        }
+
+        // Load providers
+        function loadProviders() {
+            $.get('/app/admin/ai/providers/list', function (res) {
+                if (res && res.code === 0 && res.data) {
+                    var available = res.data.available || [];
+                    var current = res.data.current || 'local.echo';
+                    var container = $('#providersContainer');
+                    container.html('');
+
+                    available.forEach(function (provider) {
+                        var isActive = provider.id === current;
+                        var card = $('<div class="provider-card' + (isActive ? ' active' : '') + '"></div>');
+                        card.append('<h3 class="text-lg font-semibold text-gray-800">' + provider.name + ' <span class="text-xs text-gray-500 font-normal">(' + provider.id + ')</span></h3>');
+                        card.append('<p class="text-sm text-gray-600 mt-2">类型: ' + provider.type + '</p>');
+                        card.append('<p class="text-sm text-gray-600">支持任务: ' + provider.supported_tasks.join(', ') + '</p>');
+
+                        var btnGroup = $('<div class="mt-4 flex gap-2"></div>');
+                        var btnSelect = $('<button type="button" class="px-4 py-2 rounded-lg text-sm font-medium transition ' +
+                            (isActive ? 'bg-green-100 text-green-800 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700') + '">' +
+                            (isActive ? '当前选择' : '选择此提供者') + '</button>');
+                        if (isActive) {
+                            btnSelect.attr('disabled', true);
+                        }
+                        btnSelect.on('click', function () {
+                            selectProvider(provider.id);
+                        });
+                        btnGroup.append(btnSelect);
+
+                        var btnConfig = $('<button type="button" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-300 transition">配置</button>');
+                        btnConfig.on('click', function () {
+                            loadProviderConfig(provider.id);
+                        });
+                        btnGroup.append(btnConfig);
+                        card.append(btnGroup);
+
+                        container.append(card);
+                    });
+                }
+            });
+        }
+
+        // Select provider
+        function selectProvider(providerId) {
+            $.ajax({
+                url: '/app/admin/ai/providers/set-current',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({provider: providerId}),
+                success: function (res) {
+                    if (res && res.code === 0) {
+                        layer.msg('设置成功', {icon: 1});
+                        loadProviders();
+                    } else {
+                        layer.msg(res.msg || '设置失败', {icon: 2});
+                    }
+                }
+            });
+        }
+
+        // Load provider config
+        function loadProviderConfig(providerId) {
+            currentProvider = providerId;
+            $('#currentProviderName').text('(' + providerId + ')');
+
+            $.get('/app/admin/ai/providers/config', {provider: providerId}, function (res) {
+                if (res && res.code === 0 && res.data) {
+                    providerConfig = res.data.config || {};
+                    var fields = res.data.fields || [];
+
+                    var formEl = $('#providerConfigForm');
+                    formEl.html('');
+
+                    fields.forEach(function (field) {
+                        var div = $('<div class="config-field"></div>');
+                        var label = $('<label class="block text-sm font-medium text-gray-700 mb-2">' + field.label +
+                            (field.required ? ' <span class="text-red-500">*</span>' : '') + '</label>');
+                        div.append(label);
+
+                        if (field.type === 'password') {
+                            var input = $('<input type="password" name="' + field.key + '" placeholder="' + (field.placeholder || '') + '" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />');
+                            input.val(providerConfig[field.key] || field.default || '');
+                            div.append(input);
+                        } else if (field.type === 'checkbox') {
+                            var checkboxWrapper = $('<div class="flex items-center"></div>');
+                            var checkbox = $('<input type="checkbox" name="' + field.key + '" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />');
+                            if (providerConfig[field.key] === true || providerConfig[field.key] === 'true' || field.default === true) {
+                                checkbox.prop('checked', true);
+                            }
+                            checkboxWrapper.append(checkbox);
+                            div.append(checkboxWrapper);
+                        } else if (field.type === 'multiselect') {
+                            // 多选框支持（用于多模态等）
+                            var multiselectWrapper = $('<div class="space-y-2"></div>');
+                            var selectedValues = providerConfig[field.key] || [];
+                            if (typeof selectedValues === 'string') {
+                                try {
+                                    selectedValues = JSON.parse(selectedValues);
+                                } catch (e) {
+                                    selectedValues = [];
+                                }
+                            }
+                            if (!Array.isArray(selectedValues)) selectedValues = [];
+
+                            (field.options || []).forEach(function (opt) {
+                                var checkboxDiv = $('<div class="flex items-center"></div>');
+                                var checkbox = $('<input type="checkbox" name="' + field.key + '[]" value="' + opt.value + '" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />');
+                                if (selectedValues.indexOf(opt.value) >= 0) {
+                                    checkbox.prop('checked', true);
+                                }
+                                var label = $('<label class="ml-2 text-sm text-gray-700">' + opt.label + '</label>');
+                                checkboxDiv.append(checkbox).append(label);
+                                multiselectWrapper.append(checkboxDiv);
+                            });
+                            div.append(multiselectWrapper);
+                        } else if (field.type === 'select') {
+                            var select = $('<select name="' + field.key + '" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"></select>');
+                            if (field.options === 'auto') {
+                                // Model field - will be populated by fetch
+                                select.append('<option value="">请先获取模型列表</option>');
+                                if (providerConfig[field.key]) {
+                                    select.append('<option value="' + providerConfig[field.key] + '" selected>' + providerConfig[field.key] + '</option>');
+                                }
+                                $('#btn-fetch-models').show().data('field-key', field.key);
+                            } else {
+                                // Regular select options
+                                (field.options || []).forEach(function (opt) {
+                                    var option = $('<option value="' + opt.value + '">' + opt.label + '</option>');
+                                    if (providerConfig[field.key] === opt.value) {
+                                        option.attr('selected', true);
+                                    }
+                                    select.append(option);
+                                });
+                            }
+                            div.append(select);
+                        } else if (field.type === 'number') {
+                            var input = $('<input type="number" name="' + field.key + '" placeholder="' + (field.placeholder || '') + '" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />');
+                            if (field.min !== undefined) input.attr('min', field.min);
+                            if (field.max !== undefined) input.attr('max', field.max);
+                            if (field.step !== undefined) input.attr('step', field.step);
+                            input.val(providerConfig[field.key] !== undefined ? providerConfig[field.key] : (field.default || ''));
+                            div.append(input);
+                        } else {
+                            var input = $('<input type="text" name="' + field.key + '" placeholder="' + (field.placeholder || '') + '" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />');
+                            input.val(providerConfig[field.key] || field.default || '');
+                            div.append(input);
+                        }
+
+                        formEl.append(div);
+                    });
+
+                    $('#providerConfigSection').show();
+                }
+            });
+        }
+
+        // Save provider config
+        $('#btn-save-provider-config').on('click', function () {
+            if (!currentProvider) {
+                layer.msg('请先选择提供者', {icon: 2});
+                return;
+            }
+
+            var formData = {};
+            var multiselectData = {};
+
+            $('#providerConfigForm').find('input, select, textarea').each(function () {
+                var $el = $(this);
+                var name = $el.attr('name');
+                if (!name) return;
+
+                // 处理多选框
+                if (name.indexOf('[]') > 0) {
+                    var key = name.replace('[]', '');
+                    if ($el.is(':checkbox') && $el.is(':checked')) {
+                        if (!multiselectData[key]) multiselectData[key] = [];
+                        multiselectData[key].push($el.val());
+                    }
+                } else if ($el.is(':checkbox')) {
+                    formData[name] = $el.is(':checked');
+                } else {
+                    formData[name] = $el.val();
+                }
+            });
+
+            // 合并多选框数据
+            Object.keys(multiselectData).forEach(function (key) {
+                formData[key] = multiselectData[key];
+            });
+
+            $.ajax({
+                url: '/app/admin/ai/providers/config-save',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({provider: currentProvider, config: formData}),
+                success: function (res) {
+                    if (res && res.code === 0) {
+                        layer.msg('保存成功', {icon: 1});
+                    } else {
+                        layer.msg(res.msg || '保存失败', {icon: 2});
+                    }
+                }
+            });
+        });
+
+        // Fetch models
+        $('#btn-fetch-models').on('click', function () {
+            if (!currentProvider) return;
+
+            var formData = {};
+            $('#providerConfigForm').find('input, select, textarea').each(function () {
+                var name = $(this).attr('name');
+                var val = $(this).val();
+                if (name) {
+                    formData[name] = val;
+                }
+            });
+
+            var idx = layer.msg('获取模型列表中...', {icon: 16, shade: 0.1, time: 0});
+            $.ajax({
+                url: '/app/admin/ai/providers/fetch-models',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({provider: currentProvider, config: formData}),
+                success: function (res) {
+                    layer.close(idx);
+                    if (res && res.code === 0 && res.data) {
+                        var models = res.data;
+                        var fieldKey = $('#btn-fetch-models').data('field-key');
+                        var select = $('#providerConfigForm').find('select[name="' + fieldKey + '"]');
+                        select.html('');
+                        models.forEach(function (model) {
+                            select.append('<option value="' + model.id + '">' + model.id + '</option>');
+                        });
+                        form.render('select');
+                        layer.msg('获取成功，共 ' + models.length + ' 个模型', {icon: 1});
+                    } else {
+                        layer.msg(res.msg || '获取失败', {icon: 2});
+                    }
+                },
+                error: function () {
+                    layer.close(idx);
+                    layer.msg('请求失败', {icon: 2});
+                }
+            });
+        });
+
+        // Refresh stats button
+        $('#btn-refresh-stats').on('click', function () {
+            loadStats();
+        });
+
+        // Save prompt button
+        $('#btn-save-prompt').on('click', function () {
+            var prompt = $('textarea[name="ai_summary_prompt"]').val();
+            // TODO: Implement save prompt API
+            layer.msg('Prompt保存功能待实现', {icon: 0});
+        });
+
+        // Initial load
+        loadStats();
+        loadProviders();
+    });
+</script>
+</body>
+</html>
