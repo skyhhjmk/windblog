@@ -14,6 +14,7 @@
  */
 
 use plugin\admin\app\controller\AccountController;
+use plugin\admin\app\controller\AiSummaryController;
 use plugin\admin\app\controller\CommentController;
 use plugin\admin\app\controller\DictController;
 use plugin\admin\app\controller\EditorController;
@@ -159,6 +160,67 @@ Route::group('/app/admin', function () {
         Route::post('/save', [EditorController::class, 'save']);
         Route::post('/upload-image', [EditorController::class, 'uploadImage']);
         Route::get('/authors', [EditorController::class, 'getAuthors']);
+    });
+
+    // AI 设置 路由组
+    Route::group('/ai', function () {
+        // AI 摘要
+        Route::group('/summary', function () {
+            Route::get('', [AiSummaryController::class, 'index']);
+            Route::get('/', [AiSummaryController::class, 'index']);
+            Route::get('/index', [AiSummaryController::class, 'index']);
+            Route::get('/stats', [AiSummaryController::class, 'stats']);
+            Route::post('/set-meta', [AiSummaryController::class, 'setMeta']);
+            Route::post('/enqueue', [AiSummaryController::class, 'enqueue']);
+        });
+
+        // AI 测试
+        Route::group('/test', function () {
+            Route::get('', [plugin\admin\app\controller\AiTestController::class, 'index']);
+            Route::get('/', [plugin\admin\app\controller\AiTestController::class, 'index']);
+            Route::get('/index', [plugin\admin\app\controller\AiTestController::class, 'index']);
+            Route::get('/providers', [plugin\admin\app\controller\AiTestController::class, 'getProviders']);
+            Route::get('/media', [plugin\admin\app\controller\AiTestController::class, 'getMedia']);
+            Route::post('/test', [plugin\admin\app\controller\AiTestController::class, 'test']);
+            Route::get('/task-status', [plugin\admin\app\controller\AiTestController::class, 'getTaskStatus']);
+            Route::post('/save-template', [plugin\admin\app\controller\AiTestController::class, 'saveTemplate']);
+            Route::get('/templates', [plugin\admin\app\controller\AiTestController::class, 'getTemplates']);
+            Route::post('/delete-template', [plugin\admin\app\controller\AiTestController::class, 'deleteTemplate']);
+        });
+
+        // 提供方管理
+        Route::group('/providers', function () {
+            Route::get('', [plugin\admin\app\controller\AiProviderController::class, 'index']);
+            Route::get('/', [plugin\admin\app\controller\AiProviderController::class, 'index']);
+            Route::get('/list', [plugin\admin\app\controller\AiProviderController::class, 'list']);
+            Route::get('/detail', [plugin\admin\app\controller\AiProviderController::class, 'detail']);
+            Route::post('/create', [plugin\admin\app\controller\AiProviderController::class, 'create']);
+            Route::post('/update', [plugin\admin\app\controller\AiProviderController::class, 'update']);
+            Route::post('/delete', [plugin\admin\app\controller\AiProviderController::class, 'delete']);
+            Route::post('/toggle-enabled', [plugin\admin\app\controller\AiProviderController::class, 'toggleEnabled']);
+            Route::get('/templates', [plugin\admin\app\controller\AiProviderController::class, 'templates']);
+            Route::get('/template-detail', [plugin\admin\app\controller\AiProviderController::class, 'templateDetail']);
+            Route::post('/test', [plugin\admin\app\controller\AiProviderController::class, 'test']);
+            Route::post('/fetch-models', [plugin\admin\app\controller\AiProviderController::class, 'fetchModels']);
+        });
+
+        // 选择管理（提供方或轮询组）
+        Route::group('/selection', function () {
+            Route::get('/get', [AiSummaryController::class, 'getSelection']);
+            Route::post('/set', [AiSummaryController::class, 'setSelection']);
+        });
+
+        // 轮询组管理
+        Route::group('/polling-groups', function () {
+            Route::get('', [plugin\admin\app\controller\AiPollingGroupController::class, 'index']);
+            Route::get('/', [plugin\admin\app\controller\AiPollingGroupController::class, 'index']);
+            Route::get('/list', [plugin\admin\app\controller\AiPollingGroupController::class, 'list']);
+            Route::post('/create', [plugin\admin\app\controller\AiPollingGroupController::class, 'create']);
+            Route::post('/update', [plugin\admin\app\controller\AiPollingGroupController::class, 'update']);
+            Route::post('/delete', [plugin\admin\app\controller\AiPollingGroupController::class, 'delete']);
+            Route::post('/toggle-enabled', [plugin\admin\app\controller\AiPollingGroupController::class, 'toggleEnabled']);
+            Route::get('/available-providers', [plugin\admin\app\controller\AiPollingGroupController::class, 'availableProviders']);
+        });
     });
 
     // Media 路由

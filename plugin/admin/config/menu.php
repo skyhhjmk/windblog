@@ -87,6 +87,43 @@ return [
         ],
     ],
     [
+        'title' => 'AI 设置',
+        'key' => 'ai',
+        'icon' => 'layui-icon-engine',
+        'weight' => 920,
+        'type' => 0,
+        'children' => [
+            [
+                'title' => 'AI 摘要',
+                'key' => 'plugin\\admin\\app\\controller\\AiSummaryController@index',
+                'href' => '/app/admin/ai/summary',
+                'type' => 1,
+                'weight' => 920,
+            ],
+            [
+                'title' => 'AI 测试',
+                'key' => 'plugin\\admin\\app\\controller\\AiTestController@index',
+                'href' => '/app/admin/ai/test',
+                'type' => 1,
+                'weight' => 910,
+            ],
+            [
+                'title' => '提供方',
+                'key' => 'plugin\\admin\\app\\controller\\AiSummaryController@providers',
+                'href' => '/app/admin/ai/providers',
+                'type' => 1,
+                'weight' => 900,
+            ],
+            [
+                'title' => '轮询组',
+                'key' => 'plugin\\admin\\app\\controller\\AiPollingGroupController@index',
+                'href' => '/app/admin/ai/polling-groups',
+                'type' => 1,
+                'weight' => 890,
+            ],
+        ],
+    ],
+    [
         'title' => '媒体管理',
         'key' => 'media',
         'icon' => 'layui-icon-picture',

@@ -57,23 +57,23 @@
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
-        
+
         /* 新增动画类 */
         .fade-enter {
             opacity: 0;
             transform: translateY(10px);
         }
-        
+
         .fade-enter-active {
             opacity: 1;
             transform: translateY(0);
             transition: opacity 0.3s ease-out, transform 0.3s ease-out;
         }
-        
+
         .scale-in {
             animation: scaleIn 0.3s ease-out forwards;
         }
-        
+
         @keyframes scaleIn {
             from {
                 opacity: 0;
@@ -84,11 +84,11 @@
                 transform: scale(1);
             }
         }
-        
+
         .pulse-once {
             animation: pulseOnce 0.5s ease-out;
         }
-        
+
         @keyframes pulseOnce {
             0% {
                 transform: scale(1);
@@ -127,7 +127,7 @@
             <div class="flex-1">
                 <label class="block text-sm font-medium text-gray-700 mb-1">搜索文件</label>
                 <div class="relative">
-                    <input type="text" id="search-input" placeholder="输入文件名搜索..." 
+                    <input type="text" id="search-input" placeholder="输入文件名搜索..."
                            class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                     <svg class="absolute left-3 top-2.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
@@ -264,7 +264,7 @@
                 this.multiple = this.getUrlParam('multiple') === 'true';
                 // 同时支持target和targetType参数，优先使用targetType
                 this.targetType = this.getUrlParam('targetType') || this.getUrlParam('target') || 'iframe';
-                
+
                 this.init();
             }
 
@@ -371,11 +371,11 @@
 
             async loadMediaList() {
                 this.showLoading(true);
-                
+
                 try {
                     const searchValue = document.getElementById('search-input').value;
                     const typeFilter = document.getElementById('type-filter').value;
-                    
+
                     const params = new URLSearchParams({
                         page: this.currentPage,
                         limit: this.pageSize,
@@ -403,7 +403,7 @@
 
             renderMediaGrid() {
                 const grid = document.getElementById('media-grid');
-                
+
                 if (!this.mediaList || this.mediaList.length === 0) {
                     grid.innerHTML = `
                         <div class="col-span-full text-center py-12 text-gray-500">
@@ -426,7 +426,7 @@
                     // 检查该项目是否之前被选中
                     const isSelected = selectedIds.includes(item.id);
                     const selectedClass = isSelected ? 'selected ring-2 ring-blue-500 bg-blue-50' : '';
-                    
+
                     let thumbnailHtml = '';
                     if (item.mime_type && item.mime_type.startsWith('image/')) {
                         const imageSrc = item.thumb_path ? `/uploads/${item.thumb_path}` : `/uploads/${item.file_path}`;
@@ -458,7 +458,7 @@
                     }
 
                     return `
-                        <div class="media-item bg-white rounded-lg border border-gray-200 overflow-hidden cursor-pointer hover:shadow-md ${selectedClass} fade-enter" 
+                        <div class="media-item bg-white rounded-lg border border-gray-200 overflow-hidden cursor-pointer hover:shadow-md ${selectedClass} fade-enter"
                              data-id="${item.id}">
                             <div class="aspect-square relative">
                                 ${thumbnailHtml}
@@ -498,7 +498,7 @@
 
                 const grid = document.getElementById('media-grid');
                 const itemElement = grid.querySelector(`[data-id="${id}"]`);
-                
+
                 if (this.multiple) {
                     const index = this.selectedItems.findIndex(selected => selected.id === id);
                     if (index > -1) {
@@ -522,13 +522,13 @@
                 } else {
                     // 单选模式
                     const previouslySelectedItem = this.selectedItems.length > 0 ? this.selectedItems[0] : null;
-                    const previouslySelectedItemElement = previouslySelectedItem ? 
+                    const previouslySelectedItemElement = previouslySelectedItem ?
                         grid.querySelector(`[data-id="${previouslySelectedItem.id}"]`) : null;
-                    
+
                     if (previouslySelectedItemElement) {
                         previouslySelectedItemElement.classList.remove('selected', 'ring-2', 'ring-blue-500', 'bg-blue-50');
                     }
-                    
+
                     if (previouslySelectedItem && previouslySelectedItem.id === id) {
                         // 取消选中当前选中的项
                         this.selectedItems = [];
@@ -556,7 +556,7 @@
                 const selectionInfo = document.getElementById('selection-info');
 
                 countElement.textContent = count;
-                
+
                 if (count > 0) {
                     confirmBtn.disabled = false;
                     confirmBtn.classList.remove('opacity-50', 'cursor-not-allowed');
@@ -642,7 +642,7 @@
 
                 const fileList = document.getElementById('file-list');
                 fileList.classList.remove('hidden');
-                
+
                 let html = '';
                 Array.from(files).forEach((file, index) => {
                     const fileType = this.getFileTypeIcon(file.type);
@@ -715,7 +715,7 @@
             async uploadFiles() {
                 const fileInput = document.getElementById('file-input');
                 const files = fileInput.files;
-                
+
                 if (!files || files.length === 0) {
                     this.showError('请选择文件');
                     return;
@@ -741,7 +741,7 @@
                     if (successCount > 0) {
                         this.hideUploadModal();
                         this.loadMediaList(); // 重新加载媒体列表以显示新上传的文件
-                        
+
                         if (failCount > 0) {
                             this.showError(`成功上传 ${successCount} 个文件，${failCount} 个失败`);
                         } else {
@@ -786,7 +786,7 @@
 
                 const result = this.multiple ? this.selectedItems : this.selectedItems[0];
                 let selectionSuccess = false;
-                
+
                 // 调试信息
                 console.log('MediaSelector: 尝试完成选择', {targetType: this.targetType, result: result});
                 console.log('MediaSelector: 窗口关系检查', {
@@ -799,34 +799,8 @@
                 });
 
                 try {
-                    // 尝试获取最顶层的window对象
-                    let topWindow = null;
-                    try {
-                        topWindow = window.top; // 尝试获取最顶层窗口
-                    } catch (e) {
-                        console.log('MediaSelector: 无法直接访问window.top，使用备用方法');
-                    }
-
-                    // 1. 尝试使用window.top（最顶层窗口）
-                    if (topWindow && typeof topWindow.selectMedia === 'function') {
-                        console.log('MediaSelector: 调用window.top.selectMedia');
-                        topWindow.selectMedia(result);
-                        selectionSuccess = true;
-                    }
-                    // 2. 尝试使用window.parent.window（父窗口的顶层对象）
-                    else if (window.parent && window.parent.window && typeof window.parent.window.selectMedia === 'function') {
-                        console.log('MediaSelector: 调用window.parent.window.selectMedia');
-                        window.parent.window.selectMedia(result);
-                        selectionSuccess = true;
-                    }
-                    // 3. 尝试使用window.parent
-                    else if (window.parent && window.parent !== window && typeof window.parent.selectMedia === 'function') {
-                        console.log('MediaSelector: 调用window.parent.selectMedia');
-                        window.parent.selectMedia(result);
-                        selectionSuccess = true;
-                    }
-                    // 4. 检查layer弹窗的回调方式
-                    else if (window.parent && window.parent.layui && window.parent.layui.layer) {
+                    // 1. 优先检查layer弹窗的回调方式（最常见的场景）
+                    if (window.parent && window.parent.layui) {
                         console.log('MediaSelector: 尝试通过layer弹窗回调方式');
                         // 获取当前窗口的layer索引
                         const getLayerIndex = () => {
@@ -834,26 +808,63 @@
                             const match = iframeId.match(/layui-layer-iframe(\d+)/);
                             return match ? match[1] : null;
                         };
-                        
+
                         const layerIndex = getLayerIndex();
+                        console.log('MediaSelector: layer索引', layerIndex);
                         if (layerIndex) {
                             const layerElem = window.parent.layui.$(`#layui-layer${layerIndex}`);
+                            console.log('MediaSelector: layerElem', layerElem, 'hasCallback', layerElem && layerElem.data('callback'));
                             if (layerElem && layerElem.data('callback')) {
                                 console.log('MediaSelector: 调用layer弹窗存储的callback');
                                 layerElem.data('callback')(result);
                                 selectionSuccess = true;
+                                // 立即关闭弹窗
+                                if (window.parent.layui.layer) {
+                                    console.log('MediaSelector: 关闭layer弹窗');
+                                    window.parent.layui.layer.close(layerIndex);
+                                }
                             }
                         }
                     }
-                    // 5. 窗口模式下，尝试调用opener的selectMedia
-                    else if (this.targetType === 'window' && window.opener && typeof window.opener.selectMedia === 'function') {
+
+                    // 2. 尝试获取最顶层的window对象
+                    if (!selectionSuccess) {
+                        let topWindow = null;
+                        try {
+                            topWindow = window.top; // 尝试获取最顶层窗口
+                        } catch (e) {
+                            console.log('MediaSelector: 无法直接访问window.top，使用备用方法');
+                        }
+
+                        // 尝试使用window.top（最顶层窗口）
+                        if (topWindow && typeof topWindow.selectMedia === 'function') {
+                            console.log('MediaSelector: 调用window.top.selectMedia');
+                            topWindow.selectMedia(result);
+                            selectionSuccess = true;
+                        }
+                        // 尝试使用window.parent.window（父窗口的顶层对象）
+                        else if (window.parent && window.parent.window && typeof window.parent.window.selectMedia === 'function') {
+                            console.log('MediaSelector: 调用window.parent.window.selectMedia');
+                            window.parent.window.selectMedia(result);
+                            selectionSuccess = true;
+                        }
+                        // 尝试使用window.parent
+                        else if (window.parent && window.parent !== window && typeof window.parent.selectMedia === 'function') {
+                            console.log('MediaSelector: 调用window.parent.selectMedia');
+                            window.parent.selectMedia(result);
+                            selectionSuccess = true;
+                        }
+                    }
+
+                    // 3. 窗口模式下，尝试调用opener的selectMedia
+                    if (!selectionSuccess && this.targetType === 'window' && window.opener && typeof window.opener.selectMedia === 'function') {
                         console.log('MediaSelector: 调用window.opener.selectMedia');
                         window.opener.selectMedia(result);
                         selectionSuccess = true;
                         setTimeout(() => window.close(), 100);
                     }
-                    
-                    // 6. 如果上述方法都失败，尝试使用postMessage，增加更多信息
+
+                    // 4. 如果上述方法都失败，尝试使用postMessage，增加更多信息
                     if (!selectionSuccess) {
                         const messageData = {
                             type: 'mediaSelected',
@@ -861,7 +872,7 @@
                             source: 'media_selector',
                             timestamp: Date.now()
                         };
-                        
+
                         if (this.targetType === 'window' && window.opener && window.opener !== window) {
                             console.log('MediaSelector: 向window.opener发送postMessage');
                             window.opener.postMessage(messageData, '*');
@@ -873,37 +884,12 @@
                             selectionSuccess = true;
                         }
                     }
-                    
-                    // 如果选择成功，在所有路径上都尝试关闭选择器
-                    if (selectionSuccess && this.targetType !== 'window') {
-                        setTimeout(() => {
-                            try {
-                                // 尝试多种关闭方式
-                                if (window.parent && window.parent.layui && window.parent.layui.layer) {
-                                    console.log('MediaSelector: 尝试关闭layer弹窗');
-                                    window.parent.layui.layer.closeAll();
-                                } else if (window.parent && typeof window.parent.closeMediaSelector === 'function') {
-                                    console.log('MediaSelector: 调用window.parent.closeMediaSelector');
-                                    window.parent.closeMediaSelector();
-                                } else if (window.frameElement) {
-                                    console.log('MediaSelector: 尝试移除iframe元素');
-                                    window.frameElement.remove();
-                                }
-                            } catch (e) {
-                                console.log('MediaSelector: 尝试关闭layer弹窗失败', e);
-                                // 最后的备选方案
-                                if (window.parent && window.parent !== window) {
-                                    window.parent.postMessage({type: 'mediaSelectorClose'}, '*');
-                                }
-                            }
-                        }, 100);
-                    }
-                    
+
                     // 如果所有方法都失败，显示详细错误
                     if (!selectionSuccess) {
                         console.error('MediaSelector: 所有选择完成方法均失败', {
-                            hasTop: !!topWindow,
                             hasParent: !!window.parent,
+                            hasOpener: !!window.opener,
                             targetType: this.targetType
                         });
                         this.showError('无法完成选择，请重试。请查看控制台获取详细错误信息。');
@@ -968,9 +954,9 @@
                         </svg>
                     </button>
                 `;
-                
+
                 document.body.appendChild(errorToast);
-                
+
                 // 5秒后自动移除
                 setTimeout(() => {
                     if (errorToast.parentElement) {

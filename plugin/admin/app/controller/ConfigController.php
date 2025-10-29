@@ -507,6 +507,87 @@ class ConfigController extends Base
     }
 
     /**
+     * 获取Session配置
+     *
+     * @return Response
+     */
+    public function get_session_config(): Response
+    {
+        try {
+            // 从数据库读取session配置
+            $sessionConfig = blog_config('session_config', null, false);
+
+            // 如果数据库没有配置，返回默认配置
+            if (!$sessionConfig) {
+                $sessionConfig = [
+                    'handler' => 'FileSessionHandler',
+                    'type' => 'file',
+                    'session_name' => 'PHPSID',
+                    'auto_update_timestamp' => false,
+                    'lifetime' => 7 * 24 * 60 * 60,
+                    'cookie_lifetime' => 365 * 24 * 60 * 60,
+                    'cookie_path' => '/',
+                    'domain' => '',
+                    'http_only' => true,
+                    'secure' => false,
+                    'same_site' => 'strict',
+                    // File配置
+                    'file_save_path' => '',
+                    // Redis配置
+                    'redis_host' => '127.0.0.1',
+                    'redis_port' => 6379,
+                    'redis_auth' => '',
+                    'redis_timeout' => 2,
+                    'redis_database' => '',
+                    'redis_prefix' => 'redis_session_',
+                ];
+            }
+
+            return json($sessionConfig);
+        } catch (Throwable $e) {
+            return $this->json(1, $e->getMessage());
+        }
+    }
+
+    /**
+     * 设置Session配置
+     *
+     * @param Request $request
+     *
+     * @return Response
+     */
+    public function set_session_config(Request $request): Response
+    {
+        try {
+            $sessionConfig = $request->post();
+
+            // 验证必要的配置项
+            if (!isset($sessionConfig['handler']) || !isset($sessionConfig['type'])) {
+                return $this->json(1, '缺少必要的配置项');
+            }
+
+            // 验证handler类型
+            $validHandlers = ['FileSessionHandler', 'RedisSessionHandler', 'RedisClusterSessionHandler'];
+            if (!in_array($sessionConfig['handler'], $validHandlers)) {
+                return $this->json(1, '无效的Handler类型');
+            }
+
+            // 验证type类型
+            $validTypes = ['file', 'redis', 'redis_cluster'];
+            if (!in_array($sessionConfig['type'], $validTypes)) {
+                return $this->json(1, '无效的Session类型');
+            }
+
+            // 保存到数据库
+            blog_config('session_config', $sessionConfig, false, true, true);
+
+            return $this->json(0, '保存成功，请重启服务以使配置生效');
+        } catch (Throwable $e) {
+            return $this->json(1, $e->getMessage());
+        }
+    }
+
+    /**
      * 颜色格式验证
      *
      * @param string $color 颜色值

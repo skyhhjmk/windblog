@@ -23,6 +23,7 @@ use Throwable;
  * @property string              $content_type    内容类型 (e.g., 'markdown', 'html')
  * @property string              $content         文章内容
  * @property string              $excerpt         文章摘要
+ * @property string|null $ai_summary      AI 摘要
  * @property string              $status          文章状态 (e.g., 'published', 'draft', 'archived')
  * @property string              $visibility      文章可见性 (e.g., 'public', 'private')
  * @property string              $password        文章密码
@@ -97,7 +98,7 @@ class Post extends Model
      * 可批量赋值的属性
      * 允许在 create() 或 fill() 方法中批量赋值的字段。
      *
-     * @var array
+     * @var array<int, string>
      */
     protected $fillable = [
         'title',
@@ -105,6 +106,7 @@ class Post extends Model
         'content_type',
         'content',
         'excerpt',
+        'ai_summary',
         'status',
         'visibility',
         'password',
@@ -213,7 +215,7 @@ class Post extends Model
      *
      * @return BelongsToMany
      */
-    public function authors()
+    public function authors(): BelongsToMany
     {
         return $this->belongsToMany(Author::class, 'post_author', 'post_id', 'author_id')
             ->orderBy('post_author.is_primary', 'desc');
@@ -225,7 +227,7 @@ class Post extends Model
      *
      * @return BelongsToMany
      */
-    public function primaryAuthor()
+    public function primaryAuthor(): BelongsToMany
     {
         return $this->belongsToMany(Author::class, 'post_author', 'post_id', 'author_id')
             ->wherePivot('is_primary', true);
@@ -237,7 +239,7 @@ class Post extends Model
      *
      * @return BelongsToMany
      */
-    public function categories()
+    public function categories(): BelongsToMany
     {
         return $this->belongsToMany(Category::class, 'post_category', 'post_id', 'category_id');
     }
@@ -248,7 +250,7 @@ class Post extends Model
      *
      * @return BelongsToMany
      */
-    public function tags()
+    public function tags(): BelongsToMany
     {
         return $this->belongsToMany(Tag::class, 'post_tag', 'post_id', 'tag_id');
     }
@@ -261,6 +263,79 @@ class Post extends Model
     public function comments(): HasMany
     {
         return $this->hasMany(Comment::class, 'post_id', 'id');
+    }
+
+    /**
+     * 获取文章的所有扩展属性
+     * 定义一个"一对多"关系，一篇文章可以有多个扩展属性
+     *
+     * @return HasMany
+     */
+    public function postExts(): HasMany
+    {
+        return $this->hasMany(PostExt::class, 'post_id', 'id');
+    }
+
+    /**
+     * 获取文章的指定扩展属性
+     *
+     * @param string $key 扩展属性键名
+     *
+     * @return PostExt|null
+     */
+    public function getExt(string $key): ?PostExt
+    {
+        /** @var PostExt|null $ext */
+        $ext = $this->postExts()->where('key', $key)->first();
+
+        return $ext;
+    }
+
+    /**
+     * 设置文章的扩展属性
+     *
+     * @param string $key   扩展属性键名
+     * @param array  $value 扩展属性值
+     *
+     * @return PostExt
+     */
+    public function setExt(string $key, array $value): PostExt
+    {
+        // 查找是否已存在该键的扩展属性
+        $ext = $this->getExt($key);
+
+        if ($ext) {
+            // 更新现有记录
+            $ext->value = $value;
+            $ext->save();
+        } else {
+            // 创建新记录
+            $ext = new PostExt([
+                'post_id' => $this->id,
+                'key' => $key,
+                'value' => $value,
+            ]);
+            $ext->save();
+        }
+
+        return $ext;
+    }
+
+    /**
+     * 删除文章的指定扩展属性
+     *
+     * @param string $key 扩展属性键名
+     *
+     * @return bool
+     */
+    public function deleteExt(string $key): bool
+    {
+        $ext = $this->getExt($key);
+        if ($ext) {
+            return $ext->delete();
+        }
+
+        return true; // 不存在时也视为成功
     }
 
     // -----------------------------------------------------

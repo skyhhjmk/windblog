@@ -77,6 +77,7 @@ CREATE TABLE IF NOT EXISTS posts (
   content_type TEXT NOT NULL DEFAULT 'markdown',
   content TEXT NOT NULL,
   excerpt TEXT DEFAULT NULL,
+  ai_summary TEXT DEFAULT NULL,
   status TEXT NOT NULL DEFAULT 'draft',
   visibility TEXT NOT NULL DEFAULT 'public',
   password TEXT DEFAULT NULL,
@@ -361,6 +362,52 @@ CREATE TABLE IF NOT EXISTS post_ext (
   value TEXT NOT NULL,
   FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE
 );
+
+-- 创建AI提供方表
+CREATE TABLE IF NOT EXISTS ai_providers
+(
+    id         TEXT PRIMARY KEY NOT NULL,
+    name       TEXT             NOT NULL,
+    template   TEXT,
+    type       TEXT             NOT NULL DEFAULT 'openai',
+    config     TEXT,
+    weight     INTEGER          NOT NULL DEFAULT 1,
+    enabled    INTEGER          NOT NULL DEFAULT 1,
+    created_at TEXT                      DEFAULT (datetime('now')),
+    updated_at TEXT                      DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_ai_providers_enabled ON ai_providers (enabled);
+CREATE INDEX IF NOT EXISTS idx_ai_providers_template ON ai_providers (template);
+
+-- 创建AI轮询组表
+CREATE TABLE IF NOT EXISTS ai_polling_groups
+(
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    name        VARCHAR(100) NOT NULL UNIQUE,
+    description VARCHAR(500)          DEFAULT NULL,
+    strategy    VARCHAR(20)  NOT NULL DEFAULT 'polling' CHECK (strategy IN ('polling', 'failover')),
+    enabled     INTEGER      NOT NULL DEFAULT 1,
+    created_at  DATETIME              DEFAULT CURRENT_TIMESTAMP,
+    updated_at  DATETIME              DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 创建AI轮询组提供方关系表
+CREATE TABLE IF NOT EXISTS ai_polling_group_providers
+(
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    group_id    INTEGER     NOT NULL,
+    provider_id VARCHAR(64) NOT NULL,
+    weight      INTEGER     NOT NULL DEFAULT 1,
+    enabled     INTEGER     NOT NULL DEFAULT 1,
+    created_at  DATETIME             DEFAULT CURRENT_TIMESTAMP,
+    updated_at  DATETIME             DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (group_id, provider_id),
+    FOREIGN KEY (group_id) REFERENCES ai_polling_groups (id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_polling_group_id ON ai_polling_group_providers (group_id);
+CREATE INDEX IF NOT EXISTS idx_polling_provider_id ON ai_polling_group_providers (provider_id);
 
 -- 添加索引
 CREATE INDEX idx_categories_parent_id ON categories (parent_id);
