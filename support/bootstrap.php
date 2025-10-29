@@ -57,20 +57,6 @@ if ($timezone = config('app.default_timezone')) {
     date_default_timezone_set($timezone);
 }
 
-$defaultConnection = config('database.default', 'pgsql');
-if ($defaultConnection === 'sqlite') {
-    $dbPath = config('database.connections.sqlite.database');
-    if ($dbPath !== ':memory:' && !file_exists($dbPath)) {
-        $dir = dirname($dbPath);
-        if (!is_dir($dir)) {
-            mkdir($dir, 0o777, true);
-        }
-        // 创建空的 SQLite 数据库文件
-        $pdo = new PDO('sqlite:' . $dbPath);
-        $pdo = null; // 关闭连接
-    }
-}
-
 foreach (config('autoload.files', []) as $file) {
     include_once $file;
 }
