@@ -318,7 +318,7 @@ class AiProviderController
     /**
      * 测试提供方连接
      * POST /app/admin/ai/providers/test
-     * body: { id } 或 { type, config }
+     * body: { id, stream? } 或 { type, config, stream? }
      */
     public function test(Request $request): Response
     {
@@ -332,8 +332,9 @@ class AiProviderController
             }
 
             $providerId = (string) ($payload['id'] ?? '');
+            $stream = (bool) ($payload['stream'] ?? false);
 
-            // 从ID加载或直接使用配置
+            // 从 ID加载或直接使用配置
             if (!empty($providerId)) {
                 $providerInstance = AISummaryService::createProviderFromDb($providerId);
             } else {
@@ -349,6 +350,11 @@ class AiProviderController
                 return json(['code' => 1, 'msg' => '无法创建提供方实例']);
             }
 
+            // 流式测试
+            if ($stream) {
+                return $this->handleStreamTest($providerInstance);
+            }
+
             // 执行简单测试
             $result = $providerInstance->call('chat', ['message' => 'Hello, this is a test message.'], []);
 
@@ -358,6 +364,48 @@ class AiProviderController
                 return json(['code' => 1, 'msg' => '测试失败: ' . ($result['error'] ?? 'Unknown error')]);
             }
         } catch (Throwable $e) {
+            return json(['code' => 1, 'msg' => '测试异常: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * 处理流式测试（收集后一次性返回）
+     */
+    private function handleStreamTest($providerInstance): Response
+    {
+        $generator = $providerInstance->callStream('chat', ['message' => 'Hello, this is a streaming test message.'], []);
+
+        if ($generator === false) {
+            return json(['code' => 1, 'msg' => 'Stream not supported or failed to initialize']);
+        }
+
+        // 收集所有数据
+        $resultText = '';
+        $usage = null;
+        $finishReason = null;
+
+        try {
+            foreach ($generator as $chunk) {
+                if ($chunk['type'] === 'content' && !empty($chunk['content'])) {
+                    $resultText .= $chunk['content'];
+                } elseif ($chunk['type'] === 'done') {
+                    $usage = $chunk['usage'] ?? null;
+                    $finishReason = $chunk['finish_reason'] ?? null;
+                } elseif ($chunk['type'] === 'error') {
+                    return json(['code' => 1, 'msg' => 'Test failed: ' . ($chunk['error'] ?? 'Unknown error')]);
+                }
+            }
+
+            return json([
+                'code' => 0,
+                'msg' => '测试成功',
+                'data' => [
+                    'result' => $resultText,
+                    'usage' => $usage,
+                    'finish_reason' => $finishReason,
+                ],
+            ]);
+        } catch (\Throwable $e) {
             return json(['code' => 1, 'msg' => '测试异常: ' . $e->getMessage()]);
         }
     }
@@ -398,20 +446,32 @@ class AiProviderController
             }
 
             // 尝试获取模型列表
-            // 对于 OpenAI 类型的提供方，使用内置方法
-            if (method_exists($providerInstance, 'fetchModels')) {
-                $result = $providerInstance->fetchModels();
-                if ($result['ok']) {
-                    return json(['code' => 0, 'data' => ['models' => $result['models']]]);
-                } else {
-                    return json(['code' => 1, 'msg' => $result['error'] ?? 'Failed to fetch models']);
+            $result = $providerInstance->fetchModels();
+            if (!empty($result['ok']) && $result['ok'] && !empty($result['models'])) {
+                return json(['code' => 0, 'data' => ['models' => $result['models']]]);
+            }
+
+            // API 拉取失败则使用预置列表
+            if (method_exists($providerInstance, 'getPresetModels')) {
+                $preset = $providerInstance->getPresetModels();
+                if (!empty($preset)) {
+                    // 统一格式化为 [{id: string}]
+                    $models = array_map(function ($m) {
+                        if (is_array($m)) {
+                            return ['id' => $m['id'] ?? ''];
+                        }
+
+                        return ['id' => (string) $m];
+                    }, $preset);
+
+                    return json(['code' => 0, 'data' => ['models' => $models]]);
                 }
             }
 
-            // 如果没有 fetchModels 方法，返回默认模型列表
+            // 最后回退到默认内置列表
             $defaultModels = [
                 'openai' => [
-                    ['id' => 'gpt-4'],
+                    ['id' => 'gpt-4o'],
                     ['id' => 'gpt-4-turbo'],
                     ['id' => 'gpt-3.5-turbo'],
                 ],
@@ -422,8 +482,16 @@ class AiProviderController
                     ['id' => 'claude-3-sonnet-20240229'],
                 ],
                 'gemini' => [
-                    ['id' => 'gemini-pro'],
-                    ['id' => 'gemini-pro-vision'],
+                    ['id' => 'gemini-1.5-flash'],
+                    ['id' => 'gemini-1.5-pro'],
+                ],
+                'deepseek' => [
+                    ['id' => 'deepseek-chat'],
+                    ['id' => 'deepseek-coder'],
+                ],
+                'zhipu' => [
+                    ['id' => 'glm-4'],
+                    ['id' => 'glm-4-plus'],
                 ],
             ];
 

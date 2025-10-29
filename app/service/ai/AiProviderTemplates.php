@@ -4,6 +4,15 @@ declare(strict_types=1);
 
 namespace app\service\ai;
 
+use app\service\ai\providers\AzureOpenAiProvider;
+use app\service\ai\providers\ClaudeProvider;
+use app\service\ai\providers\DeepSeekProvider;
+use app\service\ai\providers\GeminiProvider;
+use app\service\ai\providers\LocalEchoProvider;
+use app\service\ai\providers\OpenAiProvider;
+use app\service\ai\providers\ZhipuProvider;
+use Throwable;
+
 /**
  * AI提供方模板管理
  * 类似于邮件系统的预设配置，提供常见AI服务商的快速配置模板
@@ -118,7 +127,7 @@ class AiProviderTemplates
             ],
             'deepseek' => [
                 'name' => 'DeepSeek',
-                'type' => 'openai', // 兼容 OpenAI 接口
+                'type' => 'deepseek', // 兼容 OpenAI 接口
                 'description' => 'DeepSeek API（兼容OpenAI格式）',
                 'icon' => '🔍',
                 'config_template' => [
@@ -143,7 +152,7 @@ class AiProviderTemplates
             ],
             'zhipu' => [
                 'name' => '智谱AI (GLM)',
-                'type' => 'openai', // 兼容 OpenAI 接口
+                'type' => 'zhipu', // 兼容 OpenAI 接口
                 'description' => '智谱AI ChatGLM API（兼容OpenAI格式）',
                 'icon' => '🎓',
                 'config_template' => [
@@ -206,8 +215,44 @@ class AiProviderTemplates
     public static function getTemplate(string $templateId): ?array
     {
         $templates = self::getTemplates();
+        $template = $templates[$templateId] ?? null;
 
-        return $templates[$templateId] ?? null;
+        if (!$template) {
+            return null;
+        }
+
+        // 尝试从 Provider 类动态获取字段定义
+        $providerClass = self::getProviderClass($template['type']);
+        if ($providerClass && class_exists($providerClass)) {
+            try {
+                $instance = new $providerClass([]);
+                if (method_exists($instance, 'getConfigFields')) {
+                    $template['fields'] = $instance->getConfigFields();
+                }
+            } catch (Throwable $e) {
+                // 如果实例化失败，使用静态定义
+            }
+        }
+
+        return $template;
+    }
+
+    /**
+     * 根据类型获取 Provider 类名
+     */
+    private static function getProviderClass(string $type): ?string
+    {
+        $classMap = [
+            'openai' => OpenAiProvider::class,
+            'azure_openai' => AzureOpenAiProvider::class,
+            'claude' => ClaudeProvider::class,
+            'gemini' => GeminiProvider::class,
+            'deepseek' => DeepSeekProvider::class,
+            'zhipu' => ZhipuProvider::class,
+            'local' => LocalEchoProvider::class,
+        ];
+
+        return $classMap[$type] ?? null;
     }
 
     /**

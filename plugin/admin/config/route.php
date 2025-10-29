@@ -182,6 +182,7 @@ Route::group('/app/admin', function () {
             Route::get('/providers', [plugin\admin\app\controller\AiTestController::class, 'getProviders']);
             Route::get('/media', [plugin\admin\app\controller\AiTestController::class, 'getMedia']);
             Route::post('/test', [plugin\admin\app\controller\AiTestController::class, 'test']);
+            Route::get('/task-status', [plugin\admin\app\controller\AiTestController::class, 'getTaskStatus']);
             Route::post('/save-template', [plugin\admin\app\controller\AiTestController::class, 'saveTemplate']);
             Route::get('/templates', [plugin\admin\app\controller\AiTestController::class, 'getTemplates']);
             Route::post('/delete-template', [plugin\admin\app\controller\AiTestController::class, 'deleteTemplate']);

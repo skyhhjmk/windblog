@@ -7,12 +7,18 @@ namespace app\service;
 use app\model\AiPollingGroup;
 use app\model\AiProvider;
 use app\service\ai\AiProviderInterface;
+use app\service\ai\providers\AzureOpenAiProvider;
+use app\service\ai\providers\ClaudeProvider;
+use app\service\ai\providers\DeepSeekProvider;
+use app\service\ai\providers\GeminiProvider;
 use app\service\ai\providers\LocalEchoProvider;
 use app\service\ai\providers\OpenAiProvider;
+use app\service\ai\providers\ZhipuProvider;
 use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
 use support\Log;
+use support\Redis;
 use Throwable;
 
 /**
@@ -36,9 +42,11 @@ class AISummaryService
         return [
             'local' => LocalEchoProvider::class,
             'openai' => OpenAiProvider::class,
-            'azure_openai' => OpenAiProvider::class, // Azure 也使用 OpenAI 实现
-            'claude' => OpenAiProvider::class, // 暂时使用 OpenAI 兼容实现
-            'gemini' => OpenAiProvider::class, // 暂时使用 OpenAI 兼容实现
+            'azure_openai' => AzureOpenAiProvider::class,
+            'claude' => ClaudeProvider::class,
+            'gemini' => GeminiProvider::class,
+            'deepseek' => DeepSeekProvider::class,
+            'zhipu' => ZhipuProvider::class,
             'custom' => OpenAiProvider::class, // 自定义使用 OpenAI 兼容实现
         ];
     }
@@ -327,6 +335,132 @@ class AISummaryService
             Log::error('Enqueue AI summary failed: ' . $e->getMessage());
 
             return false;
+        }
+    }
+
+    /**
+     * 入队通用AI任务（chat, generate, translate等）
+     *
+     * @param string $taskId   任务ID（唯一标识）
+     * @param string $task     任务类型（chat, generate, translate等）
+     * @param array  $params   任务参数
+     * @param array  $options  额外选项
+     * @param string $provider 指定AI提供者ID（可选）
+     *
+     * @return bool
+     */
+    public static function enqueueTask(string $taskId, string $task, array $params, array $options = [], string $provider = ''): bool
+    {
+        try {
+            self::initializeQueues();
+            $ch = self::getChannel();
+
+            $exchange = (string) blog_config('rabbitmq_ai_exchange', 'ai_summary_exchange', true);
+            $routingKey = (string) blog_config('rabbitmq_ai_routing_key', 'ai_summary_generate', true);
+
+            // 先设置任务为 pending 状态
+            self::setTaskStatus($taskId, 'pending', null, null);
+
+            $payload = [
+                'task_type' => 'generic',  // 通用任务标记
+                'task_id' => $taskId,
+                'task' => $task,
+                'params' => $params,
+                'options' => $options,
+                'provider' => $provider,
+            ];
+
+            $priority = (int) ($options['priority'] ?? 5);
+            $priority = max(0, min(9, $priority));
+
+            $msg = new AMQPMessage(json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), [
+                'content_type' => 'application/json',
+                'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT,
+                'priority' => $priority,
+            ]);
+            $ch->basic_publish($msg, $exchange, $routingKey);
+
+            Log::debug('AI generic task enqueued: ' . json_encode([
+                    'task_id' => $taskId,
+                    'task' => $task,
+                    'provider' => $provider,
+                    'priority' => $priority,
+                ], JSON_UNESCAPED_UNICODE));
+
+            return true;
+        } catch (Throwable $e) {
+            Log::error('Enqueue AI task failed: ' . $e->getMessage());
+            self::setTaskStatus($taskId, 'failed', null, $e->getMessage());
+
+            return false;
+        }
+    }
+
+    /**
+     * 查询任务状态
+     *
+     * @param string $taskId 任务ID
+     *
+     * @return array|null
+     */
+    public static function getTaskStatus(string $taskId): ?array
+    {
+        try {
+            $cacheKey = "ai_task_status:{$taskId}";
+
+            // 直接使用Redis读取
+            $redis = Redis::connection('default');
+            $jsonData = $redis->get($cacheKey);
+
+            if ($jsonData) {
+                $data = json_decode($jsonData, true);
+                if (is_array($data)) {
+                    return $data;
+                }
+            }
+
+            return null;
+        } catch (Throwable $e) {
+            Log::error('Failed to get task status: ' . $e->getMessage());
+
+            return null;
+        }
+    }
+
+    /**
+     * 设置任务状态（为 Worker 和 Service 共用）
+     *
+     * @param string      $taskId 任务ID
+     * @param string      $status 任务状态
+     * @param array|null  $result 任务结果
+     * @param string|null $error  错误信息
+     */
+    public static function setTaskStatus(string $taskId, string $status, ?array $result = null, ?string $error = null): void
+    {
+        try {
+            $cacheKey = "ai_task_status:{$taskId}";
+            $data = [
+                'task_id' => $taskId,
+                'status' => $status,
+                'updated_at' => time(),
+            ];
+
+            if ($result !== null) {
+                $data['result'] = $result;
+            }
+
+            if ($error !== null) {
+                $data['error'] = $error;
+            }
+
+            // 直接使用Redis存储，过期时间1小时
+            $redis = Redis::connection('default');
+            $jsonData = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            $redis->setex($cacheKey, 3600, $jsonData);
+
+            Log::debug("AI task status updated: {$taskId} -> {$status}");
+        } catch (Throwable $e) {
+            Log::error("Failed to set task status: {$e->getMessage()}");
         }
     }
 

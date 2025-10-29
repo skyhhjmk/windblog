@@ -6,56 +6,6 @@
     <title>AI效果测试</title>
     <link rel="stylesheet" href="/app/admin/component/layui/css/layui.css?v=2.8.12"/>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .media-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-            gap: 12px;
-        }
-
-        .media-item {
-            position: relative;
-            cursor: pointer;
-            border: 2px solid transparent;
-            border-radius: 8px;
-            overflow: hidden;
-            transition: all 0.2s;
-        }
-
-        .media-item:hover {
-            border-color: #3b82f6;
-            transform: scale(1.05);
-        }
-
-        .media-item.selected {
-            border-color: #10b981;
-            background-color: #d1fae5;
-        }
-
-        .media-item img {
-            width: 100%;
-            height: 120px;
-            object-fit: cover;
-        }
-
-        .media-item .check-icon {
-            position: absolute;
-            top: 4px;
-            right: 4px;
-            background: #10b981;
-            color: white;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            display: none;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .media-item.selected .check-icon {
-            display: flex;
-        }
-    </style>
 </head>
 <body class="bg-gray-50">
 <div class="max-w-7xl mx-auto p-6">
@@ -117,28 +67,22 @@
             <div class="space-y-3">
                 <div class="flex justify-between items-center">
                     <label class="block text-sm font-medium text-gray-700">附加图片（多模态支持）</label>
-                    <button id="btn-toggle-media" class="text-sm text-blue-600 hover:text-blue-800">
-                        显示媒体库
-                    </button>
-                </div>
-
-                <div id="media-panel" class="hidden border border-gray-200 rounded-lg p-4 bg-gray-50">
-                    <div class="mb-3">
-                        <input type="text" id="media-search" placeholder="搜索图片..."
-                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    </div>
-                    <div id="media-grid" class="media-grid max-h-96 overflow-y-auto">
-                        <div class="col-span-full text-center py-8 text-gray-500">加载中...</div>
-                    </div>
-                    <div class="mt-3 flex justify-between items-center">
-                        <div id="media-pagination" class="flex gap-2"></div>
-                        <button id="btn-clear-selection" class="text-sm text-red-600 hover:text-red-800">
-                            清除选择
+                    <div class="flex gap-2">
+                        <button id="btn-select-media"
+                                class="text-sm px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                            <i class="layui-icon layui-icon-picture"></i> 选择图片
+                        </button>
+                        <button id="btn-clear-selection"
+                                class="text-sm px-3 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
+                            <i class="layui-icon layui-icon-delete"></i> 清空
                         </button>
                     </div>
                 </div>
 
-                <div id="selected-images" class="flex flex-wrap gap-2"></div>
+                <div id="selected-images"
+                     class="flex flex-wrap gap-2 min-h-[60px] border border-gray-200 rounded-lg p-3 bg-gray-50">
+                    <div class="text-sm text-gray-400">未选择图片</div>
+                </div>
             </div>
 
             <!-- 高级选项 -->
@@ -156,6 +100,13 @@
                         <label class="block text-sm font-medium text-gray-700 mb-2">最大 Tokens</label>
                         <input type="number" id="max-tokens" value="1000"
                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    <div>
+                        <label class="flex items-center space-x-2">
+                            <input type="checkbox" id="enable-stream" checked
+                                   class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                            <span class="text-sm font-medium text-gray-700">启用流式输出（防止响应超时）</span>
+                        </label>
                     </div>
                 </div>
             </details>
@@ -187,9 +138,10 @@
 
         var providers = [];
         var selectedImages = [];
+        var selectedMediaData = []; // 存储媒体完整数据
         var templates = [];
-        var currentPage = 1;
-        var mediaList = [];
+        var pollInterval = null; // 轮询定时器
+        var currentTaskId = null; // 当前任务ID
 
         // 加载提供者列表
         function loadProviders() {
@@ -222,127 +174,112 @@
             });
         }
 
-        // 加载媒体库
-        function loadMedia(page) {
-            page = page || 1;
-            currentPage = page;
-            var search = $('#media-search').val();
+        // 打开媒体选择器
+        function openMediaSelector() {
+            console.log('AI Test: 打开媒体选择器');
+            layer.open({
+                type: 2,
+                title: '选择图片',
+                content: '/app/admin/media/selector?multiple=1',
+                area: ['95%', '90%'],
+                success: function (layero, index) {
+                    console.log('AI Test: layer弹窗打开成功', {layero: layero, index: index});
+                    // 设置回调函数
+                    var callback = function (data) {
+                        console.log('AI Test: 媒体选择器回调被调用', {data: data});
+                        if (!data) {
+                            console.log('AI Test: 回调数据为空');
+                            return;
+                        }
 
-            $.get('/app/admin/ai/test/media', {page: page, limit: 20, search: search}, function (res) {
-                if (res && res.code === 0 && res.data) {
-                    mediaList = res.data.list || [];
-                    renderMediaGrid();
-                    renderPagination(res.data.total, res.data.page, res.data.limit);
+                        // 处理数据：将单个对象转为数组
+                        var items = Array.isArray(data) ? data : [data];
+                        console.log('AI Test: 开始添加图片', items.length + ' 个');
+
+                        // 批量添加图片
+                        items.forEach(function (item) {
+                            if (item && item.id && !selectedImages.includes(item.id)) {
+                                selectedImages.push(item.id);
+                                selectedMediaData.push(item);
+                                console.log('AI Test: 添加图片', item);
+                            }
+                        });
+
+                        console.log('AI Test: 图片添加完成，当前共', selectedImages.length, '个');
+                        renderSelectedImages();
+                        layer.close(index);
+                    };
+                    $("#layui-layer" + index).data("callback", callback);
+                    console.log('AI Test: 回调函数已设置', $("#layui-layer" + index).data("callback"));
                 }
             });
         }
 
-        // 渲染媒体网格
-        function renderMediaGrid() {
-            var grid = $('#media-grid');
-            grid.html('');
-
-            if (mediaList.length === 0) {
-                grid.html('<div class="col-span-full text-center py-8 text-gray-500">暂无图片</div>');
-                return;
-            }
-
-            mediaList.forEach(function (media) {
-                var isSelected = selectedImages.indexOf(media.id) >= 0;
-                var item = $('<div class="media-item ' + (isSelected ? 'selected' : '') + '" data-id="' + media.id + '"></div>');
-                item.append('<img src="' + media.thumb_url + '" alt="' + media.original_name + '">');
-                item.append('<div class="check-icon">✓</div>');
-                item.on('click', function () {
-                    toggleImageSelection(media.id);
-                });
-                grid.append(item);
-            });
-        }
-
-        // 渲染分页
-        function renderPagination(total, page, limit) {
-            var totalPages = Math.ceil(total / limit);
-            var pagination = $('#media-pagination');
-            pagination.html('');
-
-            if (totalPages <= 1) return;
-
-            for (var i = 1; i <= Math.min(totalPages, 5); i++) {
-                var btn = $('<button class="px-3 py-1 rounded ' + (i === page ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300') + '">' + i + '</button>');
-                btn.data('page', i);
-                btn.on('click', function () {
-                    loadMedia($(this).data('page'));
-                });
-                pagination.append(btn);
-            }
-        }
-
-        // 切换图片选择
-        function toggleImageSelection(id) {
-            var index = selectedImages.indexOf(id);
-            if (index >= 0) {
-                selectedImages.splice(index, 1);
-            } else {
-                selectedImages.push(id);
-            }
-            renderMediaGrid();
-            renderSelectedImages();
-        }
 
         // 渲染已选图片
         function renderSelectedImages() {
+            console.log('AI Test: 渲染图片', selectedMediaData);
             var container = $('#selected-images');
             container.html('');
 
             if (selectedImages.length === 0) {
-                container.html('<div class="text-sm text-gray-500">未选择图片</div>');
+                container.html('<div class="text-sm text-gray-400">未选择图片</div>');
                 return;
             }
 
-            selectedImages.forEach(function (id) {
-                var media = mediaList.find(function (m) {
-                    return m.id === id;
-                });
-                if (media) {
-                    var badge = $('<div class="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"></div>');
-                    badge.append('<span>' + media.original_name + '</span>');
-                    var removeBtn = $('<button class="text-blue-600 hover:text-blue-800">×</button>');
-                    removeBtn.on('click', function () {
-                        toggleImageSelection(id);
-                    });
-                    badge.append(removeBtn);
-                    container.append(badge);
+            selectedMediaData.forEach(function (media, idx) {
+                var wrapper = $('<div class="relative inline-block"></div>');
+
+                // 构建图片URL
+                var imageUrl = media.thumb_url || media.url || '';
+                // 如果没有完整URL，尝试从文件路径构建
+                if (!imageUrl && media.file_path) {
+                    imageUrl = '/uploads/' + media.file_path;
                 }
+                if (!imageUrl && media.thumb_path) {
+                    imageUrl = '/uploads/' + media.thumb_path;
+                }
+
+                console.log('AI Test: 图片URL', {media: media, imageUrl: imageUrl});
+
+                // 图片缩略图
+                var img = $('<img class="w-20 h-20 object-cover rounded-lg border-2 border-blue-300" />');
+                img.attr('src', imageUrl);
+                img.attr('alt', media.original_name || media.filename || media.name || '');
+                img.attr('title', media.original_name || media.filename || media.name || '');
+
+                // 删除按钮
+                var removeBtn = $('<button class="absolute -top-2 -right-2 w-6 h-6 bg-red-600 text-white rounded-full flex items-center justify-center hover:bg-red-700 transition shadow-lg">×</button>');
+                removeBtn.on('click', function () {
+                    selectedImages.splice(idx, 1);
+                    selectedMediaData.splice(idx, 1);
+                    renderSelectedImages();
+                });
+
+                wrapper.append(img);
+                wrapper.append(removeBtn);
+                container.append(wrapper);
             });
         }
 
-        // 显示/隐藏媒体库
-        $('#btn-toggle-media').on('click', function () {
-            var panel = $('#media-panel');
-            if (panel.is(':hidden')) {
-                panel.slideDown();
-                loadMedia(1);
-                $(this).text('隐藏媒体库');
-            } else {
-                panel.slideUp();
-                $(this).text('显示媒体库');
-            }
+        // 选择媒体按钮
+        $('#btn-select-media').on('click', function () {
+            openMediaSelector();
         });
 
         // 清除选择
         $('#btn-clear-selection').on('click', function () {
-            selectedImages = [];
-            renderMediaGrid();
-            renderSelectedImages();
-        });
-
-        // 媒体搜索
-        var searchTimeout;
-        $('#media-search').on('input', function () {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(function () {
-                loadMedia(1);
-            }, 500);
+            if (selectedImages.length === 0) {
+                layer.msg('没有需要清除的图片', {icon: 0});
+                return;
+            }
+            layer.confirm('确定要清空所有已选图片吗？', {icon: 3}, function (index) {
+                selectedImages = [];
+                selectedMediaData = [];
+                renderSelectedImages();
+                layer.close(index);
+                layer.msg('已清空', {icon: 1});
+            });
         });
 
         // 模板选择
@@ -425,11 +362,100 @@
             $('#temperature-value').text($(this).val());
         });
 
+        // 轮询任务状态
+        function pollTaskStatus(taskId, loadingIndex) {
+            var pollCount = 0;
+            var maxPolls = 60; // 最多轮询60次 (120秒)
+
+            // 清除之前的轮询
+            if (pollInterval) {
+                clearInterval(pollInterval);
+            }
+
+            pollInterval = setInterval(function () {
+                pollCount++;
+
+                // 超时保护
+                if (pollCount > maxPolls) {
+                    clearInterval(pollInterval);
+                    pollInterval = null;
+                    currentTaskId = null;
+                    layer.close(loadingIndex);
+                    layer.msg('任务处理超时，请稍后重试', {icon: 2});
+                    return;
+                }
+
+                // 查询任务状态
+                $.ajax({
+                    url: '/app/admin/ai/test/task-status?task_id=' + taskId,
+                    method: 'GET',
+                    success: function (res) {
+                        if (res && res.code === 0 && res.data) {
+                            var status = res.data.status;
+
+                            if (status === 'pending') {
+                                layer.msg('任务排队中...', {icon: 16, time: 1000});
+                            } else if (status === 'processing') {
+                                layer.msg('AI处理中...', {icon: 16, time: 1000});
+                            } else if (status === 'completed') {
+                                // 任务完成
+                                clearInterval(pollInterval);
+                                pollInterval = null;
+                                currentTaskId = null;
+                                layer.close(loadingIndex);
+
+                                // 显示结果
+                                var result = res.data.result || {};
+                                $('#result-panel').removeClass('hidden');
+                                $('#result-content').html('<pre class="whitespace-pre-wrap">' + (result.result || '') + '</pre>');
+
+                                var meta = [];
+                                if (result.model) meta.push('模型: ' + result.model);
+                                if (result.usage) {
+                                    if (result.usage.total_tokens) {
+                                        meta.push('Tokens: ' + result.usage.total_tokens);
+                                    }
+                                    if (result.usage.prompt_tokens && result.usage.completion_tokens) {
+                                        meta.push('(输入: ' + result.usage.prompt_tokens + ' / 输出: ' + result.usage.completion_tokens + ')');
+                                    }
+                                }
+                                if (result.finish_reason) meta.push('完成原因: ' + result.finish_reason);
+
+                                $('#result-meta').html(meta.map(function (m) {
+                                    return '<div>' + m + '</div>';
+                                }).join(''));
+
+                                layer.msg('测试完成', {icon: 1});
+                            } else if (status === 'failed') {
+                                // 任务失败
+                                clearInterval(pollInterval);
+                                pollInterval = null;
+                                currentTaskId = null;
+                                layer.close(loadingIndex);
+                                layer.msg(res.data.error || '任务处理失败', {icon: 2});
+                            }
+                        } else {
+                            // 查询失败
+                            clearInterval(pollInterval);
+                            pollInterval = null;
+                            currentTaskId = null;
+                            layer.close(loadingIndex);
+                            layer.msg(res.msg || '查询任务状态失败', {icon: 2});
+                        }
+                    },
+                    error: function () {
+                        console.log('轮询请求失败，继续尝试...');
+                    }
+                });
+            }, 2000); // 每2秒轮询2次
+        }
+
         // 测试AI
         $('#btn-test').on('click', function () {
             var provider = $('#provider-select').val();
             var task = $('#task-select').val();
             var prompt = $('#prompt-input').val();
+            var enableStream = $('#enable-stream').is(':checked');
 
             if (!provider) {
                 layer.msg('请选择AI提供者', {icon: 2});
@@ -441,57 +467,62 @@
                 return;
             }
 
-            var options = {
-                temperature: parseFloat($('#temperature').val()),
-                max_tokens: parseInt($('#max-tokens').val())
-            };
+            // 如果已有任务在处理，提示用户
+            if (currentTaskId && pollInterval) {
+                layer.confirm('已有任务正在处理，是否取消并提交新任务？', {icon: 3}, function (index) {
+                    clearInterval(pollInterval);
+                    pollInterval = null;
+                    currentTaskId = null;
+                    layer.close(index);
+                    submitTask(); // 提交新任务
+                });
+                return;
+            }
 
-            var loading = layer.msg('AI处理中...', {icon: 16, shade: 0.3, time: 0});
+            submitTask();
 
-            $.ajax({
-                url: '/app/admin/ai/test/test',
-                method: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify({
-                    provider: provider,
-                    task: task,
-                    prompt: prompt,
-                    images: selectedImages,
-                    options: options
-                }),
-                success: function (res) {
-                    layer.close(loading);
+            function submitTask() {
+                var options = {
+                    temperature: parseFloat($('#temperature').val()),
+                    max_tokens: parseInt($('#max-tokens').val())
+                };
 
-                    if (res && res.code === 0 && res.data) {
-                        $('#result-panel').removeClass('hidden');
-                        $('#result-content').html('<pre class="whitespace-pre-wrap">' + res.data.result + '</pre>');
+                var loading = layer.msg('提交任务中...', {icon: 16, shade: 0.3, time: 0});
 
-                        var meta = [];
-                        if (res.data.model) meta.push('模型: ' + res.data.model);
-                        if (res.data.usage) {
-                            if (res.data.usage.total_tokens) {
-                                meta.push('Tokens: ' + res.data.usage.total_tokens);
-                            }
-                            if (res.data.usage.prompt_tokens && res.data.usage.completion_tokens) {
-                                meta.push('(输入: ' + res.data.usage.prompt_tokens + ' / 输出: ' + res.data.usage.completion_tokens + ')');
-                            }
+                $.ajax({
+                    url: '/app/admin/ai/test/test',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        provider: provider,
+                        task: task,
+                        prompt: prompt,
+                        images: selectedImages,
+                        options: options
+                    }),
+                    success: function (res) {
+                        if (res && res.code === 0 && res.data && res.data.task_id) {
+                            // 任务提交成功，开始轮询
+                            currentTaskId = res.data.task_id;
+                            layer.msg(res.data.message || '任务已提交', {icon: 1, time: 1000});
+
+                            // 更新loading提示
+                            layer.close(loading);
+                            loading = layer.msg('AI处理中...', {icon: 16, shade: 0.3, time: 0});
+
+                            // 开始轮询任务状态
+                            pollTaskStatus(currentTaskId, loading);
+                        } else {
+                            layer.close(loading);
+                            layer.msg(res.msg || '任务提交失败', {icon: 2});
                         }
-                        if (res.data.finish_reason) meta.push('完成原因: ' + res.data.finish_reason);
-
-                        $('#result-meta').html(meta.map(function (m) {
-                            return '<div>' + m + '</div>';
-                        }).join(''));
-
-                        layer.msg('测试完成', {icon: 1});
-                    } else {
-                        layer.msg(res.msg || '测试失败', {icon: 2});
+                    },
+                    error: function () {
+                        layer.close(loading);
+                        layer.msg('请求失败', {icon: 2});
                     }
-                },
-                error: function () {
-                    layer.close(loading);
-                    layer.msg('请求失败', {icon: 2});
-                }
-            });
+                });
+            }
         });
 
         // 初始化

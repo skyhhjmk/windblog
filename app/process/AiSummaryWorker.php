@@ -8,6 +8,7 @@ use app\model\Post;
 use app\model\PostExt;
 use app\service\ai\AiProviderInterface;
 use app\service\ai\providers\LocalEchoProvider;
+use app\service\AISummaryService;
 use app\service\MQService;
 use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Exception\AMQPTimeoutException;
@@ -15,6 +16,7 @@ use PhpAmqpLib\Message\AMQPMessage;
 use PhpAmqpLib\Wire\AMQPTable;
 use RuntimeException;
 use support\Log;
+use support\Redis as SupportRedis;
 use Throwable;
 use Workerman\Timer;
 
@@ -86,9 +88,8 @@ class AiSummaryWorker
 
     protected function initProviders(): void
     {
-        // 注册内置占位提供者
-        $this->providerRegistry['local.echo'] = new LocalEchoProvider();
-        // TODO: 可在此注册更多提供者
+        // 不册需要预先注册提供者
+        // 所有提供者将从数据库动态加载
     }
 
     protected function startConsumer(): void
@@ -119,50 +120,108 @@ class AiSummaryWorker
             if (!is_array($data)) {
                 throw new RuntimeException('Invalid payload');
             }
-            $postId = (int) ($data['post_id'] ?? 0);
-            if ($postId <= 0) {
-                throw new RuntimeException('Missing post_id');
+
+            // 支持两种模式：文章摘要和通用任务
+            $taskType = (string) ($data['task_type'] ?? 'summarize');
+
+            if ($taskType === 'summarize') {
+                $this->handleSummarizeTask($data, $message);
+            } else {
+                $this->handleGenericTask($data, $message);
             }
-            $providerId = (string) ($data['provider'] ?? '');
-            $options = (array) ($data['options'] ?? []);
+        } catch (Throwable $e) {
+            Log::error('AI task handle failed: ' . $e->getMessage());
+            $this->handleFailedMessage($message);
+        }
+    }
 
-            $post = Post::find($postId);
-            if (!$post) {
-                throw new RuntimeException('Post not found: ' . $postId);
-            }
+    /**
+     * 处理文章摘要任务（原有逻辑）
+     */
+    protected function handleSummarizeTask(array $data, AMQPMessage $message): void
+    {
+        $postId = (int) ($data['post_id'] ?? 0);
+        if ($postId <= 0) {
+            throw new RuntimeException('Missing post_id');
+        }
+        $providerId = (string) ($data['provider'] ?? '');
+        $options = (array) ($data['options'] ?? []);
 
-            // 检查是否被标记为“持久化”，若是且非强制则跳过
-            $meta = $this->getAiMeta($postId);
-            $force = (bool) ($options['force'] ?? false);
-            if (($meta['status'] ?? 'none') === 'persisted' && !$force) {
-                $message->ack();
+        $post = Post::find($postId);
+        if (!$post) {
+            throw new RuntimeException('Post not found: ' . $postId);
+        }
 
-                return;
-            }
+        // 检查是否被标记为"持久化"，若是且非强制则跳过
+        $meta = $this->getAiMeta($postId);
+        $force = (bool) ($options['force'] ?? false);
+        if (($meta['status'] ?? 'none') === 'persisted' && !$force) {
+            $message->ack();
 
-            // 标记状态为刷新中
-            $this->setAiMeta($postId, ['enabled' => (bool) ($meta['enabled'] ?? true), 'status' => 'refreshing']);
+            return;
+        }
 
-            $content = (string) $post->content;
+        // 标记状态为刷新中
+        $this->setAiMeta($postId, ['enabled' => (bool) ($meta['enabled'] ?? true), 'status' => 'refreshing']);
+
+        $content = (string) $post->content;
+        $prov = $this->chooseProvider($providerId);
+        $result = $prov->summarize($content, $options);
+
+        if (!($result['ok'] ?? false)) {
+            $this->setAiMeta($postId, ['enabled' => (bool) ($meta['enabled'] ?? true), 'status' => 'failed', 'error' => (string) ($result['error'] ?? 'unknown')]);
+            throw new RuntimeException('AI summarize failed: ' . ($result['error'] ?? 'unknown'));
+        }
+
+        $summary = (string) ($result['summary'] ?? '');
+        // 更新文章字段
+        $post->ai_summary = $summary;
+        $post->save();
+
+        $this->setAiMeta($postId, ['enabled' => (bool) ($meta['enabled'] ?? true), 'status' => 'done', 'provider' => $prov->getId(), 'usage' => $result['usage'] ?? []]);
+
+        $message->ack();
+    }
+
+    /**
+     * 处理通用AI任务（chat, generate, translate等）
+     */
+    protected function handleGenericTask(array $data, AMQPMessage $message): void
+    {
+        $taskId = (string) ($data['task_id'] ?? '');
+        if (empty($taskId)) {
+            throw new RuntimeException('Missing task_id');
+        }
+
+        $task = (string) ($data['task'] ?? 'chat');
+        $providerId = (string) ($data['provider'] ?? '');
+        $params = (array) ($data['params'] ?? []);
+        $options = (array) ($data['options'] ?? []);
+
+        // 标记任务开始处理
+        $this->setTaskStatus($taskId, 'processing', null, null);
+
+        try {
             $prov = $this->chooseProvider($providerId);
-            $result = $prov->summarize($content, $options);
+            $result = $prov->call($task, $params, $options);
 
             if (!($result['ok'] ?? false)) {
-                $this->setAiMeta($postId, ['enabled' => (bool) ($meta['enabled'] ?? true), 'status' => 'failed', 'error' => (string) ($result['error'] ?? 'unknown')]);
-                throw new RuntimeException('AI summarize failed: ' . ($result['error'] ?? 'unknown'));
+                $this->setTaskStatus($taskId, 'failed', null, (string) ($result['error'] ?? 'unknown'));
+                throw new RuntimeException('AI task failed: ' . ($result['error'] ?? 'unknown'));
             }
 
-            $summary = (string) ($result['summary'] ?? '');
-            // 更新文章字段
-            $post->ai_summary = $summary;
-            $post->save();
-
-            $this->setAiMeta($postId, ['enabled' => (bool) ($meta['enabled'] ?? true), 'status' => 'done', 'provider' => $prov->getId(), 'usage' => $result['usage'] ?? []]);
+            // 保存结果
+            $this->setTaskStatus($taskId, 'completed', [
+                'result' => $result['result'] ?? '',
+                'usage' => $result['usage'] ?? null,
+                'model' => $result['model'] ?? null,
+                'finish_reason' => $result['finish_reason'] ?? null,
+            ], null);
 
             $message->ack();
         } catch (Throwable $e) {
-            Log::error('AI Summary handle failed: ' . $e->getMessage());
-            $this->handleFailedMessage($message);
+            $this->setTaskStatus($taskId, 'failed', null, $e->getMessage());
+            throw $e;
         }
     }
 
@@ -188,35 +247,27 @@ class AiSummaryWorker
 
     protected function chooseProvider(?string $specified = null): AiProviderInterface
     {
-        if ($specified && isset($this->providerRegistry[$specified])) {
-            return $this->providerRegistry[$specified];
-        }
-        // 从配置读取 providers 列表，格式参考 Mail 多平台
-        $list = blog_config('ai_providers', '[]', false, true, false);
-        $providers = is_string($list) ? json_decode($list, true) : $list;
-        if (is_array($providers)) {
-            // 简易加权选择，回退到第一个
-            $pool = [];
-            foreach ($providers as $item) {
-                if (!($item['enabled'] ?? true)) {
-                    continue;
-                }
-                $id = (string) ($item['id'] ?? '');
-                $w = max(1, (int) ($item['weight'] ?? 1));
-                if ($id !== '' && isset($this->providerRegistry[$id])) {
-                    for ($i = 0; $i < $w; $i++) {
-                        $pool[] = $id;
-                    }
-                }
+        // 如果指定了providerId，尝试从数据库加载
+        if (!empty($specified)) {
+            $provider = AISummaryService::createProviderFromDb($specified);
+            if ($provider) {
+                return $provider;
             }
-            if ($pool) {
-                $pick = $pool[random_int(0, count($pool) - 1)];
-
-                return $this->providerRegistry[$pick];
-            }
+            Log::warning("AiSummaryWorker: Specified provider not found: {$specified}, falling back to current provider");
         }
 
-        // 默认使用占位提供者
+        // 使用当前配置的提供者（支持轮询组和单个提供者）
+        $provider = AISummaryService::getCurrentProvider();
+        if ($provider) {
+            return $provider;
+        }
+
+        // 如果没有配置任何提供者，使用内置的本地测试提供者
+        Log::warning('AiSummaryWorker: No AI provider configured, using local echo provider');
+        if (!isset($this->providerRegistry['local.echo'])) {
+            $this->providerRegistry['local.echo'] = new LocalEchoProvider();
+        }
+
         return $this->providerRegistry['local.echo'];
     }
 
@@ -240,5 +291,43 @@ class AiSummaryWorker
         }
         $row->value = array_merge((array) $row->value, $meta);
         $row->save();
+    }
+
+    /**
+     * 设置通用任务状态（存储到Redis或数据库）
+     * 状态: pending, processing, completed, failed
+     *
+     * @param string      $taskId 任务ID
+     * @param string      $status 任务状态
+     * @param array|null  $result 任务结果
+     * @param string|null $error  错误信息
+     */
+    protected function setTaskStatus(string $taskId, string $status, ?array $result = null, ?string $error = null): void
+    {
+        try {
+            $cacheKey = "ai_task_status:{$taskId}";
+            $data = [
+                'task_id' => $taskId,
+                'status' => $status,
+                'updated_at' => time(),
+            ];
+
+            if ($result !== null) {
+                $data['result'] = $result;
+            }
+
+            if ($error !== null) {
+                $data['error'] = $error;
+            }
+
+            // 直接使用Redis存储，过期时间1小时
+            $redis = SupportRedis::connection('default');
+            $jsonData = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            $redis->setex($cacheKey, 3600, $jsonData);
+
+            Log::debug("AI task status updated: {$taskId} -> {$status}");
+        } catch (Throwable $e) {
+            Log::error("Failed to set task status: {$e->getMessage()}");
+        }
     }
 }
