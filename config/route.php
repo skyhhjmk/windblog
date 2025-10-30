@@ -67,6 +67,18 @@ Route::get('/oauth/{provider}/callback', [app\controller\UserController::class, 
 Route::post('/oauth/{provider}/bind', [app\controller\UserController::class, 'bindOAuth'])->name('oauth.bind');
 Route::post('/oauth/{provider}/unbind', [app\controller\UserController::class, 'unbindOAuth'])->name('oauth.unbind');
 
+// 在线用户统计路由
+Route::get('/online/count', [app\controller\OnlineController::class, 'count'])->name('online.count');
+Route::get('/online/list', [app\controller\OnlineController::class, 'list'])->name('online.list');
+Route::get('/online/stats', [app\controller\OnlineController::class, 'stats'])->name('online.stats');
+Route::post('/online/heartbeat', [app\controller\OnlineController::class, 'heartbeat'])->name('online.heartbeat');
+Route::post('/online/online', [app\controller\OnlineController::class, 'online'])->name('online.online');
+Route::post('/online/offline', [app\controller\OnlineController::class, 'offline'])->name('online.offline');
+Route::get('/online/check/{userId}', [app\controller\OnlineController::class, 'check'])->name('online.check');
+
+// Push 配置路由
+Route::get('/push/config', [app\controller\PushConfigController::class, 'config'])->name('push.config');
+
 // 页面路由 - 支持 .html 后缀
 // 首页分页路由 -> IndexController
 Route::any('/page/{page}', [app\controller\IndexController::class, 'index'])->name('index.page');
