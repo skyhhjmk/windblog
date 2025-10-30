@@ -277,6 +277,7 @@ class ConfigController extends Base
                 'site_url' => blog_config('site_url', '', true),
                 'description' => blog_config('description', '', true),
                 'favicon' => blog_config('favicon', '', true),
+                'site_logo' => blog_config('site_logo', '', true),
                 'icp' => blog_config('icp', '', true),
                 'beian' => blog_config('beian', '', true),
                 'footer_txt' => blog_config('footer_txt', '', true),
@@ -306,6 +307,7 @@ class ConfigController extends Base
             blog_config('site_url', $siteInfo['site_url'] ?? '', true, true, true);
             blog_config('description', $siteInfo['description'] ?? '', true, true, true);
             blog_config('favicon', $siteInfo['favicon'] ?? '', true, true, true);
+            blog_config('site_logo', $siteInfo['site_logo'] ?? '', true, true, true);
             blog_config('icp', $siteInfo['icp'] ?? '', true, true, true);
             blog_config('beian', $siteInfo['beian'] ?? '', true, true, true);
             blog_config('footer_txt', $siteInfo['footer_txt'] ?? '', true, true, true);

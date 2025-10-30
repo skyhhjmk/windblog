@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="{{ asset('/assets/vditor/index.min.css') }}">
     <link rel="stylesheet" href="{{ asset('/assets/vditor/content-theme/ant-design.min.css') }}">
     <!-- 高级动画样式 -->
-    <link rel="stylesheet" href="{{ asset('/assets/css/animations.css') }}">
+    <link rel="stylesheet" href="{{ asset('/assets/css/animations.css') }}?v={{ 'now'|date('U') }}">
     <!-- FloLink 悬浮链接样式 -->
     <link rel="preload" as="style" href="{{ asset('/assets/flolink/flolink.css') }}">
     <link rel="stylesheet" href="{{ asset('/assets/flolink/flolink.css') }}">
@@ -116,6 +116,20 @@
             transition: all 0.3s ease;
         }
 
+        /* Logo旋转动画 */
+        @keyframes logo-spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .logo-container.spinning {
+            animation: logo-spin 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+        }
+
         /* 保留移动端导航菜单特有的动画 */
         @keyframes slide-in {
             from {
@@ -145,6 +159,212 @@
 
         .mobile-menu.closing {
             animation: slide-out 0.3s ease-out forwards;
+        }
+
+        /* PJAX加载动画关键样式 */
+        @keyframes rotate360 {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes pulse-shape {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(0.8);
+                opacity: 0.6;
+            }
+        }
+
+        @keyframes bounce-dot {
+            0%, 60%, 100% {
+                transform: translateY(0);
+            }
+            30% {
+                transform: translateY(-20px);
+            }
+        }
+
+        @keyframes float-particle {
+            0%, 100% {
+                transform: translateY(0) translateX(0) scale(1);
+                opacity: 0.3;
+            }
+            25% {
+                transform: translateY(-30px) translateX(10px) scale(1.2);
+                opacity: 0.5;
+            }
+            50% {
+                transform: translateY(-60px) translateX(-10px) scale(1);
+                opacity: 0.2;
+            }
+            75% {
+                transform: translateY(-30px) translateX(15px) scale(1.3);
+                opacity: 0.4;
+            }
+        }
+
+        .geometric-loader {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            margin: 0 auto;
+            animation: rotate360 3s linear infinite;
+        }
+
+        .geometric-shape {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+        }
+
+        .geometric-shape.shape-1 {
+            top: 0;
+            left: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            animation: pulse-shape 1.5s ease-in-out infinite;
+        }
+
+        .geometric-shape.shape-2 {
+            top: 0;
+            right: 0;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            animation: pulse-shape 1.5s ease-in-out 0.2s infinite;
+        }
+
+        .geometric-shape.shape-3 {
+            bottom: 0;
+            left: 0;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            animation: pulse-shape 1.5s ease-in-out 0.4s infinite;
+        }
+
+        .geometric-shape.shape-4 {
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            animation: pulse-shape 1.5s ease-in-out 0.6s infinite;
+        }
+
+        .loading-text {
+            margin-top: 40px;
+            font-size: 32px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 8px;
+            color: #667eea;
+        }
+
+        .loading-dot {
+            display: inline-block;
+            animation: bounce-dot 1.4s ease-in-out infinite;
+            line-height: 1;
+            vertical-align: middle;
+        }
+
+        .loading-dot:nth-child(1) {
+            animation-delay: 0s;
+        }
+
+        .loading-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .loading-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        .particle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            opacity: 0.3;
+            animation: float-particle 4s ease-in-out infinite;
+        }
+
+        .particle:nth-child(1) {
+            left: 10%;
+            top: 20%;
+            animation-delay: 0s;
+            animation-duration: 3s;
+        }
+
+        .particle:nth-child(2) {
+            left: 20%;
+            top: 80%;
+            animation-delay: 0.5s;
+            animation-duration: 4s;
+        }
+
+        .particle:nth-child(3) {
+            left: 30%;
+            top: 40%;
+            animation-delay: 1s;
+            animation-duration: 3.5s;
+        }
+
+        .particle:nth-child(4) {
+            left: 50%;
+            top: 60%;
+            animation-delay: 1.5s;
+            animation-duration: 4.5s;
+        }
+
+        .particle:nth-child(5) {
+            left: 60%;
+            top: 30%;
+            animation-delay: 2s;
+            animation-duration: 3.2s;
+        }
+
+        .particle:nth-child(6) {
+            left: 70%;
+            top: 70%;
+            animation-delay: 2.5s;
+            animation-duration: 4.2s;
+        }
+
+        .particle:nth-child(7) {
+            left: 80%;
+            top: 50%;
+            animation-delay: 3s;
+            animation-duration: 3.8s;
+        }
+
+        .particle:nth-child(8) {
+            left: 90%;
+            top: 20%;
+            animation-delay: 3.5s;
+            animation-duration: 4.8s;
+        }
+
+        .particles-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .pjax-loading-content {
+            position: relative;
+            z-index: 2;
+            text-align: center;
         }
 
         /* Markdown内容样式 */
@@ -433,16 +653,34 @@
     </style>
     {% block extra_css %}{% endblock %}
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col">
+<body class="min-h-screen flex flex-col" style="background: linear-gradient(to bottom, #f7f9fc 0%, #eef2f7 100%);">
 <!-- 通知弹窗容器 -->
 <div class="notification-container" id="notificationContainer"></div>
 
 <!-- 顶部导航 -->
-<header class="bg-white shadow-sm sticky top-0 z-10">
+<header class="bg-white sticky top-0 z-10"
+        style="box-shadow: 0 2px 8px rgba(0,0,0,0.08); backdrop-filter: blur(10px); background: rgba(255,255,255,0.95);">
     <div class="container mx-auto px-4 py-4 flex justify-between items-center">
-        <a href="/" class="text-2xl font-bold text-gray-800 flex items-center hover-animate tap-highlight">
-            <i class="fas fa-blog text-blue-600 mr-2"></i>
-            <span id="topbarTitle">{{ page_title|default('WindBlog') }}</span>
+        <a href="/" class="flex items-center hover-animate tap-highlight" style="text-decoration: none;">
+            {% set site_logo = blog_config('site_logo', '', true) %}
+            {% if site_logo %}
+                <div id="siteLogo" class="logo-container"
+                     style="width: 40px; height: 40px; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3); transition: transform 0.3s ease, box-shadow 0.3s ease; margin-right: 0.75rem;"
+                     onmouseover="if(!this.classList.contains('spinning')) { this.style.transform='scale(1.1)'; this.style.boxShadow='0 4px 12px rgba(102, 126, 234, 0.4)'; }"
+                     onmouseout="if(!this.classList.contains('spinning')) { this.style.transform='scale(1)'; this.style.boxShadow='0 2px 8px rgba(102, 126, 234, 0.3)'; }">
+                    <img src="{{ site_logo }}" alt="{{ page_title|default('WindBlog') }}"
+                         style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+            {% else %}
+                <div id="siteLogo" class="logo-container"
+                     style="width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3); transition: transform 0.3s ease, box-shadow 0.3s ease; margin-right: 0.75rem;"
+                     onmouseover="if(!this.classList.contains('spinning')) { this.style.transform='scale(1.1)'; this.style.boxShadow='0 4px 12px rgba(102, 126, 234, 0.4)'; }"
+                     onmouseout="if(!this.classList.contains('spinning')) { this.style.transform='scale(1)'; this.style.boxShadow='0 2px 8px rgba(102, 126, 234, 0.3)'; }">
+                    <i class="fas fa-blog" style="font-size: 1.25rem; color: white;"></i>
+                </div>
+            {% endif %}
+            <span id="topbarTitle" class="text-xl md:text-2xl font-bold"
+                  style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">{{ page_title|default('WindBlog') }}</span>
         </a>
         <!-- 搜索表单 -->
         <div class="relative hidden md:block mr-6">
@@ -450,7 +688,10 @@
                 <div class="relative">
                     <input type="text" name="q" id="searchInput"
                            placeholder="搜点什么"
-                           class="pl-10 pr-4 py-2 border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-64"
+                           class="pl-10 pr-4 py-2 border border-gray-200 rounded-full text-sm focus:outline-none w-64"
+                           style="transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"
+                           onfocus="this.style.boxShadow='0 4px 12px rgba(102, 126, 234, 0.2)'; this.style.borderColor='#667eea';"
+                           onblur="this.style.boxShadow='0 2px 4px rgba(0,0,0,0.05)'; this.style.borderColor='#e5e7eb';"
                            autocomplete="off">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <i class="fas fa-search text-gray-400"></i>
@@ -465,14 +706,23 @@
             </form>
         </div>
         <!-- 移动端搜索按钮 -->
-        <button class="md:hidden text-gray-600 hover-animate tap-highlight mr-4" id="mobileSearchBtn">
+        <button
+            class="md:hidden text-gray-600 hover-animate tap-highlight mr-4 p-2 rounded-lg transition-all duration-200"
+            id="mobileSearchBtn"
+            onmouseover="this.style.background='#f3f4f6'; this.style.transform='scale(1.1)';"
+            onmouseout="this.style.background='transparent'; this.style.transform='scale(1)';">
             <i class="fas fa-search text-lg"></i>
         </button>
         <nav class="hidden md:flex items-center space-x-6">
             <a href="/"
-               class="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center hover-animate tap-highlight">
+               class="text-gray-600 font-medium transition-all duration-200 flex items-center hover-animate tap-highlight"
+               style="position: relative; padding: 0.5rem 0;"
+               onmouseover="this.style.color='#667eea'; this.querySelector('.nav-underline').style.width='100%';"
+               onmouseout="this.style.color='#4b5563'; this.querySelector('.nav-underline').style.width='0';">
                 <i class="fas fa-home mr-1"></i>
                 首页
+                <span class="nav-underline"
+                      style="position: absolute; bottom: 0; left: 0; width: 0; height: 2px; background: linear-gradient(90deg, #667eea, #764ba2); transition: width 0.3s ease;"></span>
             </a>
             {# <a href="#"
                class="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center hover-animate tap-highlight">
@@ -480,9 +730,14 @@
                 分类
             </a> #}
             <a href="/link"
-               class="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center hover-animate tap-highlight">
+               class="text-gray-600 font-medium transition-all duration-200 flex items-center hover-animate tap-highlight"
+               style="position: relative; padding: 0.5rem 0;"
+               onmouseover="this.style.color='#667eea'; this.querySelector('.nav-underline').style.width='100%';"
+               onmouseout="this.style.color='#4b5563'; this.querySelector('.nav-underline').style.width='0';">
                 <i class="fas fa-link mr-1"></i>
                 友情链接
+                <span class="nav-underline"
+                      style="position: absolute; bottom: 0; left: 0; width: 0; height: 2px; background: linear-gradient(90deg, #667eea, #764ba2); transition: width 0.3s ease;"></span>
             </a>
             {# <a href="/admin"
                class="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center hover-animate tap-highlight">
@@ -495,13 +750,18 @@
                 <!-- 未登录状态 -->
                 <div id="userNotLoggedIn" class="flex items-center space-x-2">
                     <a href="/user/login"
-                       class="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center hover-animate tap-highlight">
+                       class="px-4 py-2 text-gray-600 font-medium transition-all duration-200 flex items-center hover-animate tap-highlight rounded-lg"
+                       style="border: 1px solid #e5e7eb;"
+                       onmouseover="this.style.background='linear-gradient(135deg, #667eea 0%, #764ba2 100%)'; this.style.color='white'; this.style.borderColor='transparent'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(102, 126, 234, 0.3)';"
+                       onmouseout="this.style.background='transparent'; this.style.color='#4b5563'; this.style.borderColor='#e5e7eb'; this.style.transform='translateY(0)'; this.style.boxShadow='none';">
                         <i class="fas fa-sign-in-alt mr-1"></i>
                         登录
                     </a>
-                    <span class="text-gray-400">|</span>
                     <a href="/user/register"
-                       class="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center hover-animate tap-highlight">
+                       class="px-4 py-2 text-white font-medium transition-all duration-200 flex items-center hover-animate tap-highlight rounded-lg"
+                       style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);"
+                       onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(102, 126, 234, 0.4)';"
+                       onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(102, 126, 234, 0.3)';">
                         <i class="fas fa-user-plus mr-1"></i>
                         注册
                     </a>
@@ -536,7 +796,10 @@
         </nav>
 
         <!-- 移动端菜单按钮 -->
-        <button class="md:hidden text-gray-600 hover-animate tap-highlight" id="mobileMenuBtn">
+        <button class="md:hidden text-gray-600 hover-animate tap-highlight p-2 rounded-lg transition-all duration-200"
+                id="mobileMenuBtn"
+                onmouseover="this.style.background='#f3f4f6'; this.style.transform='scale(1.1)';"
+                onmouseout="this.style.background='transparent'; this.style.transform='scale(1)';">
             <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M4 6h16M4 12h16M4 18h16"></path>
@@ -661,7 +924,8 @@
 </main>
 
 <!-- 页脚 -->
-<footer class="bg-white border-t mt-8 md:mt-12 py-6 md:py-8 fade-in-on-scroll visible" data-animation-delay="0.4">
+<footer class="bg-white mt-8 md:mt-12 py-6 md:py-8 fade-in-on-scroll visible" data-animation-delay="0.4"
+        style="border-top: 1px solid #f0f0f0; background: linear-gradient(to bottom, #ffffff 0%, #f9fafb 100%);">
     <div class="container mx-auto px-4">
         <div class="flex flex-col md:flex-row justify-between items-center">
             <div class="mb-4 md:mb-0 text-center md:text-left">
@@ -688,7 +952,8 @@
                 </div>
             </div>
             <div class="flex space-x-4">
-                <a href="#" class="text-gray-500 hover:text-blue-600 hover-animate tap-highlight">
+                <a href="https://github.com/skyhhjmk/windblog"
+                   class="text-gray-500 hover:text-blue-600 hover-animate tap-highlight">
                     <i class="fab fa-github fa-lg"></i>
                 </a>
                 <a href="#" class="text-gray-500 hover:text-blue-600 hover-animate tap-highlight">
@@ -720,7 +985,9 @@
                 transitionSpeed: 300,
                 progressBar: null,
                 container: null,
-                isLoading: false  // 添加加载状态标志，防止重复请求
+                isLoading: false,  // 添加加载状态标志，防止重复请求
+                minLoadingDuration: 1200,  // 最小加载动画显示时间（ms），确保完整的淡入淡出效果
+                loadingStartTime: 0  // 记录加载开始时间
             };
 
             // 动态加载响应中的外部资源（script[src] 与 link[rel=stylesheet]），避免PJAX丢失新依赖
@@ -989,12 +1256,15 @@
 
             // 执行PJAX导航
             function navigateWithPJAX(url) {
-                // 如果正在加载，忽略新请求
+                // 如枟正在加载，忽略新请求
                 if (pjaxConfig.isLoading) {
                     console.log('PJAX: 正在加载中，忽略新请求');
                     return;
                 }
                 pjaxConfig.isLoading = true;
+
+                // 记录加载开始时间
+                pjaxConfig.loadingStartTime = Date.now();
 
                 try {
                     document.dispatchEvent(new CustomEvent('pjax:start'));
@@ -1005,9 +1275,51 @@
                     }
                 } catch (e) {
                 }
-                // 添加页面淡出效果
-                pjaxConfig.container.style.opacity = '0';
-                pjaxConfig.container.style.transition = `opacity ${pjaxConfig.transitionSpeed}ms ease-out`;
+
+                // 先显示加载动画遮罩（立即显示，不等待）
+                const loadingOverlay = document.getElementById('pjax-loading-overlay');
+                if (loadingOverlay) {
+                    console.log('PJAX: 显示加载动画');
+                    // 强制设置所有关键样式
+                    loadingOverlay.style.display = 'flex';
+                    loadingOverlay.style.opacity = '1';
+                    loadingOverlay.style.visibility = 'visible';
+                    loadingOverlay.classList.add('active');
+                    // 详细调试信息
+                    setTimeout(() => {
+                        const computed = window.getComputedStyle(loadingOverlay);
+                        console.log('=== 加载遮罩调试信息 ===');
+                        console.log('1. 类名:', loadingOverlay.className);
+                        console.log('2. 内联样式背景:', loadingOverlay.style.background);
+                        console.log('3. 计算后背景:', computed.background);
+                        console.log('4. 计算后背景色:', computed.backgroundColor);
+                        console.log('5. backdrop-filter:', computed.backdropFilter);
+                        console.log('6. -webkit-backdrop-filter:', computed.webkitBackdropFilter);
+                        console.log('7. 所有应用的样式表:');
+                        const sheets = document.styleSheets;
+                        for (let i = 0; i < sheets.length; i++) {
+                            try {
+                                const rules = sheets[i].cssRules || sheets[i].rules;
+                                for (let j = 0; j < rules.length; j++) {
+                                    if (rules[j].selectorText && rules[j].selectorText.includes('pjax-loading-overlay')) {
+                                        console.log(`   样式表 ${i}, 规则 ${j}:`, rules[j].cssText);
+                                    }
+                                }
+                            } catch (e) {
+                                console.log(`   样式表 ${i}: 无法访问 (跨域)`);
+                            }
+                        }
+                        console.log('========================');
+                    }, 100);
+                } else {
+                    console.error('PJAX: 找不到加载遮罩元素！');
+                }
+
+                // 稍微延迟后淡出页面内容（让加载动画先显示）
+                setTimeout(() => {
+                    pjaxConfig.container.style.opacity = '0';
+                    pjaxConfig.container.style.transition = `opacity ${pjaxConfig.transitionSpeed}ms ease-out`;
+                }, 50);
 
                 // 更新进度条
                 if (pjaxConfig.progressBar) {
@@ -1251,8 +1563,28 @@
                                 history.pushState({path: url}, '', url);
                             }
 
-                            // 内容加载完成后的处理
+                            // 内容加载完成后的处理 - 强制最小时长
+                            // 计算已经经过的时间
+                            const elapsedTime = Date.now() - pjaxConfig.loadingStartTime;
+                            // 计算还需要等待的时间，确保至少显示 minLoadingDuration 毫秒
+                            const remainingTime = Math.max(0, pjaxConfig.minLoadingDuration - elapsedTime);
+
+                            console.log('PJAX: 已经过时间:', elapsedTime, 'ms, 还需等待:', remainingTime, 'ms');
+
                             setTimeout(function () {
+                                // 隐藏加载动画遮罩
+                                const loadingOverlay = document.getElementById('pjax-loading-overlay');
+                                if (loadingOverlay) {
+                                    console.log('PJAX: 隐藏加载动画');
+                                    loadingOverlay.style.opacity = '0';
+                                    loadingOverlay.style.visibility = 'hidden';
+                                    loadingOverlay.classList.remove('active');
+                                    // 等待淡出动画完成后隐藏
+                                    setTimeout(() => {
+                                        loadingOverlay.style.display = 'none';
+                                    }, 300);
+                                }
+
                                 // 显示内容
                                 pjaxConfig.container.style.opacity = '1';
 
@@ -1287,11 +1619,24 @@
                                     AnimationUtils.reinit();
                                 }
 
+                                // Logo旋转动画
+                                try {
+                                    const logoEl = document.getElementById('siteLogo');
+                                    if (logoEl && !logoEl.classList.contains('spinning')) {
+                                        logoEl.classList.add('spinning');
+                                        logoEl.addEventListener('animationend', function () {
+                                            logoEl.classList.remove('spinning');
+                                        }, {once: true});
+                                    }
+                                } catch (e) {
+                                    // 忽略logo动画错误
+                                }
+
                                 // 进度条收尾（到100并隐藏）
                                 if (window.PjaxProgress && typeof window.PjaxProgress.complete === 'function') {
                                     window.PjaxProgress.complete();
                                 }
-                            }, 50);
+                            }, remainingTime);
                         } else {
                             console.error('PJAX: 未能找到内容容器，采用非刷新降级注入');
                             try {
@@ -1300,74 +1645,109 @@
                             } catch (e) {
                                 pjaxConfig.container.innerHTML = String(response || '');
                             }
-                            // 显示内容
-                            pjaxConfig.container.style.opacity = '1';
-                            // 完成进度条
-                            if (pjaxConfig.progressBar) {
-                                pjaxConfig.progressBar.style.width = '100%';
-                                setTimeout(() => {
-                                    pjaxConfig.progressBar.style.width = '0';
-                                }, 200);
-                            }
-                            // 移除加载状态
-                            document.body.classList.remove('pjax-loading');
-                            pjaxConfig.isLoading = false;  // 重置加载标志
-                            // 统一发送完成事件（不刷新）
-                            try {
-                                document.dispatchEvent(new CustomEvent('pjax:complete'));
-                                document.dispatchEvent(new CustomEvent('pjax:end'));
-                                if (window.$) {
-                                    $(document).trigger('pjax:complete');
-                                    $(document).trigger('pjax:end');
+
+                            // 强制最小时长 - 降级处理
+                            const elapsedTime = Date.now() - pjaxConfig.loadingStartTime;
+                            const remainingTime = Math.max(0, pjaxConfig.minLoadingDuration - elapsedTime);
+
+                            setTimeout(function () {
+                                // 隐藏加载动画遮罩
+                                const loadingOverlay = document.getElementById('pjax-loading-overlay');
+                                if (loadingOverlay) {
+                                    loadingOverlay.style.opacity = '0';
+                                    loadingOverlay.style.visibility = 'hidden';
+                                    loadingOverlay.classList.remove('active');
+                                    setTimeout(() => {
+                                        loadingOverlay.style.display = 'none';
+                                    }, 300);
                                 }
-                            } catch (e) {
-                            }
-                            // 触发页面就绪事件与动画重建
-                            document.dispatchEvent(new CustomEvent('page:ready'));
-                            if (window.AnimationUtils) {
-                                AnimationUtils.reinit();
-                            }
+
+                                // 显示内容
+                                pjaxConfig.container.style.opacity = '1';
+                                // 完成进度条
+                                if (pjaxConfig.progressBar) {
+                                    pjaxConfig.progressBar.style.width = '100%';
+                                    setTimeout(() => {
+                                        pjaxConfig.progressBar.style.width = '0';
+                                    }, 200);
+                                }
+                                // 移除加载状态
+                                document.body.classList.remove('pjax-loading');
+                                pjaxConfig.isLoading = false;  // 重置加载标志
+                                // 统一发送完成事件（不刷新）
+                                try {
+                                    document.dispatchEvent(new CustomEvent('pjax:complete'));
+                                    document.dispatchEvent(new CustomEvent('pjax:end'));
+                                    if (window.$) {
+                                        $(document).trigger('pjax:complete');
+                                        $(document).trigger('pjax:end');
+                                    }
+                                } catch (e) {
+                                }
+                                // 触发页面就绪事件与动画重建
+                                document.dispatchEvent(new CustomEvent('page:ready'));
+                                if (window.AnimationUtils) {
+                                    AnimationUtils.reinit();
+                                }
+                            }, remainingTime);
                         }
                     },
                     error: function (xhr, status, error) {
                         console.error('PJAX请求失败:', status, error);
 
-                        // 重置进度条
-                        if (pjaxConfig.progressBar) {
-                            pjaxConfig.progressBar.style.width = '0';
-                        }
+                        // 强制最小时长 - 错误处理
+                        const elapsedTime = Date.now() - pjaxConfig.loadingStartTime;
+                        const remainingTime = Math.max(0, pjaxConfig.minLoadingDuration - elapsedTime);
 
-                        // 重置容器样式
-                        pjaxConfig.container.style.opacity = '1';
-                        document.body.classList.remove('pjax-loading');
-                        pjaxConfig.isLoading = false;  // 重置加载标志
+                        setTimeout(function () {
+                            // 隐藏加载动画遮罩
+                            const loadingOverlay = document.getElementById('pjax-loading-overlay');
+                            if (loadingOverlay) {
+                                loadingOverlay.style.opacity = '0';
+                                loadingOverlay.style.visibility = 'hidden';
+                                loadingOverlay.classList.remove('active');
+                                setTimeout(() => {
+                                    loadingOverlay.style.display = 'none';
+                                }, 300);
+                            }
 
-                        // 统一错误事件
-                        try {
-                            document.dispatchEvent(new CustomEvent('pjax:error', {
-                                detail: {
-                                    xhr: xhr,
-                                    status: status,
-                                    error: error
+                            // 重置进度条
+                            if (pjaxConfig.progressBar) {
+                                pjaxConfig.progressBar.style.width = '0';
+                            }
+
+                            // 重置容器样式
+                            pjaxConfig.container.style.opacity = '1';
+                            document.body.classList.remove('pjax-loading');
+                            pjaxConfig.isLoading = false;  // 重置加载标志
+
+                            // 统一错误事件
+                            try {
+                                document.dispatchEvent(new CustomEvent('pjax:error', {
+                                    detail: {
+                                        xhr: xhr,
+                                        status: status,
+                                        error: error
+                                    }
+                                }));
+                                if (window.$) {
+                                    $(document).trigger('pjax:error', [xhr]);
                                 }
-                            }));
-                            if (window.$) {
-                                $(document).trigger('pjax:error', [xhr]);
-                            }
-                        } catch (e) {
+                            } catch (e) {
 
-                        }
-
-                        // 显示错误通知
-                        if (window.AnimationUtils) {
-                            if (xhr.status === 0) {
-                                AnimationUtils.showNotification('网络连接错误，请检查网络设置', 'error');
-                            } else if (xhr.status >= 500) {
-                                AnimationUtils.showNotification('服务器错误，请稍后再试', 'error');
-                            } else {
-                                AnimationUtils.showNotification('加载页面失败', 'error');
                             }
-                        }
+
+                            // 显示错误通知
+                            if (window.AnimationUtils) {
+                                if (xhr.status === 0) {
+                                    AnimationUtils.showNotification('网络连接错误，请检查网络设置', 'error');
+                                } else if (xhr.status >= 500) {
+                                    AnimationUtils.showNotification('服务器错误，请稍后再试', 'error');
+                                } else {
+                                    AnimationUtils.showNotification('加载页面失败', 'error');
+                                }
+                            }
+                        }, remainingTime);
                     }
                 });
             }
@@ -2276,6 +2656,37 @@
 <!-- 顶部 PJAX 进度条 -->
 <div id="pjax-progress"
      style="position:fixed;top:0;left:0;height:2px;width:0;z-index:9999;background:#3b82f6;transition:width 200ms ease,opacity 200ms ease;opacity:0;"></div>
+
+<!-- PJAX 加载动画遮罩 -->
+<div id="pjax-loading-overlay" class="pjax-loading-overlay"
+     style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(255,255,255,0.15);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:999999;display:none;align-items:center;justify-content:center;opacity:0;visibility:hidden;transition:opacity 0.4s ease-in, visibility 0.4s ease-in, backdrop-filter 0.4s ease-in;">
+    <div class="pjax-loading-content">
+        <!-- 几何图形动画 -->
+        <div class="geometric-loader">
+            <div class="geometric-shape shape-1"></div>
+            <div class="geometric-shape shape-2"></div>
+            <div class="geometric-shape shape-3"></div>
+            <div class="geometric-shape shape-4"></div>
+        </div>
+        <!-- 加载文字 -->
+        <div class="loading-text">
+            <span class="loading-dot">.</span>
+            <span class="loading-dot">.</span>
+            <span class="loading-dot">.</span>
+        </div>
+    </div>
+    <!-- 背景粒子 -->
+    <div class="particles-container">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+</div>
 <script>
     (function () {
         var bar = null;
@@ -2463,16 +2874,27 @@
             }
         }
 
-        // 发送心跳
+        // 发送心跳（异步非阻塞）
         function sendHeartbeat() {
-            fetch('/online/ws/heartbeat', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            }).catch(err => {
-                console.warn('Heartbeat failed:', err);
+            // 使用 requestIdleCallback 在空闲时发送
+            const scheduleRequest = window.requestIdleCallback || function (cb) {
+                return setTimeout(cb, 100);
+            };
+
+            scheduleRequest(function () {
+                fetch('/online/ws/heartbeat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    // 使用低优先级请求
+                    priority: 'low',
+                    // 心跳请求不需要等待响应
+                    keepalive: true
+                }).catch(err => {
+                    console.warn('Heartbeat failed:', err);
+                });
             });
         }
 
@@ -2514,40 +2936,56 @@
                     console.log('Subscribing to online-stats channel...');
                     channel = pusher.subscribe('online-stats');
 
-                    // 通知服务器上线的函数
+                    // 通知服务器上线的函数（异步非阻塞）
                     function notifyServerOnline() {
                         console.log('Notifying server of connection...');
-                        fetch('/online/ws/connect', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-Requested-With': 'XMLHttpRequest'
-                            }
-                        }).then(res => res.json())
-                            .then(data => {
-                                console.log('✅ Connected to server:', data);
-                                // 如果返回了统计数据，立即更新
-                                if (data.data) {
-                                    console.log('📊 Initial stats from connect:', data.data);
-                                    updateOnlineStats(data.data);
 
-                                    // 显示欢迎通知
-                                    if (data.data.welcome_message || data.data.location) {
-                                        const location = data.data.location ? data.data.location.display || '' : '';
-                                        const message = data.data.welcome_message || '欢迎使用在线统计功能';
-                                        showNotification({
-                                            type: 'welcome',
-                                            icon: '🎉',
-                                            title: '欢迎！',
-                                            message: message,
-                                            location: location
+                        // 使用 requestIdleCallback 或 setTimeout 将请求延迟到空闲时间
+                        const scheduleRequest = window.requestIdleCallback || function (cb) {
+                            return setTimeout(cb, 100);
+                        };
+
+                        scheduleRequest(function () {
+                            fetch('/online/ws/connect', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                },
+                                // 使用低优先级请求，不阻塞关键资源
+                                priority: 'low'
+                            }).then(res => res.json())
+                                .then(data => {
+                                    console.log('✅ Connected to server:', data);
+                                    // 如果返回了统计数据，立即更新
+                                    if (data.data) {
+                                        console.log('📊 Initial stats from connect:', data.data);
+
+                                        // 使用 requestAnimationFrame 优化 DOM 更新
+                                        requestAnimationFrame(function () {
+                                            updateOnlineStats(data.data);
                                         });
+
+                                        // 显示欢迎通知（进一步延迟）
+                                        if (data.data.welcome_message || data.data.location) {
+                                            setTimeout(function () {
+                                                const location = data.data.location ? data.data.location.display || '' : '';
+                                                const message = data.data.welcome_message || '欢迎使用在线统计功能';
+                                                showNotification({
+                                                    type: 'welcome',
+                                                    icon: '🎉',
+                                                    title: '欢迎！',
+                                                    message: message,
+                                                    location: location
+                                                });
+                                            }, 300);
+                                        }
                                     }
-                                }
-                            })
-                            .catch(err => {
-                                console.error('❌ Connect notify failed:', err);
-                            });
+                                })
+                                .catch(err => {
+                                    console.error('❌ Connect notify failed:', err);
+                                });
+                        });
                     }
 
                     // 尝试多个事件名称
@@ -2699,18 +3137,31 @@
             updateStatus('disconnected');
         }
 
-        // 首先获取初始统计数据（不阻塞页面）
+        // 首先获取初始统计数据（异步非阻塞）
         function loadInitialStats() {
-            fetch('/online/ws/stats')
-                .then(res => res.json())
-                .then(data => {
-                    if (data.code === 0 && data.data) {
-                        updateOnlineStats(data.data);
-                    }
+            // 使用 requestIdleCallback 延迟请求
+            const scheduleRequest = window.requestIdleCallback || function (cb) {
+                return setTimeout(cb, 50);
+            };
+
+            scheduleRequest(function () {
+                fetch('/online/ws/stats', {
+                    // 使用低优先级请求
+                    priority: 'low'
                 })
-                .catch(err => {
-                    console.warn('Failed to load initial stats:', err);
-                });
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.code === 0 && data.data) {
+                            // 使用 requestAnimationFrame 优化 DOM 更新
+                            requestAnimationFrame(function () {
+                                updateOnlineStats(data.data);
+                            });
+                        }
+                    })
+                    .catch(err => {
+                        console.warn('Failed to load initial stats:', err);
+                    });
+            });
         }
 
         // 页面加载完成后立即加载初始数据，然后延迟连接 WebSocket

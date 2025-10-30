@@ -95,6 +95,15 @@ class TwigTemplateService implements View
                 return config($key, $default);
             }));
 
+            // 添加 blog_config 函数到 Twig
+            $views[$viewsKey]->addFunction(new TwigFunction('blog_config', function ($key, $default = null, $init = true) {
+                try {
+                    return blog_config($key, $default, $init);
+                } catch (Throwable $e) {
+                    return $default;
+                }
+            }));
+
             $extension = config("{$configPrefix}view.extension");
             if ($extension) {
                 $extension($views[$viewsKey]);

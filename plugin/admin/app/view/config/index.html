@@ -54,9 +54,10 @@
                                 </div>
                             </div>
                             <div class="layui-form-item">
-                                <label class="layui-form-label">网站Logo</label>
+                                <label class="layui-form-label">网站Favicon</label>
                                 <div class="layui-input-inline">
-                                    <input type="text" name="favicon" placeholder="请输入网站Logo地址" autocomplete="off" class="layui-input">
+                                    <input autocomplete="off" class="layui-input" name="favicon"
+                                           placeholder="请输入网站Favicon地址" type="text">
                                 </div>
                                 <div class="layui-input-inline">
                                     <button type="button" class="pear-btn pear-btn-primary pear-btn-sm" id="favicon-upload" permission="app.admin.upload.avatar">
@@ -68,11 +69,39 @@
                                 </div>
                             </div>
                             <div class="layui-form-item">
-                                <label class="layui-form-label">Logo预览</label>
+                                <label class="layui-form-label">Favicon预览</label>
                                 <div class="layui-input-inline">
                                     <div id="favicon-preview" style="width: 100px; height: 100px; border: 1px dashed #ccc; display: flex; align-items: center; justify-content: center; overflow: hidden;">
                                         <span id="favicon-preview-text">暂无图片</span>
                                         <img id="favicon-preview-img" src="" style="max-width: 100%; max-height: 100%; display: none;">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">网站Logo</label>
+                                <div class="layui-input-inline">
+                                    <input autocomplete="off" class="layui-input" name="site_logo"
+                                           placeholder="请输入网站Logo地址" type="text">
+                                </div>
+                                <div class="layui-input-inline">
+                                    <button class="pear-btn pear-btn-primary pear-btn-sm" id="site-logo-upload"
+                                            permission="app.admin.upload.avatar" type="button">
+                                        <i class="layui-icon layui-icon-upload"></i>上传Logo
+                                    </button>
+                                    <button class="pear-btn pear-btn-primary pear-btn-sm" id="site-logo-choose"
+                                            permission="app.admin.upload.attachment" type="button">
+                                        <i class="layui-icon layui-icon-align-left"></i>选择Logo
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">Logo预览</label>
+                                <div class="layui-input-inline">
+                                    <div id="site-logo-preview"
+                                         style="width: 200px; height: 100px; border: 1px dashed #ccc; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #f9f9f9;">
+                                        <span id="site-logo-preview-text" style="color: #999;">暂无Logo</span>
+                                        <img id="site-logo-preview-img" src=""
+                                             style="max-width: 100%; max-height: 100%; display: none;">
                                     </div>
                                 </div>
                             </div>
@@ -700,8 +729,13 @@
                 let url = data.file_path ? "/uploads/" + data.file_path : data.url;
                 if (currentMediaInput) {
                     currentMediaInput.val(url);
-                    // 更新预览
-                    updateFaviconPreview(url);
+                    // 根据当前输入框name属性更新相应预览
+                    const inputName = currentMediaInput.attr('name');
+                    if (inputName === 'favicon') {
+                        updateFaviconPreview(url);
+                    } else if (inputName === 'site_logo') {
+                        updateSiteLogoPreview(url);
+                    }
                 }
                 // 关闭弹窗
                 parent.layer.closeAll();
@@ -710,6 +744,23 @@
             window.closeMediaSelector = function() {
                 parent.layer.closeAll();
             };
+
+            // 全局函数：更新网站Logo预览
+            function updateSiteLogoPreview(url) {
+                layui.use('jquery', function () {
+                    let $ = layui.$;
+                    let previewText = $("#site-logo-preview-text");
+                    let previewImg = $("#site-logo-preview-img");
+
+                    if (url && url.trim() !== "") {
+                        previewText.hide();
+                        previewImg.attr("src", url).show();
+                    } else {
+                        previewText.show();
+                        previewImg.hide();
+                    }
+                });
+            }
 
             // 网站信息设置
             layui.use(["upload", "layer", "popup", "form", "jquery"], function() {
@@ -749,6 +800,40 @@
                 // 监听favicon输入框变化，更新预览
                 $("[name='favicon']").on("input propertychange", function() {
                     updateFaviconPreview($(this).val());
+                });
+
+                // 网站Logo上传和选择
+                layui.$("#site-logo-upload").on("click", function () {
+                    currentMediaInput = $("[name='site_logo']");
+                    parent.layer.open({
+                        type: 2,
+                        title: "上传Logo",
+                        content: "/app/admin/media/upload?targetType=iframe",
+                        area: ["95%", "90%"]
+                    });
+                });
+
+                layui.$("#site-logo-choose").on("click", function () {
+                    currentMediaInput = $("[name='site_logo']");
+                    parent.layer.open({
+                        type: 2,
+                        title: "选择Logo",
+                        content: "/app/admin/media/selector?multiple=false&targetType=iframe",
+                        area: ["95%", "90%"],
+                        success: function (layero, index) {
+                            parent.layui.$("#layui-layer" + index).data("callback", function (data) {
+                                let url = data.file_path ? "/uploads/" + data.file_path : data.url;
+                                currentMediaInput.val(url);
+                                // 更新Logo预览
+                                updateSiteLogoPreview(url);
+                            });
+                        }
+                    });
+                });
+
+                // 监听site_logo输入框变化，更新预览
+                $("[name='site_logo']").on("input propertychange", function () {
+                    updateSiteLogoPreview($(this).val());
                 });
 
                 // 提交网站信息
@@ -941,6 +1026,8 @@
 
                             // 更新favicon预览
                             updateFaviconPreview(res.favicon);
+                            // 更新Logo预览
+                            updateSiteLogoPreview(res.site_logo);
                         },
                         error: function (xhr, status, error) {
                             console.error("获取网站信息失败:", error);
