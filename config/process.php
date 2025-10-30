@@ -79,7 +79,7 @@ if (strtolower(trim((string) $__cacheDriver)) === 'redis') {
     ];
 }
 
-if (is_installed()) {
+if (getenv('DB_DEFAULT')) {
     // HTTP回调处理进程（存在 .env 时注册）
     $__processes['http_callback'] = [
         'handler' => app\process\HttpCallback::class,

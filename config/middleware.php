@@ -23,7 +23,7 @@ $global = [
     app\middleware\EnhancedAuthCheck::class,
 ];
 
-if (is_installed()) {
+if (getenv('DB_DEFAULT')) {
     $must_installed = [
         // 首屏极快返回骨架（最高优先级，用户首次访问时立即看到 loading）
         app\middleware\InstantFirstPaint::class,
