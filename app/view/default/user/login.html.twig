@@ -66,10 +66,14 @@
 
             <!-- OAuth登录区域 -->
             {% set hasEnabledProvider = false %}
+            {% set hasWeChatProvider = false %}
             {% if oauthProviders is defined %}
                 {% for provider, providerInfo in oauthProviders %}
                     {% if providerInfo.enabled %}
                         {% set hasEnabledProvider = true %}
+                        {% if provider == 'wechat' %}
+                            {% set hasWeChatProvider = true %}
+                        {% endif %}
                     {% endif %}
                 {% endfor %}
             {% endif %}
@@ -85,9 +89,14 @@
                     </div>
                 </div>
 
+                <!-- 微信二维码登录容器 -->
+                {% if hasWeChatProvider %}
+                    <div id="wechat_login_container" class="mt-6 flex justify-center" style="min-height: 300px;"></div>
+                {% endif %}
+
                 <div class="mt-6 grid grid-cols-3 gap-3">
                     {% for provider, providerInfo in oauthProviders %}
-                        {% if providerInfo.enabled %}
+                        {% if providerInfo.enabled and provider != 'wechat' %}
                             <a href="/oauth/{{ provider }}/redirect"
                                data-no-pjax
                                class="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
@@ -106,6 +115,26 @@
             {% endif %}
         </div>
     </div>
+
+    <!-- 微信登录JS -->
+    {% if hasWeChatProvider %}
+        <script src="https://res.wx.qq.com/connect/zh_CN/htmledition/js/wxLogin.js"></script>
+        <script>
+            // 初始化微信登录二维码
+            {% if oauthProviders.wechat is defined and oauthProviders.wechat.enabled %}
+            new WxLogin({
+                self_redirect: false,
+                id: "wechat_login_container",
+                appid: "{{ oauthProviders.wechat.client_id }}",
+                scope: "snsapi_login",
+                redirect_uri: encodeURIComponent("{{ request().scheme() }}://{{ request().host() }}/oauth/wechat/callback"),
+                state: "{{ oauthState|default('') }}",
+                style: "black",
+                href: ""
+            });
+            {% endif %}
+        </script>
+    {% endif %}
 
     <script>
         // 登录表单提交

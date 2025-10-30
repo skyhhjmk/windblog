@@ -11,7 +11,7 @@ class PluginBootstrap
 {
     public static function init(): void
     {
-        if (is_installed()) {
+        if (getenv('DB_DEFAULT')) {
             PluginService::init();
         }
     }

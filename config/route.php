@@ -43,7 +43,15 @@ Route::get('/user/login', function () {
     // 获取OAuth配置
     $oauthProviders = UserOAuthBinding::getSupportedProviders();
 
-    return view('user/login', ['oauthProviders' => $oauthProviders]);
+    // 生成OAuth state防止CSRF攻击
+    $session = request()->session();
+    $oauthState = bin2hex(random_bytes(16));
+    $session->set('oauth_state', $oauthState);
+
+    return view('user/login', [
+        'oauthProviders' => $oauthProviders,
+        'oauthState' => $oauthState,
+    ]);
 })->name('user.login.page');
 Route::post('/user/login', [app\controller\UserController::class, 'login'])->name('user.login');
 Route::any('/user/logout', [app\controller\UserController::class, 'logout'])->name('user.logout');

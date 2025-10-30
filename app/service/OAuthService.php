@@ -3,6 +3,7 @@
 namespace app\service;
 
 use app\oauth\GenericOAuthProvider;
+use app\oauth\WeChatOAuthProvider;
 use app\oauth\WindOAuthProvider;
 use Exception;
 use League\OAuth2\Client\Provider\AbstractProvider;
@@ -32,6 +33,7 @@ class OAuthService
             'wind' => fn () => $this->createWindProvider($config),
             'github' => fn () => $this->createGithubProvider($config),
             'google' => fn () => $this->createGoogleProvider($config),
+            'wechat' => fn () => $this->createWeChatProvider($config),
         ];
 
         if (isset($builtInProviders[$provider])) {
@@ -89,6 +91,22 @@ class OAuthService
     protected function createGoogleProvider(array $config): Google
     {
         return new Google([
+            'clientId' => $config['client_id'],
+            'clientSecret' => $config['client_secret'],
+            'redirectUri' => $config['redirect_uri'],
+        ]);
+    }
+
+    /**
+     * 创建微信 OAuth Provider
+     *
+     * @param array $config
+     *
+     * @return WeChatOAuthProvider
+     */
+    protected function createWeChatProvider(array $config): WeChatOAuthProvider
+    {
+        return new WeChatOAuthProvider([
             'clientId' => $config['client_id'],
             'clientSecret' => $config['client_secret'],
             'redirectUri' => $config['redirect_uri'],
@@ -218,6 +236,13 @@ class OAuthService
                 'email' => $userData['email'] ?? null,
                 'name' => $userData['name'] ?? null,
                 'avatar' => $userData['picture'] ?? null,
+            ],
+            'wechat' => [
+                'id' => (string) ($userData['unionid'] ?? $userData['openid'] ?? ''),
+                'username' => $userData['nickname'] ?? 'wechat_user',
+                'email' => null, // 微信不提供邮箱
+                'name' => $userData['nickname'] ?? null,
+                'avatar' => $userData['headimgurl'] ?? null,
             ],
         ];
 
