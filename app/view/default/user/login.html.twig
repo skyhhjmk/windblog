@@ -127,7 +127,7 @@
                 id: "wechat_login_container",
                 appid: "{{ oauthProviders.wechat.client_id }}",
                 scope: "snsapi_login",
-                redirect_uri: encodeURIComponent("{{ request().scheme() }}://{{ request().host() }}/oauth/wechat/callback"),
+                redirect_uri: encodeURIComponent("{{ app.request.getScheme() }}://{{ app.request.getHost() }}/oauth/wechat/callback"),
                 state: "{{ oauthState|default('') }}",
                 style: "black",
                 href: ""

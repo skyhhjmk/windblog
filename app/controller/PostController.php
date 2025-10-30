@@ -3,6 +3,7 @@
 namespace app\controller;
 
 use app\annotation\EnableInstantFirstPaint;
+use app\helper\BreadcrumbHelper;
 use app\model\Post;
 use app\service\FloLinkService;
 use app\service\PJAXHelper;
@@ -71,6 +72,9 @@ class PostController
 
         if ($post->visibility === 'public') {
 
+            // 生成面包屑导航
+            $breadcrumbs = BreadcrumbHelper::forPost($post);
+
             // 使用FloLink处理文章内容
             if (blog_config('flolink_enabled', true)) {
                 try {
@@ -105,6 +109,7 @@ class PostController
                     'post' => $post,
                     'author' => $authorName,
                     'sidebar' => $sidebar,
+                    'breadcrumbs' => $breadcrumbs,
                 ],
                 $cacheKey,
                 120,
@@ -130,6 +135,9 @@ class PostController
                 }
             }
             if ($accessble) {
+                // 生成面包屑导航
+                $breadcrumbs = BreadcrumbHelper::forPost($post);
+
                 // 使用FloLink处理文章内容
                 if (blog_config('flolink_enabled', true)) {
                     try {
@@ -164,6 +172,7 @@ class PostController
                         'post' => $post,
                         'author' => $authorName,
                         'sidebar' => $sidebar,
+                        'breadcrumbs' => $breadcrumbs,
                     ],
                     $cacheKey,
                     120,

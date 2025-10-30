@@ -8,6 +8,7 @@ namespace app\controller;
 
 use app\annotation\CSRFVerify;
 use app\annotation\EnableInstantFirstPaint;
+use app\helper\BreadcrumbHelper;
 use app\model\Link;
 use app\service\CSRFHelper;
 use app\service\LinkConnectService;
@@ -67,11 +68,15 @@ class LinkController
         // 统一选择视图并生成响应（包含 X-PJAX 相关头）
         $viewName = PJAXHelper::getViewName('link/index', $isPjax);
 
+        // 生成面包屑导航
+        $breadcrumbs = BreadcrumbHelper::forLinks();
+
         return PJAXHelper::createResponse($request, $viewName, [
             'page_title' => blog_config('title', 'WindBlog', true) . ' - 链接广场',
             'links' => $links,
             'pagination' => $pagination_html,
             'sidebar' => $sidebar,
+            'breadcrumbs' => $breadcrumbs,
         ], null, 120, 'page');
     }
 
@@ -152,10 +157,14 @@ class LinkController
         // 统一选择视图并生成响应
         $viewName = PJAXHelper::getViewName('link/info', $isPjax);
 
+        // 生成面包屑导航
+        $breadcrumbs = BreadcrumbHelper::forLinks();
+
         return PJAXHelper::createResponse($request, $viewName, [
             'link' => $link,
             'page_title' => htmlspecialchars($link->name, ENT_QUOTES, 'UTF-8') . ' - 链接详情',
             'sidebar' => $sidebar,
+            'breadcrumbs' => $breadcrumbs,
         ], null, 120, 'page');
     }
 
@@ -360,11 +369,15 @@ class LinkController
         // 统一选择视图并生成响应
         $viewName = PJAXHelper::getViewName('link/request', $isPjax);
 
+        // 生成面包屑导航
+        $breadcrumbs = BreadcrumbHelper::forLinks();
+
         return PJAXHelper::createResponse($request, $viewName, [
             'page_title' => blog_config('title', 'WindBlog', true) . ' - 申请友链',
             'site_info_json_config' => $this->getSiteInfoConfig(),
             'csrf' => CSRFHelper::oneTimeToken($request, '_link_request_token'),
             'sidebar' => $sidebar,
+            'breadcrumbs' => $breadcrumbs,
         ], null, 120, 'page');
     }
 

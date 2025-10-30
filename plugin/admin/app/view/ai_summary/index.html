@@ -114,8 +114,25 @@
                 <!-- Tab 2: API Configuration -->
                 <div class="tab-content hidden" id="config-tab">
                     <div class="bg-white rounded-lg border border-gray-200 p-6 mb-6">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4">选择 AI 提供者</h3>
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">选择 AI 提供方</h3>
+                        <div class="mb-4">
+                            <label class="inline-flex items-center mr-6">
+                                <input checked class="mr-2" name="selection_type" type="radio" value="provider">
+                                <span class="text-sm font-medium text-gray-700">单个提供方</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input class="mr-2" name="selection_type" type="radio" value="group">
+                                <span class="text-sm font-medium text-gray-700">轮询组</span>
+                            </label>
+                        </div>
+
+                        <!-- 单个提供方列表 -->
                         <div id="providersContainer" class="space-y-4">
+                            <div class="text-gray-500">加载中...</div>
+                        </div>
+
+                        <!-- 轮询组列表 -->
+                        <div class="space-y-4 hidden" id="pollingGroupsContainer">
                             <div class="text-gray-500">加载中...</div>
                         </div>
                     </div>
@@ -182,6 +199,8 @@
 
         var currentProvider = null;
         var providerConfig = {};
+        var currentSelection = '';
+        var selectionType = 'provider'; // 'provider' or 'group'
 
         // Load stats
         function loadStats() {
@@ -203,27 +222,57 @@
             });
         }
 
+        // 切换选择类型
+        $('input[name="selection_type"]').on('change', function () {
+            selectionType = $(this).val();
+            if (selectionType === 'provider') {
+                $('#providersContainer').removeClass('hidden');
+                $('#pollingGroupsContainer').addClass('hidden');
+                loadProviders();
+            } else {
+                $('#providersContainer').addClass('hidden');
+                $('#pollingGroupsContainer').removeClass('hidden');
+                loadPollingGroups();
+            }
+        });
+
+        // Load current selection
+        function loadCurrentSelection() {
+            $.get('/app/admin/ai/selection/get', function (res) {
+                if (res && res.code === 0 && res.data) {
+                    currentSelection = res.data.selection || '';
+                }
+            });
+        }
+
         // Load providers
         function loadProviders() {
             $.get('/app/admin/ai/providers/list', function (res) {
                 if (res && res.code === 0 && res.data) {
-                    var available = res.data.available || [];
-                    var current = res.data.current || 'local.echo';
+                    var available = res.data || [];
                     var container = $('#providersContainer');
                     container.html('');
 
+                    if (available.length === 0) {
+                        container.html('<div class="text-gray-500">暂无可用提供方，请先到<a href="/app/admin/ai/providers" class="text-blue-600 hover:underline">提供方管理</a>页面创建提供方</div>');
+                        return;
+                    }
+
                     available.forEach(function (provider) {
-                        var isActive = provider.id === current;
+                        var isActive = currentSelection === 'provider:' + provider.id;
                         var card = $('<div class="provider-card' + (isActive ? ' active' : '') + '"></div>');
                         card.append('<h3 class="text-lg font-semibold text-gray-800">' + provider.name + ' <span class="text-xs text-gray-500 font-normal">(' + provider.id + ')</span></h3>');
                         card.append('<p class="text-sm text-gray-600 mt-2">类型: ' + provider.type + '</p>');
-                        card.append('<p class="text-sm text-gray-600">支持任务: ' + provider.supported_tasks.join(', ') + '</p>');
+                        if (provider.template) {
+                            card.append('<p class="text-sm text-gray-600">模板: ' + provider.template + '</p>');
+                        }
+                        card.append('<p class="text-sm text-gray-600">状态: ' + (provider.enabled ? '<span class="text-green-600">已启用</span>' : '<span class="text-red-600">已禁用</span>') + '</p>');
 
                         var btnGroup = $('<div class="mt-4 flex gap-2"></div>');
                         var btnSelect = $('<button type="button" class="px-4 py-2 rounded-lg text-sm font-medium transition ' +
-                            (isActive ? 'bg-green-100 text-green-800 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700') + '">' +
-                            (isActive ? '当前选择' : '选择此提供者') + '</button>');
-                        if (isActive) {
+                            (isActive ? 'bg-green-100 text-green-800 cursor-not-allowed' : (provider.enabled ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-400 text-gray-200 cursor-not-allowed')) + '">' +
+                            (isActive ? '当前选择' : '选择此提供方') + '</button>');
+                        if (isActive || !provider.enabled) {
                             btnSelect.attr('disabled', true);
                         }
                         btnSelect.on('click', function () {
@@ -231,7 +280,7 @@
                         });
                         btnGroup.append(btnSelect);
 
-                        var btnConfig = $('<button type="button" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-300 transition">配置</button>');
+                        var btnConfig = $('<button type="button" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-300 transition">查看配置</button>');
                         btnConfig.on('click', function () {
                             loadProviderConfig(provider.id);
                         });
@@ -244,17 +293,80 @@
             });
         }
 
+        // Load polling groups
+        function loadPollingGroups() {
+            $.get('/app/admin/ai/polling-groups/list', function (res) {
+                if (res && res.code === 0 && res.data) {
+                    var groups = res.data || [];
+                    var container = $('#pollingGroupsContainer');
+                    container.html('');
+
+                    if (groups.length === 0) {
+                        container.html('<div class="text-gray-500">暂无轮询组，请先创建轮询组</div>');
+                        return;
+                    }
+
+                    groups.forEach(function (group) {
+                        var isActive = currentSelection === 'group:' + group.id;
+                        var card = $('<div class="provider-card' + (isActive ? ' active' : '') + '"></div>');
+                        card.append('<h3 class="text-lg font-semibold text-gray-800">' + group.name + ' <span class="text-xs text-gray-500 font-normal">(ID: ' + group.id + ')</span></h3>');
+                        if (group.description) {
+                            card.append('<p class="text-sm text-gray-600 mt-2">' + group.description + '</p>');
+                        }
+                        card.append('<p class="text-sm text-gray-600">策略: ' + (group.strategy === 'polling' ? '轮询' : '故障转移') + '</p>');
+                        card.append('<p class="text-sm text-gray-600">状态: ' + (group.enabled ? '<span class="text-green-600">已启用</span>' : '<span class="text-red-600">已禁用</span>') + '</p>');
+                        card.append('<p class="text-sm text-gray-600">提供方数量: ' + (group.providers ? group.providers.length : 0) + '</p>');
+
+                        var btnGroup = $('<div class="mt-4 flex gap-2"></div>');
+                        var btnSelect = $('<button type="button" class="px-4 py-2 rounded-lg text-sm font-medium transition ' +
+                            (isActive ? 'bg-green-100 text-green-800 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700') + '">' +
+                            (isActive ? '当前选择' : '选择此组') + '</button>');
+                        if (isActive) {
+                            btnSelect.attr('disabled', true);
+                        }
+                        btnSelect.on('click', function () {
+                            selectGroup(group.id);
+                        });
+                        btnGroup.append(btnSelect);
+                        card.append(btnGroup);
+
+                        container.append(card);
+                    });
+                }
+            });
+        }
+
         // Select provider
         function selectProvider(providerId) {
             $.ajax({
-                url: '/app/admin/ai/providers/set-current',
+                url: '/app/admin/ai/selection/set',
                 method: 'POST',
                 contentType: 'application/json',
-                data: JSON.stringify({provider: providerId}),
+                data: JSON.stringify({selection: 'provider:' + providerId}),
                 success: function (res) {
                     if (res && res.code === 0) {
                         layer.msg('设置成功', {icon: 1});
+                        currentSelection = 'provider:' + providerId;
                         loadProviders();
+                    } else {
+                        layer.msg(res.msg || '设置失败', {icon: 2});
+                    }
+                }
+            });
+        }
+
+        // Select polling group
+        function selectGroup(groupId) {
+            $.ajax({
+                url: '/app/admin/ai/selection/set',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({selection: 'group:' + groupId}),
+                success: function (res) {
+                    if (res && res.code === 0) {
+                        layer.msg('设置成功', {icon: 1});
+                        currentSelection = 'group:' + groupId;
+                        loadPollingGroups();
                     } else {
                         layer.msg(res.msg || '设置失败', {icon: 2});
                     }
@@ -267,145 +379,69 @@
             currentProvider = providerId;
             $('#currentProviderName').text('(' + providerId + ')');
 
-            $.get('/app/admin/ai/providers/config', {provider: providerId}, function (res) {
+            $.get('/app/admin/ai/providers/detail', {id: providerId}, function (res) {
                 if (res && res.code === 0 && res.data) {
-                    providerConfig = res.data.config || {};
-                    var fields = res.data.fields || [];
+                    var provider = res.data;
+                    providerConfig = provider.config || {};
 
                     var formEl = $('#providerConfigForm');
                     formEl.html('');
 
-                    fields.forEach(function (field) {
-                        var div = $('<div class="config-field"></div>');
-                        var label = $('<label class="block text-sm font-medium text-gray-700 mb-2">' + field.label +
-                            (field.required ? ' <span class="text-red-500">*</span>' : '') + '</label>');
-                        div.append(label);
+                    // 显示提供方基本信息
+                    var infoDiv = $('<div class="mb-4 p-4 bg-gray-50 rounded-lg"></div>');
+                    infoDiv.append('<p class="text-sm text-gray-600"><strong>名称:</strong> ' + provider.name + '</p>');
+                    infoDiv.append('<p class="text-sm text-gray-600"><strong>ID:</strong> ' + provider.id + '</p>');
+                    infoDiv.append('<p class="text-sm text-gray-600"><strong>类型:</strong> ' + provider.type + '</p>');
+                    if (provider.template) {
+                        infoDiv.append('<p class="text-sm text-gray-600"><strong>模板:</strong> ' + provider.template + '</p>');
+                    }
+                    infoDiv.append('<p class="text-sm text-gray-600"><strong>状态:</strong> ' + (provider.enabled ? '<span class="text-green-600">已启用</span>' : '<span class="text-red-600">已禁用</span>') + '</p>');
+                    infoDiv.append('<p class="text-sm text-gray-500 mt-2">此页面仅用于查看配置，请到<a href="/app/admin/ai/providers" class="text-blue-600 hover:underline">提供方管理</a>页面进行编辑</p>');
+                    formEl.append(infoDiv);
 
-                        if (field.type === 'password') {
-                            var input = $('<input type="password" name="' + field.key + '" placeholder="' + (field.placeholder || '') + '" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />');
-                            input.val(providerConfig[field.key] || field.default || '');
-                            div.append(input);
-                        } else if (field.type === 'checkbox') {
-                            var checkboxWrapper = $('<div class="flex items-center"></div>');
-                            var checkbox = $('<input type="checkbox" name="' + field.key + '" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />');
-                            if (providerConfig[field.key] === true || providerConfig[field.key] === 'true' || field.default === true) {
-                                checkbox.prop('checked', true);
-                            }
-                            checkboxWrapper.append(checkbox);
-                            div.append(checkboxWrapper);
-                        } else if (field.type === 'multiselect') {
-                            // 多选框支持（用于多模态等）
-                            var multiselectWrapper = $('<div class="space-y-2"></div>');
-                            var selectedValues = providerConfig[field.key] || [];
-                            if (typeof selectedValues === 'string') {
-                                try {
-                                    selectedValues = JSON.parse(selectedValues);
-                                } catch (e) {
-                                    selectedValues = [];
-                                }
-                            }
-                            if (!Array.isArray(selectedValues)) selectedValues = [];
+                    // 显示配置信息（JSON格式）
+                    if (Object.keys(providerConfig).length > 0) {
+                        var configDiv = $('<div class="config-field"></div>');
+                        var label = $('<label class="block text-sm font-medium text-gray-700 mb-2">配置信息</label>');
+                        configDiv.append(label);
 
-                            (field.options || []).forEach(function (opt) {
-                                var checkboxDiv = $('<div class="flex items-center"></div>');
-                                var checkbox = $('<input type="checkbox" name="' + field.key + '[]" value="' + opt.value + '" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />');
-                                if (selectedValues.indexOf(opt.value) >= 0) {
-                                    checkbox.prop('checked', true);
-                                }
-                                var label = $('<label class="ml-2 text-sm text-gray-700">' + opt.label + '</label>');
-                                checkboxDiv.append(checkbox).append(label);
-                                multiselectWrapper.append(checkboxDiv);
-                            });
-                            div.append(multiselectWrapper);
-                        } else if (field.type === 'select') {
-                            var select = $('<select name="' + field.key + '" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"></select>');
-                            if (field.options === 'auto') {
-                                // Model field - will be populated by fetch
-                                select.append('<option value="">请先获取模型列表</option>');
-                                if (providerConfig[field.key]) {
-                                    select.append('<option value="' + providerConfig[field.key] + '" selected>' + providerConfig[field.key] + '</option>');
-                                }
-                                $('#btn-fetch-models').show().data('field-key', field.key);
-                            } else {
-                                // Regular select options
-                                (field.options || []).forEach(function (opt) {
-                                    var option = $('<option value="' + opt.value + '">' + opt.label + '</option>');
-                                    if (providerConfig[field.key] === opt.value) {
-                                        option.attr('selected', true);
-                                    }
-                                    select.append(option);
-                                });
-                            }
-                            div.append(select);
-                        } else if (field.type === 'number') {
-                            var input = $('<input type="number" name="' + field.key + '" placeholder="' + (field.placeholder || '') + '" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />');
-                            if (field.min !== undefined) input.attr('min', field.min);
-                            if (field.max !== undefined) input.attr('max', field.max);
-                            if (field.step !== undefined) input.attr('step', field.step);
-                            input.val(providerConfig[field.key] !== undefined ? providerConfig[field.key] : (field.default || ''));
-                            div.append(input);
-                        } else {
-                            var input = $('<input type="text" name="' + field.key + '" placeholder="' + (field.placeholder || '') + '" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />');
-                            input.val(providerConfig[field.key] || field.default || '');
-                            div.append(input);
-                        }
+                        var configTable = $('<div class="border border-gray-300 rounded-lg overflow-hidden"></div>');
+                        var table = $('<table class="min-w-full divide-y divide-gray-200"></table>');
+                        var tbody = $('<tbody class="bg-white divide-y divide-gray-200"></tbody>');
 
-                        formEl.append(div);
-                    });
+                        Object.keys(providerConfig).forEach(function (key) {
+                            var value = providerConfig[key];
+                            var displayValue = value;
+
+                            // 隐藏密码类字段
+                            if (key.toLowerCase().includes('key') || key.toLowerCase().includes('secret') || key.toLowerCase().includes('password') || key.toLowerCase().includes('token')) {
+                                displayValue = '********';
+                            } else if (typeof value === 'object') {
+                                displayValue = JSON.stringify(value);
+                            }
+
+                            var row = $('<tr></tr>');
+                            row.append('<td class="px-6 py-3 text-sm font-medium text-gray-700 bg-gray-50">' + key + '</td>');
+                            row.append('<td class="px-6 py-3 text-sm text-gray-900">' + displayValue + '</td>');
+                            tbody.append(row);
+                        });
+
+                        table.append(tbody);
+                        configTable.append(table);
+                        configDiv.append(configTable);
+                        formEl.append(configDiv);
+                    } else {
+                        formEl.append('<p class="text-sm text-gray-500">暂无配置信息</p>');
+                    }
+
+                    // 隐藏保存和获取模型按钮（只读模式）
+                    $('#btn-save-provider-config').hide();
+                    $('#btn-fetch-models').hide();
 
                     $('#providerConfigSection').show();
                 }
             });
         }
-
-        // Save provider config
-        $('#btn-save-provider-config').on('click', function () {
-            if (!currentProvider) {
-                layer.msg('请先选择提供者', {icon: 2});
-                return;
-            }
-
-            var formData = {};
-            var multiselectData = {};
-
-            $('#providerConfigForm').find('input, select, textarea').each(function () {
-                var $el = $(this);
-                var name = $el.attr('name');
-                if (!name) return;
-
-                // 处理多选框
-                if (name.indexOf('[]') > 0) {
-                    var key = name.replace('[]', '');
-                    if ($el.is(':checkbox') && $el.is(':checked')) {
-                        if (!multiselectData[key]) multiselectData[key] = [];
-                        multiselectData[key].push($el.val());
-                    }
-                } else if ($el.is(':checkbox')) {
-                    formData[name] = $el.is(':checked');
-                } else {
-                    formData[name] = $el.val();
-                }
-            });
-
-            // 合并多选框数据
-            Object.keys(multiselectData).forEach(function (key) {
-                formData[key] = multiselectData[key];
-            });
-
-            $.ajax({
-                url: '/app/admin/ai/providers/config-save',
-                method: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify({provider: currentProvider, config: formData}),
-                success: function (res) {
-                    if (res && res.code === 0) {
-                        layer.msg('保存成功', {icon: 1});
-                    } else {
-                        layer.msg(res.msg || '保存失败', {icon: 2});
-                    }
-                }
-            });
-        });
 
         // Fetch models
         $('#btn-fetch-models').on('click', function () {
@@ -454,16 +490,42 @@
             loadStats();
         });
 
+        // Load prompt
+        function loadPrompt() {
+            $.get('/app/admin/ai/summary/prompt', function (res) {
+                if (res && res.code === 0 && res.data) {
+                    $('textarea[name="ai_summary_prompt"]').val(res.data.prompt || '');
+                }
+            });
+        }
+
         // Save prompt button
         $('#btn-save-prompt').on('click', function () {
             var prompt = $('textarea[name="ai_summary_prompt"]').val();
-            // TODO: Implement save prompt API
-            layer.msg('Prompt保存功能待实现', {icon: 0});
+            if (!prompt) {
+                layer.msg('Prompt不能为空', {icon: 2});
+                return;
+            }
+            $.ajax({
+                url: '/app/admin/ai/summary/prompt-save',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({prompt: prompt}),
+                success: function (res) {
+                    if (res && res.code === 0) {
+                        layer.msg('保存成功', {icon: 1});
+                    } else {
+                        layer.msg(res.msg || '保存失败', {icon: 2});
+                    }
+                }
+            });
         });
 
         // Initial load
         loadStats();
+        loadCurrentSelection();
         loadProviders();
+        loadPrompt();
     });
 </script>
 </body>

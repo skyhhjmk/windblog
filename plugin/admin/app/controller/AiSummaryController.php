@@ -50,111 +50,6 @@ class AiSummaryController
     }
 
     /**
-     * 获取可用提供者列表及当前选择
-     * GET /app/admin/ai-summary/providers
-     */
-    public function providersGet(Request $request): Response
-    {
-        $availableProviders = [];
-        foreach (AISummaryService::getAvailableProviders() as $id => $class) {
-            $provider = AISummaryService::createProvider($id);
-            if ($provider) {
-                $availableProviders[] = [
-                    'id' => $provider->getId(),
-                    'name' => $provider->getName(),
-                    'type' => $provider->getType(),
-                    'supported_tasks' => $provider->getSupportedTasks(),
-                ];
-            }
-        }
-
-        $currentProviderId = (string) blog_config('ai_provider', 'local.echo', true);
-
-        return json([
-            'code' => 0,
-            'data' => [
-                'available' => $availableProviders,
-                'current' => $currentProviderId,
-            ],
-        ]);
-    }
-
-    /**
-     * 获取指定提供者的配置
-     * GET /app/admin/ai-summary/provider-config?provider=openai
-     */
-    public function providerConfigGet(Request $request): Response
-    {
-        $providerId = (string) $request->get('provider', '');
-        if ($providerId === '') {
-            return json(['code' => 1, 'msg' => 'provider is required']);
-        }
-
-        $provider = AISummaryService::createProvider($providerId);
-        if (!$provider) {
-            return json(['code' => 1, 'msg' => 'Unknown provider']);
-        }
-
-        $config = AISummaryService::getProviderConfig($providerId);
-        $configFields = $provider->getConfigFields();
-
-        return json([
-            'code' => 0,
-            'data' => [
-                'config' => $config,
-                'fields' => $configFields,
-            ],
-        ]);
-    }
-
-    /**
-     * 保存提供者配置
-     * POST /app/admin/ai-summary/provider-config-save
-     * body: { provider: 'openai', config: {...} }
-     */
-    public function providerConfigSave(Request $request): Response
-    {
-        try {
-            $payload = $request->post();
-            if (!is_array($payload)) {
-                $payload = json_decode((string) $request->rawBody(), true);
-            }
-            if (!is_array($payload)) {
-                return json(['code' => 1, 'msg' => 'invalid payload']);
-            }
-
-            $providerId = (string) ($payload['provider'] ?? '');
-            $config = (array) ($payload['config'] ?? []);
-
-            if ($providerId === '') {
-                return json(['code' => 1, 'msg' => 'provider is required']);
-            }
-
-            // 验证配置
-            $provider = AISummaryService::createProvider($providerId, $config);
-            if (!$provider) {
-                return json(['code' => 1, 'msg' => 'Unknown provider']);
-            }
-
-            $validation = $provider->validateConfig($config);
-            if (!($validation['valid'] ?? false)) {
-                $errors = $validation['errors'] ?? ['Invalid configuration'];
-
-                return json(['code' => 1, 'msg' => implode(', ', $errors)]);
-            }
-
-            // 保存配置
-            if (!AISummaryService::saveProviderConfig($providerId, $config)) {
-                return json(['code' => 1, 'msg' => 'Failed to save configuration']);
-            }
-
-            return json(['code' => 0, 'msg' => '保存成功']);
-        } catch (Throwable $e) {
-            return json(['code' => 1, 'msg' => $e->getMessage()]);
-        }
-    }
-
-    /**
      * 设置当前选择（提供方或轮询组）
      * POST /app/admin/ai/selection/set
      * body: { selection: 'provider:openai' | 'group:1' }
@@ -175,9 +70,9 @@ class AiSummaryController
             // 验证选择格式
             if (str_starts_with($selection, 'provider:')) {
                 $providerId = substr($selection, 9);
-                $provider = AISummaryService::createProvider($providerId);
-                if (!$provider) {
-                    return json(['code' => 1, 'msg' => '未知的提供方']);
+                $provider = \app\model\AiProvider::find($providerId);
+                if (!$provider || !$provider->enabled) {
+                    return json(['code' => 1, 'msg' => '提供方不存在或未启用']);
                 }
             } elseif (str_starts_with($selection, 'group:')) {
                 $groupId = (int) substr($selection, 6);
@@ -207,48 +102,6 @@ class AiSummaryController
             $currentSelection = (string) blog_config('ai_current_selection', '', true);
 
             return json(['code' => 0, 'data' => ['selection' => $currentSelection]]);
-        } catch (Throwable $e) {
-            return json(['code' => 1, 'msg' => $e->getMessage()]);
-        }
-    }
-
-    /**
-     * 获取OpenAI模型列表（自动获取）
-     * POST /app/admin/ai-summary/fetch-models
-     * body: { provider: 'openai', config: {...} }
-     */
-    public function fetchModels(Request $request): Response
-    {
-        try {
-            $payload = $request->post();
-            if (!is_array($payload)) {
-                $payload = json_decode((string) $request->rawBody(), true);
-            }
-
-            $providerId = (string) ($payload['provider'] ?? '');
-            $config = (array) ($payload['config'] ?? []);
-
-            if ($providerId === '') {
-                return json(['code' => 1, 'msg' => 'provider is required']);
-            }
-
-            $provider = AISummaryService::createProvider($providerId, $config);
-            if (!$provider) {
-                return json(['code' => 1, 'msg' => 'Unknown provider']);
-            }
-
-            // Check if provider supports fetchModels
-            if (!method_exists($provider, 'fetchModels')) {
-                return json(['code' => 1, 'msg' => 'Provider does not support model fetching']);
-            }
-
-            $result = $provider->fetchModels();
-
-            if (!($result['ok'] ?? false)) {
-                return json(['code' => 1, 'msg' => $result['error'] ?? 'Failed to fetch models']);
-            }
-
-            return json(['code' => 0, 'data' => $result['models'] ?? []]);
         } catch (Throwable $e) {
             return json(['code' => 1, 'msg' => $e->getMessage()]);
         }
@@ -292,5 +145,50 @@ class AiSummaryController
         $ok = AISummaryService::enqueue(['post_id' => $postId, 'provider' => ($provider ?: null), 'options' => ['force' => $force]]);
 
         return json(['code' => $ok ? 0 : 1, 'msg' => $ok ? '已入队' : '入队失败']);
+    }
+
+    /**
+     * 获取Prompt配置
+     * GET /app/admin/ai/summary/prompt
+     */
+    public function promptGet(Request $request): Response
+    {
+        try {
+            $prompt = (string) blog_config('ai_summary_prompt', '请为以下内容生成一个简短的摘要，需要在170字左右，避免出现多余的标点符号和表情符号。', true);
+
+            return json(['code' => 0, 'data' => ['prompt' => $prompt]]);
+        } catch (Throwable $e) {
+            return json(['code' => 1, 'msg' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * 保存Prompt配置
+     * POST /app/admin/ai/summary/prompt-save
+     * body: { prompt: "..." }
+     */
+    public function promptSave(Request $request): Response
+    {
+        try {
+            $payload = $request->post();
+            if (!is_array($payload)) {
+                $payload = json_decode((string) $request->rawBody(), true);
+            }
+            if (!is_array($payload)) {
+                return json(['code' => 1, 'msg' => 'invalid payload']);
+            }
+
+            $prompt = (string) ($payload['prompt'] ?? '');
+
+            if (empty($prompt)) {
+                return json(['code' => 1, 'msg' => 'Prompt不能为空']);
+            }
+
+            blog_config('ai_summary_prompt', $prompt, false, true, true);
+
+            return json(['code' => 0, 'msg' => '保存成功']);
+        } catch (Throwable $e) {
+            return json(['code' => 1, 'msg' => $e->getMessage()]);
+        }
     }
 }

@@ -15,8 +15,11 @@
         {% endif %}
     </div>
     <div class="max-w-full mx-auto px-4">
+        {# 面包屑导航 #}
+        {% include 'components/breadcrumb.html.twig' %}
+
         <!-- 页面标题区域 -->
-        <div class="text-center mb-12 fade-in-on-scroll" data-animation-delay="0">
+        <div class="text-center mb-12 fade-in-on-scroll no-animation" data-animation-delay="0">
             <h1 class="text-4xl md:text-5xl font-bold text-gray-800 mb-4">{{ page_title|default('WindBlog') }}</h1>
             <p class="text-gray-600 text-lg md:text-xl">欢迎来到链接广场，这里汇聚了优质的网站资源</p>
             <div class="mt-4 flex items-center justify-center gap-3">
@@ -41,7 +44,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {% for link in links %}
                     <div
-                        class="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 group hover-lift accelerated fade-in-on-scroll"
+                        class="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 group hover-lift accelerated fade-in-on-scroll no-animation"
                         data-protocol="{{ link.custom_fields.protocol ?? link.custom_fields.protocol_level ?? '' }}"
                         data-score="{{ (link.custom_fields.auto_audit.score ?? 0) }}"
                         data-animation-delay="{{ loop.index0 * 0.05 }}">
@@ -119,11 +122,12 @@
             </div>
 
             <!-- 分页 -->
-            <div class="mt-12 flex justify-center fade-in-on-scroll" data-animation-delay="0.3">
+            <div class="mt-12 flex justify-center fade-in-on-scroll no-animation" data-animation-delay="0.3">
                 {{ pagination|raw }}
             </div>
         {% else %}
-            <div class="bg-white rounded-2xl shadow-lg p-12 text-center fade-in-on-scroll" data-animation-delay="0.2">
+            <div class="bg-white rounded-2xl shadow-lg p-12 text-center fade-in-on-scroll no-animation"
+                 data-animation-delay="0.2">
                 <div class="text-gray-400 mb-4">
                     <svg class="w-24 h-24 mx-auto opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"

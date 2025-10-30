@@ -1,6 +1,8 @@
 <title>{{ page_title|default('WindBlog') }}</title>
 <div id="pjax-container">
 <div class="max-w-full mx-auto">
+    {# 面包屑导航 #}
+    {% include 'components/breadcrumb.html.twig' %}
 <!-- PJAX 隐藏侧栏片段：完成后注入到布局右侧栏 -->
 <div id="pjax-sidebar-html" style="display:none">
     {% if sidebar is defined and sidebar.widgets is defined %}
