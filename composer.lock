@@ -4,7 +4,7 @@
     "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
     "This file is @generated automatically"
   ],
-  "content-hash": "be9d22e21fe0815786a3213bd4f9d75b",
+  "content-hash": "fa44180c60fd90666b49366b1c2ce4b3",
   "packages": [
     {
       "name": "brick/math",
@@ -962,7 +962,7 @@
     },
     {
       "name": "illuminate/bus",
-      "version": "v12.36.0",
+      "version": "v12.36.1",
       "source": {
         "type": "git",
         "url": "https://github.com/illuminate/bus.git",
@@ -1015,16 +1015,16 @@
     },
     {
       "name": "illuminate/collections",
-      "version": "v12.36.0",
+      "version": "v12.36.1",
       "source": {
         "type": "git",
         "url": "https://github.com/illuminate/collections.git",
-        "reference": "7b2980ad8a18bc7450b70e566423bf6e57062994"
+        "reference": "419a151ce65ce38037ba80d9875d4bed8ea7eaf5"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/illuminate/collections/zipball/7b2980ad8a18bc7450b70e566423bf6e57062994",
-        "reference": "7b2980ad8a18bc7450b70e566423bf6e57062994",
+        "url": "https://api.github.com/repos/illuminate/collections/zipball/419a151ce65ce38037ba80d9875d4bed8ea7eaf5",
+        "reference": "419a151ce65ce38037ba80d9875d4bed8ea7eaf5",
         "shasum": ""
       },
       "require": {
@@ -1070,11 +1070,11 @@
         "issues": "https://github.com/laravel/framework/issues",
         "source": "https://github.com/laravel/framework"
       },
-      "time": "2025-10-27T13:34:40+00:00"
+      "time": "2025-10-28T19:20:34+00:00"
     },
     {
       "name": "illuminate/conditionable",
-      "version": "v12.36.0",
+      "version": "v12.36.1",
       "source": {
         "type": "git",
         "url": "https://github.com/illuminate/conditionable.git",
@@ -1120,7 +1120,7 @@
     },
     {
       "name": "illuminate/container",
-      "version": "v12.36.0",
+      "version": "v12.36.1",
       "source": {
         "type": "git",
         "url": "https://github.com/illuminate/container.git",
@@ -1181,7 +1181,7 @@
     },
     {
       "name": "illuminate/contracts",
-      "version": "v12.35.1",
+      "version": "v12.36.1",
       "source": {
         "type": "git",
         "url": "https://github.com/illuminate/contracts.git",
@@ -1229,7 +1229,7 @@
     },
     {
       "name": "illuminate/database",
-      "version": "v12.36.0",
+      "version": "v12.36.1",
       "source": {
         "type": "git",
         "url": "https://github.com/illuminate/database.git",
@@ -1300,7 +1300,7 @@
     },
     {
       "name": "illuminate/events",
-      "version": "v12.36.0",
+      "version": "v12.36.1",
       "source": {
         "type": "git",
         "url": "https://github.com/illuminate/events.git",
@@ -1355,16 +1355,16 @@
     },
     {
       "name": "illuminate/filesystem",
-      "version": "v12.35.1",
+      "version": "v12.36.1",
       "source": {
         "type": "git",
         "url": "https://github.com/illuminate/filesystem.git",
-        "reference": "e54ff0a5bcc57cea12bedcc804c6d8eb8a4d3555"
+        "reference": "46a3cdb0c572c0956d06ac70a819b32199d9717a"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/illuminate/filesystem/zipball/e54ff0a5bcc57cea12bedcc804c6d8eb8a4d3555",
-        "reference": "e54ff0a5bcc57cea12bedcc804c6d8eb8a4d3555",
+        "url": "https://api.github.com/repos/illuminate/filesystem/zipball/46a3cdb0c572c0956d06ac70a819b32199d9717a",
+        "reference": "46a3cdb0c572c0956d06ac70a819b32199d9717a",
         "shasum": ""
       },
       "require": {
@@ -1418,11 +1418,11 @@
         "issues": "https://github.com/laravel/framework/issues",
         "source": "https://github.com/laravel/framework"
       },
-      "time": "2025-10-22T19:48:35+00:00"
+      "time": "2025-10-26T17:15:12+00:00"
     },
     {
       "name": "illuminate/http",
-      "version": "v12.36.0",
+      "version": "v12.36.1",
       "source": {
         "type": "git",
         "url": "https://github.com/illuminate/http.git",
@@ -1484,7 +1484,7 @@
     },
     {
       "name": "illuminate/macroable",
-      "version": "v12.36.0",
+      "version": "v12.36.1",
       "source": {
         "type": "git",
         "url": "https://github.com/illuminate/macroable.git",
@@ -1530,7 +1530,7 @@
     },
     {
       "name": "illuminate/pagination",
-      "version": "v12.36.0",
+      "version": "v12.36.1",
       "source": {
         "type": "git",
         "url": "https://github.com/illuminate/pagination.git",
@@ -1580,7 +1580,7 @@
     },
     {
       "name": "illuminate/pipeline",
-      "version": "v12.36.0",
+      "version": "v12.36.1",
       "source": {
         "type": "git",
         "url": "https://github.com/illuminate/pipeline.git",
@@ -1632,7 +1632,7 @@
     },
     {
       "name": "illuminate/redis",
-      "version": "v12.36.0",
+      "version": "v12.36.1",
       "source": {
         "type": "git",
         "url": "https://github.com/illuminate/redis.git",
@@ -1686,7 +1686,7 @@
     },
     {
       "name": "illuminate/session",
-      "version": "v12.36.0",
+      "version": "v12.36.1",
       "source": {
         "type": "git",
         "url": "https://github.com/illuminate/session.git",
@@ -1743,7 +1743,7 @@
     },
     {
       "name": "illuminate/support",
-      "version": "v12.36.0",
+      "version": "v12.36.1",
       "source": {
         "type": "git",
         "url": "https://github.com/illuminate/support.git",
@@ -7034,7 +7034,7 @@
     },
     {
       "name": "twig/cache-extra",
-      "version": "v3.21.0",
+      "version": "v3.22.0",
       "source": {
         "type": "git",
         "url": "https://github.com/twigphp/cache-extra.git",
@@ -7083,7 +7083,7 @@
         "twig"
       ],
       "support": {
-        "source": "https://github.com/twigphp/cache-extra/tree/v3.21.0"
+        "source": "https://github.com/twigphp/cache-extra/tree/v3.22.0"
       },
       "funding": [
         {
@@ -7099,16 +7099,16 @@
     },
     {
       "name": "twig/inky-extra",
-      "version": "v3.21.0",
+      "version": "v3.22.0",
       "source": {
         "type": "git",
         "url": "https://github.com/twigphp/inky-extra.git",
-        "reference": "aacd79d94534b4a7fd6533cb5c33c4ee97239a0d"
+        "reference": "631f42c7123240d9c2497903679ec54bb25f2f52"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/twigphp/inky-extra/zipball/aacd79d94534b4a7fd6533cb5c33c4ee97239a0d",
-        "reference": "aacd79d94534b4a7fd6533cb5c33c4ee97239a0d",
+        "url": "https://api.github.com/repos/twigphp/inky-extra/zipball/631f42c7123240d9c2497903679ec54bb25f2f52",
+        "reference": "631f42c7123240d9c2497903679ec54bb25f2f52",
         "shasum": ""
       },
       "require": {
@@ -7153,7 +7153,7 @@
         "twig"
       ],
       "support": {
-        "source": "https://github.com/twigphp/inky-extra/tree/v3.21.0"
+        "source": "https://github.com/twigphp/inky-extra/tree/v3.22.0"
       },
       "funding": [
         {
@@ -7165,11 +7165,11 @@
           "type": "tidelift"
         }
       ],
-      "time": "2025-01-31T20:45:36+00:00"
+      "time": "2025-07-29T08:07:07+00:00"
     },
     {
       "name": "twig/string-extra",
-      "version": "v3.21.0",
+      "version": "v3.22.0",
       "source": {
         "type": "git",
         "url": "https://github.com/twigphp/string-extra.git",
@@ -7220,7 +7220,7 @@
         "unicode"
       ],
       "support": {
-        "source": "https://github.com/twigphp/string-extra/tree/v3.21.0"
+        "source": "https://github.com/twigphp/string-extra/tree/v3.22.0"
       },
       "funding": [
         {
