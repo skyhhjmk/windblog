@@ -17,6 +17,7 @@ use Twig\Error\LoaderError;
 use Twig\Error\RuntimeError;
 use Twig\Error\SyntaxError;
 use Twig\Loader\FilesystemLoader;
+use Twig\TwigFunction;
 use Webman\View;
 
 /**
@@ -88,6 +89,12 @@ class TwigTemplateService implements View
         $viewsKey = implode('|', $loaderPaths);
         if (!isset($views[$viewsKey])) {
             $views[$viewsKey] = new Environment(new FilesystemLoader($loaderPaths), config("{$configPrefix}view.options", []));
+
+            // 添加 config 函数到 Twig
+            $views[$viewsKey]->addFunction(new TwigFunction('config', function ($key, $default = null) {
+                return config($key, $default);
+            }));
+
             $extension = config("{$configPrefix}view.extension");
             if ($extension) {
                 $extension($views[$viewsKey]);

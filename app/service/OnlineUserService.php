@@ -2,6 +2,7 @@
 
 namespace app\service;
 
+use support\Log;
 use support\Redis;
 use Webman\Push\Api;
 
@@ -16,6 +17,9 @@ class OnlineUserService
     private const ONLINE_USERS_KEY = 'online_users';
     private const ONLINE_USER_INFO_PREFIX = 'online_user_info:';
     private const ONLINE_COUNT_KEY = 'online_count';
+    private const ONLINE_GUESTS_KEY = 'online_guests';
+    private const ONLINE_GUEST_INFO_PREFIX = 'online_guest_info:';
+    private const ONLINE_GUEST_COUNT_KEY = 'online_guest_count';
 
     /**
      * 用户在线超时时间（秒）
@@ -319,7 +323,177 @@ class OnlineUserService
     }
 
     /**
-     * 获取在线统计信息
+     * 访客上线
+     *
+     * @param string $guestId   访客ID（如session_id）
+     * @param array  $guestInfo 访客信息（可选）
+     *
+     * @return bool
+     */
+    public function guestOnline(string $guestId, array $guestInfo = []): bool
+    {
+        try {
+            $redis = Redis::connection();
+
+            // 添加访客到在线访客集合
+            $redis->zAdd(self::ONLINE_GUESTS_KEY, time(), $guestId);
+
+            // 存储访客信息
+            if (!empty($guestInfo)) {
+                $guestInfo['online_at'] = time();
+                $redis->setex(
+                    self::ONLINE_GUEST_INFO_PREFIX . $guestId,
+                    self::USER_ONLINE_TIMEOUT,
+                    json_encode($guestInfo)
+                );
+            }
+
+            // 更新在线人数统计
+            $this->updateGuestCount();
+
+            return true;
+        } catch (\Throwable $e) {
+            \support\Log::error('Guest online failed: ' . $e->getMessage());
+
+            return false;
+        }
+    }
+
+    /**
+     * 访客心跳（延长在线状态）
+     *
+     * @param string $guestId 访客ID
+     *
+     * @return bool
+     */
+    public function guestHeartbeat(string $guestId): bool
+    {
+        try {
+            $redis = Redis::connection();
+
+            // 更新访客在线时间戳
+            $redis->zAdd(self::ONLINE_GUESTS_KEY, time(), $guestId);
+
+            // 延长访客信息过期时间
+            $guestInfoKey = self::ONLINE_GUEST_INFO_PREFIX . $guestId;
+            if ($redis->exists($guestInfoKey)) {
+                $redis->expire($guestInfoKey, self::USER_ONLINE_TIMEOUT);
+            }
+
+            return true;
+        } catch (\Throwable $e) {
+            \support\Log::error('Guest heartbeat failed: ' . $e->getMessage());
+
+            return false;
+        }
+    }
+
+    /**
+     * 访客下线
+     *
+     * @param string $guestId 访客ID
+     *
+     * @return bool
+     */
+    public function guestOffline(string $guestId): bool
+    {
+        try {
+            $redis = Redis::connection();
+
+            // 从在线访客集合中移除
+            $redis->zRem(self::ONLINE_GUESTS_KEY, $guestId);
+
+            // 删除访客信息
+            $redis->del(self::ONLINE_GUEST_INFO_PREFIX . $guestId);
+
+            // 更新在线人数统计
+            $this->updateGuestCount();
+
+            return true;
+        } catch (\Throwable $e) {
+            \support\Log::error('Guest offline failed: ' . $e->getMessage());
+
+            return false;
+        }
+    }
+
+    /**
+     * 更新访客在线人数统计
+     *
+     * @return void
+     */
+    private function updateGuestCount(): void
+    {
+        try {
+            $redis = Redis::connection();
+            $count = $redis->zCard(self::ONLINE_GUESTS_KEY);
+            $redis->setex(self::ONLINE_GUEST_COUNT_KEY, 60, $count);
+        } catch (\Throwable $e) {
+            \support\Log::error('Update guest count failed: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 清理过期访客
+     *
+     * @return int 清理的访客数量
+     */
+    public function cleanExpiredGuests(): int
+    {
+        try {
+            $redis = Redis::connection();
+
+            $timeout = time() - self::USER_ONLINE_TIMEOUT;
+
+            // 移除超时的访客
+            $count = $redis->zRemRangeByScore(self::ONLINE_GUESTS_KEY, 0, $timeout);
+
+            if ($count > 0) {
+                // 更新在线人数统计
+                $this->updateGuestCount();
+            }
+
+            return $count;
+        } catch (\Throwable $e) {
+            \support\Log::error('Clean expired guests failed: ' . $e->getMessage());
+
+            return 0;
+        }
+    }
+
+    /**
+     * 获取在线访客数量
+     *
+     * @return int
+     */
+    public function getGuestCount(): int
+    {
+        try {
+            $redis = Redis::connection();
+
+            // 清理过期访客
+            $this->cleanExpiredGuests();
+
+            // 从缓存读取
+            $count = $redis->get(self::ONLINE_GUEST_COUNT_KEY);
+            if ($count !== false) {
+                return (int) $count;
+            }
+
+            // 重新计算
+            $count = $redis->zCard(self::ONLINE_GUESTS_KEY);
+            $redis->setex(self::ONLINE_GUEST_COUNT_KEY, 60, $count);
+
+            return $count;
+        } catch (\Throwable $e) {
+            \support\Log::error('Get guest count failed: ' . $e->getMessage());
+
+            return 0;
+        }
+    }
+
+    /**
+     * 获取在线统计信息（包含访客和已登录用户）
      *
      * @return array
      */
@@ -328,22 +502,27 @@ class OnlineUserService
         try {
             $redis = Redis::connection();
 
-            // 清理过期用户
+            // 清理过期用户和访客
             $this->cleanExpiredUsers();
+            $this->cleanExpiredGuests();
 
-            $totalOnline = $redis->zCard(self::ONLINE_USERS_KEY);
+            $totalUsers = $redis->zCard(self::ONLINE_USERS_KEY);
+            $totalGuests = $redis->zCard(self::ONLINE_GUESTS_KEY);
+            $totalOnline = $totalUsers + $totalGuests;
 
             // 统计最近1分钟、5分钟、15分钟活跃用户
             $now = time();
-            $activeIn1Min = $redis->zCount(self::ONLINE_USERS_KEY, $now - 60, $now);
-            $activeIn5Min = $redis->zCount(self::ONLINE_USERS_KEY, $now - 300, $now);
-            $activeIn15Min = $redis->zCount(self::ONLINE_USERS_KEY, $now - 900, $now);
+            $activeUsersIn1Min = $redis->zCount(self::ONLINE_USERS_KEY, $now - 60, $now);
+            $activeUsersIn5Min = $redis->zCount(self::ONLINE_USERS_KEY, $now - 300, $now);
+            $activeUsersIn15Min = $redis->zCount(self::ONLINE_USERS_KEY, $now - 900, $now);
 
             return [
                 'total_online' => $totalOnline,
-                'active_1min' => $activeIn1Min,
-                'active_5min' => $activeIn5Min,
-                'active_15min' => $activeIn15Min,
+                'logged_users' => $totalUsers,
+                'guests' => $totalGuests,
+                'active_users_1min' => $activeUsersIn1Min,
+                'active_users_5min' => $activeUsersIn5Min,
+                'active_users_15min' => $activeUsersIn15Min,
                 'timestamp' => $now,
             ];
         } catch (\Throwable $e) {
@@ -351,11 +530,148 @@ class OnlineUserService
 
             return [
                 'total_online' => 0,
-                'active_1min' => 0,
-                'active_5min' => 0,
-                'active_15min' => 0,
+                'logged_users' => 0,
+                'guests' => 0,
+                'active_users_1min' => 0,
+                'active_users_5min' => 0,
+                'active_users_15min' => 0,
                 'timestamp' => time(),
             ];
+        }
+    }
+
+    /**
+     * 广播在线人数更新（包含访客和已登录用户）
+     *
+     * @return bool
+     */
+    public function broadcastOnlineStats(): bool
+    {
+        try {
+            $stats = $this->getOnlineStats();
+
+            // 根据文档，API URL 不应该包含 /pushapi 后缀
+            $apiUrl = config('plugin.webman.push.app.api');
+            // 如果 URL 包含 /pushapi，移除它
+            $apiUrl = str_replace('/pushapi', '', $apiUrl);
+            $apiUrl = str_replace('0.0.0.0', '127.0.0.1', $apiUrl);
+
+            $appKey = config('plugin.webman.push.app.app_key');
+            $appSecret = config('plugin.webman.push.app.app_secret');
+
+            Log::info('Broadcasting online stats', [
+                'api_url' => $apiUrl,
+                'app_key' => $appKey,
+                'stats' => $stats,
+            ]);
+
+            // 使用 Push API 类
+            $pusher = new Api($apiUrl, $appKey, $appSecret);
+
+            // trigger 方法：trigger($channel, $event, $data)
+            $result = $pusher->trigger('online-stats', 'stats-updated', $stats);
+
+            Log::info('Broadcast API result', [
+                'success' => $result,
+                'channel' => 'online-stats',
+                'event' => 'stats-updated',
+            ]);
+
+            return $result;
+        } catch (\Throwable $e) {
+            Log::error('Broadcast online stats failed: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return false;
+        }
+    }
+
+    /**
+     * 广播用户上线消息
+     *
+     * @param array $userInfo 用户信息（包含地理位置）
+     * @param bool  $isGuest  是否为访客
+     *
+     * @return bool
+     */
+    public function broadcastUserOnline(array $userInfo, bool $isGuest = false): bool
+    {
+        try {
+            $apiUrl = config('plugin.webman.push.app.api');
+            $apiUrl = str_replace('/pushapi', '', $apiUrl);
+            $apiUrl = str_replace('0.0.0.0', '127.0.0.1', $apiUrl);
+
+            $appKey = config('plugin.webman.push.app.app_key');
+            $appSecret = config('plugin.webman.push.app.app_secret');
+
+            $pusher = new Api($apiUrl, $appKey, $appSecret);
+
+            // 准备广播数据
+            $broadcastData = [
+                'type' => $isGuest ? 'guest_online' : 'user_online',
+                'user_info' => $userInfo,
+                'timestamp' => time(),
+            ];
+
+            // 向 online-stats 频道广播用户上线事件
+            $result = $pusher->trigger('online-stats', 'user-online', $broadcastData);
+
+            Log::info('Broadcast user online', [
+                'is_guest' => $isGuest,
+                'location' => $userInfo['location'] ?? 'unknown',
+                'success' => $result,
+            ]);
+
+            return $result;
+        } catch (\Throwable $e) {
+            Log::error('Broadcast user online failed: ' . $e->getMessage());
+
+            return false;
+        }
+    }
+
+    /**
+     * 广播用户下线消息
+     *
+     * @param array $userInfo 用户信息
+     * @param bool  $isGuest  是否为访客
+     *
+     * @return bool
+     */
+    public function broadcastUserOffline(array $userInfo, bool $isGuest = false): bool
+    {
+        try {
+            $apiUrl = config('plugin.webman.push.app.api');
+            $apiUrl = str_replace('/pushapi', '', $apiUrl);
+            $apiUrl = str_replace('0.0.0.0', '127.0.0.1', $apiUrl);
+
+            $appKey = config('plugin.webman.push.app.app_key');
+            $appSecret = config('plugin.webman.push.app.app_secret');
+
+            $pusher = new Api($apiUrl, $appKey, $appSecret);
+
+            // 准备广播数据
+            $broadcastData = [
+                'type' => $isGuest ? 'guest_offline' : 'user_offline',
+                'user_info' => $userInfo,
+                'timestamp' => time(),
+            ];
+
+            // 向 online-stats 频道广播用户下线事件
+            $result = $pusher->trigger('online-stats', 'user-offline', $broadcastData);
+
+            Log::info('Broadcast user offline', [
+                'is_guest' => $isGuest,
+                'location' => $userInfo['location'] ?? 'unknown',
+                'success' => $result,
+            ]);
+
+            return $result;
+        } catch (\Throwable $e) {
+            Log::error('Broadcast user offline failed: ' . $e->getMessage());
+
+            return false;
         }
     }
 }
