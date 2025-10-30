@@ -19,6 +19,8 @@
     <!-- FloLink 悬浮链接样式 -->
     <link rel="preload" as="style" href="{{ asset('/assets/flolink/flolink.css') }}">
     <link rel="stylesheet" href="{{ asset('/assets/flolink/flolink.css') }}">
+    <!-- 拟态风格样式 -->
+    <link rel="stylesheet" href="{{ asset('/assets/css/neumorphism.css') }}">
     {# 可选：如需本地脚本，使用 defer 并指纹化（存在时再启用） #}
     {# <script src="{{ asset('/assets/js/common.js') }}" defer></script> #}
     <!-- 动画工具库 -->
@@ -68,10 +70,9 @@
             top: 100%;
             right: 0;
             margin-top: 0.5rem;
-            background: white;
-            border: 1px solid #e5e7eb;
-            border-radius: 0.5rem;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            background: var(--neu-bg);
+            border-radius: var(--neu-radius-md);
+            box-shadow: var(--neu-shadow-lg);
             min-width: 200px;
             opacity: 0;
             visibility: hidden;
@@ -90,13 +91,14 @@
             display: flex;
             align-items: center;
             padding: 0.75rem 1rem;
-            color: #4b5563;
+            color: var(--neu-text);
             text-decoration: none;
-            transition: background-color 0.15s ease;
+            transition: all 0.15s ease;
+            border-radius: var(--neu-radius-sm);
         }
 
         .user-dropdown a:hover {
-            background-color: #f9fafb;
+            background: linear-gradient(145deg, #d9dee8, #e8edf5);
         }
 
         .user-dropdown a i {
@@ -433,15 +435,16 @@
     </style>
     {% block extra_css %}{% endblock %}
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col">
+<body class="min-h-screen flex flex-col" style="background: var(--neu-bg);">
 <!-- 通知弹窗容器 -->
 <div class="notification-container" id="notificationContainer"></div>
 
 <!-- 顶部导航 -->
-<header class="bg-white shadow-sm sticky top-0 z-10">
+<header class="neu-header">
     <div class="container mx-auto px-4 py-4 flex justify-between items-center">
-        <a href="/" class="text-2xl font-bold text-gray-800 flex items-center hover-animate tap-highlight">
-            <i class="fas fa-blog text-blue-600 mr-2"></i>
+        <a href="/" class="text-2xl font-bold flex items-center hover-animate tap-highlight"
+           style="color: var(--neu-text);">
+            <i class="fas fa-blog mr-2" style="color: var(--neu-primary);"></i>
             <span id="topbarTitle">{{ page_title|default('WindBlog') }}</span>
         </a>
         <!-- 搜索表单 -->
@@ -450,27 +453,28 @@
                 <div class="relative">
                     <input type="text" name="q" id="searchInput"
                            placeholder="搜点什么"
-                           class="pl-10 pr-4 py-2 border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-64"
+                           class="neu-input w-64"
+                           style="border-radius: var(--neu-radius-lg); padding-left: 2.5rem;"
                            autocomplete="off">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <i class="fas fa-search text-gray-400"></i>
+                        <i class="fas fa-search" style="color: var(--neu-text-light);"></i>
                     </div>
                     <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none hidden"
                          id="searchLoading">
                         <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
                     </div>
                     <div id="searchResults"
-                         class="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg hidden max-h-60 overflow-y-auto"></div>
+                         class="neu-dropdown absolute z-50 w-full mt-1 hidden max-h-60 overflow-y-auto"></div>
                 </div>
             </form>
         </div>
         <!-- 移动端搜索按钮 -->
-        <button class="md:hidden text-gray-600 hover-animate tap-highlight mr-4" id="mobileSearchBtn">
+        <button class="md:hidden neu-btn neu-btn-sm hover-animate tap-highlight mr-4" id="mobileSearchBtn">
             <i class="fas fa-search text-lg"></i>
         </button>
         <nav class="hidden md:flex items-center space-x-6">
             <a href="/"
-               class="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center hover-animate tap-highlight">
+               class="neu-link font-medium transition-colors duration-200 flex items-center hover-animate tap-highlight">
                 <i class="fas fa-home mr-1"></i>
                 首页
             </a>
@@ -480,7 +484,7 @@
                 分类
             </a> #}
             <a href="/link"
-               class="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center hover-animate tap-highlight">
+               class="neu-link font-medium transition-colors duration-200 flex items-center hover-animate tap-highlight">
                 <i class="fas fa-link mr-1"></i>
                 友情链接
             </a>
@@ -495,13 +499,13 @@
                 <!-- 未登录状态 -->
                 <div id="userNotLoggedIn" class="flex items-center space-x-2">
                     <a href="/user/login"
-                       class="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center hover-animate tap-highlight">
+                       class="neu-link font-medium transition-colors duration-200 flex items-center hover-animate tap-highlight">
                         <i class="fas fa-sign-in-alt mr-1"></i>
                         登录
                     </a>
-                    <span class="text-gray-400">|</span>
+                    <span style="color: var(--neu-text-light);">|</span>
                     <a href="/user/register"
-                       class="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center hover-animate tap-highlight">
+                       class="neu-link font-medium transition-colors duration-200 flex items-center hover-animate tap-highlight">
                         <i class="fas fa-user-plus mr-1"></i>
                         注册
                     </a>
@@ -510,9 +514,12 @@
                 <!-- 已登录状态 -->
                 <div id="userLoggedIn" class="hidden">
                     <button
-                        class="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center hover-animate tap-highlight">
-                        <img id="userAvatar" src="" alt="" class="w-8 h-8 rounded-full mr-2 border border-gray-300"
-                             style="display:none;">
+                        class="neu-link font-medium transition-colors duration-200 flex items-center hover-animate tap-highlight"
+                        style="background: none; border: none; cursor: pointer;">
+                        <div class="neu-avatar" style="width: 2rem; height: 2rem; margin-right: 0.5rem; display:none;"
+                             id="userAvatarContainer">
+                            <img id="userAvatar" src="" alt="">
+                        </div>
                         <span id="userNickname">用户</span>
                         <i class="fas fa-chevron-down ml-1 text-xs"></i>
                     </button>
@@ -536,7 +543,7 @@
         </nav>
 
         <!-- 移动端菜单按钮 -->
-        <button class="md:hidden text-gray-600 hover-animate tap-highlight" id="mobileMenuBtn">
+        <button class="md:hidden neu-btn neu-btn-sm hover-animate tap-highlight" id="mobileMenuBtn">
             <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M4 6h16M4 12h16M4 18h16"></path>
@@ -550,10 +557,11 @@
             <div class="relative">
                 <input type="text" name="q"
                        placeholder="搜点什么"
-                       class="pl-10 pr-4 py-2 border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
+                       class="neu-input w-full"
+                       style="border-radius: var(--neu-radius-lg); padding-left: 2.5rem;"
                        autocomplete="off">
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <i class="fas fa-search text-gray-400"></i>
+                    <i class="fas fa-search" style="color: var(--neu-text-light);"></i>
                 </div>
             </div>
         </form>
@@ -563,10 +571,10 @@
 
 <!-- 移动端导航菜单 -->
 <div class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden" id="mobileMenuOverlay">
-    <div class="absolute top-0 right-0 h-full w-64 bg-white shadow-lg p-4 mobile-menu" id="mobileMenu">
+    <div class="absolute top-0 right-0 h-full w-64 neu-card p-4 mobile-menu" id="mobileMenu" style="border-radius: 0;">
         <div class="flex justify-between items-center mb-6">
-            <h3 class="text-lg font-bold text-gray-800">菜单</h3>
-            <button class="text-gray-500 hover:text-gray-800" id="closeMobileMenuBtn">
+            <h3 class="text-lg font-bold" style="color: var(--neu-text);">菜单</h3>
+            <button class="neu-btn neu-btn-sm" id="closeMobileMenuBtn">
                 <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M6 18L18 6M6 6l12 12"></path>
@@ -577,7 +585,7 @@
             <ul class="space-y-4">
                 <li>
                     <a href="/"
-                       class="block text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center py-2 tap-highlight">
+                       class="block neu-link font-medium transition-colors duration-200 flex items-center py-2 tap-highlight">
                         <i class="fas fa-home mr-3 w-5 text-center"></i>
                         首页
                     </a>
@@ -591,7 +599,7 @@
                 </li> #}
                 <li>
                     <a href="/link"
-                       class="block text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center py-2 tap-highlight">
+                       class="block neu-link font-medium transition-colors duration-200 flex items-center py-2 tap-highlight">
                         <i class="fas fa-link mr-3 w-5 text-center"></i>
                         友情链接
                     </a>
@@ -607,28 +615,28 @@
                 <!-- 用户中心 -->
                 <li id="mobileUserNotLoggedIn">
                     <a href="/user/login"
-                       class="block text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center py-2 tap-highlight">
+                       class="block neu-link font-medium transition-colors duration-200 flex items-center py-2 tap-highlight">
                         <i class="fas fa-sign-in-alt mr-3 w-5 text-center"></i>
                         登录
                     </a>
                 </li>
                 <li id="mobileUserRegister">
                     <a href="/user/register"
-                       class="block text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center py-2 tap-highlight">
+                       class="block neu-link font-medium transition-colors duration-200 flex items-center py-2 tap-highlight">
                         <i class="fas fa-user-plus mr-3 w-5 text-center"></i>
                         注册
                     </a>
                 </li>
                 <li id="mobileUserLoggedIn" class="hidden">
                     <a href="/user/center"
-                       class="block text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center py-2 tap-highlight">
+                       class="block neu-link font-medium transition-colors duration-200 flex items-center py-2 tap-highlight">
                         <i class="fas fa-user-circle mr-3 w-5 text-center"></i>
                         <span id="mobileUserNickname">用户中心</span>
                     </a>
                 </li>
                 <li id="mobileUserLogout" class="hidden">
                     <a href="/user/logout" onclick="return confirmLogout();" data-no-pjax
-                       class="block text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center py-2 tap-highlight">
+                       class="block neu-link font-medium transition-colors duration-200 flex items-center py-2 tap-highlight">
                         <i class="fas fa-sign-out-alt mr-3 w-5 text-center"></i>
                         退出登录
                     </a>
@@ -661,15 +669,17 @@
 </main>
 
 <!-- 页脚 -->
-<footer class="bg-white border-t mt-8 md:mt-12 py-6 md:py-8 fade-in-on-scroll visible" data-animation-delay="0.4">
+<footer class="neu-card mt-8 md:mt-12 py-6 md:py-8 fade-in-on-scroll visible" data-animation-delay="0.4"
+        style="border-radius: 0;">
     <div class="container mx-auto px-4">
         <div class="flex flex-col md:flex-row justify-between items-center">
             <div class="mb-4 md:mb-0 text-center md:text-left">
-                <p class="text-gray-600">
+                <p style="color: var(--neu-text);">
                     &copy; {{ 'now'|date('Y') }} {{ page_title|default('WindBlog') }} - 基于 Webman 框架构建
                 </p>
                 <!-- 在线用户统计 -->
-                <div class="mt-2 text-sm text-gray-500 flex items-center justify-center md:justify-start gap-4">
+                <div class="mt-2 text-sm flex items-center justify-center md:justify-start gap-4"
+                     style="color: var(--neu-text-light);">
                     <div class="flex items-center gap-1">
                         <i class="fas fa-circle text-green-500" style="font-size: 8px;"></i>
                         <span>在线: <span id="online-total" class="font-semibold text-gray-700">0</span></span>
@@ -688,13 +698,13 @@
                 </div>
             </div>
             <div class="flex space-x-4">
-                <a href="#" class="text-gray-500 hover:text-blue-600 hover-animate tap-highlight">
+                <a href="#" class="neu-link hover-animate tap-highlight">
                     <i class="fab fa-github fa-lg"></i>
                 </a>
-                <a href="#" class="text-gray-500 hover:text-blue-600 hover-animate tap-highlight">
+                <a href="#" class="neu-link hover-animate tap-highlight">
                     <i class="fab fa-twitter fa-lg"></i>
                 </a>
-                <a href="#" class="text-gray-500 hover:text-blue-600 hover-animate tap-highlight">
+                <a href="#" class="neu-link hover-animate tap-highlight">
                     <i class="fab fa-weibo fa-lg"></i>
                 </a>
             </div>

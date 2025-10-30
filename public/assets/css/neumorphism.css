@@ -1,0 +1,439 @@
+/* ===========================================
+   拟态风格 (Neumorphism) CSS 样式
+   =========================================== */
+
+:root {
+    /* 拟态风格配色 */
+    --neu-bg: #e0e5ec;
+    --neu-text: #4a5568;
+    --neu-text-light: #718096;
+    --neu-shadow-light: #ffffff;
+    --neu-shadow-dark: rgba(163, 177, 198, 0.6);
+    --neu-primary: #667eea;
+    --neu-success: #48bb78;
+    --neu-danger: #f56565;
+    --neu-warning: #ed8936;
+
+    /* 阴影效果 */
+    --neu-shadow-sm: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light);
+    --neu-shadow-md: 8px 8px 16px var(--neu-shadow-dark), -8px -8px 16px var(--neu-shadow-light);
+    --neu-shadow-lg: 12px 12px 24px var(--neu-shadow-dark), -12px -12px 24px var(--neu-shadow-light);
+    --neu-shadow-inset: inset 4px 4px 8px var(--neu-shadow-dark), inset -4px -4px 8px var(--neu-shadow-light);
+
+    /* 圆角 */
+    --neu-radius-sm: 12px;
+    --neu-radius-md: 16px;
+    --neu-radius-lg: 20px;
+    --neu-radius-xl: 24px;
+}
+
+/* 基础容器 */
+body {
+    background: var(--neu-bg);
+    color: var(--neu-text);
+}
+
+/* 拟态卡片 */
+.neu-card {
+    background: var(--neu-bg);
+    border-radius: var(--neu-radius-md);
+    box-shadow: var(--neu-shadow-md);
+    padding: 1.5rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.neu-card:hover {
+    box-shadow: var(--neu-shadow-lg);
+    transform: translateY(-2px);
+}
+
+.neu-card-sm {
+    background: var(--neu-bg);
+    border-radius: var(--neu-radius-sm);
+    box-shadow: var(--neu-shadow-sm);
+    padding: 1rem;
+}
+
+.neu-card-lg {
+    background: var(--neu-bg);
+    border-radius: var(--neu-radius-lg);
+    box-shadow: var(--neu-shadow-lg);
+    padding: 2rem;
+}
+
+/* 凹陷效果（内阴影） */
+.neu-inset {
+    background: var(--neu-bg);
+    border-radius: var(--neu-radius-md);
+    box-shadow: var(--neu-shadow-inset);
+    padding: 1rem;
+}
+
+/* 拟态按钮 */
+.neu-btn {
+    background: var(--neu-bg);
+    border-radius: var(--neu-radius-sm);
+    box-shadow: var(--neu-shadow-sm);
+    border: none;
+    padding: 0.75rem 1.5rem;
+    color: var(--neu-text);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.neu-btn:hover {
+    box-shadow: var(--neu-shadow-md);
+    transform: translateY(-1px);
+}
+
+.neu-btn:active {
+    box-shadow: var(--neu-shadow-inset);
+    transform: translateY(0);
+}
+
+.neu-btn-primary {
+    background: linear-gradient(145deg, #7289f5, #667eea);
+    color: white;
+    box-shadow: var(--neu-shadow-sm);
+}
+
+.neu-btn-primary:hover {
+    box-shadow: var(--neu-shadow-md);
+}
+
+.neu-btn-success {
+    background: linear-gradient(145deg, #55c882, #48bb78);
+    color: white;
+}
+
+.neu-btn-danger {
+    background: linear-gradient(145deg, #f67777, #f56565);
+    color: white;
+}
+
+.neu-btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+}
+
+.neu-btn-lg {
+    padding: 1rem 2rem;
+    font-size: 1.125rem;
+}
+
+/* 拟态输入框 */
+.neu-input {
+    background: var(--neu-bg);
+    border-radius: var(--neu-radius-sm);
+    box-shadow: var(--neu-shadow-inset);
+    border: none;
+    padding: 0.75rem 1rem;
+    color: var(--neu-text);
+    width: 100%;
+    transition: all 0.2s ease;
+}
+
+.neu-input:focus {
+    outline: none;
+    box-shadow: var(--neu-shadow-inset), 0 0 0 2px var(--neu-primary);
+}
+
+.neu-input::placeholder {
+    color: var(--neu-text-light);
+}
+
+/* 拟态搜索框 */
+.neu-search {
+    position: relative;
+    background: var(--neu-bg);
+    border-radius: var(--neu-radius-lg);
+    box-shadow: var(--neu-shadow-inset);
+    padding: 0.75rem 1rem 0.75rem 3rem;
+}
+
+/* 拟态导航栏 */
+.neu-header {
+    background: var(--neu-bg);
+    box-shadow: var(--neu-shadow-md);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+}
+
+/* 拟态标签 */
+.neu-badge {
+    background: var(--neu-bg);
+    border-radius: var(--neu-radius-sm);
+    box-shadow: var(--neu-shadow-sm);
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    transition: all 0.2s ease;
+}
+
+.neu-badge:hover {
+    box-shadow: var(--neu-shadow-md);
+    transform: translateY(-1px);
+}
+
+.neu-badge-primary {
+    background: linear-gradient(145deg, #e8ebff, #dce1ff);
+    color: var(--neu-primary);
+}
+
+.neu-badge-success {
+    background: linear-gradient(145deg, #e6f9f0, #d4f4e6);
+    color: var(--neu-success);
+}
+
+.neu-badge-danger {
+    background: linear-gradient(145deg, #fff0f0, #ffe6e6);
+    color: var(--neu-danger);
+}
+
+/* 拟态链接 */
+.neu-link {
+    color: var(--neu-primary);
+    text-decoration: none;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.neu-link:hover {
+    color: #5568d3;
+}
+
+/* 拟态分隔线 */
+.neu-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--neu-shadow-dark), transparent);
+    margin: 1.5rem 0;
+}
+
+/* 拟态下拉菜单 */
+.neu-dropdown {
+    background: var(--neu-bg);
+    border-radius: var(--neu-radius-md);
+    box-shadow: var(--neu-shadow-lg);
+    padding: 0.5rem;
+}
+
+.neu-dropdown-item {
+    padding: 0.75rem 1rem;
+    border-radius: var(--neu-radius-sm);
+    color: var(--neu-text);
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.neu-dropdown-item:hover {
+    background: linear-gradient(145deg, #d9dee8, #e8edf5);
+}
+
+/* 拟态图片容器 */
+.neu-img-wrapper {
+    background: var(--neu-bg);
+    border-radius: var(--neu-radius-md);
+    box-shadow: var(--neu-shadow-md);
+    padding: 0.5rem;
+    overflow: hidden;
+}
+
+.neu-img-wrapper img {
+    border-radius: var(--neu-radius-sm);
+    width: 100%;
+    display: block;
+}
+
+/* 拟态头像 */
+.neu-avatar {
+    background: var(--neu-bg);
+    border-radius: 50%;
+    box-shadow: var(--neu-shadow-sm);
+    padding: 0.25rem;
+}
+
+.neu-avatar img {
+    border-radius: 50%;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* 拟态进度条 */
+.neu-progress {
+    background: var(--neu-bg);
+    border-radius: var(--neu-radius-lg);
+    box-shadow: var(--neu-shadow-inset);
+    height: 8px;
+    overflow: hidden;
+}
+
+.neu-progress-bar {
+    background: linear-gradient(90deg, var(--neu-primary), #7289f5);
+    height: 100%;
+    border-radius: var(--neu-radius-lg);
+    transition: width 0.3s ease;
+}
+
+/* 拟态开关 */
+.neu-switch {
+    background: var(--neu-bg);
+    border-radius: var(--neu-radius-lg);
+    box-shadow: var(--neu-shadow-inset);
+    width: 50px;
+    height: 28px;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.neu-switch-handle {
+    background: var(--neu-bg);
+    border-radius: 50%;
+    box-shadow: var(--neu-shadow-sm);
+    width: 22px;
+    height: 22px;
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    transition: all 0.3s ease;
+}
+
+.neu-switch.active {
+    background: linear-gradient(145deg, #7289f5, #667eea);
+}
+
+.neu-switch.active .neu-switch-handle {
+    left: 25px;
+}
+
+/* 拟态标签页 */
+.neu-tabs {
+    display: flex;
+    gap: 0.5rem;
+    background: var(--neu-bg);
+    border-radius: var(--neu-radius-md);
+    padding: 0.5rem;
+    box-shadow: var(--neu-shadow-inset);
+}
+
+.neu-tab {
+    flex: 1;
+    padding: 0.75rem;
+    border-radius: var(--neu-radius-sm);
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: var(--neu-text-light);
+}
+
+.neu-tab:hover {
+    color: var(--neu-text);
+}
+
+.neu-tab.active {
+    background: var(--neu-bg);
+    box-shadow: var(--neu-shadow-sm);
+    color: var(--neu-primary);
+    font-weight: 600;
+}
+
+/* 拟态模态框 */
+.neu-modal {
+    background: var(--neu-bg);
+    border-radius: var(--neu-radius-lg);
+    box-shadow: var(--neu-shadow-lg);
+    padding: 2rem;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+/* 拟态表格 */
+.neu-table {
+    background: var(--neu-bg);
+    border-radius: var(--neu-radius-md);
+    box-shadow: var(--neu-shadow-md);
+    overflow: hidden;
+}
+
+.neu-table-header {
+    background: linear-gradient(145deg, #d9dee8, #e8edf5);
+    padding: 1rem;
+    font-weight: 600;
+}
+
+.neu-table-row {
+    padding: 1rem;
+    border-top: 1px solid rgba(163, 177, 198, 0.2);
+    transition: background 0.2s ease;
+}
+
+.neu-table-row:hover {
+    background: linear-gradient(145deg, #e8edf5, #f0f4f9);
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .neu-card {
+        padding: 1rem;
+        border-radius: var(--neu-radius-sm);
+    }
+
+    .neu-btn {
+        padding: 0.625rem 1.25rem;
+    }
+}
+
+/* 动画效果 */
+@keyframes neu-pulse {
+    0%, 100% {
+        box-shadow: var(--neu-shadow-md);
+    }
+    50% {
+        box-shadow: var(--neu-shadow-lg);
+    }
+}
+
+.neu-pulse {
+    animation: neu-pulse 2s infinite;
+}
+
+/* 加载状态 */
+.neu-loading {
+    background: linear-gradient(90deg, var(--neu-bg), #d9dee8, var(--neu-bg));
+    background-size: 200% 100%;
+    animation: neu-loading 1.5s infinite;
+}
+
+@keyframes neu-loading {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* 工具类 */
+.neu-text-primary {
+    color: var(--neu-primary);
+}
+
+.neu-text-success {
+    color: var(--neu-success);
+}
+
+.neu-text-danger {
+    color: var(--neu-danger);
+}
+
+.neu-text-light {
+    color: var(--neu-text-light);
+}
