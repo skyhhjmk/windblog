@@ -445,6 +445,10 @@ CREATE TABLE IF NOT EXISTS comments
     content     TEXT                     NOT NULL,
     quoted_data TEXT                              DEFAULT NULL,
     status      VARCHAR(10)              NOT NULL DEFAULT 'pending',
+    ai_moderation_result     VARCHAR(20)   DEFAULT NULL,
+    ai_moderation_reason     TEXT          DEFAULT NULL,
+    ai_moderation_confidence DECIMAL(3, 2) DEFAULT NULL,
+    ai_moderation_categories JSONB         DEFAULT NULL,
     ip_address  VARCHAR(45)                       DEFAULT NULL,
     user_agent  VARCHAR(255)                      DEFAULT NULL,
     created_at  TIMESTAMP WITH TIME ZONE          DEFAULT CURRENT_TIMESTAMP,
@@ -465,6 +469,10 @@ COMMENT ON COLUMN comments.guest_email IS '访客邮箱';
 COMMENT ON COLUMN comments.content IS '评论内容';
 COMMENT ON COLUMN comments.quoted_data IS '引用数据(JSON格式,包含被引用评论的ID、作者、内容等信息)';
 COMMENT ON COLUMN comments.status IS '评论状态';
+COMMENT ON COLUMN comments.ai_moderation_result IS 'AI审核结果：approved/rejected/spam/pending';
+COMMENT ON COLUMN comments.ai_moderation_reason IS 'AI审核原因';
+COMMENT ON COLUMN comments.ai_moderation_confidence IS 'AI审核置信度(0-1)';
+COMMENT ON COLUMN comments.ai_moderation_categories IS 'AI检测到的问题类别';
 COMMENT ON COLUMN comments.ip_address IS 'IP地址';
 COMMENT ON COLUMN comments.user_agent IS '用户代理';
 COMMENT ON COLUMN comments.created_at IS '创建时间';

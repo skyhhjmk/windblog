@@ -5,6 +5,7 @@ namespace app\controller;
 use app\model\Comment;
 use app\model\Post;
 use app\model\User;
+use app\service\CommentModerationService;
 use Exception;
 use support\Log;
 use support\Request;
@@ -163,7 +164,40 @@ class CommentController
             return json(['code' => 429, 'msg' => '评论过于频繁,请稍后再试']);
         }
 
-        // 6. 创建评论
+        // 6. AI自动审核
+        $aiModerationEnabled = blog_config('comment_ai_moderation_enabled', false, true);
+        $aiModerationResult = null;
+
+        if ($aiModerationEnabled) {
+            try {
+                $aiModerationResult = CommentModerationService::moderateComment(
+                    $sanitizedContent,
+                    $guestName,
+                    $guestEmail,
+                    $request->getRealIp(),
+                    substr($request->header('user-agent', ''), 0, 255)
+                );
+
+                Log::info('AI moderation completed', [
+                    'passed' => $aiModerationResult['passed'],
+                    'result' => $aiModerationResult['result'],
+                    'reason' => $aiModerationResult['reason'],
+                ]);
+            } catch (Throwable $e) {
+                Log::error('AI moderation failed: ' . $e->getMessage());
+                // AI审核失败时使用默认策略
+                $failureStrategy = blog_config('comment_ai_moderation_failure_strategy', 'approve', true);
+                $aiModerationResult = [
+                    'passed' => ($failureStrategy === 'approve'),
+                    'result' => ($failureStrategy === 'approve') ? 'approved' : 'pending',
+                    'reason' => 'AI审核异常: ' . $e->getMessage(),
+                    'confidence' => 0.0,
+                    'categories' => [],
+                ];
+            }
+        }
+
+        // 7. 创建评论
         try {
             $comment = new Comment();
             $comment->post_id = $postId;
@@ -180,9 +214,32 @@ class CommentController
                 $comment->quoted_data = json_encode($quoteData, JSON_UNESCAPED_UNICODE);
             }
 
-            // 默认状态（可配置为需要审核）
-            $requireModeration = blog_config('comment_moderation', true, true);
-            $comment->status = $requireModeration ? 'pending' : 'approved';
+            // 存储AI审核结果
+            if ($aiModerationResult) {
+                $comment->ai_moderation_result = $aiModerationResult['result'];
+                $comment->ai_moderation_reason = $aiModerationResult['reason'];
+                $comment->ai_moderation_confidence = $aiModerationResult['confidence'];
+                $comment->ai_moderation_categories = !empty($aiModerationResult['categories'])
+                    ? json_encode($aiModerationResult['categories'], JSON_UNESCAPED_UNICODE)
+                    : null;
+            }
+
+            // 确定评论状态
+            if ($aiModerationEnabled && $aiModerationResult) {
+                // 使用AI审核结果
+                if (!$aiModerationResult['passed']) {
+                    // AI审核不通过，自动拒绝或标记为垃圾
+                    $comment->status = $aiModerationResult['result']; // rejected 或 spam
+                } else {
+                    // AI审核通过，但可能还需要人工审核
+                    $requireModeration = blog_config('comment_moderation', true, true);
+                    $comment->status = $requireModeration ? 'pending' : 'approved';
+                }
+            } else {
+                // 没有AI审核，使用原有逻辑
+                $requireModeration = blog_config('comment_moderation', true, true);
+                $comment->status = $requireModeration ? 'pending' : 'approved';
+            }
 
             if ($comment->save()) {
                 // 返回新创建的评论

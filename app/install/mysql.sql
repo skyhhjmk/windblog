@@ -340,6 +340,17 @@ CREATE TABLE IF NOT EXISTS `comments` (
   `content` text NOT NULL,
   `quoted_data` text DEFAULT NULL COMMENT '引用数据(JSON格式,包含被引用评论的ID、作者、内容等信息)',
   `status` varchar(10) NOT NULL DEFAULT 'pending',
+    ` ai_moderation_result ` varchar
+(
+    20
+) DEFAULT NULL COMMENT 'AI审核结果：approved/rejected/spam/pending',
+    ` ai_moderation_reason ` text DEFAULT NULL COMMENT 'AI审核原因',
+    ` ai_moderation_confidence ` decimal
+(
+    3,
+    2
+) DEFAULT NULL COMMENT 'AI审核置信度(0-1)',
+    ` ai_moderation_categories ` json DEFAULT NULL COMMENT 'AI检测到的问题类别',
   `ip_address` varchar(45) DEFAULT NULL,
   `user_agent` varchar(255) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,

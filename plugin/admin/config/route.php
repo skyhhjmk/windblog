@@ -144,6 +144,17 @@ Route::group('/app/admin', function () {
         Route::post('/moderate', [CommentController::class, 'moderate']);
         Route::post('/delete', [CommentController::class, 'delete']);
         Route::post('/restore', [CommentController::class, 'restore']);
+
+        // AI审核管理
+        Route::group('/moderation', function () {
+            Route::get('', [plugin\admin\app\controller\CommentModerationController::class, 'index']);
+            Route::get('/', [plugin\admin\app\controller\CommentModerationController::class, 'index']);
+            Route::get('/index', [plugin\admin\app\controller\CommentModerationController::class, 'index']);
+            Route::get('/stats', [plugin\admin\app\controller\CommentModerationController::class, 'stats']);
+            Route::get('/logs', [plugin\admin\app\controller\CommentModerationController::class, 'logs']);
+            Route::post('/batch-remoderate', [plugin\admin\app\controller\CommentModerationController::class, 'batchRemoderate']);
+            Route::any('/config', [plugin\admin\app\controller\CommentModerationController::class, 'config']);
+        });
     });
 
     // Index 路由

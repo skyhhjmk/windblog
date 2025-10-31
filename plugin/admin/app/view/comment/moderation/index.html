@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>AI评论审核</title>
+    <link href="/app/admin/component/pear/css/pear.css" rel="stylesheet"/>
+    <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+    <script src="/app/admin/component/pear/pear.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 pear-container">
+
+<!-- 配置区 -->
+<div class="layui-card rounded-lg shadow-sm mb-4">
+    <div class="layui-card-header font-bold">AI审核配置</div>
+    <div class="layui-card-body">
+        <form class="layui-form" id="configForm">
+            <div class="layui-form-item">
+                <label class="layui-form-label">启用AI审核</label>
+                <div class="layui-input-block">
+                    <input lay-skin="switch" lay-text="ON|OFF" name="enabled" type="checkbox">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">审核模型</label>
+                <div class="layui-input-block">
+                    <input class="layui-input" name="model" placeholder="留空使用默认模型" type="text">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">失败策略</label>
+                <div class="layui-input-block">
+                    <select name="failure_strategy">
+                        <option value="approve">通过（默认）</option>
+                        <option value="reject">拒绝</option>
+                    </select>
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <div class="layui-input-block">
+                    <button class="pear-btn pear-btn-primary" lay-filter="saveConfig" lay-submit>保存配置</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 统计区 -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+    <div class="layui-card rounded-lg shadow-sm">
+        <div class="layui-card-body">
+            <div class="text-gray-500 text-sm mb-2">总审核数</div>
+            <div class="text-3xl font-bold text-blue-600" id="stat-total">0</div>
+        </div>
+    </div>
+    <div class="layui-card rounded-lg shadow-sm">
+        <div class="layui-card-body">
+            <div class="text-gray-500 text-sm mb-2">通过数</div>
+            <div class="text-3xl font-bold text-green-600" id="stat-approved">0</div>
+        </div>
+    </div>
+    <div class="layui-card rounded-lg shadow-sm">
+        <div class="layui-card-body">
+            <div class="text-gray-500 text-sm mb-2">拒绝数</div>
+            <div class="text-3xl font-bold text-red-600" id="stat-rejected">0</div>
+        </div>
+    </div>
+    <div class="layui-card rounded-lg shadow-sm">
+        <div class="layui-card-body">
+            <div class="text-gray-500 text-sm mb-2">通过率</div>
+            <div class="text-3xl font-bold text-purple-600" id="stat-rate">0%</div>
+        </div>
+    </div>
+</div>
+
+<!-- 审核日志 -->
+<div class="layui-card rounded-lg shadow-sm">
+    <div class="layui-card-header font-bold">审核日志</div>
+    <div class="layui-card-body">
+        <form class="layui-form mb-4">
+            <div class="layui-inline">
+                <label class="layui-form-label">审核结果</label>
+                <div class="layui-input-inline">
+                    <select id="filterResult" name="result">
+                        <option value="">全部</option>
+                        <option value="approved">通过</option>
+                        <option value="rejected">拒绝</option>
+                        <option value="spam">垃圾</option>
+                    </select>
+                </div>
+            </div>
+            <div class="layui-inline">
+                <button class="pear-btn pear-btn-primary" id="searchBtn" type="button">
+                    <i class="layui-icon layui-icon-search"></i> 查询
+                </button>
+            </div>
+        </form>
+        <table id="log-table" lay-filter="log-table"></table>
+    </div>
+</div>
+
+<script id="log-result" type="text/html">
+    {{# if(d.ai_moderation_result === 'approved') { }}
+    <span class="px-2 py-1 text-xs rounded bg-green-100 text-green-800">✔ 通过</span>
+    {{# } else if(d.ai_moderation_result === 'rejected') { }}
+    <span class="px-2 py-1 text-xs rounded bg-red-100 text-red-800">✖ 拒绝</span>
+    {{# } else if(d.ai_moderation_result === 'spam') { }}
+    <span class="px-2 py-1 text-xs rounded bg-orange-100 text-orange-800">⚠ 垃圾</span>
+    {{# } }}
+</script>
+
+<script id="log-confidence" type="text/html">
+    <div class="w-full bg-gray-200 rounded-full h-2">
+        <div class="bg-blue-600 h-2 rounded-full" style="width: {{d.ai_moderation_confidence * 100}}%"></div>
+    </div>
+    <div class="text-xs text-gray-600 mt-1">{{(d.ai_moderation_confidence * 100).toFixed(0)}}%</div>
+</script>
+
+<script id="log-categories" type="text/html">
+    {{# if(d.ai_moderation_categories && d.ai_moderation_categories.length > 0) { }}
+    {{# layui.each(d.ai_moderation_categories, function(index, item){ }}
+    <span class="px-2 py-1 text-xs rounded bg-gray-100 text-gray-700 mr-1">{{item}}</span>
+    {{# }); }}
+    {{# } else { }}
+    <span class="text-gray-400 text-xs">无</span>
+    {{# } }}
+</script>
+
+<script>
+    layui.use(['table', 'form', 'jquery', 'layer'], function () {
+        let table = layui.table;
+        let form = layui.form;
+        let $ = layui.jquery;
+        let layer = layui.layer;
+
+        // 加载配置
+        function loadConfig() {
+            $.get('/app/admin/comment/moderation/config', function (res) {
+                if (res.code === 0) {
+                    let config = res.data;
+                    $('input[name="enabled"]').prop('checked', config.enabled);
+                    $('input[name="model"]').val(config.model);
+                    $('select[name="failure_strategy"]').val(config.failure_strategy);
+                    form.render();
+                }
+            });
+        }
+
+        // 加载统计数据
+        function loadStats() {
+            $.get('/app/admin/comment/moderation/stats', {days: 7}, function (res) {
+                if (res.code === 0) {
+                    let stats = res.data;
+                    $('#stat-total').text(stats.total);
+                    $('#stat-approved').text(stats.approved);
+                    $('#stat-rejected').text(stats.rejected + stats.spam);
+                    $('#stat-rate').text(stats.rate + '%');
+                }
+            });
+        }
+
+        // 保存配置
+        form.on('submit(saveConfig)', function (data) {
+            $.post('/app/admin/comment/moderation/config', data.field, function (res) {
+                if (res.code === 0) {
+                    layer.msg('配置保存成功');
+                } else {
+                    layer.msg('配置保存失败：' + res.msg);
+                }
+            });
+            return false;
+        });
+
+        // 渲染日志表格
+        table.render({
+            elem: '#log-table',
+            url: '/app/admin/comment/moderation/logs',
+            page: true,
+            limit: 20,
+            limits: [10, 20, 50, 100],
+            cols: [[
+                {type: 'checkbox'},
+                {title: 'ID', field: 'id', width: 80, align: 'center'},
+                {
+                    title: '评论内容', field: 'content', minWidth: 200, templet: function (d) {
+                        let text = (d.content || '').replace(/<[^>]*>/g, '');
+                        return text.length > 50 ? text.substring(0, 50) + '...' : text;
+                    }
+                },
+                {
+                    title: '作者', width: 120, templet: function (d) {
+                        return d.guest_name || (d.author ? d.author.nickname : '访客');
+                    }
+                },
+                {title: '审核结果', width: 100, align: 'center', templet: '#log-result'},
+                {title: '置信度', width: 120, align: 'center', templet: '#log-confidence'},
+                {title: '问题类别', width: 200, templet: '#log-categories'},
+                {title: '审核理由', field: 'ai_moderation_reason', minWidth: 150},
+                {
+                    title: '时间', field: 'created_at', width: 160, templet: function (d) {
+                        return layui.util.toDateString(d.created_at, 'yyyy-MM-dd HH:mm:ss');
+                    }
+                }
+            ]]
+        });
+
+        // 搜索
+        $('#searchBtn').on('click', function () {
+            table.reload('log-table', {
+                where: {
+                    result: $('#filterResult').val()
+                },
+                page: {curr: 1}
+            });
+        });
+
+        // 初始化
+        loadConfig();
+        loadStats();
+
+        // 定时刷新统计数据
+        setInterval(loadStats, 60000);
+    });
+</script>
+
+</body>
+</html>

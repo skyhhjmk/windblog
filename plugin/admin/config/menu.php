@@ -84,6 +84,13 @@ return [
                 'type' => 1,
                 'weight' => 930,
             ],
+            [
+                'title' => 'AI评论审核',
+                'key' => 'plugin\\admin\\app\\controller\\CommentModerationController',
+                'href' => '/app/admin/comment/moderation',
+                'type' => 1,
+                'weight' => 920,
+            ],
         ],
     ],
     [

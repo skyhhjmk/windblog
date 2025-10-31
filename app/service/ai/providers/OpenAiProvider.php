@@ -109,6 +109,8 @@ class OpenAiProvider extends BaseAiProvider
                     return $this->doChat($params, $options);
                 case 'generate':
                     return $this->doGenerate($params, $options);
+                case 'moderate_comment':
+                    return $this->doModerateComment($params, $options);
                 default:
                     return ['ok' => false, 'error' => 'Unsupported task: ' . $task];
             }
@@ -124,7 +126,7 @@ class OpenAiProvider extends BaseAiProvider
 
     public function getSupportedTasks(): array
     {
-        return ['summarize', 'translate', 'chat', 'generate'];
+        return ['summarize', 'translate', 'chat', 'generate', 'moderate_comment'];
     }
 
     public function getConfigFields(): array
@@ -289,6 +291,96 @@ class OpenAiProvider extends BaseAiProvider
         ];
 
         return $this->callChatCompletion($messages, $options);
+    }
+
+    protected function doModerateComment(array $params, array $options): array
+    {
+        $content = (string) ($params['content'] ?? '');
+        $authorName = (string) ($params['author_name'] ?? '');
+        $authorEmail = (string) ($params['author_email'] ?? '');
+        $ipAddress = (string) ($params['ip_address'] ?? '');
+
+        $systemPrompt = '你是一个专业的评论审核助手。你的任务是检测评论是否包含垃圾信息、广告、恶意内容、敏感词汇、人身攻击等不当内容。';
+
+        $userPrompt = <<<EOT
+            请审核以下评论内容，判断是否应该通过审核。
+
+            评论内容：
+            {$content}
+
+            评论者信息：
+            - 昵称：{$authorName}
+            - 邮箱：{$authorEmail}
+            - IP地址：{$ipAddress}
+
+            请按照以下JSON格式返回审核结果（只返回JSON，不要其他内容）：
+            {
+              "passed": true/false,
+              "result": "approved/rejected/spam",
+              "reason": "审核理由",
+              "confidence": 0.0-1.0,
+              "categories": ["检测到的问题类别，如：spam, offensive, sensitive等"]
+            }
+
+            审核标准：
+            1. 垃圾评论：包含大量链接、重复内容、无意义字符
+            2. 广告：推销产品、服务的内容
+            3. 恶意内容：人身攻击、辱骂、威胁
+            4. 敏感词汇：政治敏感、色情、暴力等内容
+            5. 正常评论：友好、建设性的讨论
+            EOT;
+
+        $messages = [
+            ['role' => 'system', 'content' => $systemPrompt],
+            ['role' => 'user', 'content' => $userPrompt],
+        ];
+
+        $response = $this->callChatCompletion($messages, $options);
+
+        if (!$response['ok']) {
+            return $response;
+        }
+
+        // 解析JSON结果
+        try {
+            $resultText = trim($response['result']);
+
+            // 尝试提取JSON（防止AI返回了额外的文本）
+            if (preg_match('/\{[\s\S]*\}/', $resultText, $matches)) {
+                $resultText = $matches[0];
+            }
+
+            $moderationResult = json_decode($resultText, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                Log::error('Failed to parse moderation result as JSON', [
+                    'result' => $resultText,
+                    'error' => json_last_error_msg(),
+                ]);
+
+                // 回退到默认结果
+                $moderationResult = [
+                    'passed' => true,
+                    'result' => 'approved',
+                    'reason' => 'AI返回结果解析失败，默认通过',
+                    'confidence' => 0.0,
+                    'categories' => [],
+                ];
+            }
+
+            return [
+                'ok' => true,
+                'result' => $moderationResult,
+                'usage' => $response['usage'] ?? [],
+            ];
+        } catch (\Throwable $e) {
+            Log::error('Error processing moderation result: ' . $e->getMessage());
+
+            return [
+                'ok' => false,
+                'error' => 'Failed to process moderation result: ' . $e->getMessage(),
+            ];
+        }
     }
 
     protected function callChatCompletion(array $messages, array $options): array

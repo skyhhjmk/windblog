@@ -136,6 +136,31 @@
     {{# } }}
 </script>
 
+<script id="ai-moderation-status" type="text/html">
+    {{# if(d.ai_moderation_result) { }}
+    {{# if(d.ai_moderation_result === 'approved') { }}
+    <span class="px-2 py-1 text-xs rounded bg-green-100 text-green-800"
+          title="置信度: {{d.ai_moderation_confidence || 0}}">
+                ✔ 通过
+            </span>
+    {{# } else if(d.ai_moderation_result === 'rejected') { }}
+    <span class="px-2 py-1 text-xs rounded bg-red-100 text-red-800" title="{{d.ai_moderation_reason || ''}}">
+                ✖ 拒绝
+            </span>
+    {{# } else if(d.ai_moderation_result === 'spam') { }}
+    <span class="px-2 py-1 text-xs rounded bg-orange-100 text-orange-800" title="{{d.ai_moderation_reason || ''}}">
+                ⚠ 垃圾
+            </span>
+    {{# } else { }}
+    <span class="px-2 py-1 text-xs rounded bg-gray-100 text-gray-600">
+                {{d.ai_moderation_result}}
+            </span>
+    {{# } }}
+    {{# } else { }}
+    <span class="text-gray-400 text-xs">未审核</span>
+    {{# } }}
+</script>
+
 <script>
 layui.use(['table', 'form', 'jquery', 'layer'], function () {
     let table = layui.table;
@@ -160,6 +185,7 @@ layui.use(['table', 'form', 'jquery', 'layer'], function () {
             return text.length > 80 ? text.substring(0, 80) + '...' : text;
         } },
         { title: '状态', field: 'status', align: 'center', width: 100, templet: '#comment-status' },
+        {title: 'AI审核', align: 'center', width: 120, templet: '#ai-moderation-status'},
         { title: '时间', field: 'created_at', align: 'center', width: 160, templet: '#comment-created' },
         { title: '操作', toolbar: '#comment-bar', align: 'left', width: 180, fixed: 'right' }
     ]];

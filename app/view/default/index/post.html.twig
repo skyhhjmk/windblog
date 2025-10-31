@@ -3,6 +3,6 @@
 {% block title %}{{ post.title }} - {{ page_title|default('WindBlog') }}{% endblock %}
 
 {% block content %}
-    {# 引入文章内容模板，确保与PJAX加载的内容一致 #}
-    {% include 'index/post.content.html.twig' %}
+    {# 引入文章内容模板，避免全量页面中重复输出 #pjax-container 与 <title> #}
+    {% include 'index/post.content.html.twig' with { is_full: true } %}
 {% endblock %}

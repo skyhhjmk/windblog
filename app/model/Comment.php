@@ -23,6 +23,10 @@ use Throwable;
  * @property string      $content     评论内容
  * @property string      $quoted_data 引用数据（JSON格式）
  * @property string      $status      评论状态
+ * @property string $ai_moderation_result     AI审核结果
+ * @property string $ai_moderation_reason     AI审核原因
+ * @property float  $ai_moderation_confidence AI审核置信度
+ * @property string $ai_moderation_categories AI检测类别
  * @property string      $ip_address  IP地址
  * @property string      $user_agent  用户代理
  * @property string      $created_at  创建时间
@@ -84,6 +88,10 @@ class Comment extends Model
         'content',
         'quoted_data',
         'status',
+        'ai_moderation_result',
+        'ai_moderation_reason',
+        'ai_moderation_confidence',
+        'ai_moderation_categories',
         'ip_address',
         'user_agent',
     ];

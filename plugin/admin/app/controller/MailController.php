@@ -186,6 +186,34 @@ class MailController
     }
 
     /**
+     * 连接测试
+     * POST /app/admin/mail/config-test
+     */
+    public function configTest(Request $request): Response
+    {
+        try {
+            $post = (array) $request->post();
+            $host = (string) ($post['rabbitmq_host'] ?? blog_config('rabbitmq_host', '127.0.0.1', false, true, false));
+            $port = (int) ($post['rabbitmq_port'] ?? blog_config('rabbitmq_port', 5672, false, true, false));
+            $user = (string) ($post['rabbitmq_user'] ?? blog_config('rabbitmq_user', 'guest', false, true, false));
+            $pass = (string) ($post['rabbitmq_password'] ?? blog_config('rabbitmq_password', 'guest', false, true, false));
+            $vhost = (string) ($post['rabbitmq_vhost'] ?? blog_config('rabbitmq_vhost', '/', false, true, false));
+            if ($pass === '******') {
+                $pass = (string) blog_config('rabbitmq_password', 'guest', false, true, false);
+            }
+            $conn = new AMQPStreamConnection($host, $port, $user, $pass, $vhost);
+            $ch = $conn->channel();
+            // 简单连通性检查
+            $ch->close();
+            $conn->close();
+
+            return json(['code' => 0, 'msg' => 'ok']);
+        } catch (Throwable $e) {
+            return json(['code' => 1, 'msg' => $e->getMessage()]);
+        }
+    }
+
+    /**
      * 策略读取
      * GET /app/admin/mail/strategy-get
      */
