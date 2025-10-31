@@ -3,7 +3,6 @@
 namespace app\controller;
 
 use app\model\User;
-use app\service\LocationService;
 use app\service\OnlineUserService;
 use support\Request;
 use support\Response;
@@ -28,19 +27,11 @@ class OnlineController
     private OnlineUserService $onlineService;
 
     /**
-     * 地理位置服务
-     *
-     * @var LocationService
-     */
-    private LocationService $locationService;
-
-    /**
      * 构造函数
      */
     public function __construct()
     {
         $this->onlineService = new OnlineUserService();
-        $this->locationService = new LocationService();
     }
 
     /**
@@ -165,9 +156,9 @@ class OnlineController
             ]);
         }
 
-        // 获取 IP 和地理位置
+        // 获取 IP 和前端传来的地理位置信息
         $ip = $request->getRealIp();
-        $location = $this->locationService->getLocationByIp($ip);
+        $location = $request->post('location', []);
 
         // 获取前端传来的客户端信息
         $clientInfo = $request->post('client_info', []);
@@ -179,7 +170,7 @@ class OnlineController
             'nickname' => $user->nickname,
             'avatar' => $user->getAvatarUrl(50),
             'ip' => $ip,
-            'location' => $location['display'] ?? '未知地区',
+            'location' => $location['display'] ?? ($location['city'] ?? '未知地区'),
             'location_full' => $location,
             'user_agent' => $request->header('user-agent', ''),
             'client_info' => $clientInfo,
@@ -194,13 +185,15 @@ class OnlineController
             // 广播在线人数更新
             $this->onlineService->broadcastOnlineStats();
 
+            $locationDisplay = $location['display'] ?? ($location['city'] ?? '未知地区');
+
             return json([
                 'code' => 0,
                 'msg' => '上线成功',
                 'data' => [
                     'user_id' => $userId,
-                    'location' => $location['display'] ?? '未知地区',
-                    'welcome_message' => sprintf('欢迎来自%s的用户', $location['display'] ?? '未知地区'),
+                    'location' => $locationDisplay,
+                    'welcome_message' => sprintf('欢迎来自%s的用户', $locationDisplay),
                 ],
             ]);
         }

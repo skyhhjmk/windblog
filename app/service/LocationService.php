@@ -10,6 +10,10 @@ use Throwable;
 /**
  * 地理位置服务
  * 通过 IP 获取地理位置信息
+ *
+ * @deprecated 该服务已弃用，不应在业务逻辑中直接调用会导致阻塞的外部 API
+ * @deprecated 应由前端获取用户地理位置信息并通过 POST 参数传递给服务器
+ * @deprecated 请参考 docs/frontend-location-guide.md 了解如何在前端实现位置获取
  */
 class LocationService
 {
@@ -50,6 +54,7 @@ class LocationService
      * @param array $ips IP 地址数组
      *
      * @return array IP => 地理位置信息的映射
+     *@deprecated 该方法会导致线程阻塞，请使用前端位置获取方案
      */
     public function batchGetLocation(array $ips): array
     {
@@ -71,6 +76,9 @@ class LocationService
      * @param string $ip IP 地址（可以为空，则自动获取外部IP）
      *
      * @return array|null 地理位置信息，失败返回 null
+     * @deprecated 然后通过 POST 参数 'location' 传递给服务器
+     * @deprecated 该方法会导致线程阻塞，请使用前端位置获取方案
+     * @deprecated 前端应使用浏览器 Geolocation API 或第三方 IP 定位服务获取位置
      */
     public function getLocationByIp(string $ip = ''): ?array
     {

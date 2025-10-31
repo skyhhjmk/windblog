@@ -3,7 +3,6 @@
 namespace app\controller;
 
 use app\model\User;
-use app\service\LocationService;
 use app\service\OnlineUserService;
 use support\Log;
 use support\Request;
@@ -22,19 +21,11 @@ class OnlineWebSocketController
     private OnlineUserService $onlineService;
 
     /**
-     * 地理位置服务
-     *
-     * @var LocationService
-     */
-    private LocationService $locationService;
-
-    /**
      * 构造函数
      */
     public function __construct()
     {
         $this->onlineService = new OnlineUserService();
-        $this->locationService = new LocationService();
     }
 
     /**
@@ -50,18 +41,17 @@ class OnlineWebSocketController
         $userId = $session->get('user_id');
         $ip = $request->getRealIp();
 
-        // 获取前端传来的客户端信息
+        // 获取前端传来的客户端信息和地理位置信息
         $clientInfo = $request->post('client_info', []);
+        $location = $request->post('location', []);
 
         Log::info('Online connect called', [
             'user_id' => $userId,
             'session_id' => $session->getId(),
             'ip' => $ip,
             'client_info' => $clientInfo,
+            'location' => $location,
         ]);
-
-        // 获取地理位置信息
-        $location = $this->locationService->getLocationByIp($ip);
 
         if ($userId) {
             // 已登录用户
@@ -73,7 +63,7 @@ class OnlineWebSocketController
                     'nickname' => $user->nickname,
                     'avatar' => $user->getAvatarUrl(50),
                     'ip' => $ip,
-                    'location' => $location['display'] ?? '未知地区',
+                    'location' => $location['display'] ?? ($location['city'] ?? '未知地区'),
                     'location_full' => $location,
                     'user_agent' => $request->header('user-agent', ''),
                     'client_info' => $clientInfo,
@@ -92,7 +82,7 @@ class OnlineWebSocketController
                 $guestInfo = [
                     'guest_id' => $guestId,
                     'ip' => $ip,
-                    'location' => $location['display'] ?? '未知地区',
+                    'location' => $location['display'] ?? ($location['city'] ?? '未知地区'),
                     'location_full' => $location,
                     'user_agent' => $request->header('user-agent', ''),
                     'client_info' => $clientInfo,
