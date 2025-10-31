@@ -21,12 +21,6 @@ class MediaLibraryService
     public function upload(UploadFile $file, array $data = []): array
     {
         try {
-            PluginService::do_action('media.upload_start', [
-                'name' => $file->getUploadName(),
-                'mime' => $file->getUploadMimeType(),
-                'size' => $file->getSize(),
-                'data' => $data,
-            ]);
             // 检查文件是否有效
             if (!$file->isValid()) {
                 return ['code' => 400, 'msg' => '文件无效'];
@@ -118,12 +112,6 @@ class MediaLibraryService
             if ($this->isImageMimeType($media->mime_type)) {
                 $this->generateThumbnail($media);
             }
-
-            PluginService::do_action('media.upload_done', [
-                'id' => $media->id ?? null,
-                'path' => $media->file_path ?? null,
-                'mime' => $media->mime_type ?? null,
-            ]);
 
             return ['code' => 0, 'msg' => '上传成功', 'data' => $media];
         } catch (Exception $e) {
@@ -463,10 +451,6 @@ class MediaLibraryService
         }
 
         try {
-            PluginService::do_action('media.delete_start', [
-                'id' => $id,
-                'path' => $media->file_path ?? null,
-            ]);
             // 删除物理文件
             $filePath = public_path('uploads/' . $media->file_path);
             if (file_exists($filePath)) {
@@ -494,11 +478,6 @@ class MediaLibraryService
 
             // 删除数据库记录
             $media->delete();
-
-            PluginService::do_action('media.delete_done', [
-                'id' => $id,
-                'path' => $filePath,
-            ]);
 
             return ['code' => 0, 'msg' => '文件删除成功'];
         } catch (Exception $e) {
@@ -784,11 +763,6 @@ class MediaLibraryService
     public function downloadRemoteFile(string $url, string $title = '', ?int $authorId = null, string $authorType = 'admin'): array
     {
         try {
-            PluginService::do_action('media.download_start', [
-                'url' => $url,
-                'title' => $title,
-            ]);
-
             // 验证URL
             if (empty($url) || !filter_var($url, FILTER_VALIDATE_URL)) {
                 return ['code' => 400, 'msg' => '无效的URL地址'];
@@ -915,12 +889,6 @@ class MediaLibraryService
             if ($this->isImageMimeType($media->mime_type)) {
                 $this->generateThumbnail($media);
             }
-
-            PluginService::do_action('media.download_done', [
-                'id' => $media->id ?? null,
-                'url' => $url,
-                'path' => $media->file_path ?? null,
-            ]);
 
             return ['code' => 0, 'msg' => '文件下载成功', 'data' => $media];
         } catch (Exception $e) {

@@ -225,29 +225,6 @@ return [
         ],
     ],
     [
-        'title' => '插件管理',
-        'key' => 'plugin',
-        'icon' => 'layui-icon-app',
-        'weight' => 600,
-        'type' => 0,
-        'children' => [
-            [
-                'title' => 'webman插件',
-                'key' => 'plugin\\admin\\app\\controller\\PluginController',
-                'href' => '/app/admin/plugin/index',
-                'weight' => 800,
-                'type' => 1,
-            ],
-            [
-                'title' => '插件',
-                'key' => 'plugin\\admin\\app\\controller\\PluginSystemController',
-                'href' => '/app/admin/plugin-system/index',
-                'weight' => 790,
-                'type' => 1,
-            ],
-        ],
-    ],
-    [
         'title' => '链接',
         'key' => 'link',
         'icon' => 'layui-icon-link',

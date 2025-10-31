@@ -120,21 +120,6 @@ class PaginationService
 
         $paginationHtml .= '</div>';
 
-        // 动作：分页构建完成（需权限 pagination:action.built）
-        PluginService::do_action('pagination.built', [
-            'currentPage' => $currentPage,
-            'totalItems' => $totalItems,
-            'itemsPerPage' => $itemsPerPage,
-            'routeName' => $routeName,
-            'totalPages' => $totalPages,
-        ]);
-
-        // 过滤器：分页HTML（需权限 pagination:filter.html）
-        $paginationHtml = PluginService::apply_filters('pagination.html_filter', [
-            'routeName' => $routeName,
-            'html' => $paginationHtml,
-        ])['html'] ?? $paginationHtml;
-
         return $paginationHtml;
     }
 }

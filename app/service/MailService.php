@@ -99,10 +99,6 @@ class MailService
                     $priority = max(0, min(9, (int) $p));
                 }
             }
-            // 过滤器：允许插件调整邮件payload（需权限 mail:filter.payload）
-            $payload = PluginService::apply_filters('mail.payload_filter', $payload);
-            // 动作：入队前（需权限 mail:action.before_enqueue）
-            PluginService::do_action('mail.before_enqueue', $payload);
 
             $msg = new AMQPMessage(json_encode($payload, JSON_UNESCAPED_UNICODE), [
                 'content_type' => 'application/json',
@@ -110,14 +106,6 @@ class MailService
                 'priority' => $priority,
             ]);
             $channel->basic_publish($msg, $exchange, $routingKey);
-
-            // 动作：入队后（需权限 mail:action.after_enqueue）
-            PluginService::do_action('mail.after_enqueue', [
-                'payload' => $payload,
-                'priority' => $priority,
-                'exchange' => $exchange,
-                'routingKey' => $routingKey,
-            ]);
 
             Log::debug('Mail enqueued: ' . json_encode([
                     'to' => $payload['to'] ?? null,

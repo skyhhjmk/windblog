@@ -63,7 +63,7 @@
                     <li class="layui-nav-item layui-hide-xs message"></li>
                     <li class="layui-nav-item user">
                         <!-- 头 像 -->
-                        <a class="layui-icon layui-icon-username" href="javascript:;"></a>
+                        <a class="layui-icon layui-icon-username" href="javascript:"></a>
                         <!-- 功 能 菜 单 -->
                         <dl class="layui-nav-child">
                             <dd><a user-menu-url="/app/admin/account/index" user-menu-id="10" user-menu-title="基本资料">基本资料</a></dd>
@@ -132,7 +132,7 @@
                 admin.setConfigPath("/app/admin/config/get");
 
                 admin.render();
-                
+
                 // 获取网站信息并设置标题和Logo
                 $.ajax({
                     url: "/app/admin/index/get_site_info",
@@ -176,75 +176,6 @@
 
                 // 消息点击回调
                 //admin.message(function(id, title, context, form) {});
-                
-                // 加载插件菜单
-                function loadPluginMenus() {
-                    $.ajax({
-                        url: "/app/admin/plugin-system/plugin-menus",
-                        type: "GET",
-                        dataType: "json",
-                        success: function(res) {
-                            if (res.code === 0 && res.data && res.data.length > 0) {
-                                var menuHtml = '';
-                                res.data.forEach(function(menuGroup) {
-                                    menuGroup.forEach(function(menuItem) {
-                                        if (menuItem.type === 0) {
-                                            // 分组菜单
-                                            menuHtml += '<dd>';
-                                            menuHtml += '<a href="javascript:;">' + menuItem.title + '</a>';
-                                            if (menuItem.children && menuItem.children.length > 0) {
-                                                menuHtml += '<dl class="layui-nav-child">';
-                                                menuItem.children.forEach(function(subItem) {
-                                                    if (subItem.type === 1) {
-                                                        // 使用与框架相同的类名和属性
-                                                        menuHtml += '<dd><a class="site-demo-active" menu-type="1" menu-url="' + subItem.href + '" menu-id="plugin_' + subItem.href.replace(/\//g, '_').replace(/[^a-zA-Z0-9_]/g, '_') + '" menu-title="' + subItem.title + '" href="javascript:;"><i class=""></i><span>' + subItem.title + '</span></a></dd>';
-                                                    }
-                                                });
-                                                menuHtml += '</dl>';
-                                            }
-                                            menuHtml += '</dd>';
-                                        } else if (menuItem.type === 1) {
-                                            // 链接菜单，使用与框架相同的类名和属性
-                                            menuHtml += '<dd><a class="site-demo-active" menu-type="1" menu-url="' + menuItem.href + '" menu-id="plugin_' + menuItem.href.replace(/\//g, '_').replace(/[^a-zA-Z0-9_]/g, '_') + '" menu-title="' + menuItem.title + '" href="javascript:;"><i class=""></i><span>' + menuItem.title + '</span></a></dd>';
-                                        }
-                                    });
-                                });
-                                $('#plugin-menu-content').html(menuHtml);
-                                
-                                // 重新渲染导航菜单以应用layui样式
-                                layui.element.render('nav');
-                                
-                                // 绑定插件菜单点击事件，使用layui admin模块的jump方法
-                                $('#plugin-menu-content').off('click', 'a.site-demo-active').on('click', 'a.site-demo-active', function() {
-                                    var menuUrl = $(this).attr('menu-url');
-                                    var menuId = $(this).attr('menu-id');
-                                    var menuTitle = $(this).attr('menu-title');
-                                    
-                                    // 使用layui admin模块的jump方法处理页面跳转
-                                    layui.admin.jump(menuId, menuTitle, menuUrl);
-                                });
-                                
-                                // 显示插件菜单项
-                                $('.plugin-menu-dropdown').show();
-                            } else {
-                                // 如果没有插件菜单，隐藏插件菜单项
-                                $('.plugin-menu-dropdown').hide();
-                            }
-                        },
-                        error: function() {
-                            // 出错时隐藏插件菜单项
-                            $('.plugin-menu-dropdown').hide();
-                        }
-                    });
-                }
-                
-                // 移除之前添加的插件菜单点击事件处理，因为现在使用框架默认的处理方式
-                
-                // 初始加载插件菜单
-                loadPluginMenus();
-                
-                // 将加载插件菜单函数暴露到全局作用域，以便插件启用后可以重新加载
-                window.loadPluginMenus = loadPluginMenus;
             });
 
         </script>

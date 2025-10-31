@@ -19,6 +19,5 @@ return [
         base_path() . '/support/Request.php',
         base_path() . '/support/Response.php',
         base_path() . '/app/bootstrap/widgets.php',
-        base_path() . '/app/bootstrap/PluginBootstrap.php',
     ],
 ];

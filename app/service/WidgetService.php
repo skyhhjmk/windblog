@@ -225,13 +225,7 @@ class WidgetService
             $title = $widget['title'] ?? '';
 
             // 获取渲染后的小工具数据
-            // 动作：小工具渲染开始（需权限 widget:action.render_start）
-            PluginService::do_action('widget.render_start', $widget);
-
             $widgetData = self::renderWidget($widget);
-
-            // 动作：小工具渲染结束（需权限 widget:action.render_end）
-            PluginService::do_action('widget.render_end', $widgetData);
 
             // 优先使用自定义HTML渲染器
             if (isset(self::$widgetHtmlRenderers[$widgetType]) && is_callable(self::$widgetHtmlRenderers[$widgetType])) {
@@ -249,23 +243,11 @@ class WidgetService
 
             if (method_exists(__CLASS__, $htmlMethod)) {
                 $content = self::{$htmlMethod}($widgetData);
-                $content = PluginService::apply_filters('widget.output_filter', [
-                    'type' => $widgetType,
-                    'content' => $content,
-                    'title' => $title,
-                ])['content'] ?? $content;
 
                 return self::wrapWidgetHtml($title, $content);
             }
 
-            $unknown = '<div class="text-gray-500 text-sm italic">未知的小工具类型</div>';
-            $unknown = PluginService::apply_filters('widget.output_filter', [
-                'type' => $widgetType,
-                'content' => $unknown,
-                'title' => $title,
-            ])['content'] ?? $unknown;
-
-            return $unknown;
+            return '<div class="text-gray-500 text-sm italic">未知的小工具类型</div>';
 
         } catch (Throwable $e) {
             Log::error('[WidgetService] 渲染小工具HTML失败: ' . $e->getMessage());

@@ -25,7 +25,6 @@ use plugin\admin\app\controller\LinkController;
 use plugin\admin\app\controller\MailController;
 use plugin\admin\app\controller\MediaController;
 use plugin\admin\app\controller\PerformanceController;
-use plugin\admin\app\controller\PluginSystemController;
 use plugin\admin\app\controller\PostsController;
 use plugin\admin\app\controller\SidebarController;
 use plugin\admin\app\controller\StaticCacheController;
@@ -314,19 +313,6 @@ Route::group('/app/admin', function () {
         Route::post('/strategies/scan-posts', [StaticCacheController::class, 'strategiesScanPosts']);
     });
 
-    // 插件系统 路由（独立插件管理）
-    Route::group('/plugin-system', function () {
-        Route::get('', [PluginSystemController::class, 'index']);
-        Route::get('/', [PluginSystemController::class, 'index']);
-        Route::get('/index', [PluginSystemController::class, 'index']);
-
-        Route::get('/list', [PluginSystemController::class, 'list']);
-        Route::post('/enable', [PluginSystemController::class, 'enable']);
-        Route::post('/disable', [PluginSystemController::class, 'disable']);
-        Route::post('/uninstall', [PluginSystemController::class, 'uninstall']);
-        Route::get('/plugin-menus', [PluginSystemController::class, 'pluginMenus']);
-    });
-
     // 邮件 路由
     Route::group('/mail', function () {
         Route::get('', [MailController::class, 'index']);
@@ -376,9 +362,6 @@ Route::group('/app/admin', function () {
         Route::post('/delete', [plugin\admin\app\controller\OAuthController::class, 'delete']);
         Route::post('/toggle', [plugin\admin\app\controller\OAuthController::class, 'toggle']);
     });
-
-    // 插件沙箱路由
-    Route::any('/pluginsandbox[/{slug}[/{action}]]', [plugin\admin\app\controller\PluginSystemController::class, 'handlePluginRequest']);
 });
 
 Route::fallback(function (Request $request) {
