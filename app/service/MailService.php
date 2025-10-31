@@ -211,22 +211,11 @@ class MailService
     }
 
     /**
-     * 初始化 mail_* 的默认配置（首次无记录时落库）
+     * 初始化邮件队列默认配置（首次无记录时落库）
+     * 注：不再初始化旧版 mail_host 等单平台配置，现已使用 mail_providers 轮询机制
      */
     protected static function ensureMailDefaults(): void
     {
-        try {
-            blog_config('mail_transport', 'smtp', true);
-            blog_config('mail_host', '', true);
-            blog_config('mail_port', 587, true);
-            blog_config('mail_username', '', true);
-            blog_config('mail_password', '', true);
-            blog_config('mail_encryption', 'tls', true);
-            blog_config('mail_from_address', 'no-reply@example.com', true);
-            blog_config('mail_from_name', 'WindBlog', true);
-            blog_config('mail_reply_to', '', true);
-        } catch (Throwable $e) {
-            Log::warning('ensureMailDefaults warn: ' . $e->getMessage());
-        }
+
     }
 }

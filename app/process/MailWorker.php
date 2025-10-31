@@ -219,122 +219,6 @@ class MailWorker
         }
     }
 
-    protected function sendMail(array $data): void
-    {
-        // 保留旧接口以兼容（使用全局 mail_* 单平台配置）
-        $mailer = new PHPMailer(true);
-        try {
-            $transport = (string) blog_config('mail_transport', 'smtp', true);
-            $host = (string) blog_config('mail_host', '', true);
-            $port = (int) blog_config('mail_port', 587, true);
-            $username = (string) blog_config('mail_username', '', true);
-            $password = (string) blog_config('mail_password', '', true);
-            $encryption = (string) blog_config('mail_encryption', 'tls', true); // tls|ssl|''
-
-            $fromAddress = (string) blog_config('mail_from_address', 'no-reply@example.com', true);
-            $fromName = (string) blog_config('mail_from_name', 'WindBlog', true);
-            $replyTo = (string) blog_config('mail_reply_to', '', true);
-
-            // 支持 payload 覆盖 from_name 与 reply_to
-            if (!empty($data['from_name'])) {
-                $fromName = (string) $data['from_name'];
-            }
-            if (!empty($data['reply_to'])) {
-                $replyTo = (string) $data['reply_to'];
-            }
-
-            if (strtolower($transport) === 'smtp') {
-                $mailer->isSMTP();
-                $mailer->Host = $host;
-                $mailer->SMTPAuth = true;
-                $mailer->Username = $username;
-                $mailer->Password = $password;
-                $mailer->Port = $port;
-                if ($encryption) {
-                    $mailer->SMTPSecure = $encryption; // 'tls' or 'ssl'
-                }
-            } else {
-                // 其他传输方式回退到 mail()
-                $mailer->isMail();
-            }
-
-            $mailer->CharSet = 'UTF-8';
-            $mailer->setFrom($fromAddress, $fromName);
-            if ($replyTo !== '') {
-                $mailer->addReplyTo($replyTo, $fromName);
-            }
-
-            $to = $data['to'] ?? null;
-            if (is_string($to) && $to !== '') {
-                $mailer->addAddress($to);
-            } elseif (is_array($to)) {
-                foreach ($to as $addr) {
-                    if (is_string($addr) && $addr !== '') {
-                        $mailer->addAddress($addr);
-                    } elseif (is_array($addr) && !empty($addr['email'])) {
-                        $mailer->addAddress((string) $addr['email'], (string) ($addr['name'] ?? ''));
-                    }
-                }
-            }
-
-            if (!empty($data['headers']) && is_array($data['headers'])) {
-                foreach ($data['headers'] as $k => $v) {
-                    $mailer->addCustomHeader((string) $k, (string) $v);
-                }
-            }
-
-            if (!empty($data['attachments']) && is_array($data['attachments'])) {
-                foreach ($data['attachments'] as $att) {
-                    $path = $att['path'] ?? null;
-                    if ($path) {
-                        $mailer->addAttachment(
-                            (string) $path,
-                            isset($att['name']) ? (string) $att['name'] : '',
-                            isset($att['encoding']) ? (string) $att['encoding'] : PHPMailer::ENCODING_BASE64,
-                            isset($att['type']) ? (string) $att['type'] : ''
-                        );
-                    }
-                }
-            }
-
-            // 可选 CC/BCC
-            if (!empty($data['cc']) && is_array($data['cc'])) {
-                foreach ($data['cc'] as $cc) {
-                    if (is_string($cc) && $cc !== '') {
-                        $mailer->addCC($cc);
-                    }
-                }
-            }
-            if (!empty($data['bcc']) && is_array($data['bcc'])) {
-                foreach ($data['bcc'] as $bcc) {
-                    if (is_string($bcc) && $bcc !== '') {
-                        $mailer->addBCC($bcc);
-                    }
-                }
-            }
-
-            $subject = (string) ($data['subject'] ?? '');
-            $html = (string) ($data['html'] ?? '');
-            $text = (string) ($data['text'] ?? '');
-
-            $mailer->Subject = $subject;
-            if ($html !== '') {
-                $mailer->isHTML(true);
-                $mailer->Body = $html;
-                if ($text !== '') {
-                    $mailer->AltBody = $text;
-                }
-            } else {
-                $mailer->isHTML(false);
-                $mailer->Body = $text;
-            }
-
-            $mailer->send();
-        } catch (MailException $e) {
-            throw $e;
-        }
-    }
-
     /**
      * 使用指定平台发送（返回是否成功），并处理失败计数与惩罚
      */
@@ -529,6 +413,7 @@ class MailWorker
 
     /**
      * 加载平台配置
+     * 注：不再提供旧版 mail_* 后备逻辑，要求管理员必须配置 mail_providers 轮询平台
      */
     protected function loadProviders(): array
     {
@@ -551,30 +436,9 @@ class MailWorker
                 $out[$id] = $item;
             }
         }
-        // 当没有配置任何平台时，使用全局 mail_* 作为后备平台（只读）
-        if (!$out) {
-            $transport = strtolower((string) blog_config('mail_transport', 'smtp', true) ?: 'smtp');
-            $host = (string) blog_config('mail_host', '', true);
-            $port = (int) blog_config('mail_port', 587, true);
-            $username = (string) blog_config('mail_username', '', true);
-            $password = (string) blog_config('mail_password', '', true);
-            $encryption = (string) blog_config('mail_encryption', 'tls', true);
-            $out['legacy_smtp'] = [
-                'id' => 'legacy_smtp',
-                'name' => '默认邮件平台',
-                'type' => $transport ?: 'smtp',
-                'host' => $host,
-                'port' => $port,
-                'username' => $username,
-                'password' => $password,
-                'encryption' => $encryption,
-                'smtp_auth' => true,
-                'enabled' => true,
-                'weight' => 1,
-                'dsn' => '',
-            ];
-        }
 
+        // 不再提供后备平台，如果没有配置则返回空数组
+        // 发送时将报错：No available provider
         return $out;
     }
 
