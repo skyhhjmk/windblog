@@ -76,15 +76,6 @@ Route::post('/online/online', [app\controller\OnlineController::class, 'online']
 Route::post('/online/offline', [app\controller\OnlineController::class, 'offline'])->name('online.offline');
 Route::get('/online/check/{userId}', [app\controller\OnlineController::class, 'check'])->name('online.check');
 
-// WebSocket 在线用户统计路由
-Route::post('/online/ws/connect', [app\controller\OnlineWebSocketController::class, 'connect'])->name('online.ws.connect');
-Route::post('/online/ws/disconnect', [app\controller\OnlineWebSocketController::class, 'disconnect'])->name('online.ws.disconnect');
-Route::post('/online/ws/heartbeat', [app\controller\OnlineWebSocketController::class, 'heartbeat'])->name('online.ws.heartbeat');
-Route::get('/online/ws/stats', [app\controller\OnlineWebSocketController::class, 'stats'])->name('online.ws.stats');
-
-// Push 配置路由
-Route::get('/push/config', [app\controller\PushConfigController::class, 'config'])->name('push.config');
-
 // 页面路由 - 支持 .html 后缀
 // 首页分页路由 -> IndexController
 Route::any('/page/{page}', [app\controller\IndexController::class, 'index'])->name('index.page');
