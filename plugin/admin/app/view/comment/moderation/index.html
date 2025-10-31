@@ -41,8 +41,8 @@
             <div class="layui-form-item">
                 <label class="layui-form-label">提示词</label>
                 <div class="layui-input-block">
-                    <textarea class="layui-textarea" name="prompt"
-                              placeholder="可选：自定义AI审核的系统提示词，留空使用默认逻辑" rows="6"></textarea>
+<textarea class="layui-textarea" name="prompt"
+          placeholder="请输入AI审核提示词（必填）" rows="6"></textarea>
                 </div>
             </div>
             <div class="layui-form-item">
@@ -50,6 +50,21 @@
                 <div class="layui-input-block">
                     <input class="layui-input" max="2" min="0" name="temperature" step="0.1" type="number" value="0.1">
                     <div class="layui-form-mid layui-word-aux">0-2，越低越保守（建议 0.0-0.3）</div>
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">自动批准</label>
+                <div class="layui-input-block">
+                    <input lay-skin="switch" lay-text="ON|OFF" name="auto_approve_on_pass" type="checkbox">
+                    <div class="layui-form-mid layui-word-aux">AI判定通过且可信度达到阈值时，自动将评论设为已批准</div>
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">最低可信度</label>
+                <div class="layui-input-block">
+                    <input class="layui-input" max="1" min="0" name="auto_approve_min_confidence" step="0.01"
+                           type="number" value="0.85">
+                    <div class="layui-form-mid layui-word-aux">0-1，建议 0.80-0.95</div>
                 </div>
             </div>
             <div class="layui-form-item">
@@ -176,6 +191,8 @@
                     $('select[name="failure_strategy"]').val(config.failure_strategy);
                     $('textarea[name="prompt"]').val(config.prompt || '');
                     $('input[name="temperature"]').val(config.temperature ?? 0.1);
+                    $('input[name="auto_approve_on_pass"]').prop('checked', !!config.auto_approve_on_pass);
+                    $('input[name="auto_approve_min_confidence"]').val(config.auto_approve_min_confidence ?? 0.85);
                     form.render();
                     loadGroups(config.group_id || 0);
                 }
@@ -195,8 +212,12 @@
             });
         }
 
-        // 保存配置
+// 保存配置
         form.on('submit(saveConfig)', function (data) {
+            if (!data.field.prompt || !data.field.prompt.trim()) {
+                layer.msg('提示词不能为空');
+                return false;
+            }
             $.post('/app/admin/comment/moderation/config', data.field, function (res) {
                 if (res.code === 0) {
                     layer.msg('配置保存成功');

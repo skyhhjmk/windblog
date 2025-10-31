@@ -106,47 +106,22 @@ class CommentModerationController extends Base
         try {
             $comments = CommentModel::whereIn('id', (array) $ids)->get();
 
-            $results = [];
+            $enqueued = 0;
             foreach ($comments as $comment) {
-                $moderationResult = CommentModerationService::moderateComment(
-                    $comment->content,
-                    $comment->guest_name,
-                    $comment->guest_email,
-                    $comment->ip_address,
-                    $comment->user_agent
-                );
-
-                // 更新审核结果
-                $comment->ai_moderation_result = $moderationResult['result'];
-                $comment->ai_moderation_reason = $moderationResult['reason'];
-                $comment->ai_moderation_confidence = $moderationResult['confidence'];
-                $comment->ai_moderation_categories = !empty($moderationResult['categories'])
-                    ? json_encode($moderationResult['categories'], JSON_UNESCAPED_UNICODE)
-                    : null;
-
-                // 根据AI审核结果更新评论状态
-                if (!$moderationResult['passed']) {
-                    $comment->status = $moderationResult['result'];
+                if (\app\service\AIModerationService::enqueue(['comment_id' => $comment->id, 'priority' => 5])) {
+                    $enqueued++;
                 }
-
-                $comment->save();
-
-                $results[] = [
-                    'id' => $comment->id,
-                    'result' => $moderationResult['result'],
-                    'passed' => $moderationResult['passed'],
-                ];
             }
 
             return json([
                 'code' => 0,
-                'msg' => '重新审核完成',
-                'data' => ['results' => $results],
+                'msg' => '已入队，等待审核',
+                'data' => ['count' => $enqueued],
             ]);
         } catch (\Throwable $e) {
             return json([
                 'code' => 500,
-                'msg' => '重新审核失败：' . $e->getMessage(),
+                'msg' => '入队失败：' . $e->getMessage(),
             ]);
         }
     }
@@ -171,7 +146,16 @@ class CommentModerationController extends Base
                 'enabled' => blog_config('comment_ai_moderation_enabled', false, true),
                 'group_id' => $groupId,
                 'failure_strategy' => blog_config('comment_ai_moderation_failure_strategy', 'approve', true),
-                'prompt' => blog_config('comment_ai_moderation_prompt', '', true),
+                'prompt' => (function () {
+                    $p = blog_config('comment_ai_moderation_prompt', '', true);
+                    if (trim((string) $p) === '') {
+                        return self::defaultPrompt();
+                    }
+
+                    return $p;
+                })(),
+                'auto_approve_on_pass' => (bool) blog_config('comment_ai_auto_approve_on_pass', false, true),
+                'auto_approve_min_confidence' => (float) blog_config('comment_ai_auto_approve_min_confidence', 0.85, true),
                 'temperature' => (float) blog_config('comment_ai_moderation_temperature', 0.1, true),
             ];
 
@@ -189,12 +173,26 @@ class CommentModerationController extends Base
             $failureStrategy = $request->post('failure_strategy', 'approve');
             $prompt = (string) $request->post('prompt', '');
             $temperature = (float) $request->post('temperature', 0.1);
+            $autoApprove = (bool) $request->post('auto_approve_on_pass', false);
+            $minConf = (float) $request->post('auto_approve_min_confidence', 0.85);
+
+            if (trim($prompt) === '') {
+                return json(['code' => 400, 'msg' => '提示词不能为空']);
+            }
+            if ($minConf < 0) {
+                $minConf = 0.0;
+            }
+            if ($minConf > 1) {
+                $minConf = 1.0;
+            }
 
             // 更新配置
             blog_config('comment_ai_moderation_enabled', $enabled ? '1' : '0', false, true, true);
             blog_config('comment_ai_moderation_failure_strategy', $failureStrategy, false, true, true);
             blog_config('comment_ai_moderation_prompt', $prompt, false, true, true);
             blog_config('comment_ai_moderation_temperature', $temperature, false, true, true);
+            blog_config('comment_ai_auto_approve_on_pass', $autoApprove ? '1' : '0', false, true, true);
+            blog_config('comment_ai_auto_approve_min_confidence', $minConf, false, true, true);
 
             // 如选择了轮询组，则更新全局AI选择为该组
             if ($groupId > 0) {
@@ -219,5 +217,30 @@ class CommentModerationController extends Base
                 'msg' => '配置更新失败：' . $e->getMessage(),
             ]);
         }
+    }
+
+    private static function defaultPrompt(): string
+    {
+        return <<<EOT
+            请审核以下评论内容，并仅以JSON返回结果：
+            {
+              "passed": true/false,
+              "result": "approved/rejected/spam",
+              "reason": "审核理由",
+              "confidence": 0.0-1.0,
+              "categories": ["问题类别，如 spam, offensive 等"]
+            }
+
+            请严格按照如下说明给出 confidence：
+            - confidence 表示“你对本次审核结论(result/passed)的把握程度”。
+            - 取值范围 0 到 1，保留两位小数。
+            - 0 表示 100% 不确定（高度怀疑你的结论是错误的），1 表示 100% 确定（你的结论完全可信）。
+
+            评论内容：{content}
+            昵称：{author_name}
+            邮箱：{author_email}
+            IP：{ip_address}
+            User-Agent：{user_agent}
+            EOT;
     }
 }

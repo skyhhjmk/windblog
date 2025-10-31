@@ -30,6 +30,7 @@ Route::any('/post/{keyword}.html', [app\controller\PostController::class, 'index
 // 评论相关路由
 Route::any('/comment/submit/{postId}', [app\controller\CommentController::class, 'submit']);
 Route::any('/comment/list/{postId}', [app\controller\CommentController::class, 'getList']);
+Route::get('/comment/status/{id}', [app\controller\CommentController::class, 'status']);
 
 // 用户相关路由
 Route::get('/user/register', function () {

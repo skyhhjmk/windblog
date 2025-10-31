@@ -123,6 +123,13 @@ if (getenv('DB_DEFAULT')) {
         'reloadable' => false,
         'constructor' => [],
     ];
+
+    // AI 评论审核处理进程（存在 .env 时注册）
+    $__processes['ai_moderation_worker'] = [
+        'handler' => app\process\AiModerationWorker::class,
+        'reloadable' => false,
+        'constructor' => [],
+    ];
 }
 
 return $__processes;
