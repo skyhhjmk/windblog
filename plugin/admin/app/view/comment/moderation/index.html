@@ -22,9 +22,11 @@
                 </div>
             </div>
             <div class="layui-form-item">
-                <label class="layui-form-label">审核模型</label>
+                <label class="layui-form-label">轮询组</label>
                 <div class="layui-input-block">
-                    <input class="layui-input" name="model" placeholder="留空使用默认模型" type="text">
+                    <select id="group-select" name="group_id">
+                        <option value="0">请选择轮询组（不选择则保持当前全局设置）</option>
+                    </select>
                 </div>
             </div>
             <div class="layui-form-item">
@@ -34,6 +36,20 @@
                         <option value="approve">通过（默认）</option>
                         <option value="reject">拒绝</option>
                     </select>
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">提示词</label>
+                <div class="layui-input-block">
+                    <textarea class="layui-textarea" name="prompt"
+                              placeholder="可选：自定义AI审核的系统提示词，留空使用默认逻辑" rows="6"></textarea>
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">温度</label>
+                <div class="layui-input-block">
+                    <input class="layui-input" max="2" min="0" name="temperature" step="0.1" type="number" value="0.1">
+                    <div class="layui-form-mid layui-word-aux">0-2，越低越保守（建议 0.0-0.3）</div>
                 </div>
             </div>
             <div class="layui-form-item">
@@ -133,15 +149,35 @@
         let $ = layui.jquery;
         let layer = layui.layer;
 
+        // 加载轮询组
+        function loadGroups(selectedId) {
+            $.get('/app/admin/ai/polling-groups/list', function (res) {
+                const sel = $('#group-select');
+                sel.html('<option value="0">请选择轮询组（不选择则保持当前全局设置）</option>');
+                if (res.code === 0 && Array.isArray(res.data)) {
+                    res.data.forEach(function (g) {
+                        const opt = $('<option></option>').val(g.id).text(g.name + ' (ID: ' + g.id + ')');
+                        sel.append(opt);
+                    });
+                    if (selectedId && selectedId > 0) {
+                        sel.val(String(selectedId));
+                    }
+                }
+                form.render('select');
+            });
+        }
+
         // 加载配置
         function loadConfig() {
             $.get('/app/admin/comment/moderation/config', function (res) {
                 if (res.code === 0) {
                     let config = res.data;
-                    $('input[name="enabled"]').prop('checked', config.enabled);
-                    $('input[name="model"]').val(config.model);
+                    $('input[name="enabled"]').prop('checked', !!config.enabled);
                     $('select[name="failure_strategy"]').val(config.failure_strategy);
+                    $('textarea[name="prompt"]').val(config.prompt || '');
+                    $('input[name="temperature"]').val(config.temperature ?? 0.1);
                     form.render();
+                    loadGroups(config.group_id || 0);
                 }
             });
         }

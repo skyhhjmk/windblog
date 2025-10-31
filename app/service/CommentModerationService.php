@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace app\service;
 
+use app\model\Comment;
 use support\Log;
+use Throwable;
 
 /**
  * 评论AI审核服务
@@ -110,10 +112,45 @@ class CommentModerationService
                 'user_agent' => $userAgent,
             ];
 
-            // 获取审核选项
+            // 获取审核选项（支持后台配置）
             $options = [
-                'temperature' => 0.1, // 使用较低的温度以获得更确定的结果
+                'temperature' => (float)blog_config('comment_ai_moderation_temperature', 0.1, true),
                 'model' => blog_config('comment_ai_moderation_model', '', true) ?: $provider->getDefaultModel(),
+            ];
+
+            // 在服务层拼装提示词与消息，提供者保持可复用
+            $template = (string)blog_config('comment_ai_moderation_prompt', '', true);
+            if (trim($template) === '') {
+                // 默认模板仅在运行时使用，不写入提供者
+                $template = <<<EOT
+请审核以下评论内容，并仅以JSON返回结果：
+{
+  "passed": true/false,
+  "result": "approved/rejected/spam",
+  "reason": "审核理由",
+  "confidence": 0.0-1.0,
+  "categories": ["问题类别，如 spam, offensive 等"]
+}
+
+评论内容：{content}
+昵称：{author_name}
+邮箱：{author_email}
+IP：{ip_address}
+User-Agent：{user_agent}
+EOT;
+            }
+
+            $promptText = strtr($template, [
+                '{content}' => $content,
+                '{author_name}' => $guestName,
+                '{author_email}' => $guestEmail,
+                '{ip_address}' => $ipAddress,
+                '{user_agent}' => $userAgent,
+            ]);
+
+            // 传入标准聊天消息给提供者
+            $params['messages'] = [
+                ['role' => 'user', 'content' => $promptText],
             ];
 
             // 调用AI进行审核
@@ -136,7 +173,7 @@ class CommentModerationService
                 'categories' => $moderationResult['categories'] ?? [],
             ];
 
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('Comment moderation exception: ' . $e->getMessage());
 
             // 获取失败策略
@@ -179,22 +216,22 @@ class CommentModerationService
         try {
             $startDate = date('Y-m-d H:i:s', strtotime("-{$days} days"));
 
-            $total = \app\model\Comment::withTrashed()
+            $total = Comment::withTrashed()
                 ->where('created_at', '>=', $startDate)
                 ->whereNotNull('ai_moderation_result')
                 ->count();
 
-            $approved = \app\model\Comment::withTrashed()
+            $approved = Comment::withTrashed()
                 ->where('created_at', '>=', $startDate)
                 ->where('ai_moderation_result', 'approved')
                 ->count();
 
-            $rejected = \app\model\Comment::withTrashed()
+            $rejected = Comment::withTrashed()
                 ->where('created_at', '>=', $startDate)
                 ->where('ai_moderation_result', 'rejected')
                 ->count();
 
-            $spam = \app\model\Comment::withTrashed()
+            $spam = Comment::withTrashed()
                 ->where('created_at', '>=', $startDate)
                 ->where('ai_moderation_result', 'spam')
                 ->count();
@@ -208,7 +245,7 @@ class CommentModerationService
                 'spam' => $spam,
                 'rate' => $rate,
             ];
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('Failed to get moderation stats: ' . $e->getMessage());
 
             return [

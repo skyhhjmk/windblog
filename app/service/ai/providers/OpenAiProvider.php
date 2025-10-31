@@ -295,45 +295,13 @@ class OpenAiProvider extends BaseAiProvider
 
     protected function doModerateComment(array $params, array $options): array
     {
-        $content = (string) ($params['content'] ?? '');
-        $authorName = (string) ($params['author_name'] ?? '');
-        $authorEmail = (string) ($params['author_email'] ?? '');
-        $ipAddress = (string) ($params['ip_address'] ?? '');
-
-        $systemPrompt = '你是一个专业的评论审核助手。你的任务是检测评论是否包含垃圾信息、广告、恶意内容、敏感词汇、人身攻击等不当内容。';
-
-        $userPrompt = <<<EOT
-            请审核以下评论内容，判断是否应该通过审核。
-
-            评论内容：
-            {$content}
-
-            评论者信息：
-            - 昵称：{$authorName}
-            - 邮箱：{$authorEmail}
-            - IP地址：{$ipAddress}
-
-            请按照以下JSON格式返回审核结果（只返回JSON，不要其他内容）：
-            {
-              "passed": true/false,
-              "result": "approved/rejected/spam",
-              "reason": "审核理由",
-              "confidence": 0.0-1.0,
-              "categories": ["检测到的问题类别，如：spam, offensive, sensitive等"]
-            }
-
-            审核标准：
-            1. 垃圾评论：包含大量链接、重复内容、无意义字符
-            2. 广告：推销产品、服务的内容
-            3. 恶意内容：人身攻击、辱骂、威胁
-            4. 敏感词汇：政治敏感、色情、暴力等内容
-            5. 正常评论：友好、建设性的讨论
-            EOT;
-
-        $messages = [
-            ['role' => 'system', 'content' => $systemPrompt],
-            ['role' => 'user', 'content' => $userPrompt],
-        ];
+        // 提供者保持通用：优先使用调用方传入的 messages
+        $messages = $params['messages'] ?? null;
+        if (!$messages) {
+            // 兜底：无 messages 时，直接用纯内容作为输入
+            $content = (string) ($params['content'] ?? '');
+            $messages = [['role' => 'user', 'content' => $content]];
+        }
 
         $response = $this->callChatCompletion($messages, $options);
 

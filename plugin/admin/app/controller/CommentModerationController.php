@@ -162,10 +162,17 @@ class CommentModerationController extends Base
     {
         if ($request->method() === 'GET') {
             // 获取当前配置
+            $currentSelection = (string) blog_config('ai_current_selection', '', true);
+            $groupId = 0;
+            if (str_starts_with($currentSelection, 'group:')) {
+                $groupId = (int) substr($currentSelection, 6);
+            }
             $config = [
                 'enabled' => blog_config('comment_ai_moderation_enabled', false, true),
-                'model' => blog_config('comment_ai_moderation_model', '', true),
+                'group_id' => $groupId,
                 'failure_strategy' => blog_config('comment_ai_moderation_failure_strategy', 'approve', true),
+                'prompt' => blog_config('comment_ai_moderation_prompt', '', true),
+                'temperature' => (float) blog_config('comment_ai_moderation_temperature', 0.1, true),
             ];
 
             return json([
@@ -178,13 +185,29 @@ class CommentModerationController extends Base
         // 更新配置
         try {
             $enabled = $request->post('enabled', false);
-            $model = $request->post('model', '');
+            $groupId = (int) $request->post('group_id', 0);
             $failureStrategy = $request->post('failure_strategy', 'approve');
+            $prompt = (string) $request->post('prompt', '');
+            $temperature = (float) $request->post('temperature', 0.1);
 
-            // 更新配置（假设有config_set辅助函数）
-            config_set('comment_ai_moderation_enabled', $enabled ? '1' : '0');
-            config_set('comment_ai_moderation_model', $model);
-            config_set('comment_ai_moderation_failure_strategy', $failureStrategy);
+            // 更新配置
+            blog_config('comment_ai_moderation_enabled', $enabled ? '1' : '0', false, true, true);
+            blog_config('comment_ai_moderation_failure_strategy', $failureStrategy, false, true, true);
+            blog_config('comment_ai_moderation_prompt', $prompt, false, true, true);
+            blog_config('comment_ai_moderation_temperature', $temperature, false, true, true);
+
+            // 如选择了轮询组，则更新全局AI选择为该组
+            if ($groupId > 0) {
+                // 可选：校验轮询组是否存在
+                try {
+                    $exists = \app\model\AiPollingGroup::where('id', $groupId)->exists();
+                    if ($exists) {
+                        blog_config('ai_current_selection', 'group:' . $groupId, false, true, true);
+                    }
+                } catch (\Throwable $e) {
+                    // 如果查询失败，忽略，只保存其他配置
+                }
+            }
 
             return json([
                 'code' => 0,

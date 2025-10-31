@@ -69,6 +69,10 @@
         <i class="layui-icon layui-icon-tips"></i>
         标记丢弃
     </button>
+    <button class="pear-btn pear-btn-normal pear-btn-md" lay-event="batchAIModerate">
+        <i class="layui-icon layui-icon-auz"></i>
+        AI审核
+    </button>
     <button class="pear-btn pear-btn-danger pear-btn-md" lay-event="batchRemove">
         <i class="layui-icon layui-icon-delete"></i>
         删除（回收站）
@@ -99,6 +103,9 @@
         </button>
         <button class="pear-btn pear-btn-danger pear-btn-sm" lay-event="remove" title="删除（回收站）">
             <i class="layui-icon layui-icon-delete"></i>
+        </button>
+        <button class="pear-btn pear-btn-normal pear-btn-sm" lay-event="aiModerate" title="AI审核">
+            <i class="layui-icon layui-icon-auz"></i>
         </button>
     </div>
 </script>
@@ -289,6 +296,8 @@ layui.use(['table', 'form', 'jquery', 'layer'], function () {
             moderate([id], 'spam');
         } else if (obj.event === 'trash') {
             moderate([id], 'trash');
+        } else if (obj.event === 'aiModerate') {
+            callAIModerate([id]);
         } else if (obj.event === 'restore') {
             doRestore([id]);
         } else if (obj.event === 'forceDelete') {
@@ -316,6 +325,10 @@ layui.use(['table', 'form', 'jquery', 'layer'], function () {
             let data = table.checkStatus(obj.config.id).data;
             if (!data.length) return layer.msg('未选中数据');
             doDelete(data.map(i=>i.id), false);
+        } else if (obj.event === 'batchAIModerate') {
+            let data = table.checkStatus(obj.config.id).data;
+            if (!data.length) return layer.msg('未选中数据');
+            callAIModerate(data.map(i => i.id));
         } else if (obj.event === 'batchRestore') {
             let data = table.checkStatus(obj.config.id).data;
             if (!data.length) return layer.msg('未选中数据');
@@ -339,7 +352,11 @@ layui.use(['table', 'form', 'jquery', 'layer'], function () {
             success: function (res) {
                 layer.close(loading);
                 if (res.code === 0) {
-                    layer.msg('操作成功', {icon:1, time: 800}, function(){ tableIns.reload(); });
+                    layer.msg('操作成功', {icon: 1, time: 800}, function () {
+                        if (currentTable) {
+                            currentTable.reload();
+                        }
+                    });
                 } else {
                     layer.msg(res.msg || '操作失败', {icon:2});
                 }
@@ -363,7 +380,13 @@ layui.use(['table', 'form', 'jquery', 'layer'], function () {
                     layer.close(loading);
                     if (res.code === 0) {
                         layer.msg(force ? '已彻底删除' : '已删除至回收站', {icon:1, time: 800}, function(){
-                            if(obj){ obj.del(); } else { tableIns.reload(); }
+                            if (obj) {
+                                obj.del();
+                            } else {
+                                if (currentTable) {
+                                    currentTable.reload();
+                                }
+                            }
                         });
                     } else {
                         layer.msg(res.msg || '操作失败', {icon:2});
@@ -385,12 +408,48 @@ layui.use(['table', 'form', 'jquery', 'layer'], function () {
             success: function (res) {
                 layer.close(loading);
                 if (res.code === 0) {
-                    layer.msg('已恢复为待审', {icon:1, time: 800}, function(){ tableIns.reload(); });
+                    layer.msg('已恢复为待审', {icon: 1, time: 800}, function () {
+                        if (currentTable) {
+                            currentTable.reload();
+                        }
+                    });
                 } else {
                     layer.msg(res.msg || '恢复失败', {icon:2});
                 }
             },
             error: function(){ layer.close(loading); layer.msg('请求失败', {icon:2}); }
+        })
+    }
+
+    function callAIModerate(ids) {
+        let loading = layer.load();
+        $.ajax({
+            url: '/app/admin/comment/moderation/batch-remoderate',
+            type: 'post',
+            dataType: 'json',
+            contentType: 'application/json',
+            data: JSON.stringify({ids: ids}),
+            success: function (res) {
+                layer.close(loading);
+                if (res.code === 0) {
+                    let results = (res.data && res.data.results) ? res.data.results : [];
+                    let passed = results.filter(r => r.passed).length;
+                    layer.msg('AI审核完成：' + results.length + ' 条，建议通过 ' + passed + ' 条', {
+                        icon: 1,
+                        time: 1200
+                    }, function () {
+                        if (currentTable) {
+                            currentTable.reload();
+                        }
+                    });
+                } else {
+                    layer.msg(res.msg || 'AI审核失败', {icon: 2});
+                }
+            },
+            error: function () {
+                layer.close(loading);
+                layer.msg('请求失败', {icon: 2});
+            }
         })
     }
 });
