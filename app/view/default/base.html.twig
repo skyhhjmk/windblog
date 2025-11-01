@@ -9,26 +9,16 @@
     <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
     <title>{% block title %}{{ page_title|default('WindBlog') }}{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com/3.4.17"></script>
-    {# 本地资产预加载与指纹化（零编译） #}
     <link rel="preload" as="style" href="{{ asset('/assets/css/font-awesome.css') }}">
     <link rel="stylesheet" href="{{ asset('/assets/css/font-awesome.css') }}">
     <link rel="stylesheet" href="{{ asset('/assets/vditor/index.min.css') }}">
     <link rel="stylesheet" href="{{ asset('/assets/vditor/content-theme/ant-design.min.css') }}">
     <!-- 高级动画样式 -->
     <link rel="stylesheet" href="{{ asset('/assets/css/animations.css') }}">
-    <!-- FloLink 悬浮链接样式 -->
-    <link rel="preload" as="style" href="{{ asset('/assets/flolink/flolink.css') }}">
-    <link rel="stylesheet" href="{{ asset('/assets/flolink/flolink.css') }}">
     {# 可选：如需本地脚本，使用 defer 并指纹化（存在时再启用） #}
-    {# <script src="{{ asset('/assets/js/common.js') }}" defer></script> #}
+    <script src="{{ asset('/assets/js/common.js') }}"></script>
     <!-- 动画工具库 -->
     <script src="{{ asset('/assets/js/animation-utils.js') }}" defer></script>
-    <!-- Vditor 必须同步加载以支持 PJAX -->
-    <script src="{{ asset('/assets/vditor/method.min.js') }}"></script>
-    <!-- FloLink 悬浮链接脚本 -->
-    <script src="{{ asset('/assets/flolink/flolink.js') }}"></script>
-
-    <script src="{{ asset('/assets/js/pangu.umd.js') }}" defer></script>
 
     <script src="{{ asset('/assets/js/sweetalert2.all.min.js') }}"></script>
     <style>
@@ -915,22 +905,15 @@
 
             // 初始化
             function initPJAX() {
-                console.log('PJAX: 开始初始化');
                 // 获取DOM元素
                 pjaxConfig.progressBar = document.getElementById('pjax-progress');
                 pjaxConfig.container = document.getElementById('pjax-container');
-
-                console.log('PJAX: 进度条元素:', pjaxConfig.progressBar);
-                console.log('PJAX: 容器元素:', pjaxConfig.container);
 
                 // 确保容器存在
                 if (!pjaxConfig.container) {
                     console.error('PJAX Container not found!');
                     return;
                 }
-
-                console.log('PJAX: 初始化完成，开始绑定事件');
-
                 // 捕获阶段原生拦截（优先级最高），确保同源链接走 PJAX
                 document.addEventListener('click', function (e) {
                     try {
@@ -1032,9 +1015,7 @@
 
             // 执行PJAX导航
             function navigateWithPJAX(url) {
-                // 如枟正在加载，忽略新请求
                 if (pjaxConfig.isLoading) {
-                    console.log('PJAX: 正在加载中，忽略新请求');
                     return;
                 }
                 pjaxConfig.isLoading = true;
@@ -1055,38 +1036,12 @@
                 // 先显示加载动画遮罩（立即显示，不等待）
                 const loadingOverlay = document.getElementById('pjax-loading-overlay');
                 if (loadingOverlay) {
-                    console.log('PJAX: 显示加载动画');
                     // 强制设置所有关键样式
                     loadingOverlay.style.display = 'flex';
                     loadingOverlay.style.opacity = '1';
                     loadingOverlay.style.visibility = 'visible';
                     loadingOverlay.classList.add('active');
-                    // 详细调试信息
-                    setTimeout(() => {
-                        const computed = window.getComputedStyle(loadingOverlay);
-                        console.log('=== 加载遮罩调试信息 ===');
-                        console.log('1. 类名:', loadingOverlay.className);
-                        console.log('2. 内联样式背景:', loadingOverlay.style.background);
-                        console.log('3. 计算后背景:', computed.background);
-                        console.log('4. 计算后背景色:', computed.backgroundColor);
-                        console.log('5. backdrop-filter:', computed.backdropFilter);
-                        console.log('6. -webkit-backdrop-filter:', computed.webkitBackdropFilter);
-                        console.log('7. 所有应用的样式表:');
-                        const sheets = document.styleSheets;
-                        for (let i = 0; i < sheets.length; i++) {
-                            try {
-                                const rules = sheets[i].cssRules || sheets[i].rules;
-                                for (let j = 0; j < rules.length; j++) {
-                                    if (rules[j].selectorText && rules[j].selectorText.includes('pjax-loading-overlay')) {
-                                        console.log(`   样式表 ${i}, 规则 ${j}:`, rules[j].cssText);
-                                    }
-                                }
-                            } catch (e) {
-                                console.log(`   样式表 ${i}: 无法访问 (跨域)`);
-                            }
-                        }
-                        console.log('========================');
-                    }, 100);
+
                 } else {
                     console.error('PJAX: 找不到加载遮罩元素！');
                 }
@@ -1116,7 +1071,6 @@
 
             // 使用PJAX加载内容
             function loadContentWithPJAX(url, pushState) {
-                console.log('使用PJAX加载:', url);
 
                 // 统一构造带 _pjax=1 的请求地址，帮助服务端返回 content 模板
                 const fetchUrl = (function (u) {
@@ -1144,7 +1098,6 @@
                         'Accept': 'text/html'
                     },
                     success: function (response) {
-                        console.log('PJAX请求成功');
 
                         // 更新进度条
                         if (pjaxConfig.progressBar) {
@@ -1345,13 +1298,10 @@
                             // 计算还需要等待的时间，确保至少显示 minLoadingDuration 毫秒
                             const remainingTime = Math.max(0, pjaxConfig.minLoadingDuration - elapsedTime);
 
-                            console.log('PJAX: 已经过时间:', elapsedTime, 'ms, 还需等待:', remainingTime, 'ms');
-
                             setTimeout(function () {
                                 // 隐藏加载动画遮罩
                                 const loadingOverlay = document.getElementById('pjax-loading-overlay');
                                 if (loadingOverlay) {
-                                    console.log('PJAX: 隐藏加载动画');
                                     loadingOverlay.style.opacity = '0';
                                     loadingOverlay.style.visibility = 'hidden';
                                     loadingOverlay.classList.remove('active');

@@ -91,6 +91,13 @@ return [
                 'type' => 1,
                 'weight' => 920,
             ],
+            [
+                'title' => 'AI 摘要',
+                'key' => 'plugin\\admin\\app\\controller\\AiSummaryController@index',
+                'href' => '/app/admin/ai/summary',
+                'type' => 1,
+                'weight' => 920,
+            ],
         ],
     ],
     [
@@ -100,13 +107,6 @@ return [
         'weight' => 920,
         'type' => 0,
         'children' => [
-            [
-                'title' => 'AI 摘要',
-                'key' => 'plugin\\admin\\app\\controller\\AiSummaryController@index',
-                'href' => '/app/admin/ai/summary',
-                'type' => 1,
-                'weight' => 920,
-            ],
             [
                 'title' => 'AI 测试',
                 'key' => 'plugin\\admin\\app\\controller\\AiTestController@index',

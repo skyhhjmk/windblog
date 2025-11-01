@@ -2,10 +2,13 @@
 
 namespace plugin\admin\app\controller;
 
+use app\model\AiPollingGroup;
 use app\model\Comment as CommentModel;
+use app\service\AIModerationService;
 use app\service\CommentModerationService;
 use support\Request;
 use support\Response;
+use Throwable;
 
 /**
  * 评论AI审核管理控制器
@@ -108,7 +111,7 @@ class CommentModerationController extends Base
 
             $enqueued = 0;
             foreach ($comments as $comment) {
-                if (\app\service\AIModerationService::enqueue(['comment_id' => $comment->id, 'priority' => 5])) {
+                if (AIModerationService::enqueue(['comment_id' => $comment->id, 'priority' => 5])) {
                     $enqueued++;
                 }
             }
@@ -118,7 +121,7 @@ class CommentModerationController extends Base
                 'msg' => '已入队，等待审核',
                 'data' => ['count' => $enqueued],
             ]);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return json([
                 'code' => 500,
                 'msg' => '入队失败：' . $e->getMessage(),
@@ -198,11 +201,11 @@ class CommentModerationController extends Base
             if ($groupId > 0) {
                 // 可选：校验轮询组是否存在
                 try {
-                    $exists = \app\model\AiPollingGroup::where('id', $groupId)->exists();
+                    $exists = AiPollingGroup::where('id', $groupId)->exists();
                     if ($exists) {
                         blog_config('ai_current_selection', 'group:' . $groupId, false, true, true);
                     }
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     // 如果查询失败，忽略，只保存其他配置
                 }
             }
@@ -211,7 +214,7 @@ class CommentModerationController extends Base
                 'code' => 0,
                 'msg' => '配置更新成功',
             ]);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return json([
                 'code' => 500,
                 'msg' => '配置更新失败：' . $e->getMessage(),
@@ -235,6 +238,27 @@ class CommentModerationController extends Base
             - confidence 表示“你对本次审核结论(result/passed)的把握程度”。
             - 取值范围 0 到 1，保留两位小数。
             - 0 表示 100% 不确定（高度怀疑你的结论是错误的），1 表示 100% 确定（你的结论完全可信）。
+
+            在判断是否违规时，请特别留意并尽量进行归一化识别以下绕过方式：
+            - 同音/谐音/形似替换（含数字、符号、标点、emoji、部首拆分、火星文、形声/象形变体）
+            - 多语/方言/中英混写（含拼音、粤语/闽南/吴语等方言写法、音译/谐译，及夹杂阿拉伯文、日文、韩文等）
+            - Leet/大小写变换/插入空格与标点/拉长重复/零宽字符
+            - 隐喻、暗号、缩写、避敏同义替换
+
+            额外要求（语音音素检测）：
+            1) 先将“评论内容”转换为多通道的发音序列：
+               - 普通话：拼音（保留与不保留声调两版）
+               - 粤语：粤拼/Jyutping
+               - 英语：音标或CMU-like音素
+               - 日语：罗马音/假名；韩语：RR/IPA
+               - 其他语种可近似用IPA或合理的转写
+            2) 基于音素序列做近似匹配，检查是否与常见违规词（辱骂/歧视/色情/暴恐/违法等）的读音相近（允许少量替换/插入/删除、跨语种同音）。
+            3) 若识别为谐音/近音规避，请在 reason 中明确：
+               - 标注“phonetic-hint”并给出被映射的目标词、使用的音素/转写及匹配依据（如编辑距离/相似度）。
+
+            如命中，请在 reason 中简要说明识别依据与类别（如："offensive(谐音, phonetic-hint): ..."）。
+
+            仅输出上述JSON，不要包含多余文本或注释。
 
             评论内容：{content}
             昵称：{author_name}
