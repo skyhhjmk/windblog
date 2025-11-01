@@ -47,6 +47,21 @@
 
             <!-- 文章内容 -->
             <div class="p-6">
+                {% if post.ai_summary %}
+                    <!-- AI摘要块 -->
+                    <div
+                        class="mb-6 p-4 bg-gradient-to-r from-purple-50 to-blue-50 border-l-4 border-purple-400 rounded-r-lg">
+                        <div class="flex items-center mb-2">
+                        <span
+                            class="inline-flex items-center px-2.5 py-0.5 rounded text-sm font-semibold bg-gradient-to-r from-purple-100 to-blue-100 text-purple-700 border border-purple-200">
+                            <i class="fas fa-robot mr-1.5"></i>AI摘要
+                        </span>
+                        </div>
+                        <p class="text-gray-700 leading-relaxed">
+                            {{ post.ai_summary }}
+                        </p>
+                    </div>
+                {% endif %}
                 <div class="prose max-w-none fade-in-on-scroll no-animation"
                      id="post-container"
                      data-post-id="{{ post.id }}"

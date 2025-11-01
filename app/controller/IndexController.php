@@ -44,7 +44,6 @@ class IndexController
     #[EnableInstantFirstPaint]
     public function index(Request $request, int $page = 1): Response
     {
-
         // 构建筛选条件，并进行输入过滤
         $filters = $this->filterInput($request->get() ?: []);
 

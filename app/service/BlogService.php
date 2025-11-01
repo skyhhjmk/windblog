@@ -194,11 +194,13 @@ class BlogService
         }
 
         // 处理文章摘要
-        try {
-            self::processPostExcerpts($posts);
-        } catch (CommonMarkException $e) {
-            Log::error('Failed to process post excerpts: ' . $e->getMessage());
-            throw $e;
+        if (empty($post->excerpt) && empty($post->ai_summary) && !empty($post->content)) {
+            try {
+                self::processPostExcerpts($posts);
+            } catch (CommonMarkException $e) {
+                Log::error('Failed to process post excerpts: ' . $e->getMessage());
+                throw $e;
+            }
         }
 
         // 生成分页HTML
@@ -218,14 +220,12 @@ class BlogService
                 'highlights' => $esSearch['highlights'] ?? [],
                 'signals' => $esSearch['signals'] ?? [],
             ];
-        } else {
-            // ES 已启用但搜索未使用（回退到数据库），提供降级信号供前端提示
-            if (!empty($filters['search']) && (bool) self::getConfig('es.enabled', false)) {
-                $esMeta = [
-                    'signals' => ['degraded' => true],
-                ];
-            }
+        } elseif (!empty($filters['search']) && (bool) self::getConfig('es.enabled', false)) {
+            $esMeta = [
+                'signals' => ['degraded' => true],
+            ];
         }
+
         $result = [
             'posts' => $posts,
             'pagination' => $pagination_html,
