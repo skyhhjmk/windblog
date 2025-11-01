@@ -223,12 +223,19 @@ class OpenAiProvider extends BaseAiProvider
     protected function doSummarize(array $params, array $options): array
     {
         $content = (string) ($params['content'] ?? '');
-        $prompt = $options['prompt'] ?? '请为以下内容生成一个简洁的摘要：';
+        $customPrompt = (string) ($params['prompt'] ?? '');
 
-        $messages = [
-            ['role' => 'system', 'content' => '你是一个专业的内容摘要助手。'],
-            ['role' => 'user', 'content' => $prompt . "\n\n" . $content],
-        ];
+        // 如果有自定义提示词，使用自定义提示词，否则使用默认提示词
+        if (!empty($customPrompt)) {
+            $messages = [
+                ['role' => 'user', 'content' => $customPrompt . "\n\n" . $content],
+            ];
+        } else {
+            $messages = [
+                ['role' => 'system', 'content' => '你是一个专业的内容摘要助手。'],
+                ['role' => 'user', 'content' => '请为以下内容生成一个简洁的摘要：' . "\n\n" . $content],
+            ];
+        }
 
         return $this->callChatCompletion($messages, $options);
     }

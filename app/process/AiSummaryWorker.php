@@ -13,7 +13,6 @@ use app\service\MQService;
 use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Exception\AMQPTimeoutException;
 use PhpAmqpLib\Message\AMQPMessage;
-use PhpAmqpLib\Wire\AMQPTable;
 use RuntimeException;
 use support\Log;
 use support\Redis as SupportRedis;
@@ -161,24 +160,77 @@ class AiSummaryWorker
             return;
         }
 
-        // 标记状态为刷新中
-        $this->setAiMeta($postId, ['enabled' => (bool) ($meta['enabled'] ?? true), 'status' => 'refreshing']);
+        // 标记状态为刷新中，并记录开始时间
+        $this->setAiMeta($postId, [
+            'enabled' => (bool) ($meta['enabled'] ?? true),
+            'status' => 'refreshing',
+            'started_at' => date('Y-m-d H:i:s'),
+        ]);
 
         $content = (string) $post->content;
         $prov = $this->chooseProvider($providerId);
-        $result = $prov->summarize($content, $options);
+
+        // 获取摘要提示词
+        $defaultPrompt = <<<'EOF'
+            请为以下文章生成一个简洁的摘要，重点阐述文章的主要内容和核心观点。
+
+            要求：
+            1. 摘要长度为140-160字
+            2. 着重描述文章讲了什么，概括主要内容和观点
+            3. 使用简洁、流畅的语言，避免冗长
+            4. 不使用表情符号、特殊符号，标点符号仅保留必要的逗号和句号
+            5. 保持客观、中立的陈述角度
+
+            直接输出摘要内容，不要添加“本文介绍了”、“摘要：”等前缀词。
+            EOF;
+        $prompt = (string) blog_config('ai_summary_prompt', $defaultPrompt, true);
+
+        // 使用统一的 call 方法调用摘要任务
+        $result = $prov->call('summarize', ['content' => $content, 'prompt' => $prompt], $options);
 
         if (!($result['ok'] ?? false)) {
-            $this->setAiMeta($postId, ['enabled' => (bool) ($meta['enabled'] ?? true), 'status' => 'failed', 'error' => (string) ($result['error'] ?? 'unknown')]);
-            throw new RuntimeException('AI summarize failed: ' . ($result['error'] ?? 'unknown'));
+            $errorMsg = (string) ($result['error'] ?? 'unknown');
+            $this->setAiMeta($postId, [
+                'enabled' => (bool) ($meta['enabled'] ?? true),
+                'status' => 'failed',
+                'error' => $errorMsg,
+                'failed_at' => date('Y-m-d H:i:s'),
+                'provider' => $prov->getId(),
+            ]);
+            // 失败后直接ACK，不重试
+            $message->ack();
+            Log::error("AI summarize failed for post {$postId}: {$errorMsg}");
+
+            return;
         }
 
-        $summary = (string) ($result['summary'] ?? '');
+        $summary = (string) ($result['result'] ?? '');
+        if (empty($summary)) {
+            $this->setAiMeta($postId, [
+                'enabled' => (bool) ($meta['enabled'] ?? true),
+                'status' => 'failed',
+                'error' => 'Empty summary returned',
+                'failed_at' => date('Y-m-d H:i:s'),
+                'provider' => $prov->getId(),
+            ]);
+            $message->ack();
+            Log::error("AI returned empty summary for post {$postId}");
+
+            return;
+        }
+
         // 更新文章字段
         $post->ai_summary = $summary;
         $post->save();
 
-        $this->setAiMeta($postId, ['enabled' => (bool) ($meta['enabled'] ?? true), 'status' => 'done', 'provider' => $prov->getId(), 'usage' => $result['usage'] ?? []]);
+        $this->setAiMeta($postId, [
+            'enabled' => (bool) ($meta['enabled'] ?? true),
+            'status' => 'done',
+            'provider' => $prov->getId(),
+            'usage' => $result['usage'] ?? [],
+            'model' => $result['model'] ?? null,
+            'generated_at' => date('Y-m-d H:i:s'),
+        ]);
 
         $message->ack();
     }
@@ -227,22 +279,35 @@ class AiSummaryWorker
 
     protected function handleFailedMessage(AMQPMessage $message): void
     {
-        $headers = $message->has('application_headers') ? $message->get('application_headers') : null;
-        $retry = 0;
-        if ($headers instanceof AMQPTable) {
-            $native = method_exists($headers, 'getNativeData') ? $headers->getNativeData() : (array) $headers;
-            $retry = (int) ($native['x-retry-count'] ?? 0);
+        try {
+            // 解析消息体以获取任务信息
+            $data = json_decode($message->getBody(), true);
+            if (is_array($data)) {
+                $taskType = (string) ($data['task_type'] ?? 'summarize');
+
+                if ($taskType === 'summarize' && isset($data['post_id'])) {
+                    // 摘要任务失败，更新状态
+                    $postId = (int) $data['post_id'];
+                    $meta = $this->getAiMeta($postId);
+                    $this->setAiMeta($postId, [
+                        'enabled' => (bool) ($meta['enabled'] ?? true),
+                        'status' => 'failed',
+                        'error' => 'Message processing failed',
+                        'failed_at' => date('Y-m-d H:i:s'),
+                    ]);
+                } elseif (isset($data['task_id'])) {
+                    // 通用任务失败
+                    $taskId = (string) $data['task_id'];
+                    $this->setTaskStatus($taskId, 'failed', null, 'Message processing failed');
+                }
+            }
+        } catch (Throwable $e) {
+            Log::error('Failed to handle failed message metadata: ' . $e->getMessage());
         }
-        if ($retry < 2) {
-            $newHeaders = $headers ? clone $headers : new AMQPTable();
-            $newHeaders->set('x-retry-count', $retry + 1);
-            $newMsg = new AMQPMessage($message->getBody(), ['content_type' => 'application/json', 'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT, 'application_headers' => $newHeaders]);
-            $this->mqChannel?->basic_publish($newMsg, $this->exchange, $this->routingKey);
-            $message->ack();
-        } else {
-            // 进入 DLQ
-            $message->reject(false);
-        }
+
+        // 直接ACK，不重试，避免无限循环
+        $message->ack();
+        Log::warning('AI task message failed and acknowledged without retry');
     }
 
     protected function chooseProvider(?string $specified = null): AiProviderInterface

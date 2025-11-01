@@ -175,24 +175,35 @@
                             <h3 class="text-sm font-semibold text-gray-700 flex items-center">
                                 <i class="fas fa-brain mr-2 text-amber-500"></i>AI 摘要
                             </h3>
-                            <div class="relative">
+                            <label class="relative cursor-pointer">
                                 <input type="checkbox" id="ai-enabled" class="sr-only peer">
                                 <div class="w-9 h-5 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-amber-400 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
-                            </div>
+                            </label>
                         </div>
                     </div>
                     <div class="p-3 space-y-3">
+                        <!-- 当前状态（只读） -->
                         <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1.5" for="ai-status">状态</label>
-                            <select class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-400"
-                                    id="ai-status">
-                                <option value="none">⚪ 未生成</option>
-                                <option value="done">✅ 已生成</option>
-                                <option value="failed">❌ 失败</option>
-                                <option value="refreshing">🔄 刷新中</option>
-                                <option value="persisted">💾 持久化</option>
-                            </select>
+                            <label class="block text-xs font-medium text-gray-600 mb-1.5">当前状态</label>
+                            <div class="px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-md text-gray-700"
+                                 id="ai-status-display">
+                                <span id="ai-status-text">⚪ 未生成</span>
+                            </div>
                         </div>
+
+                        <!-- 持久化开关 -->
+                        <label class="flex items-center justify-between cursor-pointer group">
+                            <span class="text-sm text-gray-700 group-hover:text-gray-900 flex items-center">
+                                <i class="fas fa-lock mr-2 text-gray-400"></i>持久化摘要
+                                <span class="ml-2 text-xs text-gray-500">(不自动更新)</span>
+                            </span>
+                            <div class="relative">
+                                <input class="sr-only peer" id="ai-persisted" type="checkbox">
+                                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-amber-400 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+                            </div>
+                        </label>
+
+                        <!-- 摘要内容 -->
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1.5"
                                    for="ai-summary">摘要内容</label>
@@ -200,10 +211,18 @@
                                       placeholder="可手动编辑或由AI生成"
                                       rows="5"></textarea>
                         </div>
-                        <button class="w-full px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm rounded-md transition-colors flex items-center justify-center" id="ai-generate"
-                                type="button">
-                            <i class="fas fa-magic mr-2"></i>生成摘要
-                        </button>
+
+                        <!-- 操作按钮 -->
+                        <div class="flex gap-2">
+                            <button class="flex-1 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm rounded-md transition-colors flex items-center justify-center"
+                                    id="ai-generate" type="button">
+                                <i class="fas fa-magic mr-1"></i>生成摘要
+                            </button>
+                            <button class="flex-1 px-3 py-2 bg-green-500 hover:bg-green-600 text-white text-sm rounded-md transition-colors flex items-center justify-center"
+                                    id="ai-save" type="button">
+                                <i class="fas fa-save mr-1"></i>保存摘要
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -739,10 +758,8 @@
                     visibility: postVisibility.value,
                     allow_comments: allowComments.checked ? 1 : 0,
                     featured: postFeatured.checked ? 1 : 0,
-                    authors: authorIds,
-                    ai_enabled: (document.getElementById('ai-enabled')?.checked ? 1 : 0),
-                    ai_status: (document.getElementById('ai-status')?.value || ''),
-                    ai_summary: (document.getElementById('ai-summary')?.value || ''),
+                    authors: authorIds
+                    // AI摘要相关字段通过单独的“保存摘要”按钮处理
                 };
 
                 const loadingIndex = layer.msg('保存中...', {icon: 16, shade: 0.3, time: 0});
@@ -961,29 +978,216 @@
         // 初始化作者选择器
         initAuthorsSelector();
 
+        // AI 摘要状态显示映射
+        const statusTextMap = {
+            'none': '⚪ 未生成',
+            'done': '✅ 已生成',
+            'failed': '❌ 失败',
+            'refreshing': '🔄 刷新中',
+            'persisted': '💾 持久化'
+        };
+
+        // AI 摘要刷新功能
+        let aiRefreshInterval = null;
+        let aiPollCount = 0; // 轮询次数计数器
+        const MAX_POLL_COUNT = 60; // 最多轮询60次（3分钟）
+
+        function updateAiStatusDisplay(status) {
+            const statusText = document.getElementById('ai-status-text');
+            if (statusText) {
+                statusText.textContent = statusTextMap[status] || statusTextMap['none'];
+            }
+        }
+
+        function checkAiSummaryStatus() {
+            if (!postId) return;
+
+            fetch('/app/admin/ai/summary/status?post_id=' + postId)
+                .then(r => r.json())
+                .then(res => {
+                    if (res && res.code === 0 && res.data) {
+                        const data = res.data;
+                        const summaryTextarea = document.getElementById('ai-summary');
+                        const aiBtn = document.getElementById('ai-generate');
+                        const aiEnabledCheckbox = document.getElementById('ai-enabled');
+                        const aiPersistedCheckbox = document.getElementById('ai-persisted');
+
+                        // 更新状态显示
+                        updateAiStatusDisplay(data.status);
+
+                        // 更新启用状态
+                        if (aiEnabledCheckbox) {
+                            aiEnabledCheckbox.checked = data.enabled || false;
+                        }
+
+                        // 更新持久化状态
+                        if (aiPersistedCheckbox) {
+                            aiPersistedCheckbox.checked = (data.status === 'persisted');
+                        }
+
+                        // 更新摘要内容
+                        if (summaryTextarea && data.summary) {
+                            summaryTextarea.value = data.summary;
+                        }
+
+                        // 根据状态更新按钮文本
+                        if (aiBtn) {
+                            if (data.status === 'refreshing') {
+                                aiPollCount++;
+
+                                // 检查是否超过最大轮询次数
+                                if (aiPollCount >= MAX_POLL_COUNT) {
+                                    // 超时，停止轮询并显示警告
+                                    if (aiRefreshInterval) {
+                                        clearInterval(aiRefreshInterval);
+                                        aiRefreshInterval = null;
+                                    }
+                                    aiBtn.innerHTML = '<i class="fas fa-exclamation-triangle mr-1"></i>任务超时';
+                                    aiBtn.disabled = false;
+                                    layer.msg('任务超时，请重试或检查Worker进程', {icon: 5});
+                                    aiPollCount = 0;
+                                    return;
+                                }
+
+                                const elapsed = Math.floor((aiPollCount * 3) / 60);
+                                const remaining = Math.max(0, 3 - elapsed);
+                                aiBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>生成中 (' + remaining + 'm)';
+                                aiBtn.disabled = true;
+
+                                // 如果正在生成，启动轮询
+                                if (!aiRefreshInterval) {
+                                    aiRefreshInterval = setInterval(checkAiSummaryStatus, 3000);
+                                }
+                            } else {
+                                aiBtn.innerHTML = '<i class="fas fa-magic mr-1"></i>生成摘要';
+                                aiBtn.disabled = false;
+                                aiPollCount = 0;
+                                // 停止轮询
+                                if (aiRefreshInterval) {
+                                    clearInterval(aiRefreshInterval);
+                                    aiRefreshInterval = null;
+                                }
+                            }
+                        }
+
+                        // 如果失败，显示错误信息
+                        if (data.status === 'failed' && data.error) {
+                            layer.msg('AI摘要生成失败: ' + data.error, {icon: 5, time: 5000});
+                        }
+
+                        // 如果成功，显示提示
+                        if (data.status === 'done' && aiPollCount > 0) {
+                            layer.msg('摘要生成成功', {icon: 1});
+                            aiPollCount = 0;
+                        }
+                    }
+                })
+                .catch(e => {
+                    console.error('检查AI摘要状态失败:', e);
+                    // 网络错误，停止轮询
+                    if (aiRefreshInterval) {
+                        clearInterval(aiRefreshInterval);
+                        aiRefreshInterval = null;
+                    }
+                });
+        }
+
         // AI 生成按钮
         const aiBtn = document.getElementById('ai-generate');
         if (aiBtn) {
             aiBtn.addEventListener('click', function () {
                 if (!postId) {
-                    alert('请先保存文章后再生成AI摘要');
+                    layer.msg('请先保存文章后再生成AI摘要', {icon: 5});
                     return;
                 }
-                const idx = layer && layer.msg ? layer.msg('生成中...', {icon: 16, shade: 0.1, time: 0}) : null;
-                fetch('/app/admin/ai-summary/enqueue', {
+
+                updateAiStatusDisplay('refreshing');
+
+                aiBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>生成中...';
+                aiBtn.disabled = true;
+
+                fetch('/app/admin/ai/summary/enqueue', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({post_id: postId, force: true})
                 })
                     .then(r => r.json()).then(res => {
-                    if (idx) layer.close(idx);
-                    alert(res.msg || (res.code === 0 ? '已入队' : '失败'));
+                    if (res.code === 0) {
+                        layer.msg('已提交生成任务，请稍候...', {icon: 1});
+                        // 启动轮询检查状态
+                        if (!aiRefreshInterval) {
+                            aiRefreshInterval = setInterval(checkAiSummaryStatus, 3000);
+                        }
+                    } else {
+                        layer.msg(res.msg || '提交失败', {icon: 2});
+                        aiBtn.innerHTML = '<i class="fas fa-magic mr-1"></i>生成摘要';
+                        aiBtn.disabled = false;
+                    }
                 }).catch(e => {
-                    if (idx) layer.close(idx);
-                    alert('失败:' + e.message);
+                    layer.msg('请求失败: ' + e.message, {icon: 2});
+                    aiBtn.innerHTML = '<i class="fas fa-magic mr-1"></i>生成摘要';
+                    aiBtn.disabled = false;
                 });
             });
         }
+
+        // AI 保存按钮
+        const aiSaveBtn = document.getElementById('ai-save');
+        if (aiSaveBtn) {
+            aiSaveBtn.addEventListener('click', function () {
+                if (!postId) {
+                    layer.msg('请先保存文章', {icon: 5});
+                    return;
+                }
+
+                const aiEnabled = document.getElementById('ai-enabled')?.checked || false;
+                const aiPersisted = document.getElementById('ai-persisted')?.checked || false;
+                const aiSummary = document.getElementById('ai-summary')?.value || '';
+
+                // 根据持久化状态决定状态
+                const status = aiPersisted ? 'persisted' : (aiSummary ? 'done' : 'none');
+
+                const loadingIdx = layer.msg('保存中...', {icon: 16, shade: 0.1, time: 0});
+
+                fetch('/app/admin/ai/summary/set-meta', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        post_id: postId,
+                        enabled: aiEnabled ? 1 : 0,
+                        status: status
+                    })
+                })
+                    .then(r => r.json())
+                    .then(res => {
+                        layer.close(loadingIdx);
+                        if (res.code === 0) {
+                            layer.msg('保存成功', {icon: 1});
+                            // 更新状态显示
+                            updateAiStatusDisplay(status);
+                        } else {
+                            layer.msg(res.msg || '保存失败', {icon: 2});
+                        }
+                    })
+                    .catch(e => {
+                        layer.close(loadingIdx);
+                        layer.msg('请求失败: ' + e.message, {icon: 2});
+                    });
+            });
+        }
+
+        // 页面加载时检查一次状态
+        if (postId > 0) {
+            setTimeout(checkAiSummaryStatus, 1000);
+        }
+
+        // 页面卸载时清理轮询
+        window.addEventListener('beforeunload', function () {
+            if (aiRefreshInterval) {
+                clearInterval(aiRefreshInterval);
+                aiRefreshInterval = null;
+            }
+        });
 
         // 可见性字段变化监听，显示/隐藏密码输入框
         if (postVisibility && passwordField) {

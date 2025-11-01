@@ -31,7 +31,7 @@
                             <option value="pending">待审核</option>
                             <option value="approved">已通过</option>
                             <option value="spam">垃圾</option>
-                            <option value="trash">丢弃</option>
+                            <!--                            <option value="trash">丢弃</option>-->
                         </select>
                     </div>
                 </div>
@@ -65,10 +65,10 @@
         <i class="layui-icon layui-icon-face-cry"></i>
         标记垃圾
     </button>
-    <button class="pear-btn pear-btn-warming pear-btn-md" lay-event="batchTrash">
-        <i class="layui-icon layui-icon-tips"></i>
-        标记丢弃
-    </button>
+    <!--    <button class="pear-btn pear-btn-warming pear-btn-md" lay-event="batchTrash">-->
+    <!--        <i class="layui-icon layui-icon-tips"></i>-->
+    <!--        标记丢弃-->
+    <!--    </button>-->
     <button class="pear-btn pear-btn-normal pear-btn-md" lay-event="batchAIModerate">
         <i class="layui-icon layui-icon-auz"></i>
         AI审核
@@ -98,14 +98,14 @@
         <button class="pear-btn pear-btn-warming pear-btn-sm" lay-event="spam" title="标记垃圾">
             <i class="layui-icon layui-icon-face-cry"></i>
         </button>
-        <button class="pear-btn pear-btn-warming pear-btn-sm" lay-event="trash" title="标记丢弃（trash）">
-            <i class="layui-icon layui-icon-tips"></i>
+        <!--        <button class="pear-btn pear-btn-warming pear-btn-sm" lay-event="trash" title="标记丢弃（trash）">-->
+        <!--            <i class="layui-icon layui-icon-tips"></i>-->
+        <!--        </button>-->
+        <button class="pear-btn pear-btn-normal pear-btn-sm" lay-event="aiModerate" title="AI审核">
+            <i class="layui-icon layui-icon-auz"></i>
         </button>
         <button class="pear-btn pear-btn-danger pear-btn-sm" lay-event="remove" title="删除（回收站）">
             <i class="layui-icon layui-icon-delete"></i>
-        </button>
-        <button class="pear-btn pear-btn-normal pear-btn-sm" lay-event="aiModerate" title="AI审核">
-            <i class="layui-icon layui-icon-auz"></i>
         </button>
     </div>
 </script>
@@ -148,15 +148,15 @@
     {{# if(d.ai_moderation_result === 'approved') { }}
     <span class="px-2 py-1 text-xs rounded bg-green-100 text-green-800"
           title="置信度: {{d.ai_moderation_confidence || 0}}">
-                ✔ 通过
+                建议通过
             </span>
     {{# } else if(d.ai_moderation_result === 'rejected') { }}
     <span class="px-2 py-1 text-xs rounded bg-red-100 text-red-800" title="{{d.ai_moderation_reason || ''}}">
-                ✖ 拒绝
+                建议拒绝
             </span>
     {{# } else if(d.ai_moderation_result === 'spam') { }}
     <span class="px-2 py-1 text-xs rounded bg-orange-100 text-orange-800" title="{{d.ai_moderation_reason || ''}}">
-                ⚠ 垃圾
+                垃圾评论
             </span>
     {{# } else { }}
     <span class="px-2 py-1 text-xs rounded bg-gray-100 text-gray-600">

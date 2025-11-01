@@ -64,7 +64,8 @@
             <div class="mt-6">
                 <!-- Tab 1: Overview -->
                 <div class="tab-content" id="overview-tab">
-                    <div class="bg-white rounded-lg border border-gray-200 p-6">
+                    <!-- 状态统计 -->
+                    <div class="bg-white rounded-lg border border-gray-200 p-6 mb-6">
                         <h3 class="text-lg font-semibold text-gray-800 mb-4">状态统计</h3>
                         <div class="overflow-x-auto">
                             <table class="min-w-full divide-y divide-gray-200">
@@ -83,30 +84,53 @@
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">无摘要 (none)</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">-</td>
                                 </tr>
-                                <tr>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">已生成 (done)</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">-</td>
-                                </tr>
-                                <tr>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">失败 (failed)</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">-</td>
-                                </tr>
-                                <tr>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">刷新中 (refreshing)
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">-</td>
-                                </tr>
-                                <tr>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">已固化 (persisted)
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">-</td>
-                                </tr>
                                 </tbody>
                             </table>
                         </div>
+                    </div>
+
+                    <!-- 使用统计 -->
+                    <div class="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">使用统计</h3>
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                                <div class="text-sm text-gray-600">总 Token 消耗</div>
+                                <div class="text-2xl font-bold text-blue-600" id="total-tokens">0</div>
+                            </div>
+                            <div class="bg-green-50 rounded-lg p-4 border border-green-200">
+                                <div class="text-sm text-gray-600">成功生成</div>
+                                <div class="text-2xl font-bold text-green-600" id="success-count">0</div>
+                            </div>
+                        </div>
+                        <div class="space-y-2" id="provider-usage"></div>
+                    </div>
+
+                    <!-- 最近错误 -->
+                    <div class="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">最近错误</h3>
+                        <div class="space-y-2" id="recent-errors">
+                            <div class="text-sm text-gray-500">暂无错误记录</div>
+                        </div>
+                    </div>
+
+                    <!-- 最近成功 -->
+                    <div class="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">最近成功生成</h3>
+                        <div class="space-y-2" id="recent-success">
+                            <div class="text-sm text-gray-500">暂无记录</div>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2">
                         <button type="button"
-                                class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                                id="btn-refresh-stats">刷新统计
+                                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                                id="btn-refresh-stats">
+                            <i class="fas fa-sync-alt mr-2"></i>刷新统计
+                        </button>
+                        <button class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition"
+                                id="btn-reset-stuck"
+                                type="button">
+                            <i class="fas fa-redo mr-2"></i>重置卡住的任务
                         </button>
                     </div>
                 </div>
@@ -206,18 +230,64 @@
         function loadStats() {
             $.get('/app/admin/ai/summary/stats', function (res) {
                 if (res && res.code === 0 && res.data) {
-                    var stats = res.data;
+                    var data = res.data;
+                    var counters = data.counters || {};
+
+                    // 更新状态统计表格
                     var tbody = $('#statsTable');
                     tbody.html('');
                     [
-                        ['无摘要 (none)', stats.none || 0],
-                        ['已生成 (done)', stats.done || 0],
-                        ['失败 (failed)', stats.failed || 0],
-                        ['刷新中 (refreshing)', stats.refreshing || 0],
-                        ['已固化 (persisted)', stats.persisted || 0]
-                    ].forEach(function (pair) {
-                        tbody.append('<tr><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">' + pair[0] + '</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">' + pair[1] + '</td></tr>');
+                        ['无摘要 (none)', counters.none || 0, 'gray'],
+                        ['已生成 (done)', counters.done || 0, 'green'],
+                        ['失败 (failed)', counters.failed || 0, 'red'],
+                        ['刷新中 (refreshing)', counters.refreshing || 0, 'blue'],
+                        ['已固化 (persisted)', counters.persisted || 0, 'purple']
+                    ].forEach(function (item) {
+                        var colorClass = 'text-' + item[2] + '-600';
+                        tbody.append('<tr><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">' + item[0] + '</td><td class="px-6 py-4 whitespace-nowrap text-sm font-semibold ' + colorClass + '">' + item[1] + '</td></tr>');
                     });
+
+                    // 更新使用统计
+                    $('#total-tokens').text((data.total_tokens || 0).toLocaleString());
+                    $('#success-count').text(counters.done || 0);
+
+                    // 更新提供者使用情况
+                    var providerUsage = data.provider_usage || {};
+                    var providerDiv = $('#provider-usage');
+                    providerDiv.html('');
+                    if (Object.keys(providerUsage).length > 0) {
+                        providerDiv.append('<h4 class="text-sm font-medium text-gray-700 mb-2">提供者使用情况</h4>');
+                        Object.keys(providerUsage).forEach(function (provider) {
+                            var usage = providerUsage[provider];
+                            providerDiv.append('<div class="flex justify-between items-center p-2 bg-gray-50 rounded"><span class="text-sm text-gray-700">' + provider + '</span><span class="text-sm text-gray-600">调用: ' + usage.count + ' 次 | Tokens: ' + usage.tokens.toLocaleString() + '</span></div>');
+                        });
+                    } else {
+                        providerDiv.append('<div class="text-sm text-gray-500">暂无使用记录</div>');
+                    }
+
+                    // 更新最近错误
+                    var recentErrors = data.recent_errors || [];
+                    var errorsDiv = $('#recent-errors');
+                    errorsDiv.html('');
+                    if (recentErrors.length > 0) {
+                        recentErrors.forEach(function (err) {
+                            errorsDiv.append('<div class="p-3 bg-red-50 border border-red-200 rounded-lg"><div class="flex justify-between items-start mb-1"><span class="text-sm font-medium text-red-800">文章 ID: ' + err.post_id + '</span><span class="text-xs text-red-600">' + err.failed_at + '</span></div><div class="text-sm text-red-700"><strong>提供者:</strong> ' + err.provider + '</div><div class="text-sm text-red-600 mt-1">' + err.error + '</div></div>');
+                        });
+                    } else {
+                        errorsDiv.append('<div class="text-sm text-gray-500">暂无错误记录</div>');
+                    }
+
+                    // 更新最近成功
+                    var recentSuccess = data.recent_success || [];
+                    var successDiv = $('#recent-success');
+                    successDiv.html('');
+                    if (recentSuccess.length > 0) {
+                        recentSuccess.forEach(function (succ) {
+                            successDiv.append('<div class="p-3 bg-green-50 border border-green-200 rounded-lg"><div class="flex justify-between items-start mb-1"><span class="text-sm font-medium text-green-800">文章 ID: ' + succ.post_id + '</span><span class="text-xs text-green-600">' + succ.generated_at + '</span></div><div class="text-sm text-green-700"><strong>提供者:</strong> ' + succ.provider + ' | <strong>模型:</strong> ' + succ.model + '</div><div class="text-sm text-green-600 mt-1">Tokens: ' + succ.tokens + '</div></div>');
+                        });
+                    } else {
+                        successDiv.append('<div class="text-sm text-gray-500">暂无记录</div>');
+                    }
                 }
             });
         }
@@ -488,6 +558,37 @@
         // Refresh stats button
         $('#btn-refresh-stats').on('click', function () {
             loadStats();
+        });
+
+        // Reset stuck tasks button
+        $('#btn-reset-stuck').on('click', function () {
+            layer.confirm('确定要重置所有超过3分钟的卡住任务吗？', {
+                icon: 3,
+                title: '确认操作'
+            }, function (index) {
+                var idx = layer.msg('处理中...', {icon: 16, shade: 0.1, time: 0});
+                $.ajax({
+                    url: '/app/admin/ai/summary/reset-all-stuck',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({}),
+                    success: function (res) {
+                        layer.close(idx);
+                        layer.close(index);
+                        if (res && res.code === 0) {
+                            layer.msg(res.msg || '重置成功', {icon: 1});
+                            // 刷新统计
+                            loadStats();
+                        } else {
+                            layer.msg(res.msg || '重置失败', {icon: 2});
+                        }
+                    },
+                    error: function () {
+                        layer.close(idx);
+                        layer.msg('请求失败', {icon: 2});
+                    }
+                });
+            });
         });
 
         // Load prompt

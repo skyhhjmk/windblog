@@ -19,7 +19,14 @@
     <script src="{{ asset('/assets/js/common.js') }}"></script>
     <!-- 动画工具库 -->
     <script src="{{ asset('/assets/js/animation-utils.js') }}" defer></script>
-
+    <!-- FloLink 悬浮链接样式 -->
+    <link rel="preload" as="style" href="{{ asset('/assets/flolink/flolink.css') }}">
+    <link rel="stylesheet" href="{{ asset('/assets/flolink/flolink.css') }}">
+    <!-- Vditor 必须同步加载以支持 PJAX -->
+    <script src="{{ asset('/assets/vditor/method.min.js') }}"></script>
+    <!-- FloLink 悬浮链接脚本 -->
+    <script src="{{ asset('/assets/flolink/flolink.js') }}"></script>
+    <script src="{{ asset('/assets/js/pangu.umd.js') }}" defer></script>
     <script src="{{ asset('/assets/js/sweetalert2.all.min.js') }}"></script>
     <style>
         .blog-container {
@@ -2120,6 +2127,7 @@
                 }
                 return WordToHexValue;
             }
+
             var x = Array();
             var k, AA, BB, CC, DD, a, b, c, d;
             var S11 = 7, S12 = 12, S13 = 17, S14 = 22;

@@ -557,22 +557,6 @@ COMMENT ON COLUMN wa_admins.updated_at IS '更新时间';
 COMMENT ON COLUMN wa_admins.login_at IS '登录时间';
 COMMENT ON COLUMN wa_admins.status IS '禁用';
 
--- 创建选项表
-CREATE TABLE IF NOT EXISTS wa_options
-(
-    id         SERIAL PRIMARY KEY,
-    name       VARCHAR(128) NOT NULL,
-    value      jsonb        NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, -- 修正
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, -- 修正
-    UNIQUE (name)
-);
-
-COMMENT ON TABLE wa_options IS '选项表';
-COMMENT ON COLUMN wa_options.name IS '键';
-COMMENT ON COLUMN wa_options.value IS '值';
-COMMENT ON COLUMN wa_options.created_at IS '创建时间';
-COMMENT ON COLUMN wa_options.updated_at IS '更新时间';
 
 -- 创建管理员角色表（权限角色组）
 CREATE TABLE IF NOT EXISTS wa_roles
@@ -618,37 +602,6 @@ COMMENT ON COLUMN wa_rules.href IS 'url';
 COMMENT ON COLUMN wa_rules.type IS '类型';
 COMMENT ON COLUMN wa_rules.weight IS '排序';
 
--- 创建附件表
-CREATE TABLE IF NOT EXISTS wa_uploads
-(
-    id           SERIAL PRIMARY KEY,
-    name         VARCHAR(128) NOT NULL,
-    url          VARCHAR(255) NOT NULL,
-    admin_id     INTEGER                  DEFAULT NULL,
-    file_size    INTEGER      NOT NULL,
-    mime_type    VARCHAR(255) NOT NULL,
-    image_width  INTEGER                  DEFAULT NULL,
-    image_height INTEGER                  DEFAULT NULL,
-    ext          VARCHAR(128) NOT NULL,
-    storage      VARCHAR(255) NOT NULL    DEFAULT 'local',
-    category     VARCHAR(128)             DEFAULT NULL,
-    created_at   TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at   TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-COMMENT ON TABLE wa_uploads IS '附件表';
-COMMENT ON COLUMN wa_uploads.name IS '名称';
-COMMENT ON COLUMN wa_uploads.url IS '文件';
-COMMENT ON COLUMN wa_uploads.admin_id IS '管理员';
-COMMENT ON COLUMN wa_uploads.file_size IS '文件大小';
-COMMENT ON COLUMN wa_uploads.mime_type IS 'mime类型';
-COMMENT ON COLUMN wa_uploads.image_width IS '图片宽度';
-COMMENT ON COLUMN wa_uploads.image_height IS '图片高度';
-COMMENT ON COLUMN wa_uploads.ext IS '扩展名';
-COMMENT ON COLUMN wa_uploads.storage IS '存储位置';
-COMMENT ON COLUMN wa_uploads.created_at IS '上传时间';
-COMMENT ON COLUMN wa_uploads.category IS '类别';
-COMMENT ON COLUMN wa_uploads.updated_at IS '更新时间';
 
 -- 创建posts_ext表
 CREATE TABLE IF NOT EXISTS post_ext
@@ -804,10 +757,6 @@ CREATE INDEX idx_tags_deleted_at ON tags USING btree (deleted_at);
 CREATE INDEX idx_post_tag_post_id ON post_tag USING btree (post_id);
 CREATE INDEX idx_post_tag_tag_id ON post_tag USING btree (tag_id);
 
-CREATE INDEX idx_wa_uploads_category ON wa_uploads USING btree (category);
-CREATE INDEX idx_wa_uploads_admin_id ON wa_uploads USING btree (admin_id);
-CREATE INDEX idx_wa_uploads_name ON wa_uploads USING btree (name);
-CREATE INDEX idx_wa_uploads_ext ON wa_uploads USING btree (ext);
 
 CREATE INDEX idx_post_ext_id ON post_ext USING btree (id);
 CREATE INDEX idx_post_ext_key ON post_ext USING btree (key);

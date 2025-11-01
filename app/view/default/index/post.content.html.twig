@@ -1,491 +1,510 @@
 <title>{{ page_title|default('WindBlog') }}</title>
 <div id="pjax-container">
-<div class="max-w-full mx-auto">
-    {# 面包屑导航 #}
-    {% include 'components/breadcrumb.html.twig' %}
-    <article class="bg-white rounded-xl shadow-md overflow-hidden no-animation">
-        <!-- 文章头部 -->
-        <div class="p-6 border-b border-gray-100">
-            <h1 class="text-3xl font-bold text-gray-800 mb-4">{{ post.title }}</h1>
-            <div class="flex items-center text-gray-500 text-sm space-x-4">
+    <div class="max-w-full mx-auto">
+        {# 面包屑导航 #}
+        {% include 'components/breadcrumb.html.twig' %}
+        <article class="bg-white rounded-xl shadow-md overflow-hidden no-animation">
+            <!-- 文章头部 -->
+            <div class="p-6 border-b border-gray-100">
+                <h1 class="text-3xl font-bold text-gray-800 mb-4">{{ post.title }}</h1>
+                <div class="flex items-center text-gray-500 text-sm space-x-4">
                 <span class="flex items-center">
                     <i class="far fa-calendar-alt mr-1"></i>
                     {{ post.created_at|local_date('Y-m-d') }}
                 </span>
-                <span class="flex items-center">
+                    <span class="flex items-center">
                     <i class="far fa-user mr-1"></i>
-                    <span class="font-medium text-blue-600 hover:text-blue-800 transition-colors cursor-pointer" title="查看作者详情">
+                    <span class="font-medium text-blue-600 hover:text-blue-800 transition-colors cursor-pointer"
+                          title="查看作者详情">
                         {{ author }}
                     </span>
                 </span>
-                {% if post.primaryAuthor.first().avatar %}
-                <span class="flex items-center">
-                    <img src="{{ post.primaryAuthor.first().avatar }}" alt="{{ author }}" class="w-6 h-6 rounded-full mr-1 object-cover" loading="lazy" decoding="async" fetchpriority="low">
+                    {% if post.primaryAuthor.first().avatar %}
+                        <span class="flex items-center">
+                    <img src="{{ post.primaryAuthor.first().avatar }}" alt="{{ author }}"
+                         class="w-6 h-6 rounded-full mr-1 object-cover" loading="lazy" decoding="async"
+                         fetchpriority="low">
                 </span>
-                {% endif %}
+                    {% endif %}
+                </div>
+                <div class="mt-3 text-sm text-gray-600 space-x-2 flex flex-wrap px-6">
+                    {% if post.categories|length > 0 %}
+                        <span class="text-gray-500">分类：</span>
+                        {% for c in post.categories %}
+                            <a href="/category/{{ c.slug }}.html"
+                               class="inline-flex items-center px-2 py-1 bg-blue-50 text-blue-700 rounded hover:bg-blue-100 mr-2">#{{ c.name }}</a>
+                        {% endfor %}
+                    {% endif %}
+                    {% if post.tags|length > 0 %}
+                        <span class="text-gray-500 ml-3">标签：</span>
+                        {% for t in post.tags %}
+                            <a href="/tag/{{ t.slug }}.html"
+                               class="inline-flex items-center px-2 py-1 bg-purple-50 text-purple-700 rounded hover:bg-purple-100 mr-2">#{{ t.name }}</a>
+                        {% endfor %}
+                    {% endif %}
+                </div>
             </div>
-            <div class="mt-3 text-sm text-gray-600 space-x-2 flex flex-wrap px-6">
-                {% if post.categories|length > 0 %}
-                    <span class="text-gray-500">分类：</span>
-                    {% for c in post.categories %}
-                        <a href="/category/{{ c.slug }}.html" class="inline-flex items-center px-2 py-1 bg-blue-50 text-blue-700 rounded hover:bg-blue-100 mr-2">#{{ c.name }}</a>
-                    {% endfor %}
-                {% endif %}
-                {% if post.tags|length > 0 %}
-                    <span class="text-gray-500 ml-3">标签：</span>
-                    {% for t in post.tags %}
-                        <a href="/tag/{{ t.slug }}.html" class="inline-flex items-center px-2 py-1 bg-purple-50 text-purple-700 rounded hover:bg-purple-100 mr-2">#{{ t.name }}</a>
-                    {% endfor %}
-                {% endif %}
-            </div>
-        </div>
 
-        <!-- 文章内容 -->
-        <div class="p-6">
-            <div class="prose max-w-none fade-in-on-scroll no-animation"
-                 id="post-container"
-                 data-post-id="{{ post.id }}"
-                 data-post-slug="{{ post.slug }}">
-                <!-- 内容将由 Vditor 渲染 -->
-            </div>
-            <!-- 将文章内容嵌入为 JSON 数据 -->
-            <script type="application/json" id="post-content-data">
+            <!-- 文章内容 -->
+            <div class="p-6">
+                <div class="prose max-w-none fade-in-on-scroll no-animation"
+                     id="post-container"
+                     data-post-id="{{ post.id }}"
+                     data-post-slug="{{ post.slug }}">
+                    <!-- 内容将由 Vditor 渲染 -->
+                </div>
+                <!-- 将文章内容嵌入为 JSON 数据 -->
+                <script type="application/json" id="post-content-data">
                 {{ post.content|json_encode|raw }}
-            </script>
-        </div>
 
-        <!-- 文章底部 -->
-        <div class="p-6 border-t border-gray-100">
-            <div class="flex justify-between items-center">
-                <a href="/"
-                   class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium">
-                    <i class="fas fa-arrow-left mr-1"></i>
-                    返回首页
-                </a>
-                <div class="text-sm text-gray-500">
-                    <i class="far fa-clock mr-1"></i>
-                    最后更新: {{ post.updated_at|local_date('Y-m-d') }}
+
+
+                </script>
+            </div>
+
+            <!-- 文章底部 -->
+            <div class="p-6 border-t border-gray-100">
+                <div class="flex justify-between items-center">
+                    <a href="/"
+                       class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium">
+                        <i class="fas fa-arrow-left mr-1"></i>
+                        返回首页
+                    </a>
+                    <div class="text-sm text-gray-500">
+                        <i class="far fa-clock mr-1"></i>
+                        最后更新: {{ post.updated_at|local_date('Y-m-d') }}
+                    </div>
                 </div>
             </div>
-        </div>
-    </article>
+        </article>
 
-    <!-- 评论区域 -->
-    <div class="mt-8 bg-white rounded-xl shadow-md p-6" id="comments-section">
-        <h2 class="text-2xl font-bold text-gray-800 mb-4">评论</h2>
+        <!-- 评论区域 -->
+        <div class="mt-8 bg-white rounded-xl shadow-md p-6" id="comments-section">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">评论</h2>
 
-        <!-- 评论列表 -->
-        <div id="comments-list" class="mb-8">
-            <!-- 评论将通过JavaScript动态加载 -->
-        </div>
+            <!-- 评论列表 -->
+            <div id="comments-list" class="mb-8">
+                <!-- 评论将通过JavaScript动态加载 -->
+            </div>
 
-        {% if post.allow_comments %}
-        <!-- 评论表单 -->
-        <div class="border-t border-gray-200 pt-6">
-            <h3 class="text-lg font-medium text-gray-800 mb-4">发表评论</h3>
-            <form id="comment-form" class="space-y-4">
-                <input type="hidden" id="post-id" name="post_id" value="{{ post.id }}">
-                <input type="hidden" id="parent-id" name="parent_id" value="0">
-                <input type="hidden" id="quoted-text" name="quoted_text" value="">
-                <input type="hidden" id="quoted-comment-id" name="quoted_comment_id" value="0">
+            {% if post.allow_comments %}
+                <!-- 评论表单 -->
+                <div class="border-t border-gray-200 pt-6">
+                    <h3 class="text-lg font-medium text-gray-800 mb-4">发表评论</h3>
+                    <form id="comment-form" class="space-y-4">
+                        <input type="hidden" id="post-id" name="post_id" value="{{ post.id }}">
+                        <input type="hidden" id="parent-id" name="parent_id" value="0">
+                        <input type="hidden" id="quoted-text" name="quoted_text" value="">
+                        <input type="hidden" id="quoted-comment-id" name="quoted_comment_id" value="0">
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label for="guest_name" class="block text-sm font-medium text-gray-700 mb-1">昵称 *</label>
-                        <input type="text" id="guest_name" name="guest_name" required placeholder="展示在评论区的名称"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div>
-                        <label for="guest_email" class="block text-sm font-medium text-gray-700 mb-1">邮箱 *</label>
-                        <input type="email" id="guest_email" name="guest_email" required
-                               placeholder="仅用于头像与通知，不会公开"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="guest_name" class="block text-sm font-medium text-gray-700 mb-1">昵称
+                                    *</label>
+                                <input type="text" id="guest_name" name="guest_name" required
+                                       placeholder="展示在评论区的名称"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label for="guest_email" class="block text-sm font-medium text-gray-700 mb-1">邮箱
+                                    *</label>
+                                <input type="email" id="guest_email" name="guest_email" required
+                                       placeholder="仅用于头像与通知，不会公开"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="content" class="block text-sm font-medium text-gray-700 mb-1">评论内容 *</label>
+                            <textarea id="content" name="content" rows="4" required
+                                      placeholder="友善发言，理性讨论，禁止广告与人身攻击"
+                                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                            <div id="selected-text-quote"
+                                 class="mt-2 p-2 bg-gray-100 border-l-4 border-blue-500 text-sm text-gray-600 hidden">
+                                <span class="font-medium">引用:</span>
+                                <span id="selected-text-content"></span>
+                                <button type="button" id="remove-quote" class="ml-2 text-red-500 hover:text-red-700">
+                                    &times;
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <button type="submit"
+                                    class="px-6 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors">
+                                提交评论
+                            </button>
+                            <div id="comment-status" class="text-sm text-gray-500 mt-2 hidden"></div>
+                        </div>
+                    </form>
                 </div>
-
-                <div>
-                    <label for="content" class="block text-sm font-medium text-gray-700 mb-1">评论内容 *</label>
-                    <textarea id="content" name="content" rows="4" required
-                              placeholder="友善发言，理性讨论，禁止广告与人身攻击"
-                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
-                    <div id="selected-text-quote" class="mt-2 p-2 bg-gray-100 border-l-4 border-blue-500 text-sm text-gray-600 hidden">
-                        <span class="font-medium">引用:</span>
-                        <span id="selected-text-content"></span>
-                        <button type="button" id="remove-quote" class="ml-2 text-red-500 hover:text-red-700">&times;</button>
-                    </div>
+            {% else %}
+                <!-- 关闭评论提示 -->
+                <div class="border-t border-gray-200 pt-6">
+                    <p class="text-gray-500 text-center py-4">该文章已关闭评论功能</p>
                 </div>
-
-                <div>
-                    <button type="submit"
-                            class="px-6 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors">
-                        提交评论
-                    </button>
-                    <div id="comment-status" class="text-sm text-gray-500 mt-2 hidden"></div>
-                </div>
-            </form>
+            {% endif %}
         </div>
-        {% else %}
-        <!-- 关闭评论提示 -->
-        <div class="border-t border-gray-200 pt-6">
-            <p class="text-gray-500 text-center py-4">该文章已关闭评论功能</p>
-        </div>
-        {% endif %}
     </div>
-</div>
 
-<div id="selection-tooltip" class="fixed bg-gray-800 text-white px-3 py-2 rounded text-sm hidden z-50">
-    <button id="quote-selection-btn" class="hover:text-blue-300">引用选中内容评论</button>
-</div>
-<script data-pjax-eval="true">
-    // 内容缓存（避免重复请求）
-    window.__postContentCache = window.__postContentCache || {};
-    // 加载状态标记（防止重复请求）
-    window.__postLoadingState = window.__postLoadingState || {};
-    // 添加一个标志来防止重复初始化
-    window.__postRendered = window.__postRendered || false;
+    <div id="selection-tooltip" class="fixed bg-gray-800 text-white px-3 py-2 rounded text-sm hidden z-50">
+        <button id="quote-selection-btn" class="hover:text-blue-300">引用选中内容评论</button>
+    </div>
+    <script data-pjax-eval="true">
+        // 内容缓存（避免重复请求）
+        window.__postContentCache = window.__postContentCache || {};
+        // 加载状态标记（防止重复请求）
+        window.__postLoadingState = window.__postLoadingState || {};
+        // 添加一个标志来防止重复初始化
+        window.__postRendered = window.__postRendered || false;
 
-    function renderPost() {
-        // 检查是否已经渲染过，防止重复执行
-        if (window.__postRendered) {
-            return;
-        }
-
-        const container = document.getElementById('post-container');
-        if (!container) {
-            console.warn('[Post.content] 容器不存在');
-            return;
-        }
-
-        // 从嵌入的 JSON 数据中读取内容
-        // 首先尝试通过ID查找
-        let contentDataEl = document.getElementById('post-content-data');
-
-        // 如果通过ID找不到，则尝试通过类型查找
-        if (!contentDataEl) {
-            const allScripts = document.querySelectorAll('script[type="application/json"]');
-            for (let i = 0; i < allScripts.length; i++) {
-                // 查找内容长度较大的JSON脚本，这很可能是文章内容
-                if (allScripts[i].textContent && allScripts[i].textContent.length > 100) {
-                    contentDataEl = allScripts[i];
-                    break;
-                }
-            }
-        }
-
-        if (!contentDataEl) {
-            // 添加更多调试信息
-            console.log('[Post.content] 页面中的所有script标签:');
-            const allScripts = document.querySelectorAll('script');
-            allScripts.forEach((script, index) => {
-                console.log(`  [${index}] type: ${script.type}, id: ${script.id}, content length: ${script.textContent ? script.textContent.length : 0}`);
-            });
-
-            console.error('[Post.content] 内容数据不存在');
-            container.innerHTML = '<div class="text-red-500 p-4 border border-red-300 rounded">' +
-                '⚠️ 文章内容加载失败：数据丢失<br>' +
-                '<button onclick="location.reload()" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">刷新页面</button>' +
-                '</div>';
-            return;
-        }
-
-        try {
-            const content = JSON.parse(contentDataEl.textContent || '""');
-            renderContent(container, content);
-            // 标记已渲染
-            window.__postRendered = true;
-        } catch (error) {
-            console.error('[Post.content] 解析内容数据失败:', error);
-            container.innerHTML = '<div class="text-red-500 p-4 border border-red-300 rounded">' +
-                '⚠️ 文章内容解析失败<br>' +
-                '<button onclick="location.reload()" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">刷新页面</button>' +
-                '</div>';
-        }
-    }
-
-    function renderContent(container, content) {
-        function doPreview() {
-            if (!window.Vditor) {
-                window.__rpTry = (window.__rpTry || 0) + 1;
-                if (window.__rpTry < 200) {
-                    setTimeout(doPreview, 100);
-                } else {
-                    container.innerHTML = '<div class="text-red-500 p-4 border border-red-300 rounded">' +
-                        '⚠️ Vditor 加载超时<br>' +
-                        '<button onclick="location.reload()" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">刷新页面</button>' +
-                        '</div>';
-                }
+        function renderPost() {
+            // 检查是否已经渲染过，防止重复执行
+            if (window.__postRendered) {
                 return;
             }
 
-            Vditor.preview(container, content, {
-                mode: 'light',
-                lang: 'zh_CN',
-                anchor: 1,
-                lazyLoadImage: 'https://cdn.jsdelivr.net/npm/vditor/dist/images/img-loading.svg',
-                after() {
-                    // 文章渲染完成
-                    if (window.PjaxProgress && typeof window.PjaxProgress.complete === 'function') {
-                        window.PjaxProgress.complete();
-                    }
-                    // 初始化评论功能
-                    if (typeof initComments === 'function') {
-                        initComments();
-                    }
-                    // 初始化划词评论功能
-                    if (typeof initTextSelection === 'function') {
-                        initTextSelection();
+            const container = document.getElementById('post-container');
+            if (!container) {
+                console.warn('[Post.content] 容器不存在');
+                return;
+            }
+
+            // 从嵌入的 JSON 数据中读取内容
+            // 首先尝试通过ID查找
+            let contentDataEl = document.getElementById('post-content-data');
+
+            // 如果通过ID找不到，则尝试通过类型查找
+            if (!contentDataEl) {
+                const allScripts = document.querySelectorAll('script[type="application/json"]');
+                for (let i = 0; i < allScripts.length; i++) {
+                    // 查找内容长度较大的JSON脚本，这很可能是文章内容
+                    if (allScripts[i].textContent && allScripts[i].textContent.length > 100) {
+                        contentDataEl = allScripts[i];
+                        break;
                     }
                 }
-            });
+            }
+
+            if (!contentDataEl) {
+                // 添加更多调试信息
+                console.log('[Post.content] 页面中的所有script标签:');
+                const allScripts = document.querySelectorAll('script');
+                allScripts.forEach((script, index) => {
+                    console.log(`  [${index}] type: ${script.type}, id: ${script.id}, content length: ${script.textContent ? script.textContent.length : 0}`);
+                });
+
+                console.error('[Post.content] 内容数据不存在');
+                container.innerHTML = '<div class="text-red-500 p-4 border border-red-300 rounded">' +
+                    '⚠️ 文章内容加载失败：数据丢失<br>' +
+                    '<button onclick="location.reload()" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">刷新页面</button>' +
+                    '</div>';
+                return;
+            }
+
+            try {
+                const content = JSON.parse(contentDataEl.textContent || '""');
+                renderContent(container, content);
+                // 标记已渲染
+                window.__postRendered = true;
+            } catch (error) {
+                console.error('[Post.content] 解析内容数据失败:', error);
+                container.innerHTML = '<div class="text-red-500 p-4 border border-red-300 rounded">' +
+                    '⚠️ 文章内容解析失败<br>' +
+                    '<button onclick="location.reload()" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">刷新页面</button>' +
+                    '</div>';
+            }
         }
 
-        // 使用 rAF + setTimeout 让页面先渲染
-        if (window.requestAnimationFrame) {
-            requestAnimationFrame(function () { setTimeout(doPreview, 0); });
-        } else {
-            setTimeout(doPreview, 0);
-        }
-    }
+        function renderContent(container, content) {
+            function doPreview() {
+                if (!window.Vditor) {
+                    window.__rpTry = (window.__rpTry || 0) + 1;
+                    if (window.__rpTry < 200) {
+                        setTimeout(doPreview, 100);
+                    } else {
+                        container.innerHTML = '<div class="text-red-500 p-4 border border-red-300 rounded">' +
+                            '⚠️ Vditor 加载超时<br>' +
+                            '<button onclick="location.reload()" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">刷新页面</button>' +
+                            '</div>';
+                    }
+                    return;
+                }
 
-    // 监听 page:ready 和 DOMContentLoaded 事件
-    document.addEventListener('DOMContentLoaded', function() {
-        // 检查是否在文章页
-        if (!document.getElementById('post-container')) {
-            return;
-        }
-        window.__rpTry = 0;
-        // 重置渲染状态
-        window.__postRendered = false;
-        renderPost();
-    });
+                Vditor.preview(container, content, {
+                    mode: 'light',
+                    lang: 'zh_CN',
+                    anchor: 1,
+                    lazyLoadImage: 'https://cdn.jsdelivr.net/npm/vditor/dist/images/img-loading.svg',
+                    after() {
+                        // 文章渲染完成
+                        if (window.PjaxProgress && typeof window.PjaxProgress.complete === 'function') {
+                            window.PjaxProgress.complete();
+                        }
+                        // 初始化评论功能
+                        if (typeof initComments === 'function') {
+                            initComments();
+                        }
+                        // 初始化划词评论功能
+                        if (typeof initTextSelection === 'function') {
+                            initTextSelection();
+                        }
+                    }
+                });
+            }
 
-    document.addEventListener('page:ready', function() {
-        // 检查是否在文章页
-        if (!document.getElementById('post-container')) {
-            return;
-        }
-        window.__rpTry = 0;
-        // 重置渲染状态
-        window.__postRendered = false;
-        renderPost();
-    });
-
-    // 立即执行一次（用于 PJAX 加载）
-    (function () {
-        // 检查是否在文章页
-        const container = document.getElementById('post-container');
-        if (!container) {
-            return;
-        }
-
-
-        // 确保DOM已加载完成
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', function () {
-                window.__rpTry = 0;
-                // 重置渲染状态
-                window.__postRendered = false;
-                injectSidebar();
-                renderPost();
-            });
-        } else {
-            // 使用setTimeout确保在PJAX完全加载后再执行
-            setTimeout(function () {
-                window.__rpTry = 0;
-                // 重置渲染状态
-                window.__postRendered = false;
-                injectSidebar();
-                renderPost();
-            }, 0);
-        }
-
-        function injectSidebar() {
-            var t = document.getElementById('pjax-sidebar-html');
-            var c = document.getElementById('sidebar-container');
-            if (!t || !c) return;
-            if (window.PJAX || window.jQuery) {
-                try { document.dispatchEvent(new CustomEvent('pjax:sidebarReady')); } catch (_) {}
+            // 使用 rAF + setTimeout 让页面先渲染
+            if (window.requestAnimationFrame) {
+                requestAnimationFrame(function () {
+                    setTimeout(doPreview, 0);
+                });
             } else {
-                c.innerHTML = t.innerHTML || '';
+                setTimeout(doPreview, 0);
             }
         }
-    })();
 
-    // 初始化评论功能
-    function initComments() {
-        const postId = {{ post.id }};
-        const allowComments = {{ post.allow_comments|default(true) ? 'true' : 'false' }};
-
-        // 始终加载已有评论（无论是否允许评论）
-        loadComments(postId);
-
-        // 如果不允许评论，不初始化表单事件
-        if (!allowComments) {
-            return;
-        }
-
-        // 读取cookie填充昵称与邮箱
-        try {
-            const cn = getCookie('cmt_name');
-            const ce = getCookie('cmt_email');
-            if (cn) {
-                const n = document.getElementById('guest_name');
-                if (n) n.value = cn;
+        // 监听 page:ready 和 DOMContentLoaded 事件
+        document.addEventListener('DOMContentLoaded', function () {
+            // 检查是否在文章页
+            if (!document.getElementById('post-container')) {
+                return;
             }
-            if (ce) {
-                const e = document.getElementById('guest_email');
-                if (e) e.value = ce;
-            }
-        } catch (_) {
-        }
+            window.__rpTry = 0;
+            // 重置渲染状态
+            window.__postRendered = false;
+            renderPost();
+        });
 
-        // 恢复上次未通过/待审核的本地评论（cookie）
-        try {
-            const lastRaw = getCookie('cmt_last_comment');
-            if (lastRaw) {
-                const last = JSON.parse(lastRaw);
-                if (last && String(last.post_id) === String({{ post.id }})) {
-                    appendOwnComment({
-                        id: last.id,
-                        guest_name: last.guest_name,
-                        guest_email: last.guest_email,
-                        content: last.content
-                    }, last.status === 'pending');
-                    if (last.status === 'pending') {
-                        setTimeout(function () {
-                            fetch('/comment/status/' + last.id)
-                                .then(r => r.json())
-                                .then(s => {
-                                    if (s && s.code === 0) {
-                                        const res = s.data;
-                                        if (res.status === 'spam' || res.ai_moderation_result === 'rejected' || res.ai_moderation_result === 'spam') {
-                                            markOwnCommentRejected(last.id, res.ai_moderation_reason || '已拒绝');
-                                            setCookie('cmt_last_comment', JSON.stringify({
-                                                ...last,
-                                                status: 'rejected'
-                                            }), 1);
-                                        } else if (res.status === 'approved') {
-                                            // 审核通过则清除此条本地记录
-                                            setCookie('cmt_last_comment', '', -1);
+        document.addEventListener('page:ready', function () {
+            // 检查是否在文章页
+            if (!document.getElementById('post-container')) {
+                return;
+            }
+            window.__rpTry = 0;
+            // 重置渲染状态
+            window.__postRendered = false;
+            renderPost();
+        });
+
+        // 立即执行一次（用于 PJAX 加载）
+        (function () {
+            // 检查是否在文章页
+            const container = document.getElementById('post-container');
+            if (!container) {
+                return;
+            }
+
+
+            // 确保DOM已加载完成
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', function () {
+                    window.__rpTry = 0;
+                    // 重置渲染状态
+                    window.__postRendered = false;
+                    injectSidebar();
+                    renderPost();
+                });
+            } else {
+                // 使用setTimeout确保在PJAX完全加载后再执行
+                setTimeout(function () {
+                    window.__rpTry = 0;
+                    // 重置渲染状态
+                    window.__postRendered = false;
+                    injectSidebar();
+                    renderPost();
+                }, 0);
+            }
+
+            function injectSidebar() {
+                var t = document.getElementById('pjax-sidebar-html');
+                var c = document.getElementById('sidebar-container');
+                if (!t || !c) return;
+                if (window.PJAX || window.jQuery) {
+                    try {
+                        document.dispatchEvent(new CustomEvent('pjax:sidebarReady'));
+                    } catch (_) {
+                    }
+                } else {
+                    c.innerHTML = t.innerHTML || '';
+                }
+            }
+        })();
+
+        // 初始化评论功能
+        function initComments() {
+            const postId = {{ post.id }};
+            const allowComments = {{ post.allow_comments|default(true) ? 'true' : 'false' }};
+
+            // 始终加载已有评论（无论是否允许评论）
+            loadComments(postId);
+
+            // 如果不允许评论，不初始化表单事件
+            if (!allowComments) {
+                return;
+            }
+
+            // 读取cookie填充昵称与邮箱
+            try {
+                const cn = getCookie('cmt_name');
+                const ce = getCookie('cmt_email');
+                if (cn) {
+                    const n = document.getElementById('guest_name');
+                    if (n) n.value = cn;
+                }
+                if (ce) {
+                    const e = document.getElementById('guest_email');
+                    if (e) e.value = ce;
+                }
+            } catch (_) {
+            }
+
+            // 恢复上次未通过/待审核的本地评论（cookie）
+            try {
+                const lastRaw = getCookie('cmt_last_comment');
+                if (lastRaw) {
+                    const last = JSON.parse(lastRaw);
+                    if (last && String(last.post_id) === String({{ post.id }})) {
+                        appendOwnComment({
+                            id: last.id,
+                            guest_name: last.guest_name,
+                            guest_email: last.guest_email,
+                            content: last.content
+                        }, last.status === 'pending');
+                        if (last.status === 'pending') {
+                            setTimeout(function () {
+                                fetch('/comment/status/' + last.id)
+                                    .then(r => r.json())
+                                    .then(s => {
+                                        if (s && s.code === 0) {
+                                            const res = s.data;
+                                            if (res.status === 'spam' || res.ai_moderation_result === 'rejected' || res.ai_moderation_result === 'spam') {
+                                                markOwnCommentRejected(last.id, res.ai_moderation_reason || '已拒绝');
+                                                setCookie('cmt_last_comment', JSON.stringify({
+                                                    ...last,
+                                                    status: 'rejected'
+                                                }), 1);
+                                            } else if (res.status === 'approved') {
+                                                // 审核通过则清除此条本地记录
+                                                setCookie('cmt_last_comment', '', -1);
+                                            }
                                         }
-                                    }
-                                }).catch(() => {
-                            });
-                        }, 15000);
-                    } else if (last.status === 'rejected') {
-                        // 已拒绝则标红
-                        markOwnCommentRejected(last.id, '已拒绝');
+                                    }).catch(() => {
+                                });
+                            }, 15000);
+                        } else if (last.status === 'rejected') {
+                            // 已拒绝则标红
+                            markOwnCommentRejected(last.id, '已拒绝');
+                        }
                     }
                 }
+            } catch (_) {
             }
-        } catch (_) {
-        }
 
-        // 提交评论表单
-        const commentForm = document.getElementById('comment-form');
-        if (commentForm) {
-            if (!commentForm.dataset.bound) {
-                commentForm.dataset.bound = '1';
-                commentForm.addEventListener('submit', function (e) {
-                    e.preventDefault();
-                    submitComment(postId);
+            // 提交评论表单
+            const commentForm = document.getElementById('comment-form');
+            if (commentForm) {
+                if (!commentForm.dataset.bound) {
+                    commentForm.dataset.bound = '1';
+                    commentForm.addEventListener('submit', function (e) {
+                        e.preventDefault();
+                        submitComment(postId);
+                    });
+                }
+
+                // 移除回车提交功能，使回车正常换行
+                const contentTextarea = document.getElementById('content');
+                if (contentTextarea && !contentTextarea.dataset.bound) {
+                    contentTextarea.dataset.bound = '1';
+                    contentTextarea.addEventListener('keydown', function (e) {
+                        // 不做任何阻止，让回车正常换行
+                    });
+                }
+            }
+
+            // 移除引用按钮
+            const removeQuoteBtn = document.getElementById('remove-quote');
+            if (removeQuoteBtn) {
+                removeQuoteBtn.addEventListener('click', function () {
+                    const selectedTextQuote = document.getElementById('selected-text-quote');
+                    const parentId = document.getElementById('parent-id');
+                    const quotedText = document.getElementById('quoted-text');
+                    const quotedCommentId = document.getElementById('quoted-comment-id');
+
+                    if (selectedTextQuote) selectedTextQuote.classList.add('hidden');
+                    if (parentId) parentId.value = '0';
+                    if (quotedText) quotedText.value = '';
+                    if (quotedCommentId) quotedCommentId.value = '0';
                 });
             }
+        }
 
-            // 移除回车提交功能，使回车正常换行
-            const contentTextarea = document.getElementById('content');
-            if (contentTextarea && !contentTextarea.dataset.bound) {
-                contentTextarea.dataset.bound = '1';
-                contentTextarea.addEventListener('keydown', function(e) {
-                    // 不做任何阻止，让回车正常换行
-                });
+        // 加载评论
+        function loadComments(postId) {
+            const commentsList = document.getElementById('comments-list');
+            if (!commentsList) {
+                console.warn('[Post.content] 评论列表容器不存在');
+                return;
             }
+
+            fetch('/comment/list/' + postId)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 0) {
+                        renderComments(commentsList, data.data);
+                    } else {
+                        commentsList.innerHTML = '<p class="text-gray-500">加载评论失败</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('[Post.content] 评论加载失败:', error);
+                    if (commentsList) {
+                        commentsList.innerHTML = '<p class="text-gray-500">加载评论失败</p>';
+                    }
+                });
         }
 
-        // 移除引用按钮
-        const removeQuoteBtn = document.getElementById('remove-quote');
-        if (removeQuoteBtn) {
-            removeQuoteBtn.addEventListener('click', function() {
-                const selectedTextQuote = document.getElementById('selected-text-quote');
-                const parentId = document.getElementById('parent-id');
-                const quotedText = document.getElementById('quoted-text');
-                const quotedCommentId = document.getElementById('quoted-comment-id');
+        // 渲染评论
+        function renderComments(container, comments) {
+            if (!container) {
+                console.warn('[Post.content] 评论容器不存在');
+                return;
+            }
 
-                if (selectedTextQuote) selectedTextQuote.classList.add('hidden');
-                if (parentId) parentId.value = '0';
-                if (quotedText) quotedText.value = '';
-                if (quotedCommentId) quotedCommentId.value = '0';
-            });
-        }
-    }
+            // Handle nested structure where comments is an object with a comments field
+            const commentsList = Array.isArray(comments) ? comments : (comments.comments || []);
 
-    // 加载评论
-    function loadComments(postId) {
-        const commentsList = document.getElementById('comments-list');
-        if (!commentsList) {
-            console.warn('[Post.content] 评论列表容器不存在');
-            return;
-        }
+            if (!commentsList || commentsList.length === 0) {
+                container.innerHTML = '<p class="text-gray-500">暂无评论</p>';
+                return;
+            }
 
-        fetch('/comment/list/' + postId)
-            .then(response => response.json())
-            .then(data => {
-                if (data.code === 0) {
-                    renderComments(commentsList, data.data);
-                } else {
-                    commentsList.innerHTML = '<p class="text-gray-500">加载评论失败</p>';
-                }
-            })
-            .catch(error => {
-                console.error('[Post.content] 评论加载失败:', error);
-                if (commentsList) {
-                    commentsList.innerHTML = '<p class="text-gray-500">加载评论失败</p>';
-                }
-            });
-    }
+            let commentsHtml = '';
+            commentsList.forEach(comment => {
+                // 处理评论内容
+                let content = comment.content.replace(/\n/g, '<br>');
 
-    // 渲染评论
-    function renderComments(container, comments) {
-        if (!container) {
-            console.warn('[Post.content] 评论容器不存在');
-            return;
-        }
-
-        // Handle nested structure where comments is an object with a comments field
-        const commentsList = Array.isArray(comments) ? comments : (comments.comments || []);
-
-        if (!commentsList || commentsList.length === 0) {
-            container.innerHTML = '<p class="text-gray-500">暂无评论</p>';
-            return;
-        }
-
-        let commentsHtml = '';
-        commentsList.forEach(comment => {
-            // 处理评论内容
-            let content = comment.content.replace(/\n/g, '<br>');
-
-            // 如果有结构化的引用数据，显示引用块
-            let quoteHtml = '';
-            if (comment.quote && comment.quote.content) {
-                const quoteType = comment.quote.type || 'post';
-                const quoteAuthor = comment.quote.author ? `@${comment.quote.author}` : '文章内容';
-                quoteHtml = `
+                // 如果有结构化的引用数据，显示引用块
+                let quoteHtml = '';
+                if (comment.quote && comment.quote.content) {
+                    const quoteType = comment.quote.type || 'post';
+                    const quoteAuthor = comment.quote.author ? `@${comment.quote.author}` : '文章内容';
+                    quoteHtml = `
                     <div class="border-l-4 border-blue-500 pl-3 py-2 mb-3 bg-blue-50 rounded">
                         <div class="text-xs text-gray-500 mb-1">${quoteAuthor}:</div>
                         <div class="text-sm text-gray-700">${comment.quote.content}</div>
                     </div>
                 `;
-            }
+                }
 
-            // 生成Gravatar头像URL
-            const avatarUrl = comment.guest_email ? getGravatarUrl(comment.guest_email, 80, 'identicon') : '';
-            const avatarHtml = avatarUrl
-                ? `<img src="${avatarUrl}" alt="${comment.guest_name}" class="w-10 h-10 rounded-full border border-gray-200" loading="lazy">`
-                : `<div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                // 生成Gravatar头像URL
+                const avatarUrl = comment.guest_email ? getGravatarUrl(comment.guest_email, 80, 'identicon') : '';
+                const avatarHtml = avatarUrl
+                    ? `<img src="${avatarUrl}" alt="${comment.guest_name}" class="w-10 h-10 rounded-full border border-gray-200" loading="lazy">`
+                    : `<div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
                     <span class="text-gray-600 font-medium">${comment.guest_name.charAt(0)}</span>
                 </div>`;
 
-            commentsHtml += `
+                commentsHtml += `
                 <div class="mb-6 border-b border-gray-100 pb-6" data-comment-id="${comment.id}">
                     <div class="flex items-start">
                         <div class="flex-shrink-0 mr-3">
@@ -513,30 +532,30 @@
                             ${comment.replies && comment.replies.length > 0 ? `
                                 <div class="mt-4 ml-6 space-y-4">
                                     ${comment.replies.map(reply => {
-                                        // 处理回复内容
-                                        let replyContent = reply.content.replace(/\n/g, '<br>');
+                    // 处理回复内容
+                    let replyContent = reply.content.replace(/\n/g, '<br>');
 
-                                        // 如果有结构化的引用数据，显示引用块
-                                        let replyQuoteHtml = '';
-                                        if (reply.quote && reply.quote.content) {
-                                            const quoteAuthor = reply.quote.author ? `@${reply.quote.author}` : '文章内容';
-                                            replyQuoteHtml = `
+                    // 如果有结构化的引用数据，显示引用块
+                    let replyQuoteHtml = '';
+                    if (reply.quote && reply.quote.content) {
+                        const quoteAuthor = reply.quote.author ? `@${reply.quote.author}` : '文章内容';
+                        replyQuoteHtml = `
                                                 <div class="border-l-4 border-blue-500 pl-2 py-1 mb-2 bg-blue-50 rounded">
                                                     <div class="text-xs text-gray-500 mb-1">${quoteAuthor}:</div>
                                                     <div class="text-xs text-gray-700">${reply.quote.content}</div>
                                                 </div>
                                             `;
-                                        }
+                    }
 
-                // 生成回复者头像
-                const replyAvatarUrl = reply.guest_email ? getGravatarUrl(reply.guest_email, 64, 'identicon') : '';
-                const replyAvatarHtml = replyAvatarUrl
-                    ? `<img src="${replyAvatarUrl}" alt="${reply.guest_name}" class="w-8 h-8 rounded-full border border-gray-200" loading="lazy">`
-                    : `<div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                    // 生成回复者头像
+                    const replyAvatarUrl = reply.guest_email ? getGravatarUrl(reply.guest_email, 64, 'identicon') : '';
+                    const replyAvatarHtml = replyAvatarUrl
+                        ? `<img src="${replyAvatarUrl}" alt="${reply.guest_name}" class="w-8 h-8 rounded-full border border-gray-200" loading="lazy">`
+                        : `<div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
                                                 <span class="text-gray-500 text-xs">${reply.guest_name.charAt(0)}</span>
                                             </div>`;
 
-                                        return `
+                    return `
                                             <div class="flex items-start" data-comment-id="${reply.id}">
                                                 <div class="flex-shrink-0 mr-3">
                                                     ${replyAvatarHtml}
@@ -554,209 +573,209 @@
                                                 </div>
                                             </div>
                                         `;
-                                    }).join('')}
+                }).join('')}
                                 </div>
                             ` : ''}
                         </div>
                     </div>
                 </div>
             `;
-        });
-
-        container.innerHTML = commentsHtml;
-
-        // 绑定回复按钮事件
-        document.querySelectorAll('.reply-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                const commentId = this.getAttribute('data-comment-id');
-                const commentName = this.getAttribute('data-comment-name');
-                replyToComment(commentId, commentName);
             });
-        });
-    }
 
-    // 回复评论
-    function replyToComment(commentId, commentName) {
-        document.getElementById('parent-id').value = commentId;
-        document.getElementById('selected-text-content').textContent = `${commentName}: `;
-        document.getElementById('selected-text-quote').classList.remove('hidden');
-        document.getElementById('quoted-comment-id').value = commentId;
+            container.innerHTML = commentsHtml;
 
-        // 滚动到评论表单
-        document.getElementById('comment-form').scrollIntoView({ behavior: 'smooth' });
-    }
-
-    // 提交评论（带防抖与加载动画）
-    function submitComment(postId) {
-        const form = document.getElementById('comment-form');
-        if (!form || form.dataset.submitting === '1') {
-            return; // 防止重复提交
-        }
-        form.dataset.submitting = '1';
-
-        const btn = form.querySelector('button[type="submit"]');
-        const statusEl = document.getElementById('comment-status');
-        const formData = new FormData(form);
-
-        // 按钮进入加载态
-        if (btn) {
-            if (!btn.dataset.label) btn.dataset.label = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>提交中…';
-        }
-        if (statusEl) {
-            statusEl.classList.remove('hidden');
-            statusEl.textContent = '正在提交评论…';
+            // 绑定回复按钮事件
+            document.querySelectorAll('.reply-btn').forEach(button => {
+                button.addEventListener('click', function () {
+                    const commentId = this.getAttribute('data-comment-id');
+                    const commentName = this.getAttribute('data-comment-name');
+                    replyToComment(commentId, commentName);
+                });
+            });
         }
 
-        fetch('/comment/submit/' + postId, {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.code === 0) {
-                // 写入cookie，便于下次自动填充
-                try {
-                    const nameVal = (document.getElementById('guest_name') || {}).value;
-                    const emailVal = (document.getElementById('guest_email') || {}).value;
-                    if (nameVal) setCookie('cmt_name', nameVal, 180);
-                    if (emailVal) setCookie('cmt_email', emailVal, 180);
-                } catch (_) {
-                }
+        // 回复评论
+        function replyToComment(commentId, commentName) {
+            document.getElementById('parent-id').value = commentId;
+            document.getElementById('selected-text-content').textContent = `${commentName}: `;
+            document.getElementById('selected-text-quote').classList.remove('hidden');
+            document.getElementById('quoted-comment-id').value = commentId;
 
-                // 仅清空正文与引用，不清空昵称/邮箱
-                const textarea = document.getElementById('content');
-                if (textarea) textarea.value = '';
-                const quoteBox = document.getElementById('selected-text-quote');
-                if (quoteBox) quoteBox.classList.add('hidden');
-                const pid = document.getElementById('parent-id');
-                const qtxt = document.getElementById('quoted-text');
-                const qid = document.getElementById('quoted-comment-id');
-                if (pid) pid.value = '0';
-                if (qtxt) qtxt.value = '';
-                if (qid) qid.value = '0';
+            // 滚动到评论表单
+            document.getElementById('comment-form').scrollIntoView({behavior: 'smooth'});
+        }
 
-                // 状态提示：自动审核中或成功 + 将本条评论以“仅用户可见”追加到列表
-                var requiresModeration = !!(data.data && data.data.requires_moderation);
-                var newComment = (data.data && data.data.comment) ? data.data.comment : null;
-                if (statusEl) {
-                    statusEl.textContent = requiresModeration ? '评论已提交，正在自动审核…' : '评论提交成功';
-                }
-                if (newComment) {
-                    try {
-                        appendOwnComment(newComment, requiresModeration);
-                    } catch (_) {
-                    }
-                    // 将本条评论存入cookie，避免服务器刷新后因为审核快速而不可见
-                    try {
-                        setCookie('cmt_last_comment', JSON.stringify({
-                            id: newComment.id,
-                            post_id: {{ post.id }},
-                            guest_name: newComment.guest_name,
-                            guest_email: newComment.guest_email,
-                            content: newComment.content,
-                            status: requiresModeration ? 'pending' : 'submitted',
-                            ts: Date.now()
-                        }), 1);
-                    } catch (_) {
-                    }
-
-                    // 15秒后查询状态，若被拒绝则标红/更新cookie
-                    setTimeout(function () {
-                        fetch('/comment/status/' + newComment.id)
-                            .then(r => r.json())
-                            .then(s => {
-                                if (s && s.code === 0) {
-                                    const res = s.data;
-                                    if (res.status === 'spam' || res.ai_moderation_result === 'rejected' || res.ai_moderation_result === 'spam') {
-                                        try {
-                                            markOwnCommentRejected(newComment.id, res.ai_moderation_reason || '已拒绝');
-                                        } catch (_) {
-                                        }
-                                        try {
-                                            const lastRaw = getCookie('cmt_last_comment');
-                                            if (lastRaw) {
-                                                const last = JSON.parse(lastRaw);
-                                                if (last && String(last.id) === String(newComment.id)) {
-                                                    setCookie('cmt_last_comment', JSON.stringify({
-                                                        ...last,
-                                                        status: 'rejected'
-                                                    }), 1);
-                                                }
-                                            }
-                                        } catch (_) {
-                                        }
-                                        if (statusEl) {
-                                            statusEl.classList.remove('hidden');
-                                            statusEl.textContent = '审核未通过：' + (res.ai_moderation_reason || '已拒绝');
-                                        }
-                                    } else if (res.status === 'approved') {
-                                        // 审核通过则清除此条本地记录并标绿
-                                        try {
-                                            markOwnCommentApproved(newComment.id, res.ai_moderation_reason || '审核通过');
-                                        } catch (_) {
-                                        }
-                                        if (statusEl) {
-                                            statusEl.classList.remove('hidden');
-                                            statusEl.textContent = '审核通过：' + (res.ai_moderation_reason || '已通过');
-                                        }
-                                        setCookie('cmt_last_comment', '', -1);
-                                    }
-                                }
-                            }).catch(() => {
-                        });
-                    }, 15000);
-                }
-
-                // 不再刷新评论列表，避免审核很快导致用户自己的评论被“消失”的错觉
-            } else {
-                if (statusEl) {
-                    statusEl.textContent = '提交失败：' + (data.msg || '请稍后再试');
-                }
+        // 提交评论（带防抖与加载动画）
+        function submitComment(postId) {
+            const form = document.getElementById('comment-form');
+            if (!form || form.dataset.submitting === '1') {
+                return; // 防止重复提交
             }
-        })
-        .catch(error => {
-            console.error('Error submitting comment:', error);
+            form.dataset.submitting = '1';
+
+            const btn = form.querySelector('button[type="submit"]');
+            const statusEl = document.getElementById('comment-status');
+            const formData = new FormData(form);
+
+            // 按钮进入加载态
+            if (btn) {
+                if (!btn.dataset.label) btn.dataset.label = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>提交中…';
+            }
             if (statusEl) {
-                statusEl.textContent = '评论提交失败，请稍后再试';
+                statusEl.classList.remove('hidden');
+                statusEl.textContent = '正在提交评论…';
             }
-        })
-            .finally(() => {
-                // 恢复按钮
-                if (btn) {
-                    btn.disabled = false;
-                    btn.innerHTML = btn.dataset.label || '提交评论';
-                }
-                setTimeout(function () {
-                    if (statusEl) statusEl.classList.add('hidden');
-                }, 3000);
-                form.dataset.submitting = '0';
-        });
-    }
 
-    // 仅提交者可见的评论渲染
-    function appendOwnComment(comment, pending) {
-        const list = document.getElementById('comments-list');
-        if (!list) return;
-        const container = document.createElement('div');
-        container.className = 'mb-6 border border-dashed border-yellow-300 rounded-md p-4 bg-yellow-50';
-        container.id = 'own-comment-' + comment.id;
-        container.setAttribute('data-own', '1');
+            fetch('/comment/submit/' + postId, {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 0) {
+                        // 写入cookie，便于下次自动填充
+                        try {
+                            const nameVal = (document.getElementById('guest_name') || {}).value;
+                            const emailVal = (document.getElementById('guest_email') || {}).value;
+                            if (nameVal) setCookie('cmt_name', nameVal, 180);
+                            if (emailVal) setCookie('cmt_email', emailVal, 180);
+                        } catch (_) {
+                        }
 
-        const avatarUrl = comment.guest_email ? getGravatarUrl(comment.guest_email, 80, 'identicon') : '';
-        const avatarHtml = avatarUrl
-            ? `<img src="${avatarUrl}" alt="${comment.guest_name}" class="w-10 h-10 rounded-full border border-gray-200" loading="lazy">`
-            : `<div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                        // 仅清空正文与引用，不清空昵称/邮箱
+                        const textarea = document.getElementById('content');
+                        if (textarea) textarea.value = '';
+                        const quoteBox = document.getElementById('selected-text-quote');
+                        if (quoteBox) quoteBox.classList.add('hidden');
+                        const pid = document.getElementById('parent-id');
+                        const qtxt = document.getElementById('quoted-text');
+                        const qid = document.getElementById('quoted-comment-id');
+                        if (pid) pid.value = '0';
+                        if (qtxt) qtxt.value = '';
+                        if (qid) qid.value = '0';
+
+                        // 状态提示：自动审核中或成功 + 将本条评论以“仅用户可见”追加到列表
+                        var requiresModeration = !!(data.data && data.data.requires_moderation);
+                        var newComment = (data.data && data.data.comment) ? data.data.comment : null;
+                        if (statusEl) {
+                            statusEl.textContent = requiresModeration ? '评论已提交，正在自动审核…' : '评论提交成功';
+                        }
+                        if (newComment) {
+                            try {
+                                appendOwnComment(newComment, requiresModeration);
+                            } catch (_) {
+                            }
+                            // 将本条评论存入cookie，避免服务器刷新后因为审核快速而不可见
+                            try {
+                                setCookie('cmt_last_comment', JSON.stringify({
+                                    id: newComment.id,
+                                    post_id: {{ post.id }},
+                                    guest_name: newComment.guest_name,
+                                    guest_email: newComment.guest_email,
+                                    content: newComment.content,
+                                    status: requiresModeration ? 'pending' : 'submitted',
+                                    ts: Date.now()
+                                }), 1);
+                            } catch (_) {
+                            }
+
+                            // 15秒后查询状态，若被拒绝则标红/更新cookie
+                            setTimeout(function () {
+                                fetch('/comment/status/' + newComment.id)
+                                    .then(r => r.json())
+                                    .then(s => {
+                                        if (s && s.code === 0) {
+                                            const res = s.data;
+                                            if (res.status === 'spam' || res.ai_moderation_result === 'rejected' || res.ai_moderation_result === 'spam') {
+                                                try {
+                                                    markOwnCommentRejected(newComment.id, res.ai_moderation_reason || '已拒绝');
+                                                } catch (_) {
+                                                }
+                                                try {
+                                                    const lastRaw = getCookie('cmt_last_comment');
+                                                    if (lastRaw) {
+                                                        const last = JSON.parse(lastRaw);
+                                                        if (last && String(last.id) === String(newComment.id)) {
+                                                            setCookie('cmt_last_comment', JSON.stringify({
+                                                                ...last,
+                                                                status: 'rejected'
+                                                            }), 1);
+                                                        }
+                                                    }
+                                                } catch (_) {
+                                                }
+                                                if (statusEl) {
+                                                    statusEl.classList.remove('hidden');
+                                                    statusEl.textContent = '审核未通过：' + (res.ai_moderation_reason || '已拒绝');
+                                                }
+                                            } else if (res.status === 'approved') {
+                                                // 审核通过则清除此条本地记录并标绿
+                                                try {
+                                                    markOwnCommentApproved(newComment.id, res.ai_moderation_reason || '审核通过');
+                                                } catch (_) {
+                                                }
+                                                if (statusEl) {
+                                                    statusEl.classList.remove('hidden');
+                                                    statusEl.textContent = '审核通过：' + (res.ai_moderation_reason || '已通过');
+                                                }
+                                                setCookie('cmt_last_comment', '', -1);
+                                            }
+                                        }
+                                    }).catch(() => {
+                                });
+                            }, 15000);
+                        }
+
+                        // 不再刷新评论列表，避免审核很快导致用户自己的评论被“消失”的错觉
+                    } else {
+                        if (statusEl) {
+                            statusEl.textContent = '提交失败：' + (data.msg || '请稍后再试');
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error submitting comment:', error);
+                    if (statusEl) {
+                        statusEl.textContent = '评论提交失败，请稍后再试';
+                    }
+                })
+                .finally(() => {
+                    // 恢复按钮
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = btn.dataset.label || '提交评论';
+                    }
+                    setTimeout(function () {
+                        if (statusEl) statusEl.classList.add('hidden');
+                    }, 3000);
+                    form.dataset.submitting = '0';
+                });
+        }
+
+        // 仅提交者可见的评论渲染
+        function appendOwnComment(comment, pending) {
+            const list = document.getElementById('comments-list');
+            if (!list) return;
+            const container = document.createElement('div');
+            container.className = 'mb-6 border border-dashed border-yellow-300 rounded-md p-4 bg-yellow-50';
+            container.id = 'own-comment-' + comment.id;
+            container.setAttribute('data-own', '1');
+
+            const avatarUrl = comment.guest_email ? getGravatarUrl(comment.guest_email, 80, 'identicon') : '';
+            const avatarHtml = avatarUrl
+                ? `<img src="${avatarUrl}" alt="${comment.guest_name}" class="w-10 h-10 rounded-full border border-gray-200" loading="lazy">`
+                : `<div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
                     <span class="text-gray-600 font-medium">${(comment.guest_name || 'U').charAt(0)}</span>
                </div>`;
-        const quoteHtml = '';
-        const contentHtml = (comment.content || '').replace(/\n/g, '<br>');
-        const badge = pending
-            ? `<span id="own-comment-badge-${comment.id}" class="ml-2 text-xs px-2 py-1 rounded bg-yellow-200 text-yellow-900">自动审核中（仅自己可见）</span>`
-            : `<span id="own-comment-badge-${comment.id}" class="ml-2 text-xs px-2 py-1 rounded bg-green-100 text-green-700">已提交（仅自己可见）</span>`;
+            const quoteHtml = '';
+            const contentHtml = (comment.content || '').replace(/\n/g, '<br>');
+            const badge = pending
+                ? `<span id="own-comment-badge-${comment.id}" class="ml-2 text-xs px-2 py-1 rounded bg-yellow-200 text-yellow-900">自动审核中（仅自己可见）</span>`
+                : `<span id="own-comment-badge-${comment.id}" class="ml-2 text-xs px-2 py-1 rounded bg-green-100 text-green-700">已提交（仅自己可见）</span>`;
 
-        container.innerHTML = `
+            container.innerHTML = `
             <div class="flex items-start">
                 <div class="flex-shrink-0 mr-3">${avatarHtml}</div>
                 <div class="flex-1">
@@ -770,261 +789,260 @@
                 </div>
             </div>
         `;
-        // 追加到列表首位
-        list.prepend(container);
-    }
-
-    function markOwnCommentRejected(id, reason) {
-        const el = document.getElementById('own-comment-' + id);
-        if (!el) return;
-        el.className = 'mb-6 border border-red-400 rounded-md p-4 bg-red-50';
-        const badge = document.getElementById('own-comment-badge-' + id);
-        if (badge) {
-            badge.textContent = '审核未通过';
-            badge.className = 'ml-2 text-xs px-2 py-1 rounded bg-red-200 text-red-900';
-        }
-        const badgetxt = '已被拒绝：' + reason;
-        const label = document.createElement('div');
-        label.className = 'mt-2 text-sm text-red-700';
-        label.textContent = badgetxt;
-        el.appendChild(label);
-    }
-
-    function markOwnCommentApproved(id, reason) {
-        const el = document.getElementById('own-comment-' + id);
-        if (!el) return;
-        el.className = 'mb-6 border border-green-400 rounded-md p-4 bg-green-50';
-        const badge = document.getElementById('own-comment-badge-' + id);
-        if (badge) {
-            badge.textContent = '审核通过';
-            badge.className = 'ml-2 text-xs px-2 py-1 rounded bg-green-200 text-green-900';
-        }
-        const ok = document.createElement('div');
-        ok.className = 'mt-2 text-sm text-green-700';
-        ok.textContent = '审核通过：' + (reason || '已通过');
-        el.appendChild(ok);
-    }
-
-    // 简易 Cookie 工具
-    function setCookie(name, value, days) {
-        const d = new Date();
-        d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000));
-        document.cookie = name + '=' + encodeURIComponent(value) + ';expires=' + d.toUTCString() + ';path=/';
-    }
-
-    function getCookie(name) {
-        const match = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/([.$?*|{}()\[\]\\\/\+^])/g, '\\$1') + '=([^;]*)'));
-        return match ? decodeURIComponent(match[1]) : '';
-    }
-
-    // 格式化日期
-    function formatDate(dateString) {
-        // 处理带微秒的 ISO 8601 格式 (例如: 2025-10-16T04:02:30.000000Z)
-        // 移除微秒部分，只保留到秒: 2025-10-16T04:02:30Z
-        const normalizedDateString = dateString.replace(/(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(\.\d+)?(Z?)/, '$1$3');
-
-        // 正确处理：保留Z，让JavaScript自动转换为UTC时间
-        // 数据库存储的是UTC时间，new Date()会自动转换为本地时间
-        const date = new Date(normalizedDateString);
-        const now = new Date();
-        const diff = now - date;
-
-        // 处理负数时间差（评论时间在未来）或无效日期
-        if (isNaN(diff) || diff < 0) {
-            console.warn('[formatDate] 时间差异常（负数或NaN），返回格式化日期');
-            return date.getFullYear() + '年' + (date.getMonth() + 1) + '月' + date.getDate() + '日';
+            // 追加到列表首位
+            list.prepend(container);
         }
 
-        if (diff < 60000) { // 1分钟内
-            return '刚刚';
-        } else if (diff < 3600000) { // 1小时内
-            const result = Math.floor(diff / 60000) + '分钟前';
-            return result;
-        } else if (diff < 86400000) { // 1天内
-            const result = Math.floor(diff / 3600000) + '小时前';
-            return result;
-        } else {
-            const result = date.getFullYear() + '年' + (date.getMonth() + 1) + '月' + date.getDate() + '日';
-            return result;
-        }
-    }
-
-    // 初始化划词评论功能
-    function initTextSelection() {
-        const postContainer = document.getElementById('post-container');
-        const tooltip = document.getElementById('selection-tooltip');
-        const quoteBtn = document.getElementById('quote-selection-btn');
-
-        // 检查核心元素是否存在
-        if (!postContainer || !tooltip || !quoteBtn) {
-            console.warn('[Post.content] 划词评论所需的核心元素不存在');
-            return;
+        function markOwnCommentRejected(id, reason) {
+            const el = document.getElementById('own-comment-' + id);
+            if (!el) return;
+            el.className = 'mb-6 border border-red-400 rounded-md p-4 bg-red-50';
+            const badge = document.getElementById('own-comment-badge-' + id);
+            if (badge) {
+                badge.textContent = '审核未通过';
+                badge.className = 'ml-2 text-xs px-2 py-1 rounded bg-red-200 text-red-900';
+            }
+            const badgetxt = '已被拒绝：' + reason;
+            const label = document.createElement('div');
+            label.className = 'mt-2 text-sm text-red-700';
+            label.textContent = badgetxt;
+            el.appendChild(label);
         }
 
-        // 变量用于跟踪是否显示了提示框
-        let tooltipVisible = false;
-        let currentSelection = '';
-        let tooltipShownAt = 0; // 记录提示框显示时间，用于防抖首次点击
+        function markOwnCommentApproved(id, reason) {
+            const el = document.getElementById('own-comment-' + id);
+            if (!el) return;
+            el.className = 'mb-6 border border-green-400 rounded-md p-4 bg-green-50';
+            const badge = document.getElementById('own-comment-badge-' + id);
+            if (badge) {
+                badge.textContent = '审核通过';
+                badge.className = 'ml-2 text-xs px-2 py-1 rounded bg-green-200 text-green-900';
+            }
+            const ok = document.createElement('div');
+            ok.className = 'mt-2 text-sm text-green-700';
+            ok.textContent = '审核通过：' + (reason || '已通过');
+            el.appendChild(ok);
+        }
 
-        // 监听鼠标释放事件（使用选区矩形定位）
-        postContainer.addEventListener('mouseup', function() {
-            setTimeout(showTooltipForSelection, 0);
-        });
+        // 简易 Cookie 工具
+        function setCookie(name, value, days) {
+            const d = new Date();
+            d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000));
+            document.cookie = name + '=' + encodeURIComponent(value) + ';expires=' + d.toUTCString() + ';path=/';
+        }
 
-        // 监听选区变化，动态更新或隐藏提示框
-        document.addEventListener('selectionchange', function() {
-            setTimeout(showTooltipForSelection, 0);
-        });
+        function getCookie(name) {
+            const match = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/([.$?*|{}()\[\]\\\/\+^])/g, '\\$1') + '=([^;]*)'));
+            return match ? decodeURIComponent(match[1]) : '';
+        }
 
-        // 滚动或窗口尺寸变化时隐藏提示框，避免位置错乱
-        window.addEventListener('scroll', function(){ tooltip.classList.add('hidden'); tooltipVisible = false; }, { passive: true });
-        window.addEventListener('resize', function(){ tooltip.classList.add('hidden'); tooltipVisible = false; });
+        // 格式化日期
+        function formatDate(dateString) {
+            // 处理带微秒的 ISO 8601 格式 (例如: 2025-10-16T04:02:30.000000Z)
+            // 移除微秒部分，只保留到秒: 2025-10-16T04:02:30Z
+            const normalizedDateString = dateString.replace(/(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(\.\d+)?(Z?)/, '$1$3');
 
-        function showTooltipForSelection() {
-            const selection = window.getSelection();
-            if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
-                tooltip.classList.add('hidden');
-                tooltipVisible = false;
+            // 正确处理：保留Z，让JavaScript自动转换为UTC时间
+            // 数据库存储的是UTC时间，new Date()会自动转换为本地时间
+            const date = new Date(normalizedDateString);
+            const now = new Date();
+            const diff = now - date;
+
+            // 处理负数时间差（评论时间在未来）或无效日期
+            if (isNaN(diff) || diff < 0) {
+                console.warn('[formatDate] 时间差异常（负数或NaN），返回格式化日期');
+                return date.getFullYear() + '年' + (date.getMonth() + 1) + '月' + date.getDate() + '日';
+            }
+
+            if (diff < 60000) { // 1分钟内
+                return '刚刚';
+            } else if (diff < 3600000) { // 1小时内
+                const result = Math.floor(diff / 60000) + '分钟前';
+                return result;
+            } else if (diff < 86400000) { // 1天内
+                const result = Math.floor(diff / 3600000) + '小时前';
+                return result;
+            } else {
+                const result = date.getFullYear() + '年' + (date.getMonth() + 1) + '月' + date.getDate() + '日';
+                return result;
+            }
+        }
+
+        // 初始化划词评论功能
+        function initTextSelection() {
+            const postContainer = document.getElementById('post-container');
+            const tooltip = document.getElementById('selection-tooltip');
+            const quoteBtn = document.getElementById('quote-selection-btn');
+
+            // 检查核心元素是否存在
+            if (!postContainer || !tooltip || !quoteBtn) {
+                console.warn('[Post.content] 划词评论所需的核心元素不存在');
                 return;
             }
-            const selectedText = selection.toString().trim();
-            if (!selectedText || selectedText.length <= 1) {
+
+            // 变量用于跟踪是否显示了提示框
+            let tooltipVisible = false;
+            let currentSelection = '';
+            let tooltipShownAt = 0; // 记录提示框显示时间，用于防抖首次点击
+
+            // 监听鼠标释放事件（使用选区矩形定位）
+            postContainer.addEventListener('mouseup', function () {
+                setTimeout(showTooltipForSelection, 0);
+            });
+
+            // 监听选区变化，动态更新或隐藏提示框
+            document.addEventListener('selectionchange', function () {
+                setTimeout(showTooltipForSelection, 0);
+            });
+
+            // 滚动或窗口尺寸变化时隐藏提示框，避免位置错乱
+            window.addEventListener('scroll', function () {
                 tooltip.classList.add('hidden');
                 tooltipVisible = false;
-                return;
-            }
-            let inContainer = false;
-            try {
-                const range = selection.getRangeAt(0);
-                const anc = range.commonAncestorContainer;
-                const node = (anc && anc.nodeType === 1) ? anc : (anc ? anc.parentNode : null);
-                if (node && postContainer.contains(node)) inContainer = true;
+            }, {passive: true});
+            window.addEventListener('resize', function () {
+                tooltip.classList.add('hidden');
+                tooltipVisible = false;
+            });
+
+            function showTooltipForSelection() {
+                const selection = window.getSelection();
+                if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+                    tooltip.classList.add('hidden');
+                    tooltipVisible = false;
+                    return;
+                }
+                const selectedText = selection.toString().trim();
+                if (!selectedText || selectedText.length <= 1) {
+                    tooltip.classList.add('hidden');
+                    tooltipVisible = false;
+                    return;
+                }
+                let inContainer = false;
+                try {
+                    const range = selection.getRangeAt(0);
+                    const anc = range.commonAncestorContainer;
+                    const node = (anc && anc.nodeType === 1) ? anc : (anc ? anc.parentNode : null);
+                    if (node && postContainer.contains(node)) inContainer = true;
+                    if (!inContainer) {
+                        const an = selection.anchorNode;
+                        const fn = selection.focusNode;
+                        if ((an && postContainer.contains(an)) || (fn && postContainer.contains(fn))) inContainer = true;
+                    }
+                } catch (_) {
+                }
                 if (!inContainer) {
-                    const an = selection.anchorNode;
-                    const fn = selection.focusNode;
-                    if ((an && postContainer.contains(an)) || (fn && postContainer.contains(fn))) inContainer = true;
+                    tooltip.classList.add('hidden');
+                    tooltipVisible = false;
+                    return;
                 }
-            } catch (_) {}
-            if (!inContainer) {
-                tooltip.classList.add('hidden');
-                tooltipVisible = false;
-                return;
-            }
-            currentSelection = selectedText;
-            showTooltipFromSelection();
-            tooltipVisible = true;
-        }
-
-        // 点击页面其他地方隐藏提示框
-        document.addEventListener('mousedown', function(e) {
-            // 只有当点击的不是提示框内的元素时才隐藏
-            if (tooltip && !tooltip.contains(e.target)) {
-                tooltip.classList.add('hidden');
-                tooltipVisible = false;
-            }
-        });
-
-        // 引用选中文本按钮点击事件
-        quoteBtn.addEventListener('click', function(e) {
-            e.stopPropagation(); // 阻止事件冒泡
-            // 防止在显示后立即因残留点击而误触发
-            if (Date.now() - tooltipShownAt < 300) {
-                return;
+                currentSelection = selectedText;
+                showTooltipFromSelection();
+                tooltipVisible = true;
             }
 
-            if (currentSelection) {
-                // 获取必需元素
-                const selectedTextQuote = document.getElementById('selected-text-quote');
-                const selectedTextContent = document.getElementById('selected-text-content');
-                const quotedText = document.getElementById('quoted-text');
-                const parentId = document.getElementById('parent-id');
-                const commentForm = document.getElementById('comment-form');
-                const textarea = document.getElementById('content');
+            // 点击页面其他地方隐藏提示框
+            document.addEventListener('mousedown', function (e) {
+                // 只有当点击的不是提示框内的元素时才隐藏
+                if (tooltip && !tooltip.contains(e.target)) {
+                    tooltip.classList.add('hidden');
+                    tooltipVisible = false;
+                }
+            });
 
-                // 显示引用
-                if (selectedTextContent && selectedTextQuote && quotedText) {
-                    selectedTextContent.textContent = currentSelection;
-                    selectedTextQuote.classList.remove('hidden');
-                    quotedText.value = currentSelection;
-                } else {
-                    console.warn('[Post.content] 引用相关元素不存在，跳过引用设置');
+            // 引用选中文本按钮点击事件
+            quoteBtn.addEventListener('click', function (e) {
+                e.stopPropagation(); // 阻止事件冒泡
+                // 防止在显示后立即因残留点击而误触发
+                if (Date.now() - tooltipShownAt < 300) {
+                    return;
                 }
 
-                // 清除之前的父评论ID
-                if (parentId) {
-                    parentId.value = '0';
-                }
+                if (currentSelection) {
+                    // 获取必需元素
+                    const selectedTextQuote = document.getElementById('selected-text-quote');
+                    const selectedTextContent = document.getElementById('selected-text-content');
+                    const quotedText = document.getElementById('quoted-text');
+                    const parentId = document.getElementById('parent-id');
+                    const commentForm = document.getElementById('comment-form');
+                    const textarea = document.getElementById('content');
 
-                // 设置quoted_comment_id为0表示引用文章内容而非评论
-                const quotedCommentId = document.getElementById('quoted-comment-id');
-                if (quotedCommentId) {
-                    quotedCommentId.value = '0';
-                }
+                    // 显示引用
+                    if (selectedTextContent && selectedTextQuote && quotedText) {
+                        selectedTextContent.textContent = currentSelection;
+                        selectedTextQuote.classList.remove('hidden');
+                        quotedText.value = currentSelection;
+                    } else {
+                        console.warn('[Post.content] 引用相关元素不存在，跳过引用设置');
+                    }
 
-                // 滚动到评论表单
-                if (commentForm) {
-                    commentForm.scrollIntoView({ behavior: 'smooth' });
-                    // 聚焦到评论框
-                    if (textarea) {
-                        setTimeout(() => textarea.focus(), 500);
+                    // 清除之前的父评论ID
+                    if (parentId) {
+                        parentId.value = '0';
+                    }
+
+                    // 设置quoted_comment_id为0表示引用文章内容而非评论
+                    const quotedCommentId = document.getElementById('quoted-comment-id');
+                    if (quotedCommentId) {
+                        quotedCommentId.value = '0';
+                    }
+
+                    // 滚动到评论表单
+                    if (commentForm) {
+                        commentForm.scrollIntoView({behavior: 'smooth'});
+                        // 聚焦到评论框
+                        if (textarea) {
+                            setTimeout(() => textarea.focus(), 500);
+                        }
                     }
                 }
-            }
 
-            // 隐藏提示框
-            tooltip.classList.add('hidden');
-            tooltipVisible = false;
-        });
-    }
-
-    // 显示提示框
-    function showTooltipFromSelection() {
-        const tooltip = document.getElementById('selection-tooltip');
-        if (!tooltip) return;
-        const sel = window.getSelection();
-        if (!sel || sel.rangeCount === 0) return;
-        const range = sel.getRangeAt(0);
-        const rect = range.getBoundingClientRect();
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-
-        // 先显示以便测量尺寸（不闪烁）
-        tooltip.style.visibility = 'hidden';
-        tooltip.classList.remove('hidden');
-        const tooltipWidth = tooltip.offsetWidth || 120;
-        const tooltipHeight = tooltip.offsetHeight || 30;
-
-        // 计算基于 viewport 的位置（fixed 定位不需要 pageOffset）
-        let finalX = (rect.left + rect.width / 2) - (tooltipWidth / 2);
-        let finalY = rect.top - tooltipHeight - 8; // 优先显示在上方
-        if (finalY < 8) {
-            finalY = rect.bottom + 8; // 空间不足时显示在下方
+                // 隐藏提示框
+                tooltip.classList.add('hidden');
+                tooltipVisible = false;
+            });
         }
-        // 视口内约束
-        finalX = Math.max(8, Math.min(finalX, viewportWidth - tooltipWidth - 8));
-        finalY = Math.max(8, Math.min(finalY, viewportHeight - tooltipHeight - 8));
 
-        // 应用位置
-        tooltip.style.position = 'fixed';
-        tooltip.style.left = Math.round(finalX) + 'px';
-        tooltip.style.top = Math.round(finalY) + 'px';
-        tooltip.style.zIndex = '9999';
-        tooltip.style.visibility = '';
+        // 显示提示框
+        function showTooltipFromSelection() {
+            const tooltip = document.getElementById('selection-tooltip');
+            if (!tooltip) return;
+            const sel = window.getSelection();
+            if (!sel || sel.rangeCount === 0) return;
+            const range = sel.getRangeAt(0);
+            const rect = range.getBoundingClientRect();
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
 
-        // 记录显示时间并短暂禁用点击，避免鼠标抬起后的残余 click 命中按钮
-        tooltipShownAt = Date.now();
-        tooltip.style.pointerEvents = 'none';
-        setTimeout(() => { tooltip.style.pointerEvents = 'auto'; }, 250);
-    }
-</script>
+            // 先显示以便测量尺寸（不闪烁）
+            tooltip.style.visibility = 'hidden';
+            tooltip.classList.remove('hidden');
+            const tooltipWidth = tooltip.offsetWidth || 120;
+            const tooltipHeight = tooltip.offsetHeight || 30;
 
-    <!-- FloLink 悬浮链接样式 -->
-    <link rel="preload" as="style" href="{{ asset('/assets/flolink/flolink.css') }}">
-    <link rel="stylesheet" href="{{ asset('/assets/flolink/flolink.css') }}">
-    <!-- Vditor 必须同步加载以支持 PJAX -->
-    <script src="{{ asset('/assets/vditor/method.min.js') }}"></script>
-    <!-- FloLink 悬浮链接脚本 -->
-    <script src="{{ asset('/assets/flolink/flolink.js') }}"></script>
+            // 计算基于 viewport 的位置（fixed 定位不需要 pageOffset）
+            let finalX = (rect.left + rect.width / 2) - (tooltipWidth / 2);
+            let finalY = rect.top - tooltipHeight - 8; // 优先显示在上方
+            if (finalY < 8) {
+                finalY = rect.bottom + 8; // 空间不足时显示在下方
+            }
+            // 视口内约束
+            finalX = Math.max(8, Math.min(finalX, viewportWidth - tooltipWidth - 8));
+            finalY = Math.max(8, Math.min(finalY, viewportHeight - tooltipHeight - 8));
 
-    <script src="{{ asset('/assets/js/pangu.umd.js') }}" defer></script>
+            // 应用位置
+            tooltip.style.position = 'fixed';
+            tooltip.style.left = Math.round(finalX) + 'px';
+            tooltip.style.top = Math.round(finalY) + 'px';
+            tooltip.style.zIndex = '9999';
+            tooltip.style.visibility = '';
+
+            // 记录显示时间并短暂禁用点击，避免鼠标抬起后的残余 click 命中按钮
+            tooltipShownAt = Date.now();
+            tooltip.style.pointerEvents = 'none';
+            setTimeout(() => {
+                tooltip.style.pointerEvents = 'auto';
+            }, 250);
+        }
+    </script>
 </div>

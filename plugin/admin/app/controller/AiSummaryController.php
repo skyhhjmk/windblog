@@ -27,11 +27,17 @@ class AiSummaryController
         return new Response(404, ['Content-Type' => 'text/plain; charset=utf-8'], 'AI summary index template not found');
     }
 
-    // 统计：各状态数量
+    // 统计：各状态数量、使用量、提供者信息等
     public function stats(Request $request): Response
     {
         $rows = Db::table('post_ext')->where('key', 'ai_summary_meta')->get();
         $counters = ['none' => 0, 'done' => 0, 'failed' => 0, 'refreshing' => 0, 'persisted' => 0];
+        $totalTokens = 0;
+        $totalCost = 0;
+        $providerUsage = [];
+        $recentErrors = [];
+        $recentSuccess = [];
+
         foreach ($rows as $r) {
             $val = $r->value;
             if (is_string($val)) {
@@ -39,14 +45,70 @@ class AiSummaryController
             } else {
                 $meta = (array) $val;
             }
+
             $st = (string) ($meta['status'] ?? 'none');
             if (!isset($counters[$st])) {
                 $counters[$st] = 0;
             }
             $counters[$st]++;
+
+            // 统计使用量
+            if (isset($meta['usage']['total_tokens'])) {
+                $totalTokens += (int) $meta['usage']['total_tokens'];
+            }
+
+            // 统计提供者使用情况
+            if (isset($meta['provider'])) {
+                $provider = (string) $meta['provider'];
+                if (!isset($providerUsage[$provider])) {
+                    $providerUsage[$provider] = ['count' => 0, 'tokens' => 0];
+                }
+                $providerUsage[$provider]['count']++;
+                if (isset($meta['usage']['total_tokens'])) {
+                    $providerUsage[$provider]['tokens'] += (int) $meta['usage']['total_tokens'];
+                }
+            }
+
+            // 收集最近的错误
+            if ($st === 'failed' && isset($meta['error']) && count($recentErrors) < 10) {
+                $recentErrors[] = [
+                    'post_id' => $r->post_id,
+                    'error' => (string) $meta['error'],
+                    'provider' => (string) ($meta['provider'] ?? 'unknown'),
+                    'failed_at' => (string) ($meta['failed_at'] ?? 'unknown'),
+                ];
+            }
+
+            // 收集最近成功的任务
+            if ($st === 'done' && count($recentSuccess) < 10) {
+                $recentSuccess[] = [
+                    'post_id' => $r->post_id,
+                    'provider' => (string) ($meta['provider'] ?? 'unknown'),
+                    'model' => (string) ($meta['model'] ?? 'unknown'),
+                    'tokens' => (int) ($meta['usage']['total_tokens'] ?? 0),
+                    'generated_at' => (string) ($meta['generated_at'] ?? 'unknown'),
+                ];
+            }
         }
 
-        return json(['code' => 0, 'data' => $counters]);
+        // 按时间排序
+        usort($recentErrors, function ($a, $b) {
+            return strtotime($b['failed_at']) <=> strtotime($a['failed_at']);
+        });
+        usort($recentSuccess, function ($a, $b) {
+            return strtotime($b['generated_at']) <=> strtotime($a['generated_at']);
+        });
+
+        return json([
+            'code' => 0,
+            'data' => [
+                'counters' => $counters,
+                'total_tokens' => $totalTokens,
+                'provider_usage' => $providerUsage,
+                'recent_errors' => $recentErrors,
+                'recent_success' => $recentSuccess,
+            ],
+        ]);
     }
 
     /**
@@ -154,7 +216,19 @@ class AiSummaryController
     public function promptGet(Request $request): Response
     {
         try {
-            $prompt = (string) blog_config('ai_summary_prompt', '请为以下内容生成一个简短的摘要，需要在170字左右，避免出现多余的标点符号和表情符号。', true);
+            $defaultPrompt = <<<'EOF'
+                请为以下文章生成一个简洁的摘要，重点阐述文章的主要内容和核心观点。
+
+                要求：
+                1. 摘要长度为140-160字
+                2. 着重描述文章讲了什么，概括主要内容和观点
+                3. 使用简洁、流畅的语言，避免冗长
+                4. 不使用表情符号、特殊符号，标点符号仅保留必要的逗号和句号
+                5. 保持客观、中立的陈述角度
+
+                直接输出摘要内容，不要添加“本文介绍了”、“摘要：”等前缀词。
+                EOF;
+            $prompt = (string) blog_config('ai_summary_prompt', $defaultPrompt, true);
 
             return json(['code' => 0, 'data' => ['prompt' => $prompt]]);
         } catch (Throwable $e) {
@@ -187,6 +261,163 @@ class AiSummaryController
             blog_config('ai_summary_prompt', $prompt, false, true, true);
 
             return json(['code' => 0, 'msg' => '保存成功']);
+        } catch (Throwable $e) {
+            return json(['code' => 1, 'msg' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * 获取文章AI摘要状态
+     * GET /app/admin/ai/summary/status
+     * query: post_id
+     */
+    public function getStatus(Request $request): Response
+    {
+        try {
+            $postId = (int) $request->get('post_id', 0);
+            if ($postId <= 0) {
+                return json(['code' => 1, 'msg' => 'post_id required']);
+            }
+
+            $row = PostExt::where('post_id', $postId)->where('key', 'ai_summary_meta')->first();
+            $meta = $row ? (array) $row->value : [];
+
+            // 检查是否超时（刷新状态超过3分钟）
+            $isStuck = false;
+            if (($meta['status'] ?? '') === 'refreshing') {
+                $startedAt = $meta['started_at'] ?? null;
+                if ($startedAt) {
+                    $startTime = strtotime($startedAt);
+                    $elapsed = time() - $startTime;
+                    // 如果超过3分钟，认为卡住
+                    if ($elapsed > 180) {
+                        $isStuck = true;
+                        // 自动标记为失败
+                        $meta['status'] = 'failed';
+                        $meta['error'] = '任务超时（超过3分钟）';
+                        $meta['failed_at'] = date('Y-m-d H:i:s');
+
+                        // 更新数据库
+                        if ($row) {
+                            $row->value = $meta;
+                            $row->save();
+                        }
+                    }
+                }
+            }
+
+            // 同时获取文章的ai_summary字段
+            $post = \app\model\Post::find($postId);
+            $aiSummary = $post ? (string) $post->ai_summary : '';
+
+            return json([
+                'code' => 0,
+                'data' => [
+                    'meta' => $meta,
+                    'summary' => $aiSummary,
+                    'status' => (string) ($meta['status'] ?? 'none'),
+                    'enabled' => (bool) ($meta['enabled'] ?? false),
+                    'error' => (string) ($meta['error'] ?? ''),
+                    'provider' => (string) ($meta['provider'] ?? ''),
+                    'model' => (string) ($meta['model'] ?? ''),
+                    'generated_at' => (string) ($meta['generated_at'] ?? ''),
+                    'is_stuck' => $isStuck,
+                    'started_at' => (string) ($meta['started_at'] ?? ''),
+                ],
+            ]);
+        } catch (Throwable $e) {
+            return json(['code' => 1, 'msg' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * 重置卡住的任务
+     * POST /app/admin/ai/summary/reset
+     * body: { post_id: 123 }
+     */
+    public function resetStuckTask(Request $request): Response
+    {
+        try {
+            $payload = $request->post();
+            if (!is_array($payload)) {
+                $payload = json_decode((string) $request->rawBody(), true);
+            }
+
+            $postId = (int) ($payload['post_id'] ?? 0);
+            if ($postId <= 0) {
+                return json(['code' => 1, 'msg' => 'post_id required']);
+            }
+
+            $row = PostExt::where('post_id', $postId)->where('key', 'ai_summary_meta')->first();
+            if (!$row) {
+                return json(['code' => 1, 'msg' => '未找到AI摘要元数据']);
+            }
+
+            $meta = (array) $row->value;
+
+            // 重置为失败状态
+            $meta['status'] = 'failed';
+            $meta['error'] = '手动重置（任务卡住）';
+            $meta['failed_at'] = date('Y-m-d H:i:s');
+
+            $row->value = $meta;
+            $row->save();
+
+            return json(['code' => 0, 'msg' => '已重置任务状态']);
+        } catch (Throwable $e) {
+            return json(['code' => 1, 'msg' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * 批量重置所有卡住的任务
+     * POST /app/admin/ai/summary/reset-all-stuck
+     */
+    public function resetAllStuckTasks(Request $request): Response
+    {
+        try {
+            $rows = Db::table('post_ext')->where('key', 'ai_summary_meta')->get();
+            $resetCount = 0;
+            $timeout = 180; // 3分钟超时
+
+            foreach ($rows as $row) {
+                $val = $row->value;
+                if (is_string($val)) {
+                    $meta = json_decode($val, true) ?: [];
+                } else {
+                    $meta = (array) $val;
+                }
+
+                // 检查是否处于刷新中且超时
+                if (($meta['status'] ?? '') === 'refreshing') {
+                    $startedAt = $meta['started_at'] ?? null;
+                    if ($startedAt) {
+                        $startTime = strtotime($startedAt);
+                        $elapsed = time() - $startTime;
+
+                        if ($elapsed > $timeout) {
+                            // 重置为失败
+                            $meta['status'] = 'failed';
+                            $meta['error'] = '批量重置（任务超时' . round($elapsed / 60, 1) . '分钟）';
+                            $meta['failed_at'] = date('Y-m-d H:i:s');
+
+                            // 更新数据库
+                            Db::table('post_ext')
+                                ->where('post_id', $row->post_id)
+                                ->where('key', 'ai_summary_meta')
+                                ->update(['value' => json_encode($meta)]);
+
+                            $resetCount++;
+                        }
+                    }
+                }
+            }
+
+            return json([
+                'code' => 0,
+                'msg' => "已重置 {$resetCount} 个卡住的任务",
+                'data' => ['reset_count' => $resetCount],
+            ]);
         } catch (Throwable $e) {
             return json(['code' => 1, 'msg' => $e->getMessage()]);
         }

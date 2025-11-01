@@ -180,8 +180,11 @@ Route::group('/app/admin', function () {
             Route::get('/', [AiSummaryController::class, 'index']);
             Route::get('/index', [AiSummaryController::class, 'index']);
             Route::get('/stats', [AiSummaryController::class, 'stats']);
+            Route::get('/status', [AiSummaryController::class, 'getStatus']);
             Route::post('/set-meta', [AiSummaryController::class, 'setMeta']);
             Route::post('/enqueue', [AiSummaryController::class, 'enqueue']);
+            Route::post('/reset', [AiSummaryController::class, 'resetStuckTask']);
+            Route::post('/reset-all-stuck', [AiSummaryController::class, 'resetAllStuckTasks']);
             Route::get('/prompt', [AiSummaryController::class, 'promptGet']);
             Route::post('/prompt-save', [AiSummaryController::class, 'promptSave']);
         });
