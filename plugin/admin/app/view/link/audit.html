@@ -84,6 +84,10 @@
                     </p>
                 </div>
                 <div class="flex gap-3">
+                    <button class="inline-flex items-center justify-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-md shadow-sm transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                            onclick="triggerAutoAudit()">
+                        AI自动审核
+                    </button>
                     <button class="inline-flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md shadow-sm transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2" onclick="detectSite()">
                         重新检测
                     </button>
@@ -622,6 +626,58 @@
         function speedTest() {
             layui.layer.msg('正在测试网站速度...', {icon: 16, time: 2000});
             // 这里可以集成第三方测速API
+        }
+
+        // AI自动审核
+        function triggerAutoAudit() {
+            if (!linkData) {
+                layui.layer.msg('链接信息未加载');
+                return;
+            }
+
+            layui.layer.confirm('使用AI自动审核将根据反链检测和页面质量评分，达到阈值将自动通过审核。是否继续？', {
+                icon: 3,
+                title: 'AI自动审核',
+                btn: ['确定', '取消']
+            }, function (index) {
+                layui.layer.close(index);
+                const loading = layui.layer.load(1, {shade: [0.3, '#000']});
+
+                // 调用自动审核接口
+                fetch(`/app/admin/link/autoAudit/${linkData.id}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        layui.layer.close(loading);
+                        if (data.code === 0) {
+                            const result = data.data;
+                            if (result.approved) {
+                                layui.layer.msg(`AI审核通过！评分：${result.score}，排序：${result.sort_order}`, {
+                                    icon: 1,
+                                    time: 2000
+                                }, function () {
+                                    // 重新加载链接信息或跳转到下一个
+                                    loadNextPendingLink();
+                                });
+                            } else {
+                                layui.layer.alert(`AI审核未通过。评分：${result.score}（需要达到阈值才能通过）<br>您可以手动审核或调整后重试。`, {
+                                    icon: 0,
+                                    title: 'AI审核结果'
+                                });
+                            }
+                        } else {
+                            layui.layer.msg('AI审核失败：' + data.msg, {icon: 2});
+                        }
+                    })
+                    .catch(error => {
+                        layui.layer.close(loading);
+                        layui.layer.msg('网络错误', {icon: 2});
+                    });
+            });
         }
 
         // 审核操作

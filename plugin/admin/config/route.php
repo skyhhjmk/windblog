@@ -54,6 +54,8 @@ Route::group('/app/admin', function () {
         Route::get('/view/{id}', [LinkController::class, 'view']);
         Route::get('/audit/{id}', [LinkController::class, 'audit']);
         Route::post('/detectSite', [LinkController::class, 'detectSite']);
+        Route::post('/autoAudit/{id}', [LinkController::class, 'autoAudit']);
+        Route::post('/monitor', [LinkController::class, 'monitor']);
         Route::post('/batchApprove/{ids}', [LinkController::class, 'batchApprove']);
         Route::post('/batchReject/{ids}', [LinkController::class, 'batchReject']);
         Route::delete('/remove/{id}', [LinkController::class, 'remove']);
@@ -63,6 +65,19 @@ Route::group('/app/admin', function () {
         Route::post('/batchRestore/{ids}', [LinkController::class, 'batchRestore']);
         Route::delete('/batchForceDelete/{ids}', [LinkController::class, 'batchForceDelete']);
         Route::get('/get/{id}', [LinkController::class, 'get']);
+
+        // AI审核管理
+        Route::group('/moderation', function () {
+            Route::get('', [plugin\admin\app\controller\LinkModerationController::class, 'index']);
+            Route::get('/', [plugin\admin\app\controller\LinkModerationController::class, 'index']);
+            Route::get('/index', [plugin\admin\app\controller\LinkModerationController::class, 'index']);
+            Route::get('/stats', [plugin\admin\app\controller\LinkModerationController::class, 'stats']);
+            Route::get('/logs', [plugin\admin\app\controller\LinkModerationController::class, 'logs']);
+            Route::post('/triggerAudit', [plugin\admin\app\controller\LinkModerationController::class, 'triggerAudit']);
+            Route::post('/batchRemoderate', [plugin\admin\app\controller\LinkModerationController::class, 'batchRemoderate']);
+            Route::post('/batchAutoAudit', [plugin\admin\app\controller\LinkModerationController::class, 'batchAutoAudit']);
+            Route::any('/config', [plugin\admin\app\controller\LinkModerationController::class, 'config']);
+        });
     });
 
     // FloLink 浮动链接路由

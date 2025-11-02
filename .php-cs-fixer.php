@@ -101,5 +101,7 @@ return $config
         'trim_array_spaces' => true,
         'unary_operator_spaces' => true,
         'whitespace_after_comma_in_array' => true,
+        'no_trailing_whitespace' => true,
+        'heredoc_indentation' => false,
     ])
     ->setFinder($finder);

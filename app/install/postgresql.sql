@@ -242,6 +242,12 @@ CREATE TABLE IF NOT EXISTS links
     deleted_at      TIMESTAMP WITH TIME ZONE DEFAULT NULL
 );
 
+-- 为links表的custom_fields字段添加GIN索引
+CREATE INDEX IF NOT EXISTS idx_links_custom_fields_gin ON links USING GIN (custom_fields);
+CREATE INDEX IF NOT EXISTS idx_links_ai_audit_status ON links ((custom_fields ->> 'ai_audit_status'));
+CREATE INDEX IF NOT EXISTS idx_links_last_audit_time ON links ((custom_fields ->> 'last_audit_time'));
+CREATE INDEX IF NOT EXISTS idx_links_last_monitor_time ON links ((custom_fields ->> 'last_monitor_time'));
+
 COMMENT ON TABLE links IS '友链表';
 COMMENT ON COLUMN links.name IS '友链名称';
 COMMENT ON COLUMN links.url IS '友链URL';

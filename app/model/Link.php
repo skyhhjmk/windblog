@@ -32,7 +32,26 @@ use Throwable;
  * @property string|null $seo_title       SEO标题
  * @property string|null $seo_keywords    SEO关键词
  * @property string|null $seo_description SEO描述
- * @property string|null $custom_fields   自定义字段(JSON格式)
+ * @property string|null $custom_fields   自定义字段(JSON格式)，支持字段：
+ *                                         - link_position: string, 对方友链位置
+ *                                         - page_link: string, 对方友链页面链接
+ *                                         - enable_monitor: bool, 是否启用监控
+ *                                         - enable_auto_moderation: bool, 是否启用自动审核
+ *                                         - enable_auto_report: bool, 是否启用自动告警
+ *                                         - last_monitor_time: string, 上次监控时间(Y-m-d H:i:s)
+ *                                         - last_audit_time: string, 上次审核时间(Y-m-d H:i:s)
+ *                                         - ai_audit_status: string, AI审核状态(approved/rejected/spam/pending/error)
+ *                                         - ai_audit_reason: string, AI审核原因
+ *                                         - ai_audit_score: float, AI审核评分(0-100)
+ *                                         - ai_audit_confidence: float, AI审核置信度(0-1)
+ *                                         - ai_audit_categories: array, AI审核问题类别
+ *                                         - ai_auto_approved: bool, 是否AI自动通过
+ *                                         - ai_auto_hide: bool, 是否AI自动隐藏
+ *                                         - monitor: array, 监控数据(time/ok/load_time/backlink等)
+ *                                         - auto_audit: array, 自动审核数据(score/time)
+ *                                         - peer_api: string, 对方接收API地址
+ *                                         - peer_last_push: string, 最后推送时间
+ *                                         - tags: array, 友链标签
  * @property Carbon|null $created_at      创建时间
  * @property Carbon|null $updated_at      更新时间
  * @property Carbon|null $deleted_at      软删除时间

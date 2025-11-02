@@ -130,6 +130,13 @@ if (getenv('DB_DEFAULT')) {
         'reloadable' => false,
         'constructor' => [],
     ];
+
+    // AI 友链审核处理进程（存在 .env 时注册）
+    $__processes['link_audit_worker'] = [
+        'handler' => app\process\LinkAuditWorker::class,
+        'reloadable' => false,
+        'constructor' => [],
+    ];
 }
 
 return $__processes;

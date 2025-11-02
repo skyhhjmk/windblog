@@ -246,6 +246,13 @@ return [
                 'weight' => 800,
             ],
             [
+                'title' => 'AI友链审核',
+                'key' => 'plugin\\admin\\app\\controller\\LinkModerationController',
+                'href' => '/app/admin/link/moderation',
+                'type' => 1,
+                'weight' => 790,
+            ],
+            [
                 'title' => 'FloLink',
                 'key' => 'plugin\\admin\\app\\controller\\FloLinkController',
                 'href' => '/app/admin/flolink/index',

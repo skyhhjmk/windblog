@@ -148,6 +148,11 @@ CREATE TABLE IF NOT EXISTS links (
   deleted_at DATETIME DEFAULT NULL
 );
 
+-- 为links表的custom_fields字段添加索引
+CREATE INDEX IF NOT EXISTS idx_links_ai_audit_status ON links (json_extract(custom_fields, '$.ai_audit_status'));
+CREATE INDEX IF NOT EXISTS idx_links_last_audit_time ON links (json_extract(custom_fields, '$.last_audit_time'));
+CREATE INDEX IF NOT EXISTS idx_links_last_monitor_time ON links (json_extract(custom_fields, '$.last_monitor_time'));
+
 -- 创建浮动链接表（FloLink）
 CREATE TABLE IF NOT EXISTS flo_links (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

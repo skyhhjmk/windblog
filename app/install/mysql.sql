@@ -229,7 +229,54 @@ CREATE TABLE IF NOT EXISTS `links` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   `deleted_at` timestamp NULL DEFAULT NULL,
-  PRIMARY KEY (`id`)
+    PRIMARY KEY
+(
+    `
+    id
+    `
+),
+    KEY ` idx_custom_fields_ai_audit_status `
+(
+    (
+    CAST (
+    JSON_EXTRACT
+(
+    `
+    custom_fields
+    `,
+    '$.ai_audit_status'
+) AS CHAR
+(
+    20
+)))),
+    KEY ` idx_custom_fields_last_audit_time `
+(
+    (
+    CAST (
+    JSON_EXTRACT
+(
+    `
+    custom_fields
+    `,
+    '$.last_audit_time'
+) AS CHAR
+(
+    20
+)))),
+    KEY ` idx_custom_fields_last_monitor_time `
+(
+    (
+    CAST (
+    JSON_EXTRACT
+(
+    `
+    custom_fields
+    `,
+    '$.last_monitor_time'
+) AS CHAR
+(
+    20
+))))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='友链表';
 
 -- 创建浮动链接表（FloLink）
