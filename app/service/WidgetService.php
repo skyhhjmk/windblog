@@ -222,7 +222,6 @@ class WidgetService
             }
 
             $widgetType = $widget['type'] ?? '';
-            $title = $widget['title'] ?? '';
 
             // 获取渲染后的小工具数据
             $widgetData = self::renderWidget($widget);
@@ -230,24 +229,14 @@ class WidgetService
             // 优先使用自定义HTML渲染器
             if (isset(self::$widgetHtmlRenderers[$widgetType]) && is_callable(self::$widgetHtmlRenderers[$widgetType])) {
                 try {
-                    $content = call_user_func(self::$widgetHtmlRenderers[$widgetType], $widgetData);
-
-                    return self::wrapWidgetHtml($title, $content);
+                    return call_user_func(self::$widgetHtmlRenderers[$widgetType], $widgetData);
                 } catch (Throwable $e) {
                     Log::error("[WidgetService] 自定义HTML渲染器执行失败: {$widgetType} - " . $e->getMessage());
                 }
             }
 
-            // 使用内置HTML渲染器
-            $htmlMethod = 'render' . str_replace('_', '', ucwords($widgetType, '_')) . 'Html';
-
-            if (method_exists(__CLASS__, $htmlMethod)) {
-                $content = self::{$htmlMethod}($widgetData);
-
-                return self::wrapWidgetHtml($title, $content);
-            }
-
-            return '<div class="text-gray-500 text-sm italic">未知的小工具类型</div>';
+            // 使用Twig模板渲染小工具
+            return self::renderWidgetWithTwig($widgetData);
 
         } catch (Throwable $e) {
             Log::error('[WidgetService] 渲染小工具HTML失败: ' . $e->getMessage());
@@ -257,7 +246,46 @@ class WidgetService
     }
 
     /**
-     * 包装小工具HTML内容
+     * 使用Twig模板渲染小工具
+     *
+     * @param array $widget 小工具数据
+     *
+     * @return string 渲染后的HTML
+     */
+    protected static function renderWidgetWithTwig(array $widget): string
+    {
+        try {
+            $widgetType = $widget['type'] ?? '';
+            // 不要包含 .html.twig 后缀，view() 函数会自动添加
+            $templatePath = "widgets/{$widgetType}";
+
+            // 检查模板是否存在（需要完整路径检查）
+            $viewPath = app_path() . '/view/default/' . $templatePath . '.html.twig';
+            if (!file_exists($viewPath)) {
+                Log::warning("[WidgetService] 小工具模板不存在: {$viewPath}，使用默认HTML渲染器");
+                // 回退到原有的HTML渲染方法
+                $htmlMethod = 'render' . str_replace('_', '', ucwords($widgetType, '_')) . 'Html';
+                if (method_exists(__CLASS__, $htmlMethod)) {
+                    $content = self::{$htmlMethod}($widget);
+
+                    return self::wrapWidgetHtml($widget['title'] ?? '', $content);
+                }
+
+                return '<div class="text-gray-500 text-sm italic">未知的小工具类型</div>';
+            }
+
+            // 使用Twig渲染模板
+            return view($templatePath, $widget)->rawBody();
+
+        } catch (Throwable $e) {
+            Log::error("[WidgetService] Twig模板渲染失败: {$e->getMessage()}");
+
+            return '<div class="bg-white rounded-lg shadow-md p-6 mb-6 text-red-500">小工具渲染失败</div>';
+        }
+    }
+
+    /**
+     * 包装小工具HTML内容（向后兼容）
      *
      * @param string $title 小工具标题
      * @param string $content 小工具内容
@@ -296,18 +324,19 @@ class WidgetService
     public static function registerDefaultWidgets(): void
     {
         $widgets = [
-            'about' => ['关于博主', '显示关于博主的信息', null, [__CLASS__, 'renderAboutHtml']],
-            'categories' => ['文章分类', '显示博客文章分类列表', null, [__CLASS__, 'renderCategoriesHtml']],
-            'tags' => ['标签云', '显示博客文章标签云', null, [__CLASS__, 'renderTagsHtml']],
-            'archive' => ['文章归档', '按月份显示文章归档列表', null, [__CLASS__, 'renderArchiveHtml']],
-            'recent_posts' => ['最新文章', '显示最新发布的文章列表', null, [__CLASS__, 'renderRecentPostsHtml']],
-            'html' => ['自定义HTML', '自定义HTML内容', null, [__CLASS__, 'renderHtmlHtml']],
-            'popular_posts' => ['热门文章', '显示最受欢迎的文章列表', null, [__CLASS__, 'renderPopularPostsHtml']],
-            'random_posts' => ['随机文章', '随机显示博客中的文章', null, [__CLASS__, 'renderRandomPostsHtml']],
+            'about' => ['关于博主', '显示关于博主的信息'],
+            'categories' => ['文章分类', '显示博客文章分类列表'],
+            'tags' => ['标签云', '显示博客文章标签云'],
+            'archive' => ['文章归档', '按月份显示文章归档列表'],
+            'recent_posts' => ['最新文章', '显示最新发布的文章列表'],
+            'html' => ['自定义HTML', '自定义HTML内容'],
+            'popular_posts' => ['热门文章', '显示最受欢迎的文章列表'],
+            'random_posts' => ['随机文章', '随机显示博客中的文章'],
         ];
 
         foreach ($widgets as $type => $info) {
-            self::registerWidget($type, $info[0], $info[1], $info[2], $info[3]);
+            // 现在使用Twig模板，不再需要注册HTML渲染器
+            self::registerWidget($type, $info[0], $info[1], null, null);
         }
     }
 

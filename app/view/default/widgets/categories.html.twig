@@ -1,0 +1,19 @@
+{% extends "widgets/base.html.twig" %}
+
+{% block widget_content %}
+    {% if categories is defined and categories is not empty %}
+        <div class="space-y-2">
+            {% for category in categories %}
+                <a href="/category/{{ category.slug }}.html"
+                   class="flex justify-between items-center text-gray-800 hover:text-blue-600 transition-colors">
+                    <span>{{ category.name }}</span>
+                    <span class="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full border border-blue-100">
+                        {{ category.posts_count|default(0) }}
+                    </span>
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-gray-500 text-sm italic">暂无分类</div>
+    {% endif %}
+{% endblock %}
