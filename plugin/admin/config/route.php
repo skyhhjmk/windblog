@@ -179,6 +179,7 @@ Route::group('/app/admin', function () {
             Route::get('', [AiSummaryController::class, 'index']);
             Route::get('/', [AiSummaryController::class, 'index']);
             Route::get('/index', [AiSummaryController::class, 'index']);
+            Route::get('/articles', [AiSummaryController::class, 'articles']);
             Route::get('/stats', [AiSummaryController::class, 'stats']);
             Route::get('/status', [AiSummaryController::class, 'getStatus']);
             Route::post('/set-meta', [AiSummaryController::class, 'setMeta']);

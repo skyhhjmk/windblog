@@ -31,7 +31,7 @@ class AiSummaryController
     public function stats(Request $request): Response
     {
         $rows = Db::table('post_ext')->where('key', 'ai_summary_meta')->get();
-        $counters = ['none' => 0, 'done' => 0, 'failed' => 0, 'refreshing' => 0, 'persisted' => 0];
+        $counters = ['none' => 0, 'queued' => 0, 'done' => 0, 'failed' => 0, 'refreshing' => 0, 'persisted' => 0];
         $totalTokens = 0;
         $totalCost = 0;
         $providerUsage = [];
@@ -204,6 +204,18 @@ class AiSummaryController
         }
         $provider = (string) $request->post('provider', '');
         $force = (bool) $request->post('force', false);
+
+        // 立即设置状态为 queued
+        $row = PostExt::where('post_id', $postId)->where('key', 'ai_summary_meta')->first();
+        if (!$row) {
+            $row = new PostExt(['post_id' => $postId, 'key' => 'ai_summary_meta', 'value' => []]);
+        }
+        $meta = (array) $row->value;
+        $meta['status'] = 'queued';
+        $meta['queued_at'] = date('Y-m-d H:i:s');
+        $row->value = $meta;
+        $row->save();
+
         $ok = AISummaryService::enqueue(['post_id' => $postId, 'provider' => ($provider ?: null), 'options' => ['force' => $force]]);
 
         return json(['code' => $ok ? 0 : 1, 'msg' => $ok ? '已入队' : '入队失败']);
@@ -417,6 +429,80 @@ class AiSummaryController
                 'code' => 0,
                 'msg' => "已重置 {$resetCount} 个卡住的任务",
                 'data' => ['reset_count' => $resetCount],
+            ]);
+        } catch (Throwable $e) {
+            return json(['code' => 1, 'msg' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * 获取文章列表（包含AI摘要信息）
+     * GET /app/admin/ai/summary/articles
+     */
+    public function articles(Request $request): Response
+    {
+        try {
+            $page = (int) $request->get('page', 1);
+            $limit = (int) $request->get('limit', 15);
+            $title = (string) $request->get('title', '');
+            $aiStatus = (string) $request->get('ai_status', '');
+
+            // 构建查询
+            $query = \app\model\Post::query();
+
+            // 文章标题筛选
+            if ($title) {
+                $query->where('title', 'like', "%{$title}%");
+            }
+
+            // 获取总数
+            $total = $query->count();
+
+            // 获取文章列表
+            $posts = $query->orderBy('id', 'desc')
+                ->forPage($page, $limit)
+                ->get();
+
+            $data = [];
+            foreach ($posts as $post) {
+                // 获取AI摘要元数据
+                $metaRow = PostExt::where('post_id', $post->id)
+                    ->where('key', 'ai_summary_meta')
+                    ->first();
+
+                $meta = $metaRow ? (array) $metaRow->value : [];
+                $status = (string) ($meta['status'] ?? 'none');
+
+                // AI状态筛选
+                if ($aiStatus && $status !== $aiStatus) {
+                    continue;
+                }
+
+                $item = [
+                    'id' => $post->id,
+                    'title' => $post->title,
+                    'ai_summary' => (string) $post->ai_summary,
+                    'ai_status' => $status,
+                    'ai_provider' => (string) ($meta['provider'] ?? ''),
+                    'ai_model' => (string) ($meta['model'] ?? ''),
+                    'ai_tokens' => (int) ($meta['usage']['total_tokens'] ?? 0),
+                    'ai_generated_at' => (string) ($meta['generated_at'] ?? ''),
+                    'ai_error' => (string) ($meta['error'] ?? ''),
+                ];
+
+                $data[] = $item;
+            }
+
+            // 如果有AI状态筛选，重新计算总数
+            if ($aiStatus) {
+                $total = count($data);
+            }
+
+            return json([
+                'code' => 0,
+                'msg' => 'success',
+                'count' => $total,
+                'data' => $data,
             ]);
         } catch (Throwable $e) {
             return json(['code' => 1, 'msg' => $e->getMessage()]);
