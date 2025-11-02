@@ -125,6 +125,16 @@
 
     <!-- 待审核工具栏 -->
     <div id="pendingToolbar" class="hidden">
+        <button class="pear-btn pear-btn-md" style="background-color: #9333ea; color: white;"
+                lay-event="batchAutoAudit">
+            <i class="layui-icon layui-icon-star-fill"></i>
+            AI自动审核
+        </button>
+        <button class="pear-btn pear-btn-md" style="background-color: #6366f1; color: white;"
+                lay-event="batchManualAudit">
+            <i class="layui-icon layui-icon-rate"></i>
+            AI手动审核
+        </button>
         <button class="pear-btn pear-btn-success pear-btn-md" lay-event="batchApprove">
             <i class="layui-icon layui-icon-ok"></i>
             批量通过
@@ -151,6 +161,8 @@
 <script type="text/html" id="link-bar">
     <!-- 正常链接操作按钮 -->
     <div class="normal-actions flex space-x-1">
+        <button class="pear-btn pear-btn-primary pear-btn-sm" lay-event="audit" title="审核工作台"><i
+                class="layui-icon layui-icon-search"></i></button>
         <button class="pear-btn pear-btn-primary pear-btn-sm" lay-event="view" title="查看详情"><i
                 class="layui-icon layui-icon-read"></i></button>
         <button class="pear-btn pear-btn-primary pear-btn-sm" lay-event="edit" title="编辑"><i
@@ -163,6 +175,12 @@
 <script type="text/html" id="pending-link-bar">
     <!-- 待审核链接操作按钮 -->
     <div class="pending-actions flex space-x-1">
+        <button class="pear-btn pear-btn-sm" style="background-color: #9333ea; color: white;" lay-event="autoAudit"
+                title="AI自动审核"><i
+                class="layui-icon layui-icon-star-fill"></i></button>
+        <button class="pear-btn pear-btn-sm" style="background-color: #6366f1; color: white;" lay-event="manualAudit"
+                title="AI手动审核（仅记录结果）"><i
+                class="layui-icon layui-icon-rate"></i></button>
         <button class="pear-btn pear-btn-primary pear-btn-sm" lay-event="audit" title="审核工作台"><i
                 class="layui-icon layui-icon-search"></i></button>
         <button class="pear-btn pear-btn-primary pear-btn-sm" lay-event="view" title="查看详情"><i
@@ -248,6 +266,45 @@
             <div class="text-gray-500">{{ m.time }}</div>
             {{# } }}
         </div>
+    {{# } }}
+</script>
+
+<!-- AI审核结果模板（从 custom_fields.ai_audit_* 渲染） -->
+<script id="link-ai-audit" type="text/html">
+    {{# var cf = d.custom_fields || {}; }}
+    {{# var r = cf.ai_audit_status || ''; }}
+    {{# var score = (typeof cf.ai_audit_score !== 'undefined') ? cf.ai_audit_score : null; }}
+    {{# var conf = (typeof cf.ai_audit_confidence !== 'undefined') ? cf.ai_audit_confidence : null; }}
+    {{# var t = cf.last_audit_time || ''; }}
+    {{# var reason = cf.ai_audit_reason || ''; }}
+    {{# if(!r){ }}
+    <span class="text-gray-400 text-xs">暂无</span>
+    {{# } else { }}
+    <div class="text-xs space-y-1">
+        <div>
+            {{# if(r === 'approved'){ }}
+            <span class="px-2 py-0.5 rounded bg-green-100 text-green-700">✔ 通过</span>
+            {{# } else if(r === 'rejected') { }}
+            <span class="px-2 py-0.5 rounded bg-red-100 text-red-700">✖ 未通过</span>
+            {{# } else if(r === 'spam') { }}
+            <span class="px-2 py-0.5 rounded bg-orange-100 text-orange-700">⚠ 垃圾</span>
+            {{# } else if(r === 'pending') { }}
+            <span class="px-2 py-0.5 rounded bg-yellow-100 text-yellow-700">待定</span>
+            {{# } else { }}
+            <span class="px-2 py-0.5 rounded bg-gray-100 text-gray-700">{{ r }}</span>
+            {{# } }}
+        </div>
+        <div class="text-gray-700">
+            {{# if(score !== null){ }}评分：{{ score }} {{# } }}
+            {{# if(conf !== null){ }}<span class="ml-2">置信：{{ (conf*100).toFixed(0) }}%</span>{{# } }}
+        </div>
+        {{# if(reason){ }}
+        <div class="text-gray-700" style="white-space: normal; word-break: break-word;">原因：{{ reason }}</div>
+        {{# } }}
+        {{# if(t){ }}
+        <div class="text-gray-500">{{ t }}</div>
+        {{# } }}
+    </div>
     {{# } }}
 </script>
 
@@ -363,6 +420,12 @@
                     templet: '#link-monitor'
                 },
                 {
+                    title: 'AI审核',
+                    align: 'center',
+                    width: 220,
+                    templet: '#link-ai-audit'
+                },
+                {
                     title: '排序',
                     field: 'sort_order',
                     align: 'center',
@@ -379,7 +442,7 @@
                     title: '操作',
                     toolbar: '#link-bar',
                     align: 'left',
-                    width: 150,
+                    width: 200,
                     fixed: 'right'
                 }
             ]
@@ -443,6 +506,12 @@
                     title: '链接地址',
                     field: 'url',
                     align: 'center'
+                },
+                {
+                    title: 'AI审核',
+                    align: 'center',
+                    width: 220,
+                    templet: '#link-ai-audit'
                 },
                 {
                     title: '申请信息',
@@ -590,6 +659,10 @@
                 window.approve(obj);
             } else if (obj.event === 'reject') {
                 window.reject(obj);
+            } else if (obj.event === 'autoAudit') {
+                window.autoAudit(obj);
+            } else if (obj.event === 'manualAudit') {
+                window.manualAudit(obj);
             }
         });
 
@@ -610,6 +683,10 @@
                 window.batchApprove(obj);
             } else if (obj.event === 'batchReject') {
                 window.batchReject(obj);
+            } else if (obj.event === 'batchAutoAudit') {
+                window.batchAutoAudit(obj);
+            } else if (obj.event === 'batchManualAudit') {
+                window.batchManualAudit(obj);
             }
         });
 
@@ -817,7 +894,7 @@
                 return false;
             }
             let ids = data.map(item => item.id).join(',');
-            
+
             // 打开批量编辑页面
             parent.layui.admin.addTab('link-batch-edit', '批量编辑链接', '/app/admin/link/batch?ids=' + ids);
         }
@@ -967,7 +1044,7 @@
                 return false;
             }
             let ids = data.map(item => item.id).join(',');
-            
+
             layer.prompt({
                 formType: 2,
                 title: '请输入拒绝原因',
@@ -989,6 +1066,136 @@
                             }, function () {
                                 table.reload('link-table');
                                 getPendingCount();
+                            });
+                        } else {
+                            layer.msg(result.msg, {icon: 2, time: 1000});
+                        }
+                    }
+                });
+            });
+        }
+
+        // AI自动审核单个友链（通过后自动修改状态）
+        window.autoAudit = function (obj) {
+            layer.confirm('使用AI自动审核将调用AI进行友链检测，达到阈值将自动通过审核。是否继续？', {
+                icon: 3,
+                title: 'AI自动审核'
+            }, function (index) {
+                layer.close(index);
+                let loading = layer.load();
+                $.ajax({
+                    url: '/app/admin/link/moderation/triggerAudit',
+                    dataType: 'json',
+                    type: 'post',
+                    data: {id: obj.data['id'], manual: false},
+                    success: function (result) {
+                        layer.close(loading);
+                        if (result.code === 0) {
+                            layer.msg('已入队，等待AI审核完成（通过后会自动显示）', {
+                                icon: 1,
+                                time: 1500
+                            });
+                        } else {
+                            layer.msg(result.msg, {
+                                icon: 2,
+                                time: 1000
+                            });
+                        }
+                    }
+                })
+            });
+        }
+
+        // AI手动审核单个友链（仅记录结果，不修改状态）
+        window.manualAudit = function (obj) {
+            layer.confirm('AI手动审核将进行AI检测并记录结果，但不会自动修改友链展示状态。是否继续？', {
+                icon: 3,
+                title: 'AI手动审核'
+            }, function (index) {
+                layer.close(index);
+                let loading = layer.load();
+                $.ajax({
+                    url: '/app/admin/link/moderation/triggerAudit',
+                    dataType: 'json',
+                    type: 'post',
+                    data: {id: obj.data['id']},
+                    success: function (result) {
+                        layer.close(loading);
+                        if (result.code === 0) {
+                            layer.msg('已入队，等待AI审核完成', {
+                                icon: 1,
+                                time: 1500
+                            });
+                        } else {
+                            layer.msg(result.msg, {
+                                icon: 2,
+                                time: 1000
+                            });
+                        }
+                    }
+                })
+            });
+        }
+
+        // 批量AI手动审核（仅记录结果，不修改状态）
+        window.batchManualAudit = function (obj) {
+            let data = table.checkStatus(obj.config.id).data;
+            if (data.length === 0) {
+                layer.msg("未选中数据", {icon: 3, time: 1000});
+                return false;
+            }
+            let ids = data.map(item => item.id);
+            layer.confirm(`将对选中的 ${data.length} 个友链进行AI手动审核，仅记录结果不修改状态。是否继续？`, {
+                icon: 3,
+                title: '批量AI手动审核'
+            }, function (index) {
+                layer.close(index);
+                let loading = layer.load();
+                $.ajax({
+                    url: '/app/admin/link/moderation/batchRemoderate',
+                    dataType: 'json',
+                    type: 'post',
+                    data: {ids: ids},
+                    success: function (result) {
+                        layer.close(loading);
+                        if (result.code === 0) {
+                            layer.msg(`已入队 ${result.data.count} 个任务，等待AI审核完成`, {
+                                icon: 1,
+                                time: 1500
+                            });
+                        } else {
+                            layer.msg(result.msg, {icon: 2, time: 1000});
+                        }
+                    }
+                });
+            });
+        }
+
+        // 批量AI自动审核（通过后自动修改状态）
+        window.batchAutoAudit = function (obj) {
+            let data = table.checkStatus(obj.config.id).data;
+            if (data.length === 0) {
+                layer.msg("未选中数据", {icon: 3, time: 1000});
+                return false;
+            }
+            let ids = data.map(item => item.id);
+            layer.confirm(`将对选中的 ${data.length} 个友链进行AI自动审核，达到阈值将自动通过。是否继续？`, {
+                icon: 3,
+                title: '批量AI自动审核'
+            }, function (index) {
+                layer.close(index);
+                let loading = layer.load();
+                $.ajax({
+                    url: '/app/admin/link/moderation/batchAutoAudit',
+                    dataType: 'json',
+                    type: 'post',
+                    data: {ids: ids, manual: false},
+                    success: function (result) {
+                        layer.close(loading);
+                        if (result.code === 0) {
+                            layer.msg(`已入队 ${result.data.count} 个任务，等待AI审核完成（通过后会自动显示）`, {
+                                icon: 1,
+                                time: 1500
                             });
                         } else {
                             layer.msg(result.msg, {icon: 2, time: 1000});

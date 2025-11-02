@@ -40,29 +40,23 @@ class CommentController
             return json(['code' => 403, 'msg' => '该文章已关闭评论']);
         }
 
-        // 检查用户登录状态
+        // 支持游客评论：存在登录则按登录用户，否则按访客字段
         $session = $request->session();
         $userId = $session->get('user_id');
-
-        if (!$userId) {
-            return json(['code' => 401, 'msg' => '请先登录再评论']);
-        }
-
-        // 检查用户是否已激活
-        $user = User::find($userId);
-        if (!$user) {
-            return json(['code' => 401, 'msg' => '用户不存在，请重新登录']);
-        }
-
-        if (!$user->canComment()) {
-            return json(['code' => 403, 'msg' => '您的账户未激活或已被禁用，无法评论']);
+        $user = null;
+        if ($userId) {
+            $user = User::find($userId);
+            if (!$user || !$user->canComment()) {
+                return json(['code' => 403, 'msg' => '账户不可用，无法评论']);
+            }
         }
 
         // 获取评论数据
         $content = trim($request->post('content', ''));
         $parentId = (int) $request->post('parent_id', 0);
-        $guestName = $user->nickname; // 使用用户昵称
-        $guestEmail = $user->email; // 使用用户邮箱
+        // 游客或用户均允许提交，登录用户优先使用账号昵称/邮箱
+        $guestName = $user ? $user->nickname : trim((string) $request->post('guest_name', ''));
+        $guestEmail = $user ? $user->email : trim((string) $request->post('guest_email', ''));
         $quotedText = trim($request->post('quoted_text', ''));
         $quotedCommentId = (int) $request->post('quoted_comment_id', 0);
 
@@ -74,6 +68,16 @@ class CommentController
         // 检查最小长度
         if (mb_strlen($content, 'UTF-8') < 2) {
             return json(['code' => 400, 'msg' => '评论内容至少需要2个字符']);
+        }
+
+        // 游客必填校验
+        if (!$user) {
+            if ($guestName === '') {
+                return json(['code' => 400, 'msg' => '请填写您的昵称']);
+            }
+            if ($guestEmail === '' || !filter_var($guestEmail, FILTER_VALIDATE_EMAIL)) {
+                return json(['code' => 400, 'msg' => '请填写有效的邮箱']);
+            }
         }
 
         // 检查最大长度
@@ -163,11 +167,15 @@ class CommentController
             return json(['code' => 429, 'msg' => '评论过于频繁,请稍后再试']);
         }
 
-        // 6. 创建评论
+        // 6. AI自动审核（改为非阻塞：入队由独立进程处理）
+        $aiModerationEnabled = blog_config('comment_ai_moderation_enabled', false, true);
+        $aiModerationResult = null;
+
+        // 7. 创建评论
         try {
             $comment = new Comment();
             $comment->post_id = $postId;
-            $comment->user_id = $userId; // 关联用户ID
+            $comment->user_id = $userId ?: null; // 关联用户ID（游客为null）
             $comment->content = $sanitizedContent;
             $comment->guest_name = htmlspecialchars($guestName, ENT_QUOTES, 'UTF-8');
             $comment->guest_email = $guestEmail;
@@ -180,13 +188,26 @@ class CommentController
                 $comment->quoted_data = json_encode($quoteData, JSON_UNESCAPED_UNICODE);
             }
 
-            // 默认状态（可配置为需要审核）
+            // 非阻塞：先设置状态，AI结果由Worker回写
             $requireModeration = blog_config('comment_moderation', true, true);
-            $comment->status = $requireModeration ? 'pending' : 'approved';
+            if ($aiModerationEnabled) {
+                $comment->status = $requireModeration ? 'pending' : 'approved';
+            } else {
+                $comment->status = $requireModeration ? 'pending' : 'approved';
+            }
 
             if ($comment->save()) {
                 // 返回新创建的评论
                 $newComment = Comment::where('id', $comment->id)->with('author')->first();
+
+                // 入队AI审核（若开启）
+                if ($aiModerationEnabled) {
+                    try {
+                        \app\service\AIModerationService::enqueue(['comment_id' => $comment->id, 'priority' => 5]);
+                    } catch (\Throwable $e) {
+                        Log::warning('Enqueue moderation failed: ' . $e->getMessage());
+                    }
+                }
 
                 // 如果需要审核，返回提示信息
                 $message = $requireModeration
@@ -210,6 +231,30 @@ class CommentController
 
             return json(['code' => 500, 'msg' => '评论提交失败，请稍后重试']);
         }
+    }
+
+    /**
+     * 单条评论状态
+     * GET /comment/status/{id}
+     */
+    public function status(Request $request, int $id): Response
+    {
+        $comment = Comment::withTrashed()->find($id);
+        if (!$comment) {
+            return json(['code' => 404, 'msg' => '评论不存在']);
+        }
+
+        return json([
+            'code' => 0,
+            'data' => [
+                'id' => $comment->id,
+                'status' => $comment->status,
+                'ai_moderation_result' => $comment->ai_moderation_result,
+                'ai_moderation_reason' => $comment->ai_moderation_reason,
+                'ai_moderation_confidence' => $comment->ai_moderation_confidence,
+                'created_at' => $comment->created_at,
+            ],
+        ]);
     }
 
     /**

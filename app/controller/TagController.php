@@ -3,6 +3,7 @@
 namespace app\controller;
 
 use app\annotation\EnableInstantFirstPaint;
+use app\helper\BreadcrumbHelper;
 use app\model\Tag;
 use app\service\BlogService;
 use app\service\EnhancedCacheService;
@@ -61,6 +62,9 @@ class TagController
         $tagModel = Tag::query()->where('slug', $slug)->first(['name', 'slug']);
         $tag_name = $tagModel ? (string) $tagModel->name : $slug;
 
+        // 生成面包屑导航
+        $breadcrumbs = BreadcrumbHelper::forTag($tagModel, false);
+
         // 统一分页渲染
         $pagination_html = PaginationService::generatePagination(
             $page,
@@ -84,6 +88,7 @@ class TagController
                 'totalCount' => $result['totalCount'] ?? 0,
                 'sort' => $sort,
                 'sidebar' => $sidebar,
+                'breadcrumbs' => $breadcrumbs,
             ],
             $cacheKey,
             120,
@@ -124,10 +129,14 @@ class TagController
         $blog_title = BlogService::getBlogTitle();
         $viewName = PJAXHelper::isPJAX($request) ? 'tag/list.content' : 'tag/list';
 
+        // 生成面包屑导航（标签列表页）
+        $breadcrumbs = BreadcrumbHelper::forTag(null, true);
+
         return view($viewName, [
             'page_title' => "全部标签 - {$blog_title}",
             'tags' => $tags,
             'sidebar' => $sidebar,
+            'breadcrumbs' => $breadcrumbs,
         ]);
     }
 

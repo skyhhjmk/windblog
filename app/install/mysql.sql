@@ -229,7 +229,54 @@ CREATE TABLE IF NOT EXISTS `links` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   `deleted_at` timestamp NULL DEFAULT NULL,
-  PRIMARY KEY (`id`)
+    PRIMARY KEY
+(
+    `
+    id
+    `
+),
+    KEY ` idx_custom_fields_ai_audit_status `
+(
+    (
+    CAST (
+    JSON_EXTRACT
+(
+    `
+    custom_fields
+    `,
+    '$.ai_audit_status'
+) AS CHAR
+(
+    20
+)))),
+    KEY ` idx_custom_fields_last_audit_time `
+(
+    (
+    CAST (
+    JSON_EXTRACT
+(
+    `
+    custom_fields
+    `,
+    '$.last_audit_time'
+) AS CHAR
+(
+    20
+)))),
+    KEY ` idx_custom_fields_last_monitor_time `
+(
+    (
+    CAST (
+    JSON_EXTRACT
+(
+    `
+    custom_fields
+    `,
+    '$.last_monitor_time'
+) AS CHAR
+(
+    20
+))))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='友链表';
 
 -- 创建浮动链接表（FloLink）
@@ -340,6 +387,17 @@ CREATE TABLE IF NOT EXISTS `comments` (
   `content` text NOT NULL,
   `quoted_data` text DEFAULT NULL COMMENT '引用数据(JSON格式,包含被引用评论的ID、作者、内容等信息)',
   `status` varchar(10) NOT NULL DEFAULT 'pending',
+    ` ai_moderation_result ` varchar
+(
+    20
+) DEFAULT NULL COMMENT 'AI审核结果：approved/rejected/spam/pending',
+    ` ai_moderation_reason ` text DEFAULT NULL COMMENT 'AI审核原因',
+    ` ai_moderation_confidence ` decimal
+(
+    3,
+    2
+) DEFAULT NULL COMMENT 'AI审核置信度(0-1)',
+    ` ai_moderation_categories ` json DEFAULT NULL COMMENT 'AI检测到的问题类别',
   `ip_address` varchar(45) DEFAULT NULL,
   `user_agent` varchar(255) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,

@@ -42,6 +42,32 @@
             </div>
 
             <div class="layui-form-item">
+                <label class="layui-form-label">网站配图</label>
+                <div class="layui-input-block">
+                    <input class="layui-input" lay-verify="url" name="image" placeholder="请输入网站配图URL"
+                           type="text">
+                    <div class="layui-form-mid layui-word-aux">用于友链展示的封面图片</div>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">联系邮箱</label>
+                <div class="layui-input-block">
+                    <input class="layui-input" lay-verify="email" name="email" placeholder="请输入联系邮箱" type="text">
+                    <div class="layui-form-mid layui-word-aux">网站所有者的电子邮件地址</div>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">回调链接</label>
+                <div class="layui-input-block">
+                    <input class="layui-input" lay-verify="url" name="callback_url" placeholder="请输入回调链接URL"
+                           type="text">
+                    <div class="layui-form-mid layui-word-aux">友链审核通过后的回调通知地址</div>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
                 <label class="layui-form-label">排序权重</label>
                 <div class="layui-input-block">
                     <input type="number" name="sort_order" value="999" class="layui-input">
@@ -162,6 +188,11 @@
                     return '请输入有效的URL地址';
                 }
             },
+            email: function (value) {
+                if (value && !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/i.test(value)) {
+                    return '请输入有效的邮箱地址';
+                }
+            },
             json: function(value){
                 if(value && value.trim() !== ''){
                     try {
@@ -176,7 +207,7 @@
         // 监听提交
         form.on('submit(link-submit)', function(data){
             var loading = layer.load();
-            
+
             // 处理布尔值字段
             data.field.status = data.field.status === 'on';
             data.field.show_url = data.field.show_url === 'on';
@@ -200,7 +231,7 @@
                 layer.msg('自定义字段格式错误：请输入有效的JSON格式', {icon: 2});
                 return false;
             }
-            
+
             $.ajax({
                 url: '/app/admin/link/add',
                 type: 'POST',

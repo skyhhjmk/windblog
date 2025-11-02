@@ -157,6 +157,34 @@
                 </div>
             </div>
 
+            <!-- AI审核（由JS渲染） -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">AI审核</label>
+                <div class="layui-input-block">
+                    <div class="layui-card" style="margin-bottom: 10px;">
+                        <div class="layui-card-body">
+                            <div class="layui-row layui-col-space10">
+                                <div class="layui-col-md12">
+                                    <span class="layui-badge" id="ai_audit_status_badge">-</span>
+                                    <span class="layui-badge layui-bg-blue" style="margin-left:8px;">评分：<span
+                                            id="ai_audit_score">-</span></span>
+                                    <span class="layui-badge-rim" style="margin-left:8px;">置信：<span
+                                            id="ai_audit_conf">-</span></span>
+                                    <span class="layui-badge-rim" style="margin-left:8px;">时间：<span
+                                            id="ai_audit_time">-</span></span>
+                                </div>
+                                <div class="layui-col-md12" style="margin-top:8px;">
+                                    <div class="layui-text" style="white-space: normal; word-break: break-word;">
+                                        <span class="layui-badge-rim">原因</span>
+                                        <span id="ai_audit_reason" style="margin-left:6px;">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="layui-form-item">
                 <div class="layui-input-block">
                     <button type="button" class="pear-btn pear-btn-primary" onclick="window.history.back()">返回</button>
@@ -291,6 +319,47 @@
                         }
                     }
                 } catch(e) {
+                    // 忽略渲染错误
+                }
+
+                // AI审核（ai_audit_*）：渲染状态/分/置信度/时间/原因
+                try {
+                    var cf = link.custom_fields || {};
+                    var r = cf.ai_audit_status || '';
+                    var score = (typeof cf.ai_audit_score !== 'undefined') ? cf.ai_audit_score : null;
+                    var conf = (typeof cf.ai_audit_confidence !== 'undefined') ? cf.ai_audit_confidence : null;
+                    var t = cf.last_audit_time || '';
+                    var reason = cf.ai_audit_reason || '';
+
+                    if ($('#ai_audit_status_badge').length) {
+                        var $b = $('#ai_audit_status_badge');
+                        if (!r) {
+                            $b.text('-').attr('class', 'layui-badge');
+                        } else if (r === 'approved') {
+                            $b.text('通过').attr('class', 'layui-badge layui-bg-green');
+                        } else if (r === 'rejected') {
+                            $b.text('未通过').attr('class', 'layui-badge layui-bg-red');
+                        } else if (r === 'spam') {
+                            $b.text('垃圾').attr('class', 'layui-badge layui-bg-orange');
+                        } else if (r === 'pending') {
+                            $b.text('待定').attr('class', 'layui-badge');
+                        } else {
+                            $b.text(r).attr('class', 'layui-badge');
+                        }
+                    }
+                    if ($('#ai_audit_score').length) {
+                        $('#ai_audit_score').text(score !== null ? score : '-');
+                    }
+                    if ($('#ai_audit_conf').length) {
+                        $('#ai_audit_conf').text(conf !== null ? ((conf * 100).toFixed(0) + '%') : '-');
+                    }
+                    if ($('#ai_audit_time').length) {
+                        $('#ai_audit_time').text(t || '-');
+                    }
+                    if ($('#ai_audit_reason').length) {
+                        $('#ai_audit_reason').text(reason || '-');
+                    }
+                } catch (e) {
                     // 忽略渲染错误
                 }
 

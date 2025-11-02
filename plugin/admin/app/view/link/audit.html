@@ -4,8 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>友链审核工作台</title>
-    <link rel="stylesheet" href="/plugin/admin/public/assets/css/layui.css">
-    <link rel="stylesheet" href="/plugin/admin/public/assets/css/admin.css">
+    <link href="/app/admin/component/pear/css/pear.css" rel="stylesheet"/>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* 工具栏按钮样式 */
@@ -26,19 +25,19 @@
             align-items: center;
             justify-content: center;
         }
-        
+
         .toolbar-btn:hover {
             background: #007bff;
             color: #fff;
             transform: scale(1.1);
         }
-        
+
         .toolbar-btn svg {
             width: 18px;
             height: 18px;
             fill: currentColor;
         }
-        
+
         .tooltip {
             position: absolute;
             right: 50px;
@@ -56,7 +55,7 @@
             pointer-events: none;
             z-index: 3000;
         }
-        
+
         .tooltip::after {
             content: '';
             position: absolute;
@@ -66,7 +65,7 @@
             border: 5px solid transparent;
             border-left-color: rgba(0, 0, 0, 0.8);
         }
-        
+
         .toolbar-btn:hover .tooltip {
             opacity: 1;
             visibility: visible;
@@ -85,6 +84,10 @@
                     </p>
                 </div>
                 <div class="flex gap-3">
+                    <button class="inline-flex items-center justify-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-md shadow-sm transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                            onclick="triggerAutoAudit()">
+                        AI自动审核
+                    </button>
                     <button class="inline-flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md shadow-sm transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2" onclick="detectSite()">
                         重新检测
                     </button>
@@ -94,7 +97,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- 主要内容区域 -->
         <div class="flex-1 flex overflow-hidden">
             <!-- 信息面板 -->
@@ -139,7 +142,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- 检测结果 -->
                 <div class="mb-5 border border-gray-200 rounded-md overflow-hidden">
                     <div class="bg-gray-50 px-4 py-3 border-b border-gray-200 font-semibold text-gray-800">
@@ -152,7 +155,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- 审核操作 -->
                 <div class="flex gap-3 mt-5">
                     <button class="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-md border-none cursor-pointer transition-all duration-300" onclick="approveLink()">
@@ -166,7 +169,7 @@
                     </button>
                 </div>
             </div>
-            
+
             <!-- 预览面板 -->
             <div class="flex-1 relative bg-white">
                 <iframe id="site-preview" class="w-full h-full border-none bg-white" src="about:blank"></iframe>
@@ -178,7 +181,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- 悬浮工具栏 -->
         <div class="fixed top-1/2 right-5 transform -translate-y-1/2 bg-white rounded-lg shadow-lg p-3 z-50 min-w-16 cursor-move select-none" id="floating-toolbar">
             <button class="toolbar-btn" onclick="refreshIframe()">
@@ -218,7 +221,7 @@
         const linkId = window.location.pathname.split('/').pop();
         let linkData = null;
         let isMobileView = false;
-        
+
         // 页面初始化
         layui.use(['layer', 'form', 'element'], function() {
             const layer = layui.layer;
@@ -231,7 +234,7 @@
                 detectSite();
             });
         });
-        
+
         // 加载链接信息
         function loadLinkInfo() {
             return fetch(`/app/admin/link/get/${linkId}`)
@@ -239,20 +242,20 @@
                 .then(result => {
                     if (result.code === 0) {
                         linkData = result.data;
-                        
+
                         // 更新页面信息
                         document.getElementById('link-name').textContent = linkData.name;
                         document.getElementById('link-url').textContent = linkData.url;
                         document.getElementById('link-url').href = linkData.url;
                         document.getElementById('link-status').textContent = linkData.status ? '已通过' : '待审核';
                         document.getElementById('link-status').className = 'status-badge ' + (linkData.status ? 'status-approved' : 'status-pending');
-                        
+
                         // 基本信息
                         document.getElementById('basic-name').textContent = linkData.name;
                         document.getElementById('basic-url').textContent = linkData.url;
                         document.getElementById('basic-url').href = linkData.url;
                         document.getElementById('basic-description').textContent = linkData.description || '暂无描述';
-                        
+
                         // 格式化时间为本地时间
                         const createdDate = new Date(linkData.created_at);
                         const formattedDate = createdDate.toLocaleString('zh-CN', {
@@ -264,21 +267,21 @@
                             second: '2-digit'
                         });
                         document.getElementById('basic-created').textContent = formattedDate;
-                        
+
                         // 显示申请信息
                         if (linkData.content) {
                             document.getElementById('application-info').innerHTML = linkData.content.replace(/\n/g, '<br>');
                             document.getElementById('application-info-section').style.display = 'flex';
                         }
-                        
+
                         if (linkData.note) {
                             document.getElementById('application-note').innerHTML = linkData.note.replace(/\n/g, '<br>');
                             document.getElementById('application-note-section').style.display = 'flex';
                         }
-                        
+
                         // 设置iframe
                         loadIframe();
-                        
+
                         return linkData;
                     } else {
                         layui.layer.msg('获取链接信息失败：' + result.msg);
@@ -291,14 +294,14 @@
                     throw error;
                 });
         }
-        
+
         // 检测网站信息
         function detectSite() {
             if (!linkData) {
                 layui.layer.msg('请先加载链接信息');
                 return;
             }
-            
+
             const resultsContainer = document.getElementById('detection-results');
             resultsContainer.innerHTML = `
                 <div class="text-center py-5 text-gray-600">
@@ -306,7 +309,7 @@
                     <p>正在检测网站信息...</p>
                 </div>
             `;
-            
+
             fetch('/app/admin/link/detectSite', {
                 method: 'POST',
                 headers: {
@@ -327,12 +330,12 @@
                 displayDetectionError('网络连接失败', '请检查网络连接后重试', true);
             });
         }
-        
+
         // 显示检测结果
         function displayDetectionResults(data) {
             const resultsContainer = document.getElementById('detection-results');
             let html = '';
-            
+
             // 网站基本信息
             if (data.site_info) {
                 html += `
@@ -359,13 +362,13 @@
                     </div>
                 `;
             }
-            
+
             // 反向链接检查
             if (data.backlink_check) {
                 const backlink = data.backlink_check;
                 const status = backlink.found ? 'success' : (backlink.domain_mentioned ? 'warning' : 'danger');
                 const statusText = backlink.found ? '已找到反链' : (backlink.domain_mentioned ? '提到域名但无链接' : '未找到反链');
-                
+
                 html += `
                     <div style="margin-bottom: 15px;">
                         <h4 style="margin: 0 0 10px 0; color: #333; font-size: 14px;">
@@ -382,7 +385,7 @@
                             <div class="flex-1 text-gray-800 text-sm break-all">${backlink.link_count}</div>
                         </div>
                 `;
-                
+
                 if (backlink.links && backlink.links.length > 0) {
                     html += `
                         <div class="mb-3 flex items-start">
@@ -404,10 +407,10 @@
                         </div>
                     `;
                 }
-                
+
                 html += '</div>';
             }
-            
+
             // 性能信息
             if (data.performance) {
                 html += `
@@ -426,7 +429,7 @@
                     </div>
                 `;
             }
-            
+
             // SEO信息
             if (data.seo) {
                 html += `
@@ -453,7 +456,7 @@
                     </div>
                 `;
             }
-            
+
             // 安全信息
             if (data.security) {
                 html += `
@@ -480,19 +483,19 @@
                     </div>
                 `;
             }
-            
+
             resultsContainer.innerHTML = html;
         }
-        
+
         // 加载iframe
         function loadIframe() {
             const iframe = document.getElementById('site-preview');
             const loading = document.getElementById('iframe-loading');
-            
+
             iframe.onload = function() {
                 loading.style.display = 'none';
             };
-            
+
             iframe.onerror = function() {
                 loading.innerHTML = `
                     <div style="text-align: center;">
@@ -502,10 +505,10 @@
                     </div>
                 `;
             };
-            
+
             iframe.src = linkData.url;
         }
-        
+
         // 工具栏功能
         function refreshIframe() {
             const iframe = document.getElementById('site-preview');
@@ -513,17 +516,17 @@
             loading.style.display = 'flex';
             iframe.src = iframe.src;
         }
-        
+
         function openInNewWindow() {
             if (linkData) {
                 window.open(linkData.url, '_blank');
             }
         }
-        
+
         function toggleMobileView() {
             const iframe = document.getElementById('site-preview');
             isMobileView = !isMobileView;
-            
+
             if (isMobileView) {
                 iframe.style.width = '375px';
                 iframe.style.margin = '0 auto';
@@ -538,16 +541,16 @@
                 iframe.style.boxShadow = 'none';
             }
         }
-        
+
         function toggleMobileUA() {
             if (!linkData) {
                 layui.layer.msg('请先加载链接信息');
                 return;
             }
-            
+
             const iframe = document.getElementById('site-preview');
             const loading = document.getElementById('iframe-loading');
-            
+
             // 显示加载状态
             loading.style.display = 'flex';
             loading.innerHTML = `
@@ -556,7 +559,7 @@
                     <p style="margin-top: 10px; color: #666;">正在以移动端模式加载...</p>
                 </div>
             `;
-            
+
             // 创建一个新的iframe来模拟移动端UA
             const newIframe = document.createElement('iframe');
             newIframe.className = 'site-iframe';
@@ -565,7 +568,7 @@
             newIframe.style.border = '1px solid #ccc';
             newIframe.style.borderRadius = '10px';
             newIframe.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
-            
+
             // 设置移动端User-Agent（通过代理或服务端实现）
             // 这里我们通过添加移动端视口和样式来模拟
             newIframe.onload = function() {
@@ -584,7 +587,7 @@
                     console.log('无法操作iframe内容（跨域限制）');
                 }
             };
-            
+
             newIframe.onerror = function() {
                 loading.innerHTML = `
                     <div style="text-align: center;">
@@ -594,47 +597,104 @@
                     </div>
                 `;
             };
-            
+
             // 替换当前iframe
             const previewPanel = document.querySelector('.preview-panel');
             const oldIframe = document.getElementById('site-preview');
             newIframe.id = 'site-preview';
             previewPanel.replaceChild(newIframe, oldIframe);
-            
+
             // 设置URL，添加移动端标识参数
             const url = new URL(linkData.url);
             url.searchParams.set('mobile', '1');
             newIframe.src = url.toString();
-            
+
             isMobileView = true;
             layui.layer.msg('已切换到移动端UA模式', {icon: 1});
         }
-        
+
         function takeScreenshot() {
             layui.layer.msg('截图功能需要浏览器扩展支持', {icon: 0});
         }
-        
+
         function viewSource() {
             if (linkData) {
                 window.open(`view-source:${linkData.url}`, '_blank');
             }
         }
-        
+
         function speedTest() {
             layui.layer.msg('正在测试网站速度...', {icon: 16, time: 2000});
             // 这里可以集成第三方测速API
         }
-        
+
+        // AI自动审核
+        function triggerAutoAudit() {
+            if (!linkData) {
+                layui.layer.msg('链接信息未加载');
+                return;
+            }
+
+            layui.layer.confirm('使用AI自动审核将根据反链检测和页面质量评分，达到阈值将自动通过审核。是否继续？', {
+                icon: 3,
+                title: 'AI自动审核',
+                btn: ['确定', '取消']
+            }, function (index) {
+                layui.layer.close(index);
+                const loading = layui.layer.load(1, {shade: [0.3, '#000']});
+
+                // 调用自动审核接口
+                fetch(`/app/admin/link/autoAudit/${linkData.id}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        layui.layer.close(loading);
+                        if (data.code === 0) {
+                            const result = data.data;
+                            if (result.approved) {
+                                layui.layer.msg(`AI审核通过！评分：${result.score}，排序：${result.sort_order}`, {
+                                    icon: 1,
+                                    time: 2000
+                                }, function () {
+                                    // 重新加载链接信息或跳转到下一个
+                                    loadNextPendingLink();
+                                });
+                            } else {
+                                layui.layer.alert(`AI审核未通过。评分：${result.score}（需要达到阈值才能通过）<br>您可以手动审核或调整后重试。`, {
+                                    icon: 0,
+                                    title: 'AI审核结果'
+                                });
+                            }
+                        } else {
+                            layui.layer.msg('AI审核失败：' + data.msg, {icon: 2});
+                        }
+                    })
+                    .catch(error => {
+                        layui.layer.close(loading);
+                        layui.layer.msg('网络错误', {icon: 2});
+                    });
+            });
+        }
+
         // 审核操作
         function approveLink() {
             if (!linkData) {
                 layui.layer.msg('链接信息未加载');
                 return;
             }
-            
+
             layui.layer.confirm('确定要通过这个友链申请吗？', {
+                icon: 3,
+                title: '提示',
                 btn: ['确定', '取消']
             }, function(index) {
+                layui.layer.close(index);
+                const loading = layui.layer.load(1, {shade: [0.3, '#000']});
+
                 // 发送审核通过请求
                 fetch(`/app/admin/link/edit/${linkData.id}`, {
                     method: 'POST',
@@ -645,35 +705,38 @@
                 })
                 .then(response => response.json())
                 .then(data => {
+                    layui.layer.close(loading);
                     if (data.code === 0) {
-                        layui.layer.msg('审核通过成功', {icon: 1});
+                        layui.layer.msg('审核通过成功，正在加载下一个...', {icon: 1, time: 1000});
                         setTimeout(() => {
-                            goBack();
-                        }, 1500);
+                            loadNextPendingLink();
+                        }, 1000);
                     } else {
                         layui.layer.msg('操作失败：' + data.msg, {icon: 2});
                     }
                 })
                 .catch(error => {
+                    layui.layer.close(loading);
                     layui.layer.msg('网络错误', {icon: 2});
                 });
-                
-                layui.layer.close(index);
             });
         }
-        
+
         function rejectLink() {
             if (!linkData) {
                 layui.layer.msg('链接信息未加载');
                 return;
             }
-            
+
             layui.layer.prompt({
                 title: '请输入拒绝原因',
                 formType: 2,
                 value: '不符合友链申请条件',
-                area: ['300px', '150px']
+                area: ['400px', '200px']
             }, function(value, index) {
+                layui.layer.close(index);
+                const loading = layui.layer.load(1, {shade: [0.3, '#000']});
+
                 // 发送拒绝请求
                 fetch(`/app/admin/link/batchReject/${linkData.id}`, {
                     method: 'POST',
@@ -684,29 +747,35 @@
                 })
                 .then(response => response.json())
                 .then(data => {
+                    layui.layer.close(loading);
                     if (data.code === 0) {
-                        layui.layer.msg('已拒绝申请', {icon: 1});
+                        layui.layer.msg('已拒绝申请，正在加载下一个...', {icon: 1, time: 1000});
                         setTimeout(() => {
-                            goBack();
-                        }, 1500);
+                            loadNextPendingLink();
+                        }, 1000);
                     } else {
                         layui.layer.msg('操作失败：' + data.msg, {icon: 2});
                     }
                 })
                 .catch(error => {
+                    layui.layer.close(loading);
                     layui.layer.msg('网络错误', {icon: 2});
                 });
-                
-                layui.layer.close(index);
             });
         }
-        
+
         function editLink() {
             if (linkData) {
-                window.open(`/app/admin/link/edit/${linkData.id}`, '_blank');
+                // 在页内打开新tab，而不是浏览器新窗口
+                if (parent && parent.layui && parent.layui.admin) {
+                    parent.layui.admin.addTab('link-edit-' + linkData.id, '编辑友链：' + linkData.name, `/app/admin/link/edit/${linkData.id}`);
+                } else {
+                    // 如果不在admin框架内，则使用普通跳转
+                    window.location.href = `/app/admin/link/edit/${linkData.id}`;
+                }
             }
         }
-        
+
         // 显示检测错误
         function displayDetectionError(title, message, showRetry = false) {
             const resultsContainer = document.getElementById('detection-results');
@@ -716,22 +785,22 @@
                     <div class="text-base font-bold text-gray-800 mb-2">${title}</div>
                     <div class="text-sm text-gray-600 leading-relaxed">${message}</div>
             `;
-            
+
             if (showRetry) {
                 html += `<button class="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white border-none rounded cursor-pointer text-sm transition-colors duration-300" onclick="detectSite()">重新检测</button>`;
             }
-            
+
             html += '</div>';
             resultsContainer.innerHTML = html;
         }
-        
+
         // 工具栏拖拽功能
         let isDragging = false;
         let dragOffset = { x: 0, y: 0 };
-        
+
         function initToolbarDrag() {
             const toolbar = document.getElementById('floating-toolbar');
-            
+
             toolbar.addEventListener('mousedown', function(e) {
                 isDragging = true;
                 const rect = toolbar.getBoundingClientRect();
@@ -740,27 +809,27 @@
                 toolbar.style.cursor = 'grabbing';
                 e.preventDefault();
             });
-            
+
             document.addEventListener('mousemove', function(e) {
                 if (!isDragging) return;
-                
+
                 const toolbar = document.getElementById('floating-toolbar');
                 const x = e.clientX - dragOffset.x;
                 const y = e.clientY - dragOffset.y;
-                
+
                 // 限制在窗口范围内
                 const maxX = window.innerWidth - toolbar.offsetWidth;
                 const maxY = window.innerHeight - toolbar.offsetHeight;
-                
+
                 const constrainedX = Math.max(0, Math.min(x, maxX));
                 const constrainedY = Math.max(0, Math.min(y, maxY));
-                
+
                 toolbar.style.left = constrainedX + 'px';
                 toolbar.style.top = constrainedY + 'px';
                 toolbar.style.right = 'auto';
                 toolbar.style.transform = 'none';
             });
-            
+
             document.addEventListener('mouseup', function() {
                 if (isDragging) {
                     isDragging = false;
@@ -769,11 +838,53 @@
                 }
             });
         }
-        
-        function goBack() {
-            window.history.back();
+
+        // 加载下一个待审核友链
+        function loadNextPendingLink() {
+            const loading = layui.layer.load(1, {shade: [0.3, '#000']});
+
+            fetch('/app/admin/link/list?isPending=true&limit=1&page=1')
+                .then(response => response.json())
+                .then(result => {
+                    layui.layer.close(loading);
+
+                    if (result.code === 0 && result.data && result.data.length > 0) {
+                        // 有下一个待审核友链，跳转过去
+                        const nextLink = result.data[0];
+                        window.location.href = `/app/admin/link/audit/${nextLink.id}`;
+                    } else {
+                        // 没有更多待审核友链
+                        layui.layer.confirm('恭喜，所有友链已审核完毕！', {
+                            icon: 1,
+                            title: '审核完成',
+                            btn: ['返回列表'],
+                            yes: function (index) {
+                                layui.layer.close(index);
+                                goBack();
+                            }
+                        });
+                    }
+                })
+                .catch(error => {
+                    layui.layer.close(loading);
+                    console.error('获取待审核友链失败:', error);
+                    layui.layer.msg('获取失败，请返回列表', {icon: 2});
+                    setTimeout(() => {
+                        goBack();
+                    }, 1500);
+                });
         }
-        
+
+        function goBack() {
+            if (parent && parent.layui && parent.layui.admin) {
+                // 在admin框架内，关闭当前tab
+                parent.layui.admin.closeThisTab();
+            } else {
+                // 不在框架内，使用历史返回
+                window.history.back();
+            }
+        }
+
         // 页面加载完成后初始化拖拽功能
         document.addEventListener('DOMContentLoaded', function() {
             initToolbarDrag();

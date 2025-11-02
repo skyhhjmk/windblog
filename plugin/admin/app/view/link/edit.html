@@ -14,7 +14,7 @@
     <div class="layui-card-body">
         <form class="layui-form" action="">
             <input type="hidden" name="id" id="link-id">
-            
+
             <div class="layui-form-item">
                 <label class="layui-form-label">链接名称</label>
                 <div class="layui-input-block">
@@ -40,6 +40,32 @@
                 <label class="layui-form-label">网站图标</label>
                 <div class="layui-input-block">
                     <input type="text" name="icon" placeholder="请输入网站图标URL" class="layui-input" lay-verify="url">
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">网站配图</label>
+                <div class="layui-input-block">
+                    <input class="layui-input" lay-verify="url" name="image" placeholder="请输入网站配图URL"
+                           type="text">
+                    <div class="layui-form-mid layui-word-aux">用于友链展示的封面图片</div>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">联系邮箱</label>
+                <div class="layui-input-block">
+                    <input class="layui-input" lay-verify="email" name="email" placeholder="请输入联系邮箱" type="text">
+                    <div class="layui-form-mid layui-word-aux">网站所有者的电子邮件地址</div>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">回调链接</label>
+                <div class="layui-input-block">
+                    <input class="layui-input" lay-verify="url" name="callback_url" placeholder="请输入回调链接URL"
+                           type="text">
+                    <div class="layui-form-mid layui-word-aux">友链审核通过后的回调通知地址</div>
                 </div>
             </div>
 
@@ -133,6 +159,49 @@
                 </div>
             </div>
 
+            <!-- 友链监控配置 -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">启用监控</label>
+                <div class="layui-input-block">
+                    <input lay-skin="switch" lay-text="启用|禁用" name="enable_monitor" type="checkbox">
+                    <div class="layui-form-mid layui-word-aux">是否对该友链启用定期监控</div>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">启用自动审核</label>
+                <div class="layui-input-block">
+                    <input lay-skin="switch" lay-text="启用|禁用" name="enable_auto_moderation" type="checkbox">
+                    <div class="layui-form-mid layui-word-aux">是否启用AI自动审核友链申请</div>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">启用自动告警</label>
+                <div class="layui-input-block">
+                    <input lay-skin="switch" lay-text="启用|禁用" name="enable_auto_report" type="checkbox">
+                    <div class="layui-form-mid layui-word-aux">友链下线时自动告警双方</div>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">对方友链位置</label>
+                <div class="layui-input-block">
+                    <input class="layui-input" name="link_position" placeholder="如：首页底部、友链页面、侧边栏等"
+                           type="text">
+                    <div class="layui-form-mid layui-word-aux">对方友链放置位置描述</div>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">对方友链页链接</label>
+                <div class="layui-input-block">
+                    <input class="layui-input" lay-verify="url" name="page_link" placeholder="https://example.com/links"
+                           type="text">
+                    <div class="layui-form-mid layui-word-aux">对方友链放置页面的链接地址</div>
+                </div>
+            </div>
+
             <!-- 自定义字段 -->
             <div class="layui-form-item">
                 <label class="layui-form-label">自定义字段</label>
@@ -168,7 +237,7 @@
         function loadLinkData() {
             var linkId = getLinkIdFromUrl();
             $('#link-id').val(linkId);
-            
+
             $.ajax({
                 url: '/app/admin/link/get/' + linkId,
                 type: 'GET',
@@ -181,18 +250,37 @@
                         $('input[name="url"]').val(link.url).attr('maxlength', 255);
                         $('textarea[name="description"]').val(link.description);
                         $('input[name="icon"]').val(link.icon).attr('maxlength', 255);
+                        $('input[name="image"]').val(link.image || '').attr('maxlength', 255);
+                        $('input[name="email"]').val(link.email || '').attr('maxlength', 255);
+                        $('input[name="callback_url"]').val(link.callback_url || '').attr('maxlength', 255);
                         $('input[name="sort_order"]').val(link.sort_order);
                         $('textarea[name="content"]').val(link.content);
                         $('textarea[name="note"]').val(link.note);
                         $('input[name="seo_title"]').val(link.seo_title || '').attr('maxlength', 255);
                         $('input[name="seo_keywords"]').val(link.seo_keywords || '');
                         $('textarea[name="seo_description"]').val(link.seo_description || '');
-                        
+
                         // 处理自定义字段
                         if(link.custom_fields && typeof link.custom_fields === 'object'){
                             $('textarea[name="custom_fields"]').val(JSON.stringify(link.custom_fields, null, 2));
                             if (link.custom_fields.peer_api) {
                                 $('input[name="peer_api"]').val(link.custom_fields.peer_api);
+                            }
+                            // 监控配置字段
+                            if (link.custom_fields.enable_monitor) {
+                                $('input[name="enable_monitor"]').prop('checked', true);
+                            }
+                            if (link.custom_fields.enable_auto_moderation) {
+                                $('input[name="enable_auto_moderation"]').prop('checked', true);
+                            }
+                            if (link.custom_fields.enable_auto_report) {
+                                $('input[name="enable_auto_report"]').prop('checked', true);
+                            }
+                            if (link.custom_fields.link_position) {
+                                $('input[name="link_position"]').val(link.custom_fields.link_position);
+                            }
+                            if (link.custom_fields.page_link) {
+                                $('input[name="page_link"]').val(link.custom_fields.page_link);
                             }
                         } else if(link.custom_fields) {
                             $('textarea[name="custom_fields"]').val(link.custom_fields);
@@ -201,25 +289,41 @@
                                 if (_tmp.peer_api) {
                                     $('input[name="peer_api"]').val(_tmp.peer_api);
                                 }
+                                // 监控配置字段
+                                if (_tmp.enable_monitor) {
+                                    $('input[name="enable_monitor"]').prop('checked', true);
+                                }
+                                if (_tmp.enable_auto_moderation) {
+                                    $('input[name="enable_auto_moderation"]').prop('checked', true);
+                                }
+                                if (_tmp.enable_auto_report) {
+                                    $('input[name="enable_auto_report"]').prop('checked', true);
+                                }
+                                if (_tmp.link_position) {
+                                    $('input[name="link_position"]').val(_tmp.link_position);
+                                }
+                                if (_tmp.page_link) {
+                                    $('input[name="page_link"]').val(_tmp.page_link);
+                                }
                             } catch (e) {}
                         } else {
                             $('textarea[name="custom_fields"]').val('');
                         }
-                        
+
                         // 设置下拉选项
                         $('select[name="target"]').val(link.target);
                         $('select[name="redirect_type"]').val(link.redirect_type);
-                        
+
                         // 设置开关状态
                         if(link.show_url) $('input[name="show_url"]').prop('checked', true);
                         if(link.status) $('input[name="status"]').prop('checked', true);
-                        
+
                         // 重新渲染表单
                         form.render();
-                        
+
                         // 添加实时字符计数
                         addCharCounters();
-                        
+
                         // 添加表单提示
                         addFormTips();
                     }else{
@@ -240,6 +344,11 @@
             url: function(value){
                 if(value && !/^https?:\/\/.+/i.test(value)){
                     return '请输入有效的URL地址';
+                }
+            },
+            email: function (value) {
+                if (value && !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/i.test(value)) {
+                    return '请输入有效的邮箱地址';
                 }
             },
             json: function(value){
@@ -267,7 +376,7 @@
                 if(maxLength) {
                     var $counter = $('<div class="layui-form-mid layui-word-aux char-counter">0/' + maxLength + '</div>');
                     $input.after($counter);
-                    
+
                     $input.on('input', function() {
                         var length = $(this).val().length;
                         $counter.text(length + '/' + maxLength);
@@ -287,7 +396,7 @@
             $('input[name="seo_title"]').attr('title', '用于搜索引擎显示的标题，留空则使用链接名称');
             $('input[name="seo_keywords"]').attr('title', '用逗号分隔的关键词，用于SEO优化');
             $('textarea[name="custom_fields"]').attr('title', 'JSON格式的自定义数据，可用于扩展功能');
-            
+
             // 添加悬停提示
             $('[title]').hover(function(e) {
                 var tip = $(this).attr('title');
@@ -305,22 +414,44 @@
         // 监听提交
         form.on('submit(link-submit)', function(data){
             var loading = layer.load();
-            
+
             // 处理布尔值字段
             data.field.status = data.field.status === 'on';
             data.field.show_url = data.field.show_url === 'on';
-            
-            // 合并 peer_api 到 custom_fields
+
+            // 合并 peer_api 和监控配置到 custom_fields
             try {
                 var cf = {};
                 if (data.field.custom_fields && data.field.custom_fields.trim() !== '') {
                     cf = JSON.parse(data.field.custom_fields);
                 }
+                // peer_api
                 if (data.field.peer_api && data.field.peer_api.trim() !== '') {
                     cf.peer_api = data.field.peer_api.trim();
                 } else if (cf.peer_api) {
                     // 若输入为空则保留原值，或按需清空（保持原值更安全）
                 }
+
+                // 监控配置字段（处理空值情况）
+                cf.enable_monitor = data.field.enable_monitor === 'on';
+                cf.enable_auto_moderation = data.field.enable_auto_moderation === 'on';
+                cf.enable_auto_report = data.field.enable_auto_report === 'on';
+
+                // link_position 和 page_link（处理空值）
+                if (data.field.link_position && data.field.link_position.trim() !== '') {
+                    cf.link_position = data.field.link_position.trim();
+                } else {
+                    // 如果为空，删除该字段
+                    delete cf.link_position;
+                }
+
+                if (data.field.page_link && data.field.page_link.trim() !== '') {
+                    cf.page_link = data.field.page_link.trim();
+                } else {
+                    // 如果为空，删除该字段
+                    delete cf.page_link;
+                }
+
                 if (Object.keys(cf).length > 0) {
                     data.field.custom_fields = JSON.stringify(cf);
                 } else {
@@ -331,7 +462,7 @@
                 layer.msg('自定义字段格式错误：请输入有效的JSON格式', {icon: 2});
                 return false;
             }
-            
+
             $.ajax({
                 url: '/app/admin/link/edit/' + data.field.id,
                 type: 'POST',

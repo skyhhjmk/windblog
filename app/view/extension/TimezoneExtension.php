@@ -4,6 +4,7 @@ namespace app\view\extension;
 
 use Exception;
 use Illuminate\Support\Carbon;
+use Throwable;
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFilter;
 
@@ -36,6 +37,7 @@ class TimezoneExtension extends AbstractExtension
      * @param string|null $timezone 目标时区，默认使用系统配置
      *
      * @return string
+     * @throws Throwable
      */
     public function localDate($date, string $format = 'Y-m-d H:i:s', ?string $timezone = null): string
     {
@@ -100,6 +102,7 @@ class TimezoneExtension extends AbstractExtension
      * @param string|null $timezone 目标时区
      *
      * @return string
+     * @throws Throwable
      */
     public function humanTime($date, ?string $timezone = null): string
     {
@@ -135,9 +138,11 @@ class TimezoneExtension extends AbstractExtension
      * 3. 默认使用 Asia/Shanghai
      *
      * @return string
+     * @throws Throwable
      */
     private function getDefaultTimezone(): string
     {
+        // TODO: Refactor
         // 1. 尝试从用户设置读取（如果已实现）
         $session = request()?->session();
         if ($session && $userTimezone = $session->get('user_timezone')) {

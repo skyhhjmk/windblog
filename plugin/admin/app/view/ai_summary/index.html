@@ -4,13 +4,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
     <title>AI摘要管理</title>
+    <link href="/app/admin/component/pear/css/pear.css" rel="stylesheet"/>
     <link rel="stylesheet" href="/app/admin/component/layui/css/layui.css?v=2.8.12"/>
+    <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+    <script src="/app/admin/component/pear/pear.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .config-field {
-            margin-bottom: 1rem;
-        }
-
         .provider-card {
             border: 2px solid #e5e7eb;
             padding: 1rem;
@@ -29,176 +28,529 @@
             border-color: #10b981;
             background-color: #d1fae5;
         }
-
-        /* 统计表格行hover效果 */
-        #statsTable tr {
-            transition: background-color 0.2s;
-        }
-
-        #statsTable tr:hover {
-            background-color: #f9fafb;
-        }
     </style>
 </head>
-<body class="bg-gray-50">
-<div class="max-w-7xl mx-auto p-6">
-    <div class="bg-white rounded-lg shadow-md">
-        <div class="border-b border-gray-200 px-6 py-4">
-            <h1 class="text-2xl font-bold text-gray-800">AI 摘要管理</h1>
-            <p class="text-sm text-gray-500 mt-1">管理AI提供者、配置模型参数、设置提示词</p>
-        </div>
-        <div class="p-6">
-            <div class="border-b border-gray-200">
-                <nav class="-mb-px flex space-x-8">
-                    <button class="tab-btn border-b-2 border-blue-500 py-4 px-1 text-sm font-medium text-blue-600"
-                            data-tab="overview">概览
-                    </button>
-                    <button class="tab-btn border-b-2 border-transparent py-4 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                            data-tab="config">API配置
-                    </button>
-                    <button class="tab-btn border-b-2 border-transparent py-4 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                            data-tab="prompt">Prompt配置
-                    </button>
-                </nav>
+
+<body class="bg-gray-100 pear-container">
+
+<!-- 切换选项卡 -->
+<div class="layui-card rounded-lg shadow-sm">
+    <div class="layui-card-body">
+        <div class="flex border-b border-gray-200 mb-5">
+            <div class="tab-item px-4 py-2 cursor-pointer text-blue-500 border-b-2 border-blue-500 font-medium"
+                 data-tab="articles">文章列表
             </div>
-            <div class="mt-6">
-                <!-- Tab 1: Overview -->
-                <div class="tab-content" id="overview-tab">
-                    <div class="bg-white rounded-lg border border-gray-200 p-6">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4">状态统计</h3>
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        状态
-                                    </th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        数量
-                                    </th>
-                                </tr>
-                                </thead>
-                                <tbody id="statsTable" class="divide-y divide-gray-200">
-                                <tr>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">无摘要 (none)</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">-</td>
-                                </tr>
-                                <tr>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">已生成 (done)</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">-</td>
-                                </tr>
-                                <tr>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">失败 (failed)</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">-</td>
-                                </tr>
-                                <tr>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">刷新中 (refreshing)
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">-</td>
-                                </tr>
-                                <tr>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">已固化 (persisted)
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">-</td>
-                                </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        <button type="button"
-                                class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                                id="btn-refresh-stats">刷新统计
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Tab 2: API Configuration -->
-                <div class="tab-content hidden" id="config-tab">
-                    <div class="bg-white rounded-lg border border-gray-200 p-6 mb-6">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4">选择 AI 提供者</h3>
-                        <div id="providersContainer" class="space-y-4">
-                            <div class="text-gray-500">加载中...</div>
-                        </div>
-                    </div>
-
-                    <div class="bg-white rounded-lg border border-gray-200 p-6" id="providerConfigSection"
-                         style="display:none;">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4">提供者配置 <span id="currentProviderName"
-                                                                                              class="text-sm text-gray-500"></span>
-                        </h3>
-                        <form id="providerConfigForm" class="space-y-4">
-                            <!-- 动态生成配置字段 -->
-                        </form>
-                        <div class="mt-6 flex gap-3">
-                            <button type="button"
-                                    class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                                    id="btn-save-provider-config">保存配置
-                            </button>
-                            <button type="button"
-                                    class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
-                                    id="btn-fetch-models" style="display:none;">获取模型列表
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Tab 3: Prompt Configuration -->
-                <div class="tab-content hidden" id="prompt-tab">
-                    <div class="bg-white rounded-lg border border-gray-200 p-6">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4">摘要生成 Prompt</h3>
-                        <form class="space-y-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">默认 Prompt</label>
-                                <textarea name="ai_summary_prompt" placeholder="请为以下内容生成一个简洁的摘要..."
-                                          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                                          rows="6"></textarea>
-                            </div>
-                            <div>
-                                <button type="button"
-                                        class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                                        id="btn-save-prompt">保存 Prompt
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
+            <div class="tab-item px-4 py-2 cursor-pointer text-gray-500 hover:text-gray-700 font-medium"
+                 data-tab="overview">统计概览
+            </div>
+            <div class="tab-item px-4 py-2 cursor-pointer text-gray-500 hover:text-gray-700 font-medium"
+                 data-tab="config">API配置
+            </div>
+            <div class="tab-item px-4 py-2 cursor-pointer text-gray-500 hover:text-gray-700 font-medium"
+                 data-tab="prompt">Prompt配置
             </div>
         </div>
     </div>
 </div>
 
-<script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
-<script>
-    layui.use(['layer'], function () {
-        var layer = layui.layer, $ = layui.$;
+<!-- Tab 1: 文章列表 -->
+<div class="tab-content" id="tab-articles">
+    <div class="layui-card rounded-lg shadow-sm">
+        <div class="layui-card-body">
+            <form class="layui-form" id="articleForm">
+                <div class="layui-form-item">
+                    <div class="layui-inline">
+                        <label class="layui-form-label font-medium">文章标题</label>
+                        <div class="layui-input-inline">
+                            <input class="layui-input" name="title" placeholder="请输入文章标题" type="text">
+                        </div>
+                    </div>
+                    <div class="layui-inline">
+                        <label class="layui-form-label font-medium">AI摘要状态</label>
+                        <div class="layui-input-inline">
+                            <select name="ai_status">
+                                <option value="">全部状态</option>
+                                <option value="none">无摘要</option>
+                                <option value="queued">已入队</option>
+                                <option value="refreshing">生成中</option>
+                                <option value="done">已生成</option>
+                                <option value="failed">失败</option>
+                                <option value="persisted">已固化</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="layui-inline ml-[50px]">
+                        <button class="pear-btn pear-btn-md pear-btn-primary" lay-filter="article-query" lay-submit>
+                            <i class="layui-icon layui-icon-search"></i>
+                            查询
+                        </button>
+                        <button class="pear-btn pear-btn-md" type="reset">
+                            <i class="layui-icon layui-icon-refresh"></i>
+                            重置
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
 
-        // Tab switching
-        $('.tab-btn').on('click', function () {
-            var tab = $(this).data('tab');
-            $('.tab-btn').removeClass('border-blue-500 text-blue-600').addClass('border-transparent text-gray-500');
-            $(this).removeClass('border-transparent text-gray-500').addClass('border-blue-500 text-blue-600');
-            $('.tab-content').addClass('hidden');
-            $('#' + tab + '-tab').removeClass('hidden');
-        });
+    <div class="layui-card rounded-lg shadow-sm">
+        <div class="layui-card-body">
+            <table id="article-table" lay-filter="article-table"></table>
+        </div>
+    </div>
+</div>
+
+<!-- Tab 2: 统计概览 -->
+<div class="tab-content hidden" id="tab-overview">
+    <div class="layui-card rounded-lg shadow-sm">
+        <div class="layui-card-body">
+            <div class="grid grid-cols-6 gap-3 mb-4">
+                <div class="bg-white rounded-lg border border-gray-200 p-3">
+                    <div class="text-xs text-gray-600">总Token消耗</div>
+                    <div class="text-xl font-bold text-blue-600" id="total-tokens">0</div>
+                </div>
+                <div class="bg-white rounded-lg border border-gray-200 p-3">
+                    <div class="text-xs text-gray-600">成功生成</div>
+                    <div class="text-xl font-bold text-green-600" id="success-count">0</div>
+                </div>
+                <div class="bg-white rounded-lg border border-gray-200 p-3">
+                    <div class="text-xs text-gray-600">无摘要</div>
+                    <div class="text-xl font-bold text-gray-600" id="none-count">0</div>
+                </div>
+                <div class="bg-white rounded-lg border border-gray-200 p-3">
+                    <div class="text-xs text-gray-600">已入队</div>
+                    <div class="text-xl font-bold text-blue-600" id="queued-count">0</div>
+                </div>
+                <div class="bg-white rounded-lg border border-gray-200 p-3">
+                    <div class="text-xs text-gray-600">失败</div>
+                    <div class="text-xl font-bold text-red-600" id="failed-count">0</div>
+                </div>
+                <div class="bg-white rounded-lg border border-gray-200 p-3">
+                    <div class="text-xs text-gray-600">生成中</div>
+                    <div class="text-xl font-bold text-yellow-600" id="refreshing-count">0</div>
+                </div>
+            </div>
+
+            <!-- 提供者使用统计 -->
+            <div class="bg-white rounded-lg border border-gray-200 p-4 mb-4">
+                <h3 class="text-sm font-semibold text-gray-800 mb-3">提供者使用情况</h3>
+                <div class="space-y-2" id="provider-usage">
+                    <div class="text-sm text-gray-500">暂无使用记录</div>
+                </div>
+            </div>
+
+            <!-- 最近错误和成功 -->
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div class="bg-white rounded-lg border border-gray-200 p-4">
+                    <h3 class="text-sm font-semibold text-gray-800 mb-3">最近错误</h3>
+                    <div class="space-y-2 max-h-96 overflow-y-auto" id="recent-errors">
+                        <div class="text-sm text-gray-500">暂无错误记录</div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg border border-gray-200 p-4">
+                    <h3 class="text-sm font-semibold text-gray-800 mb-3">最近成功生成</h3>
+                    <div class="space-y-2 max-h-96 overflow-y-auto" id="recent-success">
+                        <div class="text-sm text-gray-500">暂无记录</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex gap-2">
+                <button class="pear-btn pear-btn-primary pear-btn-md" id="btn-refresh-stats" type="button">
+                    <i class="layui-icon layui-icon-refresh"></i>
+                    刷新统计
+                </button>
+                <button class="pear-btn pear-btn-warning pear-btn-md" id="btn-reset-stuck" type="button">
+                    <i class="layui-icon layui-icon-refresh-1"></i>
+                    重置卡住的任务
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tab 3: API配置 -->
+<div class="tab-content hidden" id="tab-config">
+    <div class="layui-card rounded-lg shadow-sm">
+        <div class="layui-card-body">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">选择 AI 提供方</h3>
+            <div class="mb-4">
+                <label class="inline-flex items-center mr-6">
+                    <input checked class="mr-2" name="selection_type" type="radio" value="provider">
+                    <span class="text-sm font-medium text-gray-700">单个提供方</span>
+                </label>
+                <label class="inline-flex items-center">
+                    <input class="mr-2" name="selection_type" type="radio" value="group">
+                    <span class="text-sm font-medium text-gray-700">轮询组</span>
+                </label>
+            </div>
+
+            <div class="space-y-4" id="providersContainer">
+                <div class="text-gray-500">加载中...</div>
+            </div>
+
+            <div class="space-y-4 hidden" id="pollingGroupsContainer">
+                <div class="text-gray-500">加载中...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="layui-card rounded-lg shadow-sm mt-4" id="providerConfigSection" style="display:none;">
+        <div class="layui-card-body">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">提供者配置 <span class="text-sm text-gray-500"
+                                                                                  id="currentProviderName"></span>
+            </h3>
+            <form class="space-y-4" id="providerConfigForm"></form>
+        </div>
+    </div>
+</div>
+
+<!-- Tab 4: Prompt配置 -->
+<div class="tab-content hidden" id="tab-prompt">
+    <div class="layui-card rounded-lg shadow-sm">
+        <div class="layui-card-body">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">摘要生成 Prompt</h3>
+            <form class="layui-form">
+                <div class="layui-form-item layui-form-text">
+                    <label class="layui-form-label">默认 Prompt</label>
+                    <div class="layui-input-block">
+                        <textarea class="layui-textarea" name="ai_summary_prompt"
+                                  placeholder="请为以下内容生成一个简洁的摘要..." rows="10"></textarea>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <div class="layui-input-block">
+                        <button class="pear-btn pear-btn-primary pear-btn-md" id="btn-save-prompt" type="button">
+                            <i class="layui-icon layui-icon-ok"></i>
+                            保存 Prompt
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 表格操作栏模板 -->
+<script id="article-toolbar" type="text/html">
+    <button class="pear-btn pear-btn-primary pear-btn-md" lay-event="batchGenerate">
+        <i class="layui-icon layui-icon-add-1"></i>
+        批量生成
+    </button>
+</script>
+
+<!-- 状态列模板 -->
+<script id="ai-status" type="text/html">
+    {{# if (d.ai_status == 'none') { }}
+    <span class="px-2 py-1 text-xs rounded bg-gray-100 text-gray-800">无摘要</span>
+    {{# } else if (d.ai_status == 'queued') { }}
+    <span class="px-2 py-1 text-xs rounded bg-blue-100 text-blue-800">已入队</span>
+    {{# } else if (d.ai_status == 'refreshing') { }}
+    <span class="px-2 py-1 text-xs rounded bg-yellow-100 text-yellow-800">生成中</span>
+    {{# } else if (d.ai_status == 'done') { }}
+    <span class="px-2 py-1 text-xs rounded bg-green-100 text-green-800">已生成</span>
+    {{# } else if (d.ai_status == 'failed') { }}
+    <span class="px-2 py-1 text-xs rounded bg-red-100 text-red-800">失败</span>
+    {{# } else if (d.ai_status == 'persisted') { }}
+    <span class="px-2 py-1 text-xs rounded bg-purple-100 text-purple-800">已固化</span>
+    {{# } }}
+    {{# if (d.ai_error) { }}
+    <div class="text-xs text-red-600 mt-1" title="{{d.ai_error}}">{{d.ai_error.substring(0, 30)}}...</div>
+    {{# } }}
+</script>
+
+<!-- Token列模板 -->
+<script id="token-display" type="text/html">
+    {{# if (d.ai_tokens > 0) { }}
+    <span class="font-mono">{{d.ai_tokens.toLocaleString()}}</span>
+    {{# } else { }}
+    <span class="text-gray-400">-</span>
+    {{# } }}
+</script>
+
+<!-- 提供者/模型列模板 -->
+<script id="provider-model" type="text/html">
+    <div class="text-sm">{{d.ai_provider || '-'}}</div>
+    <div class="text-xs text-gray-500">{{d.ai_model || '-'}}</div>
+</script>
+
+<!-- AI摘要预览列模板 -->
+<script id="summary-preview" type="text/html">
+    {{# if (d.ai_summary) { }}
+    <div class="text-sm" title="{{d.ai_summary}}">
+        {{d.ai_summary.length > 50 ? d.ai_summary.substring(0, 50) + '...' : d.ai_summary}}
+    </div>
+    {{# } else { }}
+    <span class="text-gray-400">-</span>
+    {{# } }}
+</script>
+
+<!-- 操作列模板 -->
+<script id="article-bar" type="text/html">
+    <button class="pear-btn pear-btn-primary pear-btn-sm" lay-event="generate">
+        <i class="layui-icon layui-icon-release"></i>
+    </button>
+    {{# if (d.ai_status == 'done' || d.ai_status == 'failed') { }}
+    <button class="pear-btn pear-btn-success pear-btn-sm" lay-event="refresh">
+        <i class="layui-icon layui-icon-refresh"></i>
+    </button>
+    {{# } }}
+</script>
+
+<script>
+    layui.use(['table', 'form', 'jquery', 'layer'], function () {
+        var table = layui.table;
+        var form = layui.form;
+        var $ = layui.jquery;
+        var layer = layui.layer;
 
         var currentProvider = null;
-        var providerConfig = {};
+        var currentSelection = '';
+        var selectionType = 'provider';
+
+        // Tab switching
+        $('.tab-item').on('click', function () {
+            var tab = $(this).data('tab');
+            $('.tab-item').removeClass('text-blue-500 border-b-2 border-blue-500').addClass('text-gray-500');
+            $(this).removeClass('text-gray-500').addClass('text-blue-500 border-b-2 border-blue-500');
+            $('.tab-content').addClass('hidden');
+            $('#tab-' + tab).removeClass('hidden');
+
+            if (tab === 'overview') {
+                loadStats();
+            }
+        });
+
+        // 渲染文章列表表格
+        var articleTable = table.render({
+            elem: '#article-table',
+            url: '/app/admin/ai/summary/articles',
+            page: true,
+            toolbar: '#article-toolbar',
+            defaultToolbar: [{
+                layEvent: 'refresh',
+                icon: 'layui-icon-refresh',
+            }],
+            cols: [[
+                {type: 'checkbox'},
+                {title: 'ID', field: 'id', width: 80, align: 'center'},
+                {title: '文章标题', field: 'title', minWidth: 200},
+                {title: 'AI摘要状态', field: 'ai_status', width: 120, align: 'center', templet: '#ai-status'},
+                {title: '提供者/模型', width: 150, align: 'center', templet: '#provider-model'},
+                {title: 'Token', field: 'ai_tokens', width: 100, align: 'center', templet: '#token-display'},
+                {
+                    title: '生成时间',
+                    field: 'ai_generated_at',
+                    width: 160,
+                    align: 'center',
+                    templet: function (d) {
+                        return d.ai_generated_at ? d.ai_generated_at.substring(0, 16).replace(' ', '<br>') : '-';
+                    }
+                },
+                {title: 'AI摘要内容', minWidth: 250, templet: '#summary-preview'},
+                {title: '操作', toolbar: '#article-bar', width: 120, align: 'center', fixed: 'right'}
+            ]],
+            done: function (res, curr, count) {
+                console.log('Table rendered:', res);
+            }
+        });
+
+        // 表单提交
+        form.on('submit(article-query)', function (data) {
+            table.reload('article-table', {
+                where: data.field,
+                page: {curr: 1}
+            });
+            return false;
+        });
+
+        // 工具栏事件
+        table.on('toolbar(article-table)', function (obj) {
+            if (obj.event === 'batchGenerate') {
+                var checkStatus = table.checkStatus(obj.config.id);
+                var data = checkStatus.data;
+                if (data.length === 0) {
+                    layer.msg('请选择文章', {icon: 3});
+                    return;
+                }
+                var postIds = data.map(function (item) {
+                    return item.id;
+                });
+                batchGenerateSummary(postIds);
+            } else if (obj.event === 'refresh') {
+                table.reload('article-table');
+            }
+        });
+
+        // 行操作事件
+        table.on('tool(article-table)', function (obj) {
+            if (obj.event === 'generate') {
+                generateSummary(obj.data.id, false);
+            } else if (obj.event === 'refresh') {
+                generateSummary(obj.data.id, true);
+            }
+        });
+
+        // 生成摘要
+        function generateSummary(postId, force) {
+            var loading = layer.load();
+            $.ajax({
+                url: '/app/admin/ai/summary/enqueue',
+                method: 'POST',
+                data: {
+                    post_id: postId,
+                    force: force
+                },
+                success: function (res) {
+                    layer.close(loading);
+                    if (res && res.code === 0) {
+                        layer.msg('已加入生成队列', {icon: 1});
+                        setTimeout(function () {
+                            table.reload('article-table');
+                        }, 500);
+                    } else {
+                        layer.msg(res.msg || '生成失败', {icon: 2});
+                    }
+                },
+                error: function () {
+                    layer.close(loading);
+                    layer.msg('请求失败', {icon: 2});
+                }
+            });
+        }
+
+        // 批量生成摘要
+        function batchGenerateSummary(postIds) {
+            var loading = layer.load();
+            var promises = postIds.map(function (postId) {
+                return $.ajax({
+                    url: '/app/admin/ai/summary/enqueue',
+                    method: 'POST',
+                    data: {post_id: postId, force: false}
+                });
+            });
+
+            Promise.all(promises).then(function () {
+                layer.close(loading);
+                layer.msg('已批量加入生成队列', {icon: 1});
+                setTimeout(function () {
+                    table.reload('article-table');
+                }, 500);
+            }).catch(function () {
+                layer.close(loading);
+                layer.msg('部分请求失败', {icon: 2});
+            });
+        }
 
         // Load stats
         function loadStats() {
             $.get('/app/admin/ai/summary/stats', function (res) {
                 if (res && res.code === 0 && res.data) {
-                    var stats = res.data;
-                    var tbody = $('#statsTable');
-                    tbody.html('');
-                    [
-                        ['无摘要 (none)', stats.none || 0],
-                        ['已生成 (done)', stats.done || 0],
-                        ['失败 (failed)', stats.failed || 0],
-                        ['刷新中 (refreshing)', stats.refreshing || 0],
-                        ['已固化 (persisted)', stats.persisted || 0]
-                    ].forEach(function (pair) {
-                        tbody.append('<tr><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">' + pair[0] + '</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">' + pair[1] + '</td></tr>');
-                    });
+                    var data = res.data;
+                    var counters = data.counters || {};
+
+                    $('#total-tokens').text((data.total_tokens || 0).toLocaleString());
+                    $('#success-count').text(counters.done || 0);
+                    $('#none-count').text(counters.none || 0);
+                    $('#queued-count').text(counters.queued || 0);
+                    $('#failed-count').text(counters.failed || 0);
+                    $('#refreshing-count').text(counters.refreshing || 0);
+
+                    // 更新提供者使用情况
+                    var providerUsage = data.provider_usage || {};
+                    var providerDiv = $('#provider-usage');
+                    providerDiv.html('');
+                    if (Object.keys(providerUsage).length > 0) {
+                        Object.keys(providerUsage).forEach(function (provider) {
+                            var usage = providerUsage[provider];
+                            providerDiv.append('<div class="flex justify-between items-center p-2 bg-gray-50 rounded text-sm"><span class="font-medium text-gray-700">' + provider + '</span><span class="text-gray-600">调用 ' + usage.count + ' 次 · Tokens ' + usage.tokens.toLocaleString() + '</span></div>');
+                        });
+                    } else {
+                        providerDiv.append('<div class="text-sm text-gray-500">暂无使用记录</div>');
+                    }
+
+                    // 更新最近错误
+                    var recentErrors = data.recent_errors || [];
+                    var errorsDiv = $('#recent-errors');
+                    errorsDiv.html('');
+                    if (recentErrors.length > 0) {
+                        recentErrors.forEach(function (err) {
+                            errorsDiv.append('<div class="p-2 bg-red-50 border border-red-200 rounded text-xs"><div class="flex justify-between items-start mb-1"><span class="font-medium text-red-800">ID: ' + err.post_id + '</span><span class="text-red-600">' + err.failed_at.substring(0, 16) + '</span></div><div class="text-red-700">' + err.provider + '</div><div class="text-red-600 mt-1">' + err.error.substring(0, 60) + '...</div></div>');
+                        });
+                    } else {
+                        errorsDiv.append('<div class="text-sm text-gray-500">暂无错误记录</div>');
+                    }
+
+                    // 更新最近成功
+                    var recentSuccess = data.recent_success || [];
+                    var successDiv = $('#recent-success');
+                    successDiv.html('');
+                    if (recentSuccess.length > 0) {
+                        recentSuccess.forEach(function (succ) {
+                            successDiv.append('<div class="p-2 bg-green-50 border border-green-200 rounded text-xs"><div class="flex justify-between items-start mb-1"><span class="font-medium text-green-800">ID: ' + succ.post_id + '</span><span class="text-green-600">' + succ.generated_at.substring(0, 16) + '</span></div><div class="text-green-700">' + succ.provider + ' · ' + succ.model + '</div><div class="text-green-600 mt-1">Tokens: ' + succ.tokens.toLocaleString() + '</div></div>');
+                        });
+                    } else {
+                        successDiv.append('<div class="text-sm text-gray-500">暂无记录</div>');
+                    }
+                }
+            });
+        }
+
+        // Refresh stats button
+        $('#btn-refresh-stats').on('click', function () {
+            loadStats();
+        });
+
+        // Reset stuck tasks button
+        $('#btn-reset-stuck').on('click', function () {
+            layer.confirm('确定要重置所有超过3分钟的卡住任务吗？', {
+                icon: 3,
+                title: '确认操作'
+            }, function (index) {
+                var loading = layer.load();
+                $.ajax({
+                    url: '/app/admin/ai/summary/reset-all-stuck',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({}),
+                    success: function (res) {
+                        layer.close(loading);
+                        layer.close(index);
+                        if (res && res.code === 0) {
+                            layer.msg(res.msg || '重置成功', {icon: 1});
+                            loadStats();
+                        } else {
+                            layer.msg(res.msg || '重置失败', {icon: 2});
+                        }
+                    },
+                    error: function () {
+                        layer.close(loading);
+                        layer.msg('请求失败', {icon: 2});
+                    }
+                });
+            });
+        });
+
+        // 切换选择类型
+        $('input[name="selection_type"]').on('change', function () {
+            selectionType = $(this).val();
+            if (selectionType === 'provider') {
+                $('#providersContainer').removeClass('hidden');
+                $('#pollingGroupsContainer').addClass('hidden');
+                loadProviders();
+            } else {
+                $('#providersContainer').addClass('hidden');
+                $('#pollingGroupsContainer').removeClass('hidden');
+                loadPollingGroups();
+            }
+        });
+
+        // Load current selection
+        function loadCurrentSelection() {
+            $.get('/app/admin/ai/selection/get', function (res) {
+                if (res && res.code === 0 && res.data) {
+                    currentSelection = res.data.selection || '';
                 }
             });
         }
@@ -207,35 +559,31 @@
         function loadProviders() {
             $.get('/app/admin/ai/providers/list', function (res) {
                 if (res && res.code === 0 && res.data) {
-                    var available = res.data.available || [];
-                    var current = res.data.current || 'local.echo';
+                    var available = res.data || [];
                     var container = $('#providersContainer');
                     container.html('');
 
+                    if (available.length === 0) {
+                        container.html('<div class="text-gray-500">暂无可用提供方</div>');
+                        return;
+                    }
+
                     available.forEach(function (provider) {
-                        var isActive = provider.id === current;
+                        var isActive = currentSelection === 'provider:' + provider.id;
                         var card = $('<div class="provider-card' + (isActive ? ' active' : '') + '"></div>');
                         card.append('<h3 class="text-lg font-semibold text-gray-800">' + provider.name + ' <span class="text-xs text-gray-500 font-normal">(' + provider.id + ')</span></h3>');
                         card.append('<p class="text-sm text-gray-600 mt-2">类型: ' + provider.type + '</p>');
-                        card.append('<p class="text-sm text-gray-600">支持任务: ' + provider.supported_tasks.join(', ') + '</p>');
+                        card.append('<p class="text-sm text-gray-600">状态: ' + (provider.enabled ? '<span class="text-green-600">已启用</span>' : '<span class="text-red-600">已禁用</span>') + '</p>');
 
                         var btnGroup = $('<div class="mt-4 flex gap-2"></div>');
-                        var btnSelect = $('<button type="button" class="px-4 py-2 rounded-lg text-sm font-medium transition ' +
-                            (isActive ? 'bg-green-100 text-green-800 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700') + '">' +
-                            (isActive ? '当前选择' : '选择此提供者') + '</button>');
-                        if (isActive) {
+                        var btnSelect = $('<button type="button" class="pear-btn pear-btn-sm ' + (isActive ? 'pear-btn-success' : 'pear-btn-primary') + '">' + (isActive ? '当前选择' : '选择此提供方') + '</button>');
+                        if (isActive || !provider.enabled) {
                             btnSelect.attr('disabled', true);
                         }
                         btnSelect.on('click', function () {
                             selectProvider(provider.id);
                         });
                         btnGroup.append(btnSelect);
-
-                        var btnConfig = $('<button type="button" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-300 transition">配置</button>');
-                        btnConfig.on('click', function () {
-                            loadProviderConfig(provider.id);
-                        });
-                        btnGroup.append(btnConfig);
                         card.append(btnGroup);
 
                         container.append(card);
@@ -247,13 +595,14 @@
         // Select provider
         function selectProvider(providerId) {
             $.ajax({
-                url: '/app/admin/ai/providers/set-current',
+                url: '/app/admin/ai/selection/set',
                 method: 'POST',
                 contentType: 'application/json',
-                data: JSON.stringify({provider: providerId}),
+                data: JSON.stringify({selection: 'provider:' + providerId}),
                 success: function (res) {
                     if (res && res.code === 0) {
                         layer.msg('设置成功', {icon: 1});
+                        currentSelection = 'provider:' + providerId;
                         loadProviders();
                     } else {
                         layer.msg(res.msg || '设置失败', {icon: 2});
@@ -262,208 +611,105 @@
             });
         }
 
-        // Load provider config
-        function loadProviderConfig(providerId) {
-            currentProvider = providerId;
-            $('#currentProviderName').text('(' + providerId + ')');
-
-            $.get('/app/admin/ai/providers/config', {provider: providerId}, function (res) {
+        // Load polling groups
+        function loadPollingGroups() {
+            $.get('/app/admin/ai/polling-groups/list', function (res) {
                 if (res && res.code === 0 && res.data) {
-                    providerConfig = res.data.config || {};
-                    var fields = res.data.fields || [];
+                    var groups = res.data || [];
+                    var container = $('#pollingGroupsContainer');
+                    container.html('');
 
-                    var formEl = $('#providerConfigForm');
-                    formEl.html('');
+                    if (groups.length === 0) {
+                        container.html('<div class="text-gray-500">暂无轮询组</div>');
+                        return;
+                    }
 
-                    fields.forEach(function (field) {
-                        var div = $('<div class="config-field"></div>');
-                        var label = $('<label class="block text-sm font-medium text-gray-700 mb-2">' + field.label +
-                            (field.required ? ' <span class="text-red-500">*</span>' : '') + '</label>');
-                        div.append(label);
-
-                        if (field.type === 'password') {
-                            var input = $('<input type="password" name="' + field.key + '" placeholder="' + (field.placeholder || '') + '" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />');
-                            input.val(providerConfig[field.key] || field.default || '');
-                            div.append(input);
-                        } else if (field.type === 'checkbox') {
-                            var checkboxWrapper = $('<div class="flex items-center"></div>');
-                            var checkbox = $('<input type="checkbox" name="' + field.key + '" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />');
-                            if (providerConfig[field.key] === true || providerConfig[field.key] === 'true' || field.default === true) {
-                                checkbox.prop('checked', true);
-                            }
-                            checkboxWrapper.append(checkbox);
-                            div.append(checkboxWrapper);
-                        } else if (field.type === 'multiselect') {
-                            // 多选框支持（用于多模态等）
-                            var multiselectWrapper = $('<div class="space-y-2"></div>');
-                            var selectedValues = providerConfig[field.key] || [];
-                            if (typeof selectedValues === 'string') {
-                                try {
-                                    selectedValues = JSON.parse(selectedValues);
-                                } catch (e) {
-                                    selectedValues = [];
-                                }
-                            }
-                            if (!Array.isArray(selectedValues)) selectedValues = [];
-
-                            (field.options || []).forEach(function (opt) {
-                                var checkboxDiv = $('<div class="flex items-center"></div>');
-                                var checkbox = $('<input type="checkbox" name="' + field.key + '[]" value="' + opt.value + '" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />');
-                                if (selectedValues.indexOf(opt.value) >= 0) {
-                                    checkbox.prop('checked', true);
-                                }
-                                var label = $('<label class="ml-2 text-sm text-gray-700">' + opt.label + '</label>');
-                                checkboxDiv.append(checkbox).append(label);
-                                multiselectWrapper.append(checkboxDiv);
-                            });
-                            div.append(multiselectWrapper);
-                        } else if (field.type === 'select') {
-                            var select = $('<select name="' + field.key + '" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"></select>');
-                            if (field.options === 'auto') {
-                                // Model field - will be populated by fetch
-                                select.append('<option value="">请先获取模型列表</option>');
-                                if (providerConfig[field.key]) {
-                                    select.append('<option value="' + providerConfig[field.key] + '" selected>' + providerConfig[field.key] + '</option>');
-                                }
-                                $('#btn-fetch-models').show().data('field-key', field.key);
-                            } else {
-                                // Regular select options
-                                (field.options || []).forEach(function (opt) {
-                                    var option = $('<option value="' + opt.value + '">' + opt.label + '</option>');
-                                    if (providerConfig[field.key] === opt.value) {
-                                        option.attr('selected', true);
-                                    }
-                                    select.append(option);
-                                });
-                            }
-                            div.append(select);
-                        } else if (field.type === 'number') {
-                            var input = $('<input type="number" name="' + field.key + '" placeholder="' + (field.placeholder || '') + '" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />');
-                            if (field.min !== undefined) input.attr('min', field.min);
-                            if (field.max !== undefined) input.attr('max', field.max);
-                            if (field.step !== undefined) input.attr('step', field.step);
-                            input.val(providerConfig[field.key] !== undefined ? providerConfig[field.key] : (field.default || ''));
-                            div.append(input);
-                        } else {
-                            var input = $('<input type="text" name="' + field.key + '" placeholder="' + (field.placeholder || '') + '" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />');
-                            input.val(providerConfig[field.key] || field.default || '');
-                            div.append(input);
+                    groups.forEach(function (group) {
+                        var isActive = currentSelection === 'group:' + group.id;
+                        var card = $('<div class="provider-card' + (isActive ? ' active' : '') + '"></div>');
+                        card.append('<h3 class="text-lg font-semibold text-gray-800">' + group.name + '</h3>');
+                        if (group.description) {
+                            card.append('<p class="text-sm text-gray-600 mt-2">' + group.description + '</p>');
                         }
+                        card.append('<p class="text-sm text-gray-600">状态: ' + (group.enabled ? '<span class="text-green-600">已启用</span>' : '<span class="text-red-600">已禁用</span>') + '</p>');
 
-                        formEl.append(div);
+                        var btnGroup = $('<div class="mt-4 flex gap-2"></div>');
+                        var btnSelect = $('<button type="button" class="pear-btn pear-btn-sm ' + (isActive ? 'pear-btn-success' : 'pear-btn-primary') + '">' + (isActive ? '当前选择' : '选择此组') + '</button>');
+                        if (isActive) {
+                            btnSelect.attr('disabled', true);
+                        }
+                        btnSelect.on('click', function () {
+                            selectGroup(group.id);
+                        });
+                        btnGroup.append(btnSelect);
+                        card.append(btnGroup);
+
+                        container.append(card);
                     });
-
-                    $('#providerConfigSection').show();
                 }
             });
         }
 
-        // Save provider config
-        $('#btn-save-provider-config').on('click', function () {
-            if (!currentProvider) {
-                layer.msg('请先选择提供者', {icon: 2});
-                return;
-            }
-
-            var formData = {};
-            var multiselectData = {};
-
-            $('#providerConfigForm').find('input, select, textarea').each(function () {
-                var $el = $(this);
-                var name = $el.attr('name');
-                if (!name) return;
-
-                // 处理多选框
-                if (name.indexOf('[]') > 0) {
-                    var key = name.replace('[]', '');
-                    if ($el.is(':checkbox') && $el.is(':checked')) {
-                        if (!multiselectData[key]) multiselectData[key] = [];
-                        multiselectData[key].push($el.val());
-                    }
-                } else if ($el.is(':checkbox')) {
-                    formData[name] = $el.is(':checked');
-                } else {
-                    formData[name] = $el.val();
-                }
-            });
-
-            // 合并多选框数据
-            Object.keys(multiselectData).forEach(function (key) {
-                formData[key] = multiselectData[key];
-            });
-
+        // Select group
+        function selectGroup(groupId) {
             $.ajax({
-                url: '/app/admin/ai/providers/config-save',
+                url: '/app/admin/ai/selection/set',
                 method: 'POST',
                 contentType: 'application/json',
-                data: JSON.stringify({provider: currentProvider, config: formData}),
+                data: JSON.stringify({selection: 'group:' + groupId}),
                 success: function (res) {
+                    if (res && res.code === 0) {
+                        layer.msg('设置成功', {icon: 1});
+                        currentSelection = 'group:' + groupId;
+                        loadPollingGroups();
+                    } else {
+                        layer.msg(res.msg || '设置失败', {icon: 2});
+                    }
+                }
+            });
+        }
+
+        // Load prompt
+        function loadPrompt() {
+            $.get('/app/admin/ai/summary/prompt', function (res) {
+                if (res && res.code === 0 && res.data) {
+                    $('textarea[name="ai_summary_prompt"]').val(res.data.prompt || '');
+                }
+            });
+        }
+
+        // Save prompt button
+        $('#btn-save-prompt').on('click', function () {
+            var prompt = $('textarea[name="ai_summary_prompt"]').val();
+            if (!prompt) {
+                layer.msg('Prompt不能为空', {icon: 2});
+                return;
+            }
+            var loading = layer.load();
+            $.ajax({
+                url: '/app/admin/ai/summary/prompt-save',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({prompt: prompt}),
+                success: function (res) {
+                    layer.close(loading);
                     if (res && res.code === 0) {
                         layer.msg('保存成功', {icon: 1});
                     } else {
                         layer.msg(res.msg || '保存失败', {icon: 2});
                     }
-                }
-            });
-        });
-
-        // Fetch models
-        $('#btn-fetch-models').on('click', function () {
-            if (!currentProvider) return;
-
-            var formData = {};
-            $('#providerConfigForm').find('input, select, textarea').each(function () {
-                var name = $(this).attr('name');
-                var val = $(this).val();
-                if (name) {
-                    formData[name] = val;
-                }
-            });
-
-            var idx = layer.msg('获取模型列表中...', {icon: 16, shade: 0.1, time: 0});
-            $.ajax({
-                url: '/app/admin/ai/providers/fetch-models',
-                method: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify({provider: currentProvider, config: formData}),
-                success: function (res) {
-                    layer.close(idx);
-                    if (res && res.code === 0 && res.data) {
-                        var models = res.data;
-                        var fieldKey = $('#btn-fetch-models').data('field-key');
-                        var select = $('#providerConfigForm').find('select[name="' + fieldKey + '"]');
-                        select.html('');
-                        models.forEach(function (model) {
-                            select.append('<option value="' + model.id + '">' + model.id + '</option>');
-                        });
-                        form.render('select');
-                        layer.msg('获取成功，共 ' + models.length + ' 个模型', {icon: 1});
-                    } else {
-                        layer.msg(res.msg || '获取失败', {icon: 2});
-                    }
                 },
                 error: function () {
-                    layer.close(idx);
+                    layer.close(loading);
                     layer.msg('请求失败', {icon: 2});
                 }
             });
         });
 
-        // Refresh stats button
-        $('#btn-refresh-stats').on('click', function () {
-            loadStats();
-        });
-
-        // Save prompt button
-        $('#btn-save-prompt').on('click', function () {
-            var prompt = $('textarea[name="ai_summary_prompt"]').val();
-            // TODO: Implement save prompt API
-            layer.msg('Prompt保存功能待实现', {icon: 0});
-        });
-
         // Initial load
-        loadStats();
+        loadCurrentSelection();
         loadProviders();
+        loadPrompt();
     });
 </script>
 </body>

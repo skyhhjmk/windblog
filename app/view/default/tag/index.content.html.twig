@@ -15,7 +15,10 @@
         {% endif %}
     </div>
     <div class="max-w-full mx-auto px-4">
-        <div class="text-center mb-8 sm:mb-12 fade-in-on-scroll" data-animation-delay="0">
+        {# 面包屑导航 #}
+        {% include 'components/breadcrumb.html.twig' %}
+
+        <div class="text-center mb-8 sm:mb-12 fade-in-on-scroll no-animation" data-animation-delay="0">
             <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-800 mb-3 sm:mb-4">
                 <i class="fas fa-tags text-blue-600 mr-3"></i>
                 标签：{{ tag_name|default(tag_slug) }}
@@ -98,7 +101,7 @@
                 {{ pagination|raw }}
             </div>
         {% else %}
-            <div class="bg白 rounded-2xl shadow-md sm:shadow-lg p-6 sm:p-12 text-center fade-in-on-scroll"
+            <div class="bg白 rounded-2xl shadow-md sm:shadow-lg p-6 sm:p-12 text-center fade-in-on-scroll no-animation"
                  data-animation-delay="0.2">
                 <div class="text-gray-400 mb-4">
                     <svg class="w-16 h-16 sm:w-24 sm:h-24 mx-auto opacity-50" fill="none" stroke="currentColor"

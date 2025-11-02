@@ -3,10 +3,10 @@
 namespace app\controller;
 
 use app\annotation\EnableInstantFirstPaint;
+use app\helper\BreadcrumbHelper;
 use app\model\Post;
 use app\service\FloLinkService;
 use app\service\PJAXHelper;
-use app\service\PluginService;
 use app\service\SidebarService;
 use Exception;
 use support\Log;
@@ -71,6 +71,9 @@ class PostController
 
         if ($post->visibility === 'public') {
 
+            // 生成面包屑导航
+            $breadcrumbs = BreadcrumbHelper::forPost($post);
+
             // 使用FloLink处理文章内容
             if (blog_config('flolink_enabled', true)) {
                 try {
@@ -105,20 +108,12 @@ class PostController
                     'post' => $post,
                     'author' => $authorName,
                     'sidebar' => $sidebar,
+                    'breadcrumbs' => $breadcrumbs,
                 ],
                 $cacheKey,
                 120,
                 'page'
             );
-
-            // 动作：文章内容渲染完成（需权限 content:action.post_rendered）
-            PluginService::do_action('content.post_rendered', [
-                'slug' => is_string($keyword) ? $keyword : null,
-                'id' => is_numeric($keyword) ? (int) $keyword : null,
-            ]);
-
-            // 过滤器：文章响应（需权限 content:filter.post_response）
-            $resp = PluginService::apply_filters('content.post_response_filter', $resp);
         } elseif ($post->visibility === 'password') {
             $accessble = false;
             $current_password = $request->get('password');
@@ -130,6 +125,9 @@ class PostController
                 }
             }
             if ($accessble) {
+                // 生成面包屑导航
+                $breadcrumbs = BreadcrumbHelper::forPost($post);
+
                 // 使用FloLink处理文章内容
                 if (blog_config('flolink_enabled', true)) {
                     try {
@@ -164,20 +162,12 @@ class PostController
                         'post' => $post,
                         'author' => $authorName,
                         'sidebar' => $sidebar,
+                        'breadcrumbs' => $breadcrumbs,
                     ],
                     $cacheKey,
                     120,
                     'page'
                 );
-
-                // 动作：文章内容渲染完成（需权限 content:action.post_rendered）
-                PluginService::do_action('content.post_rendered', [
-                    'slug' => is_string($keyword) ? $keyword : null,
-                    'id' => is_numeric($keyword) ? (int) $keyword : null,
-                ]);
-
-                // 过滤器：文章响应（需权限 content:filter.post_response）
-                $resp = PluginService::apply_filters('content.post_response_filter', $resp);
             } else {
                 $viewName = PJAXHelper::getViewName('lock/post', $isPjax);
                 $resp = view($viewName, [

@@ -30,6 +30,7 @@ Route::any('/post/{keyword}.html', [app\controller\PostController::class, 'index
 // 评论相关路由
 Route::any('/comment/submit/{postId}', [app\controller\CommentController::class, 'submit']);
 Route::any('/comment/list/{postId}', [app\controller\CommentController::class, 'getList']);
+Route::get('/comment/status/{id}', [app\controller\CommentController::class, 'status']);
 
 // 用户相关路由
 Route::get('/user/register', function () {
@@ -66,6 +67,15 @@ Route::get('/oauth/{provider}/redirect', [app\controller\UserController::class, 
 Route::get('/oauth/{provider}/callback', [app\controller\UserController::class, 'oauthCallback'])->name('oauth.callback');
 Route::post('/oauth/{provider}/bind', [app\controller\UserController::class, 'bindOAuth'])->name('oauth.bind');
 Route::post('/oauth/{provider}/unbind', [app\controller\UserController::class, 'unbindOAuth'])->name('oauth.unbind');
+
+// 在线用户统计路由
+Route::get('/online/count', [app\controller\OnlineController::class, 'count'])->name('online.count');
+Route::get('/online/list', [app\controller\OnlineController::class, 'list'])->name('online.list');
+Route::get('/online/stats', [app\controller\OnlineController::class, 'stats'])->name('online.stats');
+Route::post('/online/heartbeat', [app\controller\OnlineController::class, 'heartbeat'])->name('online.heartbeat');
+Route::post('/online/online', [app\controller\OnlineController::class, 'online'])->name('online.online');
+Route::post('/online/offline', [app\controller\OnlineController::class, 'offline'])->name('online.offline');
+Route::get('/online/check/{userId}', [app\controller\OnlineController::class, 'check'])->name('online.check');
 
 // 页面路由 - 支持 .html 后缀
 // 首页分页路由 -> IndexController

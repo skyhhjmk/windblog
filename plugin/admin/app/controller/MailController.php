@@ -136,26 +136,8 @@ class MailController
     }
 
     /**
-     * 获取/保存配置所用的键名清单
-     */
-    protected function mailConfigKeys(): array
-    {
-        return [
-            'mail_transport', 'mail_host', 'mail_port',
-            'mail_username', 'mail_password', 'mail_encryption',
-            'mail_from_address', 'mail_from_name', 'mail_reply_to',
-            // 队列相关键
-            'rabbitmq_mail_exchange', 'rabbitmq_mail_routing_key', 'rabbitmq_mail_queue',
-            'rabbitmq_mail_dlx_exchange', 'rabbitmq_mail_dlx_queue',
-            // MQ连接
-            'rabbitmq_host', 'rabbitmq_port', 'rabbitmq_user', 'rabbitmq_password', 'rabbitmq_vhost',
-        ];
-    }
-
-    /**
-     * 配置读取
+     * 配置读取（仅队列命名与 MQ 连接信息）
      * GET /app/admin/mail/config
-     * 保留队列命名与MQ连接项读取；mail_* 将逐步淡化至仅兼容，不再在index页编辑
      */
     public function configGet(Request $request): Response
     {
@@ -178,7 +160,7 @@ class MailController
     /**
      * 配置保存（仅队列命名）
      * POST /app/admin/mail/config-save
-     * body: rabbitmq_mail_*（可选）
+     * body: rabbitmq_mail_* 队列配置（可选）
      */
     public function configSave(Request $request): Response
     {
@@ -198,6 +180,34 @@ class MailController
             }
 
             return json(['code' => 0, 'msg' => '保存成功']);
+        } catch (Throwable $e) {
+            return json(['code' => 1, 'msg' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * 连接测试
+     * POST /app/admin/mail/config-test
+     */
+    public function configTest(Request $request): Response
+    {
+        try {
+            $post = (array) $request->post();
+            $host = (string) ($post['rabbitmq_host'] ?? blog_config('rabbitmq_host', '127.0.0.1', false, true, false));
+            $port = (int) ($post['rabbitmq_port'] ?? blog_config('rabbitmq_port', 5672, false, true, false));
+            $user = (string) ($post['rabbitmq_user'] ?? blog_config('rabbitmq_user', 'guest', false, true, false));
+            $pass = (string) ($post['rabbitmq_password'] ?? blog_config('rabbitmq_password', 'guest', false, true, false));
+            $vhost = (string) ($post['rabbitmq_vhost'] ?? blog_config('rabbitmq_vhost', '/', false, true, false));
+            if ($pass === '******') {
+                $pass = (string) blog_config('rabbitmq_password', 'guest', false, true, false);
+            }
+            $conn = new AMQPStreamConnection($host, $port, $user, $pass, $vhost);
+            $ch = $conn->channel();
+            // 简单连通性检查
+            $ch->close();
+            $conn->close();
+
+            return json(['code' => 0, 'msg' => 'ok']);
         } catch (Throwable $e) {
             return json(['code' => 1, 'msg' => $e->getMessage()]);
         }
@@ -396,38 +406,6 @@ class MailController
                     'dlq_depth' => $dlqCount,
                 ],
             ]);
-        } catch (Throwable $e) {
-            return json(['code' => 1, 'msg' => $e->getMessage()]);
-        }
-    }
-
-    /**
-     * SMTP连接测试（不发送）
-     * POST /app/admin/mail/config-test
-     */
-    public function configTest(Request $request): Response
-    {
-        try {
-            $post = (array) $request->post();
-            $host = (string) ($post['mail_host'] ?? blog_config('mail_host', '', false, true, false));
-            $port = (int) ($post['mail_port'] ?? blog_config('mail_port', 587, false, true, false));
-            $enc = (string) ($post['mail_encryption'] ?? blog_config('mail_encryption', 'tls', false, true, false));
-
-            if ($host === '' || $port <= 0) {
-                return json(['code' => 1, 'msg' => '请填写有效的主机与端口']);
-            }
-
-            $scheme = ($enc === 'ssl') ? 'ssl://' : '';
-            $errno = 0;
-            $errstr = '';
-            $fp = @stream_socket_client($scheme . $host . ':' . $port, $errno, $errstr, 5, STREAM_CLIENT_CONNECT);
-            if ($fp) {
-                @fclose($fp);
-
-                return json(['code' => 0, 'msg' => 'TCP连接成功']);
-            }
-
-            return json(['code' => 1, 'msg' => $errstr ?: '连接失败']);
         } catch (Throwable $e) {
             return json(['code' => 1, 'msg' => $e->getMessage()]);
         }

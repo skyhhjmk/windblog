@@ -1,0 +1,50 @@
+{# 面包屑导航组件 - 支持SEO结构化数据 #}
+{% if breadcrumbs is defined and breadcrumbs|length > 0 %}
+    <nav aria-label="面包屑导航" class="mb-6">
+        <ol class="flex flex-wrap items-center space-x-2 text-sm text-gray-600" itemscope
+            itemtype="https://schema.org/BreadcrumbList">
+            {% for item in breadcrumbs %}
+                <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem"
+                    class="flex items-center">
+                    {% if not loop.last %}
+                        <a href="{{ item.url }}"
+                           itemprop="item"
+                           class="hover:text-blue-600 transition-colors duration-200 flex items-center"
+                           aria-label="{{ item.name }}">
+                            {% if loop.first %}
+                                <i class="fas fa-home mr-1"></i>
+                            {% endif %}
+                            <span itemprop="name">{{ item.name }}</span>
+                        </a>
+                        <meta itemprop="position" content="{{ loop.index }}"/>
+                        <i class="fas fa-chevron-right mx-2 text-gray-400 text-xs"></i>
+                    {% else %}
+                        <span itemprop="name" class="text-gray-800 font-medium" aria-current="page">
+                        {{ item.name }}
+                    </span>
+                        <meta itemprop="position" content="{{ loop.index }}"/>
+                        <link itemprop="item" href="{{ item.url }}"/>
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ol>
+    </nav>
+
+    {# JSON-LD 结构化数据用于SEO #}
+    <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+        {% for item in breadcrumbs %}
+    {
+      "@type": "ListItem",
+      "position": {{ loop.index }},
+      "name": "{{ item.name|escape('js') }}",
+      "item": "{{ (item.url starts with 'http') ? item.url : (app.request.getSchemeAndHttpHost() ~ item.url) }}"
+    }{% if not loop.last %}{% endif %}
+        {% endfor %}
+        ]
+      }
+    </script>
+{% endif %}

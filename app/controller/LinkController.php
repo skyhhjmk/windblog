@@ -2,12 +2,22 @@
 
 /*
  * 这里面有很多屎山
+ *
+ * custom_fields 字段内容
+ * $custom_fields = [
+ *     'link_position' => $link_position, 对方友链放置位置
+ *     'page_link' => $page_link, 对方友链放置页链接地址
+ *     'enable_monitor' => true, 是否启用监控
+ *     'enable_auto_moderation' => true, 启用友链自动审核
+ *     'enable_auto_report' => true, 启用友链下线自动告警双方
+ * ];
  */
 
 namespace app\controller;
 
 use app\annotation\CSRFVerify;
 use app\annotation\EnableInstantFirstPaint;
+use app\helper\BreadcrumbHelper;
 use app\model\Link;
 use app\service\CSRFHelper;
 use app\service\LinkConnectService;
@@ -67,11 +77,15 @@ class LinkController
         // 统一选择视图并生成响应（包含 X-PJAX 相关头）
         $viewName = PJAXHelper::getViewName('link/index', $isPjax);
 
+        // 生成面包屑导航
+        $breadcrumbs = BreadcrumbHelper::forLinks();
+
         return PJAXHelper::createResponse($request, $viewName, [
             'page_title' => blog_config('title', 'WindBlog', true) . ' - 链接广场',
             'links' => $links,
             'pagination' => $pagination_html,
             'sidebar' => $sidebar,
+            'breadcrumbs' => $breadcrumbs,
         ], null, 120, 'page');
     }
 
@@ -152,10 +166,14 @@ class LinkController
         // 统一选择视图并生成响应
         $viewName = PJAXHelper::getViewName('link/info', $isPjax);
 
+        // 生成面包屑导航
+        $breadcrumbs = BreadcrumbHelper::forLinks();
+
         return PJAXHelper::createResponse($request, $viewName, [
             'link' => $link,
             'page_title' => htmlspecialchars($link->name, ENT_QUOTES, 'UTF-8') . ' - 链接详情',
             'sidebar' => $sidebar,
+            'breadcrumbs' => $breadcrumbs,
         ], null, 120, 'page');
     }
 
@@ -208,6 +226,9 @@ class LinkController
             $callback_url = trim($request->post('callback_url', ''));
             $email = trim($request->post('email', ''));
             $full_description = trim($request->post('full_description', ''));
+            $link_position = trim($request->post('link_position', ''));
+            $page_link = trim($request->post('page_link', ''));
+            $redirect_type = trim($request->post('redirect_type', ''));
 
             $ipAddress = $request->getRealIp();
             $show_url = !(bool) $hide_url; // 取反值，即将是否隐藏 url 转为是否显示 url
@@ -215,6 +236,31 @@ class LinkController
             // 增强验证
             if (empty($name) || empty($url) || empty($description)) {
                 return json(['code' => 1, 'msg' => '请填写必填字段']);
+            }
+
+            // 验证友链放置位置
+            if (empty($link_position)) {
+                return json(['code' => 1, 'msg' => '请选择友链放置位置']);
+            }
+
+            // 验证友链放置位置的值是否合法
+            if (!in_array($link_position, ['homepage', 'link_page', 'other_page'], true)) {
+                return json(['code' => 1, 'msg' => '无效的友链放置位置']);
+            }
+
+            // 如果选择了友链页或其他页面，则页面链接为必填
+            if (($link_position === 'link_page' || $link_position === 'other_page') && empty($page_link)) {
+                return json(['code' => 1, 'msg' => '请填写页面链接']);
+            }
+
+            // 验证跳转方式
+            if (empty($redirect_type)) {
+                return json(['code' => 1, 'msg' => '请选择跳转方式']);
+            }
+
+            // 验证跳转方式的值是否合法
+            if (!in_array($redirect_type, ['direct', 'goto', 'info'], true)) {
+                return json(['code' => 1, 'msg' => '无效的跳转方式']);
             }
 
             // 限制字段长度，防止超长输入
@@ -282,6 +328,18 @@ class LinkController
                 }
             }
 
+            // 验证页面链接（如果提供了）
+            if (!empty($page_link)) {
+                if (strlen($page_link) > 500) {
+                    return json(['code' => 1, 'msg' => '页面链接地址过长']);
+                }
+
+                if (!filter_var($page_link, FILTER_VALIDATE_URL) ||
+                    !preg_match('/^https?:\/\/[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+(:[0-9]{1,5})?(\/[-a-zA-Z0-9()@:%_+.~#?&\/=]*)?$/', $page_link)) {
+                    return json(['code' => 1, 'msg' => '请输入有效的页面链接地址']);
+                }
+            }
+
             // 检查是否已存在相同的链接
             $existingLink = Link::where('url', 'like', "%{$url}%")->first();
             if ($existingLink) {
@@ -292,6 +350,13 @@ class LinkController
 
                 return json(['code' => 1, 'msg' => '该链接已存在或正在审核中']);
             }
+            $custom_fields = [
+                'link_position' => $link_position,
+                'page_link' => $page_link,
+                'enable_monitor' => true,
+                'enable_auto_moderation' => true,
+                'enable_auto_report' => true,
+            ];
 
             try {
                 // 创建待审核的链接
@@ -303,13 +368,28 @@ class LinkController
                 $link->status = false; // 默认为未审核状态
                 $link->sort_order = 999; // 默认排序
                 $link->target = '_blank';
-                $link->redirect_type = 'goto';
+                $link->redirect_type = $redirect_type;
                 $link->show_url = $show_url;
                 $link->content = htmlspecialchars($full_description, ENT_QUOTES, 'UTF-8');
                 $link->email = $email;
                 $link->callback_url = $callback_url;
+                $link->custom_fields = json_encode($custom_fields);
 
                 // 构建内容信息 - 使用更结构化的格式
+                $linkPositionText = match ($link_position) {
+                    'homepage' => '首页',
+                    'link_page' => '友链页',
+                    'other_page' => '其他页面',
+                    default => '未知',
+                };
+
+                $redirectTypeText = match ($redirect_type) {
+                    'direct' => '直接跳转',
+                    'goto' => 'goto页面',
+                    'info' => 'info页面',
+                    default => '未知',
+                };
+
                 $note = [
                     '## 申请信息',
                     '',
@@ -321,6 +401,20 @@ class LinkController
                     '',
                     '**申请IP**: ' . $ipAddress,
                     '',
+                    '**友链放置位置**: ' . $linkPositionText,
+                    '',
+                ];
+
+                // 如果有页面链接，添加到备注中
+                if (!empty($page_link)) {
+                    $note[] = '**页面链接**: ' . htmlspecialchars($page_link, ENT_QUOTES, 'UTF-8');
+                    $note[] = '';
+                }
+
+                $note[] = '**跳转方式**: ' . $redirectTypeText;
+                $note[] = '';
+
+                $note = array_merge($note, [
                     '### 附加选项',
                     '',
                     '- 支持风屿互联协议: ' . ($supports_wind_connect ? '是' : '否'),
@@ -330,7 +424,7 @@ class LinkController
                     '### 审核记录',
                     '',
                     '> 待审核',
-                ];
+                ]);
 
                 $link->note = implode("\n", $note);
                 $link->save();
@@ -360,11 +454,15 @@ class LinkController
         // 统一选择视图并生成响应
         $viewName = PJAXHelper::getViewName('link/request', $isPjax);
 
+        // 生成面包屑导航
+        $breadcrumbs = BreadcrumbHelper::forLinks();
+
         return PJAXHelper::createResponse($request, $viewName, [
             'page_title' => blog_config('title', 'WindBlog', true) . ' - 申请友链',
             'site_info_json_config' => $this->getSiteInfoConfig(),
             'csrf' => CSRFHelper::oneTimeToken($request, '_link_request_token'),
             'sidebar' => $sidebar,
+            'breadcrumbs' => $breadcrumbs,
         ], null, 120, 'page');
     }
 

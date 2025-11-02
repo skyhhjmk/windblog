@@ -84,6 +84,20 @@ return [
                 'type' => 1,
                 'weight' => 930,
             ],
+            [
+                'title' => 'AI评论审核',
+                'key' => 'plugin\\admin\\app\\controller\\CommentModerationController',
+                'href' => '/app/admin/comment/moderation',
+                'type' => 1,
+                'weight' => 920,
+            ],
+            [
+                'title' => 'AI 摘要',
+                'key' => 'plugin\\admin\\app\\controller\\AiSummaryController@index',
+                'href' => '/app/admin/ai/summary',
+                'type' => 1,
+                'weight' => 920,
+            ],
         ],
     ],
     [
@@ -93,13 +107,6 @@ return [
         'weight' => 920,
         'type' => 0,
         'children' => [
-            [
-                'title' => 'AI 摘要',
-                'key' => 'plugin\\admin\\app\\controller\\AiSummaryController@index',
-                'href' => '/app/admin/ai/summary',
-                'type' => 1,
-                'weight' => 920,
-            ],
             [
                 'title' => 'AI 测试',
                 'key' => 'plugin\\admin\\app\\controller\\AiTestController@index',
@@ -225,29 +232,6 @@ return [
         ],
     ],
     [
-        'title' => '插件管理',
-        'key' => 'plugin',
-        'icon' => 'layui-icon-app',
-        'weight' => 600,
-        'type' => 0,
-        'children' => [
-            [
-                'title' => 'webman插件',
-                'key' => 'plugin\\admin\\app\\controller\\PluginController',
-                'href' => '/app/admin/plugin/index',
-                'weight' => 800,
-                'type' => 1,
-            ],
-            [
-                'title' => '插件',
-                'key' => 'plugin\\admin\\app\\controller\\PluginSystemController',
-                'href' => '/app/admin/plugin-system/index',
-                'weight' => 790,
-                'type' => 1,
-            ],
-        ],
-    ],
-    [
         'title' => '链接',
         'key' => 'link',
         'icon' => 'layui-icon-link',
@@ -260,6 +244,13 @@ return [
                 'href' => '/app/admin/link/index',
                 'type' => 1,
                 'weight' => 800,
+            ],
+            [
+                'title' => 'AI友链审核',
+                'key' => 'plugin\\admin\\app\\controller\\LinkModerationController',
+                'href' => '/app/admin/link/moderation',
+                'type' => 1,
+                'weight' => 790,
             ],
             [
                 'title' => 'FloLink',

@@ -17,6 +17,7 @@ use Twig\Error\LoaderError;
 use Twig\Error\RuntimeError;
 use Twig\Error\SyntaxError;
 use Twig\Loader\FilesystemLoader;
+use Twig\TwigFunction;
 use Webman\View;
 
 /**
@@ -88,6 +89,21 @@ class TwigTemplateService implements View
         $viewsKey = implode('|', $loaderPaths);
         if (!isset($views[$viewsKey])) {
             $views[$viewsKey] = new Environment(new FilesystemLoader($loaderPaths), config("{$configPrefix}view.options", []));
+
+            // 添加 config 函数到 Twig
+            $views[$viewsKey]->addFunction(new TwigFunction('config', function ($key, $default = null) {
+                return config($key, $default);
+            }));
+
+            // 添加 blog_config 函数到 Twig
+            $views[$viewsKey]->addFunction(new TwigFunction('blog_config', function ($key, $default = null, $init = true) {
+                try {
+                    return blog_config($key, $default, $init);
+                } catch (Throwable $e) {
+                    return $default;
+                }
+            }));
+
             $extension = config("{$configPrefix}view.extension");
             if ($extension) {
                 $extension($views[$viewsKey]);
@@ -97,40 +113,8 @@ class TwigTemplateService implements View
             $vars = array_merge((array) $request->_view_vars, $vars);
         }
 
-        // 过滤器：模板变量（需权限 template:filter.vars）
-        $vars = PluginService::apply_filters('template.vars_filter', [
-            'template' => $template,
-            'vars' => $vars,
-            'app' => $app,
-            'plugin' => $plugin,
-        ])['vars'] ?? $vars;
-
-        // 动作：渲染开始（需权限 template:action.render_start）
-        PluginService::do_action('template.render_start', [
-            'template' => $template,
-            'app' => $app,
-            'plugin' => $plugin,
-            'paths' => $loaderPaths,
-        ]);
-
         // 使用多路径缓存键进行渲染
         $html = $views[$viewsKey]->render("$template.$viewSuffix", $vars);
-
-        // 动作：渲染结束（需权限 template:action.render_end）
-        PluginService::do_action('template.render_end', [
-            'template' => $template,
-            'app' => $app,
-            'plugin' => $plugin,
-            'html_len' => strlen($html),
-        ]);
-
-        // 过滤器：HTML输出（需权限 template:filter.html）
-        $html = PluginService::apply_filters('template.html_filter', [
-            'template' => $template,
-            'html' => $html,
-            'app' => $app,
-            'plugin' => $plugin,
-        ])['html'] ?? $html;
 
         return $html;
     }

@@ -14,17 +14,17 @@
             {% endfor %}
         {% endif %}
     </div>
-    <div class="max-w-4xl mx-auto px-4">
-        <div class="bg-white rounded-xl shadow-lg overflow-hidden">
-            <div class="p-8">
-                <div class="text-center mb-8">
-                    <h1 class="text-3xl font-bold text-gray-800 mb-2">申请友链</h1>
-                    <p class="text-gray-600">填写以下信息申请友情链接，我们会尽快审核</p>
+    <div class="max-w-4xl mx-auto px-3 sm:px-4">
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden no-animation">
+            <div class="p-4 sm:p-6 md:p-8">
+                <div class="text-center mb-6 sm:mb-8">
+                    <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">申请友链</h1>
+                    <p class="text-sm sm:text-base text-gray-600">填写以下信息申请友情链接，我们会尽快审核</p>
                 </div>
 
                 <!-- 友链申请规则卡片 -->
                 <div id="link-rules"
-                     class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8 transition-all duration-300">
+                     class="bg-blue-50 border border-blue-200 rounded-lg p-4 sm:p-6 mb-6 sm:mb-8 transition-all duration-300">
                     <div class="flex items-start">
                         <i class="fas fa-info-circle text-blue-500 text-xl mr-3 mt-1"></i>
                         <div>
@@ -100,15 +100,16 @@
                 </div>
 
                 <!-- 本站信息卡片 -->
-                <div class="bg-gray-50 border border-gray-200 rounded-lg p-6 mb-8">
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 sm:p-6 mb-6 sm:mb-8">
                     <div class="flex items-start">
                         <i class="fas fa-home text-gray-500 text-xl mr-3 mt-1"></i>
                         <div class="flex-1">
                             <h2 class="text-lg font-semibold text-gray-800 mb-3">本站信息</h2>
                             <div class="space-y-2 text-gray-700 mb-4">
                                 <p><span class="font-medium">风屿互联协议级别：CAT3E</span></p>
-                                <p><span class="font-medium">网站名称：</span></p>
-                                <p><span class="font-medium">网站描述：</span></p>
+                                <p><span class="font-medium">网站名称：{{ blog_config('title', '') }}</span></p>
+                                <p><span class="font-medium">网站描述：{{ blog_config('description', '') }}</span></p>
+                                <p><span class="font-medium">Favicon：{{ blog_config('favicon', '') }}</span></p>
                             </div>
                             <button id="toggleConfig"
                                     class="flex items-center text-blue-600 hover:text-blue-800 font-medium">
@@ -132,22 +133,22 @@
                 </div>
 
                 <!-- CAT3* 快速互联 -->
-                <div class="border border-green-200 rounded-lg p-4 mb-8 bg-green-50">
+                <div class="border border-green-200 rounded-lg p-3 sm:p-4 mb-6 sm:mb-8 bg-green-50">
                     <div class="flex items-start">
-                        <i class="fas fa-plug text-green-500 text-xl mr-3 mt-1"></i>
-                        <div class="flex-1">
-                            <h3 class="text-lg font-semibold text-green-800 mb-2">快速互联（CAT3*）</h3>
-                            <p class="text-gray-600 text-sm mb-3">
+                        <i class="fas fa-plug text-green-500 text-lg sm:text-xl mr-2 sm:mr-3 mt-1 flex-shrink-0"></i>
+                        <div class="flex-1 min-w-0">
+                            <h3 class="text-base sm:text-lg font-semibold text-green-800 mb-2">快速互联（CAT3*）</h3>
+                            <p class="text-gray-600 text-xs sm:text-sm mb-3">
                                 如果您的站点支持风屿互联协议，请填写其接收 API（peer_api），系统将自动在您的站点创建友链记录。
                             </p>
-                            <div class="flex flex-col sm:flex-row gap-3">
+                            <div class="flex flex-col sm:flex-row gap-2 sm:gap-3">
                                 <input type="url"
                                        id="peer_api"
-                                       class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-200"
-                                       placeholder="https://peer.example.com/link/connect/receive?key=xxx"
+                                       class="flex-1 min-w-0 px-3 sm:px-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-200"
+                                       placeholder="https://peer.example.com/..."
                                        pattern="https?://.+">
                                 <button id="quickConnectBtn"
-                                        class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors duration-200 relative overflow-hidden">
+                                        class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 relative overflow-hidden whitespace-nowrap flex-shrink-0">
                                     <span id="quickConnectBtnText">一键互联</span>
                                     <span id="quickConnectBtnLoader"
                                           class="hidden absolute inset-0 flex items-center justify-center bg-green-700">
@@ -233,6 +234,105 @@
                                name="contact"
                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                                placeholder="微信/QQ等联系方式（可选）">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">友链放置位置 <span
+                                class="text-red-500">*</span></label>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-2">
+                            <label class="link-position-option">
+                                <input type="radio"
+                                       name="link_position"
+                                       value="homepage"
+                                       class="peer hidden"
+                                       checked
+                                       required>
+                                <div
+                                    class="cursor-pointer px-4 py-3 border-2 border-gray-300 rounded-lg text-center transition-all duration-200 peer-checked:border-blue-500 peer-checked:bg-blue-50 peer-checked:text-blue-700 hover:border-blue-400 hover:bg-blue-25">
+                                    <i class="fas fa-home mb-1"></i>
+                                    <div class="font-medium">首页</div>
+                                </div>
+                            </label>
+                            <label class="link-position-option">
+                                <input type="radio"
+                                       name="link_position"
+                                       value="link_page"
+                                       class="peer hidden">
+                                <div
+                                    class="cursor-pointer px-4 py-3 border-2 border-gray-300 rounded-lg text-center transition-all duration-200 peer-checked:border-blue-500 peer-checked:bg-blue-50 peer-checked:text-blue-700 hover:border-blue-400 hover:bg-blue-25">
+                                    <i class="fas fa-link mb-1"></i>
+                                    <div class="font-medium">友链页</div>
+                                </div>
+                            </label>
+                            <label class="link-position-option">
+                                <input type="radio"
+                                       name="link_position"
+                                       value="other_page"
+                                       class="peer hidden">
+                                <div
+                                    class="cursor-pointer px-4 py-3 border-2 border-gray-300 rounded-lg text-center transition-all duration-200 peer-checked:border-blue-500 peer-checked:bg-blue-50 peer-checked:text-blue-700 hover:border-blue-400 hover:bg-blue-25">
+                                    <i class="fas fa-file-alt mb-1"></i>
+                                    <div class="font-medium">其他页面</div>
+                                </div>
+                            </label>
+                        </div>
+                        <p class="text-xs text-gray-500 mb-3">您将本站的友链放置于您站点的哪个页面？</p>
+                        <div id="page_link_container" class="hidden">
+                            <input type="url"
+                                   id="page_link"
+                                   name="page_link"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                                   placeholder="为便于自动审核,请填写此内容">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">跳转方式 <span class="text-red-500">*</span></label>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-2">
+                            <label class="redirect-type-option">
+                                <input type="radio"
+                                       name="redirect_type"
+                                       value="direct"
+                                       class="peer hidden"
+                                       required>
+                                <div
+                                    class="cursor-pointer px-4 py-3 border-2 border-gray-300 rounded-lg text-center transition-all duration-200 peer-checked:border-blue-500 peer-checked:bg-blue-50 peer-checked:text-blue-700 hover:border-blue-400 hover:bg-blue-25">
+                                    <i class="fas fa-bolt mb-1"></i>
+                                    <div class="font-medium">直接跳转</div>
+                                    <div class="text-xs text-gray-500 mt-1">(需人工审核)</div>
+                                </div>
+                            </label>
+                            <label class="redirect-type-option">
+                                <input type="radio"
+                                       name="redirect_type"
+                                       value="goto"
+                                       class="peer hidden"
+                                       checked>
+                                <div
+                                    class="cursor-pointer px-4 py-3 border-2 border-gray-300 rounded-lg text-center transition-all duration-200 peer-checked:border-blue-500 peer-checked:bg-blue-50 peer-checked:text-blue-700 hover:border-blue-400 hover:bg-blue-25">
+                                    <i class="fas fa-arrow-right mb-1"></i>
+                                    <div class="font-medium">goto页面</div>
+                                    <div class="text-xs text-gray-500 mt-1">&nbsp;</div>
+                                </div>
+                            </label>
+                            <label class="redirect-type-option">
+                                <input type="radio"
+                                       name="redirect_type"
+                                       value="info"
+                                       class="peer hidden">
+                                <div
+                                    class="cursor-pointer px-4 py-3 border-2 border-gray-300 rounded-lg text-center transition-all duration-200 peer-checked:border-blue-500 peer-checked:bg-blue-50 peer-checked:text-blue-700 hover:border-blue-400 hover:bg-blue-25">
+                                    <i class="fas fa-info-circle mb-1"></i>
+                                    <div class="font-medium">info页面</div>
+                                    <div class="text-xs text-gray-500 mt-1">(显示详细信息)</div>
+                                </div>
+                            </label>
+                        </div>
+                        <div id="redirect_type_hint"
+                             class="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg p-3">
+                            <i class="fas fa-arrow-right text-blue-500 mr-1"></i>
+                            使用goto中间页询问用户是否跳转
+                        </div>
                     </div>
 
                     <div style="position:absolute; left:-9999px; top:-9999px;">
@@ -529,6 +629,59 @@
     </script>
 
     <script>
+        // 友链放置位置选项交互逻辑
+        (function () {
+            const linkPositionRadios = document.querySelectorAll('input[name="link_position"]');
+            const pageLinkContainer = document.getElementById('page_link_container');
+            const pageLinkInput = document.getElementById('page_link');
+
+            if (!linkPositionRadios.length || !pageLinkContainer || !pageLinkInput) return;
+
+            // 监听单选按钮变化
+            linkPositionRadios.forEach(radio => {
+                radio.addEventListener('change', function () {
+                    if (this.value === 'link_page' || this.value === 'other_page') {
+                        // 显示页面链接输入框并设为必填
+                        pageLinkContainer.classList.remove('hidden');
+                        pageLinkInput.setAttribute('required', 'required');
+                    } else {
+                        // 隐藏页面链接输入框并取消必填
+                        pageLinkContainer.classList.add('hidden');
+                        pageLinkInput.removeAttribute('required');
+                        pageLinkInput.value = '';
+                    }
+                });
+            });
+        })();
+    </script>
+
+    <script>
+        // 跳转方式选项交互逻辑
+        (function () {
+            const redirectTypeRadios = document.querySelectorAll('input[name="redirect_type"]');
+            const redirectTypeHint = document.getElementById('redirect_type_hint');
+
+            if (!redirectTypeRadios.length || !redirectTypeHint) return;
+
+            // 提示文本映射
+            const hintMap = {
+                'direct': '<i class="fas fa-bolt text-yellow-500 mr-1"></i>不询问用户直接跳转',
+                'goto': '<i class="fas fa-arrow-right text-blue-500 mr-1"></i>使用goto中间页询问用户是否跳转',
+                'info': '<i class="fas fa-info-circle text-green-500 mr-1"></i>显示友链的详细信息，用户选择是否跳转'
+            };
+
+            // 监听单选按钮变化
+            redirectTypeRadios.forEach(radio => {
+                radio.addEventListener('change', function () {
+                    if (hintMap[this.value]) {
+                        redirectTypeHint.innerHTML = hintMap[this.value];
+                    }
+                });
+            });
+        })();
+    </script>
+
+    <script>
         // 表单提交处理
         (function () {
             const form = document.getElementById('linkRequestForm');
@@ -594,11 +747,9 @@
                             document.dispatchEvent(new CustomEvent('pjax:sidebarReady'));
                         } catch (_) {
                         }
-                    } else {
-                        c.innerHTML = t.innerHTML || '';
                     }
+                    c.innerHTML = t.innerHTML || '';
                 }
-                c.innerHTML = t.innerHTML || '';
             }
 
             injectSidebar();

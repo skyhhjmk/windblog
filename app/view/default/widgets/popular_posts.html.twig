@@ -1,0 +1,20 @@
+{% extends "widgets/base.html.twig" %}
+
+{% block widget_content %}
+    {% if popular_posts is defined and popular_posts is not empty %}
+        <div class="space-y-3">
+            {% for post in popular_posts %}
+                <a href="/post/{{ post.slug }}.html" class="block group">
+                    <div class="text-sm font-medium text-gray-800 group-hover:text-blue-600 transition-colors mb-1">
+                        {{ post.title }}
+                    </div>
+                    <div class="text-xs text-gray-500">
+                        浏览量: {{ post.views|default(0) }}
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-gray-500 text-sm italic">暂无热门文章</div>
+    {% endif %}
+{% endblock %}

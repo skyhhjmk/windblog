@@ -7,7 +7,6 @@ use app\service\SidebarService;
 use support\Request;
 use support\Response;
 use Throwable;
-use Webman\RateLimiter\Annotation\RateLimiter;
 
 /**
  * 动画演示页面控制器
@@ -27,7 +26,6 @@ class AnimationDemoController
      * @return Response
      * @throws Throwable
      */
-    #[RateLimiter(limit: 5, ttl: 3)]
     public function index(Request $request): Response
     {
         // 使用PJAXHelper检测是否为PJAX请求

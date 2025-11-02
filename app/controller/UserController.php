@@ -2,6 +2,7 @@
 
 namespace app\controller;
 
+use app\helper\BreadcrumbHelper;
 use app\model\User;
 use app\model\UserOAuthBinding;
 use app\service\MQService;
@@ -638,10 +639,14 @@ class UserController
         $bindings = $user->oauthBindings;
         $supportedProviders = UserOAuthBinding::getSupportedProviders();
 
+        // 生成面包屑导航
+        $breadcrumbs = BreadcrumbHelper::forUserCenter('用户中心');
+
         return view('user/center', [
             'user' => $user,
             'bindings' => $bindings,
             'supportedProviders' => $supportedProviders,
+            'breadcrumbs' => $breadcrumbs,
         ]);
     }
 

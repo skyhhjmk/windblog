@@ -25,7 +25,6 @@ use plugin\admin\app\controller\LinkController;
 use plugin\admin\app\controller\MailController;
 use plugin\admin\app\controller\MediaController;
 use plugin\admin\app\controller\PerformanceController;
-use plugin\admin\app\controller\PluginSystemController;
 use plugin\admin\app\controller\PostsController;
 use plugin\admin\app\controller\SidebarController;
 use plugin\admin\app\controller\StaticCacheController;
@@ -55,6 +54,8 @@ Route::group('/app/admin', function () {
         Route::get('/view/{id}', [LinkController::class, 'view']);
         Route::get('/audit/{id}', [LinkController::class, 'audit']);
         Route::post('/detectSite', [LinkController::class, 'detectSite']);
+        Route::post('/autoAudit/{id}', [LinkController::class, 'autoAudit']);
+        Route::post('/monitor', [LinkController::class, 'monitor']);
         Route::post('/batchApprove/{ids}', [LinkController::class, 'batchApprove']);
         Route::post('/batchReject/{ids}', [LinkController::class, 'batchReject']);
         Route::delete('/remove/{id}', [LinkController::class, 'remove']);
@@ -64,6 +65,19 @@ Route::group('/app/admin', function () {
         Route::post('/batchRestore/{ids}', [LinkController::class, 'batchRestore']);
         Route::delete('/batchForceDelete/{ids}', [LinkController::class, 'batchForceDelete']);
         Route::get('/get/{id}', [LinkController::class, 'get']);
+
+        // AI审核管理
+        Route::group('/moderation', function () {
+            Route::get('', [plugin\admin\app\controller\LinkModerationController::class, 'index']);
+            Route::get('/', [plugin\admin\app\controller\LinkModerationController::class, 'index']);
+            Route::get('/index', [plugin\admin\app\controller\LinkModerationController::class, 'index']);
+            Route::get('/stats', [plugin\admin\app\controller\LinkModerationController::class, 'stats']);
+            Route::get('/logs', [plugin\admin\app\controller\LinkModerationController::class, 'logs']);
+            Route::post('/triggerAudit', [plugin\admin\app\controller\LinkModerationController::class, 'triggerAudit']);
+            Route::post('/batchRemoderate', [plugin\admin\app\controller\LinkModerationController::class, 'batchRemoderate']);
+            Route::post('/batchAutoAudit', [plugin\admin\app\controller\LinkModerationController::class, 'batchAutoAudit']);
+            Route::any('/config', [plugin\admin\app\controller\LinkModerationController::class, 'config']);
+        });
     });
 
     // FloLink 浮动链接路由
@@ -145,6 +159,17 @@ Route::group('/app/admin', function () {
         Route::post('/moderate', [CommentController::class, 'moderate']);
         Route::post('/delete', [CommentController::class, 'delete']);
         Route::post('/restore', [CommentController::class, 'restore']);
+
+        // AI审核管理
+        Route::group('/moderation', function () {
+            Route::get('', [plugin\admin\app\controller\CommentModerationController::class, 'index']);
+            Route::get('/', [plugin\admin\app\controller\CommentModerationController::class, 'index']);
+            Route::get('/index', [plugin\admin\app\controller\CommentModerationController::class, 'index']);
+            Route::get('/stats', [plugin\admin\app\controller\CommentModerationController::class, 'stats']);
+            Route::get('/logs', [plugin\admin\app\controller\CommentModerationController::class, 'logs']);
+            Route::post('/batch-remoderate', [plugin\admin\app\controller\CommentModerationController::class, 'batchRemoderate']);
+            Route::any('/config', [plugin\admin\app\controller\CommentModerationController::class, 'config']);
+        });
     });
 
     // Index 路由
@@ -169,9 +194,15 @@ Route::group('/app/admin', function () {
             Route::get('', [AiSummaryController::class, 'index']);
             Route::get('/', [AiSummaryController::class, 'index']);
             Route::get('/index', [AiSummaryController::class, 'index']);
+            Route::get('/articles', [AiSummaryController::class, 'articles']);
             Route::get('/stats', [AiSummaryController::class, 'stats']);
+            Route::get('/status', [AiSummaryController::class, 'getStatus']);
             Route::post('/set-meta', [AiSummaryController::class, 'setMeta']);
             Route::post('/enqueue', [AiSummaryController::class, 'enqueue']);
+            Route::post('/reset', [AiSummaryController::class, 'resetStuckTask']);
+            Route::post('/reset-all-stuck', [AiSummaryController::class, 'resetAllStuckTasks']);
+            Route::get('/prompt', [AiSummaryController::class, 'promptGet']);
+            Route::post('/prompt-save', [AiSummaryController::class, 'promptSave']);
         });
 
         // AI 测试
@@ -312,19 +343,6 @@ Route::group('/app/admin', function () {
         Route::post('/strategies/scan-posts', [StaticCacheController::class, 'strategiesScanPosts']);
     });
 
-    // 插件系统 路由（独立插件管理）
-    Route::group('/plugin-system', function () {
-        Route::get('', [PluginSystemController::class, 'index']);
-        Route::get('/', [PluginSystemController::class, 'index']);
-        Route::get('/index', [PluginSystemController::class, 'index']);
-
-        Route::get('/list', [PluginSystemController::class, 'list']);
-        Route::post('/enable', [PluginSystemController::class, 'enable']);
-        Route::post('/disable', [PluginSystemController::class, 'disable']);
-        Route::post('/uninstall', [PluginSystemController::class, 'uninstall']);
-        Route::get('/plugin-menus', [PluginSystemController::class, 'pluginMenus']);
-    });
-
     // 邮件 路由
     Route::group('/mail', function () {
         Route::get('', [MailController::class, 'index']);
@@ -374,9 +392,6 @@ Route::group('/app/admin', function () {
         Route::post('/delete', [plugin\admin\app\controller\OAuthController::class, 'delete']);
         Route::post('/toggle', [plugin\admin\app\controller\OAuthController::class, 'toggle']);
     });
-
-    // 插件沙箱路由
-    Route::any('/pluginsandbox[/{slug}[/{action}]]', [plugin\admin\app\controller\PluginSystemController::class, 'handlePluginRequest']);
 });
 
 Route::fallback(function (Request $request) {

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace app\service\ai;
 
+use Generator;
+
 /**
  * AI提供者抽象基类
  * 提供通用实现，减少各Provider的重复代码
@@ -137,10 +139,10 @@ abstract class BaseAiProvider implements AiProviderInterface
      * 默认流式调用实现（子类可以覆盖）
      * 默认实现不支持流式，返回 false
      */
-    public function callStream(string $task, array $params = [], array $options = []): \Generator|false
+    public function callStream(string $task, array $params = [], array $options = []): Generator|false
     {
         // 默认不支持流式输出，返回 false
         // 子类如果支持流式输出，需要覆盖此方法
-        return false;
+        yield from [];
     }
 }

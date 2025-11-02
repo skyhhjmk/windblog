@@ -558,6 +558,268 @@ article .hover-rotate:hover,
   box-shadow: 0 0 10px rgba(59, 130, 246, 0.6), 0 0 4px rgba(96, 165, 250, 0.6);
 }
 
+/* 15. PJAX 加载动画遮罩 */
+
+.pjax-loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 999999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.4s ease-in, visibility 0.4s ease-in, backdrop-filter 0.4s ease-in;
+    pointer-events: none;
+    margin: 0;
+    padding: 0;
+    transform: none;
+}
+
+.pjax-loading-overlay.active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+/* 加载内容容器 */
+.pjax-loading-content {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+}
+
+/* 几何形状加载器 */
+.geometric-loader {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto;
+    animation: rotate360 3s linear infinite;
+}
+
+.geometric-shape {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+}
+
+.geometric-shape.shape-1 {
+    top: 0;
+    left: 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    animation: pulse-shape 1.5s ease-in-out infinite;
+}
+
+.geometric-shape.shape-2 {
+    top: 0;
+    right: 0;
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    animation: pulse-shape 1.5s ease-in-out 0.2s infinite;
+}
+
+.geometric-shape.shape-3 {
+    bottom: 0;
+    left: 0;
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    animation: pulse-shape 1.5s ease-in-out 0.4s infinite;
+}
+
+.geometric-shape.shape-4 {
+    bottom: 0;
+    right: 0;
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    animation: pulse-shape 1.5s ease-in-out 0.6s infinite;
+}
+
+@keyframes pulse-shape {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(0.8);
+        opacity: 0.6;
+    }
+}
+
+@keyframes rotate360 {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* 加载文字动画 */
+.loading-text {
+    margin-top: 40px;
+    font-size: 32px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 8px;
+    color: #667eea; /* 降级方案，兼容不支持背景裁剪的浏览器 */
+}
+
+.loading-dot {
+    display: inline-block;
+    animation: bounce-dot 1.4s ease-in-out infinite;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+.loading-dot:nth-child(1) {
+    animation-delay: 0s;
+}
+
+.loading-dot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.loading-dot:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes bounce-dot {
+    0%, 60%, 100% {
+        transform: translateY(0);
+    }
+    30% {
+        transform: translateY(-20px);
+    }
+}
+
+/* 背景粒子动画 */
+.particles-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: 1;
+    pointer-events: none;
+}
+
+.particle {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    opacity: 0.3;
+    animation: float-particle 4s ease-in-out infinite;
+}
+
+.particle:nth-child(1) {
+    left: 10%;
+    top: 20%;
+    animation-delay: 0s;
+    animation-duration: 3s;
+}
+
+.particle:nth-child(2) {
+    left: 20%;
+    top: 80%;
+    animation-delay: 0.5s;
+    animation-duration: 4s;
+}
+
+.particle:nth-child(3) {
+    left: 30%;
+    top: 40%;
+    animation-delay: 1s;
+    animation-duration: 3.5s;
+}
+
+.particle:nth-child(4) {
+    left: 50%;
+    top: 60%;
+    animation-delay: 1.5s;
+    animation-duration: 4.5s;
+}
+
+.particle:nth-child(5) {
+    left: 60%;
+    top: 30%;
+    animation-delay: 2s;
+    animation-duration: 3.2s;
+}
+
+.particle:nth-child(6) {
+    left: 70%;
+    top: 70%;
+    animation-delay: 2.5s;
+    animation-duration: 4.2s;
+}
+
+.particle:nth-child(7) {
+    left: 80%;
+    top: 50%;
+    animation-delay: 3s;
+    animation-duration: 3.8s;
+}
+
+.particle:nth-child(8) {
+    left: 90%;
+    top: 20%;
+    animation-delay: 3.5s;
+    animation-duration: 4.8s;
+}
+
+@keyframes float-particle {
+    0%, 100% {
+        transform: translateY(0) translateX(0) scale(1);
+        opacity: 0.3;
+    }
+    25% {
+        transform: translateY(-30px) translateX(10px) scale(1.2);
+        opacity: 0.5;
+    }
+    50% {
+        transform: translateY(-60px) translateX(-10px) scale(1);
+        opacity: 0.2;
+    }
+    75% {
+        transform: translateY(-30px) translateX(15px) scale(1.3);
+        opacity: 0.4;
+    }
+}
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+    .geometric-loader {
+        width: 90px;
+        height: 90px;
+    }
+
+    .geometric-shape {
+        width: 30px;
+        height: 30px;
+    }
+
+    .loading-text {
+        font-size: 24px;
+        letter-spacing: 6px;
+    }
+
+    .particle {
+        width: 6px;
+        height: 6px;
+    }
+}
+
 /* 响应式调整 */
 
 @media (max-width: 640px) {
@@ -593,4 +855,19 @@ article .hover-rotate:hover,
   header {
     transform: translateY(0) !important;
   }
+
+    /* 简化加载遮罩动画 */
+    .pjax-loading-overlay {
+        backdrop-filter: none !important;
+    }
+
+    .geometric-loader,
+    .particles-container {
+        display: none !important;
+    }
+
+    .loading-text {
+        animation: none !important;
+        font-size: 18px !important;
+    }
 }

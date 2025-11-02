@@ -1,0 +1,17 @@
+{% extends "widgets/base.html.twig" %}
+
+{% block widget_content %}
+    {% if random_posts is defined and random_posts is not empty %}
+        <div class="space-y-3">
+            {% for post in random_posts %}
+                <a href="/post/{{ post.slug }}.html" class="block group">
+                    <div class="text-sm font-medium text-gray-800 group-hover:text-blue-600 transition-colors">
+                        {{ post.title }}
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-gray-500 text-sm italic">暂无文章</div>
+    {% endif %}
+{% endblock %}

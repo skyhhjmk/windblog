@@ -109,6 +109,8 @@ class OpenAiProvider extends BaseAiProvider
                     return $this->doChat($params, $options);
                 case 'generate':
                     return $this->doGenerate($params, $options);
+                case 'moderate_comment':
+                    return $this->doModerateComment($params, $options);
                 default:
                     return ['ok' => false, 'error' => 'Unsupported task: ' . $task];
             }
@@ -124,7 +126,7 @@ class OpenAiProvider extends BaseAiProvider
 
     public function getSupportedTasks(): array
     {
-        return ['summarize', 'translate', 'chat', 'generate'];
+        return ['summarize', 'translate', 'chat', 'generate', 'moderate_comment'];
     }
 
     public function getConfigFields(): array
@@ -221,12 +223,19 @@ class OpenAiProvider extends BaseAiProvider
     protected function doSummarize(array $params, array $options): array
     {
         $content = (string) ($params['content'] ?? '');
-        $prompt = $options['prompt'] ?? '请为以下内容生成一个简洁的摘要：';
+        $customPrompt = (string) ($params['prompt'] ?? '');
 
-        $messages = [
-            ['role' => 'system', 'content' => '你是一个专业的内容摘要助手。'],
-            ['role' => 'user', 'content' => $prompt . "\n\n" . $content],
-        ];
+        // 如果有自定义提示词，使用自定义提示词，否则使用默认提示词
+        if (!empty($customPrompt)) {
+            $messages = [
+                ['role' => 'user', 'content' => $customPrompt . "\n\n" . $content],
+            ];
+        } else {
+            $messages = [
+                ['role' => 'system', 'content' => '你是一个专业的内容摘要助手。'],
+                ['role' => 'user', 'content' => '请为以下内容生成一个简洁的摘要：' . "\n\n" . $content],
+            ];
+        }
 
         return $this->callChatCompletion($messages, $options);
     }
@@ -289,6 +298,64 @@ class OpenAiProvider extends BaseAiProvider
         ];
 
         return $this->callChatCompletion($messages, $options);
+    }
+
+    protected function doModerateComment(array $params, array $options): array
+    {
+        // 提供者保持通用：优先使用调用方传入的 messages
+        $messages = $params['messages'] ?? null;
+        if (!$messages) {
+            // 兜底：无 messages 时，直接用纯内容作为输入
+            $content = (string) ($params['content'] ?? '');
+            $messages = [['role' => 'user', 'content' => $content]];
+        }
+
+        $response = $this->callChatCompletion($messages, $options);
+
+        if (!$response['ok']) {
+            return $response;
+        }
+
+        // 解析JSON结果
+        try {
+            $resultText = trim($response['result']);
+
+            // 尝试提取JSON（防止AI返回了额外的文本）
+            if (preg_match('/\{[\s\S]*\}/', $resultText, $matches)) {
+                $resultText = $matches[0];
+            }
+
+            $moderationResult = json_decode($resultText, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                Log::error('Failed to parse moderation result as JSON', [
+                    'result' => $resultText,
+                    'error' => json_last_error_msg(),
+                ]);
+
+                // 回退到默认结果
+                $moderationResult = [
+                    'passed' => true,
+                    'result' => 'approved',
+                    'reason' => 'AI返回结果解析失败，默认通过',
+                    'confidence' => 0.0,
+                    'categories' => [],
+                ];
+            }
+
+            return [
+                'ok' => true,
+                'result' => $moderationResult,
+                'usage' => $response['usage'] ?? [],
+            ];
+        } catch (\Throwable $e) {
+            Log::error('Error processing moderation result: ' . $e->getMessage());
+
+            return [
+                'ok' => false,
+                'error' => 'Failed to process moderation result: ' . $e->getMessage(),
+            ];
+        }
     }
 
     protected function callChatCompletion(array $messages, array $options): array

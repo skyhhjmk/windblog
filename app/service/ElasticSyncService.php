@@ -121,8 +121,6 @@ class ElasticSyncService
             'author' => self::pickAuthor($post),
         ];
 
-        // 过滤器：允许插件调整索引payload（需权限 search:filter.index_post_payload）
-        $payload = PluginService::apply_filters('es.index_post_payload_filter', $payload);
         if ($created) {
             $payload['created_at'] = $created;
         }
@@ -231,11 +229,6 @@ class ElasticSyncService
             'tag_description' => (string) ($tag->description ?? ''),
         ];
 
-        // 过滤器：索引标签payload（需权限 search:filter.index_tag_payload）
-        $body = PluginService::apply_filters('es.index_tag_payload_filter', $body);
-        // 动作：开始索引标签（需权限 search:action.index_tag_start）
-        PluginService::do_action('elastic.index_tag_start', ['id' => (int) $tag->id]);
-
         try {
             $client = ElasticService::client();
             $params = [
@@ -245,9 +238,6 @@ class ElasticSyncService
             ];
             $response = $client->index($params);
             redis()->lPush('es:sync:logs', utc_now_string('Y-m-d H:i:s') . ' [ES] indexTag id=' . (int) $tag->id . ' name=' . (string) $tag->name . ' status=200');
-
-            // 动作：完成索引标签（需权限 search:action.index_tag_done）
-            PluginService::do_action('elastic.index_tag_done', ['id' => (int) $tag->id]);
 
             return true;
         } catch (Throwable $e) {
@@ -271,11 +261,6 @@ class ElasticSyncService
             'category_description' => (string) ($category->description ?? ''),
         ];
 
-        // 过滤器：索引分类payload（需权限 search:filter.index_category_payload）
-        $body = PluginService::apply_filters('es.index_category_payload_filter', $body);
-        // 动作：开始索引分类（需权限 search:action.index_category_start）
-        PluginService::do_action('elastic.index_category_start', ['id' => (int) $category->id]);
-
         try {
             $client = ElasticService::client();
             $params = [
@@ -285,9 +270,6 @@ class ElasticSyncService
             ];
             $response = $client->index($params);
             redis()->lPush('es:sync:logs', date('Y-m-d H:i:s') . ' [ES] indexCategory id=' . (int) $category->id . ' name=' . (string) $category->name . ' status=200');
-
-            // 动作：完成索引分类（需权限 search:action.index_category_done）
-            PluginService::do_action('elastic.index_category_done', ['id' => (int) $category->id]);
 
             return true;
         } catch (Throwable $e) {
@@ -304,15 +286,12 @@ class ElasticSyncService
     {
         $cfg = ElasticService::getConfigProxy();
         try {
-            PluginService::do_action('elastic.delete_post_start', ['id' => $id]);
-
             $client = ElasticService::client();
             $params = [
                 'index' => $cfg['index'],
                 'id' => $id,
             ];
             $response = $client->delete($params);
-            PluginService::do_action('elastic.delete_post_done', ['id' => $id]);
             $resp = ['ok' => true, 'status' => 200, 'body' => $response->asArray()];
         } catch (Throwable $e) {
             $resp = ['ok' => false, 'status' => 0, 'error' => $e->getMessage()];
@@ -335,15 +314,12 @@ class ElasticSyncService
     {
         $cfg = ElasticService::getConfigProxy();
         try {
-            PluginService::do_action('elastic.delete_tag_start', ['id' => $id]);
-
             $client = ElasticService::client();
             $params = [
                 'index' => $cfg['index'],
                 'id' => 'tag_' . $id,
             ];
             $response = $client->delete($params);
-            PluginService::do_action('elastic.delete_tag_done', ['id' => $id]);
 
             return true;
         } catch (Throwable $e) {
@@ -360,15 +336,12 @@ class ElasticSyncService
     {
         $cfg = ElasticService::getConfigProxy();
         try {
-            PluginService::do_action('elastic.delete_category_start', ['id' => $id]);
-
             $client = ElasticService::client();
             $params = [
                 'index' => $cfg['index'],
                 'id' => 'category_' . $id,
             ];
             $response = $client->delete($params);
-            PluginService::do_action('elastic.delete_category_done', ['id' => $id]);
 
             return true;
         } catch (Throwable $e) {

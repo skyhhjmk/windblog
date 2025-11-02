@@ -14,20 +14,24 @@
             {% endfor %}
         {% endif %}
     </div>
-    <div class="max-w-full mx-auto px-4">
+    <div class="max-w-full mx-auto px-0">
+        {# 面包屑导航 #}
+        {% include 'components/breadcrumb.html.twig' %}
+
         <!-- 页面标题区域 -->
-        <div class="text-center mb-12 fade-in-on-scroll" data-animation-delay="0">
-            <h1 class="text-4xl md:text-5xl font-bold text-gray-800 mb-4">{{ page_title|default('WindBlog') }}</h1>
-            <p class="text-gray-600 text-lg md:text-xl">欢迎来到链接广场，这里汇聚了优质的网站资源</p>
-            <div class="mt-4 flex items-center justify-center gap-3">
+        <div class="text-center mb-8 sm:mb-12 fade-in-on-scroll no-animation px-2" data-animation-delay="0">
+            <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-800 mb-3 sm:mb-4">{{ page_title|default('WindBlog') }}</h1>
+            <p class="text-gray-600 text-sm sm:text-lg md:text-xl px-2">欢迎来到链接广场，这里汇聚了优质的网站资源</p>
+            <div class="mt-3 sm:mt-4 flex flex-col xs:flex-row items-center justify-center gap-2 sm:gap-3 px-2">
                 <a href="/link/request"
-                   class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200 hover-lift accelerated">
-                    <i class="fas fa-link mr-2"></i>
+                   class="inline-flex items-center px-3 sm:px-4 py-1.5 sm:py-2 bg-blue-600 text-white text-xs sm:text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200 hover-lift accelerated whitespace-nowrap">
+                    <i class="fas fa-link mr-1.5 sm:mr-2"></i>
                     申请友链
                 </a>
-                <div class="inline-flex items-center text-sm">
-                    <label for="linkSortSelect" class="mr-2 text-gray-600">排序</label>
-                    <select id="linkSortSelect" class="px-2 py-1 border border-gray-300 rounded">
+                <div class="inline-flex items-center text-xs sm:text-sm whitespace-nowrap">
+                    <label for="linkSortSelect" class="mr-1.5 sm:mr-2 text-gray-600">排序</label>
+                    <select id="linkSortSelect"
+                            class="px-1.5 sm:px-2 py-1 border border-gray-300 rounded text-xs sm:text-sm min-w-0">
                         <option value="default">默认</option>
                         <option value="protocol">协议级别</option>
                         <option value="score">审核评分</option>
@@ -38,29 +42,29 @@
 
         <!-- 链接列表 -->
         {% if links|length > 0 %}
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {% for link in links %}
                     <div
-                        class="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 group hover-lift accelerated fade-in-on-scroll"
+                        class="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 group hover-lift accelerated fade-in-on-scroll no-animation"
                         data-protocol="{{ link.custom_fields.protocol ?? link.custom_fields.protocol_level ?? '' }}"
                         data-score="{{ (link.custom_fields.auto_audit.score ?? 0) }}"
                         data-animation-delay="{{ loop.index0 * 0.05 }}">
-                        <div class="p-6">
+                        <div class="p-4 sm:p-6">
                             <div class="flex items-start mb-4">
                                 <div
-                                    class="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16 flex items-center justify-center mr-4 transition-all duration-300 group-hover:bg-blue-100">
-                                    <i class="fas fa-link text-gray-500 text-xl group-hover:text-blue-500"></i>
+                                    class="bg-gray-200 border-2 border-dashed rounded-xl w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center mr-3 sm:mr-4 flex-shrink-0 transition-all duration-300 group-hover:bg-blue-100">
+                                    <i class="fas fa-link text-gray-500 text-lg sm:text-xl group-hover:text-blue-500"></i>
                                 </div>
-                                <div>
-                                    <h2 class="text-xl font-bold text-gray-800 mb-1 group-hover:text-blue-600 transition-colors duration-200">
+                                <div class="flex-1 min-w-0">
+                                    <h2 class="text-lg sm:text-xl font-bold text-gray-800 mb-1 group-hover:text-blue-600 transition-colors duration-200 truncate">
                                         <a href="{% if link.redirect_type == 'info' %}/link/info/{{ link.id }}{% else %}/link/goto/{{ link.id }}{% endif %}"
                                            {% if link.redirect_type == 'direct' %}target="{{ link.target }}"{% endif %}
                                            class="block hover-lift accelerated">
                                             {{ link.name|length > 20 ? link.name|slice(0, 20) ~ '...' : link.name }}
                                         </a>
                                     </h2>
-                                    <div class="flex items-center text-gray-500 text-xs gap-2 flex-wrap">
-                                    <span class="inline-flex items-center">
+                                    <div class="flex items-center text-gray-500 text-xs gap-1.5 sm:gap-2 flex-wrap">
+                                    <span class="inline-flex items-center whitespace-nowrap">
                                         <i class="far fa-calendar-alt mr-1"></i>
                                         {{ link.created_at|date('Y-m-d') }}
                                     </span>
@@ -68,12 +72,12 @@
                                         {% set _peer_status = link.custom_fields.peer_status ?? (link.status ? 'established' : (link.is_pending ? 'pending' : '')) %}
                                         {% if _protocol %}
                                             <span
-                                                class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-purple-100 text-purple-700">协议 {{ _protocol }}</span>
+                                                class="px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] font-medium bg-purple-100 text-purple-700 whitespace-nowrap">协议 {{ _protocol }}</span>
                                         {% endif %}
                                         {% if _peer_status %}
                                             {% set _color = _peer_status == 'established' ? 'green' : (_peer_status == 'waiting' ? 'yellow' : 'gray') %}
                                             <span
-                                                class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-{{ _color }}-100 text-{{ _color }}-700">{{ _peer_status }}</span>
+                                                class="px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] font-medium bg-{{ _color }}-100 text-{{ _color }}-700 whitespace-nowrap">{{ _peer_status }}</span>
                                         {% endif %}
                                     </div>
                                 </div>
@@ -83,25 +87,27 @@
                                 {{ link.description ?: '这个网站还没有添加描述信息' }}
                             </p>
 
-                            <div class="flex justify-between items-center">
+                            <div class="flex justify-between items-center gap-2">
                                 <a href="{% if link.redirect_type == 'info' %}/link/info/{{ link.id }}{% else %}/link/goto/{{ link.id }}{% endif %}"
                                    {% if link.redirect_type == 'direct' %}target="{{ link.target }}"{% endif %}
-                                   class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium text-sm transition-colors duration-200 hover-lift accelerated">
+                                   class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium text-xs sm:text-sm transition-colors duration-200 hover-lift accelerated whitespace-nowrap">
                                     {% if link.redirect_type == 'info' %}
                                         查看详情
                                     {% else %}
                                         访问网站
                                     {% endif %}
                                     <svg
-                                        class="w-4 h-4 ml-1 transition-transform duration-200 group-hover:translate-x-1"
+                                        class="w-3 h-3 sm:w-4 sm:h-4 ml-1 transition-transform duration-200 group-hover:translate-x-1 flex-shrink-0"
                                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                               d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
                                     </svg>
                                 </a>
 
-                                <div class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                                <div
+                                    class="bg-blue-100 text-blue-800 text-[10px] sm:text-xs px-1.5 sm:px-2 py-1 rounded-full whitespace-nowrap flex-shrink-0">
                                     <i class="fas fa-external-link-alt mr-1"></i>
+                                    <span class="hidden xs:inline">
                                     {% if link.redirect_type == 'direct' %}
                                         直接跳转
                                     {% elseif link.redirect_type == 'goto' %}
@@ -111,6 +117,7 @@
                                     {% elseif link.redirect_type == 'info' %}
                                         详情页面
                                     {% endif %}
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -119,11 +126,12 @@
             </div>
 
             <!-- 分页 -->
-            <div class="mt-12 flex justify-center fade-in-on-scroll" data-animation-delay="0.3">
+            <div class="mt-12 flex justify-center fade-in-on-scroll no-animation" data-animation-delay="0.3">
                 {{ pagination|raw }}
             </div>
         {% else %}
-            <div class="bg-white rounded-2xl shadow-lg p-12 text-center fade-in-on-scroll" data-animation-delay="0.2">
+            <div class="bg-white rounded-2xl shadow-lg p-12 text-center fade-in-on-scroll no-animation"
+                 data-animation-delay="0.2">
                 <div class="text-gray-400 mb-4">
                     <svg class="w-24 h-24 mx-auto opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -143,6 +151,30 @@
             -webkit-line-clamp: 3;
             -webkit-box-orient: vertical;
             overflow: hidden;
+        }
+
+        /* 超小屏幕响应式样式 (宽度 < 400px) */
+        @media (max-width: 400px) {
+            .grid {
+                gap: 0.75rem;
+            }
+
+            /* 确保卡片不溢出 */
+            .grid > div {
+                max-width: 100%;
+                overflow: hidden;
+            }
+        }
+
+        /* 自定义断点 xs (宽度 >= 380px) */
+        @media (min-width: 380px) {
+            .xs\:inline {
+                display: inline;
+            }
+
+            .xs\:flex-row {
+                flex-direction: row;
+            }
         }
     </style>
 

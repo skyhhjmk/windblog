@@ -175,13 +175,6 @@ class SidebarService
                     }
                     // 调用重构后的WidgetService渲染小工具为HTML
                     $widget['html'] = WidgetService::renderToHtml($widget);
-
-                    // 过滤器：侧边栏单个小工具HTML（需权限 sidebar:filter.widget_html）
-                    $widget['html'] = PluginService::apply_filters('sidebar.widget_html_filter', [
-                        'page_key' => $sidebarConfig['page_key'] ?? 'default',
-                        'widget' => $widget,
-                        'html' => $widget['html'],
-                    ])['html'] ?? $widget['html'];
                 } catch (Throwable $e) {
                     Log::error('[SidebarService] Failed to render widget: ' . $e->getMessage());
                     $widget['html'] = '';

@@ -61,10 +61,7 @@ class EditorController
         $allow_comments = $request->post('allow_comments', 1);
         $featured = $request->post('featured', 0);
         $authors = $request->post('authors', []);
-        // AI 摘要相关
-        $ai_summary = (string) $request->post('ai_summary', '');
-        $ai_enabled = (int) $request->post('ai_enabled', 0) ? true : false;
-        $ai_status = (string) $request->post('ai_status', ''); // none/done/failed/refreshing/persisted
+        // AI 摘要相关字段现在通过单独的保存摘要接口处理
 
         // 验证输入
         if (empty($title)) {
@@ -92,9 +89,7 @@ class EditorController
             'featured' => $featured ? 1 : 0,
             'updated_at' => utc_now_string('Y-m-d H:i:s'),
         ];
-        if ($ai_summary !== '') {
-            $data['ai_summary'] = $ai_summary;
-        }
+        // AI摘要相关字段通过单独的保存接口处理，不在此更新
 
         // 调试日志
         Log::info('EditorController::save - 接收到的数据', [
@@ -139,27 +134,7 @@ class EditorController
                 $contentChanged = true;
             }
 
-            // 同步 AI 元数据（存于 post_ext.key = 'ai_summary_meta'）
-            try {
-                $row = \app\model\PostExt::where('post_id', $post_id)->where('key', 'ai_summary_meta')->first();
-                if (!$row) {
-                    $row = new \app\model\PostExt(['post_id' => $post_id, 'key' => 'ai_summary_meta', 'value' => []]);
-                }
-                $row->value = array_merge((array) $row->value, ['enabled' => $ai_enabled]);
-                if ($ai_status !== '') {
-                    $row->value['status'] = $ai_status;
-                }
-                $row->save();
-            } catch (\Throwable $e) { /* ignore */
-            }
-
-            // 自动入队：启用且非持久化，且内容变更或无摘要
-            if ($ai_enabled && ($ai_status !== 'persisted')) {
-                $needsGen = ($ai_summary === '') || ($contentChanged ?? false);
-                if ($needsGen) {
-                    \app\service\AISummaryService::enqueue(['post_id' => $post_id]);
-                }
-            }
+            // AI摘要相关逻辑已移至单独的保存摘要接口，不再自动处理
 
             // 处理多作者
             if (!empty($authors) && is_array($authors)) {

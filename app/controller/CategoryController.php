@@ -3,6 +3,7 @@
 namespace app\controller;
 
 use app\annotation\EnableInstantFirstPaint;
+use app\helper\BreadcrumbHelper;
 use app\model\Category;
 use app\service\BlogService;
 use app\service\EnhancedCacheService;
@@ -59,6 +60,9 @@ class CategoryController
         $categoryModel = Category::query()->where('slug', $slug)->first(['name', 'slug']);
         $category_name = $categoryModel ? (string) $categoryModel->name : $slug;
 
+        // 生成面包屑导航
+        $breadcrumbs = BreadcrumbHelper::forCategory($categoryModel, false);
+
         // 使用项目统一的分页渲染，保证路由正确
         $pagination_html = PaginationService::generatePagination(
             $page,
@@ -82,6 +86,7 @@ class CategoryController
                 'totalCount' => $result['totalCount'] ?? 0,
                 'sort' => $sort,
                 'sidebar' => $sidebar,
+                'breadcrumbs' => $breadcrumbs,
             ],
             $cacheKey,
             120,
@@ -121,10 +126,14 @@ class CategoryController
         $blog_title = BlogService::getBlogTitle();
         $viewName = PJAXHelper::isPJAX($request) ? 'category/list.content' : 'category/list';
 
+        // 生成面包屑导航（分类列表页）
+        $breadcrumbs = BreadcrumbHelper::forCategory(null, true);
+
         return view($viewName, [
             'page_title' => "全部分类 - {$blog_title}",
             'categories' => $categories,
             'sidebar' => $sidebar,
+            'breadcrumbs' => $breadcrumbs,
         ]);
     }
 

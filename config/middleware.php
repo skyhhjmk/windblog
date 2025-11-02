@@ -31,7 +31,6 @@ if (getenv('DB_DEFAULT')) {
         app\middleware\StaticCacheRedirect::class,
         // 常规中间件
         app\middleware\CSRFMiddleware::class,
-        app\middleware\PluginSupport::class,
     ];
 
     $global = array_merge($global, $must_installed);

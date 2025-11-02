@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html style="overflow: hidden; height: 100%;">
 <head>
     <meta charset="utf-8">
     <title>数据分析</title>
@@ -8,8 +8,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
     <link rel="stylesheet" href="../../component/pear/css/pear.css"/>
     <link rel="stylesheet" href="../../demos/css/console2.css"/>
+    <link href="../../component/layui/css/layui.css" rel="stylesheet"/>
 </head>
-<body class="pear-container">
+<body class="pear-container" style="overflow: hidden; height: 100%; margin: 0; padding: 0;">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.11.0/axios.min.js"
         integrity="sha512-h9644v03pHqrIHThkvXhB2PJ8zf5E9IyVnrSfZg8Yj8k4RsO4zldcQc4Bi9iVLUCCsqNY0b4WXVV4UB+wbWENA=="
@@ -35,169 +36,228 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.9.0/mermaid.min.js"
         integrity="sha512-OAr6bl1pt/FD0oVcuPzJ9VIMso+HQhHoodVI7mnDst19p8rNkNiraPLsDCYVhit3Mjd6B7AUHFsoDhq3dDeI7g=="
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="../../component/layui/layui.js"></script>
 
-<div class="w-full px-4 py-8 h-full">
-    <!-- 编辑器容器 -->
-    <div class="bg-white rounded-lg shadow-lg p-6">
-        <!-- 标题 -->
-        <h1 id="page-title" class="text-2xl font-bold text-gray-800 mb-6">文章编辑</h1>
+<div style="width: 100%; height: 100vh; display: flex; flex-direction: column; overflow: hidden;">
+    <!-- 顶部标题栏 -->
+    <header style="background: white; border-bottom: 1px solid #e5e7eb; padding: 12px 16px; flex-shrink: 0;">
+        <div class="flex items-center justify-between">
+            <h1 class="text-lg font-bold text-gray-800" id="page-title">文章编辑</h1>
+            <!-- 顶部操作按钮 -->
+            <div class="flex items-center gap-2">
+                <button class="px-3 py-1.5 bg-purple-500 text-white text-sm rounded hover:bg-purple-600 transition-colors"
+                        id="media-selector-btn">
+                    <i class="fas fa-image mr-1"></i>插入媒体
+                </button>
+                <button class="px-3 py-1.5 bg-gray-600 text-white text-sm rounded hover:bg-gray-700 transition-colors"
+                        id="save-draft-btn">
+                    <i class="fas fa-save mr-1"></i>保存草稿
+                </button>
+                <button class="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
+                        id="publish-btn">
+                    <i class="fas fa-paper-plane mr-1"></i>发布
+                </button>
+            </div>
+        </div>
+    </header>
 
-        <!-- 布局：主编辑区 + 右侧边栏 -->
-        <div class="flex flex-col md:flex-row gap-6">
-            <!-- 主编辑区 -->
-            <div class="flex-1 min-w-0">
+    <!-- 主内容区 -->
+    <div style="display: flex; flex: 1; overflow: hidden; min-height: 0;">
+        <!-- 主编辑区 -->
+        <main style="flex: 1; overflow-y: auto; background: #f9fafb; min-width: 0;">
+            <div style="max-width: 100%; padding: 12px 16px;">
                 <!-- 标题输入 -->
-                <div class="mb-6">
+                <div style="margin-bottom: 12px;">
                     <input type="text" id="post-title"
-                           class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                           style="width: 100%; padding: 8px 12px; font-size: 18px; border: 1px solid #d1d5db; border-radius: 4px; background: white;"
                            placeholder="请输入文章标题">
                 </div>
                 <!-- 编辑器区域 -->
-                <div id="vditor"></div>
+                <div id="vditor"
+                     style="background: white; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);"></div>
             </div>
+        </main>
 
-            <!-- 右侧边栏 -->
-            <aside class="w-full md:w-80 md:shrink-0">
-                <div class="sticky top-6 space-y-4">
-                    <!-- 统计信息 -->
-                    <div id="editor-stats" class="p-3 bg-gray-50 rounded border border-gray-200">
-                        <div class="flex items-center justify-between text-sm text-gray-600">
-                            <span>字数</span><span id="stats-words">0</span>
+        <!-- 右侧边栏 -->
+        <aside style="width: 320px; flex-shrink: 0; background: white; border-left: 1px solid #e5e7eb; overflow-y: auto;">
+            <div style="padding: 12px; display: flex; flex-direction: column; gap: 12px;">
+                <!-- 统计信息卡片 -->
+                <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded p-3 border border-blue-100">
+                    <h3 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                        <i class="fas fa-chart-line mr-2 text-blue-500"></i>内容统计
+                    </h3>
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-600">字数</span>
+                            <span class="font-semibold text-gray-800" id="stats-words">0</span>
                         </div>
-                        <div class="flex items-center justify-between text-sm text-gray-600 mt-1">
-                            <span>字符</span><span id="stats-chars">0</span>
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-600">字符</span>
+                            <span class="font-semibold text-gray-800" id="stats-chars">0</span>
                         </div>
-                        <div class="flex items-center justify-between text-sm text-gray-600 mt-1">
-                            <span>预计阅读</span><span id="stats-readtime">0分钟</span>
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-600">预计阅读</span>
+                            <span class="font-semibold text-gray-800" id="stats-readtime">0分钟</span>
                         </div>
-                        <div class="flex items-center justify-between text-xs text-gray-500 mt-2">
-                            <span>上次保存</span><span id="stats-last-saved">—</span>
+                        <div class="flex items-center justify-between text-xs pt-2 border-t border-blue-200">
+                            <span class="text-gray-500">上次保存</span>
+                            <span class="text-gray-500" id="stats-last-saved">—</span>
                         </div>
                     </div>
+                </div>
 
-                    <!-- 文章状态 -->
-                    <div>
-                        <label for="post-status" class="block text-sm text-gray-600 mb-1">文章状态</label>
-                        <select id="post-status"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="draft">草稿</option>
-                            <option value="published">已发布</option>
-                            <option value="archived">已归档</option>
-                        </select>
+                <!-- 发布设置 -->
+                <div class="bg-white rounded border border-gray-200">
+                    <div class="p-3 border-b border-gray-200">
+                        <h3 class="text-sm font-semibold text-gray-700 flex items-center">
+                            <i class="fas fa-cog mr-2 text-gray-500"></i>发布设置
+                        </h3>
                     </div>
-
-                    <!-- 可见性 -->
-                    <div>
-                        <label for="post-visibility" class="block text-sm text-gray-600 mb-1">可见性</label>
-                        <select id="post-visibility"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="public">公开</option>
-                            <option value="private">私密</option>
-                            <option value="password">密码保护</option>
-                        </select>
-                    </div>
-
-                    <!-- 文章密码 -->
-                    <div id="password-field" class="hidden">
-                        <label for="post-password" class="block text-sm text-gray-600 mb-1">文章密码</label>
-                        <input type="text" id="post-password"
-                               class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                               placeholder="设置文章密码，不修改请留空">
-                    </div>
-
-                    <!-- 评论设置 -->
-                    <div class="p-3 bg-gray-50 rounded border border-gray-200">
-                        <label class="flex items-center justify-between cursor-pointer">
-                            <span class="text-sm text-gray-700">允许评论</span>
-                            <div class="relative">
-                                <input type="checkbox" id="allow-comments" class="sr-only peer" checked>
-                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                            </div>
-                        </label>
-                    </div>
-
-                    <!-- 精选文章 -->
-                    <div class="p-3 bg-gray-50 rounded border border-gray-200">
-                        <label class="flex items-center justify-between cursor-pointer">
-                            <span class="text-sm text-gray-700">精选文章</span>
-                            <div class="relative">
-                                <input type="checkbox" id="post-featured" class="sr-only peer">
-                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                            </div>
-                        </label>
-                    </div>
-
-                    <!-- AI 摘要设置 -->
-                    <div class="p-3 bg-yellow-50 rounded border border-yellow-200 space-y-2">
-                        <div class="flex items-center justify-between">
-                            <label class="text-sm text-gray-700">启用 AI 摘要</label>
-                            <div class="relative">
-                                <input type="checkbox" id="ai-enabled" class="sr-only peer">
-                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-yellow-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-500"></div>
-                            </div>
-                        </div>
+                    <div class="p-3 space-y-3">
                         <div>
-                            <label for="ai-status" class="block text-sm text-gray-600 mb-1">AI 摘要状态</label>
-                            <select id="ai-status" class="w-full px-3 py-2 border border-gray-300 rounded-md">
-                                <option value="none">未生成</option>
-                                <option value="done">已生成</option>
-                                <option value="failed">失败</option>
-                                <option value="refreshing">刷新中</option>
-                                <option value="persisted">持久化</option>
+                            <label class="block text-xs font-medium text-gray-600 mb-1.5" for="post-status">状态</label>
+                            <select class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    id="post-status">
+                                <option value="draft">草稿</option>
+                                <option value="published">已发布</option>
+                                <option value="archived">已归档</option>
                             </select>
                         </div>
                         <div>
-                            <label for="ai-summary" class="block text-sm text-gray-600 mb-1">AI 摘要</label>
-                            <textarea id="ai-summary" rows="6"
-                                      class="w-full px-3 py-2 border border-gray-300 rounded-md"
-                                      placeholder="可手动编辑或留空由系统生成"></textarea>
+                            <label class="block text-xs font-medium text-gray-600 mb-1.5"
+                                   for="post-visibility">可见性</label>
+                            <select class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    id="post-visibility">
+                                <option value="public">🌐 公开</option>
+                                <option value="private">🔒 私密</option>
+                                <option value="password">🔑 密码保护</option>
+                            </select>
                         </div>
+                        <div class="hidden" id="password-field">
+                            <label class="block text-xs font-medium text-gray-600 mb-1.5"
+                                   for="post-password">密码</label>
+                            <input class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" id="post-password"
+                                   placeholder="留空不修改"
+                                   type="text">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 文章选项 -->
+                <div class="bg-white rounded border border-gray-200 p-3 space-y-3">
+                    <h3 class="text-sm font-semibold text-gray-700 flex items-center mb-2">
+                        <i class="fas fa-sliders-h mr-2 text-gray-500"></i>文章选项
+                    </h3>
+                    <label class="flex items-center justify-between cursor-pointer group">
+                        <span class="text-sm text-gray-700 group-hover:text-gray-900 flex items-center">
+                            <i class="fas fa-comments mr-2 text-gray-400"></i>允许评论
+                        </span>
+                        <div class="relative">
+                            <input checked class="sr-only peer" id="allow-comments" type="checkbox">
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-400 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </div>
+                    </label>
+                    <label class="flex items-center justify-between cursor-pointer group">
+                        <span class="text-sm text-gray-700 group-hover:text-gray-900 flex items-center">
+                            <i class="fas fa-star mr-2 text-gray-400"></i>精选文章
+                        </span>
+                        <div class="relative">
+                            <input class="sr-only peer" id="post-featured" type="checkbox">
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-yellow-400 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-500"></div>
+                        </div>
+                    </label>
+                </div>
+
+                <!-- AI 摘要设置 -->
+                <div class="bg-gradient-to-br from-amber-50 to-yellow-50 rounded border border-amber-200">
+                    <div class="p-3 border-b border-amber-200">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-sm font-semibold text-gray-700 flex items-center">
+                                <i class="fas fa-brain mr-2 text-amber-500"></i>AI 摘要
+                            </h3>
+                            <label class="relative cursor-pointer">
+                                <input type="checkbox" id="ai-enabled" class="sr-only peer">
+                                <div class="w-9 h-5 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-amber-400 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="p-3 space-y-3">
+                        <!-- 当前状态（只读） -->
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1.5">当前状态</label>
+                            <div class="px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-md text-gray-700"
+                                 id="ai-status-display">
+                                <span id="ai-status-text">⚪ 未生成</span>
+                            </div>
+                        </div>
+
+                        <!-- 持久化开关 -->
+                        <label class="flex items-center justify-between cursor-pointer group">
+                            <span class="text-sm text-gray-700 group-hover:text-gray-900 flex items-center">
+                                <i class="fas fa-lock mr-2 text-gray-400"></i>持久化摘要
+                                <span class="ml-2 text-xs text-gray-500">(不自动更新)</span>
+                            </span>
+                            <div class="relative">
+                                <input class="sr-only peer" id="ai-persisted" type="checkbox">
+                                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-amber-400 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+                            </div>
+                        </label>
+
+                        <!-- 摘要内容 -->
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1.5"
+                                   for="ai-summary">摘要内容</label>
+                            <textarea class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-400" id="ai-summary"
+                                      placeholder="可手动编辑或由AI生成"
+                                      rows="5"></textarea>
+                        </div>
+
+                        <!-- 操作按钮 -->
                         <div class="flex gap-2">
-                            <button type="button" id="ai-generate"
-                                    class="w-full px-3 py-2 bg-yellow-500 text-white rounded-md">生成AI摘要
+                            <button class="flex-1 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm rounded-md transition-colors flex items-center justify-center"
+                                    id="ai-generate" type="button">
+                                <i class="fas fa-magic mr-1"></i>生成摘要
+                            </button>
+                            <button class="flex-1 px-3 py-2 bg-green-500 hover:bg-green-600 text-white text-sm rounded-md transition-colors flex items-center justify-center"
+                                    id="ai-save" type="button">
+                                <i class="fas fa-save mr-1"></i>保存摘要
                             </button>
                         </div>
                     </div>
+                </div>
 
-                    <!-- 作者选择 -->
-                    <div class="relative">
-                        <label class="block text-sm text-gray-600 mb-1">作者</label>
+                <!-- 作者选择 -->
+                <div class="bg-white rounded border border-gray-200">
+                    <div class="p-3 border-b border-gray-200">
+                        <h3 class="text-sm font-semibold text-gray-700 flex items-center">
+                            <i class="fas fa-user-edit mr-2 text-gray-500"></i>作者
+                        </h3>
+                    </div>
+                    <div class="p-3 relative">
                         <input type="text" id="authors-select"
-                               class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                               placeholder="选择作者" readonly>
+                               class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer"
+                               placeholder="点击选择作者" readonly>
                         <div id="authors-dropdown"
-                             class="absolute z-50 hidden w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                            <div class="p-2 border-b border-gray-200">
+                             class="absolute z-50 hidden w-full left-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-64 overflow-hidden">
+                            <div class="p-2 border-b border-gray-200 bg-gray-50">
                                 <input type="text" id="authors-search"
-                                       class="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                       placeholder="搜索作者">
+                                       class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                       placeholder="搜索作者...">
                             </div>
-                            <div id="authors-list" class="p-2"></div>
+                            <div class="p-2 overflow-y-auto max-h-52" id="authors-list"></div>
                         </div>
                     </div>
-
-                    <!-- 操作按钮 -->
-                    <div class="space-y-2">
-                        <button id="media-selector-btn"
-                                class="w-full px-4 py-2 bg-purple-500 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50 flex items-center justify-center">
-                            <i class="fas fa-photo-video mr-2"></i><span>选择媒体</span>
-                        </button>
-                        <button id="preview-btn"
-                                class="w-full px-4 py-2 bg-blue-500 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 flex items-center justify-center">
-                            <i class="fas fa-eye mr-2"></i><span>预览</span>
-                        </button>
-                        <button id="save-btn"
-                                class="w-full px-4 py-2 bg-green-500 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 flex items-center justify-center">
-                            <i class="fas fa-save mr-2"></i><span>保存</span>
-                        </button>
-                        <button id="clear-btn"
-                                class="w-full px-4 py-2 bg-red-500 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 flex items-center justify-center">
-                            <i class="fas fa-trash-alt mr-2"></i><span>清除缓存</span>
-                        </button>
-                    </div>
                 </div>
-            </aside>
-        </div>
+
+                <!-- 快捷操作 -->
+                <div class="space-y-2">
+                    <button class="w-full px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm rounded transition-colors flex items-center justify-center border border-gray-300"
+                            id="clear-btn">
+                        <i class="fas fa-trash-alt mr-2"></i>清除缓存
+                    </button>
+                </div>
+            </div>
+        </aside>
     </div>
 </div>
 
@@ -257,8 +317,8 @@
 
         try {
             vditor = new Vditor('vditor', {
-                height: 'auto',
-                minHeight: 500,
+                height: 'calc(100vh - 140px)',
+                minHeight: 600,
                 // cdn: 'https://cdnjs.cloudflare.com/ajax/libs/vditor/3.11.1', // 无法使用cf公共cdn，没有dist目录
                 mode: 'sv', // 分屏
                 input(value) {
@@ -661,14 +721,82 @@
             }
         }
 
-        // 预览按钮事件
-        document.getElementById('preview-btn').addEventListener('click', function () {
-            if (vditor && typeof vditor.preview === 'function') {
-                vditor.preview();
-            }
+        // 保存草稿按钮事件
+        document.getElementById('save-draft-btn').addEventListener('click', function () {
+            savePost('draft');
         });
 
-        // 保存按钮事件
+        // 发布按钮事件
+        document.getElementById('publish-btn').addEventListener('click', function () {
+            savePost('published');
+        });
+
+        // 保存文章的通用函数
+        function savePost(targetStatus) {
+            if (vditor) {
+                // 验证数据
+                if (!postTitle.value.trim()) {
+                    layer.msg('请输入文章标题', {icon: 5});
+                    postTitle.focus();
+                    return;
+                }
+
+                if (!vditor.getValue().trim()) {
+                    layer.msg('请输入文章内容', {icon: 5});
+                    return;
+                }
+
+                // 准备作者数据
+                const authorIds = selectedAuthors.map(a => a.id);
+
+                // 准备保存数据
+                const saveData = {
+                    post_id: postId,
+                    title: postTitle.value.trim(),
+                    content: vditor.getValue(),
+                    status: targetStatus,
+                    visibility: postVisibility.value,
+                    allow_comments: allowComments.checked ? 1 : 0,
+                    featured: postFeatured.checked ? 1 : 0,
+                    authors: authorIds
+                    // AI摘要相关字段通过单独的“保存摘要”按钮处理
+                };
+
+                const loadingIndex = layer.msg('保存中...', {icon: 16, shade: 0.3, time: 0});
+
+                // 发送到服务器保存
+                fetch('/app/admin/editor/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                    },
+                    body: JSON.stringify(saveData)
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        layer.close(loadingIndex);
+                        if (data.code === 0) {
+                            const statusText = targetStatus === 'published' ? '发布' : '保存';
+                            layer.msg(statusText + '成功', {icon: 1});
+                            updateLastSaved(new Date());
+                            if (!postId) {
+                                postId = data.data.id;
+                                pageTitle.textContent = `编辑文章: ${postTitle.value}`;
+                            }
+                            // 更新状态选择器
+                            postStatus.value = targetStatus;
+                        } else {
+                            layer.msg('保存失败: ' + (data.msg || '未知错误'), {icon: 5});
+                        }
+                    })
+                    .catch(error => {
+                        layer.close(loadingIndex);
+                        layer.msg('保存失败: ' + error.message, {icon: 5});
+                    });
+            }
+        }
+
         // 清除缓存按钮事件
         document.getElementById('clear-btn').addEventListener('click', function () {
             if (confirm('确定要清除自动保存的内容吗？')) {
@@ -846,98 +974,220 @@
                 });
         }
 
-        // 修改保存按钮事件，添加作者数据
-        document.getElementById('save-btn').addEventListener('click', function () {
-            if (vditor) {
-                // 验证数据
-                if (!postTitle.value.trim()) {
-                    alert('请输入文章标题');
-                    postTitle.focus();
-                    return;
-                }
-
-                if (!vditor.getValue().trim()) {
-                    alert('请输入文章内容');
-                    return;
-                }
-
-                // 准备作者数据
-                const authorIds = selectedAuthors.map(a => a.id);
-
-                // 准备保存数据
-                const saveData = {
-                    post_id: postId,
-                    title: postTitle.value.trim(),
-                    content: vditor.getValue(),
-                    status: postStatus.value,
-                    visibility: postVisibility.value,
-                    allow_comments: allowComments.checked ? 1 : 0,
-                    featured: postFeatured.checked ? 1 : 0,
-                    authors: authorIds,
-                    ai_enabled: (document.getElementById('ai-enabled')?.checked ? 1 : 0),
-                    ai_status: (document.getElementById('ai-status')?.value || ''),
-                    ai_summary: (document.getElementById('ai-summary')?.value || ''),
-                };
-
-                // 如果是密码保护，添加密码字段
-                // if (postVisibility.value === 'password' && postPassword.value) {
-                //     saveData.password = postPassword.value;
-                // }
-
-                // 发送到服务器保存
-                fetch('/app/admin/editor/save', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
-                    },
-                    body: JSON.stringify(saveData)
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.code === 0) {
-                            alert('保存成功');
-                            updateLastSaved(new Date());
-                            if (!postId) {
-                                postId = data.data.id;
-                                pageTitle.textContent = `编辑文章: ${postTitle.value}`;
-                            }
-                        } else {
-                            alert('保存失败: ' + (data.msg || '未知错误'));
-                        }
-                    })
-                    .catch(error => {
-                        alert('保存失败: ' + error.message);
-                    });
-            }
-        });
 
         // 初始化作者选择器
         initAuthorsSelector();
+
+        // AI 摘要状态显示映射
+        const statusTextMap = {
+            'none': '⚪ 未生成',
+            'done': '✅ 已生成',
+            'failed': '❌ 失败',
+            'refreshing': '🔄 刷新中',
+            'persisted': '💾 持久化'
+        };
+
+        // AI 摘要刷新功能
+        let aiRefreshInterval = null;
+        let aiPollCount = 0; // 轮询次数计数器
+        const MAX_POLL_COUNT = 60; // 最多轮询60次（3分钟）
+
+        function updateAiStatusDisplay(status) {
+            const statusText = document.getElementById('ai-status-text');
+            if (statusText) {
+                statusText.textContent = statusTextMap[status] || statusTextMap['none'];
+            }
+        }
+
+        function checkAiSummaryStatus() {
+            if (!postId) return;
+
+            fetch('/app/admin/ai/summary/status?post_id=' + postId)
+                .then(r => r.json())
+                .then(res => {
+                    if (res && res.code === 0 && res.data) {
+                        const data = res.data;
+                        const summaryTextarea = document.getElementById('ai-summary');
+                        const aiBtn = document.getElementById('ai-generate');
+                        const aiEnabledCheckbox = document.getElementById('ai-enabled');
+                        const aiPersistedCheckbox = document.getElementById('ai-persisted');
+
+                        // 更新状态显示
+                        updateAiStatusDisplay(data.status);
+
+                        // 更新启用状态
+                        if (aiEnabledCheckbox) {
+                            aiEnabledCheckbox.checked = data.enabled || false;
+                        }
+
+                        // 更新持久化状态
+                        if (aiPersistedCheckbox) {
+                            aiPersistedCheckbox.checked = (data.status === 'persisted');
+                        }
+
+                        // 更新摘要内容
+                        if (summaryTextarea && data.summary) {
+                            summaryTextarea.value = data.summary;
+                        }
+
+                        // 根据状态更新按钮文本
+                        if (aiBtn) {
+                            if (data.status === 'refreshing') {
+                                aiPollCount++;
+
+                                // 检查是否超过最大轮询次数
+                                if (aiPollCount >= MAX_POLL_COUNT) {
+                                    // 超时，停止轮询并显示警告
+                                    if (aiRefreshInterval) {
+                                        clearInterval(aiRefreshInterval);
+                                        aiRefreshInterval = null;
+                                    }
+                                    aiBtn.innerHTML = '<i class="fas fa-exclamation-triangle mr-1"></i>任务超时';
+                                    aiBtn.disabled = false;
+                                    layer.msg('任务超时，请重试或检查Worker进程', {icon: 5});
+                                    aiPollCount = 0;
+                                    return;
+                                }
+
+                                const elapsed = Math.floor((aiPollCount * 3) / 60);
+                                const remaining = Math.max(0, 3 - elapsed);
+                                aiBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>生成中 (' + remaining + 'm)';
+                                aiBtn.disabled = true;
+
+                                // 如果正在生成，启动轮询
+                                if (!aiRefreshInterval) {
+                                    aiRefreshInterval = setInterval(checkAiSummaryStatus, 3000);
+                                }
+                            } else {
+                                aiBtn.innerHTML = '<i class="fas fa-magic mr-1"></i>生成摘要';
+                                aiBtn.disabled = false;
+                                aiPollCount = 0;
+                                // 停止轮询
+                                if (aiRefreshInterval) {
+                                    clearInterval(aiRefreshInterval);
+                                    aiRefreshInterval = null;
+                                }
+                            }
+                        }
+
+                        // 如果失败，显示错误信息
+                        if (data.status === 'failed' && data.error) {
+                            layer.msg('AI摘要生成失败: ' + data.error, {icon: 5, time: 5000});
+                        }
+
+                        // 如果成功，显示提示
+                        if (data.status === 'done' && aiPollCount > 0) {
+                            layer.msg('摘要生成成功', {icon: 1});
+                            aiPollCount = 0;
+                        }
+                    }
+                })
+                .catch(e => {
+                    console.error('检查AI摘要状态失败:', e);
+                    // 网络错误，停止轮询
+                    if (aiRefreshInterval) {
+                        clearInterval(aiRefreshInterval);
+                        aiRefreshInterval = null;
+                    }
+                });
+        }
 
         // AI 生成按钮
         const aiBtn = document.getElementById('ai-generate');
         if (aiBtn) {
             aiBtn.addEventListener('click', function () {
                 if (!postId) {
-                    alert('请先保存文章后再生成AI摘要');
+                    layer.msg('请先保存文章后再生成AI摘要', {icon: 5});
                     return;
                 }
-                const idx = layer && layer.msg ? layer.msg('生成中...', {icon: 16, shade: 0.1, time: 0}) : null;
-                fetch('/app/admin/ai-summary/enqueue', {
+
+                updateAiStatusDisplay('refreshing');
+
+                aiBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>生成中...';
+                aiBtn.disabled = true;
+
+                fetch('/app/admin/ai/summary/enqueue', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({post_id: postId, force: true})
                 })
                     .then(r => r.json()).then(res => {
-                    if (idx) layer.close(idx);
-                    alert(res.msg || (res.code === 0 ? '已入队' : '失败'));
+                    if (res.code === 0) {
+                        layer.msg('已提交生成任务，请稍候...', {icon: 1});
+                        // 启动轮询检查状态
+                        if (!aiRefreshInterval) {
+                            aiRefreshInterval = setInterval(checkAiSummaryStatus, 3000);
+                        }
+                    } else {
+                        layer.msg(res.msg || '提交失败', {icon: 2});
+                        aiBtn.innerHTML = '<i class="fas fa-magic mr-1"></i>生成摘要';
+                        aiBtn.disabled = false;
+                    }
                 }).catch(e => {
-                    if (idx) layer.close(idx);
-                    alert('失败:' + e.message);
+                    layer.msg('请求失败: ' + e.message, {icon: 2});
+                    aiBtn.innerHTML = '<i class="fas fa-magic mr-1"></i>生成摘要';
+                    aiBtn.disabled = false;
                 });
             });
         }
+
+        // AI 保存按钮
+        const aiSaveBtn = document.getElementById('ai-save');
+        if (aiSaveBtn) {
+            aiSaveBtn.addEventListener('click', function () {
+                if (!postId) {
+                    layer.msg('请先保存文章', {icon: 5});
+                    return;
+                }
+
+                const aiEnabled = document.getElementById('ai-enabled')?.checked || false;
+                const aiPersisted = document.getElementById('ai-persisted')?.checked || false;
+                const aiSummary = document.getElementById('ai-summary')?.value || '';
+
+                // 根据持久化状态决定状态
+                const status = aiPersisted ? 'persisted' : (aiSummary ? 'done' : 'none');
+
+                const loadingIdx = layer.msg('保存中...', {icon: 16, shade: 0.1, time: 0});
+
+                fetch('/app/admin/ai/summary/set-meta', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        post_id: postId,
+                        enabled: aiEnabled ? 1 : 0,
+                        status: status
+                    })
+                })
+                    .then(r => r.json())
+                    .then(res => {
+                        layer.close(loadingIdx);
+                        if (res.code === 0) {
+                            layer.msg('保存成功', {icon: 1});
+                            // 更新状态显示
+                            updateAiStatusDisplay(status);
+                        } else {
+                            layer.msg(res.msg || '保存失败', {icon: 2});
+                        }
+                    })
+                    .catch(e => {
+                        layer.close(loadingIdx);
+                        layer.msg('请求失败: ' + e.message, {icon: 2});
+                    });
+            });
+        }
+
+        // 页面加载时检查一次状态
+        if (postId > 0) {
+            setTimeout(checkAiSummaryStatus, 1000);
+        }
+
+        // 页面卸载时清理轮询
+        window.addEventListener('beforeunload', function () {
+            if (aiRefreshInterval) {
+                clearInterval(aiRefreshInterval);
+                aiRefreshInterval = null;
+            }
+        });
 
         // 可见性字段变化监听，显示/隐藏密码输入框
         if (postVisibility && passwordField) {
@@ -1102,9 +1352,22 @@
             }
         }
 
-        // 为媒体选择器按钮绑定点击事件
-        document.getElementById('media-selector-btn').addEventListener('click', function () {
-            openMediaSelector();
+        // 加载layui
+        layui.use(['layer'], function () {
+            const layer = layui.layer;
+
+            // 为媒体选择器按钮绑定点击事件（使用layer弹窗）
+            document.getElementById('media-selector-btn').addEventListener('click', function () {
+                layer.open({
+                    type: 2,
+                    title: '选择媒体',
+                    shadeClose: true,
+                    shade: 0.3,
+                    maxmin: true,
+                    area: ['900px', '600px'],
+                    content: '/app/admin/editor/media-selector?target=layer&origin=' + encodeURIComponent(window.location.href)
+                });
+            });
         });
     });
 </script>

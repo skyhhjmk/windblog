@@ -148,6 +148,11 @@ CREATE TABLE IF NOT EXISTS links (
   deleted_at DATETIME DEFAULT NULL
 );
 
+-- 为links表的custom_fields字段添加索引
+CREATE INDEX IF NOT EXISTS idx_links_ai_audit_status ON links (json_extract(custom_fields, '$.ai_audit_status'));
+CREATE INDEX IF NOT EXISTS idx_links_last_audit_time ON links (json_extract(custom_fields, '$.last_audit_time'));
+CREATE INDEX IF NOT EXISTS idx_links_last_monitor_time ON links (json_extract(custom_fields, '$.last_monitor_time'));
+
 -- 创建浮动链接表（FloLink）
 CREATE TABLE IF NOT EXISTS flo_links (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -250,6 +255,10 @@ CREATE TABLE IF NOT EXISTS comments (
   content TEXT NOT NULL,
   quoted_data TEXT DEFAULT NULL,
   status TEXT NOT NULL DEFAULT 'pending',
+  ai_moderation_result     TEXT DEFAULT NULL,
+  ai_moderation_reason     TEXT DEFAULT NULL,
+  ai_moderation_confidence REAL DEFAULT NULL,
+  ai_moderation_categories TEXT DEFAULT NULL,
   ip_address TEXT DEFAULT NULL,
   user_agent TEXT DEFAULT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

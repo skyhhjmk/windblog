@@ -3,6 +3,7 @@
 namespace app\controller;
 
 use app\annotation\EnableInstantFirstPaint;
+use app\helper\BreadcrumbHelper;
 use app\model\Category;
 use app\model\Tag;
 use app\service\BlogService;
@@ -186,6 +187,9 @@ class SearchController
             ]
         );
 
+        // 生成面包屑导航
+        $breadcrumbs = BreadcrumbHelper::forSearch($keyword);
+
         // 动态选择模板：PJAX 返回片段，非 PJAX 返回完整页面
         $viewName = PJAXHelper::isPJAX($request) ? 'search/index.content' : 'search/index';
 
@@ -201,6 +205,7 @@ class SearchController
             'esMeta' => $result['esMeta'] ?? [],
             'suggest_titles' => $suggestTitles,
             'totalCount' => $result['totalCount'] ?? 0,
+            'breadcrumbs' => $breadcrumbs,
         ]);
     }
 

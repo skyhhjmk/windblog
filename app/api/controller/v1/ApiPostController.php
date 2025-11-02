@@ -9,7 +9,6 @@ use support\Log;
 use support\Request;
 use support\Response;
 use Throwable;
-use Webman\RateLimiter\Annotation\RateLimiter;
 
 class ApiPostController
 {
@@ -83,7 +82,6 @@ class ApiPostController
      * @throws Throwable
      * @deprecated 不再使用，内容已直接嵌入到模板中以优化 SEO
      */
-    #[RateLimiter(limit: 10, ttl: 3)]
     public function content(Request $request, mixed $keyword = null): Response
     {
         // 移除URL参数中的 .html 后缀
