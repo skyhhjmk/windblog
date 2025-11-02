@@ -32,13 +32,12 @@ use Throwable;
  * @property string|null $seo_title       SEO标题
  * @property string|null $seo_keywords    SEO关键词
  * @property string|null $seo_description SEO描述
- * @property array|null  $custom_fields   自定义字段(JSON格式)
+ * @property string|null $custom_fields   自定义字段(JSON格式)
  * @property Carbon|null $created_at      创建时间
  * @property Carbon|null $updated_at      更新时间
  * @property Carbon|null $deleted_at      软删除时间
  *
- * @method static Builder|Link where(string|array|Closure $column, mixed $operator = null, mixed $value = null, string
- *         $boolean = 'and') 添加where条件查询
+ * @method static Builder|Link where(string|array|Closure $column, mixed $operator = null, mixed $value = null, string $boolean = 'and') 添加where条件查询
  * @method static Builder|Link active() 只查询显示状态的链接
  * @method static Builder|Link ordered() 按排序权重升序查询
  * @method static Builder|Link withTrashed() 包含软删除的记录

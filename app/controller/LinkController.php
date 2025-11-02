@@ -2,6 +2,15 @@
 
 /*
  * 这里面有很多屎山
+ *
+ * custom_fields 字段内容
+ * $custom_fields = [
+ *     'link_position' => $link_position, 对方友链放置位置
+ *     'page_link' => $page_link, 对方友链放置页链接地址
+ *     'enable_monitor' => true, 是否启用监控
+ *     'enable_auto_moderation' => true, 启用友链自动审核
+ *     'enable_auto_report' => true, 启用友链下线自动告警双方
+ * ];
  */
 
 namespace app\controller;
@@ -341,6 +350,13 @@ class LinkController
 
                 return json(['code' => 1, 'msg' => '该链接已存在或正在审核中']);
             }
+            $custom_fields = [
+                'link_position' => $link_position,
+                'page_link' => $page_link,
+                'enable_monitor' => true,
+                'enable_auto_moderation' => true,
+                'enable_auto_report' => true,
+            ];
 
             try {
                 // 创建待审核的链接
@@ -357,6 +373,7 @@ class LinkController
                 $link->content = htmlspecialchars($full_description, ENT_QUOTES, 'UTF-8');
                 $link->email = $email;
                 $link->callback_url = $callback_url;
+                $link->custom_fields = json_encode($custom_fields);
 
                 // 构建内容信息 - 使用更结构化的格式
                 $linkPositionText = match ($link_position) {
