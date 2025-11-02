@@ -33,7 +33,6 @@ CREATE TABLE IF NOT EXISTS wa_users
     UNIQUE (username)
 );
 
-CREATE INDEX IF NOT EXISTS idx_wa_users_email ON wa_users (email);
 CREATE INDEX IF NOT EXISTS idx_wa_users_activation_token ON wa_users (activation_token);
 
 COMMENT ON TABLE wa_users IS '用户表';

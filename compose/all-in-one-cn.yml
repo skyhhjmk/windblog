@@ -236,7 +236,7 @@ services:
     user: "1000:1000"  # logstash 用户
     ports:
       - "0.0.0.0:${LOGSTASH_PORT}:5044"     # Beats 端口
-      - "${LOGSTASH_TCP_PORT}:5000" # TCP 端口（用于应用直接发送日志）
+      - "${LOGSTASH_TCP_PORT}:5000"          # TCP 端口（用于应用直接发送日志）
       - "0.0.0.0:9600:9600"                 # 监控端口
     environment:
       - xpack.monitoring.enabled=true
@@ -252,7 +252,10 @@ services:
       elk-setup:
         condition: service_completed_successfully
     networks:
-      - windblog_network
+      windblog_network:
+        aliases:
+          - logstash
+          - windblog_logstash
     healthcheck:
       test: [ "CMD-SHELL", "curl -s http://localhost:9600/_node/stats || exit 1" ]
       interval: 30s

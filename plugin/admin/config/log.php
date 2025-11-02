@@ -19,10 +19,37 @@ $logLevel = (getenv('APP_DEBUG') === 'true' || getenv('APP_DEBUG') === '1')
     ? Monolog\Logger::DEBUG
     : Monolog\Logger::INFO;
 
-// 获取 Logstash 配置
-$logstashHost = getenv('LOGSTASH_HOST') ?: 'logstash';
-$logstashPort = getenv('LOGSTASH_PORT') ?: 5000;
+// Logstash 配置（更健壮）
 $enableLogstash = getenv('ENABLE_LOGSTASH') === 'true' || getenv('ENABLE_LOGSTASH') === '1';
+$proto = getenv('LOGSTASH_PROTO') ?: 'tcp';
+$port = getenv('LOGSTASH_PORT') ?: 5000;
+$dsn = getenv('LOGSTASH_DSN') ?: '';
+$hostEnv = getenv('LOGSTASH_HOST') ?: 'logstash';
+
+$inContainerEnv = getenv('IN_CONTAINER');
+$inContainer = $inContainerEnv === false ? true : in_array(strtolower(trim($inContainerEnv)), ['true', '1', 'yes'], true);
+
+$resolvedDsn = '';
+if ($enableLogstash) {
+    if ($dsn) {
+        $resolvedDsn = $dsn;
+    } else {
+        $candidates = array_unique(array_filter([
+            $hostEnv,
+            'logstash',
+            'windblog_logstash',
+            $inContainer ? null : '127.0.0.1',
+            $inContainer ? null : 'localhost',
+        ]));
+        foreach ($candidates as $h) {
+            $ip = @gethostbyname($h);
+            if ($ip && $ip !== $h) {
+                $resolvedDsn = sprintf('%s://%s:%s', $proto, $h, $port);
+                break;
+            }
+        }
+    }
+}
 
 // 构建 handlers 数组
 $handlers = [
@@ -31,7 +58,7 @@ $handlers = [
         'class' => Monolog\Handler\RotatingFileHandler::class,
         'constructor' => [
             runtime_path() . '/logs/admin.log',
-            3, // 保留 3 天的日志文件，自动删除旧文件
+            3,
             $logLevel,
         ],
         'formatter' => [
@@ -41,13 +68,17 @@ $handlers = [
     ],
 ];
 
-// 如果启用 Logstash，添加 Socket handler
-if ($enableLogstash) {
+// 如果启用 Logstash 且已得到 DSN，则添加 Socket handler（设置合理超时，防止阻塞/抛错）
+if ($enableLogstash && $resolvedDsn) {
     $handlers[] = [
         'class' => Monolog\Handler\SocketHandler::class,
         'constructor' => [
-            "tcp://{$logstashHost}:{$logstashPort}",
+            $resolvedDsn,
             $logLevel,
+            true,
+            1,
+            2,
+            false,
         ],
         'formatter' => [
             'class' => Monolog\Formatter\JsonFormatter::class,

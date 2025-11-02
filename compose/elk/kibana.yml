@@ -13,8 +13,11 @@ elasticsearch.username: "kibana_system"
 # Monitoring
 monitoring.ui.container.elasticsearch.enabled: true
 
+xpack.monitoring.enabled: true  # 启用Kibana自身监控（默认true，可显式声明）
+xpack.monitoring.kibana.collection.enabled: true  # 收集Kibana监控数据
+
 # Localization
 i18n.locale: "zh-CN"
 
 # Logging
-logging.root.level: info
+logging.root.level: error

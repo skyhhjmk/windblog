@@ -5,30 +5,35 @@ SET client_encoding = 'UTF8';
 -- 创建用户表
 CREATE TABLE IF NOT EXISTS wa_users
 (
-    id         BIGSERIAL PRIMARY KEY,
-    username   VARCHAR(32)    NOT NULL,
-    nickname   VARCHAR(40)    NOT NULL,
-    password   VARCHAR(255)   NOT NULL,
-    sex        VARCHAR(1)     NOT NULL  DEFAULT '1',
-    avatar     VARCHAR(255)             DEFAULT NULL,
-    email      VARCHAR(128)             DEFAULT NULL,
-    mobile     VARCHAR(16)              DEFAULT NULL,
-    level      INTEGER        NOT NULL  DEFAULT 0,
-    birthday   DATE                     DEFAULT NULL,
-    money      DECIMAL(10, 2) NOT NULL  DEFAULT 0.00,
-    score      INTEGER        NOT NULL  DEFAULT 0,
-    last_time  TIMESTAMP WITH TIME ZONE DEFAULT NULL,
-    last_ip    VARCHAR(50)              DEFAULT NULL,
-    join_time  TIMESTAMP WITH TIME ZONE DEFAULT NULL,
-    join_ip    VARCHAR(50)              DEFAULT NULL,
-    token      VARCHAR(50)              DEFAULT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
-    "role"     INTEGER        NOT NULL  DEFAULT 1,
-    status     INTEGER        NOT NULL  DEFAULT 0,
+    id                          BIGSERIAL PRIMARY KEY,
+    username                    VARCHAR(32)    NOT NULL,
+    nickname                    VARCHAR(40)    NOT NULL,
+    password                    VARCHAR(255)   NOT NULL,
+    sex                         VARCHAR(1)     NOT NULL  DEFAULT '1',
+    avatar                      VARCHAR(255)             DEFAULT NULL,
+    email                       VARCHAR(128)             DEFAULT NULL,
+    mobile                      VARCHAR(16)              DEFAULT NULL,
+    level                       INTEGER        NOT NULL  DEFAULT 0,
+    birthday                    DATE                     DEFAULT NULL,
+    money                       DECIMAL(10, 2) NOT NULL  DEFAULT 0.00,
+    score                       INTEGER        NOT NULL  DEFAULT 0,
+    last_time                   TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+    last_ip                     VARCHAR(50)              DEFAULT NULL,
+    join_time                   TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+    join_ip                     VARCHAR(50)              DEFAULT NULL,
+    token                       VARCHAR(50)              DEFAULT NULL,
+    email_verified_at           TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+    activation_token            VARCHAR(64)              DEFAULT NULL,
+    activation_token_expires_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+    created_at                  TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at                  TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    deleted_at                  TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+    "role"                      INTEGER        NOT NULL  DEFAULT 1,
+    status                      INTEGER        NOT NULL  DEFAULT 0,
     UNIQUE (username)
 );
+
+CREATE INDEX IF NOT EXISTS idx_wa_users_activation_token ON wa_users (activation_token);
 
 COMMENT ON TABLE wa_users IS '用户表';
 COMMENT ON COLUMN wa_users.username IS '用户名';
@@ -47,11 +52,52 @@ COMMENT ON COLUMN wa_users.last_ip IS '登录ip';
 COMMENT ON COLUMN wa_users.join_time IS '注册时间';
 COMMENT ON COLUMN wa_users.join_ip IS '注册ip';
 COMMENT ON COLUMN wa_users.token IS 'token';
+COMMENT ON COLUMN wa_users.email_verified_at IS '邮箱验证时间';
+COMMENT ON COLUMN wa_users.activation_token IS '激活令牌';
+COMMENT ON COLUMN wa_users.activation_token_expires_at IS '激活令牌过期时间';
 COMMENT ON COLUMN wa_users.created_at IS '创建时间';
 COMMENT ON COLUMN wa_users.updated_at IS '更新时间';
 COMMENT ON COLUMN wa_users.deleted_at IS '删除时间';
 COMMENT ON COLUMN wa_users."role" IS '角色';
 COMMENT ON COLUMN wa_users.status IS '禁用';
+
+-- 创建用户OAuth绑定表
+CREATE TABLE IF NOT EXISTS user_oauth_bindings
+(
+    id                BIGSERIAL PRIMARY KEY,
+    user_id           INTEGER      NOT NULL,
+    provider          VARCHAR(50)  NOT NULL,
+    provider_user_id  VARCHAR(255) NOT NULL,
+    provider_username VARCHAR(255) DEFAULT NULL,
+    provider_email    VARCHAR(255) DEFAULT NULL,
+    provider_avatar   VARCHAR(500) DEFAULT NULL,
+    access_token      TEXT         DEFAULT NULL,
+    refresh_token     TEXT         DEFAULT NULL,
+    expires_at        TIMESTAMP    DEFAULT NULL,
+    extra_data        JSONB        DEFAULT NULL,
+    created_at        TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+    updated_at        TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_provider_user UNIQUE (provider, provider_user_id),
+    CONSTRAINT user_oauth_bindings_user_id_foreign FOREIGN KEY (user_id) REFERENCES wa_users (id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_oauth_user_id ON user_oauth_bindings (user_id);
+CREATE INDEX IF NOT EXISTS idx_user_oauth_provider ON user_oauth_bindings (provider);
+
+COMMENT ON TABLE user_oauth_bindings IS '用户OAuth绑定表';
+COMMENT ON COLUMN user_oauth_bindings.id IS '主键';
+COMMENT ON COLUMN user_oauth_bindings.user_id IS '用户ID';
+COMMENT ON COLUMN user_oauth_bindings.provider IS 'OAuth提供商(github, google, wechat等)';
+COMMENT ON COLUMN user_oauth_bindings.provider_user_id IS 'OAuth提供商的用户ID';
+COMMENT ON COLUMN user_oauth_bindings.provider_username IS 'OAuth提供商的用户名';
+COMMENT ON COLUMN user_oauth_bindings.provider_email IS 'OAuth提供商的邮箱';
+COMMENT ON COLUMN user_oauth_bindings.provider_avatar IS 'OAuth提供商的头像URL';
+COMMENT ON COLUMN user_oauth_bindings.access_token IS '访问令牌(加密存储)';
+COMMENT ON COLUMN user_oauth_bindings.refresh_token IS '刷新令牌(加密存储)';
+COMMENT ON COLUMN user_oauth_bindings.expires_at IS '令牌过期时间';
+COMMENT ON COLUMN user_oauth_bindings.extra_data IS '额外数据(JSON格式)';
+COMMENT ON COLUMN user_oauth_bindings.created_at IS '绑定时间';
+COMMENT ON COLUMN user_oauth_bindings.updated_at IS '更新时间';
 
 -- 创建分类表
 CREATE TABLE IF NOT EXISTS categories
@@ -90,6 +136,7 @@ CREATE TABLE IF NOT EXISTS posts
     content_type   VARCHAR(10)              NOT NULL DEFAULT 'markdown',
     content        TEXT                     NOT NULL,
     excerpt        TEXT                              DEFAULT NULL,
+    ai_summary TEXT DEFAULT NULL,
     status         VARCHAR(15)              NOT NULL DEFAULT 'draft',
     visibility     VARCHAR(20)              NOT NULL DEFAULT 'public',
     password       VARCHAR(255)                      DEFAULT NULL,
@@ -193,6 +240,12 @@ CREATE TABLE IF NOT EXISTS links
     updated_at      TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     deleted_at      TIMESTAMP WITH TIME ZONE DEFAULT NULL
 );
+
+-- 为links表的custom_fields字段添加GIN索引
+CREATE INDEX IF NOT EXISTS idx_links_custom_fields_gin ON links USING GIN (custom_fields);
+CREATE INDEX IF NOT EXISTS idx_links_ai_audit_status ON links ((custom_fields ->> 'ai_audit_status'));
+CREATE INDEX IF NOT EXISTS idx_links_last_audit_time ON links ((custom_fields ->> 'last_audit_time'));
+CREATE INDEX IF NOT EXISTS idx_links_last_monitor_time ON links ((custom_fields ->> 'last_monitor_time'));
 
 COMMENT ON TABLE links IS '友链表';
 COMMENT ON COLUMN links.name IS '友链名称';
@@ -397,6 +450,10 @@ CREATE TABLE IF NOT EXISTS comments
     content     TEXT                     NOT NULL,
     quoted_data TEXT                              DEFAULT NULL,
     status      VARCHAR(10)              NOT NULL DEFAULT 'pending',
+    ai_moderation_result     VARCHAR(20)   DEFAULT NULL,
+    ai_moderation_reason     TEXT          DEFAULT NULL,
+    ai_moderation_confidence DECIMAL(3, 2) DEFAULT NULL,
+    ai_moderation_categories JSONB         DEFAULT NULL,
     ip_address  VARCHAR(45)                       DEFAULT NULL,
     user_agent  VARCHAR(255)                      DEFAULT NULL,
     created_at  TIMESTAMP WITH TIME ZONE          DEFAULT CURRENT_TIMESTAMP,
@@ -417,6 +474,10 @@ COMMENT ON COLUMN comments.guest_email IS '访客邮箱';
 COMMENT ON COLUMN comments.content IS '评论内容';
 COMMENT ON COLUMN comments.quoted_data IS '引用数据(JSON格式,包含被引用评论的ID、作者、内容等信息)';
 COMMENT ON COLUMN comments.status IS '评论状态';
+COMMENT ON COLUMN comments.ai_moderation_result IS 'AI审核结果：approved/rejected/spam/pending';
+COMMENT ON COLUMN comments.ai_moderation_reason IS 'AI审核原因';
+COMMENT ON COLUMN comments.ai_moderation_confidence IS 'AI审核置信度(0-1)';
+COMMENT ON COLUMN comments.ai_moderation_categories IS 'AI检测到的问题类别';
 COMMENT ON COLUMN comments.ip_address IS 'IP地址';
 COMMENT ON COLUMN comments.user_agent IS '用户代理';
 COMMENT ON COLUMN comments.created_at IS '创建时间';
@@ -501,22 +562,6 @@ COMMENT ON COLUMN wa_admins.updated_at IS '更新时间';
 COMMENT ON COLUMN wa_admins.login_at IS '登录时间';
 COMMENT ON COLUMN wa_admins.status IS '禁用';
 
--- 创建选项表
-CREATE TABLE IF NOT EXISTS wa_options
-(
-    id         SERIAL PRIMARY KEY,
-    name       VARCHAR(128) NOT NULL,
-    value      jsonb        NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, -- 修正
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, -- 修正
-    UNIQUE (name)
-);
-
-COMMENT ON TABLE wa_options IS '选项表';
-COMMENT ON COLUMN wa_options.name IS '键';
-COMMENT ON COLUMN wa_options.value IS '值';
-COMMENT ON COLUMN wa_options.created_at IS '创建时间';
-COMMENT ON COLUMN wa_options.updated_at IS '更新时间';
 
 -- 创建管理员角色表（权限角色组）
 CREATE TABLE IF NOT EXISTS wa_roles
@@ -562,37 +607,6 @@ COMMENT ON COLUMN wa_rules.href IS 'url';
 COMMENT ON COLUMN wa_rules.type IS '类型';
 COMMENT ON COLUMN wa_rules.weight IS '排序';
 
--- 创建附件表
-CREATE TABLE IF NOT EXISTS wa_uploads
-(
-    id           SERIAL PRIMARY KEY,
-    name         VARCHAR(128) NOT NULL,
-    url          VARCHAR(255) NOT NULL,
-    admin_id     INTEGER                  DEFAULT NULL,
-    file_size    INTEGER      NOT NULL,
-    mime_type    VARCHAR(255) NOT NULL,
-    image_width  INTEGER                  DEFAULT NULL,
-    image_height INTEGER                  DEFAULT NULL,
-    ext          VARCHAR(128) NOT NULL,
-    storage      VARCHAR(255) NOT NULL    DEFAULT 'local',
-    category     VARCHAR(128)             DEFAULT NULL,
-    created_at   TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at   TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-COMMENT ON TABLE wa_uploads IS '附件表';
-COMMENT ON COLUMN wa_uploads.name IS '名称';
-COMMENT ON COLUMN wa_uploads.url IS '文件';
-COMMENT ON COLUMN wa_uploads.admin_id IS '管理员';
-COMMENT ON COLUMN wa_uploads.file_size IS '文件大小';
-COMMENT ON COLUMN wa_uploads.mime_type IS 'mime类型';
-COMMENT ON COLUMN wa_uploads.image_width IS '图片宽度';
-COMMENT ON COLUMN wa_uploads.image_height IS '图片高度';
-COMMENT ON COLUMN wa_uploads.ext IS '扩展名';
-COMMENT ON COLUMN wa_uploads.storage IS '存储位置';
-COMMENT ON COLUMN wa_uploads.created_at IS '上传时间';
-COMMENT ON COLUMN wa_uploads.category IS '类别';
-COMMENT ON COLUMN wa_uploads.updated_at IS '更新时间';
 
 -- 创建posts_ext表
 CREATE TABLE IF NOT EXISTS post_ext
@@ -608,6 +622,95 @@ COMMENT ON TABLE post_ext IS '文章扩展表';
 COMMENT ON COLUMN post_ext.post_id IS '文章ID';
 COMMENT ON COLUMN post_ext.key IS '键';
 COMMENT ON COLUMN post_ext.value IS '值';
+
+-- 创建AI提供方表
+CREATE TABLE IF NOT EXISTS ai_providers
+(
+    id         varchar(64)  NOT NULL PRIMARY KEY,
+    name       varchar(255) NOT NULL,
+    template   varchar(64),
+    type       varchar(64)  NOT NULL DEFAULT 'openai',
+    config     text,
+    weight     integer      NOT NULL DEFAULT 1,
+    enabled    boolean      NOT NULL DEFAULT true,
+    created_at timestamp             DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp             DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE ai_providers IS 'AI提供方配置表';
+COMMENT ON COLUMN ai_providers.id IS '提供方唯一标识（用户自定义或自动生成）';
+COMMENT ON COLUMN ai_providers.name IS '提供方名称';
+COMMENT ON COLUMN ai_providers.template IS '模板类型（openai/claude/azure/gemini/custom等）';
+COMMENT ON COLUMN ai_providers.type IS '提供方类型';
+COMMENT ON COLUMN ai_providers.config IS '配置JSON（包含api_key、base_url、model等）';
+COMMENT ON COLUMN ai_providers.weight IS '权重（用于加权选择）';
+COMMENT ON COLUMN ai_providers.enabled IS '是否启用';
+
+CREATE INDEX IF NOT EXISTS idx_ai_providers_enabled ON ai_providers (enabled);
+CREATE INDEX IF NOT EXISTS idx_ai_providers_template ON ai_providers (template);
+
+-- 创建更新时间触发器
+CREATE OR REPLACE FUNCTION update_ai_providers_updated_at()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_ai_providers_updated_at ON ai_providers;
+CREATE TRIGGER trigger_ai_providers_updated_at
+    BEFORE UPDATE
+    ON ai_providers
+    FOR EACH ROW
+EXECUTE FUNCTION update_ai_providers_updated_at();
+
+-- 创建AI轮询组表
+CREATE TABLE IF NOT EXISTS ai_polling_groups
+(
+    id          SERIAL PRIMARY KEY,
+    name        VARCHAR(100) NOT NULL UNIQUE,
+    description VARCHAR(500)          DEFAULT NULL,
+    strategy    VARCHAR(20)  NOT NULL DEFAULT 'polling' CHECK (strategy IN ('polling', 'failover')),
+    enabled     BOOLEAN      NOT NULL DEFAULT TRUE,
+    created_at  TIMESTAMP             DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMP             DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE ai_polling_groups IS 'AI轮询组表';
+COMMENT ON COLUMN ai_polling_groups.id IS '主键ID';
+COMMENT ON COLUMN ai_polling_groups.name IS '轮询组名称';
+COMMENT ON COLUMN ai_polling_groups.description IS '轮询组描述';
+COMMENT ON COLUMN ai_polling_groups.strategy IS '调度策略：polling=轮询, failover=主备';
+COMMENT ON COLUMN ai_polling_groups.enabled IS '是否启用';
+COMMENT ON COLUMN ai_polling_groups.created_at IS '创建时间';
+COMMENT ON COLUMN ai_polling_groups.updated_at IS '更新时间';
+
+-- 创建AI轮询组提供方关系表
+CREATE TABLE IF NOT EXISTS ai_polling_group_providers
+(
+    id          SERIAL PRIMARY KEY,
+    group_id    INTEGER     NOT NULL REFERENCES ai_polling_groups (id) ON DELETE CASCADE,
+    provider_id VARCHAR(64) NOT NULL,
+    weight      INTEGER     NOT NULL DEFAULT 1,
+    enabled     BOOLEAN     NOT NULL DEFAULT TRUE,
+    created_at  TIMESTAMP            DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMP            DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (group_id, provider_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_polling_group_id ON ai_polling_group_providers (group_id);
+CREATE INDEX IF NOT EXISTS idx_polling_provider_id ON ai_polling_group_providers (provider_id);
+
+COMMENT ON TABLE ai_polling_group_providers IS 'AI轮询组提供方关系表';
+COMMENT ON COLUMN ai_polling_group_providers.id IS '主键ID';
+COMMENT ON COLUMN ai_polling_group_providers.group_id IS '轮询组ID';
+COMMENT ON COLUMN ai_polling_group_providers.provider_id IS '提供方ID';
+COMMENT ON COLUMN ai_polling_group_providers.weight IS '权重（用于轮询和优先级）';
+COMMENT ON COLUMN ai_polling_group_providers.enabled IS '是否启用';
+COMMENT ON COLUMN ai_polling_group_providers.created_at IS '创建时间';
+COMMENT ON COLUMN ai_polling_group_providers.updated_at IS '更新时间';
 
 -- 添加索引
 CREATE INDEX idx_wa_users_join_time ON wa_users USING btree (join_time);
@@ -659,55 +762,46 @@ CREATE INDEX idx_tags_deleted_at ON tags USING btree (deleted_at);
 CREATE INDEX idx_post_tag_post_id ON post_tag USING btree (post_id);
 CREATE INDEX idx_post_tag_tag_id ON post_tag USING btree (tag_id);
 
-CREATE INDEX idx_wa_uploads_category ON wa_uploads USING btree (category);
-CREATE INDEX idx_wa_uploads_admin_id ON wa_uploads USING btree (admin_id);
-CREATE INDEX idx_wa_uploads_name ON wa_uploads USING btree (name);
-CREATE INDEX idx_wa_uploads_ext ON wa_uploads USING btree (ext);
 
 CREATE INDEX idx_post_ext_id ON post_ext USING btree (id);
 CREATE INDEX idx_post_ext_key ON post_ext USING btree (key);
 -- 插入预定义表数据
 
 -- Data for Name: settings; Type: TABLE DATA; Schema: public; Owner: postgres
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'system_config', '{
+INSERT INTO public.settings (key, value, created_at, updated_at)
+VALUES ('system_config', '{
+  "logo": {
+    "title": "风屿岛管理页",
+    "image": "/app/admin/admin/images/logo.png"
+  },
+  "menu": {
+    "data": "/app/admin/rule/get",
+    "method": "GET",
+    "accordion": true,
+    "collapse": false,
+    "control": false,
+    "controlWidth": 2000,
+    "select": "0",
+    "async": true
+  },
   "tab": {
+    "enable": true,
+    "keepState": true,
+    "session": true,
+    "preload": false,
     "max": "30",
     "index": {
       "id": "0",
       "href": "/app/admin/index/dashboard",
       "title": "仪表盘"
-    },
-    "enable": true,
-    "preload": false,
-    "session": true,
-    "keepState": true
-  },
-  "logo": {
-    "image": "/app/admin/admin/images/logo.png",
-    "title": "风屿岛管理页"
-  },
-  "menu": {
-    "data": "/app/admin/rule/get",
-    "async": true,
-    "method": "GET",
-    "select": "0",
-    "control": false,
-    "collapse": false,
-    "accordion": true,
-    "controlWidth": 2000
-  },
-  "other": {
-    "footer": false,
-    "autoHead": false,
-    "keepLoad": "500"
+    }
   },
   "theme": {
-    "banner": false,
-    "allowCustom": true,
-    "defaultMenu": "light-theme",
     "defaultColor": "2",
-    "defaultHeader": "light-theme"
+    "defaultMenu": "light-theme",
+    "defaultHeader": "light-theme",
+    "allowCustom": true,
+    "banner": false
   },
   "colors": [
     {
@@ -736,1077 +830,909 @@ VALUES (default, 'system_config', '{
       "second": "#ecf5ff"
     }
   ],
+  "other": {
+    "keepLoad": "500",
+    "autoHead": false,
+    "footer": false
+  },
   "header": {
     "message": false
   }
-}', 'general', '2022-12-05 06:49:01.000000 +00:00', '2022-12-08 12:20:28.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'table_form_schema_wa_users', '{
-  "id": {
-    "field": "id",
-    "comment": "主键",
-    "control": "inputNumber",
-    "_field_id": "0",
-    "form_show": false,
-    "list_show": true,
-    "searchable": true,
-    "enable_sort": true,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "sex": {
-    "field": "sex",
-    "comment": "性别",
-    "control": "select",
-    "_field_id": "4",
-    "form_show": true,
-    "list_show": true,
-    "searchable": true,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": "url:/app/admin/dict/get/sex"
-  },
-  "role": {
-    "field": "role",
-    "comment": "角色",
-    "control": "inputNumber",
-    "_field_id": "19",
-    "form_show": false,
-    "list_show": false,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "email": {
-    "field": "email",
-    "comment": "邮箱",
-    "control": "input",
-    "_field_id": "6",
-    "form_show": true,
-    "list_show": true,
-    "searchable": true,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "level": {
-    "field": "level",
-    "comment": "等级",
-    "control": "inputNumber",
-    "_field_id": "8",
-    "form_show": true,
-    "list_show": false,
-    "searchable": true,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "money": {
-    "field": "money",
-    "comment": "余额(元)",
-    "control": "inputNumber",
-    "_field_id": "10",
-    "form_show": true,
-    "list_show": false,
-    "searchable": true,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "score": {
-    "field": "score",
-    "comment": "积分",
-    "control": "inputNumber",
-    "_field_id": "11",
-    "form_show": true,
-    "list_show": false,
-    "searchable": true,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "token": {
-    "field": "token",
-    "comment": "token",
-    "control": "input",
-    "_field_id": "16",
-    "form_show": false,
-    "list_show": false,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "avatar": {
-    "field": "avatar",
-    "comment": "头像",
-    "control": "uploadImage",
-    "_field_id": "5",
-    "form_show": true,
-    "list_show": true,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": "url:/app/admin/upload/avatar"
-  },
-  "mobile": {
-    "field": "mobile",
-    "comment": "手机",
-    "control": "input",
-    "_field_id": "7",
-    "form_show": true,
-    "list_show": true,
-    "searchable": true,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "status": {
-    "field": "status",
-    "comment": "禁用",
-    "control": "switch",
-    "_field_id": "20",
-    "form_show": true,
-    "list_show": true,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "join_ip": {
-    "field": "join_ip",
-    "comment": "注册ip",
-    "control": "input",
-    "_field_id": "15",
-    "form_show": true,
-    "list_show": false,
-    "searchable": true,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "last_ip": {
-    "field": "last_ip",
-    "comment": "登录ip",
-    "control": "input",
-    "_field_id": "13",
-    "form_show": true,
-    "list_show": false,
-    "searchable": true,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "birthday": {
-    "field": "birthday",
-    "comment": "生日",
-    "control": "datePicker",
-    "_field_id": "9",
-    "form_show": true,
-    "list_show": false,
-    "searchable": true,
-    "enable_sort": false,
-    "search_type": "between",
-    "control_args": ""
-  },
-  "nickname": {
-    "field": "nickname",
-    "comment": "昵称",
-    "control": "input",
-    "_field_id": "2",
-    "form_show": true,
-    "list_show": true,
-    "searchable": true,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "password": {
-    "field": "password",
-    "comment": "密码",
-    "control": "input",
-    "_field_id": "3",
-    "form_show": true,
-    "list_show": false,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "username": {
-    "field": "username",
-    "comment": "用户名",
-    "control": "input",
-    "_field_id": "1",
-    "form_show": true,
-    "list_show": true,
-    "searchable": true,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "join_time": {
-    "field": "join_time",
-    "comment": "注册时间",
-    "control": "dateTimePicker",
-    "_field_id": "14",
-    "form_show": true,
-    "list_show": false,
-    "searchable": true,
-    "enable_sort": false,
-    "search_type": "between",
-    "control_args": ""
-  },
-  "last_time": {
-    "field": "last_time",
-    "comment": "登录时间",
-    "control": "dateTimePicker",
-    "_field_id": "12",
-    "form_show": true,
-    "list_show": false,
-    "searchable": true,
-    "enable_sort": false,
-    "search_type": "between",
-    "control_args": ""
-  },
-  "created_at": {
-    "field": "created_at",
-    "comment": "创建时间",
-    "control": "dateTimePicker",
-    "_field_id": "17",
-    "form_show": true,
-    "list_show": false,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "between",
-    "control_args": ""
-  },
-  "updated_at": {
-    "field": "updated_at",
-    "comment": "更新时间",
-    "control": "dateTimePicker",
-    "_field_id": "18",
-    "form_show": false,
-    "list_show": false,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "between",
-    "control_args": ""
-  }
-}', 'general', '2022-08-14 16:00:00.000000 +00:00', '2022-12-23 07:28:13.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'table_form_schema_wa_roles', '{
-  "id": {
-    "field": "id",
-    "comment": "主键",
-    "control": "inputNumber",
-    "_field_id": "0",
-    "form_show": false,
-    "list_show": true,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "pid": {
-    "field": "pid",
-    "comment": "父级",
-    "control": "select",
-    "_field_id": "5",
-    "form_show": true,
-    "list_show": true,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": "url:/app/admin/role/select?format=tree"
-  },
-  "name": {
-    "field": "name",
-    "comment": "角色组",
-    "control": "input",
-    "_field_id": "1",
-    "form_show": true,
-    "list_show": true,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "rules": {
-    "field": "rules",
-    "comment": "权限",
-    "control": "treeSelectMulti",
-    "_field_id": "2",
-    "form_show": true,
-    "list_show": true,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": "url:/app/admin/rule/get?type=0,1,2"
-  },
-  "created_at": {
-    "field": "created_at",
-    "comment": "创建时间",
-    "control": "dateTimePicker",
-    "_field_id": "3",
-    "form_show": false,
-    "list_show": false,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "updated_at": {
-    "field": "updated_at",
-    "comment": "更新时间",
-    "control": "dateTimePicker",
-    "_field_id": "4",
-    "form_show": false,
-    "list_show": false,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  }
-}', 'general', '2022-08-14 16:00:00.000000 +00:00', '2022-12-19 06:24:25.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'table_form_schema_wa_rules', '{
-  "id": {
-    "field": "id",
-    "comment": "主键",
-    "control": "inputNumber",
-    "_field_id": "0",
-    "form_show": false,
-    "list_show": false,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "key": {
-    "field": "key",
-    "comment": "标识",
-    "control": "input",
-    "_field_id": "3",
-    "form_show": true,
-    "list_show": true,
-    "searchable": true,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "pid": {
-    "field": "pid",
-    "comment": "上级菜单",
-    "control": "treeSelect",
-    "_field_id": "4",
-    "form_show": true,
-    "list_show": true,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": "/app/admin/rule/select?format=tree&type=0,1"
-  },
-  "href": {
-    "field": "href",
-    "comment": "url",
-    "control": "input",
-    "_field_id": "7",
-    "form_show": true,
-    "list_show": true,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "icon": {
-    "field": "icon",
-    "comment": "图标",
-    "control": "iconPicker",
-    "_field_id": "2",
-    "form_show": true,
-    "list_show": true,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "type": {
-    "field": "type",
-    "comment": "类型",
-    "control": "select",
-    "_field_id": "8",
-    "form_show": true,
-    "list_show": true,
-    "searchable": true,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": "data:0:目录,1:菜单,2:权限"
-  },
-  "title": {
-    "field": "title",
-    "comment": "标题",
-    "control": "input",
-    "_field_id": "1",
-    "form_show": true,
-    "list_show": true,
-    "searchable": true,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "weight": {
-    "field": "weight",
-    "comment": "排序",
-    "control": "inputNumber",
-    "_field_id": "9",
-    "form_show": true,
-    "list_show": true,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "created_at": {
-    "field": "created_at",
-    "comment": "创建时间",
-    "control": "dateTimePicker",
-    "_field_id": "5",
-    "form_show": false,
-    "list_show": false,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "updated_at": {
-    "field": "updated_at",
-    "comment": "更新时间",
-    "control": "dateTimePicker",
-    "_field_id": "6",
-    "form_show": false,
-    "list_show": false,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  }
-}', 'general', '2022-08-14 16:00:00.000000 +00:00', '2022-12-08 03:44:45.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'table_form_schema_wa_admins', '{
-  "id": {
-    "field": "id",
-    "comment": "ID",
-    "control": "inputNumber",
-    "_field_id": "0",
-    "form_show": false,
-    "list_show": true,
-    "searchable": false,
-    "enable_sort": true,
-    "search_type": "between",
-    "control_args": ""
-  },
-  "email": {
-    "field": "email",
-    "comment": "邮箱",
-    "control": "input",
-    "_field_id": "5",
-    "form_show": true,
-    "list_show": true,
-    "searchable": true,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "avatar": {
-    "field": "avatar",
-    "comment": "头像",
-    "control": "uploadImage",
-    "_field_id": "4",
-    "form_show": true,
-    "list_show": true,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": "url:/app/admin/upload/avatar"
-  },
-  "mobile": {
-    "field": "mobile",
-    "comment": "手机",
-    "control": "input",
-    "_field_id": "6",
-    "form_show": true,
-    "list_show": true,
-    "searchable": true,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "status": {
-    "field": "status",
-    "comment": "禁用",
-    "control": "switch",
-    "_field_id": "10",
-    "form_show": true,
-    "list_show": true,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "login_at": {
-    "field": "login_at",
-    "comment": "登录时间",
-    "control": "dateTimePicker",
-    "_field_id": "9",
-    "form_show": true,
-    "list_show": true,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "between",
-    "control_args": ""
-  },
-  "nickname": {
-    "field": "nickname",
-    "comment": "昵称",
-    "control": "input",
-    "_field_id": "2",
-    "form_show": true,
-    "list_show": true,
-    "searchable": true,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "password": {
-    "field": "password",
-    "comment": "密码",
-    "control": "input",
-    "_field_id": "3",
-    "form_show": true,
-    "list_show": false,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "username": {
-    "field": "username",
-    "comment": "用户名",
-    "control": "input",
-    "_field_id": "1",
-    "form_show": true,
-    "list_show": true,
-    "searchable": true,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "created_at": {
-    "field": "created_at",
-    "comment": "创建时间",
-    "control": "dateTimePicker",
-    "_field_id": "7",
-    "form_show": true,
-    "list_show": false,
-    "searchable": true,
-    "enable_sort": false,
-    "search_type": "between",
-    "control_args": ""
-  },
-  "updated_at": {
-    "field": "updated_at",
-    "comment": "更新时间",
-    "control": "dateTimePicker",
-    "_field_id": "8",
-    "form_show": true,
-    "list_show": false,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  }
-}', 'general', '2022-08-14 16:00:00.000000 +00:00', '2022-12-23 07:36:48.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'table_form_schema_wa_options', '{
-  "id": {
-    "field": "id",
-    "comment": "",
-    "control": "inputNumber",
-    "_field_id": "0",
-    "form_show": false,
-    "list_show": true,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "name": {
-    "field": "name",
-    "comment": "键",
-    "control": "input",
-    "_field_id": "1",
-    "form_show": true,
-    "list_show": true,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "value": {
-    "field": "value",
-    "comment": "值",
-    "control": "textArea",
-    "_field_id": "2",
-    "form_show": true,
-    "list_show": true,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "created_at": {
-    "field": "created_at",
-    "comment": "创建时间",
-    "control": "dateTimePicker",
-    "_field_id": "3",
-    "form_show": false,
-    "list_show": false,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "updated_at": {
-    "field": "updated_at",
-    "comment": "更新时间",
-    "control": "dateTimePicker",
-    "_field_id": "4",
-    "form_show": false,
-    "list_show": false,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  }
-}', 'general', '2022-08-14 16:00:00.000000 +00:00', '2022-12-08 03:36:57.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'table_form_schema_wa_uploads', '{
-  "id": {
-    "field": "id",
-    "comment": "主键",
-    "control": "inputNumber",
-    "_field_id": "0",
-    "form_show": false,
-    "list_show": true,
-    "searchable": false,
-    "enable_sort": true,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "ext": {
-    "field": "ext",
-    "comment": "扩展名",
-    "control": "input",
-    "_field_id": "8",
-    "form_show": false,
-    "list_show": true,
-    "searchable": true,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "url": {
-    "field": "url",
-    "comment": "文件",
-    "control": "upload",
-    "_field_id": "2",
-    "form_show": true,
-    "list_show": true,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": "url:/app/admin/upload/file"
-  },
-  "name": {
-    "field": "name",
-    "comment": "名称",
-    "control": "input",
-    "_field_id": "1",
-    "form_show": false,
-    "list_show": true,
-    "searchable": true,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "storage": {
-    "field": "storage",
-    "comment": "存储位置",
-    "control": "input",
-    "_field_id": "9",
-    "form_show": false,
-    "list_show": false,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "admin_id": {
-    "field": "admin_id",
-    "comment": "管理员",
-    "control": "select",
-    "_field_id": "3",
-    "form_show": false,
-    "list_show": false,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": "url:/app/admin/admin/select?format=select"
-  },
-  "category": {
-    "field": "category",
-    "comment": "类别",
-    "control": "select",
-    "_field_id": "11",
-    "form_show": true,
-    "list_show": true,
-    "searchable": true,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": "url:/app/admin/dict/get/upload"
-  },
-  "file_size": {
-    "field": "file_size",
-    "comment": "文件大小",
-    "control": "inputNumber",
-    "_field_id": "4",
-    "form_show": false,
-    "list_show": true,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "between",
-    "control_args": ""
-  },
-  "mime_type": {
-    "field": "mime_type",
-    "comment": "mime类型",
-    "control": "input",
-    "_field_id": "5",
-    "form_show": false,
-    "list_show": true,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "created_at": {
-    "field": "created_at",
-    "comment": "上传时间",
-    "control": "dateTimePicker",
-    "_field_id": "10",
-    "form_show": false,
-    "list_show": false,
-    "searchable": true,
-    "enable_sort": false,
-    "search_type": "between",
-    "control_args": ""
-  },
-  "updated_at": {
-    "field": "updated_at",
-    "comment": "更新时间",
-    "control": "dateTimePicker",
-    "_field_id": "12",
-    "form_show": true,
-    "list_show": true,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "image_width": {
-    "field": "image_width",
-    "comment": "图片宽度",
-    "control": "inputNumber",
-    "_field_id": "6",
-    "form_show": false,
-    "list_show": true,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "image_height": {
-    "field": "image_height",
-    "comment": "图片高度",
-    "control": "inputNumber",
-    "_field_id": "7",
-    "form_show": false,
-    "list_show": true,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  }
-}', 'general', '2022-08-14 16:00:00.000000 +00:00', '2022-12-08 03:47:45.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'dict_upload', '[
-  {
-    "name": "分类1",
-    "value": "1"
-  },
-  {
-    "name": "分类2",
-    "value": "2"
-  },
-  {
-    "name": "分类3",
-    "value": "3"
-  }
-]', 'general', '2022-12-04 08:24:13.000000 +00:00', '2022-12-04 08:24:13.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'dict_sex', '[
-  {
-    "name": "女",
-    "value": "0"
-  },
-  {
-    "name": "男",
-    "value": "1"
-  }
-]', 'general', '2022-12-04 07:04:40.000000 +00:00', '2022-12-04 07:04:40.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'dict_status', '[
-  {
-    "name": "正常",
-    "value": "0"
-  },
-  {
-    "name": "禁用",
-    "value": "1"
-  }
-]', 'general', '2022-12-04 07:05:09.000000 +00:00', '2022-12-04 07:05:09.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'flolink_affiliate_suffix', '"github_"', 'general', '2025-10-18 09:42:53.000000 +00:00',
-        '2025-10-18 09:42:53.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'rabbitmq_dlx_queue', '"dlx_queue"', 'general', '2025-10-18 20:47:19.000000 +00:00',
-        '2025-10-18 20:47:19.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'table_form_schema_wa_admin_roles', '{
-  "id": {
-    "field": "id",
-    "comment": "主键",
-    "control": "inputNumber",
-    "_field_id": "0",
-    "form_show": false,
-    "list_show": true,
-    "searchable": true,
-    "enable_sort": true,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "role_id": {
-    "field": "role_id",
-    "comment": "角色id",
-    "control": "inputNumber",
-    "_field_id": "1",
-    "form_show": true,
-    "list_show": true,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  },
-  "admin_id": {
-    "field": "admin_id",
-    "comment": "管理员id",
-    "control": "inputNumber",
-    "_field_id": "2",
-    "form_show": true,
-    "list_show": true,
-    "searchable": false,
-    "enable_sort": false,
-    "search_type": "normal",
-    "control_args": ""
-  }
-}', 'general', '2022-08-14 16:00:00.000000 +00:00', '2022-12-20 11:42:51.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'dict_dict_name', '[
-  {
-    "name": "字典名称",
-    "value": "dict_name"
-  },
-  {
-    "name": "启禁用状态",
-    "value": "status"
-  },
-  {
-    "name": "性别",
-    "value": "sex"
-  },
-  {
-    "name": "附件分类",
-    "value": "upload"
-  }
-]', 'general', '2022-08-14 16:00:00.000000 +00:00', '2022-12-20 11:42:51.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'rabbitmq_host', '"rabbitmq"', 'general', '2025-10-16 04:01:11.000000 +00:00',
-        '2025-10-16 04:01:11.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'rabbitmq_port', '5672', 'general', '2025-10-16 04:01:11.000000 +00:00',
-        '2025-10-16 04:01:11.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'rabbitmq_user', '"windblog"', 'general', '2025-10-16 04:01:11.000000 +00:00',
-        '2025-10-16 04:01:11.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'rabbitmq_import_exchange', '"import_exchange"', 'general', '2025-10-16 04:01:11.000000 +00:00',
-        '2025-10-16 04:01:11.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'rabbitmq_password', '"rabbitmq_secret_change_me"', 'general', '2025-10-16 04:01:11.000000 +00:00',
-        '2025-10-16 04:01:11.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'rabbitmq_import_routing_key', '"import_job"', 'general', '2025-10-16 04:01:11.000000 +00:00',
-        '2025-10-16 04:01:11.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'rabbitmq_import_queue', '"import_queue"', 'general', '2025-10-16 04:01:11.000000 +00:00',
-        '2025-10-16 04:01:11.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'rabbitmq_vhost', '"/"', 'general', '2025-10-16 04:01:11.000000 +00:00',
-        '2025-10-16 04:01:11.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'rabbitmq_import_dlx_exchange', '"import_dlx_exchange"', 'general',
-        '2025-10-16 04:01:11.000000 +00:00', '2025-10-16 04:01:11.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'rabbitmq_import_dlx_queue', '"import_dlx_queue"', 'general', '2025-10-16 04:01:11.000000 +00:00',
-        '2025-10-16 04:01:11.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'rabbitmq_http_callback_exchange', '"http_callback_exchange"', 'general',
-        '2025-10-16 04:01:11.000000 +00:00', '2025-10-16 04:01:11.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'rabbitmq_http_callback_routing_key', '"http_callback"', 'general',
-        '2025-10-16 04:01:11.000000 +00:00', '2025-10-16 04:01:11.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'rabbitmq_http_callback_queue', '"http_callback_queue"', 'general',
-        '2025-10-16 04:01:11.000000 +00:00', '2025-10-16 04:01:11.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'rabbitmq_link_monitor_exchange', '"link_monitor_exchange"', 'general',
-        '2025-10-16 04:01:11.000000 +00:00', '2025-10-16 04:01:11.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'rabbitmq_http_dlx_exchange', '"http_dlx_exchange"', 'general', '2025-10-16 04:01:11.000000 +00:00',
-        '2025-10-16 04:01:11.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'rabbitmq_link_monitor_routing_key', '"link_monitor"', 'general', '2025-10-16 04:01:11.000000 +00:00',
-        '2025-10-16 04:01:11.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'rabbitmq_http_dlx_queue', '"http_dlx_queue"', 'general', '2025-10-16 04:01:11.000000 +00:00',
-        '2025-10-16 04:01:11.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'rabbitmq_static_exchange', '"windblog_static_gen"', 'general', '2025-10-16 04:01:11.000000 +00:00',
-        '2025-10-16 04:01:11.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'rabbitmq_link_monitor_queue', '"link_monitor_queue"', 'general', '2025-10-16 04:01:11.000000 +00:00',
-        '2025-10-16 04:01:11.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'rabbitmq_static_routing_key', '"static_gen"', 'general', '2025-10-16 04:01:11.000000 +00:00',
-        '2025-10-16 04:01:11.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'rabbitmq_link_monitor_dlx_exchange', '"link_monitor_dlx_exchange"', 'general',
-        '2025-10-16 04:01:11.000000 +00:00', '2025-10-16 04:01:11.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'rabbitmq_mail_exchange', '"mail_exchange"', 'general', '2025-10-16 04:01:11.000000 +00:00',
-        '2025-10-16 04:01:11.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'rabbitmq_static_queue', '"windblog_static_queue"', 'general', '2025-10-16 04:01:11.000000 +00:00',
-        '2025-10-16 04:01:11.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'rabbitmq_link_monitor_dlx_queue', '"link_monitor_dlx_queue"', 'general',
-        '2025-10-16 04:01:11.000000 +00:00', '2025-10-16 04:01:11.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'rabbitmq_mail_routing_key', '"mail_send"', 'general', '2025-10-16 04:01:11.000000 +00:00',
-        '2025-10-16 04:01:11.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'rabbitmq_static_dlx_exchange', '"windblog_static_dlx"', 'general',
-        '2025-10-16 04:01:11.000000 +00:00', '2025-10-16 04:01:11.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'rabbitmq_mail_queue', '"mail_queue"', 'general', '2025-10-16 04:01:11.000000 +00:00',
-        '2025-10-16 04:01:11.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'rabbitmq_static_dlx_queue', '"windblog_static_dlq"', 'general', '2025-10-16 04:01:11.000000 +00:00',
-        '2025-10-16 04:01:11.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'rabbitmq_mail_dlx_exchange', '"mail_dlx_exchange"', 'general', '2025-10-16 04:01:11.000000 +00:00',
-        '2025-10-16 04:01:11.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'rabbitmq_mail_dlx_queue', '"mail_dlx_queue"', 'general', '2025-10-16 04:01:11.000000 +00:00',
-        '2025-10-16 04:01:11.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'title', '"WindBlog"', 'general', '2025-10-16 04:01:20.000000 +00:00',
-        '2025-10-16 04:01:20.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'site_url', '""', 'general', '2025-10-16 04:01:20.000000 +00:00', '2025-10-16 04:01:20.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'description', '""', 'general', '2025-10-16 04:01:20.000000 +00:00',
-        '2025-10-16 04:01:20.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'favicon', '""', 'general', '2025-10-16 04:01:20.000000 +00:00', '2025-10-16 04:01:20.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'icp', '""', 'general', '2025-10-16 04:01:20.000000 +00:00', '2025-10-16 04:01:20.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'beian', '""', 'general', '2025-10-16 04:01:20.000000 +00:00', '2025-10-16 04:01:20.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'footer_txt', '""', 'general', '2025-10-16 04:01:20.000000 +00:00',
-        '2025-10-16 04:01:20.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'theme', '"default"', 'general', '2025-10-16 04:01:23.000000 +00:00',
-        '2025-10-16 04:01:23.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'es.enabled', 'false', 'general', '2025-10-16 04:01:39.000000 +00:00',
-        '2025-10-16 04:01:39.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'posts_per_page', '10', 'general', '2025-10-16 04:01:46.000000 +00:00',
-        '2025-10-16 04:01:46.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'add_your_ip_header', 'false', 'general', '2025-10-16 04:01:46.000000 +00:00',
-        '2025-10-16 04:01:46.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'url_mode', '"mix"', 'general', '2025-10-16 04:01:58.000000 +00:00',
-        '2025-10-16 04:01:58.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'flolink_enabled', 'true', 'general', '2025-10-16 04:01:58.000000 +00:00',
-        '2025-10-16 04:01:58.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'flolink_affiliate_rewrite', 'true', 'general', '2025-10-16 04:01:58.000000 +00:00',
-        '2025-10-16 04:01:58.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'comment_moderation', 'true', 'general', '2025-10-16 04:02:30.000000 +00:00',
-        '2025-10-16 04:02:30.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'links_per_page', '15', 'general', '2025-10-16 04:10:42.000000 +00:00',
-        '2025-10-16 04:10:42.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'rabbitmq_locale', '"en_US"', 'general', '2025-10-18 06:59:19.000000 +00:00',
-        '2025-10-18 06:59:19.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'rabbitmq_dlx_exchange', '"dlx_exchange"', 'general', '2025-10-18 20:47:19.000000 +00:00',
-        '2025-10-18 20:47:19.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'static_base_url', '""', 'general', '2025-10-17 09:40:09.000000 +00:00',
-        '2025-10-17 09:40:09.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'site_scheme', '"http"', 'general', '2025-10-17 09:40:09.000000 +00:00',
-        '2025-10-17 09:40:09.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'site_host', '"127.0.0.1"', 'general', '2025-10-17 09:40:09.000000 +00:00',
-        '2025-10-17 09:40:09.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'site_port', '8787', 'general', '2025-10-17 09:40:09.000000 +00:00',
-        '2025-10-17 09:40:09.000000 +00:00');
-INSERT INTO settings (id, key, value, "group", created_at, updated_at)
-VALUES (default, 'static_url_strategies', '[]', 'general', '2025-10-17 09:40:09.000000 +00:00',
-        '2025-10-17 09:40:09.000000 +00:00');
-
+}', '2022-12-05 14:49:01+08', '2022-12-08 20:20:28+08'),
+       ('table_form_schema_wa_users', '{
+         "id": {
+           "field": "id",
+           "_field_id": "0",
+           "comment": "主键",
+           "control": "inputNumber",
+           "control_args": "",
+           "list_show": true,
+           "enable_sort": true,
+           "searchable": true,
+           "search_type": "normal",
+           "form_show": false
+         },
+         "username": {
+           "field": "username",
+           "_field_id": "1",
+           "comment": "用户名",
+           "control": "input",
+           "control_args": "",
+           "form_show": true,
+           "list_show": true,
+           "searchable": true,
+           "search_type": "normal",
+           "enable_sort": false
+         },
+         "nickname": {
+           "field": "nickname",
+           "_field_id": "2",
+           "comment": "昵称",
+           "control": "input",
+           "control_args": "",
+           "form_show": true,
+           "list_show": true,
+           "searchable": true,
+           "search_type": "normal",
+           "enable_sort": false
+         },
+         "password": {
+           "field": "password",
+           "_field_id": "3",
+           "comment": "密码",
+           "control": "input",
+           "control_args": "",
+           "form_show": true,
+           "search_type": "normal",
+           "list_show": false,
+           "enable_sort": false,
+           "searchable": false
+         },
+         "sex": {
+           "field": "sex",
+           "_field_id": "4",
+           "comment": "性别",
+           "control": "select",
+           "control_args": "url:/app/admin/dict/get/sex",
+           "form_show": true,
+           "list_show": true,
+           "searchable": true,
+           "search_type": "normal",
+           "enable_sort": false
+         },
+         "avatar": {
+           "field": "avatar",
+           "_field_id": "5",
+           "comment": "头像",
+           "control": "uploadImage",
+           "control_args": "url:/app/admin/upload/avatar",
+           "form_show": true,
+           "list_show": true,
+           "search_type": "normal",
+           "enable_sort": false,
+           "searchable": false
+         },
+         "email": {
+           "field": "email",
+           "_field_id": "6",
+           "comment": "邮箱",
+           "control": "input",
+           "control_args": "",
+           "form_show": true,
+           "list_show": true,
+           "searchable": true,
+           "search_type": "normal",
+           "enable_sort": false
+         },
+         "mobile": {
+           "field": "mobile",
+           "_field_id": "7",
+           "comment": "手机",
+           "control": "input",
+           "control_args": "",
+           "form_show": true,
+           "list_show": true,
+           "searchable": true,
+           "search_type": "normal",
+           "enable_sort": false
+         },
+         "level": {
+           "field": "level",
+           "_field_id": "8",
+           "comment": "等级",
+           "control": "inputNumber",
+           "control_args": "",
+           "form_show": true,
+           "searchable": true,
+           "search_type": "normal",
+           "list_show": false,
+           "enable_sort": false
+         },
+         "birthday": {
+           "field": "birthday",
+           "_field_id": "9",
+           "comment": "生日",
+           "control": "datePicker",
+           "control_args": "",
+           "form_show": true,
+           "searchable": true,
+           "search_type": "between",
+           "list_show": false,
+           "enable_sort": false
+         },
+         "money": {
+           "field": "money",
+           "_field_id": "10",
+           "comment": "余额(元)",
+           "control": "inputNumber",
+           "control_args": "",
+           "form_show": true,
+           "searchable": true,
+           "search_type": "normal",
+           "list_show": false,
+           "enable_sort": false
+         },
+         "score": {
+           "field": "score",
+           "_field_id": "11",
+           "comment": "积分",
+           "control": "inputNumber",
+           "control_args": "",
+           "form_show": true,
+           "searchable": true,
+           "search_type": "normal",
+           "list_show": false,
+           "enable_sort": false
+         },
+         "last_time": {
+           "field": "last_time",
+           "_field_id": "12",
+           "comment": "登录时间",
+           "control": "dateTimePicker",
+           "control_args": "",
+           "form_show": true,
+           "searchable": true,
+           "search_type": "between",
+           "list_show": false,
+           "enable_sort": false
+         },
+         "last_ip": {
+           "field": "last_ip",
+           "_field_id": "13",
+           "comment": "登录ip",
+           "control": "input",
+           "control_args": "",
+           "form_show": true,
+           "searchable": true,
+           "search_type": "normal",
+           "list_show": false,
+           "enable_sort": false
+         },
+         "join_time": {
+           "field": "join_time",
+           "_field_id": "14",
+           "comment": "注册时间",
+           "control": "dateTimePicker",
+           "control_args": "",
+           "form_show": true,
+           "searchable": true,
+           "search_type": "between",
+           "list_show": false,
+           "enable_sort": false
+         },
+         "join_ip": {
+           "field": "join_ip",
+           "_field_id": "15",
+           "comment": "注册ip",
+           "control": "input",
+           "control_args": "",
+           "form_show": true,
+           "searchable": true,
+           "search_type": "normal",
+           "list_show": false,
+           "enable_sort": false
+         },
+         "token": {
+           "field": "token",
+           "_field_id": "16",
+           "comment": "token",
+           "control": "input",
+           "control_args": "",
+           "search_type": "normal",
+           "form_show": false,
+           "list_show": false,
+           "enable_sort": false,
+           "searchable": false
+         },
+         "created_at": {
+           "field": "created_at",
+           "_field_id": "17",
+           "comment": "创建时间",
+           "control": "dateTimePicker",
+           "control_args": "",
+           "form_show": true,
+           "search_type": "between",
+           "list_show": false,
+           "enable_sort": false,
+           "searchable": false
+         },
+         "updated_at": {
+           "field": "updated_at",
+           "_field_id": "18",
+           "comment": "更新时间",
+           "control": "dateTimePicker",
+           "control_args": "",
+           "search_type": "between",
+           "form_show": false,
+           "list_show": false,
+           "enable_sort": false,
+           "searchable": false
+         },
+         "role": {
+           "field": "role",
+           "_field_id": "19",
+           "comment": "角色",
+           "control": "inputNumber",
+           "control_args": "",
+           "search_type": "normal",
+           "form_show": false,
+           "list_show": false,
+           "enable_sort": false,
+           "searchable": false
+         },
+         "status": {
+           "field": "status",
+           "_field_id": "20",
+           "comment": "禁用",
+           "control": "switch",
+           "control_args": "",
+           "form_show": true,
+           "list_show": true,
+           "search_type": "normal",
+           "enable_sort": false,
+           "searchable": false
+         }
+       }', '2022-08-15 00:00:00+08', '2022-12-23 15:28:13+08'),
+       ('table_form_schema_wa_roles', '{
+         "id": {
+           "field": "id",
+           "_field_id": "0",
+           "comment": "主键",
+           "control": "inputNumber",
+           "control_args": "",
+           "list_show": true,
+           "search_type": "normal",
+           "form_show": false,
+           "enable_sort": false,
+           "searchable": false
+         },
+         "name": {
+           "field": "name",
+           "_field_id": "1",
+           "comment": "角色组",
+           "control": "input",
+           "control_args": "",
+           "form_show": true,
+           "list_show": true,
+           "search_type": "normal",
+           "enable_sort": false,
+           "searchable": false
+         },
+         "rules": {
+           "field": "rules",
+           "_field_id": "2",
+           "comment": "权限",
+           "control": "treeSelectMulti",
+           "control_args": "url:/app/admin/rule/get?type=0,1,2",
+           "form_show": true,
+           "list_show": true,
+           "search_type": "normal",
+           "enable_sort": false,
+           "searchable": false
+         },
+         "created_at": {
+           "field": "created_at",
+           "_field_id": "3",
+           "comment": "创建时间",
+           "control": "dateTimePicker",
+           "control_args": "",
+           "search_type": "normal",
+           "form_show": false,
+           "list_show": false,
+           "enable_sort": false,
+           "searchable": false
+         },
+         "updated_at": {
+           "field": "updated_at",
+           "_field_id": "4",
+           "comment": "更新时间",
+           "control": "dateTimePicker",
+           "control_args": "",
+           "search_type": "normal",
+           "form_show": false,
+           "list_show": false,
+           "enable_sort": false,
+           "searchable": false
+         },
+         "pid": {
+           "field": "pid",
+           "_field_id": "5",
+           "comment": "父级",
+           "control": "select",
+           "control_args": "url:/app/admin/role/select?format=tree",
+           "form_show": true,
+           "list_show": true,
+           "search_type": "normal",
+           "enable_sort": false,
+           "searchable": false
+         }
+       }', '2022-08-15 00:00:00+08', '2022-12-19 14:24:25+08'),
+       ('table_form_schema_wa_rules', '{
+         "id": {
+           "field": "id",
+           "_field_id": "0",
+           "comment": "主键",
+           "control": "inputNumber",
+           "control_args": "",
+           "search_type": "normal",
+           "form_show": false,
+           "list_show": false,
+           "enable_sort": false,
+           "searchable": false
+         },
+         "title": {
+           "field": "title",
+           "_field_id": "1",
+           "comment": "标题",
+           "control": "input",
+           "control_args": "",
+           "form_show": true,
+           "list_show": true,
+           "searchable": true,
+           "search_type": "normal",
+           "enable_sort": false
+         },
+         "icon": {
+           "field": "icon",
+           "_field_id": "2",
+           "comment": "图标",
+           "control": "iconPicker",
+           "control_args": "",
+           "form_show": true,
+           "list_show": true,
+           "search_type": "normal",
+           "enable_sort": false,
+           "searchable": false
+         },
+         "key": {
+           "field": "key",
+           "_field_id": "3",
+           "comment": "标识",
+           "control": "input",
+           "control_args": "",
+           "form_show": true,
+           "list_show": true,
+           "searchable": true,
+           "search_type": "normal",
+           "enable_sort": false
+         },
+         "pid": {
+           "field": "pid",
+           "_field_id": "4",
+           "comment": "上级菜单",
+           "control": "treeSelect",
+           "control_args": "/app/admin/rule/select?format=tree&type=0,1",
+           "form_show": true,
+           "list_show": true,
+           "search_type": "normal",
+           "enable_sort": false,
+           "searchable": false
+         },
+         "created_at": {
+           "field": "created_at",
+           "_field_id": "5",
+           "comment": "创建时间",
+           "control": "dateTimePicker",
+           "control_args": "",
+           "search_type": "normal",
+           "form_show": false,
+           "list_show": false,
+           "enable_sort": false,
+           "searchable": false
+         },
+         "updated_at": {
+           "field": "updated_at",
+           "_field_id": "6",
+           "comment": "更新时间",
+           "control": "dateTimePicker",
+           "control_args": "",
+           "search_type": "normal",
+           "form_show": false,
+           "list_show": false,
+           "enable_sort": false,
+           "searchable": false
+         },
+         "href": {
+           "field": "href",
+           "_field_id": "7",
+           "comment": "url",
+           "control": "input",
+           "control_args": "",
+           "form_show": true,
+           "list_show": true,
+           "search_type": "normal",
+           "enable_sort": false,
+           "searchable": false
+         },
+         "type": {
+           "field": "type",
+           "_field_id": "8",
+           "comment": "类型",
+           "control": "select",
+           "control_args": "data:0:目录,1:菜单,2:权限",
+           "form_show": true,
+           "list_show": true,
+           "searchable": true,
+           "search_type": "normal",
+           "enable_sort": false
+         },
+         "weight": {
+           "field": "weight",
+           "_field_id": "9",
+           "comment": "排序",
+           "control": "inputNumber",
+           "control_args": "",
+           "form_show": true,
+           "list_show": true,
+           "search_type": "normal",
+           "enable_sort": false,
+           "searchable": false
+         }
+       }', '2022-08-15 00:00:00+08', '2022-12-08 11:44:45+08'),
+       ('table_form_schema_wa_admins', '{
+         "id": {
+           "field": "id",
+           "_field_id": "0",
+           "comment": "ID",
+           "control": "inputNumber",
+           "control_args": "",
+           "list_show": true,
+           "enable_sort": true,
+           "search_type": "between",
+           "form_show": false,
+           "searchable": false
+         },
+         "username": {
+           "field": "username",
+           "_field_id": "1",
+           "comment": "用户名",
+           "control": "input",
+           "control_args": "",
+           "form_show": true,
+           "list_show": true,
+           "searchable": true,
+           "search_type": "normal",
+           "enable_sort": false
+         },
+         "nickname": {
+           "field": "nickname",
+           "_field_id": "2",
+           "comment": "昵称",
+           "control": "input",
+           "control_args": "",
+           "form_show": true,
+           "list_show": true,
+           "searchable": true,
+           "search_type": "normal",
+           "enable_sort": false
+         },
+         "password": {
+           "field": "password",
+           "_field_id": "3",
+           "comment": "密码",
+           "control": "input",
+           "control_args": "",
+           "form_show": true,
+           "search_type": "normal",
+           "list_show": false,
+           "enable_sort": false,
+           "searchable": false
+         },
+         "avatar": {
+           "field": "avatar",
+           "_field_id": "4",
+           "comment": "头像",
+           "control": "uploadImage",
+           "control_args": "url:/app/admin/upload/avatar",
+           "form_show": true,
+           "list_show": true,
+           "search_type": "normal",
+           "enable_sort": false,
+           "searchable": false
+         },
+         "email": {
+           "field": "email",
+           "_field_id": "5",
+           "comment": "邮箱",
+           "control": "input",
+           "control_args": "",
+           "form_show": true,
+           "list_show": true,
+           "searchable": true,
+           "search_type": "normal",
+           "enable_sort": false
+         },
+         "mobile": {
+           "field": "mobile",
+           "_field_id": "6",
+           "comment": "手机",
+           "control": "input",
+           "control_args": "",
+           "form_show": true,
+           "list_show": true,
+           "searchable": true,
+           "search_type": "normal",
+           "enable_sort": false
+         },
+         "created_at": {
+           "field": "created_at",
+           "_field_id": "7",
+           "comment": "创建时间",
+           "control": "dateTimePicker",
+           "control_args": "",
+           "form_show": true,
+           "searchable": true,
+           "search_type": "between",
+           "list_show": false,
+           "enable_sort": false
+         },
+         "updated_at": {
+           "field": "updated_at",
+           "_field_id": "8",
+           "comment": "更新时间",
+           "control": "dateTimePicker",
+           "control_args": "",
+           "form_show": true,
+           "search_type": "normal",
+           "list_show": false,
+           "enable_sort": false,
+           "searchable": false
+         },
+         "login_at": {
+           "field": "login_at",
+           "_field_id": "9",
+           "comment": "登录时间",
+           "control": "dateTimePicker",
+           "control_args": "",
+           "form_show": true,
+           "list_show": true,
+           "search_type": "between",
+           "enable_sort": false,
+           "searchable": false
+         },
+         "status": {
+           "field": "status",
+           "_field_id": "10",
+           "comment": "禁用",
+           "control": "switch",
+           "control_args": "",
+           "form_show": true,
+           "list_show": true,
+           "search_type": "normal",
+           "enable_sort": false,
+           "searchable": false
+         }
+       }', '2022-08-15 00:00:00+08', '2022-12-23 15:36:48+08'),
+       ('table_form_schema_wa_options', '{
+         "id": {
+           "field": "id",
+           "_field_id": "0",
+           "comment": "",
+           "control": "inputNumber",
+           "control_args": "",
+           "list_show": true,
+           "search_type": "normal",
+           "form_show": false,
+           "enable_sort": false,
+           "searchable": false
+         },
+         "name": {
+           "field": "name",
+           "_field_id": "1",
+           "comment": "键",
+           "control": "input",
+           "control_args": "",
+           "form_show": true,
+           "list_show": true,
+           "search_type": "normal",
+           "enable_sort": false,
+           "searchable": false
+         },
+         "value": {
+           "field": "value",
+           "_field_id": "2",
+           "comment": "值",
+           "control": "textArea",
+           "control_args": "",
+           "form_show": true,
+           "list_show": true,
+           "search_type": "normal",
+           "enable_sort": false,
+           "searchable": false
+         },
+         "created_at": {
+           "field": "created_at",
+           "_field_id": "3",
+           "comment": "创建时间",
+           "control": "dateTimePicker",
+           "control_args": "",
+           "search_type": "normal",
+           "form_show": false,
+           "list_show": false,
+           "enable_sort": false,
+           "searchable": false
+         },
+         "updated_at": {
+           "field": "updated_at",
+           "_field_id": "4",
+           "comment": "更新时间",
+           "control": "dateTimePicker",
+           "control_args": "",
+           "search_type": "normal",
+           "form_show": false,
+           "list_show": false,
+           "enable_sort": false,
+           "searchable": false
+         }
+       }', '2022-08-15 00:00:00+08', '2022-12-08 11:36:57+08'),
+       ('table_form_schema_wa_uploads', '{
+         "id": {
+           "field": "id",
+           "_field_id": "0",
+           "comment": "主键",
+           "control": "inputNumber",
+           "control_args": "",
+           "list_show": true,
+           "enable_sort": true,
+           "search_type": "normal",
+           "form_show": false,
+           "searchable": false
+         },
+         "name": {
+           "field": "name",
+           "_field_id": "1",
+           "comment": "名称",
+           "control": "input",
+           "control_args": "",
+           "list_show": true,
+           "searchable": true,
+           "search_type": "normal",
+           "form_show": false,
+           "enable_sort": false
+         },
+         "url": {
+           "field": "url",
+           "_field_id": "2",
+           "comment": "文件",
+           "control": "upload",
+           "control_args": "url:/app/admin/upload/file",
+           "form_show": true,
+           "list_show": true,
+           "search_type": "normal",
+           "enable_sort": false,
+           "searchable": false
+         },
+         "admin_id": {
+           "field": "admin_id",
+           "_field_id": "3",
+           "comment": "管理员",
+           "control": "select",
+           "control_args": "url:/app/admin/admin/select?format=select",
+           "search_type": "normal",
+           "form_show": false,
+           "list_show": false,
+           "enable_sort": false,
+           "searchable": false
+         },
+         "file_size": {
+           "field": "file_size",
+           "_field_id": "4",
+           "comment": "文件大小",
+           "control": "inputNumber",
+           "control_args": "",
+           "list_show": true,
+           "search_type": "between",
+           "form_show": false,
+           "enable_sort": false,
+           "searchable": false
+         },
+         "mime_type": {
+           "field": "mime_type",
+           "_field_id": "5",
+           "comment": "mime类型",
+           "control": "input",
+           "control_args": "",
+           "list_show": true,
+           "search_type": "normal",
+           "form_show": false,
+           "enable_sort": false,
+           "searchable": false
+         },
+         "image_width": {
+           "field": "image_width",
+           "_field_id": "6",
+           "comment": "图片宽度",
+           "control": "inputNumber",
+           "control_args": "",
+           "list_show": true,
+           "search_type": "normal",
+           "form_show": false,
+           "enable_sort": false,
+           "searchable": false
+         },
+         "image_height": {
+           "field": "image_height",
+           "_field_id": "7",
+           "comment": "图片高度",
+           "control": "inputNumber",
+           "control_args": "",
+           "list_show": true,
+           "search_type": "normal",
+           "form_show": false,
+           "enable_sort": false,
+           "searchable": false
+         },
+         "ext": {
+           "field": "ext",
+           "_field_id": "8",
+           "comment": "扩展名",
+           "control": "input",
+           "control_args": "",
+           "list_show": true,
+           "searchable": true,
+           "search_type": "normal",
+           "form_show": false,
+           "enable_sort": false
+         },
+         "storage": {
+           "field": "storage",
+           "_field_id": "9",
+           "comment": "存储位置",
+           "control": "input",
+           "control_args": "",
+           "search_type": "normal",
+           "form_show": false,
+           "list_show": false,
+           "enable_sort": false,
+           "searchable": false
+         },
+         "created_at": {
+           "field": "created_at",
+           "_field_id": "10",
+           "comment": "上传时间",
+           "control": "dateTimePicker",
+           "control_args": "",
+           "searchable": true,
+           "search_type": "between",
+           "form_show": false,
+           "list_show": false,
+           "enable_sort": false
+         },
+         "category": {
+           "field": "category",
+           "_field_id": "11",
+           "comment": "类别",
+           "control": "select",
+           "control_args": "url:/app/admin/dict/get/upload",
+           "form_show": true,
+           "list_show": true,
+           "searchable": true,
+           "search_type": "normal",
+           "enable_sort": false
+         },
+         "updated_at": {
+           "field": "updated_at",
+           "_field_id": "12",
+           "comment": "更新时间",
+           "control": "dateTimePicker",
+           "control_args": "",
+           "form_show": true,
+           "list_show": true,
+           "search_type": "normal",
+           "enable_sort": false,
+           "searchable": false
+         }
+       }', '2022-08-15 00:00:00+08', '2022-12-08 11:47:45+08'),
+       ('dict_upload', '[
+         {
+           "value": "1",
+           "name": "分类1"
+         },
+         {
+           "value": "2",
+           "name": "分类2"
+         },
+         {
+           "value": "3",
+           "name": "分类3"
+         }
+       ]', '2022-12-04 16:24:13+08', '2022-12-04 16:24:13+08'),
+       ('dict_sex', '[
+         {
+           "value": "0",
+           "name": "女"
+         },
+         {
+           "value": "1",
+           "name": "男"
+         }
+       ]', '2022-12-04 15:04:40+08', '2022-12-04 15:04:40+08'),
+       ('dict_status', '[
+         {
+           "value": "0",
+           "name": "正常"
+         },
+         {
+           "value": "1",
+           "name": "禁用"
+         }
+       ]', '2022-12-04 15:05:09+08', '2022-12-04 15:05:09+08'),
+       ('table_form_schema_wa_admin_roles', '{
+         "id": {
+           "field": "id",
+           "_field_id": "0",
+           "comment": "主键",
+           "control": "inputNumber",
+           "control_args": "",
+           "list_show": true,
+           "enable_sort": true,
+           "searchable": true,
+           "search_type": "normal",
+           "form_show": false
+         },
+         "role_id": {
+           "field": "role_id",
+           "_field_id": "1",
+           "comment": "角色id",
+           "control": "inputNumber",
+           "control_args": "",
+           "form_show": true,
+           "list_show": true,
+           "search_type": "normal",
+           "enable_sort": false,
+           "searchable": false
+         },
+         "admin_id": {
+           "field": "admin_id",
+           "_field_id": "2",
+           "comment": "管理员id",
+           "control": "inputNumber",
+           "control_args": "",
+           "form_show": true,
+           "list_show": true,
+           "search_type": "normal",
+           "enable_sort": false,
+           "searchable": false
+         }
+       }', '2022-08-15 00:00:00+08', '2022-12-20 19:42:51+08'),
+       ('dict_dict_name', '[
+         {
+           "value": "dict_name",
+           "name": "字典名称"
+         },
+         {
+           "value": "status",
+           "name": "启禁用状态"
+         },
+         {
+           "value": "sex",
+           "name": "性别"
+         },
+         {
+           "value": "upload",
+           "name": "附件分类"
+         }
+       ]', '2022-08-15 00:00:00+08', '2022-12-20 19:42:51+08');
 
 
 INSERT INTO wa_roles
