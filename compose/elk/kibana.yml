@@ -16,6 +16,12 @@ monitoring.ui.container.elasticsearch.enabled: true
 xpack.monitoring.enabled: true  # 启用Kibana自身监控（默认true，可显式声明）
 xpack.monitoring.kibana.collection.enabled: true  # 收集Kibana监控数据
 
+# Enable Fleet (Synthetics UI is managed by plugins; no dedicated xpack.synthetics.enabled key in this build)
+xpack.fleet.enabled: true
+
+# Optional: reduce phone-home/noise
+telemetry.enabled: false
+
 # Localization
 i18n.locale: "zh-CN"
 

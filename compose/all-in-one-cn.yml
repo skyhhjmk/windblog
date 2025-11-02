@@ -283,10 +283,15 @@ services:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
       - ELASTICSEARCH_USERNAME=kibana_system
       - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
-      - KIBANA_ENCRYPTION_KEY=${KIBANA_ENCRYPTION_KEY}
-      - xpack.security.encryptionKey=${KIBANA_ENCRYPTION_KEY}
-      - xpack.reporting.encryptionKey=${KIBANA_ENCRYPTION_KEY}
-      - xpack.encryptedSavedObjects.encryptionKey=${KIBANA_ENCRYPTION_KEY}
+      # 若 .env 未设置，则提供安全的默认值（>=32字符）
+      - KIBANA_ENCRYPTION_KEY=${KIBANA_ENCRYPTION_KEY:-CHANGE_ME_This_Is_A_Long_Encryption_Key_2025_0123456789_ABCDEFGHIJKLMNOPQRSTUVWXYZ}
+      - xpack.security.encryptionKey=${KIBANA_ENCRYPTION_KEY:-CHANGE_ME_This_Is_A_Long_Encryption_Key_2025_0123456789_ABCDEFGHIJKLMNOPQRSTUVWXYZ}
+      - xpack.reporting.encryptionKey=${KIBANA_ENCRYPTION_KEY:-CHANGE_ME_This_Is_A_Long_Encryption_Key_2025_0123456789_ABCDEFGHIJKLMNOPQRSTUVWXYZ}
+      - xpack.encryptedSavedObjects.encryptionKey=${KIBANA_ENCRYPTION_KEY:-CHANGE_ME_This_Is_A_Long_Encryption_Key_2025_0123456789_ABCDEFGHIJKLMNOPQRSTUVWXYZ}
+      # Agent ID 验证密钥，避免依赖 Encrypted SO 生成
+      - FLEET_AGENT_ID_VERIFICATION_KEY=${FLEET_AGENT_ID_VERIFICATION_KEY:-CHANGE_ME_FLEET_AGENT_ID_VERIFICATION_KEY_0123456789abcdef}
+      - xpack.fleet.agents.agentIdVerificationKey=${FLEET_AGENT_ID_VERIFICATION_KEY:-CHANGE_ME_FLEET_AGENT_ID_VERIFICATION_KEY_0123456789abcdef}
+      - ELASTIC_APM_ACTIVE=false
     volumes:
       - ./elk/kibana.yml:/usr/share/kibana/config/kibana.yml:ro
       - ./data/kibana:/usr/share/kibana/data
@@ -321,6 +326,7 @@ services:
       - ELASTICSEARCH_URL=http://elasticsearch:9200
       - ELASTIC_USER=elastic
       - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - ENABLE_FLEET=true
     depends_on:
       kibana:
         condition: service_healthy

@@ -27,6 +27,45 @@ done
 echo "Kibana 已启动,等待其完全就绪..."
 sleep 10
 
+# Fleet 初始化（仅当显式启用时）
+ENABLE_FLEET="${ENABLE_FLEET:-false}"
+if [ "$ENABLE_FLEET" = "true" ]; then
+  echo "初始化 Fleet（带重试）..."
+  tmp=$(mktemp)
+  for i in $(seq 1 60); do
+    code=$(curl -s -o "$tmp" -w "%{http_code}" -X POST "$KIBANA_URL/api/fleet/setup" \
+      -u "$ELASTIC_USER:$ELASTIC_PASSWORD" \
+      -H "kbn-xsrf: true" \
+      -H "Content-Type: application/json" \
+      -d '{}') || code=000
+    body="$(cat "$tmp")"
+    if echo "$code" | grep -q '^2'; then
+      echo "Fleet setup 成功"
+      break
+    fi
+    if echo "$body" | grep -qi 'Agent binary source needs encrypted saved object api key to be set'; then
+      echo "等待 Kibana 生成 Encrypted Saved Objects 内部 API key（$i/60）..."
+      sleep 5
+      continue
+    fi
+    echo "Fleet setup 返回($code): $body"
+    sleep 5
+  done
+  rm -f "$tmp"
+
+  # 确保 Fleet 关键 component templates 存在（离线环境兜底）
+  for tpl in ".fleet_globals-1" ".fleet_agent_id_verification-1"; do
+    code=$(curl -s -o /dev/null -w "%{http_code}" -u "$ELASTIC_USER:$ELASTIC_PASSWORD" "$ELASTICSEARCH_URL/_component_template/$tpl")
+    if [ "$code" = "404" ]; then
+      echo "创建缺失的 component template: $tpl"
+      curl -sS -f -X PUT "$ELASTICSEARCH_URL/_component_template/$tpl" \
+        -u "$ELASTIC_USER:$ELASTIC_PASSWORD" \
+        -H "Content-Type: application/json" \
+        -d '{"template":{"settings":{},"mappings":{"dynamic":true},"aliases":{}},"version":1}' >/dev/null || true
+    fi
+  done
+fi
+
 # 创建/更新 ILM 策略（幂等）
 echo "确保 ILM 策略存在..."
 if ! curl -s -o /dev/null -w "%{http_code}" -u "$ELASTIC_USER:$ELASTIC_PASSWORD" "$ELASTICSEARCH_URL/_ilm/policy/windblog-logs-policy" | grep -q "200"; then
