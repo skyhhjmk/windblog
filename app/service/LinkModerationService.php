@@ -136,6 +136,7 @@ class LinkModerationService
                 $template = self::getDefaultPrompt();
             }
 
+            $backlinkSummary = sprintf('反链：%s（数量：%d）', ($backlink['found'] ?? false) ? '是' : '否', (int) ($backlink['link_count'] ?? 0));
             $promptText = strtr($template, [
                 '{url}' => $url,
                 '{name}' => $name,
@@ -145,6 +146,9 @@ class LinkModerationService
                 '{backlink_count}' => (string) ($backlink['link_count'] ?? 0),
                 '{html_snippet}' => mb_substr(strip_tags($html), 0, 500),
                 '{my_domain}' => $myDomain,
+                // 兼容旧占位符
+                '{backlink_info}' => $backlinkSummary,
+                '{page_summary}' => mb_substr(strip_tags($html), 0, 500),
             ]);
 
             $params['messages'] = [

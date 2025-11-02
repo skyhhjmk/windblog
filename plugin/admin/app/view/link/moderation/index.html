@@ -10,250 +10,139 @@
 </head>
 <body class="bg-gray-100 pear-container">
 
-<!-- Tab 导航 -->
-<div class="layui-tab layui-tab-brief" lay-filter="moderation-tab">
-    <ul class="layui-tab-title">
-        <li class="layui-this">AI审核配置</li>
-        <li>评分规则</li>
-        <li>审核统计</li>
-        <li>审核日志</li>
-    </ul>
-    <div class="layui-tab-content">
-        <!-- Tab 1: AI审核配置 -->
-        <div class="layui-tab-item layui-show">
-            <div class="layui-card rounded-lg shadow-sm mb-4">
-                <div class="layui-card-header font-bold">AI审核配置</div>
-                <div class="layui-card-body">
-                    <form class="layui-form" id="configForm">
-                        <div class="layui-form-item">
-                            <label class="layui-form-label">启用AI审核</label>
-                            <div class="layui-input-block">
-                                <input lay-skin="switch" lay-text="ON|OFF" name="enabled" type="checkbox">
-                                <div class="layui-form-mid layui-word-aux">开启后，友链将通过AI进行智能审核</div>
-                            </div>
-                        </div>
-
-                        <div class="layui-form-item">
-                            <label class="layui-form-label">轮询组</label>
-                            <div class="layui-input-block">
-                                <select id="group-select" name="group_id">
-                                    <option value="0">请选择轮询组（不选择则保持当前全局设置）</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="layui-form-item">
-                            <label class="layui-form-label">失败策略</label>
-                            <div class="layui-input-block">
-                                <select name="failure_strategy">
-                                    <option value="approve">通过（默认）</option>
-                                    <option value="reject">拒绝</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="layui-form-item">
-                            <label class="layui-form-label">自动批准</label>
-                            <div class="layui-input-block">
-                                <input lay-skin="switch" lay-text="ON|OFF" name="auto_approve_on_pass" type="checkbox">
-                                <div class="layui-form-mid layui-word-aux">
-                                    AI审核通过且置信度/评分达到阈值时，自动将友链状态设为已启用
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="layui-form-item">
-                            <label class="layui-form-label">最低置信度</label>
-                            <div class="layui-input-block">
-                                <input class="layui-input" max="1" min="0" name="auto_approve_min_confidence"
-                                       step="0.01" type="number" value="0.85">
-                                <div class="layui-form-mid layui-word-aux">0-1，建议 0.80-0.95</div>
-                            </div>
-                        </div>
-
-                        <div class="layui-form-item">
-                            <label class="layui-form-label">最低评分</label>
-                            <div class="layui-input-block">
-                                <input class="layui-input" max="100" min="0" name="auto_approve_min_score" step="1"
-                                       type="number" value="60">
-                                <div class="layui-form-mid layui-word-aux">0-100，建议 60-80</div>
-                            </div>
-                        </div>
-
-                        <div class="layui-form-item">
-                            <label class="layui-form-label">温度</label>
-                            <div class="layui-input-block">
-                                <input class="layui-input" max="2" min="0" name="temperature" step="0.1" type="number"
-                                       value="0.1">
-                                <div class="layui-form-mid layui-word-aux">0-2，越低越保守（建议 0.0-0.3）</div>
-                            </div>
-                        </div>
-
-                        <div class="layui-form-item">
-                            <label class="layui-form-label">AI提示词</label>
-                            <div class="layui-input-block">
-                                <textarea class="layui-textarea" name="prompt" placeholder="请输入AI审核提示词（必填）"
-                                          rows="10"
-                                          style="font-family: 'Courier New', monospace; font-size: 13px;"></textarea>
-                            </div>
-                        </div>
-
-                        <div class="layui-form-item">
-                            <div class="layui-input-block">
-                                <button class="pear-btn pear-btn-primary" lay-filter="saveConfig" lay-submit>保存配置
-                                </button>
-                                <button class="pear-btn" onclick="loadConfig()" type="button">重置</button>
-                            </div>
-                        </div>
-                    </form>
+<!-- 配置区 -->
+<div class="layui-card rounded-lg shadow-sm mb-4">
+    <div class="layui-card-header font-bold">AI审核配置</div>
+    <div class="layui-card-body">
+        <form class="layui-form" id="configForm">
+            <div class="layui-form-item">
+                <label class="layui-form-label">启用AI审核</label>
+                <div class="layui-input-block">
+                    <input lay-skin="switch" lay-text="ON|OFF" name="enabled" type="checkbox">
                 </div>
             </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">轮询组</label>
+                <div class="layui-input-block">
+                    <select id="group-select" name="group_id">
+                        <option value="0">请选择轮询组（不选择则保持当前全局设置）</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">失败策略</label>
+                <div class="layui-input-block">
+                    <select name="failure_strategy">
+                        <option value="approve">通过（默认）</option>
+                        <option value="reject">拒绝</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">自动批准</label>
+                <div class="layui-input-block">
+                    <input lay-skin="switch" lay-text="ON|OFF" name="auto_approve_on_pass" type="checkbox">
+                    <div class="layui-form-mid layui-word-aux">
+                        AI审核通过且置信度/评分达到阈值时，自动将友链状态设为已启用
+                    </div>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">最低置信度</label>
+                <div class="layui-input-block">
+                    <input class="layui-input" max="1" min="0" name="auto_approve_min_confidence" step="0.01"
+                           type="number" value="0.85">
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">最低评分</label>
+                <div class="layui-input-block">
+                    <input class="layui-input" max="100" min="0" name="auto_approve_min_score" step="1" type="number"
+                           value="60">
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">温度</label>
+                <div class="layui-input-block">
+                    <input class="layui-input" max="2" min="0" name="temperature" step="0.1" type="number" value="0.1">
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">AI提示词</label>
+                <div class="layui-input-block">
+                    <textarea class="layui-textarea" name="prompt" placeholder="请输入AI审核提示词（必填）" rows="8"
+                              style="font-family: 'Courier New', monospace; font-size: 13px;"></textarea>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <div class="layui-input-block">
+                    <button class="pear-btn pear-btn-primary" lay-filter="saveConfig" lay-submit>保存配置</button>
+                    <button class="pear-btn" onclick="loadConfig()" type="button">重置</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 统计区 -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+    <div class="layui-card rounded-lg shadow-sm">
+        <div class="layui-card-body">
+            <div class="text-gray-500 text-sm mb-2">总审核数</div>
+            <div class="text-3xl font-bold text-blue-600" id="stat-total">0</div>
         </div>
-
-        <!-- Tab 2: 评分规则 -->
-        <div class="layui-tab-item">
-            <div class="layui-card rounded-lg shadow-sm mb-4">
-                <div class="layui-card-header font-bold">评分规则配置</div>
-                <div class="layui-card-body">
-                    <form class="layui-form" id="scoreForm">
-                        <div class="layui-form-item">
-                            <label class="layui-form-label">检测反向链接</label>
-                            <div class="layui-input-block">
-                                <input lay-skin="switch" lay-text="ON|OFF" name="check_backlink" type="checkbox">
-                                <div class="layui-form-mid layui-word-aux">检查对方网站是否包含指向本站的链接</div>
-                            </div>
-                        </div>
-
-                        <div class="layui-form-item">
-                            <label class="layui-form-label">反链基础分</label>
-                            <div class="layui-input-block">
-                                <input class="layui-input" max="100" min="0" name="backlink_score" step="1"
-                                       type="number" value="40">
-                                <div class="layui-form-mid layui-word-aux">找到反向链接时的基础得分（0-100分）</div>
-                            </div>
-                        </div>
-
-                        <div class="layui-form-item">
-                            <label class="layui-form-label">检测语义匹配</label>
-                            <div class="layui-input-block">
-                                <input lay-skin="switch" lay-text="ON|OFF" name="check_semantic" type="checkbox">
-                                <div class="layui-form-mid layui-word-aux">检查页面是否包含"友链"、"friends"等关键词
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="layui-form-item">
-                            <label class="layui-form-label">语义匹配分</label>
-                            <div class="layui-input-block">
-                                <input class="layui-input" max="100" min="0" name="semantic_score" step="1"
-                                       type="number" value="20">
-                                <div class="layui-form-mid layui-word-aux">页面包含友链相关语义时的加分（0-100分）</div>
-                            </div>
-                        </div>
-
-                        <div class="layui-form-item">
-                            <label class="layui-form-label">多链接加分</label>
-                            <div class="layui-input-block">
-                                <input class="layui-input" max="20" min="0" name="multiple_link_bonus" step="1"
-                                       type="number" value="5">
-                                <div class="layui-form-mid layui-word-aux">每增加一个反链的额外加分（0-20分，最多加20分）
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="layui-form-item">
-                            <div class="layui-input-block">
-                                <button class="pear-btn pear-btn-primary" lay-filter="saveConfig" lay-submit>保存配置
-                                </button>
-                                <button class="pear-btn" onclick="loadConfig()" type="button">重置</button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- 评分规则说明 -->
-            <div class="layui-card rounded-lg shadow-sm mb-4">
-                <div class="layui-card-header font-bold">评分规则说明</div>
-                <div class="layui-card-body">
-                    <div class="text-sm text-gray-700 leading-relaxed">
-                        <p class="mb-2"><strong>总分计算方式：</strong></p>
-                        <ul class="list-disc list-inside mb-3">
-                            <li>找到反向链接：<span class="text-blue-600">反链基础分</span></li>
-                            <li>每增加一个反链：<span class="text-blue-600">+ 多链接加分</span>（最多累加20分）</li>
-                            <li>页面包含友链语义：<span class="text-blue-600">+ 语义匹配分</span></li>
-                        </ul>
-                        <p class="mb-2"><strong>示例（使用默认配置）：</strong></p>
-                        <ul class="list-disc list-inside mb-3">
-                            <li>对方网站有1个反链，且页面包含"友情链接"：40 + 20 = <strong
-                                    class="text-green-600">60分（通过）</strong></li>
-                            <li>对方网站有2个反链，但无友链语义：40 + 5 = <strong
-                                    class="text-red-600">45分（未通过）</strong></li>
-                            <li>对方网站有3个反链，且有友链语义：40 + 10 + 20 = <strong
-                                    class="text-green-600">70分（通过）</strong></li>
-                        </ul>
-                        <p class="text-orange-600"><strong>注意：</strong>总分最高为100分</p>
-                    </div>
-                </div>
-            </div>
+    </div>
+    <div class="layui-card rounded-lg shadow-sm">
+        <div class="layui-card-body">
+            <div class="text-gray-500 text-sm mb-2">通过数</div>
+            <div class="text-3xl font-bold text-green-600" id="stat-approved">0</div>
         </div>
+    </div>
+    <div class="layui-card rounded-lg shadow-sm">
+        <div class="layui-card-body">
+            <div class="text-gray-500 text-sm mb-2">未通过数</div>
+            <div class="text-3xl font-bold text-red-600" id="stat-rejected">0</div>
+        </div>
+    </div>
+    <div class="layui-card rounded-lg shadow-sm">
+        <div class="layui-card-body">
+            <div class="text-gray-500 text-sm mb-2">通过率</div>
+            <div class="text-3xl font-bold text-purple-600" id="stat-rate">0%</div>
+        </div>
+    </div>
+</div>
 
-        <!-- Tab 3: 审核统计 -->
-        <div class="layui-tab-item">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                <div class="layui-card rounded-lg shadow-sm">
-                    <div class="layui-card-body">
-                        <div class="text-gray-500 text-sm mb-2">总审核数</div>
-                        <div class="text-3xl font-bold text-blue-600" id="stat-total">0</div>
-                    </div>
-                </div>
-                <div class="layui-card rounded-lg shadow-sm">
-                    <div class="layui-card-body">
-                        <div class="text-gray-500 text-sm mb-2">通过数</div>
-                        <div class="text-3xl font-bold text-green-600" id="stat-approved">0</div>
-                    </div>
-                </div>
-                <div class="layui-card rounded-lg shadow-sm">
-                    <div class="layui-card-body">
-                        <div class="text-gray-500 text-sm mb-2">未通过数</div>
-                        <div class="text-3xl font-bold text-red-600" id="stat-rejected">0</div>
-                    </div>
-                </div>
-                <div class="layui-card rounded-lg shadow-sm">
-                    <div class="layui-card-body">
-                        <div class="text-gray-500 text-sm mb-2">通过率</div>
-                        <div class="text-3xl font-bold text-purple-600" id="stat-rate">0%</div>
-                    </div>
+<!-- 审核日志 -->
+<div class="layui-card rounded-lg shadow-sm">
+    <div class="layui-card-header font-bold">AI审核日志</div>
+    <div class="layui-card-body">
+        <form class="layui-form mb-4">
+            <div class="layui-inline">
+                <label class="layui-form-label">审核结果</label>
+                <div class="layui-input-inline">
+                    <select id="filterResult" name="result">
+                        <option value="">全部</option>
+                        <option value="approved">通过</option>
+                        <option value="rejected">未通过</option>
+                        <option value="spam">垃圾</option>
+                    </select>
                 </div>
             </div>
-        </div>
-
-        <!-- Tab 4: 审核日志 -->
-        <div class="layui-tab-item">
-            <div class="layui-card rounded-lg shadow-sm">
-                <div class="layui-card-header font-bold">AI审核日志</div>
-                <div class="layui-card-body">
-                    <form class="layui-form mb-4">
-                        <div class="layui-inline">
-                            <label class="layui-form-label">审核结果</label>
-                            <div class="layui-input-inline">
-                                <select id="filterResult" name="result">
-                                    <option value="">全部</option>
-                                    <option value="approved">通过</option>
-                                    <option value="rejected">未通过</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="layui-inline">
-                            <button class="pear-btn pear-btn-primary" id="searchBtn" type="button">
-                                <i class="layui-icon layui-icon-search"></i> 查询
-                            </button>
-                        </div>
-                    </form>
-                    <table id="log-table" lay-filter="log-table"></table>
-                </div>
+            <div class="layui-inline">
+                <button class="pear-btn pear-btn-primary" id="searchBtn" type="button">
+                    <i class="layui-icon layui-icon-search"></i> 查询
+                </button>
             </div>
-        </div>
+        </form>
+        <table id="log-table" lay-filter="log-table"></table>
     </div>
 </div>
 
@@ -262,6 +151,12 @@
     <span class="px-2 py-1 text-xs rounded bg-green-100 text-green-800">✔ 通过</span>
     {{# } else if(d.ai_moderation_result === 'rejected') { }}
     <span class="px-2 py-1 text-xs rounded bg-red-100 text-red-800">✖ 未通过</span>
+    {{# } else if(d.ai_moderation_result === 'spam') { }}
+    <span class="px-2 py-1 text-xs rounded bg-orange-100 text-orange-800">⚠ 垃圾</span>
+    {{# } else if(d.ai_moderation_result === 'pending') { }}
+    <span class="px-2 py-1 text-xs rounded bg-yellow-100 text-yellow-800">待定</span>
+    {{# } else { }}
+    <span class="px-2 py-1 text-xs rounded bg-gray-100 text-gray-800">-</span>
     {{# } }}
 </script>
 
@@ -275,12 +170,11 @@
 </script>
 
 <script>
-    layui.use(['table', 'form', 'jquery', 'layer', 'element'], function () {
+    layui.use(['table', 'form', 'jquery', 'layer'], function () {
         let table = layui.table;
         let form = layui.form;
         let $ = layui.jquery;
         let layer = layui.layer;
-        let element = layui.element;
 
         // 加载轮询组
         function loadGroups(selectedId) {
@@ -301,7 +195,7 @@
         }
 
         // 加载配置
-        function loadConfig() {
+        window.loadConfig = function () {
             $.get('/app/admin/link/moderation/config', function (res) {
                 if (res.code === 0) {
                     let config = res.data;
@@ -337,7 +231,6 @@
                 layer.msg('提示词不能为空', {icon: 2});
                 return false;
             }
-
             let loading = layer.load();
             $.post('/app/admin/link/moderation/config', data.field, function (res) {
                 layer.close(loading);
@@ -362,20 +255,23 @@
                 {title: 'ID', field: 'id', width: 80, align: 'center'},
                 {title: '友链名称', field: 'name', minWidth: 150},
                 {
-                    title: 'URL', field: 'url', minWidth: 200, templet: function (d) {
-                        return '<a href="' + d.url + '" target="_blank" class="text-blue-600 hover:underline">' + d.url + '</a>';
+                    title: 'URL', field: 'url', minWidth: 220, templet: function (d) {
+                        var u = d.url || '';
+                        var text = u.length > 48 ? (u.substring(0, 48) + '...') : u;
+                        return '<a href="' + u + '" target="_blank" class="text-blue-600 hover:underline">' + text + '</a>';
                     }
                 },
                 {title: '审核结果', width: 100, align: 'center', templet: '#log-result'},
-                {title: '评分/置信度', width: 150, align: 'center', templet: '#log-score'},
+                {title: '评分/置信度', width: 140, align: 'center', templet: '#log-score'},
+                {title: '原因', field: 'ai_moderation_reason', minWidth: 220},
                 {
                     title: '审核时间', field: 'ai_moderation_time', width: 160, templet: function (d) {
                         return d.ai_moderation_time || '-';
                     }
                 },
                 {
-                    title: '操作', width: 150, align: 'center', templet: function (d) {
-                        return '<button class="pear-btn pear-btn-primary pear-btn-sm" onclick="viewLink(' + d.id + ')">查看详情</button>';
+                    title: '操作', width: 120, align: 'center', templet: function (d) {
+                        return '<button class="pear-btn pear-btn-primary pear-btn-sm" onclick="viewLink(' + d.id + ')">查看</button>';
                     }
                 }
             ]]
@@ -399,9 +295,9 @@
         // 初始化
         loadConfig();
         loadStats();
-
-        // 定时刷新统计数据
         setInterval(loadStats, 60000);
+    });
+</script>
     });
 </script>
 

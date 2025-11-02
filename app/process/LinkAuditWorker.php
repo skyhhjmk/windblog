@@ -160,6 +160,7 @@ class LinkAuditWorker
         // 清理并格式化 HTML，提取关键内容
         $cleanedHtml = $this->cleanHtml($html);
 
+        $backlinkSummary = sprintf('反链：%s（数量：%d）', ($backlink['found'] ?? false) ? '是' : '否', (int) ($backlink['link_count'] ?? 0));
         $promptText = strtr($template, [
             '{url}' => (string) $link->url,
             '{name}' => (string) $link->name,
@@ -170,6 +171,10 @@ class LinkAuditWorker
             '{html_snippet}' => mb_substr($cleanedHtml, 0, 2000),
             '{html_content}' => $cleanedHtml,
             '{my_domain}' => $myDomain,
+            // 兼容旧占位符
+            '{backlink_info}' => $backlinkSummary,
+            '{page_summary}' => mb_substr($cleanedHtml, 0, 2000),
+            '{created_at}' => $link->created_at ? $link->created_at->format('Y-m-d H:i:s') : '',
         ]);
 
         $params = [

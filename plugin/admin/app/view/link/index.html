@@ -269,6 +269,45 @@
     {{# } }}
 </script>
 
+<!-- AI审核结果模板（从 custom_fields.ai_audit_* 渲染） -->
+<script id="link-ai-audit" type="text/html">
+    {{# var cf = d.custom_fields || {}; }}
+    {{# var r = cf.ai_audit_status || ''; }}
+    {{# var score = (typeof cf.ai_audit_score !== 'undefined') ? cf.ai_audit_score : null; }}
+    {{# var conf = (typeof cf.ai_audit_confidence !== 'undefined') ? cf.ai_audit_confidence : null; }}
+    {{# var t = cf.last_audit_time || ''; }}
+    {{# var reason = cf.ai_audit_reason || ''; }}
+    {{# if(!r){ }}
+    <span class="text-gray-400 text-xs">暂无</span>
+    {{# } else { }}
+    <div class="text-xs space-y-1">
+        <div>
+            {{# if(r === 'approved'){ }}
+            <span class="px-2 py-0.5 rounded bg-green-100 text-green-700">✔ 通过</span>
+            {{# } else if(r === 'rejected') { }}
+            <span class="px-2 py-0.5 rounded bg-red-100 text-red-700">✖ 未通过</span>
+            {{# } else if(r === 'spam') { }}
+            <span class="px-2 py-0.5 rounded bg-orange-100 text-orange-700">⚠ 垃圾</span>
+            {{# } else if(r === 'pending') { }}
+            <span class="px-2 py-0.5 rounded bg-yellow-100 text-yellow-700">待定</span>
+            {{# } else { }}
+            <span class="px-2 py-0.5 rounded bg-gray-100 text-gray-700">{{ r }}</span>
+            {{# } }}
+        </div>
+        <div class="text-gray-700">
+            {{# if(score !== null){ }}评分：{{ score }} {{# } }}
+            {{# if(conf !== null){ }}<span class="ml-2">置信：{{ (conf*100).toFixed(0) }}%</span>{{# } }}
+        </div>
+        {{# if(reason){ }}
+        <div class="text-gray-700" style="white-space: normal; word-break: break-word;">原因：{{ reason }}</div>
+        {{# } }}
+        {{# if(t){ }}
+        <div class="text-gray-500">{{ t }}</div>
+        {{# } }}
+    </div>
+    {{# } }}
+</script>
+
 <script>
     layui.use(['table', 'form', 'jquery', 'drawer', 'dropdown', 'layer'], function () {
         let table = layui.table;
@@ -381,6 +420,12 @@
                     templet: '#link-monitor'
                 },
                 {
+                    title: 'AI审核',
+                    align: 'center',
+                    width: 220,
+                    templet: '#link-ai-audit'
+                },
+                {
                     title: '排序',
                     field: 'sort_order',
                     align: 'center',
@@ -461,6 +506,12 @@
                     title: '链接地址',
                     field: 'url',
                     align: 'center'
+                },
+                {
+                    title: 'AI审核',
+                    align: 'center',
+                    width: 220,
+                    templet: '#link-ai-audit'
                 },
                 {
                     title: '申请信息',

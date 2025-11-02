@@ -38,31 +38,24 @@ class LinkModerationController extends Base
         $days = (int) $request->get('days', 7);
 
         try {
-            // 获取指定天数内的友链AI审核统计
+            // 获取指定天数内的友链AI审核统计（基于 ai_audit_status 字段）
             $startDate = date('Y-m-d H:i:s', strtotime("-{$days} days"));
 
-            // 总审核数 - 有auto_audit记录的友链
-            $total = Link::whereNotNull('custom_fields->auto_audit')
-                ->where('created_at', '>=', $startDate)
-                ->count();
+            $base = Link::whereNotNull('custom_fields->ai_audit_status')
+                ->where('updated_at', '>=', $startDate);
 
-            // 通过数 - auto_audit.score >= threshold 且 status=true
-            $approved = Link::whereNotNull('custom_fields->auto_audit')
-                ->where('status', true)
-                ->where('created_at', '>=', $startDate)
-                ->count();
+            $total = (clone $base)->count();
+            $approved = (clone $base)->where('custom_fields->ai_audit_status', 'approved')->count();
+            $rejected = (clone $base)->where('custom_fields->ai_audit_status', 'rejected')->count();
+            $spam = (clone $base)->where('custom_fields->ai_audit_status', 'spam')->count();
 
-            // 未通过数
-            $rejected = $total - $approved;
-
-            // 通过率
             $rate = $total > 0 ? round(($approved / $total) * 100, 2) : 0;
 
             $stats = [
                 'total' => $total,
                 'approved' => $approved,
                 'rejected' => $rejected,
-                'spam' => 0, // 友链没有spam概念，保持为0
+                'spam' => $spam,
                 'rate' => $rate,
             ];
 
@@ -90,33 +83,35 @@ class LinkModerationController extends Base
     {
         $page = (int) $request->get('page', 1);
         $limit = (int) $request->get('limit', 20);
-        $result = $request->get('result', ''); // approved/rejected
+        $result = $request->get('result', ''); // approved/rejected/spam
 
         try {
-            $query = Link::whereNotNull('custom_fields->auto_audit');
+            // 仅筛选有 AI 审核结果的友链
+            $query = Link::whereNotNull('custom_fields->ai_audit_status');
 
             if ($result === 'approved') {
-                $query->where('status', true);
+                $query->where('custom_fields->ai_audit_status', 'approved');
             } elseif ($result === 'rejected') {
-                $query->where('status', false);
+                $query->where('custom_fields->ai_audit_status', 'rejected');
+            } elseif ($result === 'spam') {
+                $query->where('custom_fields->ai_audit_status', 'spam');
             }
 
             $total = $query->count();
 
-            $logs = $query->orderBy('created_at', 'desc')
+            $logs = $query->orderBy('updated_at', 'desc')
                 ->forPage($page, $limit)
                 ->get();
 
-            // 处理数据，提取auto_audit信息
+            // 处理数据，提取 AI 审核信息
             $logs = $logs->map(function ($log) {
                 $logArray = $log->toArray();
-                $autoAudit = $log->getCustomField('auto_audit', []);
 
-                // 添加AI审核相关字段
-                $logArray['ai_moderation_result'] = $log->status ? 'approved' : 'rejected';
-                $logArray['ai_moderation_score'] = $autoAudit['score'] ?? 0;
-                $logArray['ai_moderation_time'] = $autoAudit['time'] ?? '';
-                $logArray['ai_moderation_confidence'] = isset($autoAudit['score']) ? ($autoAudit['score'] / 100) : 0;
+                $logArray['ai_moderation_result'] = (string) $log->getCustomField('ai_audit_status', '');
+                $logArray['ai_moderation_score'] = (float) $log->getCustomField('ai_audit_score', 0);
+                $logArray['ai_moderation_time'] = (string) $log->getCustomField('last_audit_time', '');
+                $logArray['ai_moderation_confidence'] = (float) $log->getCustomField('ai_audit_confidence', 0);
+                $logArray['ai_moderation_reason'] = (string) $log->getCustomField('ai_audit_reason', '');
 
                 return $logArray;
             });
@@ -373,6 +368,7 @@ class LinkModerationController extends Base
 请审核以下友情链接申请，并仅以JSON返回结果：
 {
   "passed": true/false,
+  "result": "approved/rejected/spam",
   "confidence": 0.0-1.0,
   "score": 0-100,
   "reason": "审核理由",
@@ -408,9 +404,8 @@ class LinkModerationController extends Base
 网站名称：{name}
 网站地址：{url}
 网站描述：{description}
-申请时间：{created_at}
-反链检测结果：{backlink_info}
-页面内容摘要：{page_summary}
+反链状态：{backlink_found}（数量：{backlink_count}）
+页面内容摘要：{html_snippet}
 EOT;
     }
 }
