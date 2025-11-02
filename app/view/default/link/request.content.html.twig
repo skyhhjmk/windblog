@@ -14,17 +14,17 @@
             {% endfor %}
         {% endif %}
     </div>
-    <div class="max-w-4xl mx-auto px-4">
+    <div class="max-w-4xl mx-auto px-3 sm:px-4">
         <div class="bg-white rounded-xl shadow-lg overflow-hidden no-animation">
-            <div class="p-8">
-                <div class="text-center mb-8">
-                    <h1 class="text-3xl font-bold text-gray-800 mb-2">申请友链</h1>
-                    <p class="text-gray-600">填写以下信息申请友情链接，我们会尽快审核</p>
+            <div class="p-4 sm:p-6 md:p-8">
+                <div class="text-center mb-6 sm:mb-8">
+                    <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">申请友链</h1>
+                    <p class="text-sm sm:text-base text-gray-600">填写以下信息申请友情链接，我们会尽快审核</p>
                 </div>
 
                 <!-- 友链申请规则卡片 -->
                 <div id="link-rules"
-                     class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8 transition-all duration-300">
+                     class="bg-blue-50 border border-blue-200 rounded-lg p-4 sm:p-6 mb-6 sm:mb-8 transition-all duration-300">
                     <div class="flex items-start">
                         <i class="fas fa-info-circle text-blue-500 text-xl mr-3 mt-1"></i>
                         <div>
@@ -100,7 +100,7 @@
                 </div>
 
                 <!-- 本站信息卡片 -->
-                <div class="bg-gray-50 border border-gray-200 rounded-lg p-6 mb-8">
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 sm:p-6 mb-6 sm:mb-8">
                     <div class="flex items-start">
                         <i class="fas fa-home text-gray-500 text-xl mr-3 mt-1"></i>
                         <div class="flex-1">
@@ -132,22 +132,22 @@
                 </div>
 
                 <!-- CAT3* 快速互联 -->
-                <div class="border border-green-200 rounded-lg p-4 mb-8 bg-green-50">
+                <div class="border border-green-200 rounded-lg p-3 sm:p-4 mb-6 sm:mb-8 bg-green-50">
                     <div class="flex items-start">
-                        <i class="fas fa-plug text-green-500 text-xl mr-3 mt-1"></i>
-                        <div class="flex-1">
-                            <h3 class="text-lg font-semibold text-green-800 mb-2">快速互联（CAT3*）</h3>
-                            <p class="text-gray-600 text-sm mb-3">
+                        <i class="fas fa-plug text-green-500 text-lg sm:text-xl mr-2 sm:mr-3 mt-1 flex-shrink-0"></i>
+                        <div class="flex-1 min-w-0">
+                            <h3 class="text-base sm:text-lg font-semibold text-green-800 mb-2">快速互联（CAT3*）</h3>
+                            <p class="text-gray-600 text-xs sm:text-sm mb-3">
                                 如果您的站点支持风屿互联协议，请填写其接收 API（peer_api），系统将自动在您的站点创建友链记录。
                             </p>
-                            <div class="flex flex-col sm:flex-row gap-3">
+                            <div class="flex flex-col sm:flex-row gap-2 sm:gap-3">
                                 <input type="url"
                                        id="peer_api"
-                                       class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-200"
-                                       placeholder="https://peer.example.com/link/connect/receive?key=xxx"
+                                       class="flex-1 min-w-0 px-3 sm:px-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-200"
+                                       placeholder="https://peer.example.com/..."
                                        pattern="https?://.+">
                                 <button id="quickConnectBtn"
-                                        class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors duration-200 relative overflow-hidden">
+                                        class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 relative overflow-hidden whitespace-nowrap flex-shrink-0">
                                     <span id="quickConnectBtnText">一键互联</span>
                                     <span id="quickConnectBtnLoader"
                                           class="hidden absolute inset-0 flex items-center justify-center bg-green-700">
