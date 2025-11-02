@@ -4,7 +4,7 @@
         <!-- 页面标题区域 - 优化响应式字体大小 -->
         <div class="text-center mb-8 sm:mb-12 fade-in-on-scroll no-animation" data-animation-delay="0">
             <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-800 mb-3 sm:mb-4">{{ page_title|default('WindBlog') }}</h1>
-            <p class="text-gray-600 text-base sm:text-lg md:text-xl">不知名海域的知名岛屿</p>
+            <p class="text-gray-600 text-base sm:text-lg md:text-xl">{{ blog_config('description', '不知名海域的知名岛屿') }}</p>
         </div>
 
         <!-- 博客文章列表 - 优化移动端间距和内边距 -->
