@@ -106,14 +106,6 @@ class LinkAuditWorker
                 throw new RuntimeException('Invalid payload');
             }
 
-            $taskType = (string) ($data['task_type'] ?? 'moderate_link');
-            if ($taskType !== 'moderate_link') {
-                // 忽略非审核任务
-                $message->ack();
-
-                return;
-            }
-
             $this->handleAuditTask($data, $message);
         } catch (Throwable $e) {
             Log::error('Link audit handle failed: ' . $e->getMessage());
@@ -165,6 +157,9 @@ class LinkAuditWorker
         // 检查反链
         $backlink = $this->checkBacklink($html, $myDomain);
 
+        // 清理并格式化 HTML，提取关键内容
+        $cleanedHtml = $this->cleanHtml($html);
+
         $promptText = strtr($template, [
             '{url}' => (string) $link->url,
             '{name}' => (string) $link->name,
@@ -172,7 +167,8 @@ class LinkAuditWorker
             '{email}' => (string) $link->email,
             '{backlink_found}' => $backlink['found'] ? '是' : '否',
             '{backlink_count}' => (string) ($backlink['link_count'] ?? 0),
-            '{html_snippet}' => mb_substr(strip_tags($html), 0, 500),
+            '{html_snippet}' => mb_substr($cleanedHtml, 0, 2000),
+            '{html_content}' => $cleanedHtml,
             '{my_domain}' => $myDomain,
         ]);
 
@@ -183,7 +179,7 @@ class LinkAuditWorker
             'email' => (string) $link->email,
             'backlink_found' => $backlink['found'] ?? false,
             'backlink_count' => $backlink['link_count'] ?? 0,
-            'html_snippet' => mb_substr(strip_tags($html), 0, 500),
+            'html_snippet' => mb_substr($this->cleanHtml($html), 0, 2000),
             'messages' => [
                 ['role' => 'user', 'content' => $promptText],
             ],
@@ -218,27 +214,60 @@ class LinkAuditWorker
             throw new RuntimeException('AI link audit failed: ' . ($result['error'] ?? 'unknown'));
         }
 
-        $resultData = $result['result'] ?? [];
-        if (is_string($resultData)) {
-            // 兼容文本：提取 JSON
-            $resultData = $this->tryParseJsonFromText($resultData);
-        }
-        if (!is_array($resultData)) {
-            Log::error('Link audit AI result parsing failed', [
-                'result_type' => gettype($resultData),
-                'raw_result' => is_scalar($resultData) ? $resultData : json_encode($resultData),
+        // 注意：result['result'] 是 AI 返回的文本内容，需要解析为 JSON
+        $resultText = $result['result'] ?? '';
+        if (!is_string($resultText)) {
+            Log::error('Link audit AI result is not string', [
+                'result_type' => gettype($resultText),
+                'result' => $resultText,
             ]);
-            throw new RuntimeException('AI link audit result is not array');
+            throw new RuntimeException('AI link audit result is not string');
+        }
+
+        // 从 AI 返回的文本中提取 JSON
+        $resultData = $this->tryParseJsonFromText($resultText);
+
+        Log::debug('Link audit parsing step', [
+            'result_text_type' => gettype($resultText),
+            'result_text_length' => strlen($resultText),
+            'result_text_preview' => mb_substr($resultText, 0, 200),
+            'parsed_data_type' => gettype($resultData),
+            'is_array' => is_array($resultData),
+            'is_empty' => empty($resultData),
+        ]);
+
+        if (!is_array($resultData) || empty($resultData)) {
+            Log::error('Link audit AI result parsing failed', [
+                'result_text' => $resultText,
+                'parsed_data' => $resultData,
+            ]);
+            throw new RuntimeException('AI link audit result parsing failed');
         }
 
         // 记录 AI 返回的原始数据
         Log::debug('Link audit AI raw response', [
             'link_id' => $linkId,
             'result_data' => $resultData,
+            'result_data_keys' => array_keys($resultData),
         ]);
 
         // 校验规则
-        $validated = $this->validateAuditResult($resultData);
+        Log::debug('Before validateAuditResult', [
+            'result_data_type' => gettype($resultData),
+            'result_data' => $resultData,
+        ]);
+
+        try {
+            $validated = $this->validateAuditResult($resultData);
+        } catch (\Throwable $e) {
+            Log::error('validateAuditResult threw exception', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'result_data' => $resultData,
+            ]);
+            throw $e;
+        }
+
         if ($validated === null) {
             Log::error('Link audit result validation failed', [
                 'link_id' => $linkId,
@@ -246,6 +275,21 @@ class LinkAuditWorker
                 'missing_or_invalid_fields' => $this->getDiagnosticInfo($resultData),
             ]);
             throw new RuntimeException('AI link audit result not match schema');
+        }
+
+        Log::debug('After validateAuditResult', [
+            'validated_type' => gettype($validated),
+            'validated_is_array' => is_array($validated),
+            'validated' => $validated,
+        ]);
+
+        // 确保 $validated 是数组
+        if (!is_array($validated)) {
+            Log::error('$validated is not an array!', [
+                'validated_type' => gettype($validated),
+                'validated' => $validated,
+            ]);
+            throw new RuntimeException('Validated result is not an array');
         }
 
         // 更新友链审核信息到 custom_fields
@@ -301,16 +345,25 @@ class LinkAuditWorker
   "reason": "审核理由",
   "confidence": 0.0-1.0,
   "score": 0-100,
-  "categories": ["问题类别，如 spam, low_quality, no_backlink 等"]
+  "categories": ["问题类别，如 spam, low_quality, no_backlink, illegal_content, adult_content 等"]
 }
 
 审核要点：
 1. 反链检查：对方网站是否包含指向本站({my_domain})的链接
-2. 网站质量：网站内容质量、是否正常访问、是否涉及违规内容
-3. 相关性：网站内容与本站是否有一定相关性
-4. 信誉度：根据网站描述、邮箱等判断可信度
+2. 网站质量：网站内容质量、是否正常访问
+3. **违规内容检测**：仔细分析网站内容，检查是否包含色情、赌博、暴力、欺诈等违法违规内容
+4. 内容合规性：是否涉及政治敏感、低俗、广告欺诈等不适内容
+5. 相关性：网站内容与本站是否有一定相关性
+6. 信誉度：根据网站描述、邮箱等判断可信度
+
+违规内容判定标准：
+- 色情内容：包含成人、色情、性暗示等内容 → 直接拒绝（categories: adult_content）
+- 赌博博彩：涉及赌博、彩票、博彩等内容 → 直接拒绝（categories: gambling）
+- 违法内容：诈骗、钓鱼、恶意软件、非法交易等 → 直接拒绝（categories: illegal_content）
+- 低质量内容：垃圾广告、采集站、无实质内容 → 拒绝（categories: spam, low_quality）
 
 评分规则（score）：
+- **存在违规内容：直接0分**
 - 找到反链：基础分40分
 - 反链数量：每个额外+5分（最多20分）
 - 内容质量高：+20分
@@ -327,9 +380,11 @@ URL：{url}
 描述：{description}
 邮箱：{email}
 反链状态：{backlink_found}（数量：{backlink_count}）
-网站内容片段：{html_snippet}
 
-仅输出上述JSON，不要包含多余文本或注释。
+网站内容（已清理格式，请仔细分析以下内容判断是否违规）：
+{html_snippet}
+
+仅输出上述JSON格式，不要包含markdown代码块标记、多余文本或注释。
 EOT;
     }
 
@@ -426,6 +481,16 @@ EOT;
      */
     private function validateAuditResult(array $data): ?array
     {
+        // 首先确保 $data 确实是数组
+        if (!is_array($data)) {
+            Log::error('validateAuditResult: $data is not an array', [
+                'data_type' => gettype($data),
+                'data' => $data,
+            ]);
+
+            return null;
+        }
+
         // 如果缺少 result 字段，尝试从 passed 推断
         if (!isset($data['result']) || trim((string) $data['result']) === '') {
             $passed = $data['passed'] ?? null;
@@ -469,7 +534,7 @@ EOT;
             }));
         }
 
-        return [
+        $returnValue = [
             'passed' => $passed,
             'result' => $result,
             'reason' => $reason,
@@ -477,6 +542,13 @@ EOT;
             'score' => $score,
             'categories' => $categories,
         ];
+
+        Log::debug('validateAuditResult returning', [
+            'return_value' => $returnValue,
+            'return_type' => gettype($returnValue),
+        ]);
+
+        return $returnValue;
     }
 
     /**
@@ -507,5 +579,61 @@ EOT;
         }
 
         return $diagnostic;
+    }
+
+    /**
+     * 清理 HTML，提取页面关键内容
+     * 删除 script、style、注释等无用标签，保留文本内容
+     */
+    private function cleanHtml(string $html): string
+    {
+        if (trim($html) === '') {
+            return '';
+        }
+
+        // 删除 script 标签及内容
+        $html = preg_replace('/<script[^>]*?>.*?<\/script>/is', '', $html);
+
+        // 删除 style 标签及内容
+        $html = preg_replace('/<style[^>]*?>.*?<\/style>/is', '', $html);
+
+        // 删除 HTML 注释
+        $html = preg_replace('/<!--.*?-->/s', '', $html);
+
+        // 删除 iframe、embed、object 等嵌入标签
+        $html = preg_replace('/<(iframe|embed|object|noscript)[^>]*?>.*?<\/\1>/is', '', $html);
+
+        // 提取 title 标签内容（保留用于分析）
+        $title = '';
+        if (preg_match('/<title[^>]*?>(.*?)<\/title>/is', $html, $matches)) {
+            $title = 'Title: ' . trim(strip_tags($matches[1])) . "\n\n";
+        }
+
+        // 提取 meta description（保留用于分析）
+        $description = '';
+        if (preg_match('/<meta[^>]*?name=["\']description["\'][^>]*?content=["\']([^"\']*)["\'][^>]*?>/i', $html, $matches)) {
+            $description = 'Description: ' . trim($matches[1]) . "\n\n";
+        }
+
+        // 提取 meta keywords（保留用于分析）
+        $keywords = '';
+        if (preg_match('/<meta[^>]*?name=["\']keywords["\'][^>]*?content=["\']([^"\']*)["\'][^>]*?>/i', $html, $matches)) {
+            $keywords = 'Keywords: ' . trim($matches[1]) . "\n\n";
+        }
+
+        // 删除所有 HTML 标签
+        $text = strip_tags($html);
+
+        // 解码 HTML 实体
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        // 删除多余空白字符
+        $text = preg_replace('/\s+/', ' ', $text);
+
+        // 组合结果：meta信息 + 正文内容
+        $cleaned = $title . $description . $keywords . trim($text);
+
+        // 限制总长度，避免发送过大的内容给 AI
+        return mb_substr($cleaned, 0, 3000);
     }
 }

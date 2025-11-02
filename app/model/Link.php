@@ -32,7 +32,7 @@ use Throwable;
  * @property string|null $seo_title       SEO标题
  * @property string|null $seo_keywords    SEO关键词
  * @property string|null $seo_description SEO描述
- * @property string|null $custom_fields   自定义字段(JSON格式)，支持字段：
+ * @property array|null $custom_fields   自定义字段(JSON格式)，支持字段：
  *                                         - link_position: string, 对方友链位置
  *                                         - page_link: string, 对方友链页面链接
  *                                         - enable_monitor: bool, 是否启用监控
@@ -335,7 +335,20 @@ class Link extends Model
      */
     public function getCustomField(string $key, $default = null)
     {
-        return $this->custom_fields[$key] ?? $default;
+        $fields = $this->custom_fields;
+
+        // 确保 custom_fields 是数组
+        if (!is_array($fields)) {
+            Log::warning('custom_fields is not an array in getCustomField', [
+                'link_id' => $this->id,
+                'custom_fields_type' => gettype($fields),
+                'custom_fields_value' => $fields,
+            ]);
+
+            return $default;
+        }
+
+        return $fields[$key] ?? $default;
     }
 
     /**
@@ -348,12 +361,24 @@ class Link extends Model
      */
     public function setCustomField(string $key, $value): void
     {
-        $customFields = $this->custom_fields ?: [];
+        $customFields = $this->custom_fields;
+
+        // 确保 custom_fields 是数组
+        if (!is_array($customFields)) {
+            Log::warning('custom_fields is not an array in setCustomField, resetting to empty array', [
+                'link_id' => $this->id,
+                'custom_fields_type' => gettype($customFields),
+                'custom_fields_value' => $customFields,
+            ]);
+            $customFields = [];
+        }
+
         if ($value === null) {
             unset($customFields[$key]);
         } else {
             $customFields[$key] = $value;
         }
+
         $this->custom_fields = $customFields;
     }
 
@@ -366,7 +391,18 @@ class Link extends Model
      */
     public function setCustomFields(array $fields): void
     {
-        $customFields = $this->custom_fields ?: [];
+        $customFields = $this->custom_fields;
+
+        // 确保 custom_fields 是数组
+        if (!is_array($customFields)) {
+            Log::warning('custom_fields is not an array in setCustomFields, resetting to empty array', [
+                'link_id' => $this->id,
+                'custom_fields_type' => gettype($customFields),
+                'custom_fields_value' => $customFields,
+            ]);
+            $customFields = [];
+        }
+
         foreach ($fields as $key => $value) {
             if ($value === null) {
                 unset($customFields[$key]);
@@ -374,6 +410,7 @@ class Link extends Model
                 $customFields[$key] = $value;
             }
         }
+
         $this->custom_fields = $customFields;
     }
 }
