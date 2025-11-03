@@ -226,6 +226,51 @@
                     </div>
                 </div>
 
+                <!-- 分类选择 -->
+                <div class="bg-white rounded border border-gray-200">
+                    <div class="p-3 border-b border-gray-200">
+                        <h3 class="text-sm font-semibold text-gray-700 flex items-center">
+                            <i class="fas fa-folder mr-2 text-gray-500"></i>分类
+                        </h3>
+                    </div>
+                    <div class="p-3 space-y-2">
+                        <div class="relative">
+                            <input class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer" id="categories-select"
+                                   placeholder="点击选择分类"
+                                   readonly type="text">
+                            <div class="absolute z-50 hidden w-full left-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-64 overflow-hidden"
+                                 id="categories-dropdown">
+                                <div class="p-2 border-b border-gray-200 bg-gray-50">
+                                    <input class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" id="categories-search"
+                                           placeholder="搜索分类..."
+                                           type="text">
+                                </div>
+                                <div class="p-2 overflow-y-auto max-h-52" id="categories-list"></div>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap gap-1.5" id="selected-categories"></div>
+                    </div>
+                </div>
+
+                <!-- 标签选择 -->
+                <div class="bg-white rounded border border-gray-200">
+                    <div class="p-3 border-b border-gray-200">
+                        <h3 class="text-sm font-semibold text-gray-700 flex items-center">
+                            <i class="fas fa-tags mr-2 text-gray-500"></i>标签
+                        </h3>
+                    </div>
+                    <div class="p-3 space-y-2">
+                        <div class="relative">
+                            <input class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" id="tags-input"
+                                   placeholder="输入标签名称并按回车..."
+                                   type="text">
+                            <div class="absolute z-50 hidden w-full left-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto"
+                                 id="tags-suggestions"></div>
+                        </div>
+                        <div class="flex flex-wrap gap-1.5" id="selected-tags"></div>
+                    </div>
+                </div>
+
                 <!-- 作者选择 -->
                 <div class="bg-white rounded border border-gray-200">
                     <div class="p-3 border-b border-gray-200">
@@ -748,6 +793,13 @@
 
                 // 准备作者数据
                 const authorIds = selectedAuthors.map(a => a.id);
+                // 准备分类数据
+                const categoryIds = selectedCategories.map(c => c.id);
+                // 准备标签数据（包含id和名称）
+                const tags = selectedTags.map(t => ({
+                    id: t.id,
+                    name: t.name
+                }));
 
                 // 准备保存数据
                 const saveData = {
@@ -758,8 +810,10 @@
                     visibility: postVisibility.value,
                     allow_comments: allowComments.checked ? 1 : 0,
                     featured: postFeatured.checked ? 1 : 0,
-                    authors: authorIds
-                    // AI摘要相关字段通过单独的“保存摘要”按钮处理
+                    authors: authorIds,
+                    categories: categoryIds,
+                    tags: tags
+                    // AI摘要相关字段通过单独的"保存摘要"按钮处理
                 };
 
                 const loadingIndex = layer.msg('保存中...', {icon: 16, shade: 0.3, time: 0});
@@ -977,6 +1031,444 @@
 
         // 初始化作者选择器
         initAuthorsSelector();
+
+        // ==============================================
+        // 分类选择功能
+        // ==============================================
+        let selectedCategories = [];
+        let allCategories = [];
+
+        function initCategoriesSelector() {
+            const categoriesSelect = document.getElementById('categories-select');
+            const categoriesDropdown = document.getElementById('categories-dropdown');
+            const categoriesSearch = document.getElementById('categories-search');
+            const categoriesList = document.getElementById('categories-list');
+
+            if (!categoriesSelect || !categoriesDropdown) return;
+
+            // 点击输入框显示/隐藏下拉框
+            categoriesSelect.addEventListener('click', function (e) {
+                e.stopPropagation();
+                categoriesDropdown.classList.toggle('hidden');
+                if (!categoriesDropdown.classList.contains('hidden')) {
+                    categoriesSearch.focus();
+                    loadCategoriesList();
+                }
+            });
+
+            // 搜索功能
+            categoriesSearch.addEventListener('input', function () {
+                const searchTerm = this.value.trim();
+                if (searchTerm.length === 0) {
+                    renderCategoriesList(allCategories);
+                    return;
+                }
+
+                const searchLower = searchTerm.toLowerCase();
+                const filtered = allCategories.filter(cat =>
+                    cat.name.toLowerCase().includes(searchLower) ||
+                    cat.slug.toLowerCase().includes(searchLower)
+                );
+                renderCategoriesList(filtered, searchTerm);
+            });
+
+            // 点击其他地方关闭下拉框
+            document.addEventListener('click', function () {
+                categoriesDropdown.classList.add('hidden');
+            });
+
+            categoriesDropdown.addEventListener('click', function (e) {
+                e.stopPropagation();
+            });
+
+            // 加载文章时设置已选分类
+            if (postId > 0) {
+                loadPostCategories();
+            }
+        }
+
+        function loadCategoriesList() {
+            const categoriesList = document.getElementById('categories-list');
+            if (!categoriesList) return;
+
+            categoriesList.innerHTML = '<div class="p-2 text-gray-500 text-center">加载中...</div>';
+
+            fetch('/app/admin/category/list?limit=1000')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 0) {
+                        allCategories = data.data;
+                        renderCategoriesList(allCategories);
+                    } else {
+                        categoriesList.innerHTML = '<div class="p-2 text-red-500 text-center">加载失败</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('加载分类列表失败:', error);
+                    categoriesList.innerHTML = '<div class="p-2 text-red-500 text-center">加载失败</div>';
+                });
+        }
+
+        function renderCategoriesList(categories, searchTerm = '') {
+            const categoriesList = document.getElementById('categories-list');
+            if (!categoriesList) return;
+
+            categoriesList.innerHTML = '';
+
+            // 如果有搜索词且没有匹配结果，显示创建选项
+            if (searchTerm && categories.length === 0) {
+                const createItem = document.createElement('div');
+                createItem.className = 'p-2 cursor-pointer hover:bg-green-50 rounded border border-green-200 bg-green-50';
+                createItem.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <i class="fas fa-plus-circle text-green-600 mr-2"></i>
+                            <span class="font-medium text-green-700">创建新分类: "${searchTerm}"</span>
+                        </div>
+                        <span class="px-2 py-0.5 text-xs bg-green-600 text-white rounded-full font-semibold">NEW</span>
+                    </div>
+                `;
+                createItem.addEventListener('click', function () {
+                    createNewCategory(searchTerm);
+                });
+                categoriesList.appendChild(createItem);
+                return;
+            }
+
+            // 如果有搜索词且没有完全匹配，在顶部显示创建选项
+            if (searchTerm && !categories.some(c => c.name.toLowerCase() === searchTerm.toLowerCase())) {
+                const createItem = document.createElement('div');
+                createItem.className = 'p-2 cursor-pointer hover:bg-green-50 rounded border border-green-200 bg-green-50 mb-2';
+                createItem.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <i class="fas fa-plus-circle text-green-600 mr-2"></i>
+                            <span class="font-medium text-green-700">创建新分类: "${searchTerm}"</span>
+                        </div>
+                        <span class="px-2 py-0.5 text-xs bg-green-600 text-white rounded-full font-semibold">NEW</span>
+                    </div>
+                `;
+                createItem.addEventListener('click', function () {
+                    createNewCategory(searchTerm);
+                });
+                categoriesList.appendChild(createItem);
+            }
+
+            // 显示现有分类
+            if (categories.length === 0 && !searchTerm) {
+                categoriesList.innerHTML = '<div class="p-2 text-gray-500 text-center">暂无分类</div>';
+                return;
+            }
+
+            categories.forEach(category => {
+                const isSelected = selectedCategories.some(c => c.id === category.id);
+                const categoryItem = document.createElement('div');
+                categoryItem.className = `p-2 cursor-pointer hover:bg-gray-100 rounded ${isSelected ? 'bg-blue-50 text-blue-600' : ''}`;
+                categoryItem.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <span class="font-medium">${category.name}</span>
+                            <span class="text-gray-400 text-xs ml-2">${category.slug}</span>
+                        </div>
+                        ${isSelected ? '<span class="text-blue-600">✓</span>' : ''}
+                    </div>
+                `;
+                categoryItem.addEventListener('click', function () {
+                    toggleCategorySelection(category);
+                });
+                categoriesList.appendChild(categoryItem);
+            });
+        }
+
+        function toggleCategorySelection(category) {
+            const index = selectedCategories.findIndex(c => c.id === category.id);
+            if (index > -1) {
+                selectedCategories.splice(index, 1);
+            } else {
+                selectedCategories.push(category);
+            }
+            updateCategoriesDisplay();
+            renderCategoriesList(allCategories);
+        }
+
+        function updateCategoriesDisplay() {
+            const categoriesSelect = document.getElementById('categories-select');
+            const selectedCategoriesDiv = document.getElementById('selected-categories');
+
+            if (!categoriesSelect) return;
+
+            if (selectedCategories.length === 0) {
+                categoriesSelect.value = '';
+                categoriesSelect.placeholder = '点击选择分类';
+            } else {
+                const names = selectedCategories.map(c => c.name).join(', ');
+                categoriesSelect.value = names;
+            }
+
+            // 显示已选分类标签
+            if (selectedCategoriesDiv) {
+                selectedCategoriesDiv.innerHTML = '';
+                selectedCategories.forEach(category => {
+                    const badge = document.createElement('span');
+                    const isNew = !category.id; // 没有ID表示是新创建的分类
+                    badge.className = 'inline-flex items-center px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded gap-1';
+                    badge.innerHTML = `
+                        <span>${category.name}</span>
+                        ${isNew ? '<span class="px-1.5 py-0.5 bg-blue-600 text-white rounded-full text-[10px] font-semibold">NEW</span>' : ''}
+                        <button class="hover:text-blue-900" onclick="event.stopPropagation()">×</button>
+                    `;
+                    badge.querySelector('button').addEventListener('click', () => {
+                        toggleCategorySelection(category);
+                    });
+                    selectedCategoriesDiv.appendChild(badge);
+                });
+            }
+        }
+
+        function loadPostCategories() {
+            if (!postId) return;
+
+            fetch(`/app/admin/editor/post/${postId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 200 && data.data && data.data.categories) {
+                        selectedCategories = data.data.categories;
+                        updateCategoriesDisplay();
+                    }
+                })
+                .catch(error => {
+                    console.error('加载文章分类信息失败:', error);
+                });
+        }
+
+        function createNewCategory(categoryName) {
+            if (!categoryName || categoryName.trim() === '') {
+                return;
+            }
+
+            const slug = categoryName.toLowerCase()
+                .replace(/[^\w\u4e00-\u9fa5]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+
+            // 直接添加到已选列表，不立即创建
+            // id 为 null 表示这是一个待创建的新分类
+            selectedCategories.push({
+                id: null,
+                name: categoryName,
+                slug: slug,
+                isNew: true // 标记为新创建
+            });
+
+            updateCategoriesDisplay();
+
+            // 清空搜索框并关闭下拉框
+            document.getElementById('categories-search').value = '';
+            document.getElementById('categories-dropdown').classList.add('hidden');
+
+            layer.msg('已添加新分类，保存文章时将自动创建', {icon: 1, time: 2000});
+        }
+
+        // ==============================================
+        // 标签选择功能
+        // ==============================================
+        let selectedTags = [];
+        let allTags = [];
+
+        function initTagsSelector() {
+            const tagsInput = document.getElementById('tags-input');
+            const tagsSuggestions = document.getElementById('tags-suggestions');
+            const selectedTagsDiv = document.getElementById('selected-tags');
+
+            if (!tagsInput) return;
+
+            // 输入时显示提示
+            tagsInput.addEventListener('input', function () {
+                const value = this.value.trim();
+                if (value.length > 0) {
+                    loadTagSuggestions(value);
+                } else {
+                    tagsSuggestions.classList.add('hidden');
+                }
+            });
+
+            // 按回车添加标签
+            tagsInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const value = this.value.trim();
+                    if (value) {
+                        addTag(value);
+                        this.value = '';
+                        tagsSuggestions.classList.add('hidden');
+                    }
+                }
+            });
+
+            // 点击其他地方关闭提示
+            document.addEventListener('click', function (e) {
+                if (!tagsInput.contains(e.target) && !tagsSuggestions.contains(e.target)) {
+                    tagsSuggestions.classList.add('hidden');
+                }
+            });
+
+            // 加载所有标签
+            loadAllTags();
+
+            // 加载文章时设置已选标签
+            if (postId > 0) {
+                loadPostTags();
+            }
+        }
+
+        function loadAllTags() {
+            fetch('/app/admin/tag/list?limit=1000')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 0) {
+                        allTags = data.data;
+                    }
+                })
+                .catch(error => {
+                    console.error('加载标签列表失败:', error);
+                });
+        }
+
+        function loadTagSuggestions(search) {
+            const tagsSuggestions = document.getElementById('tags-suggestions');
+            if (!tagsSuggestions) return;
+
+            const filtered = allTags.filter(tag =>
+                (tag.name.toLowerCase().includes(search.toLowerCase()) ||
+                    tag.slug.toLowerCase().includes(search.toLowerCase())) &&
+                !selectedTags.some(t => t.name === tag.name)
+            );
+
+            tagsSuggestions.innerHTML = '';
+
+            // 检查是否完全匹配
+            const exactMatch = filtered.some(tag => tag.name.toLowerCase() === search.toLowerCase());
+
+            // 如果没有完全匹配，显示创建新标签选项
+            if (!exactMatch && search.trim()) {
+                const createItem = document.createElement('div');
+                createItem.className = 'p-2 cursor-pointer hover:bg-green-50 border-b border-gray-200 bg-green-50';
+                createItem.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <i class="fas fa-plus-circle text-green-600 mr-2"></i>
+                            <span class="font-medium text-green-700 text-sm">创建新标签: "${search}"</span>
+                        </div>
+                        <span class="px-2 py-0.5 text-xs bg-green-600 text-white rounded-full font-semibold">NEW</span>
+                    </div>
+                `;
+                createItem.addEventListener('click', function () {
+                    createAndAddTag(search);
+                    document.getElementById('tags-input').value = '';
+                    tagsSuggestions.classList.add('hidden');
+                });
+                tagsSuggestions.appendChild(createItem);
+            }
+
+            // 显示匹配的现有标签
+            if (filtered.length === 0 && exactMatch) {
+                tagsSuggestions.classList.add('hidden');
+                return;
+            }
+
+            filtered.slice(0, 10).forEach(tag => {
+                const item = document.createElement('div');
+                item.className = 'p-2 cursor-pointer hover:bg-gray-100 text-sm';
+                item.innerHTML = `
+                    <span class="font-medium">${tag.name}</span>
+                    <span class="text-gray-400 text-xs ml-2">${tag.slug}</span>
+                `;
+                item.addEventListener('click', function () {
+                    addTag(tag.name, tag.id);
+                    document.getElementById('tags-input').value = '';
+                    tagsSuggestions.classList.add('hidden');
+                });
+                tagsSuggestions.appendChild(item);
+            });
+
+            tagsSuggestions.classList.remove('hidden');
+        }
+
+        function addTag(tagName, tagId = null) {
+            if (!tagName || selectedTags.some(t => t.name === tagName)) {
+                return;
+            }
+
+            selectedTags.push({
+                id: tagId,
+                name: tagName
+            });
+            updateTagsDisplay();
+        }
+
+        function createAndAddTag(tagName) {
+            if (!tagName || tagName.trim() === '') {
+                return;
+            }
+
+            // 直接添加到已选列表，不立即创建
+            // id 为 null 表示这是一个待创建的新标签
+            selectedTags.push({
+                id: null,
+                name: tagName,
+                isNew: true // 标记为新创建
+            });
+
+            updateTagsDisplay();
+
+            layer.msg('已添加新标签，保存文章时将自动创建', {icon: 1, time: 2000});
+        }
+
+        function removeTag(tagName) {
+            selectedTags = selectedTags.filter(t => t.name !== tagName);
+            updateTagsDisplay();
+        }
+
+        function updateTagsDisplay() {
+            const selectedTagsDiv = document.getElementById('selected-tags');
+            if (!selectedTagsDiv) return;
+
+            selectedTagsDiv.innerHTML = '';
+            selectedTags.forEach(tag => {
+                const badge = document.createElement('span');
+                const isNew = !tag.id; // 没有ID表示是新创建的标签
+                badge.className = 'inline-flex items-center px-2.5 py-1 text-xs bg-green-100 text-green-700 rounded-full gap-1';
+                badge.innerHTML = `
+                    <i class="fas fa-tag"></i>
+                    <span>${tag.name}</span>
+                    ${isNew ? '<span class="px-1.5 py-0.5 bg-green-600 text-white rounded-full text-[10px] font-semibold">NEW</span>' : ''}
+                    <button class="hover:text-green-900" onclick="event.stopPropagation()">×</button>
+                `;
+                badge.querySelector('button').addEventListener('click', () => {
+                    removeTag(tag.name);
+                });
+                selectedTagsDiv.appendChild(badge);
+            });
+        }
+
+        function loadPostTags() {
+            if (!postId) return;
+
+            fetch(`/app/admin/editor/post/${postId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 200 && data.data && data.data.tags) {
+                        selectedTags = data.data.tags;
+                        updateTagsDisplay();
+                    }
+                })
+                .catch(error => {
+                    console.error('加载文章标签信息失败:', error);
+                });
+        }
+
+        // 初始化分类和标签选择器
+        initCategoriesSelector();
+        initTagsSelector();
 
         // AI 摘要状态显示映射
         const statusTextMap = {

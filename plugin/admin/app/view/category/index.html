@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>分类管理</title>
+    <link href="/app/admin/component/pear/css/pear.css" rel="stylesheet"/>
+    <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+    <script src="/app/admin/component/pear/pear.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .layui-table-view .layui-table td .layui-table-cell {
+            display: flex;
+            align-items: center;
+        }
+
+        .layui-table-view .layui-table td .layui-table-cell .normal-actions,
+        .layui-table-view .layui-table td .layui-table-cell .trash-actions {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            height: 100%;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 pear-container">
+<div class="layui-card rounded-lg shadow-sm">
+    <div class="layui-card-body">
+        <div class="flex border-b border-gray-200 mb-5" id="categoryTab">
+            <div class="tab-item px-4 py-2 cursor-pointer text-blue-500 border-b-2 border-blue-500 font-medium"
+                 data-type="normal">分类列表
+            </div>
+            <div class="tab-item px-4 py-2 cursor-pointer text-gray-500 hover:text-gray-700 font-medium"
+                 data-type="trash">垃圾箱
+            </div>
+        </div>
+
+        <form action="" class="layui-form" id="categoryForm">
+            <div class="layui-form-item">
+                <div class="layui-inline">
+                    <label class="layui-form-label font-medium">分类名称</label>
+                    <div class="layui-input-inline">
+                        <input class="layui-input" name="name" placeholder="请输入分类名称" type="text">
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <label class="layui-form-label font-medium">分类别名</label>
+                    <div class="layui-input-inline">
+                        <input class="layui-input" name="slug" placeholder="请输入分类别名" type="text">
+                    </div>
+                </div>
+                <div class="layui-inline ml-[50px]">
+                    <button class="pear-btn pear-btn-md pear-btn-primary" lay-filter="category-query" lay-submit>
+                        <i class="layui-icon layui-icon-search"></i>
+                        查询
+                    </button>
+                    <button class="pear-btn pear-btn-md" type="reset">
+                        <i class="layui-icon layui-icon-refresh"></i>
+                        重置
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        <input id="isTrashed" name="isTrashed" type="hidden" value="false">
+    </div>
+</div>
+
+<div class="layui-card rounded-lg shadow-sm">
+    <div class="layui-card-body">
+        <table id="category-table" lay-filter="category-table"></table>
+    </div>
+</div>
+
+<script id="category-toolbar" type="text/html">
+    <div id="normalToolbar">
+        <button class="pear-btn pear-btn-primary pear-btn-md" lay-event="add">
+            <i class="layui-icon layui-icon-add-1"></i>
+            新增
+        </button>
+        <button class="pear-btn pear-btn-danger pear-btn-md" lay-event="batchRemove">
+            <i class="layui-icon layui-icon-delete"></i>
+            删除
+        </button>
+    </div>
+
+    <div id="trashToolbar" class="hidden">
+        <button class="pear-btn pear-btn-success pear-btn-md" lay-event="batchRestore">
+            <i class="layui-icon layui-icon-refresh-1"></i>
+            恢复
+        </button>
+        <button class="pear-btn pear-btn-danger pear-btn-md" lay-event="batchForceDelete">
+            <i class="layui-icon layui-icon-delete"></i>
+            永久删除
+        </button>
+    </div>
+</script>
+
+<script id="category-bar" type="text/html">
+    <div class="normal-actions flex space-x-1">
+        <button class="pear-btn pear-btn-primary pear-btn-sm" lay-event="edit"><i
+                class="layui-icon layui-icon-edit"></i></button>
+        <button class="pear-btn pear-btn-danger pear-btn-sm" lay-event="remove"><i
+                class="layui-icon layui-icon-delete"></i></button>
+    </div>
+</script>
+
+<script id="trash-category-bar" type="text/html">
+    <div class="trash-actions flex items-center space-x-2">
+        <button class="pear-btn pear-btn-success pear-btn-sm" lay-event="restore"><i
+                class="layui-icon layui-icon-refresh-1"></i></button>
+        <button class="pear-btn pear-btn-danger pear-btn-sm" lay-event="forceDelete"><i
+                class="layui-icon layui-icon-delete"></i></button>
+    </div>
+</script>
+
+<script id="category-createTime" type="text/html">
+    <span class="text-gray-600">{{layui.util.toDateString(d.created_at, 'yyyy-MM-dd HH:mm:ss')}}</span>
+</script>
+
+<script>
+    layui.use(['table', 'form', 'jquery', 'layer'], function () {
+        let table = layui.table;
+        let form = layui.form;
+        let $ = layui.jquery;
+        let layer = layui.layer;
+
+        let MODULE_PATH = "/app/admin/category/";
+
+        let tableIns = table.render({
+            elem: '#category-table',
+            url: MODULE_PATH + 'list',
+            toolbar: '#category-toolbar',
+            defaultToolbar: [],
+            cols: [[
+                {type: 'checkbox'},
+                {field: 'id', title: 'ID', width: 80, sort: true},
+                {field: 'name', title: '分类名称', minWidth: 150},
+                {field: 'slug', title: '分类别名', minWidth: 150},
+                {field: 'description', title: '描述', minWidth: 200},
+                {field: 'sort_order', title: '排序', width: 100},
+                {field: 'created_at', title: '创建时间', width: 180, templet: '#category-createTime'},
+                {title: '操作', toolbar: '#category-bar', align: 'center', width: 120}
+            ]],
+            page: true,
+            limit: 15,
+            limits: [10, 15, 20, 30, 50]
+        });
+
+        // 切换标签
+        $('#categoryTab').on('click', '.tab-item', function () {
+            let type = $(this).data('type');
+            $('.tab-item').removeClass('text-blue-500 border-b-2 border-blue-500').addClass('text-gray-500');
+            $(this).removeClass('text-gray-500').addClass('text-blue-500 border-b-2 border-blue-500');
+
+            if (type === 'trash') {
+                $('#isTrashed').val('true');
+                $('#normalToolbar').addClass('hidden');
+                $('#trashToolbar').removeClass('hidden');
+
+                tableIns.reload({
+                    url: MODULE_PATH + 'list',
+                    where: {isTrashed: 'true'},
+                    cols: [[
+                        {type: 'checkbox'},
+                        {field: 'id', title: 'ID', width: 80, sort: true},
+                        {field: 'name', title: '分类名称', minWidth: 150},
+                        {field: 'slug', title: '分类别名', minWidth: 150},
+                        {field: 'description', title: '描述', minWidth: 200},
+                        {field: 'sort_order', title: '排序', width: 100},
+                        {field: 'created_at', title: '创建时间', width: 180, templet: '#category-createTime'},
+                        {title: '操作', toolbar: '#trash-category-bar', align: 'center', width: 120}
+                    ]]
+                });
+            } else {
+                $('#isTrashed').val('false');
+                $('#normalToolbar').removeClass('hidden');
+                $('#trashToolbar').addClass('hidden');
+
+                tableIns.reload({
+                    url: MODULE_PATH + 'list',
+                    where: {isTrashed: 'false'},
+                    cols: [[
+                        {type: 'checkbox'},
+                        {field: 'id', title: 'ID', width: 80, sort: true},
+                        {field: 'name', title: '分类名称', minWidth: 150},
+                        {field: 'slug', title: '分类别名', minWidth: 150},
+                        {field: 'description', title: '描述', minWidth: 200},
+                        {field: 'sort_order', title: '排序', width: 100},
+                        {field: 'created_at', title: '创建时间', width: 180, templet: '#category-createTime'},
+                        {title: '操作', toolbar: '#category-bar', align: 'center', width: 120}
+                    ]]
+                });
+            }
+        });
+
+        // 搜索
+        form.on('submit(category-query)', function (data) {
+            let field = data.field;
+            field.isTrashed = $('#isTrashed').val();
+            tableIns.reload({where: field});
+            return false;
+        });
+
+        // 工具栏事件
+        table.on('toolbar(category-table)', function (obj) {
+            if (obj.event === 'add') {
+                showAddDialog();
+            } else if (obj.event === 'batchRemove') {
+                batchRemove(obj);
+            } else if (obj.event === 'batchRestore') {
+                batchRestore(obj);
+            } else if (obj.event === 'batchForceDelete') {
+                batchForceDelete(obj);
+            }
+        });
+
+        // 行工具事件
+        table.on('tool(category-table)', function (obj) {
+            if (obj.event === 'edit') {
+                showEditDialog(obj.data);
+            } else if (obj.event === 'remove') {
+                removeCategory(obj.data.id);
+            } else if (obj.event === 'restore') {
+                restoreCategory(obj.data.id);
+            } else if (obj.event === 'forceDelete') {
+                forceDeleteCategory(obj.data.id);
+            }
+        });
+
+        // 显示新增对话框
+        function showAddDialog() {
+            layer.open({
+                type: 1,
+                title: '新增分类',
+                area: ['500px', '450px'],
+                content: `
+                    <form class="layui-form" style="padding: 20px;" lay-filter="addForm">
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">分类名称</label>
+                            <div class="layui-input-block">
+                                <input type="text" name="name" required lay-verify="required" placeholder="请输入分类名称" class="layui-input">
+                            </div>
+                        </div>
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">分类别名</label>
+                            <div class="layui-input-block">
+                                <input type="text" name="slug" required lay-verify="required" placeholder="请输入分类别名(英文)" class="layui-input">
+                            </div>
+                        </div>
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">描述</label>
+                            <div class="layui-input-block">
+                                <textarea name="description" placeholder="请输入描述" class="layui-textarea"></textarea>
+                            </div>
+                        </div>
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">排序</label>
+                            <div class="layui-input-block">
+                                <input type="number" name="sort_order" value="0" placeholder="请输入排序值" class="layui-input">
+                            </div>
+                        </div>
+                        <div class="layui-form-item" style="text-align: center;">
+                            <button class="layui-btn" lay-submit lay-filter="submitAdd">提交</button>
+                            <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+                        </div>
+                    </form>
+                `,
+                success: function (layero, index) {
+                    form.render();
+                    form.on('submit(submitAdd)', function (data) {
+                        $.ajax({
+                            url: MODULE_PATH + 'create',
+                            type: 'POST',
+                            data: data.field,
+                            success: function (res) {
+                                if (res.code === 0) {
+                                    layer.msg(res.msg, {icon: 1});
+                                    layer.close(index);
+                                    tableIns.reload();
+                                } else {
+                                    layer.msg(res.msg, {icon: 2});
+                                }
+                            }
+                        });
+                        return false;
+                    });
+                }
+            });
+        }
+
+        // 显示编辑对话框
+        function showEditDialog(data) {
+            layer.open({
+                type: 1,
+                title: '编辑分类',
+                area: ['500px', '450px'],
+                content: `
+                    <form class="layui-form" style="padding: 20px;" lay-filter="editForm">
+                        <input type="hidden" name="id" value="${data.id}">
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">分类名称</label>
+                            <div class="layui-input-block">
+                                <input type="text" name="name" required lay-verify="required" value="${data.name}" class="layui-input">
+                            </div>
+                        </div>
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">分类别名</label>
+                            <div class="layui-input-block">
+                                <input type="text" name="slug" required lay-verify="required" value="${data.slug}" class="layui-input">
+                            </div>
+                        </div>
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">描述</label>
+                            <div class="layui-input-block">
+                                <textarea name="description" class="layui-textarea">${data.description || ''}</textarea>
+                            </div>
+                        </div>
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">排序</label>
+                            <div class="layui-input-block">
+                                <input type="number" name="sort_order" value="${data.sort_order}" class="layui-input">
+                            </div>
+                        </div>
+                        <div class="layui-form-item" style="text-align: center;">
+                            <button class="layui-btn" lay-submit lay-filter="submitEdit">提交</button>
+                            <button type="button" class="layui-btn layui-btn-primary" onclick="layer.closeAll()">取消</button>
+                        </div>
+                    </form>
+                `,
+                success: function (layero, index) {
+                    form.render();
+                    form.on('submit(submitEdit)', function (formData) {
+                        $.ajax({
+                            url: MODULE_PATH + 'update/' + data.id,
+                            type: 'POST',
+                            data: formData.field,
+                            success: function (res) {
+                                if (res.code === 0) {
+                                    layer.msg(res.msg, {icon: 1});
+                                    layer.close(index);
+                                    tableIns.reload();
+                                } else {
+                                    layer.msg(res.msg, {icon: 2});
+                                }
+                            }
+                        });
+                        return false;
+                    });
+                }
+            });
+        }
+
+        // 删除分类
+        function removeCategory(id) {
+            layer.confirm('确定要删除该分类吗?', {icon: 3}, function (index) {
+                $.ajax({
+                    url: MODULE_PATH + 'remove/' + id,
+                    type: 'DELETE',
+                    success: function (res) {
+                        if (res.code === 0) {
+                            layer.msg(res.msg, {icon: 1});
+                            tableIns.reload();
+                        } else {
+                            layer.msg(res.msg, {icon: 2});
+                        }
+                        layer.close(index);
+                    }
+                });
+            });
+        }
+
+        // 恢复分类
+        function restoreCategory(id) {
+            layer.confirm('确定要恢复该分类吗?', {icon: 3}, function (index) {
+                $.ajax({
+                    url: MODULE_PATH + 'restore/' + id,
+                    type: 'POST',
+                    success: function (res) {
+                        if (res.code === 0) {
+                            layer.msg(res.msg, {icon: 1});
+                            tableIns.reload();
+                        } else {
+                            layer.msg(res.msg, {icon: 2});
+                        }
+                        layer.close(index);
+                    }
+                });
+            });
+        }
+
+        // 永久删除分类
+        function forceDeleteCategory(id) {
+            layer.confirm('确定要永久删除该分类吗?此操作不可恢复!', {icon: 3}, function (index) {
+                $.ajax({
+                    url: MODULE_PATH + 'forceDelete/' + id,
+                    type: 'DELETE',
+                    success: function (res) {
+                        if (res.code === 0) {
+                            layer.msg(res.msg, {icon: 1});
+                            tableIns.reload();
+                        } else {
+                            layer.msg(res.msg, {icon: 2});
+                        }
+                        layer.close(index);
+                    }
+                });
+            });
+        }
+
+        // 批量删除
+        function batchRemove(obj) {
+            let checkStatus = table.checkStatus(obj.config.id);
+            if (checkStatus.data.length === 0) {
+                layer.msg('请选择要删除的分类', {icon: 2});
+                return;
+            }
+            let ids = checkStatus.data.map(item => item.id).join(',');
+            layer.confirm('确定要删除选中的分类吗?', {icon: 3}, function (index) {
+                $.ajax({
+                    url: MODULE_PATH + 'batchRemove/' + ids,
+                    type: 'DELETE',
+                    success: function (res) {
+                        if (res.code === 0) {
+                            layer.msg(res.msg, {icon: 1});
+                            tableIns.reload();
+                        } else {
+                            layer.msg(res.msg, {icon: 2});
+                        }
+                        layer.close(index);
+                    }
+                });
+            });
+        }
+
+        // 批量恢复
+        function batchRestore(obj) {
+            let checkStatus = table.checkStatus(obj.config.id);
+            if (checkStatus.data.length === 0) {
+                layer.msg('请选择要恢复的分类', {icon: 2});
+                return;
+            }
+            let ids = checkStatus.data.map(item => item.id).join(',');
+            layer.confirm('确定要恢复选中的分类吗?', {icon: 3}, function (index) {
+                $.ajax({
+                    url: MODULE_PATH + 'batchRestore/' + ids,
+                    type: 'POST',
+                    success: function (res) {
+                        if (res.code === 0) {
+                            layer.msg(res.msg, {icon: 1});
+                            tableIns.reload();
+                        } else {
+                            layer.msg(res.msg, {icon: 2});
+                        }
+                        layer.close(index);
+                    }
+                });
+            });
+        }
+
+        // 批量永久删除
+        function batchForceDelete(obj) {
+            let checkStatus = table.checkStatus(obj.config.id);
+            if (checkStatus.data.length === 0) {
+                layer.msg('请选择要永久删除的分类', {icon: 2});
+                return;
+            }
+            let ids = checkStatus.data.map(item => item.id).join(',');
+            layer.confirm('确定要永久删除选中的分类吗?此操作不可恢复!', {icon: 3}, function (index) {
+                $.ajax({
+                    url: MODULE_PATH + 'batchForceDelete/' + ids,
+                    type: 'DELETE',
+                    success: function (res) {
+                        if (res.code === 0) {
+                            layer.msg(res.msg, {icon: 1});
+                            tableIns.reload();
+                        } else {
+                            layer.msg(res.msg, {icon: 2});
+                        }
+                        layer.close(index);
+                    }
+                });
+            });
+        }
+    });
+</script>
+</body>
+</html>

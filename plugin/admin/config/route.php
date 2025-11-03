@@ -15,6 +15,7 @@
 
 use plugin\admin\app\controller\AccountController;
 use plugin\admin\app\controller\AiSummaryController;
+use plugin\admin\app\controller\CategoryController;
 use plugin\admin\app\controller\CommentController;
 use plugin\admin\app\controller\DictController;
 use plugin\admin\app\controller\EditorController;
@@ -28,6 +29,7 @@ use plugin\admin\app\controller\PerformanceController;
 use plugin\admin\app\controller\PostsController;
 use plugin\admin\app\controller\SidebarController;
 use plugin\admin\app\controller\StaticCacheController;
+use plugin\admin\app\controller\TagController;
 use plugin\admin\app\controller\WpImportController;
 use support\Request;
 use support\Response;
@@ -148,6 +150,41 @@ Route::group('/app/admin', function () {
         Route::delete('/batchRemove/{ids}', [PostsController::class, 'batchRemove']);
         Route::post('/batchRestore/{ids}', [PostsController::class, 'batchRestore']);
         Route::delete('/batchForceDelete/{ids}', [PostsController::class, 'batchForceDelete']);
+    });
+
+    // Category 路由
+    Route::group('/category', function () {
+        Route::get('', [CategoryController::class, 'index']);
+        Route::get('/', [CategoryController::class, 'index']);
+        Route::get('/index', [CategoryController::class, 'index']);
+        Route::get('/list', [CategoryController::class, 'list']);
+        Route::get('/get/{id}', [CategoryController::class, 'get']);
+        Route::post('/create', [CategoryController::class, 'create']);
+        Route::post('/update/{id}', [CategoryController::class, 'update']);
+        Route::delete('/remove/{id}', [CategoryController::class, 'remove']);
+        Route::post('/restore/{id}', [CategoryController::class, 'restore']);
+        Route::delete('/forceDelete/{id}', [CategoryController::class, 'forceDelete']);
+        Route::delete('/batchRemove/{ids}', [CategoryController::class, 'batchRemove']);
+        Route::post('/batchRestore/{ids}', [CategoryController::class, 'batchRestore']);
+        Route::delete('/batchForceDelete/{ids}', [CategoryController::class, 'batchForceDelete']);
+        Route::get('/parents', [CategoryController::class, 'parents']);
+    });
+
+    // Tag 路由
+    Route::group('/tag', function () {
+        Route::get('', [TagController::class, 'index']);
+        Route::get('/', [TagController::class, 'index']);
+        Route::get('/index', [TagController::class, 'index']);
+        Route::get('/list', [TagController::class, 'list']);
+        Route::get('/get/{id}', [TagController::class, 'get']);
+        Route::post('/create', [TagController::class, 'create']);
+        Route::post('/update/{id}', [TagController::class, 'update']);
+        Route::delete('/remove/{id}', [TagController::class, 'remove']);
+        Route::post('/restore/{id}', [TagController::class, 'restore']);
+        Route::delete('/forceDelete/{id}', [TagController::class, 'forceDelete']);
+        Route::delete('/batchRemove/{ids}', [TagController::class, 'batchRemove']);
+        Route::post('/batchRestore/{ids}', [TagController::class, 'batchRestore']);
+        Route::delete('/batchForceDelete/{ids}', [TagController::class, 'batchForceDelete']);
     });
 
     // Comment 路由
