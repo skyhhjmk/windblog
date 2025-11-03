@@ -25,37 +25,13 @@ class PostController
             $keyword = substr($keyword, 0, -5);
         }
 
-        switch (blog_config('url_mode', 'mix', true)) {
-            case 'slug':
-                // slug模式
-                $post = Post::where('slug', $keyword)->first();
-                break;
-            case 'id':
-                // id模式
-                $post = Post::where('id', $keyword)->first();
-                if (!$post || $post['status'] != 'published') {
-                    return view('error/404');
-                }
-                break;
-            case 'mix':
-                // 混合模式
-                if (is_numeric($keyword)) {
-                    $post = Post::where('id', $keyword)->first();
-                    if ($post === null) {
-                        $post = Post::where('slug', $keyword)->first();
-                    }
-                } elseif (is_string($keyword)) {
-                    $post = Post::where('slug', $keyword)->first();
-                } else {
-                    return view('error/404');
-                }
+        // 统一使用 slug 模式，提高性能并降低错误率
+        $post = Post::where('slug', $keyword)
+            ->where('status', 'published')
+            ->first();
 
-                if (!$post || $post['status'] !== 'published') {
-                    return view('error/404');
-                }
-                break;
-            default:
-                return view('error/404');
+        if (!$post) {
+            return view('error/404');
         }
 
         // 使用PJAXHelper检测是否为PJAX请求
@@ -92,10 +68,7 @@ class PostController
             if (!$isPjax) {
                 $locale = $request->header('Accept-Language') ?? 'zh-CN';
                 $route = 'post.index';
-                $params = [
-                    'keyword' => $keyword,
-                    'mode' => blog_config('url_mode', 'mix', true),
-                ];
+                $params = ['slug' => $keyword];
                 $cacheKey = PJAXHelper::generateCacheKey($route, $params, 1, $locale);
             }
 
@@ -146,10 +119,7 @@ class PostController
                 if (!$isPjax) {
                     $locale = $request->header('Accept-Language') ?? 'zh-CN';
                     $route = 'post.index';
-                    $params = [
-                        'keyword' => $keyword,
-                        'mode' => blog_config('url_mode', 'mix', true),
-                    ];
+                    $params = ['slug' => $keyword];
                     $cacheKey = PJAXHelper::generateCacheKey($route, $params, 1, $locale);
                 }
 

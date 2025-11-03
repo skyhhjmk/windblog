@@ -107,26 +107,17 @@ class BlogService
                         break;
                     case 'category':
                         if (!empty($value)) {
-                            // 支持按分类ID或slug过滤（多对多关系）
+                            // 统一使用 slug 过滤，提高性能并降低错误率
                             $query->whereHas('categories', function ($q) use ($value) {
-                                if (is_numeric($value)) {
-                                    $q->where('categories.id', (int) $value);
-                                } else {
-                                    $q->where('categories.slug', (string) $value)
-                                        ->orWhere('categories.name', (string) $value);
-                                }
+                                $q->where('categories.slug', (string) $value);
                             });
                         }
                         break;
                     case 'tag':
                         if (!empty($value)) {
+                            // 统一使用 slug 过滤，提高性能并降低错误率
                             $query->whereHas('tags', function ($q) use ($value) {
-                                if (is_numeric($value)) {
-                                    $q->where('tags.id', (int) $value);
-                                } else {
-                                    $q->where('tags.slug', (string) $value)
-                                        ->orWhere('tags.name', (string) $value);
-                                }
+                                $q->where('tags.slug', (string) $value);
                             });
                         }
                         break;
@@ -182,9 +173,9 @@ class BlogService
             }
 
             if ($sort === 'hot') {
-                $query = $query->withCount('comments')->orderByDesc('comments_count')->orderByDesc('id');
+                $query = $query->withCount('comments')->orderByDesc('featured')->orderByDesc('comments_count')->orderByDesc('id');
             } else {
-                $query = $query->orderByDesc('id');
+                $query = $query->orderByDesc('featured')->orderByDesc('id');
             }
 
             $posts = $query
