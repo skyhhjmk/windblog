@@ -126,6 +126,15 @@ class Link extends Model
     ];
 
     /**
+     * 属性默认值
+     *
+     * @var array
+     */
+    protected $attributes = [
+        'custom_fields' => '[]',
+    ];
+
+    /**
      * 指示是否自动维护时间戳
      *
      * @var bool

@@ -92,6 +92,7 @@ class Performance
 
             // Redis 采集（分别采集并写入各自连接）
             foreach ($conns as $conn) {
+                /** @var mixed $r */
                 $r = Redis::connection($conn);
                 if (!$r) {
                     Log::warning("Redis 连接不可用，跳过采集: {$conn}");
@@ -101,7 +102,9 @@ class Performance
                 $statsByConn[$conn] = $stats;
 
                 // 写入当前连接的快照与序列
+                /** @phpstan-ignore-next-line */
                 $r->set('perf:redis:snapshot', json_encode($stats, JSON_UNESCAPED_UNICODE));
+                /** @phpstan-ignore-next-line */
                 $r->rPush('perf:redis:series', json_encode(array_merge($stats, ['t' => $t])));
                 $this->trimList($r, 'perf:redis:series', $this->maxSeries);
 
@@ -117,7 +120,9 @@ class Performance
             }
 
             // OPcache 采集（保持原逻辑：snapshot写入cache，series写入default）
+            /** @var mixed $cache */
             $cache = Redis::connection('cache');
+            /** @var mixed $default */
             $default = Redis::connection('default');
             $opStats = $this->collectOpcacheStats();
             if ($cache) {

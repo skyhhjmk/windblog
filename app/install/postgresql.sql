@@ -235,7 +235,7 @@ CREATE TABLE IF NOT EXISTS links
     seo_title       VARCHAR(255)             DEFAULT NULL,
     seo_keywords    VARCHAR(255)             DEFAULT NULL,
     seo_description VARCHAR(255)             DEFAULT NULL,
-    custom_fields   jsonb                    DEFAULT NULL,
+    custom_fields jsonb DEFAULT '{}',
     created_at      TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     deleted_at      TIMESTAMP WITH TIME ZONE DEFAULT NULL

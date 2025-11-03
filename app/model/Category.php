@@ -2,6 +2,7 @@
 
 namespace app\model;
 
+use Closure;
 use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -30,6 +31,14 @@ use Throwable;
  * @property-read Category|null         $parent      父分类
  * @property-read Collection|Category[] $children    子分类
  *
+ * @method static Builder|Category where(string|Closure|array $column, mixed $operator = null, mixed $value = null, string $boolean = 'and') 查询构造器
+ * @method static Builder|Category find(int|string $id, array $columns = ['*']) 根据主键查找记录
+ * @method static Builder|Category first(array $columns = ['*']) 获取第一条记录
+ * @method static Collection|Category[] get(array $columns = ['*']) 获取所有记录
+ * @method static Builder|Category limit(int $value) 限制查询结果数量
+ * @method static Builder|Category ordered() 按排序权重升序排列
+ * @method static Builder|Category topLevel() 查询顶级分类
+ * @method static Builder|Category withCount(string|array $relation) 包含关联计数
  * @method static Builder|Category withTrashed() 包含软删除的记录
  * @method static Builder|Category onlyTrashed() 只查询软删除的记录
  */

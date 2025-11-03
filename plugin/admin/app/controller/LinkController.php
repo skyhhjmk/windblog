@@ -4,6 +4,8 @@ namespace plugin\admin\app\controller;
 
 use app\model\Link;
 use app\service\CacheService;
+use app\service\LinkPriorityService;
+use app\service\LinkPushQueueService;
 use app\service\MQService;
 use DOMDocument;
 use DOMXPath;
@@ -284,13 +286,27 @@ class LinkController extends Base
                 // 清除相关缓存
                 $this->clearLinkCache();
 
-                // 若状态为已启用（审核通过），自动触发CAT5扩展信息推送（静默）
+                // === CAT4* + CAT5* 集成 ===
                 if ($link->status) {
-                    try {
-                        $this->pushExtendedInfoInternal($link);
-                    } catch (Throwable $e) {
-                        Log::warning('CAT5 auto push on save failed: ' . $e->getMessage());
+                    $source = $link->getCustomField('source', '');
+
+                    // 如果是审核通过操作
+                    if ($isApproval && in_array($source, ['wind_connect', 'wind_connect_backlink'])) {
+                        // CAT4* 自动排序
+                        try {
+                            $updated = LinkPriorityService::updateSortOrder([$link->id]);
+                            Log::info("友链审核通过，触发自动排序 - Link ID: {$link->id}, Updated: {$updated}");
+                        } catch (Throwable $e) {
+                            Log::error("自动排序失败 - Link ID: {$link->id}, Error: " . $e->getMessage());
+                        }
+
+                        // CAT5* 双向确认后推送
+                        if ($source === 'wind_connect') {
+                            $this->checkAndEnqueuePush($link);
+                        }
                     }
+
+                    Log::info("链接保存成功（已启用） - ID: {$link->id}, Name: {$link->name}, Source: {$source}");
                 }
 
                 // 返回更新后的数据
@@ -602,7 +618,7 @@ class LinkController extends Base
                 $link = Link::find($id);
                 if ($link && !$link->status) {
                     // 更新审核记录
-                    if (str_contains($link->note, '## 申请信息')) {
+                    if ($link->note && str_contains($link->note, '## 申请信息')) {
                         $link->note = str_replace(
                             '### 审核记录',
                             "### 审核记录\n\n> 已审核通过 - {$adminName} - " . utc_now_string('Y-m-d H:i:s'),
@@ -613,12 +629,25 @@ class LinkController extends Base
                     $link->status = $this->parseBooleanForPostgres(true);
                     if ($link->save()) {
                         $count++;
-                        // 审核通过后自动静默推送扩展信息
-                        try {
-                            $this->pushExtendedInfoInternal($link);
-                        } catch (Throwable $e) {
-                            Log::warning('CAT5 auto push(batch) failed: ' . $e->getMessage());
+                        $source = $link->getCustomField('source', '');
+
+                        // === CAT4* + CAT5* 集成 ===
+                        if (in_array($source, ['wind_connect', 'wind_connect_backlink'])) {
+                            // CAT4* 自动排序
+                            try {
+                                $updated = LinkPriorityService::updateSortOrder([$link->id]);
+                                Log::info("友链审核通过，触发自动排序 - Link ID: {$link->id}, Updated: {$updated}");
+                            } catch (Throwable $e) {
+                                Log::error("自动排序失败 - Link ID: {$link->id}, Error: " . $e->getMessage());
+                            }
+
+                            // CAT5* 双向确认后推送
+                            if ($source === 'wind_connect') {
+                                $this->checkAndEnqueuePush($link);
+                            }
                         }
+
+                        Log::info("链接审核通过 - ID: {$link->id}, Name: {$link->name}, Source: {$source}");
                     }
                 }
             }
@@ -662,7 +691,7 @@ class LinkController extends Base
                 $link = Link::find($id);
                 if ($link && !$link->status) {
                     // 更新审核记录
-                    if (str_contains($link->note, '## 申请信息')) {
+                    if ($link->note && str_contains($link->note, '## 申请信息')) {
                         $link->note = str_replace(
                             '### 审核记录',
                             "### 审核记录\n\n> 已拒绝 - {$adminName} - " . utc_now_string('Y-m-d H:i:s') . "\n> 原因：{$reason}",
@@ -1078,15 +1107,18 @@ class LinkController extends Base
 
         // 检查可疑内容
         $suspiciousPatterns = [
-            'eval\s*\(',
-            'document\.write\s*\(',
-            'innerHTML\s*=',
-            '<script[^>]*src=["\'][^"\']*[^a-zA-Z0-9\-\._~:/\?#\[\]@!$&\'()*+,;=]["\']',
+            'eval\\s*\\(',
+            'document\\.write\\s*\\(',
+            'innerHTML\\s*=',
+            // 修复：简化正则表达式，检查 script src 中是否有非标准 URL 字符
+            '<script[^>]*src=["\'][^"\']*(javascript:|data:)[^"\']["\']',
         ];
 
         $security['suspicious_content'] = [];
         foreach ($suspiciousPatterns as $pattern) {
-            if (preg_match('/' . $pattern . '/i', $html)) {
+            // 由于 $pattern 已经是转义后的字符串，使用 @ 抑制错误并检查结果
+            $result = @preg_match('/' . $pattern . '/i', $html);
+            if ($result !== false && $result > 0) {
                 $security['suspicious_content'][] = $pattern;
             }
         }
@@ -1412,6 +1444,97 @@ class LinkController extends Base
             return ['success' => true, 'body' => (string) $result];
         } catch (Exception $e) {
             return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * 将推送任务入队
+     * 只对 wind_connect 来源的友链进行异步推送
+     */
+    private function enqueuePushTask(Link $link): void
+    {
+        try {
+            $peerApi = $link->getCustomField('peer_api', '') ?: ($link->callback_url ?? '');
+            if (empty($peerApi)) {
+                Log::warning("无法入队推送任务 - Link ID: {$link->id}, 原因: 未配置 peer_api");
+
+                return;
+            }
+
+            $payload = [
+                'type' => 'wind_connect_push',
+                'site' => [
+                    'name' => blog_config('title', 'WindBlog', true),
+                    'url' => blog_config('site_url', '', true),
+                    'description' => blog_config('description', '', true),
+                    'icon' => blog_config('favicon', '', true),
+                    'protocol' => 'CAT5',
+                    'version' => '1.0',
+                ],
+                'link' => [
+                    'name' => $link->name,
+                    'url' => $link->url,
+                    'icon' => $link->icon,
+                    'description' => $link->description,
+                    'tags' => $link->getCustomField('tags', []),
+                ],
+                'timestamp' => time(),
+            ];
+
+            $result = LinkPushQueueService::enqueue($link->id, $peerApi, $payload);
+
+            if ($result['code'] === 0) {
+                Log::info("推送任务已入队 - Link ID: {$link->id}, Task ID: {$result['task_id']}");
+            } else {
+                Log::error("推送任务入队失败 - Link ID: {$link->id}, 错误: {$result['msg']}");
+            }
+        } catch (Throwable $e) {
+            Log::error("推送任务入队异常 - Link ID: {$link->id}, 错误: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * CAT5* 检查并推送（只在双方都审核通过后触发）
+     *
+     * @param Link $link 本站的友链记录
+     */
+    private function checkAndEnqueuePush(Link $link): void
+    {
+        try {
+            // 获取对方的回链ID
+            $peerBacklinkId = $link->getCustomField('peer_backlink_id');
+            $peerApi = $link->getCustomField('peer_api', '') ?: ($link->callback_url ?? '');
+
+            if (empty($peerApi)) {
+                Log::info("跳过 CAT5 推送 - Link ID: {$link->id}, 原因: 未配置 peer_api");
+
+                return;
+            }
+
+            // 如果没有 peer_backlink_id，说明对方还未创建回链，不推送
+            if (empty($peerBacklinkId)) {
+                Log::info("跳过 CAT5 推送 - Link ID: {$link->id}, 原因: 对方未创建回链，关系未建立");
+
+                return;
+            }
+
+            // TODO: 可以进一步检查对方回链的状态（通过 API 查询）
+            // 但这里先假设对方已经创建了回链（peer_backlink_id 存在）
+
+            // 检查是否已经推送过
+            $lastPush = $link->getCustomField('peer_last_push');
+            if (!empty($lastPush)) {
+                Log::info("跳过 CAT5 推送 - Link ID: {$link->id}, 原因: 已经推送过，上次推送: {$lastPush}");
+
+                return;
+            }
+
+            // 双方关系已建立，触发推送
+            Log::info("双向友链关系已建立，触发 CAT5 推送 - Link ID: {$link->id}, Peer Backlink ID: {$peerBacklinkId}");
+            $this->enqueuePushTask($link);
+
+        } catch (Throwable $e) {
+            Log::error("检查并推送异常 - Link ID: {$link->id}, Error: " . $e->getMessage());
         }
     }
 }

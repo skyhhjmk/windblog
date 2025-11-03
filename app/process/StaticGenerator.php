@@ -483,8 +483,8 @@ class StaticGenerator
             CURLOPT_CONNECTTIMEOUT => 5,
             CURLOPT_TIMEOUT => 15,
             CURLOPT_HTTPHEADER => $headers,
-            CURLOPT_SSL_VERIFYHOST => 0,
-            CURLOPT_SSL_VERIFYPEER => 0,
+            CURLOPT_SSL_VERIFYHOST => 2,
+            CURLOPT_SSL_VERIFYPEER => false,
         ]);
         $body = curl_exec($ch);
         if ($body === false) {

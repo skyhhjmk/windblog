@@ -290,7 +290,7 @@ CREATE TABLE IF NOT EXISTS flo_links
     hover_delay      INTEGER                  DEFAULT 200,
     status           BOOLEAN                  DEFAULT true,
     sort_order       INTEGER                  DEFAULT 999,
-    custom_fields    jsonb                    DEFAULT NULL,
+    custom_fields jsonb DEFAULT '{}',
     created_at       TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at       TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     deleted_at       TIMESTAMP WITH TIME ZONE DEFAULT NULL
@@ -1757,3 +1757,28 @@ VALUES (default, '雨云',
         '超高性价比云服务商，使用优惠码github注册并绑定微信即可获得5折优惠',
         null, '2025-9-26 11:00:00+08', '2022-12-23 12:05:07',
         null);
+
+INSERT INTO settings (id, key, value, "group", created_at, updated_at)
+VALUES (default, 'rabbitmq_host', '"rabbitmq"', 'general', '2025-10-16 04:01:11.000000 +00:00',
+        '2025-10-16 04:01:11.000000 +00:00');
+INSERT INTO settings (id, key, value, "group", created_at, updated_at)
+VALUES (default, 'rabbitmq_user', '"windblog"', 'general', '2025-10-16 04:01:11.000000 +00:00',
+        '2025-10-16 04:01:11.000000 +00:00');
+INSERT INTO settings (id, key, value, "group", created_at, updated_at)
+VALUES (default, 'rabbitmq_password', '"rabbitmq_secret_change_me"', 'general', '2025-10-16 04:01:11.000000 +00:00',
+        '2025-10-16 04:01:11.000000 +00:00');
+INSERT INTO settings (id, key, value, "group", created_at, updated_at)
+VALUES (default, 'title', '"WindBlog"', 'general', '2025-10-16 04:01:20.000000 +00:00',
+        '2025-10-16 04:01:20.000000 +00:00');
+INSERT INTO settings (id, key, value, "group", created_at, updated_at)
+VALUES (default, 'es.enabled', 'true', 'general', '2025-10-16 04:01:39.000000 +00:00',
+        '2025-10-16 04:01:39.000000 +00:00');
+INSERT INTO settings (id, key, value, "group", created_at, updated_at)
+VALUES (default, 'es.basic.username', '"elastic"', 'general', '2025-10-16 04:01:39.000000 +00:00',
+        '2025-10-16 04:01:39.000000 +00:00');
+INSERT INTO settings (id, key, value, "group", created_at, updated_at)
+VALUES (default, 'es.basic.password', '"change_me"', 'general', '2025-10-16 04:01:39.000000 +00:00',
+        '2025-10-16 04:01:39.000000 +00:00');
+INSERT INTO settings (id, key, value, "group", created_at, updated_at)
+VALUES (default, 'comment_moderation', 'true', 'general', '2025-10-16 04:02:30.000000 +00:00',
+        '2025-10-16 04:02:30.000000 +00:00');

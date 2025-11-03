@@ -2,8 +2,10 @@
 
 namespace app\model;
 
+use Closure;
 use Exception;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -29,11 +31,17 @@ use Throwable;
  * @property string $ai_moderation_categories AI检测类别
  * @property string      $ip_address  IP地址
  * @property string      $user_agent  用户代理
- * @property string      $created_at  创建时间
- * @property string      $updated_at  更新时间
- * @property string      $deleted_at  删除时间
+ * @property Carbon      $created_at  创建时间
+ * @property Carbon      $updated_at  更新时间
+ * @property Carbon|null $deleted_at  删除时间
  * @property-read Post   $post        关联的文章
  * @property-read Author $author      关联的作者
+ *
+ * @method static Builder|Comment where(string|Closure|array $column, mixed $operator = null, mixed $value = null, string $boolean = 'and') 查询构造器
+ * @method static Builder|Comment find(int|string $id, array $columns = ['*']) 根据主键查找记录
+ * @method static Builder|Comment first(array $columns = ['*']) 获取第一条记录
+ * @method static Collection|Comment[] get(array $columns = ['*']) 获取所有记录
+ * @method static Builder|Comment limit(int $value) 限制查询结果数量
  */
 class Comment extends Model
 {

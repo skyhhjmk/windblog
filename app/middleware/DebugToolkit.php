@@ -42,9 +42,6 @@ class DebugToolkit implements MiddlewareInterface
 
         // 安全注入：仅当响应体可用且包含 </body>，且未已注入
         $content = $response->rawBody();
-        if (!is_string($content)) {
-            return $response;
-        }
         if (stripos($content, '</body>') === false) {
             return $response;
         }

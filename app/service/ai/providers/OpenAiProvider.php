@@ -7,6 +7,7 @@ namespace app\service\ai\providers;
 use app\service\ai\BaseAiProvider;
 use GuzzleHttp\Client;
 use support\Log;
+use Throwable;
 
 /**
  * OpenAI提供者：支持OpenAI官方API和兼容接口（如Azure OpenAI、自建等）
@@ -114,7 +115,7 @@ class OpenAiProvider extends BaseAiProvider
                 default:
                     return ['ok' => false, 'error' => 'Unsupported task: ' . $task];
             }
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('OpenAI Provider error: ' . $e->getMessage(), [
                 'task' => $task,
                 'exception' => get_class($e),
@@ -213,7 +214,7 @@ class OpenAiProvider extends BaseAiProvider
                 'ok' => true,
                 'models' => array_values($chatModels),
             ];
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('Failed to fetch OpenAI models: ' . $e->getMessage());
 
             return ['ok' => false, 'error' => $e->getMessage()];
@@ -348,7 +349,7 @@ class OpenAiProvider extends BaseAiProvider
                 'result' => $moderationResult,
                 'usage' => $response['usage'] ?? [],
             ];
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('Error processing moderation result: ' . $e->getMessage());
 
             return [
@@ -406,7 +407,7 @@ class OpenAiProvider extends BaseAiProvider
                 ],
                 CURLOPT_POSTFIELDS => json_encode($body),
                 CURLOPT_SSL_VERIFYPEER => false,
-                CURLOPT_SSL_VERIFYHOST => false,
+                CURLOPT_SSL_VERIFYHOST => 2,
                 CURLOPT_TIMEOUT => $this->getTimeout(),
                 CURLOPT_CONNECTTIMEOUT => 10,
             ]);
@@ -502,7 +503,7 @@ class OpenAiProvider extends BaseAiProvider
                 'model' => $data['model'] ?? null,
                 'finish_reason' => $data['choices'][0]['finish_reason'] ?? null,
             ];
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('OpenAI API call failed: ' . $e->getMessage());
 
             return ['ok' => false, 'error' => $e->getMessage()];

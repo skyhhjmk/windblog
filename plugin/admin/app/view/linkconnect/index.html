@@ -170,12 +170,20 @@
             <!-- 安全设置 -->
             <div class="layui-elem-field" id="section-security">
                 <legend class="layui-field-title">安全设置</legend>
+
+                <!-- 校验和设置 -->
+                <fieldset class="layui-elem-field layui-field-title" style="margin-top: 20px;">
+                    <legend>数据校验</legend>
+                </fieldset>
                 <div class="layui-form-item">
                     <div class="layui-col-md2">
                         <label class="layui-form-label">启用校验和</label>
                     </div>
                     <div class="layui-col-md4">
                         <input type="checkbox" name="security.enable_checksum" lay-skin="switch" lay-filter="enable_checksum" lay-text="开启|关闭">
+                    </div>
+                    <div class="layui-col-md6">
+                        <div class="layui-form-mid layui-word-aux">用于验证数据完整性，防止传输过程中被篡改</div>
                     </div>
                 </div>
                 <div class="layui-form-item">
@@ -184,26 +192,68 @@
                     </div>
                     <div class="layui-col-md4">
                         <select name="security.checksum_algorithm" class="layui-input">
-                            <option value="sha512">SHA-512</option>
+                            <option value="sha512">SHA-512 (推荐)</option>
                             <option value="sha256">SHA-256</option>
-                            <option value="md5">MD5</option>
+                            <option value="md5">MD5 (不安全)</option>
                         </select>
                     </div>
                 </div>
+
+                <!-- 系统Token设置 -->
+                <fieldset class="layui-elem-field layui-field-title" style="margin-top: 30px;">
+                    <legend>接收鉴权设置</legend>
+                </fieldset>
                 <div class="layui-form-item">
-                    <div class="layui-col-md2">
-                        <label class="layui-form-label">启用Token验证</label>
-                    </div>
-                    <div class="layui-col-md4">
-                        <input type="checkbox" name="security.enable_token" lay-skin="switch" lay-filter="enable_token" lay-text="开启|关闭">
+                    <div class="layui-col-md12">
+                        <blockquote class="layui-elem-quote" style="margin-bottom: 15px;">
+                            <i class="layui-icon layui-icon-tips" style="color: #1E9FFF;"></i>
+                            <strong>说明：</strong>系统Token用于验证来自其他站点的友链申请。如果配置了Token，则只有携带正确
+                            Token 的请求才能被接收。<br>
+                            建议：<span style="color: #FF5722;">默认开启</span>，使用下方的“生成随机Token”按钮生成复杂的Token值。
+                        </blockquote>
                     </div>
                 </div>
                 <div class="layui-form-item">
                     <div class="layui-col-md2">
-                        <label class="layui-form-label">访问Token</label>
+                        <label class="layui-form-label">启用鉴权</label>
                     </div>
                     <div class="layui-col-md4">
-                        <input type="text" name="security.token" placeholder="请输入访问Token" class="layui-input">
+                        <input checked lay-filter="enable_token" lay-skin="switch" lay-text="开启|关闭"
+                               name="security.enable_token" type="checkbox">
+                    </div>
+                    <div class="layui-col-md6">
+                        <div class="layui-form-mid layui-word-aux">强烈建议开启，防止恶意申请</div>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <div class="layui-col-md2">
+                        <label class="layui-form-label">系统Token</label>
+                    </div>
+                    <div class="layui-col-md6">
+                        <input class="layui-input" id="systemToken" name="security.token"
+                               placeholder="输入系统Token，或点击右侧按钮生成" type="text">
+                    </div>
+                    <div class="layui-col-md4" style="padding-left:10px;">
+                        <button class="pear-btn pear-btn-primary pear-btn-md" id="genSystemTokenBtn" type="button">
+                            <i class="layui-icon layui-icon-refresh-1"></i> 生成随机Token
+                        </button>
+                        <button class="pear-btn pear-btn-md" id="copySystemTokenBtn" type="button">
+                            <i class="layui-icon layui-icon-file"></i> 复制
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 快速互联Token管理 -->
+                <fieldset class="layui-elem-field layui-field-title" style="margin-top: 30px;">
+                    <legend>快速互联Token管理</legend>
+                </fieldset>
+                <div class="layui-form-item">
+                    <div class="layui-col-md12">
+                        <blockquote class="layui-elem-quote" style="margin-bottom: 15px;">
+                            <i class="layui-icon layui-icon-tips" style="color: #1E9FFF;"></i>
+                            <strong>说明：</strong>快速互联Token用于生成一次性的互联链接，供其他站长使用。每个Token只能使用一次，使用后自动标记为“已使用”。<br>
+                            <span style="color: #FF5722;">注意：</span>此Token与上方的系统Token不同，主要用于「快速互联」功能。
+                        </blockquote>
                     </div>
                 </div>
             </div>
@@ -336,7 +386,7 @@
                 success: function(res) {
                     if (res.code === 0) {
                         var config = res.data;
-                        
+
                         // 填充表单数据
                         form.val('configForm', {
                             'enabled': config.enabled ? true : false,
@@ -356,7 +406,7 @@
                             'security.enable_token': config.security?.enable_token ? true : false,
                             'security.token': config.security?.token || ''
                         });
-                        
+
                         // 重新渲染表单
                         form.render();
                     } else {
@@ -420,7 +470,7 @@
             // 清空测试结果
             $('#testResult').hide();
             $('#testResultContent').text('');
-            
+
             layer.open({
                 type: 1,
                 title: '测试互联协议连接',
@@ -429,15 +479,15 @@
                 btn: ['测试', '关闭'],
                 yes: function(index) {
                     var url = $('input[name="test_url"]').val();
-                    
+
                     if (!url) {
                         layer.msg('请输入测试URL', {icon: 5});
                         return;
                     }
-                    
+
                     // 显示加载中
                     var loadingIndex = layer.load();
-                    
+
                     $.ajax({
                         url: '/app/admin/linkconnect/testConnection',
                         type: 'POST',
@@ -445,7 +495,7 @@
                         dataType: 'json',
                         success: function(res) {
                             layer.close(loadingIndex);
-                            
+
                             if (res.code === 0) {
                                 // 显示测试结果
                                 $('#testResultContent').text(JSON.stringify(res.data, null, 2));
@@ -477,7 +527,7 @@
                         // 格式化JSON
                         var formattedJson = JSON.stringify(res.data, null, 2);
                         $('#exampleContent').text(formattedJson);
-                        
+
                         layer.open({
                             type: 1,
                             title: '互联协议示例配置',
@@ -677,6 +727,42 @@
         $(document).on('click', '#saveSiteBtn', function(){ saveSection('site'); });
         $(document).on('click', '#saveExchangeBtn', function(){ saveSection('exchange'); });
         $(document).on('click', '#saveSecurityBtn', function(){ saveSection('security'); });
+
+        // 生成系统Token（64位随机字符串）
+        $(document).on('click', '#genSystemTokenBtn', function () {
+            // 生成64位随机hex字符串
+            var array = new Uint8Array(32);
+            window.crypto.getRandomValues(array);
+            var token = Array.from(array, function (byte) {
+                return ('0' + byte.toString(16)).slice(-2);
+            }).join('');
+            $('#systemToken').val(token);
+            $('input[name="security.token"]').val(token);
+            layer.msg('已生成随机Token，请记得保存配置', {icon: 6});
+        });
+
+        // 复制系统Token
+        $(document).on('click', '#copySystemTokenBtn', function () {
+            var val = $('#systemToken').val() || $('input[name="security.token"]').val();
+            if (!val) {
+                layer.msg('请先生成或输入Token', {icon: 3});
+                return;
+            }
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(val).then(function () {
+                    layer.msg('已复制到剪贴板', {icon: 6});
+                }).catch(function () {
+                    layer.msg('复制失败', {icon: 5});
+                });
+            } else {
+                var tmp = $('<input>');
+                $('body').append(tmp);
+                tmp.val(val).select();
+                document.execCommand('copy');
+                tmp.remove();
+                layer.msg('已复制到剪贴板', {icon: 6});
+            }
+        });
 
         // 生成 Token
         $(document).on('click', '#genTokenBtn', function(){

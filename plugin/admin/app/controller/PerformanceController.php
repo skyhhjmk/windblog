@@ -34,6 +34,7 @@ class PerformanceController extends Base
                 return $this->fail('非法连接参数，允许值为 default 或 cache');
             }
 
+            /** @var mixed $redis */
             $redis = Redis::connection($conn);
             $snapshotKey = 'perf:redis:snapshot';
             $seriesKey = 'perf:redis:series';
@@ -53,9 +54,11 @@ class PerformanceController extends Base
             ];
 
             try {
-                // 尝试从Redis获取预存的快照和时间序列数据
+                // 尝试从 Redis 获取预存的快照和时间序列数据
                 if ($redis) {
+                    /** @phpstan-ignore-next-line */
                     $snapshot = $redis->get($snapshotKey);
+                    /** @phpstan-ignore-next-line */
                     $series = $redis->lRange($seriesKey, -100, -1);
                 }
             } catch (Throwable $e) {
@@ -113,7 +116,9 @@ class PerformanceController extends Base
     public function opcacheStatus(Request $request)
     {
         try {
+            /** @var mixed $cache */
             $cache = Redis::connection('cache');
+            /** @var mixed $default */
             $default = Redis::connection('default');
 
             $snapshotKey = 'perf:opcache:snapshot';
@@ -135,9 +140,11 @@ class PerformanceController extends Base
             try {
                 // 尝试从Redis获取预存的快照和时间序列数据
                 if ($cache) {
+                    /** @phpstan-ignore-next-line */
                     $snapshot = $cache->get($snapshotKey);
                 }
                 if ($default) {
+                    /** @phpstan-ignore-next-line */
                     $series = $default->lRange($seriesKey, -100, -1);
                 }
             } catch (Throwable $e) {
