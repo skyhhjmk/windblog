@@ -78,6 +78,20 @@ return [
                 'weight' => 940,
             ],
             [
+                'title' => '分类管理',
+                'key' => 'plugin\\admin\\app\\controller\\CategoryController',
+                'href' => '/app/admin/category/index',
+                'type' => 1,
+                'weight' => 935,
+            ],
+            [
+                'title' => '标签管理',
+                'key' => 'plugin\\admin\\app\\controller\\TagController',
+                'href' => '/app/admin/tag/index',
+                'type' => 1,
+                'weight' => 933,
+            ],
+            [
                 'title' => '评论管理',
                 'key' => 'plugin\\admin\\app\\controller\\CommentController',
                 'href' => '/app/admin/comment/index',
