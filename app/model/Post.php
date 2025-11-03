@@ -3,6 +3,7 @@
 namespace app\model;
 
 use app\service\BlogService;
+use app\service\CacheService;
 use app\service\ElasticSyncService;
 use Exception;
 use Illuminate\Database\Eloquent\Builder;
@@ -81,6 +82,31 @@ class Post extends Model
                 ElasticSyncService::deletePost((int) $post->id);
             } catch (Throwable $e) {
                 Log::warning('[Post.deleted] ES delete failed: ' . $e->getMessage());
+            }
+        });
+
+        // 保存后检测发布状态变化，清除相关缓存
+        static::saved(function (Post $post) {
+            try {
+                // 检测是否为发布状态
+                $isPublished = $post->status === 'published';
+
+                // 检测状态是否从非发布变为发布（新发布）
+                $wasUnpublished = $post->wasChanged('status') &&
+                    $post->getOriginal('status') !== 'published' &&
+                    $post->status === 'published';
+
+                // 如果是发布状态的文章（新发布或已发布的更新），清除缓存
+                if ($isPublished) {
+                    Log::info("[Post.saved] Post {$post->id} published, clearing caches...");
+                    CacheService::clearPublishCache($post->id);
+
+                    if ($wasUnpublished) {
+                        Log::info("[Post.saved] Post {$post->id} newly published");
+                    }
+                }
+            } catch (Throwable $e) {
+                Log::warning('[Post.saved] Cache clear failed: ' . $e->getMessage());
             }
         });
 

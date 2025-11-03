@@ -855,6 +855,146 @@ class CacheService
     }
 
     /**
+     * 清除侧边栏缓存
+     *
+     * @return bool
+     */
+    public static function clearSidebarCache(): bool
+    {
+        try {
+            Log::info('[CacheService] Clearing sidebar cache...');
+
+            // 清除侧边栏相关的缓存键
+            $patterns = [
+                'sidebar:*',
+                'widget:*',
+                'blog_config_sidebar',
+            ];
+
+            $success = true;
+            foreach ($patterns as $pattern) {
+                if (!self::clearCache($pattern)) {
+                    $success = false;
+                    Log::warning("[CacheService] Failed to clear sidebar cache pattern: {$pattern}");
+                }
+            }
+
+            Log::info('[CacheService] Sidebar cache cleared: ' . ($success ? 'success' : 'partial'));
+
+            return $success;
+        } catch (Exception $e) {
+            Log::error('[CacheService] Failed to clear sidebar cache: ' . $e->getMessage());
+
+            return false;
+        }
+    }
+
+    /**
+     * 清除文章缓存
+     *
+     * @param int|null $postId 文章ID，如果为null则清除所有文章缓存
+     *
+     * @return bool
+     */
+    public static function clearPostCache(?int $postId = null): bool
+    {
+        try {
+            if ($postId !== null) {
+                Log::info("[CacheService] Clearing post cache for ID: {$postId}");
+
+                // 清除特定文章的缓存键
+                $patterns = [
+                    "post:{$postId}:*",
+                    "post_detail:{$postId}",
+                    "post_content:{$postId}",
+                ];
+            } else {
+                Log::info('[CacheService] Clearing all post caches...');
+
+                // 清除所有文章相关的缓存键
+                $patterns = [
+                    'post:*',
+                    'post_detail:*',
+                    'post_content:*',
+                    'post_list:*',
+                    'posts:*',
+                    'recent_posts:*',
+                    'featured_posts:*',
+                    'category:*:posts',
+                    'tag:*:posts',
+                    'home_posts',
+                ];
+            }
+
+            $success = true;
+            foreach ($patterns as $pattern) {
+                if (!self::clearCache($pattern)) {
+                    $success = false;
+                    Log::warning("[CacheService] Failed to clear post cache pattern: {$pattern}");
+                }
+            }
+
+            Log::info('[CacheService] Post cache cleared: ' . ($success ? 'success' : 'partial'));
+
+            return $success;
+        } catch (Exception $e) {
+            Log::error('[CacheService] Failed to clear post cache: ' . $e->getMessage());
+
+            return false;
+        }
+    }
+
+    /**
+     * 清除发布相关的所有缓存（文章+侧边栏+首页等）
+     *
+     * @param int|null $postId 文章ID
+     *
+     * @return bool
+     */
+    public static function clearPublishCache(?int $postId = null): bool
+    {
+        try {
+            Log::info('[CacheService] Clearing publish-related caches...');
+
+            $success = true;
+
+            // 清除文章缓存
+            if (!self::clearPostCache($postId)) {
+                $success = false;
+            }
+
+            // 清除侧边栏缓存
+            if (!self::clearSidebarCache()) {
+                $success = false;
+            }
+
+            // 清除其他相关缓存
+            $additionalPatterns = [
+                'index:*',
+                'home:*',
+                'archive:*',
+                'sitemap:*',
+                'rss:*',
+            ];
+
+            foreach ($additionalPatterns as $pattern) {
+                if (!self::clearCache($pattern)) {
+                    $success = false;
+                    Log::warning("[CacheService] Failed to clear additional cache pattern: {$pattern}");
+                }
+            }
+
+            Log::info('[CacheService] Publish cache cleared: ' . ($success ? 'success' : 'partial'));
+
+            return $success;
+        } catch (Exception $e) {
+            Log::error('[CacheService] Failed to clear publish cache: ' . $e->getMessage());
+
+            return false;
+        }
+    }
+
+    /**
      * 获取 PSR-16 轻量适配器（不依赖外部包）
      */
     public static function getPsr16Adapter(): object
