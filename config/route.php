@@ -107,7 +107,7 @@ Route::any('/link/request', [app\controller\LinkController::class, 'request'])->
 Route::any('/link/connect/apply', [app\controller\LinkController::class, 'connectApply'])->name('link.connect.apply');
 Route::get('/link/connect/check-status', [app\controller\LinkController::class, 'checkTaskStatus'])->name('link.connect.check.status');
 Route::post('/link/connect/receive', [app\controller\LinkController::class, 'connectReceive'])->name('link.connect.receive');
-Route::get('/link/quick-connect', [app\controller\LinkController::class, 'quickConnect'])->name('link.quick.connect');
+Route::any('/link/quick-connect', [app\controller\LinkController::class, 'quickConnect'])->name('link.quick.connect');
 
 // 分类浏览（兼容旧路由）
 Route::any('/category/{slug}', [app\controller\CategoryController::class, 'index'])->name('category.index');

@@ -770,6 +770,8 @@ class LinkController
         try {
             // 获取token参数
             $token = trim((string) $request->get('token', ''));
+            // 获取是否创建回链的参数（POST请求时）
+            $createBacklink = $request->post('create_backlink', 'false') === 'true';
 
             // 验证token是否有效
             if (empty($token)) {
@@ -824,16 +826,79 @@ class LinkController
                 'email' => blog_config('admin_email', '', true),
             ];
 
-            // 成功返回后，token由connectApply调用方标记为已使用
-            // 注意：此处不标记，由connectApply在成功获取信息后标记
-            // 这样可以防止仅查询信息就消耗token的情况
+            $backlinkId = null;
 
-            return json([
+            // === CAT3* 步骤5: A站自动创建回链 ===
+            if ($createBacklink) {
+                try {
+                    // 从请求中获取B站信息
+                    $peerSite = $request->post('peer_site', []);
+
+                    if (empty($peerSite['name']) || empty($peerSite['url'])) {
+                        Log::warning('quickConnect 请求缺少对方站点信息');
+
+                        return json(['code' => 1, 'msg' => '缺少对方站点信息']);
+                    }
+
+                    // 检查是否已存在该URL的友链
+                    $existingLink = Link::where('url', $peerSite['url'])->first();
+                    if (!$existingLink) {
+                        // 自动创建指向B站的友链
+                        $backlink = new Link();
+                        $backlink->name = $peerSite['name'];
+                        $backlink->url = $peerSite['url'];
+                        $backlink->icon = $peerSite['icon'] ?? '';
+                        $backlink->description = $peerSite['description'] ?? '';
+                        $backlink->status = true; // 自动通过
+                        $backlink->sort_order = 999;
+                        $backlink->target = '_blank';
+                        $backlink->redirect_type = 'goto';
+                        $backlink->show_url = true;
+                        $backlink->email = $peerSite['email'] ?? '';
+                        $backlink->setCustomFields([
+                            'source' => 'wind_connect_backlink',
+                            'peer_api' => $peerSite['api'] ?? '',
+                            'created_via' => 'quick_connect',
+                            'created_at_utc' => utc_now_string('Y-m-d H:i:s'),
+                        ]);
+                        $backlink->save();
+
+                        $backlinkId = $backlink->id;
+
+                        Log::info('quickConnect 自动创建回链成功', [
+                            'backlink_id' => $backlinkId,
+                            'peer_url' => $peerSite['url'],
+                            'peer_name' => $peerSite['name'],
+                        ]);
+                    } else {
+                        $backlinkId = $existingLink->id;
+                        Log::info('quickConnect 检测到已存在的友链，返回现有ID', [
+                            'backlink_id' => $backlinkId,
+                            'peer_url' => $peerSite['url'],
+                        ]);
+                    }
+                } catch (Throwable $e) {
+                    Log::error('quickConnect 创建回链失败: ' . $e->getMessage());
+
+                    return json(['code' => 1, 'msg' => '创建回链失败: ' . $e->getMessage()]);
+                }
+            }
+
+            // 构建响应数据
+            $responseData = [
                 'code' => 0,
                 'msg' => 'success',
                 'site' => $siteInfo,
                 'link' => $linkInfo,
-            ]);
+            ];
+
+            // 如果创建了回链，返回回链ID
+            if ($backlinkId !== null) {
+                $responseData['backlink_id'] = $backlinkId;
+                $responseData['msg'] = '友链已自动创建';
+            }
+
+            return json($responseData);
         } catch (Throwable $e) {
             Log::error('快速互联API错误: ' . $e->getMessage());
 

@@ -111,7 +111,7 @@ class LinkPushWorker
                 // 每 60 秒输出一次日志
                 $now = time();
                 if ($now - $this->lastDebugLogTime >= 60) {
-                    Log::debug('[LinkPushWorker] 队列无消息');
+                    //                    Log::debug('[LinkPushWorker] 队列无消息');
                     $this->lastDebugLogTime = $now;
                 }
             }

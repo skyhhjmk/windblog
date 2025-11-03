@@ -142,7 +142,7 @@ class LinkConnectWorker
                 // 每 60 秒输出一次日志
                 $now = time();
                 if ($now - $this->lastDebugLogTime >= 60) {
-                    Log::debug('[LinkConnectWorker] 队列无消息');
+                    //                    Log::debug('[LinkConnectWorker] 队列无消息');
                     $this->lastDebugLogTime = $now;
                 }
             }
@@ -180,63 +180,9 @@ class LinkConnectWorker
 
             Log::info("LinkConnectWorker 处理友链申请 [{$taskId}] - 目标: {$peerApi}");
 
-            // === 步骤1: 如果有token，先调用quickConnect获取站点信息 ===
+            // === 步骤1: 如果有 token，直接跳过预获取，由 sendQuickConnectRequest 一次性完成 ===
             if ($token) {
-                Log::info("[{$taskId}] 检测到token，调用quickConnect获取站点信息");
-
-                try {
-                    $parsedUrl = parse_url($peerApi);
-                    $scheme = $parsedUrl['scheme'] ?? 'http';
-                    $host = $parsedUrl['host'] ?? '';
-                    $port = isset($parsedUrl['port']) ? ':' . $parsedUrl['port'] : '';
-
-                    $quickConnectUrl = $scheme . '://' . $host . $port . '/link/quick-connect?token=' . urlencode($token);
-
-                    $sslVerify = (bool) blog_config('wind_connect_ssl_verify', true, true);
-                    $opts = [
-                        'http' => [
-                            'method' => 'GET',
-                            'timeout' => 10,
-                            'header' => 'Accept: application/json',
-                        ],
-                        'ssl' => [
-                            'verify_peer' => $sslVerify,
-                            'verify_peer_name' => $sslVerify,
-                        ],
-                    ];
-                    $ctx = stream_context_create($opts);
-
-                    $resp = @file_get_contents($quickConnectUrl, false, $ctx);
-
-                    if ($resp !== false) {
-                        $quickData = json_decode($resp, true);
-                        if (is_array($quickData) && $quickData['code'] === 0) {
-                            $remoteSite = $quickData['site'] ?? [];
-                            $remoteLink = $quickData['link'] ?? [];
-
-                            // 使用远程信息覆盖
-                            $name = $name ?: (string) ($remoteLink['name'] ?? ($remoteSite['name'] ?? $name));
-                            $url = $url ?: (string) ($remoteLink['url'] ?? ($remoteSite['url'] ?? $url));
-                            $icon = $icon ?: (string) ($remoteLink['icon'] ?? ($remoteSite['icon'] ?? $icon));
-                            $description = $description ?: (string) ($remoteLink['description'] ?? ($remoteSite['description'] ?? $description));
-                            $email = $email ?: (string) ($remoteLink['email'] ?? $email);
-
-                            // 标记token为已使用
-                            LinkConnectService::markTokenUsed($token, $url);
-
-                            // 自动调整peer_api
-                            $peerApi = rtrim($url, '/') . '/api/wind-connect';
-
-                            Log::info("[{$taskId}] quickConnect成功，已获取站点信息: {$name}");
-                        } else {
-                            Log::warning("[{$taskId}] quickConnect返回错误: " . ($quickData['msg'] ?? '未知'));
-                        }
-                    } else {
-                        Log::warning("[{$taskId}] quickConnect请求失败");
-                    }
-                } catch (Throwable $e) {
-                    Log::warning("[{$taskId}] quickConnect异常: " . $e->getMessage());
-                }
+                Log::info("[{$taskId}] 检测到 token，将在后续请求中一次性处理");
             }
 
             // 回填默认值
@@ -256,49 +202,47 @@ class LinkConnectWorker
                 $email = (string) blog_config('admin_email', '', true);
             }
 
-            // === 步骤2: 检查URL是否已存在 ===
+            // === 步骤2: 检查URL是否已存在，如果存在则直接使用现有记录 ===
             $existingLink = Link::where('url', $url)->first();
             if ($existingLink) {
-                Log::warning("[{$taskId}] 该链接已存在: {$url}");
-                LinkConnectQueueService::updateTaskStatus($taskId, 'failed', '该链接已存在或审核中');
-                $message->ack();
+                Log::info("[{$taskId}] 该链接已存在，使用现有记录 - ID: {$existingLink->id}, URL: {$url}");
+                $linkId = $existingLink->id;
+                // 不需要重复创建，直接跳到发送请求步骤
+            } else {
+                // === 步骤3: 创建Link记录 ===
+                try {
+                    $link = new Link();
+                    $link->name = $name;
+                    $link->url = $url;
+                    $link->icon = $icon;
+                    $link->description = $description;
+                    $link->status = false; // pending
+                    $link->sort_order = 999;
+                    $link->target = '_blank';
+                    $link->redirect_type = 'goto';
+                    $link->show_url = true;
+                    $link->email = $email;
+                    $link->setCustomFields([
+                        'peer_status' => 'pending',
+                        'peer_api' => $peerApi,
+                        'peer_protocol' => 'wind_connect',
+                        'source' => 'wind_connect', // 标记为快速互联申请
+                        'connect_status' => 'pending',
+                    ]);
+                    $link->save();
 
-                return;
+                    Log::info("[{$taskId}] 创建Link记录成功 - ID: {$link->id}, URL: {$url}");
+                    $linkId = $link->id;
+                } catch (Throwable $e) {
+                    Log::error("[{$taskId}] 创建Link记录失败: " . $e->getMessage());
+                    LinkConnectQueueService::updateTaskStatus($taskId, 'failed', '创建记录失败: ' . $e->getMessage());
+                    $message->ack();
+
+                    return;
+                }
             }
 
-            // === 步骤3: 创建Link记录 ===
-            try {
-                $link = new Link();
-                $link->name = $name;
-                $link->url = $url;
-                $link->icon = $icon;
-                $link->description = $description;
-                $link->status = false; // pending
-                $link->sort_order = 999;
-                $link->target = '_blank';
-                $link->redirect_type = 'goto';
-                $link->show_url = true;
-                $link->email = $email;
-                $link->setCustomFields([
-                    'peer_status' => 'pending',
-                    'peer_api' => $peerApi,
-                    'peer_protocol' => 'wind_connect',
-                    'source' => 'wind_connect', // 标记为快速互联申请
-                    'connect_status' => 'pending',
-                ]);
-                $link->save();
-
-                Log::info("[{$taskId}] 创建Link记录成功 - ID: {$link->id}, URL: {$url}");
-                $linkId = $link->id;
-            } catch (Throwable $e) {
-                Log::error("[{$taskId}] 创建Link记录失败: " . $e->getMessage());
-                LinkConnectQueueService::updateTaskStatus($taskId, 'failed', '创建记录失败: ' . $e->getMessage());
-                $message->ack();
-
-                return;
-            }
-
-            // === 步骤4: 发送互联请求 ===
+            // === 步骤4: 发送互联请求到 A站 ===
             // 检查是否超过失败限制
             if ($this->shouldSendToDeadLetter($peerApi)) {
                 Log::error("友链申请连续失败超限 [{$taskId}]，进入DLX: {$peerApi}");
@@ -308,31 +252,113 @@ class LinkConnectWorker
                 return;
             }
 
-            // 构建对外载荷
-            $payload = LinkConnectService::buildOutboundPayload();
+            // === CAT3* 步骤5: 发送带有 create_backlink 的请求 ===
+            // 构建对外载荷，包含 B站的信息
+            $payload = [
+                'create_backlink' => 'true',
+                'peer_site' => [
+                    'name' => $name,
+                    'url' => $url,
+                    'icon' => $icon,
+                    'description' => $description,
+                    'email' => $email,
+                    'api' => $peerApi,
+                ],
+            ];
 
-            // 发送HTTP请求
+            // 发送HTTP请求到 A站的 quickConnect 接口
             $startTime = microtime(true);
-            $result = $this->sendLinkConnectRequest($peerApi, $payload);
+            $result = $this->sendQuickConnectRequest($peerApi, $token, $payload);
             $endTime = microtime(true);
             $responseTime = round(($endTime - $startTime) * 1000, 2);
 
             if ($result['success']) {
-                Log::info("友链申请成功 [{$taskId}] - 耗时: {$responseTime}ms");
+                // 解析响应
+                $responseData = json_decode($result['response'], true);
 
-                // 更新本地link记录状态
-                if ($linkId) {
-                    $this->updateLinkStatus($linkId, 'sent', $result);
+                // 如果有 token 且响应成功，标记 token 为已使用
+                if ($token && isset($responseData['code']) && $responseData['code'] === 0) {
+                    // 从响应中获取站点信息并更新 Link 记录
+                    $remoteSite = $responseData['site'] ?? [];
+                    $remoteLink = $responseData['link'] ?? [];
+
+                    if (!empty($remoteSite['url'])) {
+                        // 标记 token 为已使用
+                        LinkConnectService::markTokenUsed($token, $remoteSite['url']);
+                        Log::info("[{$taskId}] Token 已标记为已使用");
+
+                        // 更新 Link 记录的信息（如果之前没有填充）
+                        if ($linkId) {
+                            $link = Link::find($linkId);
+                            if ($link) {
+                                $updated = false;
+                                if (empty($link->name) || $link->name === 'WindBlog') {
+                                    $link->name = $remoteLink['name'] ?? $remoteSite['name'] ?? $link->name;
+                                    $updated = true;
+                                }
+                                if (empty($link->icon)) {
+                                    $link->icon = $remoteLink['icon'] ?? $remoteSite['icon'] ?? '';
+                                    $updated = true;
+                                }
+                                if (empty($link->description)) {
+                                    $link->description = $remoteLink['description'] ?? $remoteSite['description'] ?? '';
+                                    $updated = true;
+                                }
+                                if ($updated) {
+                                    $link->save();
+                                    Log::info("[{$taskId}] 已更新 Link 记录信息 - ID: {$linkId}");
+                                }
+                            }
+                        }
+                    }
                 }
 
-                // 更新任务状态为成功
-                LinkConnectQueueService::updateTaskStatus($taskId, 'success', '友链申请已发送', [
-                    'link_id' => $linkId,
-                    'response_time' => $responseTime,
-                ]);
+                // === CAT3* 步骤6: 检查 A站是否成功创建了回链 ===
+                if (isset($responseData['backlink_id']) && $responseData['code'] === 0) {
+                    Log::info("友链申请成功且已确认回链 [{$taskId}] - A站回链ID: {$responseData['backlink_id']}, 耗时: {$responseTime}ms");
 
-                $this->clearFailureStats($peerApi);
-                $message->ack();
+                    // 更新本地link记录状态，保存对方回链ID
+                    if ($linkId) {
+                        $link = Link::find($linkId);
+                        if ($link) {
+                            $link->setCustomField('peer_backlink_id', $responseData['backlink_id']);
+                            $link->setCustomField('connect_status', 'confirmed');
+                            $link->setCustomField('connect_last_attempt', utc_now_string('Y-m-d H:i:s'));
+                            $link->setCustomField('connect_result', [
+                                'success' => true,
+                                'backlink_id' => $responseData['backlink_id'],
+                                'response_time' => $responseTime,
+                            ]);
+                            $link->save();
+                        }
+                    }
+
+                    // 更新任务状态为成功
+                    LinkConnectQueueService::updateTaskStatus($taskId, 'success', '友链申请已发送且已确认回链', [
+                        'link_id' => $linkId,
+                        'peer_backlink_id' => $responseData['backlink_id'],
+                        'response_time' => $responseTime,
+                    ]);
+
+                    $this->clearFailureStats($peerApi);
+                    $message->ack();
+                } else {
+                    // A站未创建回链或请求失败
+                    Log::warning("友链申请成功但未确认回链 [{$taskId}] - Response: " . $result['response']);
+
+                    // 仍然更新本地记录，但标记为未确认
+                    if ($linkId) {
+                        $this->updateLinkStatus($linkId, 'sent_unconfirmed', $result);
+                    }
+
+                    LinkConnectQueueService::updateTaskStatus($taskId, 'partial_success', '友链申请已发送但未确认回链', [
+                        'link_id' => $linkId,
+                        'response_time' => $responseTime,
+                        'warning' => '对方未创建回链',
+                    ]);
+
+                    $message->ack();
+                }
             } else {
                 Log::warning("友链申请失败 [{$taskId}] - 原因: " . ($result['error'] ?? '未知错误'));
 
@@ -391,6 +417,115 @@ class LinkConnectWorker
             return ['success' => true, 'response' => $response];
 
         } catch (Throwable $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * CAT3* 发送 QuickConnect 请求（带 create_backlink 参数）
+     * 注意：quickConnect 路由使用 GET+POST 混合方式，token 在 GET 参数中，peer_site 在 POST body 中
+     */
+    protected function sendQuickConnectRequest(string $peerApi, ?string $token, array $payload): array
+    {
+        try {
+            if (empty($token)) {
+                Log::error('[sendQuickConnectRequest] Token 不能为空');
+
+                return ['success' => false, 'error' => 'Token 不能为空'];
+            }
+
+            // 从 peerApi 解析出基础 URL
+            $parsedUrl = parse_url($peerApi);
+            $scheme = $parsedUrl['scheme'] ?? 'http';
+            $host = $parsedUrl['host'] ?? '';
+            $port = isset($parsedUrl['port']) ? ':' . $parsedUrl['port'] : '';
+
+            // 构建 quickConnect URL，token 在 URL 中
+            $quickConnectUrl = $scheme . '://' . $host . $port . '/link/quick-connect?token=' . urlencode($token);
+
+            $sslVerify = (bool) blog_config('wind_connect_ssl_verify', true, true);
+            $timeout = (int) blog_config('link_connect_timeout', 30, true);
+
+            // 准备 POST 数据（使用 multipart/form-data 格式，支持嵌套数组）
+            $postFields = [];
+            foreach ($payload as $key => $value) {
+                if (is_array($value)) {
+                    // peer_site 是嵌套数组，需要特殊处理
+                    foreach ($value as $subKey => $subValue) {
+                        $postFields["{$key}[{$subKey}]"] = $subValue;
+                    }
+                } else {
+                    $postFields[$key] = $value;
+                }
+            }
+
+            $postData = http_build_query($postFields);
+
+            // 输出详细的请求日志
+            Log::info('[sendQuickConnectRequest] 准备发送请求', [
+                'url' => $quickConnectUrl,
+                'method' => 'POST',
+                'payload_raw' => $payload,
+                'post_fields' => $postFields,
+                'post_data' => $postData,
+                'content_type' => 'application/x-www-form-urlencoded',
+                'ssl_verify' => $sslVerify,
+                'timeout' => $timeout,
+            ]);
+
+            $ch = curl_init();
+            curl_setopt_array($ch, [
+                CURLOPT_URL => $quickConnectUrl,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT => $timeout,
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => $postData,
+                CURLOPT_HTTPHEADER => [
+                    'Content-Type: application/x-www-form-urlencoded',
+                ],
+                CURLOPT_SSL_VERIFYPEER => $sslVerify,
+                CURLOPT_SSL_VERIFYHOST => $sslVerify ? 2 : 0,
+            ]);
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $effectiveUrl = curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
+            $error = curl_error($ch);
+            curl_close($ch);
+
+            // 输出详细的响应日志
+            Log::info('[sendQuickConnectRequest] 收到响应', [
+                'http_code' => $httpCode,
+                'effective_url' => $effectiveUrl,
+                'curl_error' => $error ?: 'none',
+                'response_length' => strlen($response),
+                'response_preview' => substr($response, 0, 500),
+            ]);
+
+            if ($error) {
+                Log::error('[sendQuickConnectRequest] CURL 错误: ' . $error);
+
+                return ['success' => false, 'error' => $error];
+            }
+
+            if ($httpCode < 200 || $httpCode >= 300) {
+                Log::error('[sendQuickConnectRequest] HTTP 错误', [
+                    'http_code' => $httpCode,
+                    'response' => $response,
+                ]);
+
+                return ['success' => false, 'error' => "HTTP {$httpCode}", 'response' => $response];
+            }
+
+            Log::info('[sendQuickConnectRequest] 请求成功');
+
+            return ['success' => true, 'response' => $response];
+
+        } catch (Throwable $e) {
+            Log::error('[sendQuickConnectRequest] 异常: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
+
             return ['success' => false, 'error' => $e->getMessage()];
         }
     }
