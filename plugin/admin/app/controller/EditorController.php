@@ -62,6 +62,8 @@ class EditorController
         $allow_comments = $request->post('allow_comments', 1);
         $featured = $request->post('featured', 0);
         $authors = $request->post('authors', []);
+        $categories = $request->post('categories', []);
+        $tags = $request->post('tags', []);
         // AI 摘要相关字段现在通过单独的保存摘要接口处理
 
         // 验证输入
@@ -202,6 +204,119 @@ class EditorController
                             'updated_at' => date('Y-m-d H:i:s'),
                         ]);
                     }
+                }
+            }
+
+            // 处理分类关联
+            if (!empty($categories) && is_array($categories)) {
+                // 删除现有的分类关联
+                Db::table('post_category')->where('post_id', $post_id)->delete();
+
+                // 添加新的分类关联
+                $categoryRecords = [];
+                foreach ($categories as $category) {
+                    // 支持直接传递ID或者对象
+                    if (is_numeric($category)) {
+                        $categoryRecords[] = [
+                            'post_id' => $post_id,
+                            'category_id' => (int) $category,
+                        ];
+                    } elseif (is_array($category)) {
+                        // 如果是对象，可能包含id和name
+                        if (!empty($category['id'])) {
+                            // 现有分类
+                            $categoryRecords[] = [
+                                'post_id' => $post_id,
+                                'category_id' => (int) $category['id'],
+                            ];
+                        } elseif (!empty($category['name'])) {
+                            // 新分类，先查找是否已存在
+                            $existingCategory = Db::table('categories')
+                                ->where('name', $category['name'])
+                                ->first();
+
+                            if ($existingCategory) {
+                                // 已存在，直接使用
+                                $categoryRecords[] = [
+                                    'post_id' => $post_id,
+                                    'category_id' => $existingCategory->id,
+                                ];
+                            } else {
+                                // 不存在，创建新分类
+                                $slug = !empty($category['slug']) ? $category['slug'] : $this->generateSlug($category['name']);
+                                $newCategoryId = Db::table('categories')->insertGetId([
+                                    'name' => $category['name'],
+                                    'slug' => $slug,
+                                    'description' => $category['description'] ?? '',
+                                    'sort_order' => $category['sort_order'] ?? 0,
+                                    'created_at' => utc_now_string('Y-m-d H:i:s'),
+                                    'updated_at' => utc_now_string('Y-m-d H:i:s'),
+                                ]);
+
+                                $categoryRecords[] = [
+                                    'post_id' => $post_id,
+                                    'category_id' => $newCategoryId,
+                                ];
+
+                                Log::info('创建新分类: ' . $category['name'] . ' (ID: ' . $newCategoryId . ')');
+                            }
+                        }
+                    }
+                }
+
+                if (!empty($categoryRecords)) {
+                    Db::table('post_category')->insert($categoryRecords);
+                }
+            }
+
+            // 处理标签关联
+            if (!empty($tags) && is_array($tags)) {
+                // 删除现有的标签关联
+                Db::table('post_tag')->where('post_id', $post_id)->delete();
+
+                // 处理标签（可能是现有标签或新标签）
+                $tagRecords = [];
+                foreach ($tags as $tag) {
+                    if (is_array($tag)) {
+                        $tagId = $tag['id'] ?? null;
+                        $tagName = $tag['name'] ?? '';
+
+                        if ($tagId) {
+                            // 使用现有标签
+                            $tagRecords[] = [
+                                'post_id' => $post_id,
+                                'tag_id' => (int) $tagId,
+                            ];
+                        } elseif ($tagName) {
+                            // 创建新标签
+                            $existingTag = Db::table('tags')->where('name', $tagName)->first();
+                            if ($existingTag) {
+                                $tagRecords[] = [
+                                    'post_id' => $post_id,
+                                    'tag_id' => $existingTag->id,
+                                ];
+                            } else {
+                                // 创建新标签
+                                $slug = $this->generateSlug($tagName);
+                                $newTagId = Db::table('tags')->insertGetId([
+                                    'name' => $tagName,
+                                    'slug' => $slug,
+                                    'created_at' => utc_now_string('Y-m-d H:i:s'),
+                                    'updated_at' => utc_now_string('Y-m-d H:i:s'),
+                                ]);
+                                $tagRecords[] = [
+                                    'post_id' => $post_id,
+                                    'tag_id' => $newTagId,
+                                ];
+
+                                Log::info('创建新标签: ' . $tagName . ' (ID: ' . $newTagId . ')');
+                            }
+                        }
+                    }
+                }
+
+                if (!empty($tagRecords)) {
+                    Db::table('post_tag')->insert($tagRecords);
                 }
             }
 
@@ -474,10 +589,18 @@ class EditorController
             ]);
         }
 
-        // 查询文章及作者信息
-        $post = Post::with(['authors' => function ($query) {
-            $query->select('wa_users.id', 'username', 'nickname', 'email', 'avatar');
-        }])->find($id);
+        // 查询文章及作者信息、分类和标签
+        $post = Post::with([
+            'authors' => function ($query) {
+                $query->select('wa_users.id', 'username', 'nickname', 'email', 'avatar');
+            },
+            'categories' => function ($query) {
+                $query->select('categories.id', 'name', 'slug');
+            },
+            'tags' => function ($query) {
+                $query->select('tags.id', 'name', 'slug');
+            },
+        ])->find($id);
 
         if (!$post) {
             return json([
@@ -507,7 +630,32 @@ class EditorController
                 'created_at' => $post->created_at,
                 'updated_at' => $post->updated_at,
                 'authors' => $post->authors ? $post->authors->toArray() : [],
+                'categories' => $post->categories ? $post->categories->toArray() : [],
+                'tags' => $post->tags ? $post->tags->toArray() : [],
             ],
         ]);
+    }
+
+    /**
+     * 生成 slug
+     *
+     * @param string $text
+     *
+     * @return string
+     */
+    private function generateSlug(string $text): string
+    {
+        // 移除特殊字符，只保留字母、数字、中文和连字符
+        $slug = preg_replace('/[^\w\x{4e00}-\x{9fa5}-]+/u', '-', $text);
+        // 移除首尾的连字符
+        $slug = trim($slug, '-');
+        // 转换为小写
+        $slug = strtolower($slug);
+        // 如果 slug 为空，使用时间戳
+        if (empty($slug)) {
+            $slug = 'tag-' . time();
+        }
+
+        return $slug;
     }
 }
