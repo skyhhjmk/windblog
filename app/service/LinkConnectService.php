@@ -523,7 +523,15 @@ class LinkConnectService
             return ['code' => 1, 'msg' => '鉴权失败'];
         }
 
-        if (($payload['type'] ?? '') !== 'wind_connect_apply') {
+        $type = $payload['type'] ?? '';
+
+        // 支持两种类型: wind_connect_apply (申请) 和 wind_connect_push (推送)
+        if ($type === 'wind_connect_push') {
+            // CAT5 扩展信息推送，更新现有友链信息
+            return self::handlePushUpdate($payload);
+        }
+
+        if ($type !== 'wind_connect_apply') {
             return ['code' => 1, 'msg' => '无效载荷'];
         }
 
@@ -779,5 +787,70 @@ class LinkConnectService
         $calculatedChecksum = self::calculateChecksum($data);
 
         return hash_equals($checksum, $calculatedChecksum);
+    }
+
+    /**
+     * 处理 CAT5 扩展信息推送
+     * 更新现有友链的信息
+     *
+     * @param array $payload 推送载荷
+     *
+     * @return array
+     */
+    protected static function handlePushUpdate(array $payload): array
+    {
+        $site = $payload['site'] ?? [];
+        $link = $payload['link'] ?? [];
+
+        $peerUrl = (string) ($link['url'] ?? ($site['url'] ?? ''));
+
+        if (empty($peerUrl)) {
+            Log::warning('[CAT5 Push] 无效的 URL');
+
+            return ['code' => 1, 'msg' => '无效的 URL'];
+        }
+
+        // 查找现有友链
+        $existingLink = Link::where('url', $peerUrl)->first();
+
+        if (!$existingLink) {
+            Log::warning('[CAT5 Push] 友链不存在: ' . $peerUrl);
+
+            return ['code' => 1, 'msg' => '友链不存在'];
+        }
+
+        // 更新友链信息
+        $updated = false;
+
+        if (!empty($link['name']) && $link['name'] !== $existingLink->name) {
+            $existingLink->name = $link['name'];
+            $updated = true;
+        }
+
+        if (!empty($link['icon']) && $link['icon'] !== $existingLink->icon) {
+            $existingLink->icon = $link['icon'];
+            $updated = true;
+        }
+
+        if (!empty($link['description']) && $link['description'] !== $existingLink->description) {
+            $existingLink->description = $link['description'];
+            $updated = true;
+        }
+
+        // 更新自定义字段
+        if (!empty($site)) {
+            $existingLink->setCustomField('peer_site_info', $site);
+            $updated = true;
+        }
+
+        $existingLink->setCustomField('peer_last_push_received', utc_now_string('Y-m-d H:i:s'));
+        $updated = true;
+
+        if ($updated) {
+            $existingLink->save();
+            Log::info('[CAT5 Push] 友链信息已更新 - Link ID: ' . $existingLink->id . ', URL: ' . $peerUrl);
+        }
+
+        return ['code' => 0, 'msg' => '信息已更新'];
     }
 }

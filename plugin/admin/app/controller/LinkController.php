@@ -4,6 +4,7 @@ namespace plugin\admin\app\controller;
 
 use app\model\Link;
 use app\service\CacheService;
+use app\service\LinkPushQueueService;
 use app\service\MQService;
 use DOMDocument;
 use DOMXPath;
@@ -284,16 +285,13 @@ class LinkController extends Base
                 // 清除相关缓存
                 $this->clearLinkCache();
 
-                // TODO: 审核通过后的推送应该异步处理，临时禁用以解决阻塞问题
-                // if ($link->status) {
-                //     try {
-                //         $this->pushExtendedInfoInternal($link);
-                //     } catch (Throwable $e) {
-                //         Log::warning('CAT5 auto push on save failed: ' . $e->getMessage());
-                //     }
-                // }
+                // 对 wind_connect 来源的友链进行异步推送
                 if ($link->status) {
-                    Log::info("链接保存成功（已启用） - ID: {$link->id}, Name: {$link->name}");
+                    $source = $link->getCustomField('source', '');
+                    if ($source === 'wind_connect') {
+                        $this->enqueuePushTask($link);
+                    }
+                    Log::info("链接保存成功（已启用） - ID: {$link->id}, Name: {$link->name}, Source: {$source}");
                 }
 
                 // 返回更新后的数据
@@ -616,13 +614,12 @@ class LinkController extends Base
                     $link->status = $this->parseBooleanForPostgres(true);
                     if ($link->save()) {
                         $count++;
-                        // TODO: 审核通过后的推送应该异步处理，临时禁用以解决阻塞问题
-                        // try {
-                        //     $this->pushExtendedInfoInternal($link);
-                        // } catch (Throwable $e) {
-                        //     Log::warning('CAT5 auto push(batch) failed: ' . $e->getMessage());
-                        // }
-                        Log::info("链接审核通过 - ID: {$link->id}, Name: {$link->name}");
+                        // 对 wind_connect 来源的友链进行异步推送
+                        $source = $link->getCustomField('source', '');
+                        if ($source === 'wind_connect') {
+                            $this->enqueuePushTask($link);
+                        }
+                        Log::info("链接审核通过 - ID: {$link->id}, Name: {$link->name}, Source: {$source}");
                     }
                 }
             }
@@ -1416,6 +1413,52 @@ class LinkController extends Base
             return ['success' => true, 'body' => (string) $result];
         } catch (Exception $e) {
             return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * 将推送任务入队
+     * 只对 wind_connect 来源的友链进行异步推送
+     */
+    private function enqueuePushTask(Link $link): void
+    {
+        try {
+            $peerApi = $link->getCustomField('peer_api', '') ?: ($link->callback_url ?? '');
+            if (empty($peerApi)) {
+                Log::warning("无法入队推送任务 - Link ID: {$link->id}, 原因: 未配置 peer_api");
+
+                return;
+            }
+
+            $payload = [
+                'type' => 'wind_connect_push',
+                'site' => [
+                    'name' => blog_config('title', 'WindBlog', true),
+                    'url' => blog_config('site_url', '', true),
+                    'description' => blog_config('description', '', true),
+                    'icon' => blog_config('favicon', '', true),
+                    'protocol' => 'CAT5',
+                    'version' => '1.0',
+                ],
+                'link' => [
+                    'name' => $link->name,
+                    'url' => $link->url,
+                    'icon' => $link->icon,
+                    'description' => $link->description,
+                    'tags' => $link->getCustomField('tags', []),
+                ],
+                'timestamp' => time(),
+            ];
+
+            $result = LinkPushQueueService::enqueue($link->id, $peerApi, $payload);
+
+            if ($result['code'] === 0) {
+                Log::info("推送任务已入队 - Link ID: {$link->id}, Task ID: {$result['task_id']}");
+            } else {
+                Log::error("推送任务入队失败 - Link ID: {$link->id}, 错误: {$result['msg']}");
+            }
+        } catch (Throwable $e) {
+            Log::error("推送任务入队异常 - Link ID: {$link->id}, 错误: " . $e->getMessage());
         }
     }
 }

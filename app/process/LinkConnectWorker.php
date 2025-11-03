@@ -45,6 +45,11 @@ class LinkConnectWorker
     // 失败统计
     protected array $failureStats = [];
 
+    // 缓存的配置
+    protected string $cachedQueueName = '';
+
+    protected int $lastDebugLogTime = 0;
+
     protected function getMqConnection(): AMQPStreamConnection
     {
         if ($this->mqConnection === null) {
@@ -86,17 +91,18 @@ class LinkConnectWorker
 
             $exchange = (string) blog_config('rabbitmq_link_connect_exchange', 'link_connect_exchange', true);
             $routingKey = (string) blog_config('rabbitmq_link_connect_routing_key', 'link_connect', true);
-            $queueName = (string) blog_config('rabbitmq_link_connect_queue', 'link_connect_queue', true);
+            $this->cachedQueueName = (string) blog_config('rabbitmq_link_connect_queue', 'link_connect_queue', true);
 
             // 设置专属DLX
             $dlxExchange = (string) blog_config('rabbitmq_link_connect_dlx_exchange', 'link_connect_dlx_exchange', true);
             $dlxQueue = (string) blog_config('rabbitmq_link_connect_dlx_queue', 'link_connect_dlx_queue', true);
 
             MQService::declareDlx($channel, $dlxExchange, $dlxQueue);
-            MQService::setupQueueWithDlx($channel, $exchange, $routingKey, $queueName, $dlxExchange, $dlxQueue);
+            MQService::setupQueueWithDlx($channel, $exchange, $routingKey, $this->cachedQueueName, $dlxExchange, $dlxQueue);
 
             $this->mqChannel = $channel;
-            Log::info('RabbitMQ连接初始化成功(LinkConnectWorker)');
+            $this->lastDebugLogTime = time();
+            Log::info('RabbitMQ连接初始化成功(LinkConnectWorker) - Queue: ' . $this->cachedQueueName);
         } catch (Exception $e) {
             Log::error('RabbitMQ连接初始化失败(LinkConnectWorker): ' . $e->getMessage());
         }
@@ -123,23 +129,21 @@ class LinkConnectWorker
 
     public function processMessages(): void
     {
-        static $checkCount = 0;
-        $checkCount++;
-
         try {
-            $queueName = blog_config('rabbitmq_link_connect_queue', 'link_connect_queue', true);
             $channel = $this->getMqChannel();
 
-            // 使用 basic_get 进行非阻塞式消费
-            $message = $channel->basic_get($queueName, false);
+            // 使用缓存的队列名称
+            $message = $channel->basic_get($this->cachedQueueName, false);
 
             if ($message) {
-                Log::debug("[LinkConnectWorker] 收到消息, 检查次数: {$checkCount}");
+                Log::debug('[LinkConnectWorker] 收到消息');
                 $this->handleMessage($message);
             } else {
-                // 每 12 次输出一次日志 (约 60 秒)
-                if ($checkCount % 12 === 0) {
-                    Log::debug("[LinkConnectWorker] 队列无消息, 检查次数: {$checkCount}");
+                // 每 60 秒输出一次日志
+                $now = time();
+                if ($now - $this->lastDebugLogTime >= 60) {
+                    Log::debug('[LinkConnectWorker] 队列无消息');
+                    $this->lastDebugLogTime = $now;
                 }
             }
         } catch (Exception $e) {
