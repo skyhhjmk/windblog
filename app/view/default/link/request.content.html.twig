@@ -106,7 +106,33 @@
                         <div class="flex-1">
                             <h2 class="text-lg font-semibold text-gray-800 mb-3">本站信息</h2>
                             <div class="space-y-2 text-gray-700 mb-4">
-                                <p><span class="font-medium">风屿互联协议级别：CAT3E</span></p>
+                                {% if cat_level_info is defined and cat_level_info.level is defined %}
+                                    <div class="flex items-center mb-3">
+                                        <span class="font-medium mr-2">风屿互联协议级别：</span>
+                                        <span class="cat-level-badge"
+                                              style="background: {% if cat_level_info.level starts with 'CAT5' %}#ff6b6b{% elseif cat_level_info.level starts with 'CAT4' %}#4ecdc4{% elseif cat_level_info.level starts with 'CAT3' %}#95e1d3{% elseif cat_level_info.level starts with 'CAT2' %}#feca57{% else %}#dfe6e9{% endif %}; color: white; padding: 4px 12px; border-radius: 4px; font-weight: bold; font-size: 14px; display: inline-block;">{{ cat_level_info.level }}</span>
+                                        <button type="button" onclick="toggleCatInfo()"
+                                                class="ml-2 text-blue-600 hover:text-blue-800 text-sm">
+                                            <i class="fas fa-info-circle"></i> 详情
+                                        </button>
+                                    </div>
+                                    <div id="cat-level-details"
+                                         class="hidden bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
+                                        <div
+                                            class="text-sm text-blue-800 font-medium mb-2">{{ cat_level_info.description }}</div>
+                                        <div class="text-xs text-gray-700 space-y-1">
+                                            {% for capability in cat_level_info.capabilities %}
+                                                <div>{{ capability }}</div>
+                                            {% endfor %}
+                                        </div>
+                                        <div class="text-xs text-gray-500 mt-2">
+                                            <i class="fas fa-clock mr-1"></i>检测时间：{{ cat_level_info.detected_at }}
+                                            UTC
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <p><span class="font-medium">风屿互联协议级别：CAT3E</span></p>
+                                {% endif %}
                                 <p><span class="font-medium">网站名称：{{ blog_config('title', '') }}</span></p>
                                 <p><span class="font-medium">网站描述：{{ blog_config('description', '') }}</span></p>
                                 <p><span class="font-medium">Favicon：{{ blog_config('favicon', '') }}</span></p>
@@ -432,6 +458,16 @@
             </div>
         </div>
     </div>
+
+    <script>
+        // CAT 级别详情切换
+        function toggleCatInfo() {
+            const details = document.getElementById('cat-level-details');
+            if (details) {
+                details.classList.toggle('hidden');
+            }
+        }
+    </script>
 
     <script>
         // 处理锚点跳转和闪烁效果

@@ -19,6 +19,7 @@ use app\annotation\CSRFVerify;
 use app\annotation\EnableInstantFirstPaint;
 use app\helper\BreadcrumbHelper;
 use app\model\Link;
+use app\service\CatLevelService;
 use app\service\CSRFHelper;
 use app\service\LinkConnectQueueService;
 use app\service\LinkConnectService;
@@ -26,6 +27,7 @@ use app\service\MQService;
 use app\service\PaginationService;
 use app\service\PJAXHelper;
 use app\service\SidebarService;
+use app\service\WindConnectVersion;
 use Exception;
 use PhpAmqpLib\Message\AMQPMessage;
 use support\Log;
@@ -458,12 +460,16 @@ class LinkController
         // 生成面包屑导航
         $breadcrumbs = BreadcrumbHelper::forLinks();
 
+        // 获取 CAT 等级信息
+        $catLevelInfo = CatLevelService::getLevelInfo();
+
         return PJAXHelper::createResponse($request, $viewName, [
             'page_title' => blog_config('title', 'WindBlog', true) . ' - 申请友链',
             'site_info_json_config' => $this->getSiteInfoConfig(),
             'csrf' => CSRFHelper::oneTimeToken($request, '_link_request_token'),
             'sidebar' => $sidebar,
             'breadcrumbs' => $breadcrumbs,
+            'cat_level_info' => $catLevelInfo,
         ], null, 120, 'page');
     }
 
@@ -475,13 +481,18 @@ class LinkController
      */
     private function getSiteInfoConfig(): string
     {
+        // 获取 CAT 级别信息
+        $catLevelInfo = CatLevelService::getCurrentLevel();
+        $catLevel = $catLevelInfo['level'];
+
         $config = [
             'name' => blog_config('title', 'WindBlog', true),
             'url' => blog_config('site_url', '', true),
             'description' => blog_config('description', '', true),
             'icon' => blog_config('favicon', '', true),
-            'protocol' => 'CAT3E',
-            'version' => '1.0',
+            'protocol' => $catLevel,
+            'version' => WindConnectVersion::getVersion(),
+            'protocol_name' => WindConnectVersion::getProtocolName(),
         ];
 
         return json_encode($config, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
@@ -807,14 +818,18 @@ class LinkController
                 return json(['code' => 1, 'msg' => '无效的token']);
             }
 
+            // 获取 CAT 级别信息
+            $catLevelInfo = CatLevelService::getCurrentLevel();
+            $catLevel = $catLevelInfo['level'];
+
             // 构建并返回本站信息
             $siteInfo = [
                 'name' => blog_config('title', 'WindBlog', true),
                 'url' => blog_config('site_url', '', true),
                 'description' => blog_config('description', '', true),
                 'icon' => blog_config('favicon', '', true),
-                'protocol' => 'CAT3E',
-                'version' => '1.0',
+                'protocol' => $catLevel,
+                'version' => WindConnectVersion::getVersion(),
             ];
 
             // 构建友链信息
