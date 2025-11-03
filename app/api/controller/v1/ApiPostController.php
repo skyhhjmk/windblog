@@ -5,6 +5,7 @@ namespace app\api\controller\v1;
 use app\model\Post;
 use app\service\FloLinkService;
 use Exception;
+use Illuminate\Database\Eloquent\Collection;
 use support\Log;
 use support\Request;
 use support\Response;
@@ -28,7 +29,7 @@ class ApiPostController
     public function get(Request $request, ?int $id = null): Response
     {
         // 验证ID
-        if (empty($id) || !is_numeric($id) || $id < 1 || $id > 2147483646/* int最大值-1 */) {
+        if ($id === null || $id < 1 || $id > 2147483646/* int最大值-1 */) {
             return json([
                 'code' => 400,
                 'message' => trans('Missing input parameter :parameter', ['parameter' => 'id']), // 缺少输入参数 id
@@ -67,7 +68,9 @@ class ApiPostController
                 'published_at' => $post->published_at,
                 'created_at' => $post->created_at,
                 'updated_at' => $post->updated_at,
-                'authors' => $post->authors ? $post->authors->toArray() : [],
+                'authors' => $post->authors instanceof Collection
+                    ? $post->authors->toArray()
+                    : (is_array($post->authors) ? $post->authors : []),
             ],
         ]);
     }

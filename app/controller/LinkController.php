@@ -376,7 +376,7 @@ class LinkController
                 $link->content = $full_description;
                 $link->email = $email;
                 $link->callback_url = $callback_url;
-                $link->custom_fields = json_encode($custom_fields);
+                $link->custom_fields = $custom_fields;
 
                 // 构建内容信息 - 使用更结构化的格式
                 $linkPositionText = match ($link_position) {

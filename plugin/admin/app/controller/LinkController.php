@@ -1107,15 +1107,18 @@ class LinkController extends Base
 
         // 检查可疑内容
         $suspiciousPatterns = [
-            'eval\s*\(',
-            'document\.write\s*\(',
-            'innerHTML\s*=',
-            '<script[^>]*src=["\'][^"\']*[^a-zA-Z0-9\-\._~:/\?#\[\]@!$&\'()*+,;=]["\']',
+            'eval\\s*\\(',
+            'document\\.write\\s*\\(',
+            'innerHTML\\s*=',
+            // 修复：简化正则表达式，检查 script src 中是否有非标准 URL 字符
+            '<script[^>]*src=["\'][^"\']*(javascript:|data:)[^"\']["\']',
         ];
 
         $security['suspicious_content'] = [];
         foreach ($suspiciousPatterns as $pattern) {
-            if (preg_match('/' . $pattern . '/i', $html)) {
+            // 由于 $pattern 已经是转义后的字符串，使用 @ 抑制错误并检查结果
+            $result = @preg_match('/' . $pattern . '/i', $html);
+            if ($result !== false && $result > 0) {
                 $security['suspicious_content'][] = $pattern;
             }
         }

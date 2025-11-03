@@ -2,8 +2,10 @@
 
 namespace app\model;
 
+use Closure;
 use Exception;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Carbon;
 use support\Log;
@@ -20,6 +22,12 @@ use Throwable;
  * @property string $created_at  创建时间
  * @property string $updated_at  更新时间
  * @property string $deleted_at  删除时间
+ *
+ * @method static Builder|Tag where(string|Closure|array $column, mixed $operator = null, mixed $value = null, string $boolean = 'and') 查询构造器
+ * @method static Builder|Tag find(int|string $id, array $columns = ['*']) 根据主键查找记录
+ * @method static Builder|Tag first(array $columns = ['*']) 获取第一条记录
+ * @method static Collection|Tag[] get(array $columns = ['*']) 获取所有记录
+ * @method static Builder|Tag limit(int $value) 限制查询结果数量
  */
 class Tag extends Model
 {

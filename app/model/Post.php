@@ -213,10 +213,11 @@ class Post extends Model
      * 获取文章关联的所有作者。
      * 通过 post_author 中间表建立多对多关系。
      *
-     * @return BelongsToMany
+     * @return BelongsToMany<Author>
      */
     public function authors(): BelongsToMany
     {
+        /** @var BelongsToMany<Author> */
         return $this->belongsToMany(Author::class, 'post_author', 'post_id', 'author_id')
             ->orderBy('post_author.is_primary', 'desc');
     }

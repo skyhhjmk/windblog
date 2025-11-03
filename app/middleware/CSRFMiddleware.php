@@ -229,8 +229,8 @@ class CSRFMiddleware implements MiddlewareInterface
         } catch (Exception $e) {
             // 反射异常或其他错误,记录日志
             Log::warning('CSRFMiddleware 处理异常: ' . $e->getMessage(), [
-                'controller' => $request->controller ?? 'unknown',
-                'action' => $request->action ?? 'unknown',
+                'controller' => $request->controller ?: 'unknown',
+                'action' => $request->action ?: 'unknown',
                 'trace' => $e->getTraceAsString(),
             ]);
 

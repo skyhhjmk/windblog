@@ -2,6 +2,9 @@
 
 namespace app\model;
 
+use Closure;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -21,6 +24,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int         $status 0=未激活, 1=正常, 2=禁用
  * @property string|null $created_at
  * @property string|null $updated_at
+ *
+ * @method static Builder|User where(string|Closure|array $column, mixed $operator = null, mixed $value = null, string $boolean = 'and') 查询构造器
+ * @method static User|null find(int|string $id, array $columns = ['*']) 根据主键查找记录
+ * @method static User|null first(array $columns = ['*']) 获取第一条记录
+ * @method static Collection|User[] get(array $columns = ['*']) 获取所有记录
  */
 class User extends Model
 {

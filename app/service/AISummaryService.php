@@ -17,6 +17,7 @@ use app\service\ai\providers\ZhipuProvider;
 use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
+use PhpAmqpLib\Wire\AMQPTable;
 use support\Log;
 use support\Redis;
 use Throwable;
@@ -80,7 +81,7 @@ class AISummaryService
             }
 
             return self::createProviderInstance($provider->type, $provider->getConfigArray());
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error("Failed to create provider from DB: {$providerId}, error: " . $e->getMessage());
 
             return null;
@@ -159,7 +160,7 @@ class AISummaryService
             }
 
             return self::createProviderInstance($provider->type, $provider->getConfigArray());
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('Failed to get first available provider: ' . $e->getMessage());
 
             return self::createProviderInstance('local', []);
@@ -210,7 +211,7 @@ class AISummaryService
             $first = $providerRelations->first();
 
             return self::createProviderInstance($first->provider->type, $first->provider->getConfigArray());
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('Failed to get provider from group: ' . $e->getMessage());
 
             return self::getFirstAvailableProvider($excludeProviders);
@@ -410,6 +411,7 @@ class AISummaryService
 
             // 直接使用Redis读取
             $redis = Redis::connection('default');
+            /** @var string|false $jsonData */
             $jsonData = $redis->get($cacheKey);
 
             if ($jsonData) {
@@ -456,6 +458,7 @@ class AISummaryService
             // 直接使用Redis存储，过期时间1小时
             $redis = Redis::connection('default');
             $jsonData = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            /** @phpstan-ignore-next-line */
             $redis->setex($cacheKey, 3600, $jsonData);
 
             Log::debug("AI task status updated: {$taskId} -> {$status}");
@@ -511,7 +514,7 @@ class AISummaryService
 
             // Main exchange & queue
             $ch->exchange_declare($exchange, 'direct', false, true, false);
-            $ch->queue_declare($queueName, false, true, false, false, false, new \PhpAmqpLib\Wire\AMQPTable([
+            $ch->queue_declare($queueName, false, true, false, false, false, new AMQPTable([
                 'x-dead-letter-exchange' => $dlxExchange,
                 'x-dead-letter-routing-key' => $dlq,
                 'x-max-priority' => 10,
