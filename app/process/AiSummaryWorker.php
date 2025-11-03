@@ -15,7 +15,6 @@ use PhpAmqpLib\Exception\AMQPTimeoutException;
 use PhpAmqpLib\Message\AMQPMessage;
 use RuntimeException;
 use support\Log;
-use support\Redis as SupportRedis;
 use Throwable;
 use Workerman\Timer;
 
@@ -250,20 +249,25 @@ class AiSummaryWorker
         $params = (array) ($data['params'] ?? []);
         $options = (array) ($data['options'] ?? []);
 
+        Log::debug("AI generic task processing started: {$taskId}, task: {$task}, provider: {$providerId}");
+
         // 标记任务开始处理
-        $this->setTaskStatus($taskId, 'processing', null, null);
+        AISummaryService::setTaskStatus($taskId, 'processing', null, null);
 
         try {
             $prov = $this->chooseProvider($providerId);
             $result = $prov->call($task, $params, $options);
 
             if (!($result['ok'] ?? false)) {
-                $this->setTaskStatus($taskId, 'failed', null, (string) ($result['error'] ?? 'unknown'));
-                throw new RuntimeException('AI task failed: ' . ($result['error'] ?? 'unknown'));
+                $errorMsg = (string) ($result['error'] ?? 'unknown');
+                Log::error("AI generic task failed: {$taskId}, error: {$errorMsg}");
+                AISummaryService::setTaskStatus($taskId, 'failed', null, $errorMsg);
+                throw new RuntimeException('AI task failed: ' . $errorMsg);
             }
 
             // 保存结果
-            $this->setTaskStatus($taskId, 'completed', [
+            Log::debug("AI generic task completed: {$taskId}");
+            AISummaryService::setTaskStatus($taskId, 'completed', [
                 'result' => $result['result'] ?? '',
                 'usage' => $result['usage'] ?? null,
                 'model' => $result['model'] ?? null,
@@ -272,7 +276,8 @@ class AiSummaryWorker
 
             $message->ack();
         } catch (Throwable $e) {
-            $this->setTaskStatus($taskId, 'failed', null, $e->getMessage());
+            Log::error("AI generic task exception: {$taskId}, exception: {$e->getMessage()}");
+            AISummaryService::setTaskStatus($taskId, 'failed', null, $e->getMessage());
             throw $e;
         }
     }
@@ -298,7 +303,7 @@ class AiSummaryWorker
                 } elseif (isset($data['task_id'])) {
                     // 通用任务失败
                     $taskId = (string) $data['task_id'];
-                    $this->setTaskStatus($taskId, 'failed', null, 'Message processing failed');
+                    AISummaryService::setTaskStatus($taskId, 'failed', null, 'Message processing failed');
                 }
             }
         } catch (Throwable $e) {
@@ -356,43 +361,5 @@ class AiSummaryWorker
         }
         $row->value = array_merge((array) $row->value, $meta);
         $row->save();
-    }
-
-    /**
-     * 设置通用任务状态（存储到Redis或数据库）
-     * 状态: pending, processing, completed, failed
-     *
-     * @param string      $taskId 任务ID
-     * @param string      $status 任务状态
-     * @param array|null  $result 任务结果
-     * @param string|null $error  错误信息
-     */
-    protected function setTaskStatus(string $taskId, string $status, ?array $result = null, ?string $error = null): void
-    {
-        try {
-            $cacheKey = "ai_task_status:{$taskId}";
-            $data = [
-                'task_id' => $taskId,
-                'status' => $status,
-                'updated_at' => time(),
-            ];
-
-            if ($result !== null) {
-                $data['result'] = $result;
-            }
-
-            if ($error !== null) {
-                $data['error'] = $error;
-            }
-
-            // 直接使用Redis存储，过期时间1小时
-            $redis = SupportRedis::connection('default');
-            $jsonData = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-            $redis->setex($cacheKey, 3600, $jsonData);
-
-            Log::debug("AI task status updated: {$taskId} -> {$status}");
-        } catch (Throwable $e) {
-            Log::error("Failed to set task status: {$e->getMessage()}");
-        }
     }
 }
