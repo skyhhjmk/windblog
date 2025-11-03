@@ -5,6 +5,7 @@ namespace plugin\admin\app\controller;
 use app\model\Author;
 use app\model\Media;
 use app\model\Post;
+use app\service\CacheService;
 use app\service\MediaLibraryService;
 use Exception;
 use support\Db;
@@ -201,6 +202,16 @@ class EditorController
                             'updated_at' => date('Y-m-d H:i:s'),
                         ]);
                     }
+                }
+            }
+
+            // 如果文章状态为已发布，清除相关缓存
+            if ($status === 'published') {
+                try {
+                    Log::info("[EditorController] Post {$post_id} published, clearing caches...");
+                    CacheService::clearPublishCache($post_id);
+                } catch (Exception $e) {
+                    Log::warning('[EditorController] Failed to clear cache: ' . $e->getMessage());
                 }
             }
 

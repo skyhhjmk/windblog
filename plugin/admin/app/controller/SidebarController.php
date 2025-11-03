@@ -2,7 +2,9 @@
 
 namespace plugin\admin\app\controller;
 
+use app\service\CacheService;
 use app\service\SidebarService;
+use support\Log;
 use support\Request;
 use support\Response;
 use Throwable;
@@ -97,6 +99,16 @@ class SidebarController extends Base
 
             // 保存配置
             $result = SidebarService::saveSidebarConfig($pageKey, $sidebarConfig);
+
+            // 如果保存成功，清除侧边栏缓存
+            if ($result) {
+                try {
+                    Log::info("[SidebarController] Sidebar config saved for page {$pageKey}, clearing caches...");
+                    CacheService::clearSidebarCache();
+                } catch (Throwable $e) {
+                    Log::warning('[SidebarController] Failed to clear sidebar cache: ' . $e->getMessage());
+                }
+            }
 
             return $result ? $this->success('保存侧边栏配置成功') : $this->fail('保存侧边栏配置失败');
         } catch (Throwable $e) {
@@ -195,6 +207,13 @@ class SidebarController extends Base
             // 保存更新后的配置
             SidebarService::saveSidebarConfig($pageKey, $sidebarConfig);
 
+            // 清除侧边栏缓存
+            try {
+                CacheService::clearSidebarCache();
+            } catch (Throwable $e) {
+                Log::warning('[SidebarController] Failed to clear sidebar cache after adding widget: ' . $e->getMessage());
+            }
+
             return $this->success('添加小工具成功', $newWidget);
         } catch (Throwable $e) {
             return $this->fail('添加小工具失败: ' . $e->getMessage());
@@ -245,6 +264,13 @@ class SidebarController extends Base
 
             // 保存更新后的配置
             SidebarService::saveSidebarConfig($pageKey, $sidebarConfig);
+
+            // 清除侧边栏缓存
+            try {
+                CacheService::clearSidebarCache();
+            } catch (Throwable $e) {
+                Log::warning('[SidebarController] Failed to clear sidebar cache after removing widget: ' . $e->getMessage());
+            }
 
             return $this->success('删除小工具成功');
         } catch (Throwable $e) {
@@ -302,6 +328,13 @@ class SidebarController extends Base
 
             // 保存更新后的配置
             SidebarService::saveSidebarConfig($pageKey, $sidebarConfig);
+
+            // 清除侧边栏缓存
+            try {
+                CacheService::clearSidebarCache();
+            } catch (Throwable $e) {
+                Log::warning('[SidebarController] Failed to clear sidebar cache after updating widget: ' . $e->getMessage());
+            }
 
             return $this->success('更新小工具配置成功');
         } catch (Throwable $e) {
