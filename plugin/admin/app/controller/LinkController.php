@@ -284,13 +284,16 @@ class LinkController extends Base
                 // 清除相关缓存
                 $this->clearLinkCache();
 
-                // 若状态为已启用（审核通过），自动触发CAT5扩展信息推送（静默）
+                // TODO: 审核通过后的推送应该异步处理，临时禁用以解决阻塞问题
+                // if ($link->status) {
+                //     try {
+                //         $this->pushExtendedInfoInternal($link);
+                //     } catch (Throwable $e) {
+                //         Log::warning('CAT5 auto push on save failed: ' . $e->getMessage());
+                //     }
+                // }
                 if ($link->status) {
-                    try {
-                        $this->pushExtendedInfoInternal($link);
-                    } catch (Throwable $e) {
-                        Log::warning('CAT5 auto push on save failed: ' . $e->getMessage());
-                    }
+                    Log::info("链接保存成功（已启用） - ID: {$link->id}, Name: {$link->name}");
                 }
 
                 // 返回更新后的数据
@@ -602,7 +605,7 @@ class LinkController extends Base
                 $link = Link::find($id);
                 if ($link && !$link->status) {
                     // 更新审核记录
-                    if (str_contains($link->note, '## 申请信息')) {
+                    if ($link->note && str_contains($link->note, '## 申请信息')) {
                         $link->note = str_replace(
                             '### 审核记录',
                             "### 审核记录\n\n> 已审核通过 - {$adminName} - " . utc_now_string('Y-m-d H:i:s'),
@@ -613,12 +616,13 @@ class LinkController extends Base
                     $link->status = $this->parseBooleanForPostgres(true);
                     if ($link->save()) {
                         $count++;
-                        // 审核通过后自动静默推送扩展信息
-                        try {
-                            $this->pushExtendedInfoInternal($link);
-                        } catch (Throwable $e) {
-                            Log::warning('CAT5 auto push(batch) failed: ' . $e->getMessage());
-                        }
+                        // TODO: 审核通过后的推送应该异步处理，临时禁用以解决阻塞问题
+                        // try {
+                        //     $this->pushExtendedInfoInternal($link);
+                        // } catch (Throwable $e) {
+                        //     Log::warning('CAT5 auto push(batch) failed: ' . $e->getMessage());
+                        // }
+                        Log::info("链接审核通过 - ID: {$link->id}, Name: {$link->name}");
                     }
                 }
             }
@@ -662,7 +666,7 @@ class LinkController extends Base
                 $link = Link::find($id);
                 if ($link && !$link->status) {
                     // 更新审核记录
-                    if (str_contains($link->note, '## 申请信息')) {
+                    if ($link->note && str_contains($link->note, '## 申请信息')) {
                         $link->note = str_replace(
                             '### 审核记录',
                             "### 审核记录\n\n> 已拒绝 - {$adminName} - " . utc_now_string('Y-m-d H:i:s') . "\n> 原因：{$reason}",

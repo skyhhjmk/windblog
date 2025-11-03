@@ -573,34 +573,110 @@
                         return r.json();
                     })
                     .then(data => {
-                        if (data && data.code === 0) {
-                            showQuickResult(resBox, true, data.msg || '已发起互联申请');
+                        if (data && data.code === 0 && data.task_id) {
+                            // 开始轮询任务状态
+                            showQuickResult(resBox, true, '任务已提交，正在异步处理中...');
+                            pollTaskStatus(data.task_id, resBox, newBtn, tempStyle);
+                        } else if (data && data.code === 0) {
+                            // 兼容旧版同步返回
+                            showQuickResult(resBox, true, data.msg || '已发起互联申请', true);
+                            restoreButton(newBtn, tempStyle);
                         } else {
-                            showQuickResult(resBox, false, (data && data.msg) ? data.msg : '互联申请失败');
+                            showQuickResult(resBox, false, (data && data.msg) ? data.msg : '互联申请失败', true);
+                            restoreButton(newBtn, tempStyle);
                         }
                     })
                     .catch(error => {
                         console.error('互联申请错误:', error);
-                        showQuickResult(resBox, false, '互联申请请求失败，请稍后重试');
-                    })
-                    .finally(() => {
-                        // 恢复按钮状态
-                        newBtn.disabled = false;
-                        newBtn.classList.remove('opacity-70', 'cursor-not-allowed');
-                        document.getElementById('quickConnectBtnText').classList.remove('hidden');
-                        document.getElementById('quickConnectBtnLoader').classList.add('hidden');
-
-                        // 移除临时样式
-                        if (tempStyle.parentNode) {
-                            document.head.removeChild(tempStyle);
-                        }
+                        showQuickResult(resBox, false, '互联申请请求失败，请稍后重试', true);
+                        restoreButton(newBtn, tempStyle);
                     });
 
-                function showQuickResult(el, ok, text) {
+                // 恢复按钮状态的函数
+                function restoreButton(btn, style) {
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-70', 'cursor-not-allowed');
+                    document.getElementById('quickConnectBtnText').classList.remove('hidden');
+                    document.getElementById('quickConnectBtnLoader').classList.add('hidden');
+                    if (style && style.parentNode) {
+                        document.head.removeChild(style);
+                    }
+                }
+
+                // 轮询任务状态
+                function pollTaskStatus(taskId, resBox, btn, style) {
+                    let pollCount = 0;
+                    const maxPolls = 10; // 最多轮询10次
+                    const pollInterval = 6000; // 每6秒轮询一次
+
+                    const poll = () => {
+                        pollCount++;
+
+                        if (pollCount > maxPolls) {
+                            showQuickResult(resBox, false, '处理超时，请稍后查看结果', true);
+                            restoreButton(btn, style);
+                            return;
+                        }
+
+                        fetch(`/link/connect/check-status?task_id=${encodeURIComponent(taskId)}`, {
+                            method: 'GET',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        })
+                            .then(r => r.json())
+                            .then(data => {
+                                if (data.code !== 0) {
+                                    showQuickResult(resBox, false, data.msg || '查询任务状态失败', true);
+                                    restoreButton(btn, style);
+                                    return;
+                                }
+
+                                const status = data.status;
+                                const message = data.message || '';
+
+                                if (status === 'success') {
+                                    // 任务成功
+                                    showQuickResult(resBox, true, message || '友链互联申请成功！', true);
+                                    restoreButton(btn, style);
+                                } else if (status === 'failed') {
+                                    // 任务失败
+                                    showQuickResult(resBox, false, message || '友链互联申请失败', true);
+                                    restoreButton(btn, style);
+                                } else if (status === 'pending' || status === 'processing') {
+                                    // 继续轮询
+                                    showQuickResult(resBox, true, `处理中 (${pollCount}/${maxPolls})...`);
+                                    setTimeout(poll, pollInterval);
+                                } else {
+                                    // 未知状态
+                                    showQuickResult(resBox, false, '任务状态未知', true);
+                                    restoreButton(btn, style);
+                                }
+                            })
+                            .catch(error => {
+                                console.error('轮询任务状态错误:', error);
+                                showQuickResult(resBox, false, '查询任务状态失败，请稍后重试', true);
+                                restoreButton(btn, style);
+                            });
+                    };
+
+                    // 首次轮询延迟2秒
+                    setTimeout(poll, 2000);
+                }
+
+                function showQuickResult(el, ok, text, autoHide = false) {
                     if (!el) return;
-                    el.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
-                    el.classList.add(ok ? 'bg-green-100' : 'bg-red-100', ok ? 'text-green-700' : 'text-red-700');
-                    el.innerHTML = (ok ? '<i class="fas fa-check-circle mr-2"></i>' : '<i class="fas fa-exclamation-circle mr-2"></i>') + text;
+                    el.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700', 'bg-blue-100', 'text-blue-700');
+
+                    // 根据状态设置颜色
+                    if (text.includes('处理中')) {
+                        el.classList.add('bg-blue-100', 'text-blue-700');
+                        el.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>' + text;
+                    } else {
+                        el.classList.add(ok ? 'bg-green-100' : 'bg-red-100', ok ? 'text-green-700' : 'text-red-700');
+                        el.innerHTML = (ok ? '<i class="fas fa-check-circle mr-2"></i>' : '<i class="fas fa-exclamation-circle mr-2"></i>') + text;
+                    }
 
                     // 添加淡入动画
                     el.style.opacity = '0';
@@ -609,10 +685,13 @@
                         el.style.opacity = '1';
                     }, 10);
 
-                    setTimeout(() => {
-                        el.style.opacity = '0';
-                        setTimeout(() => el.classList.add('hidden'), 300);
-                    }, 4000);
+                    // 只在需要时自动隐藏（最终状态）
+                    if (autoHide) {
+                        setTimeout(() => {
+                            el.style.opacity = '0';
+                            setTimeout(() => el.classList.add('hidden'), 300);
+                        }, 5000);
+                    }
                 }
             });
         }

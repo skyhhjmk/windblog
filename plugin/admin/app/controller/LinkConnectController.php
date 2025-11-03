@@ -94,10 +94,10 @@ class LinkConnectController extends Base
 
             $result = LinkConnectService::testConnection($url);
 
-            if ($result['success']) {
-                return $this->success($result['message'], $result);
+            if ($result['code'] === 0) {
+                return $this->success($result['msg'], $result);
             } else {
-                return $this->fail($result['message']);
+                return $this->fail($result['msg']);
             }
         } catch (Exception $e) {
             return $this->fail($e->getMessage());

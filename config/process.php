@@ -137,6 +137,13 @@ if (getenv('DB_DEFAULT')) {
         'reloadable' => false,
         'constructor' => [],
     ];
+
+    // 友链互联处理进程（存在 .env 时注册）
+    $__processes['link_connect_worker'] = [
+        'handler' => app\process\LinkConnectWorker::class,
+        'reloadable' => false,
+        'constructor' => [],
+    ];
 }
 
 return $__processes;

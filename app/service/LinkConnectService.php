@@ -67,7 +67,7 @@ class LinkConnectService
             'security' => [
                 'enable_checksum' => true,
                 'checksum_algorithm' => 'sha512',
-                'enable_token' => false,
+                'enable_token' => true,  // 默认开启Token验证
                 'token' => (string) blog_config('wind_connect_token', '', true),
             ],
         ];
@@ -147,19 +147,57 @@ class LinkConnectService
 
     public static function markTokenUsed(string $token, string $usedBy = ''): bool
     {
-        $tokens = self::listTokens();
-        $changed = false;
-        foreach ($tokens as &$t) {
-            if (($t['token'] ?? '') === $token) {
-                $t['status'] = 'used';
-                $t['used_by'] = $usedBy;
-                $t['used_at'] = date('c');
-                $changed = true;
+        // 使用Redis锁保证并发安全
+        $lockKey = 'link_connect_token_lock:' . md5($token);
+        $redis = \support\Redis::connection();
+
+        // 尝试获取锁，最长等待10秒，锁过期时间30秒
+        $lockAcquired = false;
+        $maxAttempts = 50; // 10秒 / 0.2秒 = 50次
+
+        for ($i = 0; $i < $maxAttempts; $i++) {
+            // SET NX EX: 如果不存在则设置并设置过期时间
+            $lockAcquired = $redis->set($lockKey, '1', 'EX', 30, 'NX');
+            if ($lockAcquired) {
                 break;
             }
+            usleep(200000); // 等待200ms
         }
 
-        return $changed ? self::saveTokens($tokens) : false;
+        if (!$lockAcquired) {
+            Log::warning('Token标记使用失败：无法获取锁', ['token' => substr($token, 0, 8) . '...']);
+
+            return false;
+        }
+
+        try {
+            $tokens = self::listTokens();
+            $changed = false;
+
+            foreach ($tokens as &$t) {
+                if (($t['token'] ?? '') === $token) {
+                    // 再次检查状态，防止重复标记
+                    if (($t['status'] ?? '') === 'used') {
+                        Log::warning('Token已被标记为使用，跳过', ['token' => substr($token, 0, 8) . '...']);
+
+                        return false;
+                    }
+
+                    $t['status'] = 'used';
+                    $t['used_by'] = $usedBy;
+                    $t['used_at'] = date('c');
+                    $changed = true;
+                    break;
+                }
+            }
+
+            $result = $changed ? self::saveTokens($tokens) : false;
+
+            return $result;
+        } finally {
+            // 释放锁
+            $redis->del($lockKey);
+        }
     }
 
     /**
@@ -276,14 +314,14 @@ class LinkConnectService
             curl_close($ch);
 
             if ($httpCode != 200) {
-                return ['success' => false, 'message' => "HTTP错误码：$httpCode"];
+                return ['code' => 1, 'msg' => "HTTP错误码：$httpCode"];
             }
 
             // 尝试解析JSON
             $data = json_decode($response, true);
 
             if (json_last_error() !== JSON_ERROR_NONE) {
-                return ['success' => false, 'message' => '无效的JSON响应'];
+                return ['code' => 1, 'msg' => '无效的JSON响应'];
             }
 
             // 验证数据结构
@@ -298,8 +336,8 @@ class LinkConnectService
 
             if (!empty($missingFields)) {
                 return [
-                    'success' => false,
-                    'message' => '缺少必要字段：' . implode(', ', $missingFields),
+                    'code' => 1,
+                    'msg' => '缺少必要字段：' . implode(', ', $missingFields),
                     'data' => $data,
                 ];
             }
@@ -312,28 +350,28 @@ class LinkConnectService
 
                 if ($calculatedChecksum !== $data['checksum']) {
                     return [
-                        'success' => false,
-                        'message' => '校验和验证失败',
+                        'code' => 1,
+                        'msg' => '校验和验证失败',
                         'data' => $data,
                         'checksum_valid' => false,
                     ];
                 }
 
                 return [
-                    'success' => true,
-                    'message' => '连接测试成功，校验和验证通过',
+                    'code' => 0,
+                    'msg' => '连接测试成功，校验和验证通过',
                     'data' => $data,
                     'checksum_valid' => true,
                 ];
             }
 
             return [
-                'success' => true,
-                'message' => '连接测试成功',
+                'code' => 0,
+                'msg' => '连接测试成功',
                 'data' => $data,
             ];
         } catch (Exception $e) {
-            return ['success' => false, 'message' => '测试失败：' . $e->getMessage()];
+            return ['code' => 1, 'msg' => '测试失败：' . $e->getMessage()];
         }
     }
 
@@ -476,10 +514,12 @@ class LinkConnectService
             return ['code' => 1, 'msg' => '互联协议未启用'];
         }
 
-        $incoming = (string) ($headers['X-WIND-CONNECT-TOKEN'] ?? '');
+        // Token验证：优先使用系统Token，如果未配置则跳过验证（开放接收）
+        $incoming = (string) ($headers['X-WIND-CONNECT-TOKEN'] ?? ($headers['x-wind-connect-token'] ?? ''));
         $expected = (string) blog_config('wind_connect_token', '', true);
 
-        if (empty($expected) || $incoming !== $expected) {
+        // 如果配置了系统Token，则必须验证；否则跳过验证（允许任何站点申请）
+        if (!empty($expected) && $incoming !== $expected) {
             return ['code' => 1, 'msg' => '鉴权失败'];
         }
 
@@ -594,10 +634,11 @@ class LinkConnectService
     public static function buildLocalPendingLink(array $input): Link
     {
         $link = new Link();
-        $link->name = htmlspecialchars((string) $input['name'], ENT_QUOTES, 'UTF-8');
+        // 移除htmlspecialchars，存储原始数据，在显示时转义
+        $link->name = (string) $input['name'];
         $link->url = (string) $input['url'];
         $link->icon = (string) ($input['icon'] ?? '');
-        $link->description = htmlspecialchars((string) ($input['description'] ?? ''), ENT_QUOTES, 'UTF-8');
+        $link->description = (string) ($input['description'] ?? '');
         $link->status = false; // pending
         $link->sort_order = 999;
         $link->target = '_blank';
@@ -625,10 +666,11 @@ class LinkConnectService
     public static function buildLocalWaitingLink(array $site, array $fromLink): Link
     {
         $link = new Link();
-        $link->name = htmlspecialchars((string) ($fromLink['name'] ?? ($site['name'] ?? '友链')), ENT_QUOTES, 'UTF-8');
+        // 移除htmlspecialchars，存储原始数据，在显示时转义
+        $link->name = (string) ($fromLink['name'] ?? ($site['name'] ?? '友链'));
         $link->url = (string) ($fromLink['url'] ?? '');
         $link->icon = (string) ($fromLink['icon'] ?? ($site['icon'] ?? ''));
-        $link->description = htmlspecialchars((string) ($fromLink['description'] ?? ''), ENT_QUOTES, 'UTF-8');
+        $link->description = (string) ($fromLink['description'] ?? '');
         $link->status = false; // waiting
         $link->sort_order = 999;
         $link->target = '_blank';
@@ -657,7 +699,7 @@ class LinkConnectService
     }
 
     /**
-     * 简易 JSON POST（带 X-WIND-CONNECT-TOKEN，禁用 SSL 验证）
+     * 简易 JSON POST（带 X-WIND-CONNECT-TOKEN）
      *
      * @param string $url
      * @param array  $payload
@@ -672,6 +714,10 @@ class LinkConnectService
             if (!empty($token)) {
                 $headers .= "X-WIND-CONNECT-TOKEN: {$token}\r\n";
             }
+
+            // SSL验证配置：从配置读取，默认启用以提高安全性
+            $sslVerify = (bool) blog_config('wind_connect_ssl_verify', true, true);
+
             $opts = [
                 'http' => [
                     'method' => 'POST',
@@ -680,8 +726,8 @@ class LinkConnectService
                     'content' => json_encode($payload, JSON_UNESCAPED_UNICODE),
                 ],
                 'ssl' => [
-                    'verify_peer' => false,
-                    'verify_peer_name' => false,
+                    'verify_peer' => $sslVerify,
+                    'verify_peer_name' => $sslVerify,
                 ],
             ];
             $context = stream_context_create($opts);
@@ -710,7 +756,8 @@ class LinkConnectService
         unset($cleanData['checksum']);
 
         // 将数据转换为JSON并计算SHA512校验和
-        $jsonData = json_encode($cleanData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_NUMERIC_CHECK);
+        // 注意：移除 JSON_NUMERIC_CHECK 以避免跨环境不一致
+        $jsonData = json_encode($cleanData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
         return hash('sha512', $jsonData);
     }
