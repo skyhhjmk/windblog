@@ -793,8 +793,12 @@
 
                 // 准备作者数据
                 const authorIds = selectedAuthors.map(a => a.id);
-                // 准备分类数据
-                const categoryIds = selectedCategories.map(c => c.id);
+                // 准备分类数据（包含完整对象，支持新建分类）
+                const categories = selectedCategories.map(c => ({
+                    id: c.id,
+                    name: c.name,
+                    slug: c.slug
+                }));
                 // 准备标签数据（包含id和名称）
                 const tags = selectedTags.map(t => ({
                     id: t.id,
@@ -811,7 +815,7 @@
                     allow_comments: allowComments.checked ? 1 : 0,
                     featured: postFeatured.checked ? 1 : 0,
                     authors: authorIds,
-                    categories: categoryIds,
+                    categories: categories,
                     tags: tags
                     // AI摘要相关字段通过单独的"保存摘要"按钮处理
                 };

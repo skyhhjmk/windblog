@@ -4,6 +4,7 @@ namespace plugin\admin\app\controller;
 
 use app\model\Setting;
 use app\service\MediaLibraryService;
+use app\service\SlugTranslateService;
 use plugin\admin\app\common\Util;
 use support\Db;
 use support\exception\BusinessException;
@@ -586,6 +587,85 @@ class ConfigController extends Base
             return $this->json(0, '保存成功，请重启服务以使配置生效');
         } catch (Throwable $e) {
             return $this->json(1, $e->getMessage());
+        }
+    }
+
+    /**
+     * 获取Slug翻译配置
+     *
+     * @return Response
+     */
+    public function get_slug_translate_config(): Response
+    {
+        try {
+            $config = [
+                'baidu_translate_appid' => blog_config('baidu_translate_appid', '', true),
+                'baidu_translate_secret' => blog_config('baidu_translate_secret', '', true),
+                'slug_translate_mode' => blog_config('slug_translate_mode', 'auto', true),
+                'slug_translate_ai_selection' => blog_config('slug_translate_ai_selection', '', true),
+            ];
+
+            return json($config);
+        } catch (Throwable $e) {
+            return $this->json(1, $e->getMessage());
+        }
+    }
+
+    /**
+     * 设置Slug翻译配置
+     *
+     * @param Request $request
+     *
+     * @return Response
+     */
+    public function set_slug_translate_config(Request $request): Response
+    {
+        try {
+            $config = $request->post();
+
+            // 保存百度翻译配置
+            blog_config('baidu_translate_appid', $config['baidu_translate_appid'] ?? '', true, true, true);
+            blog_config('baidu_translate_secret', $config['baidu_translate_secret'] ?? '', true, true, true);
+
+            // 保存slug翻译模式
+            $mode = $config['slug_translate_mode'] ?? 'auto';
+            if (!in_array($mode, ['baidu', 'ai', 'auto'])) {
+                return $this->json(1, '无效的翻译模式');
+            }
+            blog_config('slug_translate_mode', $mode, true, true, true);
+
+            // 保存AI选择
+            blog_config('slug_translate_ai_selection', $config['slug_translate_ai_selection'] ?? '', true, true, true);
+
+            return $this->json(0);
+        } catch (Throwable $e) {
+            return $this->json(1, $e->getMessage());
+        }
+    }
+
+    /**
+     * 测试Slug翻译配置
+     *
+     * @param Request $request
+     *
+     * @return Response
+     */
+    public function test_slug_translate(Request $request): Response
+    {
+        try {
+            $mode = $request->post('mode', 'auto');
+            $aiSelection = $request->post('ai_selection', '');
+
+            $service = new SlugTranslateService();
+            $result = $service->testConfig($mode, $aiSelection ?: null);
+
+            return json($result);
+        } catch (Throwable $e) {
+            return json([
+                'success' => false,
+                'message' => '测试异常: ' . $e->getMessage(),
+                'result' => '',
+            ]);
         }
     }
 

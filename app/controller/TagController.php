@@ -25,6 +25,9 @@ class TagController
             $slug = substr($slug, 0, -5);
         }
 
+        // URL解码 slug
+        $slug = urldecode($slug);
+
         // 解析排序
         $sort = $request->get('sort', 'latest');
         $sort = in_array($sort, ['latest', 'hot']) ? $sort : 'latest';

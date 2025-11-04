@@ -7,6 +7,7 @@ use app\model\Media;
 use app\model\Post;
 use app\service\CacheService;
 use app\service\MediaLibraryService;
+use app\service\SlugTranslateService;
 use Exception;
 use support\Db;
 use support\Log;
@@ -208,6 +209,15 @@ class EditorController
             }
 
             // 处理分类关联
+            Log::info('EditorController::save - 分类数据', ['categories' => $categories]);
+
+            // 过滤null值
+            if (is_array($categories)) {
+                $categories = array_filter($categories, function ($cat) {
+                    return $cat !== null && $cat !== '';
+                });
+            }
+
             if (!empty($categories) && is_array($categories)) {
                 // 删除现有的分类关联
                 Db::table('post_category')->where('post_id', $post_id)->delete();
@@ -243,7 +253,14 @@ class EditorController
                                 ];
                             } else {
                                 // 不存在，创建新分类
-                                $slug = !empty($category['slug']) ? $category['slug'] : $this->generateSlug($category['name']);
+                                // 使用SlugTranslateService生成slug
+                                if (!empty($category['slug'])) {
+                                    $slug = $category['slug'];
+                                } else {
+                                    $slugService = new SlugTranslateService();
+                                    $slug = $slugService->translate($category['name']) ?? $this->generateSlug($category['name']);
+                                }
+
                                 $newCategoryId = Db::table('categories')->insertGetId([
                                     'name' => $category['name'],
                                     'slug' => $slug,
@@ -270,6 +287,13 @@ class EditorController
             }
 
             // 处理标签关联
+            // 过滤null值
+            if (is_array($tags)) {
+                $tags = array_filter($tags, function ($tag) {
+                    return $tag !== null && $tag !== '';
+                });
+            }
+
             if (!empty($tags) && is_array($tags)) {
                 // 删除现有的标签关联
                 Db::table('post_tag')->where('post_id', $post_id)->delete();
@@ -296,8 +320,10 @@ class EditorController
                                     'tag_id' => $existingTag->id,
                                 ];
                             } else {
-                                // 创建新标签
-                                $slug = $this->generateSlug($tagName);
+                                // 创建新标签，使用SlugTranslateService生成slug
+                                $slugService = new SlugTranslateService();
+                                $slug = $slugService->translate($tagName) ?? $this->generateSlug($tagName);
+
                                 $newTagId = Db::table('tags')->insertGetId([
                                     'name' => $tagName,
                                     'slug' => $slug,

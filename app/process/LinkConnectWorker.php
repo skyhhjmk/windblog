@@ -75,6 +75,30 @@ class LinkConnectWorker
         return $this->mqChannel;
     }
 
+    /**
+     * 重建 MQ 连接（自愈机制）
+     */
+    protected function reconnectMq(): void
+    {
+        try {
+            // 关闭现有连接
+            $this->closeMqConnection();
+
+            // 等待短暂时间后重建
+            usleep(500000); // 0.5秒
+
+            // 重新获取通道
+            $channel = MQService::getChannel();
+            $this->mqChannel = $channel;
+
+            Log::info('LinkConnectWorker MQ连接重建成功');
+        } catch (Throwable $e) {
+            Log::error('LinkConnectWorker MQ连接重建失败: ' . $e->getMessage());
+            $this->mqChannel = null;
+            $this->mqConnection = null;
+        }
+    }
+
     public function onWorkerStart(Worker $worker): void
     {
         // 检查系统是否已安装
@@ -147,7 +171,16 @@ class LinkConnectWorker
                 }
             }
         } catch (Exception $e) {
-            Log::error('LinkConnectWorker 消费异常: ' . $e->getMessage());
+            $errorMsg = $e->getMessage();
+            Log::error('LinkConnectWorker 消费异常: ' . $errorMsg);
+
+            // 检测通道连接断开，触发自愈
+            if (strpos($errorMsg, 'Channel connection is closed') !== false ||
+                strpos($errorMsg, 'Broken pipe') !== false ||
+                strpos($errorMsg, 'connection is closed') !== false) {
+                Log::warning('LinkConnectWorker 检测到连接断开，尝试重建连接');
+                $this->reconnectMq();
+            }
         }
     }
 

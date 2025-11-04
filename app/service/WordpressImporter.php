@@ -699,7 +699,7 @@ class WordpressImporter
     }
 
     /**
-     * 翻译标题（使用免费翻译API）
+     * 翻译标题（使用SlugTranslateService）
      *
      * @param string $title
      *
@@ -709,40 +709,24 @@ class WordpressImporter
     protected function translateTitle(string $title): string
     {
         try {
-            // 使用百度翻译API（免费版）
-            $appid = blog_config('baidu_translate_appid', '', true); // 你的百度翻译API AppID
-            $secret = blog_config('baidu_translate_secret', '', true); // 你的百度翻译API密钥
+            // 使用SlugTranslateService
+            $service = new SlugTranslateService();
 
-            // 如果没有配置API密钥，则直接返回原标题
-            if (empty($appid) || empty($secret)) {
-                return $this->formatTitleAsSlug($title);
+            // 从导入配置中获取翻译模式和AI选择
+            $mode = $this->options['slug_translate_mode'] ?? blog_config('slug_translate_mode', 'auto', true);
+            $aiSelection = $this->options['slug_translate_ai_selection'] ?? blog_config('slug_translate_ai_selection', '', true);
+
+            $result = $service->translate($title, [
+                'mode' => $mode,
+                'ai_selection' => $aiSelection ?: null,
+            ]);
+
+            if ($result !== null) {
+                return $result;
             }
 
-            // 检查标题是否已经是英文
-            if (preg_match('/^[A-Za-z0-9\s\-_]+$/', $title)) {
-                return $this->formatTitleAsSlug($title);
-            }
-
-            $url = 'https://fanyi-api.baidu.com/api/trans/vip/translate';
-            $salt = time();
-            $sign = md5($appid . $title . $salt . $secret);
-
-            $params = [
-                'q' => $title,
-                'from' => 'auto',
-                'to' => 'en',
-                'appid' => $appid,
-                'salt' => $salt,
-                'sign' => $sign,
-            ];
-
-            $response = @file_get_contents($url . '?' . http_build_query($params));
-            if ($response) {
-                $result = json_decode($response, true);
-                if (isset($result['trans_result'][0]['dst'])) {
-                    return $this->formatTitleAsSlug($result['trans_result'][0]['dst']);
-                }
-            }
+            // 如果翻译失败，回退到格式化原标题
+            return $this->formatTitleAsSlug($title);
         } catch (Exception $e) {
             Log::warning('翻译标题时出错: ' . $e->getMessage());
         }

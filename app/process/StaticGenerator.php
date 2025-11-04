@@ -104,14 +104,28 @@ class StaticGenerator
         // 在 worker 循环中轮询消费
         if (class_exists(Timer::class)) {
             Timer::add(1, function () {
-                if ($this->mqChannel) {
-                    try {
-                        // 增大超时时间并忽略超时异常
-                        $this->mqChannel->wait(null, false, 1.0);
-                    } catch (AMQPTimeoutException $e) {
-                        // 无数据到达的正常超时，忽略
-                    } catch (Throwable $e) {
-                        Log::warning('StaticGenerator 消费轮询异常: ' . $e->getMessage());
+                try {
+                    if ($this->mqChannel === null) {
+                        Log::warning('StaticGenerator: channel is null, reconnecting...');
+                        $this->reconnectMq();
+
+                        return;
+                    }
+                    // 增大超时时间并忽略超时异常
+                    $this->mqChannel->wait(null, false, 1.0);
+                } catch (AMQPTimeoutException $e) {
+                    // 无数据到达的正常超时，忽略
+                } catch (Throwable $e) {
+                    $errorMsg = $e->getMessage();
+                    Log::warning('StaticGenerator 消费轮询异常: ' . $errorMsg);
+
+                    // 检测通道连接断开，触发自愈
+                    if (strpos($errorMsg, 'Channel connection is closed') !== false ||
+                        strpos($errorMsg, 'Broken pipe') !== false ||
+                        strpos($errorMsg, 'connection is closed') !== false ||
+                        strpos($errorMsg, 'on null') !== false) {
+                        Log::warning('StaticGenerator 检测到连接断开，尝试重建连接');
+                        $this->reconnectMq();
                     }
                 }
             });
@@ -610,6 +624,30 @@ class StaticGenerator
         }
         // 历史列表保留时长更久（1小时）
         cache($histKey, $history, true, 3600);
+    }
+
+    /**
+     * 重建 MQ 连接（自愈机制）
+     */
+    protected function reconnectMq(): void
+    {
+        try {
+            $this->mqChannel = null;
+            $this->mqConnection = null;
+
+            // 等待短暂时间后重建
+            usleep(500000); // 0.5秒
+
+            // 重新初始化 MQ 并启动消费者
+            $this->initMq();
+            $this->startConsumer();
+
+            Log::info('StaticGenerator MQ连接重建成功');
+        } catch (Throwable $e) {
+            Log::error('StaticGenerator MQ连接重建失败: ' . $e->getMessage());
+            $this->mqChannel = null;
+            $this->mqConnection = null;
+        }
     }
 
     public function onWorkerStop(): void
