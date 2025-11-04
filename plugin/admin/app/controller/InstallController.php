@@ -815,8 +815,8 @@ class InstallController extends Base
             # Redis密码，如果未设置密码则留空
             REDIS_PASSWORD=
 
-            # Redis数据库索引，项目使用多库架构（DB0+DB1），此选项不可用
-            #REDIS_DATABASE=1
+            # Redis数据库索引
+            REDIS_DATABASE=0
 
             # Memcached服务器主机地址
             MEMCACHED_HOST=127.0.0.1

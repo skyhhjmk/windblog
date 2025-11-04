@@ -108,9 +108,19 @@ class CacheService
                 return new class () {
                     private $redis;
 
+                    private $isCluster = false;
+
                     public function __construct()
                     {
                         $this->redis = Redis::connection('cache');
+
+                        // 检测是否为集群模式
+                        try {
+                            $info = $this->redis->info('cluster');
+                            $this->isCluster = isset($info['cluster_enabled']) && $info['cluster_enabled'] == 1;
+                        } catch (\Exception $e) {
+                            $this->isCluster = false;
+                        }
                     }
 
                     public function get(string $key)

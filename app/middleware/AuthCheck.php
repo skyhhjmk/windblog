@@ -29,6 +29,11 @@ class AuthCheck implements MiddlewareInterface
      */
     public function process(Request $request, callable $handler): Response
     {
+        // 如果控制器为空，直接放行（可能是404或其他情况）
+        if (empty($request->controller)) {
+            return $handler($request);
+        }
+
         $action = $request->action;
         $controller = new ReflectionClass($request->controller);
         $noNeedLogin = $controller->getDefaultProperties()['noNeedLogin'] ?? [];

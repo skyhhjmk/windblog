@@ -11,6 +11,21 @@ use support\Response;
 
 class SitemapController
 {
+    /**
+     * 不需要登录的方法
+     *
+     * @var array
+     */
+    protected array $noNeedLogin = [
+        'sitemap',
+        'index',
+        'posts',
+        'categories',
+        'tags',
+        'archives',
+        'graphical',
+    ];
+
     protected function baseUrl(Request $request): string
     {
         $site = (string) blog_config('site_url', '', true);
@@ -34,7 +49,7 @@ class SitemapController
         // 缓存键
         $cacheKey = 'sitemap_xml_v1';
         $cached = cache($cacheKey);
-        if ($cached !== false) {
+        if ($cached !== false && !empty($cached)) {
             return new Response(200, ['Content-Type' => 'application/xml; charset=utf-8'], $cached);
         }
 
@@ -110,7 +125,7 @@ class SitemapController
         // 缓存键
         $cacheKey = 'sitemap_index_xml_v1';
         $cached = cache($cacheKey);
-        if ($cached !== false) {
+        if ($cached !== false && !empty($cached)) {
             return new Response(200, ['Content-Type' => 'application/xml; charset=utf-8'], $cached);
         }
 
@@ -159,7 +174,7 @@ class SitemapController
         // 缓存键
         $cacheKey = 'sitemap_posts_xml_v1';
         $cached = cache($cacheKey);
-        if ($cached !== false) {
+        if ($cached !== false && !empty($cached)) {
             return new Response(200, ['Content-Type' => 'application/xml; charset=utf-8'], $cached);
         }
 
@@ -192,7 +207,7 @@ class SitemapController
         // 缓存键
         $cacheKey = 'sitemap_categories_xml_v1';
         $cached = cache($cacheKey);
-        if ($cached !== false) {
+        if ($cached !== false && !empty($cached)) {
             return new Response(200, ['Content-Type' => 'application/xml; charset=utf-8'], $cached);
         }
 
@@ -220,7 +235,7 @@ class SitemapController
         // 缓存键
         $cacheKey = 'sitemap_tags_xml_v1';
         $cached = cache($cacheKey);
-        if ($cached !== false) {
+        if ($cached !== false && !empty($cached)) {
             return new Response(200, ['Content-Type' => 'application/xml; charset=utf-8'], $cached);
         }
 
@@ -248,7 +263,7 @@ class SitemapController
         // 缓存键
         $cacheKey = 'sitemap_archives_xml_v1';
         $cached = cache($cacheKey);
-        if ($cached !== false) {
+        if ($cached !== false && !empty($cached)) {
             return new Response(200, ['Content-Type' => 'application/xml; charset=utf-8'], $cached);
         }
 

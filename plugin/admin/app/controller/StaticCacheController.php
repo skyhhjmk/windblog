@@ -3,6 +3,7 @@
 namespace plugin\admin\app\controller;
 
 use app\model\Post;
+use app\service\EnhancedStaticCacheConfig;
 
 use function publish_static;
 
@@ -269,5 +270,165 @@ class StaticCacheController extends Base
         blog_config('site_port', $cfg['site_port'], true, true, true);
 
         return json(['success' => true]);
+    }
+
+    // ==================== 增强功能 ====================
+
+    public function getEnhancedConfig(Request $request): Response
+    {
+        $config = [
+            'enabled' => EnhancedStaticCacheConfig::isEnabled(),
+            'compression' => EnhancedStaticCacheConfig::isCompressionEnabled(),
+            'version' => EnhancedStaticCacheConfig::getCacheVersion(),
+        ];
+
+        return json(['success' => true, 'data' => $config]);
+    }
+
+    public function saveEnhancedConfig(Request $request): Response
+    {
+        $enabled = (bool) $request->post('enabled', true);
+        $compression = (bool) $request->post('compression', true);
+        blog_config('static_cache_enabled', $enabled, true, true, true);
+        blog_config('static_cache_compression', $compression, true, true, true);
+
+        return json(['success' => true]);
+    }
+
+    public function updateVersion(Request $request): Response
+    {
+        try {
+            $newVersion = EnhancedStaticCacheConfig::updateCacheVersion();
+
+            return json(['success' => true, 'version' => $newVersion]);
+        } catch (Throwable $e) {
+            return json(['success' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
+    public function clearAll(Request $request): Response
+    {
+        try {
+            EnhancedStaticCacheConfig::clearAllCache();
+
+            return json(['success' => true]);
+        } catch (Throwable $e) {
+            return json(['success' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
+    public function getStats(Request $request): Response
+    {
+        try {
+            $stats = EnhancedStaticCacheConfig::getCacheStats();
+
+            return json(['success' => true, 'data' => $stats]);
+        } catch (Throwable $e) {
+            return json(['success' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
+    public function resetStats(Request $request): Response
+    {
+        try {
+            EnhancedStaticCacheConfig::resetStats();
+
+            return json(['success' => true]);
+        } catch (Throwable $e) {
+            return json(['success' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
+    public function getEnhancedStrategies(Request $request): Response
+    {
+        try {
+            $strategies = (array) (blog_config('static_cache_strategies', [], true) ?: []);
+            if (empty($strategies)) {
+                $strategies = EnhancedStaticCacheConfig::getDefaultStrategies();
+            }
+
+            return json(['success' => true, 'data' => $strategies]);
+        } catch (Throwable $e) {
+            return json(['success' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
+    public function saveEnhancedStrategies(Request $request): Response
+    {
+        try {
+            $json = $request->post('strategies', '[]');
+            $strategies = json_decode($json, true);
+            if (!is_array($strategies)) {
+                return json(['success' => false, 'message' => '参数格式错误']);
+            }
+            blog_config('static_cache_strategies', $strategies, true, true, true);
+
+            return json(['success' => true]);
+        } catch (Throwable $e) {
+            return json(['success' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
+    public function warmup(Request $request): Response
+    {
+        try {
+            $urls = EnhancedStaticCacheConfig::getWarmupUrls();
+            $jobId = 'warmup_' . date('Ymd_His');
+            $total = count($urls);
+
+            // 初始化进度
+            $progressData = [
+                'job_id' => $jobId,
+                'scope' => 'warmup',
+                'total' => $total,
+                'current' => 0,
+                'status' => 'running',
+                'started_at' => time(),
+                'updated_at' => time(),
+                'current_path' => '',
+            ];
+            cache('static_progress_latest', $jobId, true, 3600);
+            cache('static_progress_' . $jobId, $progressData, true, 900);
+
+            // 发送任务
+            foreach ($urls as $url) {
+                publish_static([
+                    'type' => 'url',
+                    'value' => $url,
+                    'options' => ['force' => true, 'job_id' => $jobId],
+                ]);
+            }
+
+            return json(['success' => true, 'job_id' => $jobId, 'count' => $total]);
+        } catch (Throwable $e) {
+            return json(['success' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
+    public function getWarmupUrls(Request $request): Response
+    {
+        try {
+            $urls = EnhancedStaticCacheConfig::getWarmupUrls();
+
+            return json(['success' => true, 'data' => $urls]);
+        } catch (Throwable $e) {
+            return json(['success' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
+    public function saveWarmupUrls(Request $request): Response
+    {
+        try {
+            $json = $request->post('urls', '[]');
+            $urls = json_decode($json, true);
+            if (!is_array($urls)) {
+                return json(['success' => false, 'message' => '参数格式错误']);
+            }
+            blog_config('static_cache_warmup_urls', $urls, true, true, true);
+
+            return json(['success' => true]);
+        } catch (Throwable $e) {
+            return json(['success' => false, 'message' => $e->getMessage()]);
+        }
     }
 }
