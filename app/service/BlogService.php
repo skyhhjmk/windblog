@@ -98,10 +98,11 @@ class BlogService
                         if (!empty($value)) {
                             // 安全地转义搜索词，防止 SQL 注入
                             $searchTerm = (string) $value;
-                            $query->where(function ($q) use ($searchTerm) {
-                                $q->where('title', 'like', '%' . addcslashes($searchTerm, '%_\\') . '%')
-                                    ->orWhere('content', 'like', '%' . addcslashes($searchTerm, '%_\\') . '%')
-                                    ->orWhere('excerpt', 'like', '%' . addcslashes($searchTerm, '%_\\') . '%');
+                            $searchTermLower = mb_strtolower(addcslashes($searchTerm, '%_\\'));
+                            $query->where(function ($q) use ($searchTermLower) {
+                                $q->whereRaw('LOWER(title) like ?', ['%' . $searchTermLower . '%'])
+                                    ->orWhereRaw('LOWER(content) like ?', ['%' . $searchTermLower . '%'])
+                                    ->orWhereRaw('LOWER(excerpt) like ?', ['%' . $searchTermLower . '%']);
                             });
                         }
                         break;
@@ -165,9 +166,9 @@ class BlogService
             // 获取文章列表并预加载作者信息
             if (!empty($filters['search'])) {
                 // 安全地处理搜索词，防止 SQL 注入
-                $searchTerm = '%' . addcslashes((string) $filters['search'], '%_\\') . '%';
+                $searchTerm = '%' . mb_strtolower(addcslashes((string) $filters['search'], '%_\\')) . '%';
                 $query = $query->orderByRaw(
-                    'CASE WHEN title LIKE ? THEN 0 WHEN excerpt LIKE ? THEN 1 WHEN content LIKE ? THEN 2 ELSE 3 END',
+                    'CASE WHEN LOWER(title) LIKE ? THEN 0 WHEN LOWER(excerpt) LIKE ? THEN 1 WHEN LOWER(content) LIKE ? THEN 2 ELSE 3 END',
                     [$searchTerm, $searchTerm, $searchTerm]
                 );
             }
