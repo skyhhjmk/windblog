@@ -39,6 +39,9 @@ if (getenv('DB_DEFAULT')) {
 $middleware = [
     // 全局中间件
     '' => $global,
+    '@' => [
+        app\middleware\RequestLogger::class,
+    ],
 ];
 
 return $middleware;

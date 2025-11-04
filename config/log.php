@@ -65,7 +65,11 @@ $handlers = [
         ],
         'formatter' => [
             'class' => Monolog\Formatter\LineFormatter::class,
-            'constructor' => [null, 'Y-m-d H:i:s', true],
+            'constructor' => [
+                "[%datetime%] %channel%.%level_name%: %message%\n",  // 包含 channel 和 level
+                'Y-m-d H:i:s',                                         // 日期格式
+                true,                                                   // 允许换行
+            ],
         ],
     ],
 ];
