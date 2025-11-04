@@ -12,6 +12,7 @@ use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
 use PhpAmqpLib\Wire\AMQPTable;
 use support\Log;
+use support\Response;
 
 /**
  * 获取缓存处理器实例
@@ -701,5 +702,42 @@ if (!function_exists('is_install_lock_exists')) {
     function is_install_lock_exists(): bool
     {
         return file_exists(base_path() . '/runtime/install.lock');
+    }
+}
+
+if (!function_exists('view_error')) {
+    /**
+     * View response
+     *
+     * @param mixed       $template
+     * @param array       $vars
+     * @param int         $code
+     * @param string|null $app
+     * @param string|null $plugin
+     *
+     * @return Response
+     */
+    function view_error(mixed $template = null, array $vars = [], int $code = 500, ?string $app = null, ?string $plugin = null): Response
+    {
+        [$template, $vars, $app, $plugin] = template_inputs($template, $vars, $app, $plugin);
+        $handler = config($plugin ? "plugin.$plugin.view.handler" : 'view.handler');
+
+        return new Response($code, [], $handler::render($template, $vars, $app, $plugin));
+    }
+}
+
+if (!function_exists('json_error')) {
+    /**
+     * Json response
+     *
+     * @param     $data
+     * @param int $code
+     * @param int $options
+     *
+     * @return Response
+     */
+    function json_error($data, int $code = 500, int $options = JSON_UNESCAPED_UNICODE): Response
+    {
+        return new Response($code, ['Content-Type' => 'application/json'], json_encode($data, $options));
     }
 }

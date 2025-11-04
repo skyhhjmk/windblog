@@ -13,14 +13,14 @@
  * @license   http://www.opensource.org/licenses/mit-license.php MIT License
  */
 $global = [
-//        app\middleware\AuthCheck::class,
+    app\middleware\AuthCheck::class,
     app\middleware\SecurityHeaders::class,
     app\middleware\Lang::class,
-    app\middleware\DebugToolkit::class,
-    app\middleware\IpChecker::class,
+//    app\middleware\DebugToolkit::class,
+//    app\middleware\IpChecker::class,
     // 新增的安全和性能优化中间件
     app\middleware\SecureFileUpload::class,
-    app\middleware\EnhancedAuthCheck::class,
+//    app\middleware\EnhancedAuthCheck::class,
 ];
 
 if (getenv('DB_DEFAULT')) {

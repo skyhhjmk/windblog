@@ -77,11 +77,11 @@ class LinkPushWorker
         }
 
         // 定时输出状态
-        $this->timerId = Timer::add(60, function () {
-            $memoryUsage = memory_get_usage(true) / 1024 / 1024;
-            $peak = memory_get_peak_usage(true) / 1024 / 1024;
-            Log::debug("LinkPushWorker 状态 - 内存: {$memoryUsage}MB, 峰值: {$peak}MB");
-        });
+        //        $this->timerId = Timer::add(60, function () {
+        //            $memoryUsage = memory_get_usage(true) / 1024 / 1024;
+        //            $peak = memory_get_peak_usage(true) / 1024 / 1024;
+        //            Log::debug("LinkPushWorker 状态 - 内存: {$memoryUsage}MB, 峰值: {$peak}MB");
+        //        });
 
         // MQ健康检查
         Timer::add(60, function () {

@@ -3,7 +3,7 @@
 namespace app\api\controller;
 
 use support\Request;
-use Webman\Http\Response;
+use support\Response;
 
 class DebugController
 {

@@ -13,11 +13,4 @@
  * @license   http://www.opensource.org/licenses/mit-license.php MIT License
  */
 
-return [
-    'default' => [
-        'host' => '127.0.0.1',
-        'password' => null,
-        'port' => 6379,
-        'database' => 0,
-    ],
-];
+return include base_path() . '/config/redis.php';

@@ -40,7 +40,6 @@
     "league/html-to-markdown": "^5.1",
     "webman/admin": "*",
     "league/commonmark": "^2.7",
-    "overtrue/easy-sms": "^3.2",
     "phpmailer/phpmailer": "^6.12",
     "twig/cache-extra": "^3.22",
     "twig/string-extra": "^3.22",
@@ -53,7 +52,8 @@
     "league/oauth2-client": "^2.8",
     "league/oauth2-github": "^3.1",
     "league/oauth2-google": "^4.0",
-    "webman/event": "^1.0"
+    "webman/event": "^1.0",
+    "webman/log": "^2.1"
   },
   "suggest": {
     "ext-event": "For better performance. "
