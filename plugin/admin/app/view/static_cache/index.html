@@ -717,8 +717,12 @@ layui.use(['form','layer','element'], function(){
 
   // 快捷操作
   var cacheEnabled = true;
-  function updateCacheStatus(enabled){
+  var cacheCompression = true;
+  function updateCacheStatus(enabled, compression){
     cacheEnabled = enabled;
+    if (compression !== undefined) {
+      cacheCompression = compression;
+    }
     var $badge = $('#cache-status-badge');
     var $btn = $('#btn-toggle-cache');
     if(enabled){
@@ -732,9 +736,9 @@ layui.use(['form','layer','element'], function(){
 
   $('#btn-toggle-cache').on('click', function(){
     var newState = !cacheEnabled;
-    $.post('/app/admin/static-cache/enhanced/config', {enabled: newState, compression: true}, function(res){
+    $.post('/app/admin/static-cache/enhanced/config', {enabled: newState, compression: cacheCompression}, function(res){
       if(res && res.success){
-        updateCacheStatus(newState);
+        updateCacheStatus(newState, cacheCompression);
         layer.msg(newState ? '缓存已启用' : '缓存已关闭', {icon:1});
       }else{
         layer.msg('操作失败', {icon:2});
@@ -820,7 +824,7 @@ layui.use(['form','layer','element'], function(){
     $.get('/app/admin/static-cache/enhanced/config', function(res){
       if(res && res.success){
         var data = res.data || {};
-        updateCacheStatus(data.enabled);
+        updateCacheStatus(data.enabled, data.compression);
         $('#overview-version').text(data.version || '-');
       }
     });

@@ -287,8 +287,13 @@ class StaticCacheController extends Base
 
     public function saveEnhancedConfig(Request $request): Response
     {
-        $enabled = (bool) $request->post('enabled', true);
-        $compression = (bool) $request->post('compression', true);
+        // 正确处理布尔值：将字符串 'false' 和 false 都识别为 false
+        $enabledRaw = $request->post('enabled');
+        $enabled = $enabledRaw === 'false' || $enabledRaw === false || $enabledRaw === 0 || $enabledRaw === '0' ? false : (bool) $enabledRaw;
+
+        $compressionRaw = $request->post('compression');
+        $compression = $compressionRaw === 'false' || $compressionRaw === false || $compressionRaw === 0 || $compressionRaw === '0' ? false : (bool) $compressionRaw;
+
         blog_config('static_cache_enabled', $enabled, true, true, true);
         blog_config('static_cache_compression', $compression, true, true, true);
 
