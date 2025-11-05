@@ -118,6 +118,7 @@
                 <div class="border-t border-gray-200 pt-6">
                     <h3 class="text-lg font-medium text-gray-800 mb-4">发表评论</h3>
                     <form id="comment-form" class="space-y-4">
+                        <input type="hidden" name="_token" value="{{ csrf_token|default('') }}">
                         <input type="hidden" id="post-id" name="post_id" value="{{ post.id }}">
                         <input type="hidden" id="parent-id" name="parent_id" value="0">
                         <input type="hidden" id="quoted-text" name="quoted_text" value="">
@@ -154,6 +155,9 @@
                                 </button>
                             </div>
                         </div>
+
+                        <!-- 验证码区域 -->
+                        <div id="comment-captcha-wrapper" class="space-y-2"></div>
 
                         <div>
                             <button type="submit"
@@ -358,6 +362,39 @@
 
         // 初始化评论功能
         function initComments() {
+            // 渲染评论验证码
+            (async function () {
+                try {
+                    const res = await fetch('/captcha/config');
+                    const json = await res.json();
+                    const c = json && json.data ? json.data : {enabled: false};
+                    const wrap = document.getElementById('comment-captcha-wrapper');
+                    if (!wrap || !c.enabled) return;
+                    if (c.type === 'turnstile' && c.sitekey) {
+                        const div = document.createElement('div');
+                        div.className = 'cf-turnstile';
+                        div.setAttribute('data-sitekey', c.sitekey);
+                        wrap.appendChild(div);
+                        const s = document.createElement('script');
+                        s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+                        s.async = true;
+                        s.defer = true;
+                        document.body.appendChild(s);
+                    } else if (c.type === 'image') {
+                        const box = document.createElement('div');
+                        box.className = 'flex items-center space-x-2';
+                        box.innerHTML = `
+                            <input name="captcha" placeholder="请输入验证码" class="mt-1 flex-1 appearance-none rounded-md px-3 py-2 border border-gray-300 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+                            <img id="commentCaptchaImg" src="/captcha/image?ts=${Date.now()}" alt="验证码" class="h-10 w-28 cursor-pointer border border-gray-300 rounded" title="点击刷新" />
+                        `;
+                        wrap.appendChild(box);
+                        box.querySelector('#commentCaptchaImg').addEventListener('click', function () {
+                            this.src = '/captcha/image?ts=' + Date.now();
+                        });
+                    }
+                } catch (_) {
+                }
+            })();
             const postId = {{ post.id }};
             const allowComments = {{ post.allow_comments|default(true) ? 'true' : 'false' }};
 

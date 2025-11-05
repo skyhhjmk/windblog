@@ -151,24 +151,37 @@ class SearchController
                     })->values();
                 }
 
-                // 覆盖结果集与计数，并重新生成分页（保留每页条数）
+                // 覆盖结果集与计数
                 $result['posts'] = $filtered;
                 $result['totalCount'] = count($filtered);
-                $result['pagination'] = PaginationService::generatePagination(
-                    $page,
-                    (int) $result['totalCount'],
-                    (int) ($result['postsPerPage'] ?? BlogService::getPostsPerPage()),
-                    'search.page',
-                    [
-                        'q' => $keyword,
-                        'type' => $type,
-                        'sort' => $sort,
-                        'date' => $date,
-                    ]
-                );
             }
         } catch (Throwable $e) {
             // 过滤过程中出错不影响主流程
+        }
+
+        // AMP 渲染
+        if ($this->isAmpRequest($request)) {
+            $siteUrl = $request->host();
+            // canonical 保留原查询
+            $canonicalUrl = 'https://' . $siteUrl . '/search?q=' . rawurlencode($keyword);
+            $postsPerPage = (int)($result['postsPerPage'] ?? BlogService::getPostsPerPage());
+            $totalCount = (int)($result['totalCount'] ?? 0);
+            $totalPages = max(1, (int)ceil($totalCount / max(1, $postsPerPage)));
+
+            return view('search/index.amp', [
+                'page_title' => "搜索: {$keyword}",
+                'posts' => $result['posts'],
+                'amp_pagination' => [
+                    'current_page' => $page,
+                    'total_pages' => $totalPages,
+                ],
+                'search_keyword' => $keyword,
+                'search_type' => $type,
+                'search_sort' => $sort,
+                'search_date' => $date,
+                'canonical_url' => $canonicalUrl,
+                'request' => $request,
+            ]);
         }
 
         // 获取博客标题
@@ -212,6 +225,15 @@ class SearchController
             'totalCount' => $result['totalCount'] ?? 0,
             'breadcrumbs' => $breadcrumbs,
         ]);
+    }
+
+    protected function isAmpRequest(Request $request): bool
+    {
+        if ($request->get('amp') === '1' || $request->get('amp') === 'true') {
+            return true;
+        }
+        $path = $request->path();
+        return str_starts_with($path, '/amp/');
     }
 
     /**

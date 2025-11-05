@@ -78,6 +78,24 @@ class LinkController
             $links = Link::where('status', 'true')->orderByDesc('id')->forPage($page, $links_per_page)->get();
         }
 
+        // AMP 渲染
+        if ($this->isAmpRequest($request)) {
+            $siteUrl = $request->host();
+            $canonicalUrl = 'https://' . $siteUrl . '/link';
+            $totalPages = max(1, (int)ceil($count / max(1, $links_per_page)));
+
+            return view('link/index.amp', [
+                'page_title' => '链接广场',
+                'links' => $links,
+                'amp_pagination' => [
+                    'current_page' => $page,
+                    'total_pages' => $totalPages,
+                ],
+                'canonical_url' => $canonicalUrl,
+                'request' => $request,
+            ]);
+        }
+
         $isPjax = PJAXHelper::isPJAX($request);
         // 侧边栏（PJAX 与非 PJAX 均获取）
         $sidebar = SidebarService::getSidebarContent($request, 'link');
@@ -164,6 +182,19 @@ class LinkController
         if (!$link->status) {
             return view('error/404', [
                 'message' => '链接已被禁用',
+            ]);
+        }
+
+        // AMP 渲染
+        if ($this->isAmpRequest($request)) {
+            $siteUrl = $request->host();
+            $canonicalUrl = 'https://' . $siteUrl . '/link/info/' . $id;
+
+            return view('link/info.amp', [
+                'link' => $link,
+                'page_title' => htmlspecialchars($link->name, ENT_QUOTES, 'UTF-8') . ' - 链接详情',
+                'canonical_url' => $canonicalUrl,
+                'request' => $request,
             ]);
         }
 
@@ -959,5 +990,14 @@ class LinkController
 
             return json(['code' => 1, 'msg' => '处理请求时发生错误']);
         }
+    }
+
+    protected function isAmpRequest(Request $request): bool
+    {
+        if ($request->get('amp') === '1' || $request->get('amp') === 'true') {
+            return true;
+        }
+        $path = $request->path();
+        return str_starts_with($path, '/amp/');
     }
 }

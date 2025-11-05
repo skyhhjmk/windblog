@@ -7,6 +7,7 @@ use app\model\Post;
 use app\model\Setting;
 use app\model\Tag;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use support\Log;
 use Throwable;
 
@@ -540,10 +541,38 @@ class WidgetService
     {
         return self::getDataWrapper(function () use ($widget) {
             $limit = $widget['params']['count'] ?? 5;
-            $widget['popular_posts'] = Post::where('status', 'published')
-                ->orderBy('views', 'desc')
-                ->take($limit)
-                ->get(['id', 'title', 'slug', 'created_at', 'views']);
+
+            try {
+                $driver = DB::connection()->getDriverName();
+                $query = Post::select('posts.*')
+                    ->leftJoin('post_ext', function ($join) {
+                        $join->on('posts.id', '=', 'post_ext.post_id')
+                            ->where('post_ext.key', '=', 'view_count');
+                    })
+                    ->where('posts.status', 'published');
+
+                if ($driver === 'pgsql') {
+                    $query->orderByRaw("COALESCE((post_ext.value->>'count')::int, 0) DESC");
+                } elseif ($driver === 'mysql') {
+                    $query->orderByRaw("COALESCE(CAST(JSON_UNQUOTE(JSON_EXTRACT(post_ext.value, '$.count')) AS UNSIGNED), 0) DESC");
+                } elseif ($driver === 'sqlite') {
+                    $query->orderByRaw("COALESCE(json_extract(post_ext.value, '$.count') + 0, 0) DESC");
+                } else {
+                    $query->orderBy('posts.created_at', 'desc');
+                }
+
+                $posts = $query->take($limit)->get(['posts.id', 'posts.title', 'posts.slug', 'posts.created_at']);
+
+                foreach ($posts as $p) {
+                    $ext = $p->getExt('view_count');
+                    $p->views = $ext ? (int)(($ext->value['count'] ?? 0)) : 0;
+                }
+
+                $widget['popular_posts'] = $posts;
+            } catch (Throwable $e) {
+                Log::warning('[WidgetService] 热门文章获取失败: ' . $e->getMessage());
+                $widget['popular_posts'] = collect();
+            }
 
             return $widget;
         }, $widget, 'popular_posts', []);

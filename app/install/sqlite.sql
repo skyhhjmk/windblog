@@ -22,14 +22,18 @@ CREATE TABLE IF NOT EXISTS wa_users (
   email_verified_at DATETIME DEFAULT NULL,
   activation_token  TEXT     DEFAULT NULL,
   activation_token_expires_at DATETIME DEFAULT NULL,
+  password_reset_token  TEXT             DEFAULT NULL,
+  password_reset_expire DATETIME         DEFAULT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   role INTEGER NOT NULL DEFAULT 1,
-  status INTEGER NOT NULL DEFAULT 0
+  status                INTEGER NOT NULL DEFAULT 0,
+  timezone              TEXT             DEFAULT 'UTC'
 );
 
 CREATE INDEX IF NOT EXISTS idx_wa_users_email ON wa_users (email);
 CREATE INDEX IF NOT EXISTS idx_wa_users_activation_token ON wa_users (activation_token);
+CREATE INDEX IF NOT EXISTS idx_wa_users_password_reset_token ON wa_users (password_reset_token);
 
 -- 创建用户OAuth绑定表
 CREATE TABLE IF NOT EXISTS user_oauth_bindings
@@ -209,6 +213,37 @@ CREATE TABLE IF NOT EXISTS settings (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+-- 多语言内容表
+-- sqlite 不支持复杂的 schema 注释，直接建表
+CREATE TABLE IF NOT EXISTS i18n_contents
+(
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    entity_type TEXT    NOT NULL,
+    entity_id   INTEGER NOT NULL,
+    field_name  TEXT    NOT NULL,
+    locale      TEXT    NOT NULL,
+    content     TEXT    NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS unique_translation ON i18n_contents (entity_type, entity_id, field_name, locale);
+CREATE INDEX IF NOT EXISTS idx_i18n_entity ON i18n_contents (entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_i18n_locale ON i18n_contents (locale);
+
+-- 语言配置表
+CREATE TABLE IF NOT EXISTS i18n_languages
+(
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    code        TEXT NOT NULL UNIQUE,
+    name        TEXT NOT NULL,
+    native_name TEXT NOT NULL,
+    enabled     INTEGER DEFAULT 1,
+    is_default  INTEGER DEFAULT 0,
+    sort_order  INTEGER DEFAULT 0
+);
+INSERT OR IGNORE INTO i18n_languages (code, name, native_name, enabled, is_default, sort_order)
+VALUES ('zh_CN', 'Simplified Chinese', '简体中文', 1, 1, 0);
+INSERT OR IGNORE INTO i18n_languages (code, name, native_name, enabled, is_default, sort_order)
+VALUES ('en', 'English', 'English', 1, 0, 1);
 
 -- 创建媒体附件表
 CREATE TABLE IF NOT EXISTS media (

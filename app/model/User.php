@@ -66,6 +66,7 @@ class User extends Model
         'money' => 'decimal:2',
         'email_verified_at' => 'datetime',
         'activation_token_expires_at' => 'datetime',
+        'password_reset_expire' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'last_time' => 'datetime',
@@ -103,6 +104,7 @@ class User extends Model
         'password',
         'activation_token',
         'token',
+        'password_reset_token',
     ];
 
     /**

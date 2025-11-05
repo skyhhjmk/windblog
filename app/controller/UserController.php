@@ -2,10 +2,12 @@
 
 namespace app\controller;
 
+use app\annotation\CSRFVerify;
 use app\helper\BreadcrumbHelper;
 use app\model\User;
 use app\model\UserOAuthBinding;
-use app\service\MQService;
+use app\service\CaptchaService;
+use app\service\MailService;
 use app\service\OAuthService;
 use Exception;
 use support\Log;
@@ -43,8 +45,14 @@ class UserController
      * @return Response
      * @throws Throwable
      */
+    #[CSRFVerify(tokenName: '_token', methods: ['POST'])]
     public function register(Request $request): Response
     {
+        // 同步封装的验证码验证（内部使用 http-client，短暂等待，不会长时间阻塞）
+        [$ok, $msg] = CaptchaService::verify($request);
+        if (!$ok) {
+            return json(['code' => 400, 'msg' => $msg]);
+        }
         // 获取注册数据
         $username = trim($request->post('username', ''));
         $email = trim($request->post('email', ''));
@@ -146,8 +154,14 @@ class UserController
      *
      * @return Response
      */
+    #[CSRFVerify(tokenName: '_token', methods: ['POST'])]
     public function login(Request $request): Response
     {
+        [$ok, $msg] = CaptchaService::verify($request);
+        if (!$ok) {
+            return json(['code' => 400, 'msg' => $msg]);
+        }
+
         $username = trim($request->post('username', ''));
         $password = $request->post('password', '');
         $remember = (bool) $request->post('remember', false);
@@ -417,18 +431,148 @@ class UserController
                 </html>
                 HTML;
 
-            // 发送到消息队列
+            // 入队
             $mailData = [
                 'to' => $user->email,
                 'subject' => $subject,
                 'html' => $html,
+                'priority' => 'high',
             ];
 
-            MQService::publishMail($mailData);
+            MailService::enqueue($mailData);
 
             Log::info("Activation email queued for user: {$user->username} ({$user->email})");
         } catch (Throwable $e) {
             Log::error('Failed to queue activation email: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 忘记密码页面
+     */
+    public function forgotPasswordPage(Request $request): Response
+    {
+        $csrf = (new \app\service\CSRFService())->generateToken($request, '_token');
+        return view('user/forgot-password', ['csrf_token' => $csrf]);
+    }
+
+    /**
+     * 提交忘记密码
+     */
+    #[CSRFVerify(tokenName: '_token', methods: ['POST'])]
+    public function forgotPassword(Request $request): Response
+    {
+        $email = trim((string)$request->post('email', ''));
+        if ($email === '') {
+            return json(['code' => 400, 'msg' => '邮箱不能为空']);
+        }
+        // 验证验证码
+        [$ok, $msg] = CaptchaService::verify($request);
+        if (!$ok) {
+            return json(['code' => 400, 'msg' => $msg]);
+        }
+        $user = User::where('email', $email)->first();
+        if ($user) {
+            try {
+                $token = bin2hex(random_bytes(32));
+                $user->password_reset_token = $token;
+                $user->password_reset_expire = utc_now()->addHour();
+                $user->save();
+                $this->sendPasswordResetEmail($user, $token);
+            } catch (Throwable $e) {
+                Log::error('generate reset token failed: ' . $e->getMessage());
+            }
+        }
+        // 统一返回，避免枚举邮箱
+        return json(['code' => 0, 'msg' => '如果该邮箱已注册，我们将发送重置链接至您的邮箱']);
+    }
+
+    /**
+     * 重置密码页面
+     */
+    public function resetPasswordPage(Request $request): Response
+    {
+        $token = (string)$request->get('token', '');
+        if ($token === '') {
+            return view('user/reset-password-error', ['message' => '重置链接无效']);
+        }
+        $user = User::where('password_reset_token', $token)->first();
+        if (!$user || !$user->password_reset_expire || utc_now()->gt($user->password_reset_expire)) {
+            return view('user/reset-password-error', ['message' => '重置链接无效或已过期']);
+        }
+        $csrf = (new \app\service\CSRFService())->generateToken($request, '_token');
+        return view('user/reset-password', ['token' => $token, 'csrf_token' => $csrf]);
+    }
+
+    /**
+     * 提交重置密码
+     */
+    #[CSRFVerify(tokenName: '_token', methods: ['POST'])]
+    public function resetPassword(Request $request): Response
+    {
+        $token = (string)$request->post('token', '');
+        $pwd = (string)$request->post('password', '');
+        $pwd2 = (string)$request->post('password_confirm', '');
+        if ($token === '' || $pwd === '' || $pwd2 === '') {
+            return json(['code' => 400, 'msg' => '参数错误']);
+        }
+        if ($pwd !== $pwd2) {
+            return json(['code' => 400, 'msg' => '两次输入的密码不一致']);
+        }
+        if (strlen($pwd) < 6) {
+            return json(['code' => 400, 'msg' => '密码长度至少为6个字符']);
+        }
+        $user = User::where('password_reset_token', $token)->first();
+        if (!$user || !$user->password_reset_expire || utc_now()->gt($user->password_reset_expire)) {
+            return json(['code' => 400, 'msg' => '重置链接无效或已过期']);
+        }
+        $user->password = password_hash($pwd, PASSWORD_DEFAULT);
+        $user->password_reset_token = null;
+        $user->password_reset_expire = null;
+        $user->save();
+        return json(['code' => 0, 'msg' => '密码重置成功，请使用新密码登录']);
+    }
+
+    private function sendPasswordResetEmail(User $user, string $token): void
+    {
+        try {
+            $resetUrl = request()->host() . '/user/reset-password?token=' . $token;
+            $subject = '重置您的密码';
+            $html = <<<HTML
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>重置密码</title>
+                </head>
+                <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                        <h2 style="color: #4a90e2;">重置您的密码</h2>
+                        <p>您好，{$user->username}！</p>
+                        <p>我们收到了您的密码重置请求。请点击下方按钮重置您的密码：</p>
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="{$resetUrl}"
+                               style="background-color: #4a90e2; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                                重置密码
+                            </a>
+                        </div>
+                        <p>或者复制以下链接到浏览器中打开：</p>
+                        <p style="word-break: break-all; color: #666;">{$resetUrl}</p>
+                        <p style="color: #999; font-size: 14px;">此链接将在1小时后失效。</p>
+                        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+                        <p style="color: #999; font-size: 12px;">如果您没有请求重置密码，请忽略此邮件。</p>
+                    </div>
+                </body>
+                </html>
+                HTML;
+            MailService::enqueue([
+                'to' => $user->email,
+                'subject' => $subject,
+                'html' => $html,
+                'priority' => 'high',
+            ]);
+        } catch (Throwable $e) {
+            Log::error('Failed to enqueue reset email: ' . $e->getMessage());
         }
     }
 

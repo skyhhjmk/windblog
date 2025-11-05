@@ -17,6 +17,7 @@
                 </p>
             </div>
             <form class="mt-8 space-y-6" id="registerForm">
+                <input type="hidden" name="_token" value="{{ csrf_token|default('') }}">
                 <div class="rounded-md shadow-sm space-y-4">
                     <div>
                         <label for="username" class="block text-sm font-medium text-gray-700">
@@ -61,6 +62,9 @@
                                placeholder="请再次输入密码">
                     </div>
                 </div>
+
+                <!-- 验证码区域 -->
+                <div id="captchaWrapper" class="space-y-2"></div>
 
                 <div>
                     <button type="submit" id="submitBtn"
@@ -121,6 +125,41 @@
     </div>
 
     <script>
+        // 加载验证码配置并渲染
+        (async function () {
+            try {
+                const res = await fetch('/captcha/config');
+                const json = await res.json();
+                const c = json && json.data ? json.data : {enabled: false};
+                const wrap = document.getElementById('captchaWrapper');
+                if (!wrap || !c.enabled) return;
+
+                if (c.type === 'turnstile' && c.sitekey) {
+                    const div = document.createElement('div');
+                    div.className = 'cf-turnstile';
+                    div.setAttribute('data-sitekey', c.sitekey);
+                    wrap.appendChild(div);
+                    const s = document.createElement('script');
+                    s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+                    s.async = true;
+                    s.defer = true;
+                    document.body.appendChild(s);
+                } else if (c.type === 'image') {
+                    const box = document.createElement('div');
+                    box.className = 'flex items-center space-x-2';
+                    box.innerHTML = `
+                        <input name="captcha" placeholder="请输入验证码" class="mt-1 flex-1 appearance-none rounded-md px-3 py-2 border border-gray-300 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+                        <img id="captchaImg" src="/captcha/image?ts=${Date.now()}" alt="验证码" class="h-10 w-28 cursor-pointer border border-gray-300 rounded" title="点击刷新" />
+                    `;
+                    wrap.appendChild(box);
+                    box.querySelector('#captchaImg').addEventListener('click', function () {
+                        this.src = '/captcha/image?ts=' + Date.now();
+                    });
+                }
+            } catch (e) { /* 忽略 */
+            }
+        })();
+
         document.getElementById('registerForm').addEventListener('submit', async function (e) {
             e.preventDefault();
 

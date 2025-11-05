@@ -8,7 +8,14 @@
     <link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
     <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
     <title>{% block title %}{{ page_title|default('WindBlog') }}{% endblock %}</title>
-    
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="WindBlog">
+    <link rel="apple-touch-icon" href="/app-images/ios/180.png">
+
     {# AMP 链接标签 #}
     {% block amp_links %}
         {% if amp_url is defined and amp_url %}
@@ -767,6 +774,19 @@
                 </p>
             </div>
             <div class="flex space-x-4">
+                <!-- 语言切换 -->
+                <div class="relative group inline-block">
+                    <button class="text-gray-500 hover:text-blue-600 hover-animate tap-highlight flex items-center">
+                        <i class="fas fa-globe fa-lg"></i>
+                        <span class="ml-1 text-sm">语言</span>
+                    </button>
+                    <div
+                        class="absolute bottom-full mb-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 invisible group-hover:visible transition-all">
+                        <a href="/lang/zh_CN"
+                           class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">简体中文</a>
+                        <a href="/lang/en" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">English</a>
+                    </div>
+                </div>
                 <a href="https://github.com/skyhhjmk/windblog"
                    class="text-gray-500 hover:text-blue-600 hover-animate tap-highlight">
                     <i class="fab fa-github fa-lg"></i>
@@ -786,6 +806,77 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.pjax/2.0.1/jquery.pjax.min.js" crossorigin="anonymous"
         referrerpolicy="no-referrer"></script>
 {% block extra_js %}{% endblock %}
+
+<!-- Service Worker 注册 & 安装提示 -->
+<script>
+    (function () {
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(function (reg) {
+                        console.log('[PWA] SW registered', reg.scope);
+                    })
+                    .catch(function (err) {
+                        console.log('[PWA] SW registration failed', err);
+                    });
+            });
+        }
+        // 自定义安装提示
+        let deferredPrompt = null;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const btn = document.getElementById('pwaInstallBtn');
+            if (btn) btn.style.display = 'flex';
+        });
+        window.addEventListener('appinstalled', () => {
+            const btn = document.getElementById('pwaInstallBtn');
+            if (btn) btn.style.display = 'none';
+            deferredPrompt = null;
+        });
+        window.addEventListener('DOMContentLoaded', function () {
+            const btn = document.getElementById('pwaInstallBtn');
+            if (!btn) return;
+            btn.addEventListener('click', async function () {
+                if (!deferredPrompt) {
+                    // 部分浏览器策略不触发自动提示，此时引导用户使用浏览器菜单添加
+                    alert('若未出现安装对话框，可在浏览器菜单中选择“安装应用”/“添加到主屏幕”。');
+                    return;
+                }
+                deferredPrompt.prompt();
+                const {outcome} = await deferredPrompt.userChoice;
+                if (outcome !== 'accepted') {
+                    console.log('[PWA] install dismissed');
+                }
+                deferredPrompt = null;
+            });
+        });
+    })();
+</script>
+
+<!-- 悬浮安装按钮 -->
+<style>
+    #pwaInstallBtn {
+        position: fixed;
+        right: 16px;
+        bottom: 16px;
+        z-index: 50;
+        display: none;
+        align-items: center;
+        gap: 8px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #fff;
+        padding: 10px 14px;
+        border-radius: 9999px;
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.35);
+        cursor: pointer
+    }
+
+    #pwaInstallBtn:hover {
+        transform: translateY(-2px)
+    }
+</style>
+<div id="pwaInstallBtn"><i class="fas fa-download"></i><span>安装应用</span></div>
 
 <!-- PJAX 初始化 -->
 <script>

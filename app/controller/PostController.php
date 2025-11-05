@@ -6,8 +6,11 @@ use app\annotation\EnableInstantFirstPaint;
 use app\helper\BreadcrumbHelper;
 use app\model\Post;
 use app\service\FloLinkService;
+use app\service\CSRFService;
+use app\service\I18nService;
 use app\service\PJAXHelper;
 use app\service\SidebarService;
+use app\service\markdown\MarkdownService;
 use Exception;
 use support\Log;
 use support\Request;
@@ -32,6 +35,10 @@ class PostController
         // 统一使用 slug 模式，提高性能并降低错误率
         $post = Post::where('slug', $keyword)
             ->where('status', 'published')
+            ->where(function ($q) {
+                $q->whereNull('published_at')
+                    ->orWhere('published_at', '<=', utc_now());
+            })
             ->first();
 
         if (!$post) {
@@ -54,6 +61,18 @@ class PostController
 
         if ($post->visibility === 'public') {
 
+            // 记录浏览量（post_ext:view_count）
+            try {
+                $viewExt = $post->getExt('view_count');
+                $data = $viewExt ? (is_array($viewExt->value) ? $viewExt->value : []) : [];
+                $cnt = (int)($data['count'] ?? 0);
+                $data['count'] = $cnt + 1;
+                $data['updated_at'] = time();
+                $post->setExt('view_count', $data);
+            } catch (\Throwable $e) {
+                Log::warning('记录浏览量失败: ' . $e->getMessage());
+            }
+
             // 生成面包屑导航
             $breadcrumbs = BreadcrumbHelper::forPost($post);
 
@@ -65,6 +84,12 @@ class PostController
                     Log::error('FloLink处理失败: ' . $e->getMessage());
                     // 处理失败时使用原始内容
                 }
+            }
+
+            // 应用多语言翻译（标题/摘要/正文）
+            try {
+                I18nService::applyPostTranslation($post, null, false);
+            } catch (\Throwable $e) {
             }
 
             // AMP请求使用专用渲染
@@ -159,6 +184,7 @@ class PostController
                     'seo' => $seoData,
                     'schema' => $schemaData,
                     'amp_url' => $ampUrl,
+                    'csrf_token' => (new CSRFService())->generateToken($request, '_token'),
                 ],
                 $cacheKey,
                 120,
@@ -271,6 +297,7 @@ class PostController
                         'breadcrumbs' => $breadcrumbs,
                         'seo' => $seoData,
                         'schema' => $schemaData,
+                        'csrf_token' => (new CSRFService())->generateToken($request, '_token'),
                     ],
                     $cacheKey,
                     120,
@@ -329,6 +356,27 @@ class PostController
     {
         $siteUrl = $request->host();
         $postUrl = 'https://' . $siteUrl . '/post/' . $post->slug . '.html';
+
+        // 在 AMP 下将 Markdown 渲染为 HTML，且禁止内联 CSS 注入与包裹容器
+        $ampContent = $post->content ?? '';
+        $contentType = $post->content_type ?? 'markdown';
+        if ($ampContent !== '') {
+            if ($contentType === 'markdown' || $contentType === 'md' || $contentType === null) {
+                $md = new MarkdownService([
+                    'options' => [
+                        // AMP 下移除原始 HTML 以避免不被允许的标签
+                        'html_input' => 'strip',
+                        'allow_unsafe_links' => false,
+                    ],
+                ]);
+                $ampContent = $md->render($ampContent, [
+                    'wrap' => false,
+                    'inject_css' => '',
+                ]);
+            }
+            // 可选：后续如需将 <img> 转换为 <amp-img>，可以在此处做正则替换
+            // 为了保持内容纯净与兼容性，此处先直接输出渲染后的基本 HTML
+        }
 
         // SEO 标题：自定义 > 文章标题
         $seoTitle = !empty($post->seo_title) ? $post->seo_title : $post->title;
@@ -392,6 +440,7 @@ class PostController
             'schema' => $schemaData,
             'canonical_url' => $postUrl,
             'request' => $request,
+            'amp_content' => $ampContent,
         ]);
     }
 }

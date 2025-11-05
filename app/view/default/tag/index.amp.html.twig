@@ -1,0 +1,60 @@
+{% extends "base.amp.html.twig" %}
+
+{% block title %}标签：{{ tag_name }} - {{ page_title|default('WindBlog') }}{% endblock %}
+
+{% block content %}
+    <article class="main-content">
+        {% if breadcrumbs is defined and breadcrumbs|length > 0 %}
+            <nav style="margin-bottom: 1rem; font-size: 0.875rem; color: #6b7280;">
+                {% for item in breadcrumbs %}
+                    {% if not loop.last %}
+                        <a href="{{ item.url ~ (( '?' in item.url ) ? '&' : '?') ~ 'amp=1' }}"
+                           style="color: #667eea; text-decoration: none;">{{ item.name }}</a>
+                        <span> / </span>
+                    {% else %}
+                        <span>{{ item.name }}</span>
+                    {% endif %}
+                {% endfor %}
+            </nav>
+        {% endif %}
+
+        <h1 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 1rem;">标签：{{ tag_name }}</h1>
+
+        {% if posts is defined and posts|length > 0 %}
+            {% for post in posts %}
+                <article class="post-card">
+                    <h2 class="post-title">
+                        <a href="/post/{{ post.slug }}.html?amp=1">{{ post.title }}</a>
+                    </h2>
+                    <div class="post-meta">
+                        {% if post.created_at %}
+                            <span>📅 {{ post.created_at|date('Y-m-d') }}</span>
+                        {% endif %}
+                    </div>
+                    {% if post.excerpt %}
+                        <div class="post-excerpt">{{ post.excerpt|striptags|raw }}</div>
+                    {% endif %}
+                    <a href="/post/{{ post.slug }}.html?amp=1" style="color:#667eea;text-decoration:none;">阅读全文
+                        →</a>
+                </article>
+            {% endfor %}
+
+            {% if amp_pagination is defined and amp_pagination.total_pages > 1 %}
+                <div style="display:flex;justify-content:center;gap:0.5rem;margin-top:1.5rem;">
+                    {% if amp_pagination.current_page > 1 %}
+                        <a href="/tag/{{ tag_slug|url_encode }}/page/{{ amp_pagination.current_page - 1 }}.html?amp=1"
+                           style="padding:.5rem 1rem;background:#667eea;color:#fff;border-radius:4px;text-decoration:none;">←
+                            上一页</a>
+                    {% endif %}
+                    {% if amp_pagination.current_page < amp_pagination.total_pages %}
+                        <a href="/tag/{{ tag_slug|url_encode }}/page/{{ amp_pagination.current_page + 1 }}.html?amp=1"
+                           style="padding:.5rem 1rem;background:#667eea;color:#fff;border-radius:4px;text-decoration:none;">下一页
+                            →</a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        {% else %}
+            <p style="color:#6b7280;">暂无文章</p>
+        {% endif %}
+    </article>
+{% endblock %}

@@ -117,6 +117,13 @@ if (getenv('DB_DEFAULT')) {
         'constructor' => [],
     ];
 
+    // 定时发布处理进程（存在 .env 时注册）
+    $__processes['scheduled_publish_worker'] = [
+        'handler' => app\process\ScheduledPublishWorker::class,
+        'reloadable' => false,
+        'constructor' => [],
+    ];
+
     // AI 摘要生成处理进程（存在 .env 时注册）
     $__processes['ai_summary_worker'] = [
         'handler' => app\process\AiSummaryWorker::class,

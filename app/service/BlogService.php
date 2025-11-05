@@ -3,6 +3,7 @@
 namespace app\service;
 
 use app\model\Post;
+use app\service\I18nService;
 use Illuminate\Support\Collection;
 use League\CommonMark\Environment\Environment;
 use League\CommonMark\Exception\CommonMarkException;
@@ -87,8 +88,12 @@ class BlogService
             }
         }
 
-        // 构建查询
-        $query = Post::where('status', 'published');
+        // 构建查询（仅展示已发布且发布时间不在未来的文章）
+        $query = Post::where('status', 'published')
+            ->where(function ($q) {
+                $q->whereNull('published_at')
+                    ->orWhere('published_at', '<=', utc_now());
+            });
 
         // 处理搜索筛选条件
         if (!empty($filters)) {
@@ -204,6 +209,13 @@ class BlogService
             [],
             10
         );
+
+        // 应用多语言翻译（标题/摘要）
+        try {
+            I18nService::translatePosts($posts);
+        } catch (Throwable $e) {
+            Log::warning('[i18n] translatePosts failed: ' . $e->getMessage());
+        }
 
         // 构建结果数组
         $esMeta = [];

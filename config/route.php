@@ -13,8 +13,8 @@
  * @license   http://www.opensource.org/licenses/mit-license.php MIT License
  */
 
-use app\api\controller\v1\ApiPostController;
 use app\model\UserOAuthBinding;
+use app\service\CSRFService;
 use Webman\Route;
 
 Route::disableDefaultRoute();
@@ -37,7 +37,13 @@ Route::get('/user/register', function () {
     // 获取OAuth配置
     $oauthProviders = UserOAuthBinding::getSupportedProviders();
 
-    return view('user/register', ['oauthProviders' => $oauthProviders]);
+    // 生成CSRF token
+    $csrf = (new CSRFService())->generateToken(request(), '_token');
+
+    return view('user/register', [
+        'oauthProviders' => $oauthProviders,
+        'csrf_token' => $csrf,
+    ]);
 })->name('user.register.page');
 Route::post('/user/register', [app\controller\UserController::class, 'register'])->name('user.register');
 Route::get('/user/login', function () {
@@ -49,16 +55,30 @@ Route::get('/user/login', function () {
     $oauthState = bin2hex(random_bytes(16));
     $session->set('oauth_state', $oauthState);
 
+    // 生成CSRF token
+    $csrf = (new CSRFService())->generateToken(request(), '_token');
+
     return view('user/login', [
         'oauthProviders' => $oauthProviders,
         'oauthState' => $oauthState,
+        'csrf_token' => $csrf,
     ]);
 })->name('user.login.page');
 Route::post('/user/login', [app\controller\UserController::class, 'login'])->name('user.login');
 Route::any('/user/logout', [app\controller\UserController::class, 'logout'])->name('user.logout');
 Route::get('/user/activate', [app\controller\UserController::class, 'activate'])->name('user.activate');
 Route::post('/user/resend-activation', [app\controller\UserController::class, 'resendActivation'])->name('user.resend.activation');
+
+// 验证码路由
+Route::get('/captcha/image', [app\controller\CaptchaController::class, 'image'])->name('captcha.image');
+Route::get('/captcha/config', [app\controller\CaptchaController::class, 'config'])->name('captcha.config');
 Route::get('/user/profile', [app\controller\UserController::class, 'profile'])->name('user.profile');
+
+// 忘记密码 / 重置密码
+Route::get('/user/forgot-password', [app\controller\UserController::class, 'forgotPasswordPage'])->name('user.forgot.password.page');
+Route::post('/user/forgot-password', [app\controller\UserController::class, 'forgotPassword'])->name('user.forgot.password');
+Route::get('/user/reset-password', [app\controller\UserController::class, 'resetPasswordPage'])->name('user.reset.password.page');
+Route::post('/user/reset-password', [app\controller\UserController::class, 'resetPassword'])->name('user.reset.password');
 Route::get('/user/profile/api', [app\controller\UserController::class, 'profileApi'])->name('user.profile.api');
 Route::get('/user/center', [app\controller\UserController::class, 'center'])->name('user.center');
 
@@ -138,14 +158,6 @@ Route::any('/t/{slug}/page/{page}.html', [app\controller\TagController::class, '
 // Rainyun API工具路由
 Route::any('/rainyun', [app\controller\RainyunController::class, 'index'])->name('rainyun.index');
 
-// REST API v1
-/*Route::group('/api/v1', function () {
-    // 文章相关API
-    Route::get('/post/{id}', [ApiPostController::class, 'get']);
-    Route::get('/posts', [ApiPostController::class, 'index']);
-    // 文章内容API（支持 GET 和 POST）
-    Route::any('/post/content/{keyword}', [ApiPostController::class, 'content']);
-});*/
 
 // 友链互联API
 Route::post('/api/wind-connect', [app\controller\LinkController::class, 'windConnect'])->name('wind.connect');
@@ -163,6 +175,9 @@ Route::get('/sitemap/tags.xml', [app\controller\SitemapController::class, 'tags'
 Route::get('/sitemap/archives.xml', [app\controller\SitemapController::class, 'archives'])->name('sitemap.archives');
 Route::get('/g_sitemap', [app\controller\SitemapController::class, 'graphical'])->name('sitemap.graphical');
 Route::get('/g_sitemap.html', [app\controller\SitemapController::class, 'graphical'])->name('sitemap.graphical.html');
+
+// 语言切换
+Route::get('/lang/{code}', [app\controller\LangController::class, 'change'])->name('lang.change');
 
 Route::fallback(function () {
     return view('error/404')->withStatus(404);

@@ -53,7 +53,8 @@
     "league/oauth2-github": "^3.1",
     "league/oauth2-google": "^4.0",
     "webman/event": "^1.0",
-    "webman/log": "^2.1"
+    "webman/log": "^2.1",
+    "workerman/http-client": "^3.0"
   },
   "suggest": {
     "ext-event": "For better performance. "

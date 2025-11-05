@@ -2,9 +2,11 @@
 
 namespace app\controller;
 
+use app\annotation\CSRFVerify;
 use app\model\Comment;
 use app\model\Post;
 use app\model\User;
+use app\service\CaptchaService;
 use Exception;
 use support\Log;
 use support\Request;
@@ -34,8 +36,14 @@ class CommentController
      * @return Response
      * @throws Throwable
      */
+    #[CSRFVerify(tokenName: '_token', methods: ['POST'])]
     public function submit(Request $request, int $postId): Response
     {
+        // 验证验证码
+        [$ok, $msg] = CaptchaService::verify($request);
+        if (!$ok) {
+            return json(['code' => 400, 'msg' => $msg]);
+        }
         // 检查文章是否存在且允许评论
         $post = Post::where('id', $postId)->first();
         if (!$post) {
