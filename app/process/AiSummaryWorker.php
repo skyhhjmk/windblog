@@ -102,10 +102,26 @@ class AiSummaryWorker
         if (class_exists(Timer::class)) {
             Timer::add(1, function () {
                 try {
-                    $this->mqChannel?->wait(null, false, 1.0);
+                    if ($this->mqChannel === null) {
+                        Log::warning('AI summary: channel is null, reconnecting...');
+                        $this->reconnectMq();
+
+                        return;
+                    }
+                    $this->mqChannel->wait(null, false, 1.0);
                 } catch (AMQPTimeoutException $e) { /* noop */
                 } catch (Throwable $e) {
-                    Log::warning('AI wait: ' . $e->getMessage());
+                    $errorMsg = $e->getMessage();
+                    Log::warning('AI wait: ' . $errorMsg);
+
+                    // 检测通道连接断开，触发自愈
+                    if (strpos($errorMsg, 'Channel connection is closed') !== false ||
+                        strpos($errorMsg, 'Broken pipe') !== false ||
+                        strpos($errorMsg, 'connection is closed') !== false ||
+                        strpos($errorMsg, 'on null') !== false) {
+                        Log::warning('AI summary 检测到连接断开，尝试重建连接');
+                        $this->reconnectMq();
+                    }
                 }
             });
         }
@@ -361,5 +377,27 @@ class AiSummaryWorker
         }
         $row->value = array_merge((array) $row->value, $meta);
         $row->save();
+    }
+
+    /**
+     * 重建 MQ 连接（自愈机制）
+     */
+    protected function reconnectMq(): void
+    {
+        try {
+            $this->mqChannel = null;
+
+            // 等待短暂时间后重建
+            usleep(500000); // 0.5秒
+
+            // 重新初始化 MQ 并启动消费者
+            $this->initMq();
+            $this->startConsumer();
+
+            Log::info('AiSummaryWorker MQ连接重建成功');
+        } catch (Throwable $e) {
+            Log::error('AiSummaryWorker MQ连接重建失败: ' . $e->getMessage());
+            $this->mqChannel = null;
+        }
     }
 }

@@ -145,6 +145,16 @@
     </div>
 </script>
 
+<script id="post-featured" type="text/html">
+    {{#if (d.featured == 1) { }}
+    <span class="px-2 py-1 text-xs rounded bg-yellow-100 text-yellow-800 flex items-center justify-center">
+        <i class="layui-icon layui-icon-star-fill" style="color: #FFD700; font-size: 14px;"></i>
+    </span>
+    {{# } else { }}
+    <span class="text-gray-400">-</span>
+    {{# } }}
+</script>
+
 <script type="text/html" id="post-status">
     {{#if (d.status == 'draft') { }}
     <span class="px-2 py-1 text-xs rounded bg-yellow-100 text-yellow-800">草稿</span>
@@ -257,6 +267,13 @@
                     title: '文章标题',
                     field: 'title',
                     align: 'center'
+                },
+                {
+                    title: '精选',
+                    field: 'featured',
+                    align: 'center',
+                    width: 80,
+                    templet: '#post-featured'
                 },
                 {
                     title: '文章状态',

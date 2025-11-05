@@ -22,6 +22,11 @@ use Throwable;
  */
 class SearchController
 {
+    /**
+     * 不需要登录的方法
+     * index: 搜索结果页，公开访问
+     * ajax: AJAX搜索接口，公开访问
+     */
     protected array $noNeedLogin = ['index', 'ajax'];
 
     /**
@@ -283,9 +288,11 @@ class SearchController
                     $degraded = !empty($signals['degraded']);
                     if ($degraded && empty($tags)) {
                         try {
-                            $tagModel = Tag::where('name', 'like', '%' . $keyword . '%')
-                                ->orWhere('slug', 'like', '%' . $keyword . '%')
-                                ->limit(10)->get(['id', 'name', 'slug']);
+                            $kwLower = mb_strtolower($keyword);
+                            $tagModel = Tag::where(function ($q) use ($keyword, $kwLower) {
+                                $q->whereRaw('LOWER(name) like ?', ['%' . $kwLower . '%'])
+                                    ->orWhereRaw('LOWER(slug) like ?', ['%' . $kwLower . '%']);
+                            })->limit(10)->get(['id', 'name', 'slug']);
                             foreach ($tagModel as $t) {
                                 $tags[] = ['id' => (int) $t->id, 'name' => (string) $t->name, 'slug' => (string) $t->slug];
                             }
@@ -307,9 +314,11 @@ class SearchController
                     $degraded = !empty($signals['degraded']);
                     if ($degraded && empty($cats)) {
                         try {
-                            $catModel = Category::where('name', 'like', '%' . $keyword . '%')
-                                ->orWhere('slug', 'like', '%' . $keyword . '%')
-                                ->limit(10)->get(['id', 'name', 'slug']);
+                            $kwLower = mb_strtolower($keyword);
+                            $catModel = Category::where(function ($q) use ($keyword, $kwLower) {
+                                $q->whereRaw('LOWER(name) like ?', ['%' . $kwLower . '%'])
+                                    ->orWhereRaw('LOWER(slug) like ?', ['%' . $kwLower . '%']);
+                            })->limit(10)->get(['id', 'name', 'slug']);
                             foreach ($catModel as $c) {
                                 $cats[] = ['id' => (int) $c->id, 'name' => (string) $c->name, 'slug' => (string) $c->slug];
                             }
@@ -329,9 +338,11 @@ class SearchController
                 // ES未启用：沿用DB模糊匹配
                 if ($type === 'all' || $type === 'tag') {
                     try {
-                        $tagModel = Tag::where('name', 'like', '%' . $keyword . '%')
-                            ->orWhere('slug', 'like', '%' . $keyword . '%')
-                            ->limit(10)->get(['id', 'name', 'slug']);
+                        $kwLower = mb_strtolower($keyword);
+                        $tagModel = Tag::where(function ($q) use ($keyword, $kwLower) {
+                            $q->whereRaw('LOWER(name) like ?', ['%' . $kwLower . '%'])
+                                ->orWhereRaw('LOWER(slug) like ?', ['%' . $kwLower . '%']);
+                        })->limit(10)->get(['id', 'name', 'slug']);
                         foreach ($tagModel as $t) {
                             $mixedItems[] = [
                                 'type' => 'tag',
@@ -345,9 +356,11 @@ class SearchController
                 }
                 if ($type === 'all' || $type === 'category') {
                     try {
-                        $catModel = Category::where('name', 'like', '%' . $keyword . '%')
-                            ->orWhere('slug', 'like', '%' . $keyword . '%')
-                            ->limit(10)->get(['id', 'name', 'slug']);
+                        $kwLower = mb_strtolower($keyword);
+                        $catModel = Category::where(function ($q) use ($keyword, $kwLower) {
+                            $q->whereRaw('LOWER(name) like ?', ['%' . $kwLower . '%'])
+                                ->orWhereRaw('LOWER(slug) like ?', ['%' . $kwLower . '%']);
+                        })->limit(10)->get(['id', 'name', 'slug']);
                         foreach ($catModel as $c) {
                             $mixedItems[] = [
                                 'type' => 'category',

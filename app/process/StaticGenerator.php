@@ -3,6 +3,7 @@
 namespace app\process;
 
 use app\model\Post;
+use app\service\EnhancedStaticCacheConfig;
 use app\service\MQService;
 use MatthiasMullie\Minify\CSS;
 use MatthiasMullie\Minify\JS;
@@ -46,6 +47,13 @@ class StaticGenerator
         // 检查系统是否已安装
         if (!is_installed()) {
             Log::warning('StaticGenerator 检测到系统未安装，已跳过启动');
+
+            return;
+        }
+
+        // 检查静态缓存是否启用
+        if (!EnhancedStaticCacheConfig::isEnabled()) {
+            Log::info('StaticGenerator 检测到静态缓存已关闭，已跳过启动');
 
             return;
         }
@@ -104,14 +112,28 @@ class StaticGenerator
         // 在 worker 循环中轮询消费
         if (class_exists(Timer::class)) {
             Timer::add(1, function () {
-                if ($this->mqChannel) {
-                    try {
-                        // 增大超时时间并忽略超时异常
-                        $this->mqChannel->wait(null, false, 1.0);
-                    } catch (AMQPTimeoutException $e) {
-                        // 无数据到达的正常超时，忽略
-                    } catch (Throwable $e) {
-                        Log::warning('StaticGenerator 消费轮询异常: ' . $e->getMessage());
+                try {
+                    if ($this->mqChannel === null) {
+                        Log::warning('StaticGenerator: channel is null, reconnecting...');
+                        $this->reconnectMq();
+
+                        return;
+                    }
+                    // 增大超时时间并忽略超时异常
+                    $this->mqChannel->wait(null, false, 1.0);
+                } catch (AMQPTimeoutException $e) {
+                    // 无数据到达的正常超时，忽略
+                } catch (Throwable $e) {
+                    $errorMsg = $e->getMessage();
+                    Log::warning('StaticGenerator 消费轮询异常: ' . $errorMsg);
+
+                    // 检测通道连接断开，触发自愈
+                    if (strpos($errorMsg, 'Channel connection is closed') !== false ||
+                        strpos($errorMsg, 'Broken pipe') !== false ||
+                        strpos($errorMsg, 'connection is closed') !== false ||
+                        strpos($errorMsg, 'on null') !== false) {
+                        Log::warning('StaticGenerator 检测到连接断开，尝试重建连接');
+                        $this->reconnectMq();
                     }
                 }
             });
@@ -177,19 +199,45 @@ class StaticGenerator
     protected function generateByUrl(string $url, bool $force = false, ?string $jobId = null): void
     {
         $path = parse_url($url, PHP_URL_PATH) ?: '/';
+
+        // 确保进度初始化（仅当不存在时）
+        $progressKey = $jobId ? 'static_progress_' . $jobId : null;
+        $shouldFinish = false;
+
         if ($jobId) {
-            $this->progressStart($jobId, 'url', 1);
+            $existing = cache($progressKey);
+            if (!$existing) {
+                // 单URL任务，自动初始化并在结束时finish
+                $this->progressStart($jobId, 'url', 1);
+                $shouldFinish = true;
+            }
         }
+
         [$code, $body] = $this->httpFetch($path);
         $this->writeHtml($path, $code, $body, $force);
+
         if ($jobId) {
-            $this->progressTick($jobId, 1, $path);
-            $this->progressFinish($jobId);
+            // warmup任务由Controller初始化，这里只递增
+            $data = cache($progressKey);
+            if ($data && ($data['scope'] ?? '') === 'warmup') {
+                $this->progressTick($jobId, 0, $path, true);
+                // 检查是否全部完成
+                $updated = cache($progressKey);
+                if ($updated && ($updated['current'] ?? 0) >= ($updated['total'] ?? 0)) {
+                    $this->progressFinish($jobId);
+                }
+            } else {
+                // 单URL任务
+                $this->progressTick($jobId, 1, $path, false);
+                if ($shouldFinish) {
+                    $this->progressFinish($jobId);
+                }
+            }
         }
     }
 
     // 生成：按范围（带进度）
-    protected function generateByScope(string $scope, int $pages = 1, bool $force = false, ?string $jobId = null): void
+    protected function generateByScope(string $scope, int $pages = 1, bool $force = false, ?string $jobId = null, bool $skipProgress = false): void
     {
         // 估算总数
         $total = 0;
@@ -205,7 +253,9 @@ class StaticGenerator
                 + (int) Post::where('status', 'published')->count('*')
                 + 1; // /search
         }
-        if ($jobId) {
+
+        // 仅在非子任务时初始化进度
+        if ($jobId && !$skipProgress) {
             $this->progressStart($jobId, $scope, $total);
         }
 
@@ -218,7 +268,7 @@ class StaticGenerator
                     $this->writeHtml($path, $code, $body, $force);
                     $done++;
                     if ($jobId) {
-                        $this->progressTick($jobId, $done, $path);
+                        $this->progressTick($jobId, $done, $path, $skipProgress);
                     }
                 }
                 $path = '/';
@@ -226,7 +276,7 @@ class StaticGenerator
                 $this->writeHtml($path, $code, $body, $force);
                 $done++;
                 if ($jobId) {
-                    $this->progressTick($jobId, $done, $path);
+                    $this->progressTick($jobId, $done, $path, $skipProgress);
                 }
                 break;
             case 'list':
@@ -236,7 +286,7 @@ class StaticGenerator
                     $this->writeHtml($path, $code, $body, $force);
                     $done++;
                     if ($jobId) {
-                        $this->progressTick($jobId, $done, $path);
+                        $this->progressTick($jobId, $done, $path, $skipProgress);
                     }
                 }
                 $path = '/link';
@@ -244,7 +294,7 @@ class StaticGenerator
                 $this->writeHtml($path, $code, $body, $force);
                 $done++;
                 if ($jobId) {
-                    $this->progressTick($jobId, $done, $path);
+                    $this->progressTick($jobId, $done, $path, $skipProgress);
                 }
                 break;
             case 'post':
@@ -256,32 +306,34 @@ class StaticGenerator
                     $this->writeHtml($path, $code, $body, $force);
                     $done++;
                     if ($jobId) {
-                        $this->progressTick($jobId, $done, $path);
+                        $this->progressTick($jobId, $done, $path, $skipProgress);
                     }
                 }
                 break;
             case 'all':
-                $this->generateByScope('index', $pages, $force, $jobId);
-                $this->generateByScope('list', $pages, $force, $jobId);
-                $this->generateByScope('post', $pages, $force, $jobId);
+                // 子任务不再单独管理进度，直接累加到总进度
+                $this->generateByScope('index', $pages, $force, $jobId, true);
+                $this->generateByScope('list', $pages, $force, $jobId, true);
+                $this->generateByScope('post', $pages, $force, $jobId, true);
                 $path = '/search';
                 [$code, $body] = $this->httpFetch($path);
                 $this->writeHtml($path, $code, $body, $force);
                 $done++;
                 if ($jobId) {
-                    $this->progressTick($jobId, $done, $path);
+                    $this->progressTick($jobId, $done, $path, true);
                 }
                 break;
             default:
                 Log::warning('未知静态化范围: ' . $scope);
         }
 
-        if ($jobId) {
+        // 仅在非子任务时结束进度
+        if ($jobId && !$skipProgress) {
             $this->progressFinish($jobId);
         }
     }
 
-    protected function writeHtml(string $urlPath, int $code, string $body, bool $force = false): void
+    protected function writeHtml(string $urlPath, int $code, string $body, bool $force = false, array $options = []): void
     {
         if ($code !== 200) {
             Log::warning("渲染非200，跳过: {$urlPath}, code={$code}");
@@ -289,14 +341,28 @@ class StaticGenerator
             return;
         }
 
-        // 按策略决定是否做JS/CSS压缩替换（若库缺失则自动跳过）
+        // 按策略决定是否做 JS/CSS 压缩替换（若库缺失则自动跳过）
         $body = $this->maybeMinifyHtml($urlPath, $body);
 
         $target = $this->mapPath($urlPath);
 
+        // 获取缓存版本和策略
+        $version = EnhancedStaticCacheConfig::getCacheVersion();
+        $strategy = EnhancedStaticCacheConfig::getCacheStrategy($urlPath);
+        $strategyType = $strategy['type'] ?? 'public';
+
+        // 生成缓存键(使用虚拟 request)
+        $mockRequest = new \stdClass();
+        $mockRequest->path = function () use ($urlPath) { return $urlPath; };
+        $cacheKey = EnhancedStaticCacheConfig::getCacheKey($urlPath, $strategy, $mockRequest);
+
+        // 使用版本化目录结构
+        $versionDir = substr($cacheKey, 0, 8);
+        $baseDir = public_path() . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'static';
+
         // 目录：正式与临时
-        $final = public_path() . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'static' . DIRECTORY_SEPARATOR . $target;
-        $stage = public_path() . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'static_tmp' . DIRECTORY_SEPARATOR . $target;
+        $final = $baseDir . DIRECTORY_SEPARATOR . $versionDir . DIRECTORY_SEPARATOR . $target;
+        $stage = public_path() . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'static_tmp' . DIRECTORY_SEPARATOR . $versionDir . DIRECTORY_SEPARATOR . $target;
 
         // 确保目录存在
         $finalDir = dirname($final);
@@ -325,10 +391,13 @@ class StaticGenerator
         if (file_exists($final)) {
             @unlink($final);
         }
-        // 跨目录移动（同盘rename即为移动）
+        // 跨目录移动（同盘 rename 即为移动）
         @rename($stage, $final);
 
-        Log::info("静态页面生成(临时->正式，逐页替换): {$final}");
+        // 记录缓存生成
+        EnhancedStaticCacheConfig::recordCacheGenerated();
+
+        Log::info("静态页面生成(v{$version}, {$strategyType}): {$final}");
     }
 
     /**
@@ -569,11 +638,16 @@ class StaticGenerator
     }
 
     // 进度：步进
-    protected function progressTick(string $jobId, int $current, string $path): void
+    protected function progressTick(string $jobId, int $current, string $path, bool $increment = false): void
     {
         $key = 'static_progress_' . $jobId;
         $data = cache($key) ?: [];
-        $data['current'] = $current;
+        // increment=true 时递增，false 时直接设置
+        if ($increment) {
+            $data['current'] = ($data['current'] ?? 0) + 1;
+        } else {
+            $data['current'] = $current;
+        }
         $data['updated_at'] = time();
         $data['current_path'] = $path;
         // 步进更新，刷新TTL
@@ -585,6 +659,12 @@ class StaticGenerator
     {
         $key = 'static_progress_' . $jobId;
         $data = cache($key) ?: [];
+
+        // 防止重复结束
+        if (isset($data['status']) && $data['status'] === 'finished') {
+            return;
+        }
+
         $data['status'] = 'finished';
         $data['finished_at'] = time();
         $data['updated_at'] = time();
@@ -594,22 +674,107 @@ class StaticGenerator
         // 写入历史列表（保留最近10条）
         $histKey = 'static_progress_history';
         $history = cache($histKey) ?: [];
-        $summary = [
-            'job_id' => $data['job_id'] ?? $jobId,
-            'scope' => $data['scope'] ?? '',
-            'total' => $data['total'] ?? 0,
-            'finished_at' => $data['finished_at'] ?? time(),
-            'duration' => isset($data['started_at']) ? (($data['finished_at'] ?? time()) - $data['started_at']) : null,
-            'status' => $data['status'] ?? 'finished',
-        ];
-        // 将最新记录插入列表头部
-        array_unshift($history, $summary);
-        // 仅保留最近10条
-        if (count($history) > 10) {
-            $history = array_slice($history, 0, 10);
+
+        // 检查是否已存在该任务ID（防止重复添加）
+        $exists = false;
+        foreach ($history as $item) {
+            if (($item['job_id'] ?? '') === $jobId) {
+                $exists = true;
+                break;
+            }
         }
-        // 历史列表保留时长更久（1小时）
-        cache($histKey, $history, true, 3600);
+
+        if (!$exists) {
+            $summary = [
+                'job_id' => $data['job_id'] ?? $jobId,
+                'scope' => $data['scope'] ?? '',
+                'total' => $data['total'] ?? 0,
+                'finished_at' => $data['finished_at'] ?? time(),
+                'duration' => isset($data['started_at']) ? (($data['finished_at'] ?? time()) - $data['started_at']) : null,
+                'status' => $data['status'] ?? 'finished',
+            ];
+            // 将最新记录插入列表头部
+            array_unshift($history, $summary);
+            // 仅保留最近10条
+            if (count($history) > 10) {
+                $history = array_slice($history, 0, 10);
+            }
+            // 历史列表保留时长更久（1小时）
+            cache($histKey, $history, true, 3600);
+        }
+
+        // 清理临时目录
+        $this->cleanupTempDirectory();
+    }
+
+    /**
+     * 重建 MQ 连接（自愈机制）
+     */
+    protected function reconnectMq(): void
+    {
+        try {
+            $this->mqChannel = null;
+            $this->mqConnection = null;
+
+            // 等待短暂时间后重建
+            usleep(500000); // 0.5秒
+
+            // 重新初始化 MQ 并启动消费者
+            $this->initMq();
+            $this->startConsumer();
+
+            Log::info('StaticGenerator MQ连接重建成功');
+        } catch (Throwable $e) {
+            Log::error('StaticGenerator MQ连接重建失败: ' . $e->getMessage());
+            $this->mqChannel = null;
+            $this->mqConnection = null;
+        }
+    }
+
+    /**
+     * 清理临时目录
+     */
+    protected function cleanupTempDirectory(): void
+    {
+        try {
+            $tmpDir = public_path() . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'static_tmp';
+            if (is_dir($tmpDir)) {
+                $this->deleteDirectory($tmpDir);
+                Log::info('StaticGenerator 临时目录已清理: ' . $tmpDir);
+            }
+        } catch (Throwable $e) {
+            Log::warning('StaticGenerator 临时目录清理失败: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 递归删除目录
+     */
+    protected function deleteDirectory(string $dir): bool
+    {
+        if (!is_dir($dir)) {
+            return false;
+        }
+
+        $items = @scandir($dir);
+        if ($items === false) {
+            return false;
+        }
+
+        foreach ($items as $item) {
+            if ($item === '.' || $item === '..') {
+                continue;
+            }
+
+            $path = $dir . DIRECTORY_SEPARATOR . $item;
+            if (is_dir($path)) {
+                $this->deleteDirectory($path);
+            } else {
+                @unlink($path);
+            }
+        }
+
+        return @rmdir($dir);
     }
 
     public function onWorkerStop(): void

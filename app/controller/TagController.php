@@ -15,6 +15,11 @@ use support\Response;
 
 class TagController
 {
+    /**
+     * 不需要登录的方法
+     * index: 标签文章列表页，公开访问
+     * list: 全部标签汇总页，公开访问
+     */
     protected array $noNeedLogin = ['index', 'list'];
 
     #[EnableInstantFirstPaint]
@@ -24,6 +29,9 @@ class TagController
         if (is_string($slug) && str_ends_with($slug, '.html')) {
             $slug = substr($slug, 0, -5);
         }
+
+        // URL解码 slug
+        $slug = urldecode($slug);
 
         // 解析排序
         $sort = $request->get('sort', 'latest');

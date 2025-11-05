@@ -36,13 +36,20 @@ class PaginationService
         $paginationHtml .= '<div class="flex space-x-1 mb-4">';
 
         // 上一页按钮
-        $prevDisabled = ($currentPage <= 1) ? 'pointer-events-none opacity-50' : '';
         $prevRouteParams = $routeParams;
-        $prevRouteParams['page'] = $currentPage - 1;
-        $paginationHtml .= '<a class="flex items-center justify-center w-10 h-10 rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 ' . $prevDisabled . '" href="' . (($currentPage > 1) ? route($routeName, $prevRouteParams) : 'javascript:void(0)') . '">';
-        $paginationHtml .= '<span class="sr-only">上一页</span>';
-        $paginationHtml .= '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>';
-        $paginationHtml .= '</a>';
+        $prevRouteParams['page'] = max(1, $currentPage - 1);
+        if ($currentPage <= 1) {
+            // 已在第一页，使用 span 替代 a 标签，避免 SEO 问题
+            $paginationHtml .= '<span class="flex items-center justify-center w-10 h-10 rounded-md border border-gray-300 bg-white text-gray-400 pointer-events-none opacity-50" aria-disabled="true">';
+            $paginationHtml .= '<span class="sr-only">上一页</span>';
+            $paginationHtml .= '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>';
+            $paginationHtml .= '</span>';
+        } else {
+            $paginationHtml .= '<a class="flex items-center justify-center w-10 h-10 rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50" href="' . route($routeName, $prevRouteParams) . '" rel="prev">';
+            $paginationHtml .= '<span class="sr-only">上一页</span>';
+            $paginationHtml .= '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>';
+            $paginationHtml .= '</a>';
+        }
 
         // 智能页码显示逻辑
         if ($totalPages <= $maxDisplayPages) {
@@ -102,13 +109,20 @@ class PaginationService
         }
 
         // 下一页按钮
-        $nextDisabled = ($currentPage >= $totalPages) ? 'pointer-events-none opacity-50' : '';
         $nextRouteParams = $routeParams;
-        $nextRouteParams['page'] = $currentPage + 1;
-        $paginationHtml .= '<a class="flex items-center justify-center w-10 h-10 rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 ' . $nextDisabled . '" href="' . (($currentPage < $totalPages) ? route($routeName, $nextRouteParams) : 'javascript:void(0)') . '">';
-        $paginationHtml .= '<span class="sr-only">下一页</span>';
-        $paginationHtml .= '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>';
-        $paginationHtml .= '</a>';
+        $nextRouteParams['page'] = min($totalPages, $currentPage + 1);
+        if ($currentPage >= $totalPages) {
+            // 已在最后一页，使用 span 替代 a 标签，避免 SEO 问题
+            $paginationHtml .= '<span class="flex items-center justify-center w-10 h-10 rounded-md border border-gray-300 bg-white text-gray-400 pointer-events-none opacity-50" aria-disabled="true">';
+            $paginationHtml .= '<span class="sr-only">下一页</span>';
+            $paginationHtml .= '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>';
+            $paginationHtml .= '</span>';
+        } else {
+            $paginationHtml .= '<a class="flex items-center justify-center w-10 h-10 rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50" href="' . route($routeName, $nextRouteParams) . '" rel="next">';
+            $paginationHtml .= '<span class="sr-only">下一页</span>';
+            $paginationHtml .= '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>';
+            $paginationHtml .= '</a>';
+        }
 
         $paginationHtml .= '</div>';
 

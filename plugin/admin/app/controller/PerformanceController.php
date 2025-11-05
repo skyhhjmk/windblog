@@ -73,6 +73,23 @@ class PerformanceController extends Base
                         try {
                             $info = $redis->info();
                             if (is_array($info)) {
+                                // 检测是否为集群模式
+                                $clusterEnabled = false;
+                                $clusterInfo = [];
+                                try {
+                                    $clusterInfoRaw = $redis->info('cluster');
+                                    if (isset($clusterInfoRaw['cluster_enabled']) && $clusterInfoRaw['cluster_enabled'] == 1) {
+                                        $clusterEnabled = true;
+                                        $clusterInfo = [
+                                            'cluster_enabled' => true,
+                                            'cluster_state' => $clusterInfoRaw['cluster_state'] ?? 'unknown',
+                                            'cluster_size' => $clusterInfoRaw['cluster_size'] ?? 0,
+                                        ];
+                                    }
+                                } catch (Throwable $e) {
+                                    // 非集群模式
+                                }
+
                                 $currentStats = [
                                     't' => date('Y-m-d H:i:s'),
                                     'version' => $info['redis_version'] ?? '',
@@ -81,6 +98,8 @@ class PerformanceController extends Base
                                     'instantaneous_ops_per_sec' => $info['instantaneous_ops_per_sec'] ?? 0,
                                     'keys' => 0,
                                     'keys_method' => '直接获取',
+                                    'cluster_enabled' => $clusterEnabled,
+                                    'cluster_info' => $clusterInfo,
                                 ];
                                 $snapshot = json_encode($currentStats);
                             }

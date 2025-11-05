@@ -24,8 +24,6 @@ class ElasticController extends Base
 {
     protected $noNeedLogin = [];
 
-    protected array $noNeedRight = [];
-
     public function index(Request $request): Response
     {
         // 纯HTML视图，使用AJAX获取配置

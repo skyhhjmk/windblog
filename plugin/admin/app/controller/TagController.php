@@ -3,6 +3,8 @@
 namespace plugin\admin\app\controller;
 
 use app\model\Tag;
+use app\service\SlugTranslateService;
+use Exception;
 use support\Log;
 use support\Request;
 use support\Response;
@@ -101,8 +103,15 @@ class TagController extends Base
             return $this->fail('标签名称不能为空');
         }
 
+        // 如果slug为空，使用翻译服务自动生成
         if (empty($data['slug'])) {
-            return $this->fail('标签别名不能为空');
+            $slugService = new SlugTranslateService();
+            $data['slug'] = $slugService->translate($data['name']);
+
+            // 如果翻译失败，返回错误
+            if (empty($data['slug'])) {
+                return $this->fail('标签别名生成失败，请手动输入');
+            }
         }
 
         // 检查别名是否已存在
@@ -118,7 +127,7 @@ class TagController extends Base
             $tag->save();
 
             return $this->success('创建成功');
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('创建标签失败: ' . $e->getMessage());
 
             return $this->fail('创建失败');
@@ -147,8 +156,15 @@ class TagController extends Base
             return $this->fail('标签名称不能为空');
         }
 
+        // 如果slug为空，使用翻译服务自动生成
         if (empty($data['slug'])) {
-            return $this->fail('标签别名不能为空');
+            $slugService = new SlugTranslateService();
+            $data['slug'] = $slugService->translate($data['name']);
+
+            // 如果翻译失败，返回错误
+            if (empty($data['slug'])) {
+                return $this->fail('标签别名生成失败，请手动输入');
+            }
         }
 
         // 检查别名是否已被其他标签使用
@@ -163,7 +179,7 @@ class TagController extends Base
             $tag->save();
 
             return $this->success('更新成功');
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('更新标签失败: ' . $e->getMessage());
 
             return $this->fail('更新失败');

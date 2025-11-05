@@ -68,8 +68,9 @@ class PostsController extends Base
         // 获取总数
         $total = $query->count();
 
-        // 排序和分页
-        $list = $query->orderBy($order, $sort)
+        // 排序和分页 - 精选文章置顶
+        $list = $query->orderByDesc('featured')
+            ->orderBy($order, $sort)
             ->forPage($page, $limit)
             ->get()
             ->toArray();

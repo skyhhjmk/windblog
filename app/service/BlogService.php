@@ -98,35 +98,27 @@ class BlogService
                         if (!empty($value)) {
                             // 安全地转义搜索词，防止 SQL 注入
                             $searchTerm = (string) $value;
-                            $query->where(function ($q) use ($searchTerm) {
-                                $q->where('title', 'like', '%' . addcslashes($searchTerm, '%_\\') . '%')
-                                    ->orWhere('content', 'like', '%' . addcslashes($searchTerm, '%_\\') . '%')
-                                    ->orWhere('excerpt', 'like', '%' . addcslashes($searchTerm, '%_\\') . '%');
+                            $searchTermLower = mb_strtolower(addcslashes($searchTerm, '%_\\'));
+                            $query->where(function ($q) use ($searchTermLower) {
+                                $q->whereRaw('LOWER(title) like ?', ['%' . $searchTermLower . '%'])
+                                    ->orWhereRaw('LOWER(content) like ?', ['%' . $searchTermLower . '%'])
+                                    ->orWhereRaw('LOWER(excerpt) like ?', ['%' . $searchTermLower . '%']);
                             });
                         }
                         break;
                     case 'category':
                         if (!empty($value)) {
-                            // 支持按分类ID或slug过滤（多对多关系）
+                            // 统一使用 slug 过滤，提高性能并降低错误率
                             $query->whereHas('categories', function ($q) use ($value) {
-                                if (is_numeric($value)) {
-                                    $q->where('categories.id', (int) $value);
-                                } else {
-                                    $q->where('categories.slug', (string) $value)
-                                        ->orWhere('categories.name', (string) $value);
-                                }
+                                $q->where('categories.slug', (string) $value);
                             });
                         }
                         break;
                     case 'tag':
                         if (!empty($value)) {
+                            // 统一使用 slug 过滤，提高性能并降低错误率
                             $query->whereHas('tags', function ($q) use ($value) {
-                                if (is_numeric($value)) {
-                                    $q->where('tags.id', (int) $value);
-                                } else {
-                                    $q->where('tags.slug', (string) $value)
-                                        ->orWhere('tags.name', (string) $value);
-                                }
+                                $q->where('tags.slug', (string) $value);
                             });
                         }
                         break;
@@ -174,17 +166,17 @@ class BlogService
             // 获取文章列表并预加载作者信息
             if (!empty($filters['search'])) {
                 // 安全地处理搜索词，防止 SQL 注入
-                $searchTerm = '%' . addcslashes((string) $filters['search'], '%_\\') . '%';
+                $searchTerm = '%' . mb_strtolower(addcslashes((string) $filters['search'], '%_\\')) . '%';
                 $query = $query->orderByRaw(
-                    'CASE WHEN title LIKE ? THEN 0 WHEN excerpt LIKE ? THEN 1 WHEN content LIKE ? THEN 2 ELSE 3 END',
+                    'CASE WHEN LOWER(title) LIKE ? THEN 0 WHEN LOWER(excerpt) LIKE ? THEN 1 WHEN LOWER(content) LIKE ? THEN 2 ELSE 3 END',
                     [$searchTerm, $searchTerm, $searchTerm]
                 );
             }
 
             if ($sort === 'hot') {
-                $query = $query->withCount('comments')->orderByDesc('comments_count')->orderByDesc('id');
+                $query = $query->withCount('comments')->orderByDesc('featured')->orderByDesc('comments_count')->orderByDesc('id');
             } else {
-                $query = $query->orderByDesc('id');
+                $query = $query->orderByDesc('featured')->orderByDesc('id');
             }
 
             $posts = $query

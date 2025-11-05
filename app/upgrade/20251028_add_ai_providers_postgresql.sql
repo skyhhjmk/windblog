@@ -24,23 +24,6 @@ COMMENT ON COLUMN ai_providers.enabled IS '是否启用';
 CREATE INDEX IF NOT EXISTS idx_ai_providers_enabled ON ai_providers (enabled);
 CREATE INDEX IF NOT EXISTS idx_ai_providers_template ON ai_providers (template);
 
--- 创建更新时间触发器
-CREATE OR REPLACE FUNCTION update_ai_providers_updated_at()
-    RETURNS TRIGGER AS
-$$
-BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-DROP TRIGGER IF EXISTS trigger_ai_providers_updated_at ON ai_providers;
-CREATE TRIGGER trigger_ai_providers_updated_at
-    BEFORE UPDATE
-    ON ai_providers
-    FOR EACH ROW
-EXECUTE FUNCTION update_ai_providers_updated_at();
-
 -- 为现有的 provider_id 创建对应的 ai_providers 记录
 INSERT INTO ai_providers (id, name, template, type, config, weight, enabled)
 SELECT DISTINCT provider_id,

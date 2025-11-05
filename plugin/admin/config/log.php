@@ -27,7 +27,7 @@ $dsn = getenv('LOGSTASH_DSN') ?: '';
 $hostEnv = getenv('LOGSTASH_HOST') ?: 'logstash';
 
 $inContainerEnv = getenv('IN_CONTAINER');
-$inContainer = $inContainerEnv === false ? true : in_array(strtolower(trim($inContainerEnv)), ['true', '1', 'yes'], true);
+$inContainer = $inContainerEnv === false || in_array(strtolower(trim($inContainerEnv)), ['true', '1', 'yes'], true);
 
 $resolvedDsn = '';
 if ($enableLogstash) {

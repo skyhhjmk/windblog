@@ -7,6 +7,7 @@ use app\model\Media;
 use app\model\Post;
 use app\service\CacheService;
 use app\service\MediaLibraryService;
+use app\service\SlugTranslateService;
 use Exception;
 use support\Db;
 use support\Log;
@@ -64,6 +65,10 @@ class EditorController
         $authors = $request->post('authors', []);
         $categories = $request->post('categories', []);
         $tags = $request->post('tags', []);
+        // SEO 字段
+        $seo_title = $request->post('seo_title', '');
+        $seo_description = $request->post('seo_description', '');
+        $seo_keywords = $request->post('seo_keywords', '');
         // AI 摘要相关字段现在通过单独的保存摘要接口处理
 
         // 验证输入
@@ -90,6 +95,9 @@ class EditorController
             'visibility' => $visibility,
             'allow_comments' => $allow_comments ? 1 : 0,
             'featured' => $featured ? 1 : 0,
+            'seo_title' => $seo_title ?: null,
+            'seo_description' => $seo_description ?: null,
+            'seo_keywords' => $seo_keywords ?: null,
             'updated_at' => utc_now_string('Y-m-d H:i:s'),
         ];
         // AI摘要相关字段通过单独的保存接口处理，不在此更新
@@ -208,6 +216,15 @@ class EditorController
             }
 
             // 处理分类关联
+            Log::info('EditorController::save - 分类数据', ['categories' => $categories]);
+
+            // 过滤null值
+            if (is_array($categories)) {
+                $categories = array_filter($categories, function ($cat) {
+                    return $cat !== null && $cat !== '';
+                });
+            }
+
             if (!empty($categories) && is_array($categories)) {
                 // 删除现有的分类关联
                 Db::table('post_category')->where('post_id', $post_id)->delete();
@@ -243,7 +260,14 @@ class EditorController
                                 ];
                             } else {
                                 // 不存在，创建新分类
-                                $slug = !empty($category['slug']) ? $category['slug'] : $this->generateSlug($category['name']);
+                                // 使用SlugTranslateService生成slug
+                                if (!empty($category['slug'])) {
+                                    $slug = $category['slug'];
+                                } else {
+                                    $slugService = new SlugTranslateService();
+                                    $slug = $slugService->translate($category['name']) ?? $this->generateSlug($category['name']);
+                                }
+
                                 $newCategoryId = Db::table('categories')->insertGetId([
                                     'name' => $category['name'],
                                     'slug' => $slug,
@@ -270,6 +294,13 @@ class EditorController
             }
 
             // 处理标签关联
+            // 过滤null值
+            if (is_array($tags)) {
+                $tags = array_filter($tags, function ($tag) {
+                    return $tag !== null && $tag !== '';
+                });
+            }
+
             if (!empty($tags) && is_array($tags)) {
                 // 删除现有的标签关联
                 Db::table('post_tag')->where('post_id', $post_id)->delete();
@@ -296,8 +327,10 @@ class EditorController
                                     'tag_id' => $existingTag->id,
                                 ];
                             } else {
-                                // 创建新标签
-                                $slug = $this->generateSlug($tagName);
+                                // 创建新标签，使用SlugTranslateService生成slug
+                                $slugService = new SlugTranslateService();
+                                $slug = $slugService->translate($tagName) ?? $this->generateSlug($tagName);
+
                                 $newTagId = Db::table('tags')->insertGetId([
                                     'name' => $tagName,
                                     'slug' => $slug,
@@ -629,6 +662,9 @@ class EditorController
                 'published_at' => $post->published_at,
                 'created_at' => $post->created_at,
                 'updated_at' => $post->updated_at,
+                'seo_title' => $post->seo_title ?? '',
+                'seo_description' => $post->seo_description ?? '',
+                'seo_keywords' => $post->seo_keywords ?? '',
                 'authors' => $post->authors ? $post->authors->toArray() : [],
                 'categories' => $post->categories ? $post->categories->toArray() : [],
                 'tags' => $post->tags ? $post->tags->toArray() : [],

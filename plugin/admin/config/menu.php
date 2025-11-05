@@ -195,14 +195,6 @@ return [
                 'type' => 1,
                 'weight' => 480,
             ],
-
-            [
-                'title' => '短信设置',
-                'key' => 'plugin\\sms\\app\\admin\\controller\\SettingController',
-                'href' => '/app/sms/admin/setting',
-                'type' => 1,
-                'weight' => 0,
-            ],
             [
                 'title' => '邮件',
                 'key' => 'mail',

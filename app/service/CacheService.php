@@ -40,8 +40,8 @@ class CacheService
             $cacheDriver = 'memory';
         }
 
-        // 统一初始化前缀
-        self::$prefix = getenv('CACHE_PREFIX') ?: '';
+        // 统一初始化前缀（设置默认前缀以支持模式匹配的缓存清除）
+        self::$prefix = getenv('CACHE_PREFIX') ?: 'blog_';
 
         // 如果不是在回退模式，且驱动没有失败，则返回现有处理器
         if (self::$handler !== null && !self::$fallbackMode &&
@@ -108,9 +108,19 @@ class CacheService
                 return new class () {
                     private $redis;
 
+                    private $isCluster = false;
+
                     public function __construct()
                     {
                         $this->redis = Redis::connection('cache');
+
+                        // 检测是否为集群模式
+                        try {
+                            $info = $this->redis->info('cluster');
+                            $this->isCluster = isset($info['cluster_enabled']) && $info['cluster_enabled'] == 1;
+                        } catch (\Exception $e) {
+                            $this->isCluster = false;
+                        }
                     }
 
                     public function get(string $key)
@@ -846,9 +856,9 @@ class CacheService
      */
     public static function prefixKey(string $key): string
     {
-        // 如果静态前缀为空，尝试从环境变量获取
-        if (self::$prefix === '' && getenv('CACHE_PREFIX')) {
-            self::$prefix = getenv('CACHE_PREFIX');
+        // 如果静态前缀为空，尝试从环境变量获取，否则使用默认前缀
+        if (self::$prefix === '') {
+            self::$prefix = getenv('CACHE_PREFIX') ?: 'blog_';
         }
 
         return self::$prefix . $key;
@@ -973,6 +983,8 @@ class CacheService
                 'index:*',
                 'home:*',
                 'archive:*',
+                'category:*',  // 添加分类缓存清除
+                'tag:*',       // 添加标签缓存清除
                 'sitemap:*',
                 'rss:*',
             ];

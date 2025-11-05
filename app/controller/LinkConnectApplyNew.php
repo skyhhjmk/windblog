@@ -20,6 +20,13 @@ use Throwable;
 class LinkConnectApplyNew
 {
     /**
+     * 不需要登录的方法
+     * connectApply: 发起友链互联申请，公开访问
+     * checkTaskStatus: 查询任务状态，公开访问
+     */
+    protected array $noNeedLogin = ['connectApply', 'checkTaskStatus'];
+
+    /**
      * CAT3*: 发起友链申请（异步处理+轮询机制）
      *
      * 流程：

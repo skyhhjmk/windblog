@@ -373,11 +373,28 @@ Route::group('/app/admin', function () {
         Route::get('/index', [StaticCacheController::class, 'index']);
         Route::post('/refresh', [StaticCacheController::class, 'refresh']);
         Route::get('/progress', [StaticCacheController::class, 'progress']);
+        Route::get('/get', [StaticCacheController::class, 'get']);
+        Route::post('/save', [StaticCacheController::class, 'save']);
 
         // URL 策略
         Route::get('/strategies/get', [StaticCacheController::class, 'strategiesGet']);
         Route::post('/strategies/save', [StaticCacheController::class, 'strategiesSave']);
         Route::post('/strategies/scan-posts', [StaticCacheController::class, 'strategiesScanPosts']);
+
+        // 增强功能
+        Route::group('/enhanced', function () {
+            Route::get('/config', [StaticCacheController::class, 'getEnhancedConfig']);
+            Route::post('/config', [StaticCacheController::class, 'saveEnhancedConfig']);
+            Route::post('/update-version', [StaticCacheController::class, 'updateVersion']);
+            Route::post('/clear-all', [StaticCacheController::class, 'clearAll']);
+            Route::get('/stats', [StaticCacheController::class, 'getStats']);
+            Route::post('/reset-stats', [StaticCacheController::class, 'resetStats']);
+            Route::get('/strategies', [StaticCacheController::class, 'getEnhancedStrategies']);
+            Route::post('/strategies', [StaticCacheController::class, 'saveEnhancedStrategies']);
+            Route::post('/warmup', [StaticCacheController::class, 'warmup']);
+            Route::get('/warmup-urls', [StaticCacheController::class, 'getWarmupUrls']);
+            Route::post('/warmup-urls', [StaticCacheController::class, 'saveWarmupUrls']);
+        });
     });
 
     // 邮件 路由

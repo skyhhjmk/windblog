@@ -551,7 +551,7 @@ class InstallController extends Base
      * 添加菜单
      *
      * @param array  $menu
-     * @param PDO $pdo
+     * @param PDO    $pdo
      * @param string $type 数据库类型
      *
      * @return int
@@ -600,7 +600,7 @@ class InstallController extends Base
      * 导入菜单
      *
      * @param array  $menu_tree
-     * @param PDO $pdo
+     * @param PDO    $pdo
      * @param string $type 数据库类型
      *
      * @return void
@@ -764,89 +764,106 @@ class InstallController extends Base
      */
     protected function getPgsqlEnvConfig($host, $port, $database, $user, $password): string
     {
-        return <<<EOF
-            # 实例部署类型
-            DEPLOYMENT_TYPE=datacenter
-            DB_DEFAULT=pgsql
+        return
+            <<<EOF
+# 实例部署类型
+DEPLOYMENT_TYPE=datacenter
+DB_DEFAULT=pgsql
 
-            # 数据库配置 - PostgreSQL
-            DB_PGSQL_HOST=$host
-            DB_PGSQL_PORT=$port
-            DB_PGSQL_DATABASE=$database
-            DB_PGSQL_USERNAME=$user
-            DB_PGSQL_PASSWORD=$password
+# 数据库配置 - PostgreSQL
+DB_PGSQL_HOST=$host
+DB_PGSQL_PORT=$port
+DB_PGSQL_DATABASE=$database
+DB_PGSQL_USERNAME=$user
+DB_PGSQL_PASSWORD=$password
 
-            # 缓存配置
-            # CACHE_DRIVER 可选：none | memory | array | apcu | memcached | redis
-            # - none: 完全禁用缓存
-            # - memory/array: 进程内内存缓存（仅当前PHP进程/worker内有效，适合开发/单机）
-            # - apcu: 需开启 APCu 扩展；如在 CLI/常驻进程下需确保 php.ini 中 apc.enable_cli=1
-            # - memcached: 需安装 Memcached 扩展，使用 MEMCACHED_HOST/MEMCACHED_PORT
-            # - redis: 使用 REDIS_* 配置
-            CACHE_DRIVER=null
+# 缓存配置
+# CACHE_DRIVER 可选：none | memory | array | apcu | memcached | redis
+# - none: 完全禁用缓存
+# - memory/array: 进程内内存缓存（仅当前PHP进程/worker内有效，适合开发/单机）
+# - apcu: 需开启 APCu 扩展；如在 CLI/常驻进程下需确保 php.ini 中 apc.enable_cli=1
+# - memcached: 需安装 Memcached 扩展，使用 MEMCACHED_HOST/MEMCACHED_PORT
+# - redis: 使用 REDIS_* 配置
+CACHE_DRIVER=null
 
-            # 缓存键前缀，用于避免缓存键冲突，可为空或自定义字符串
-            CACHE_PREFIX=
+# 缓存键前缀，用于避免缓存键冲突，可为空或自定义字符串
+CACHE_PREFIX=
 
-            # 默认缓存过期时间（秒），默认为86400秒（24小时）
-            CACHE_DEFAULT_TTL=86400
+# 默认缓存过期时间（秒），默认为86400秒（24小时）
+CACHE_DEFAULT_TTL=86400
 
-            # 负面缓存过期时间（秒），用于缓存不存在的数据结果，防止缓存穿透，默认30秒
-            CACHE_NEGATIVE_TTL=30
+# 负面缓存过期时间（秒），用于缓存不存在的数据结果，防止缓存穿透，默认30秒
+CACHE_NEGATIVE_TTL=30
 
-            # 缓存抖动时间（秒），用于给缓存过期时间添加随机值，防止缓存雪崩，默认0秒
-            CACHE_JITTER_SECONDS=0
+# 缓存抖动时间（秒），用于给缓存过期时间添加随机值，防止缓存雪崩，默认0秒
+CACHE_JITTER_SECONDS=0
 
-            # 缓存忙等待时间（毫秒），当缓存正在重建时，其他请求等待的时间，默认50毫秒
-            CACHE_BUSY_WAIT_MS=50
+# 缓存忙等待时间（毫秒），当缓存正在重建时，其他请求等待的时间，默认50毫秒
+CACHE_BUSY_WAIT_MS=50
 
-            # 缓存忙等待最大重试次数，当缓存正在重建时，最多重试次数，默认3次
-            CACHE_BUSY_MAX_RETRIES=3
+# 缓存忙等待最大重试次数，当缓存正在重建时，最多重试次数，默认3次
+CACHE_BUSY_MAX_RETRIES=3
 
-            # 缓存锁过期时间（毫秒），用于防止缓存击穿，默认3000毫秒（3秒）
-            CACHE_LOCK_TTL_MS=3000
+# 缓存锁过期时间（毫秒），用于防止缓存击穿，默认3000毫秒（3秒）
+CACHE_LOCK_TTL_MS=3000
 
-            # Redis服务器主机地址
-            REDIS_HOST=127.0.0.1
+# Redis服务器主机地址
+REDIS_HOST=127.0.0.1
 
-            # Redis服务器端口
-            REDIS_PORT=6379
+# Redis服务器端口
+REDIS_PORT=6379
 
-            # Redis密码，如果未设置密码则留空
-            REDIS_PASSWORD=
+# Redis密码，如果未设置密码则留空
+REDIS_PASSWORD=
 
-            # Redis数据库索引，项目使用多库架构（DB0+DB1），此选项不可用
-            #REDIS_DATABASE=1
+# Redis数据库索引
+REDIS_DATABASE=0
 
-            # Memcached服务器主机地址
-            MEMCACHED_HOST=127.0.0.1
+# Memcached服务器主机地址
+MEMCACHED_HOST=127.0.0.1
 
-            # Memcached服务器端口
-            MEMCACHED_PORT=11211
+# Memcached服务器端口
+MEMCACHED_PORT=11211
 
-            # 缓存严格模式，设为true时会抛出异常而非尝试切换缓存器自愈
-            CACHE_STRICT_MODE=false
+# 缓存严格模式，设为true时会抛出异常而非尝试切换缓存器自愈
+CACHE_STRICT_MODE=false
 
-            # APP_DEBUG=false
-            # TWIG_CACHE_ENABLE=true
-            # TWIG_CACHE_PATH=runtime/twig_cache
-            # TWIG_AUTO_RELOAD=false
-            #
-            # 默认策略说明：
-            # - 当 APP_DEBUG=false（生产环境），默认：启用缓存、禁用 debug、禁用 auto_reload
-            # - 当 APP_DEBUG=true（开发环境），默认：关闭缓存、启用 debug、启用 auto_reload
-            # - 若设置 TWIG_CACHE_ENABLE，则优先生效（true 启用缓存，false 关闭缓存）
-            # - 若设置 TWIG_AUTO_RELOAD，则优先生效（true 开启自动重载，false 关闭）
-            # - 缓存目录默认为 runtime/twig_cache，可用 TWIG_CACHE_PATH 覆盖
-            # Push 配置
-            PUSH_ENABLE=true
-            PUSH_WEBSOCKET=websocket://0.0.0.0:3131
-            PUSH_API=http://0.0.0.0:3232
-            PUSH_APP_KEY=e9d56e94590f9f922259c05c1753e5f8
-            PUSH_APP_SECRET=769a66dccaf5404b196a72bcefc31d48
-            PUSH_CHANNEL_HOOK=http://127.0.0.1:8787/plugin/webman/push/hook
-            PUSH_AUTH=/plugin/webman/push/auth
-            EOF;
+# APP_DEBUG=false
+# TWIG_CACHE_ENABLE=true
+# TWIG_CACHE_PATH=runtime/twig_cache
+# TWIG_AUTO_RELOAD=false
+#
+# 默认策略说明：
+# - 当 APP_DEBUG=false（生产环境），默认：启用缓存、禁用 debug、禁用 auto_reload
+# - 当 APP_DEBUG=true（开发环境），默认：关闭缓存、启用 debug、启用 auto_reload
+# - 若设置 TWIG_CACHE_ENABLE，则优先生效（true 启用缓存，false 关闭缓存）
+# - 若设置 TWIG_AUTO_RELOAD，则优先生效（true 开启自动重载，false 关闭）
+# - 缓存目录默认为 runtime/twig_cache，可用 TWIG_CACHE_PATH 覆盖
+
+# 请求耗时日志级别
+# 可选值：info, debug
+# 默认值：info
+# - info: 生产环境推荐，记录请求基本信息和耗时
+# - debug: 开发环境使用，更详细的日志信息
+REQUEST_LOGGER_TIMING_LEVEL=info
+
+# 是否启用 debug 模式（开启后会记录堆栈追踪）
+# 可选值：true, false, 1, 0
+# 默认值：继承 APP_DEBUG 的值
+# 注意：堆栈追踪会增加日志量和性能开销，生产环境建议关闭
+REQUEST_LOGGER_DEBUG_MODE=false
+
+# 是否启用链路追踪（显示请求生命周期的详细信息）
+# 可选值：true, false, 1, 0
+# 默认值：true
+# 注意：链路追踪会详细记录请求的每个阶段，包括初始化、业务处理等
+REQUEST_LOGGER_ENABLE_TRACE=false
+
+# 是否记录异常信息
+# 可选值：true, false, 1, 0
+# 默认值：true
+REQUEST_LOGGER_EXCEPTION_ENABLE=true
+EOF;
     }
 
     /**
@@ -855,80 +872,104 @@ class InstallController extends Base
     protected function getMysqlEnvConfig($host, $port, $database, $user, $password): string
     {
         return <<<EOF
-            # 实例部署类型
-            DEPLOYMENT_TYPE=datacenter
-            DB_DEFAULT=mysql
+# 实例部署类型
+DEPLOYMENT_TYPE=datacenter
+DB_DEFAULT=mysql
 
-            # 数据库配置 - MySQL
-            DB_MYSQL_HOST=$host
-            DB_MYSQL_PORT=$port
-            DB_MYSQL_DATABASE=$database
-            DB_MYSQL_USERNAME=$user
-            DB_MYSQL_PASSWORD=$password
+# 数据库配置 - MySQL
+DB_MYSQL_HOST=$host
+DB_MYSQL_PORT=$port
+DB_MYSQL_DATABASE=$database
+DB_MYSQL_USERNAME=$user
+DB_MYSQL_PASSWORD=$password
 
-            # 缓存配置
-            # CACHE_DRIVER 可选：none | memory | array | apcu | memcached | redis
-            # - none: 完全禁用缓存
-            # - memory/array: 进程内内存缓存（仅当前PHP进程/worker内有效，适合开发/单机）
-            # - apcu: 需开启 APCu 扩展；如在 CLI/常驻进程下需确保 php.ini 中 apc.enable_cli=1
-            # - memcached: 需安装 Memcached 扩展，使用 MEMCACHED_HOST/MEMCACHED_PORT
-            # - redis: 使用 REDIS_* 配置
-            CACHE_DRIVER=null
+# 缓存配置
+# CACHE_DRIVER 可选：none | memory | array | apcu | memcached | redis
+# - none: 完全禁用缓存
+# - memory/array: 进程内内存缓存（仅当前PHP进程/worker内有效，适合开发/单机）
+# - apcu: 需开启 APCu 扩展；如在 CLI/常驻进程下需确保 php.ini 中 apc.enable_cli=1
+# - memcached: 需安装 Memcached 扩展，使用 MEMCACHED_HOST/MEMCACHED_PORT
+# - redis: 使用 REDIS_* 配置
+CACHE_DRIVER=null
 
-            # 缓存键前缀，用于避免缓存键冲突，可为空或自定义字符串
-            CACHE_PREFIX=
+# 缓存键前缀，用于避免缓存键冲突，可为空或自定义字符串
+CACHE_PREFIX=
 
-            # 默认缓存过期时间（秒），默认为86400秒（24小时）
-            CACHE_DEFAULT_TTL=86400
+# 默认缓存过期时间（秒），默认为86400秒（24小时）
+CACHE_DEFAULT_TTL=86400
 
-            # 负面缓存过期时间（秒），用于缓存不存在的数据结果，防止缓存穿透，默认30秒
-            CACHE_NEGATIVE_TTL=30
+# 负面缓存过期时间（秒），用于缓存不存在的数据结果，防止缓存穿透，默认30秒
+CACHE_NEGATIVE_TTL=30
 
-            # 缓存抖动时间（秒），用于给缓存过期时间添加随机值，防止缓存雪崩，默认0秒
-            CACHE_JITTER_SECONDS=0
+# 缓存抖动时间（秒），用于给缓存过期时间添加随机值，防止缓存雪崩，默认0秒
+CACHE_JITTER_SECONDS=0
 
-            # 缓存忙等待时间（毫秒），当缓存正在重建时，其他请求等待的时间，默认50毫秒
-            CACHE_BUSY_WAIT_MS=50
+# 缓存忙等待时间（毫秒），当缓存正在重建时，其他请求等待的时间，默认50毫秒
+CACHE_BUSY_WAIT_MS=50
 
-            # 缓存忙等待最大重试次数，当缓存正在重建时，最多重试次数，默认3次
-            CACHE_BUSY_MAX_RETRIES=3
+# 缓存忙等待最大重试次数，当缓存正在重建时，最多重试次数，默认3次
+CACHE_BUSY_MAX_RETRIES=3
 
-            # 缓存锁过期时间（毫秒），用于防止缓存击穿，默认3000毫秒（3秒）
-            CACHE_LOCK_TTL_MS=3000
+# 缓存锁过期时间（毫秒），用于防止缓存击穿，默认3000毫秒（3秒）
+CACHE_LOCK_TTL_MS=3000
 
-            # Redis服务器主机地址
-            REDIS_HOST=127.0.0.1
+# Redis服务器主机地址
+REDIS_HOST=127.0.0.1
 
-            # Redis服务器端口
-            REDIS_PORT=6379
+# Redis服务器端口
+REDIS_PORT=6379
 
-            # Redis密码，如果未设置密码则留空
-            REDIS_PASSWORD=
+# Redis密码，如果未设置密码则留空
+REDIS_PASSWORD=
 
-            # Redis数据库索引，项目使用多库架构（DB0+DB1），此选项不可用
-            #REDIS_DATABASE=1
+# Redis数据库索引，项目使用多库架构（DB0+DB1），此选项不可用
+#REDIS_DATABASE=1
 
-            # Memcached服务器主机地址
-            MEMCACHED_HOST=127.0.0.1
+# Memcached服务器主机地址
+MEMCACHED_HOST=127.0.0.1
 
-            # Memcached服务器端口
-            MEMCACHED_PORT=11211
+# Memcached服务器端口
+MEMCACHED_PORT=11211
 
-            # 缓存严格模式，设为true时会抛出异常而非尝试切换缓存器自愈
-            CACHE_STRICT_MODE=false
+# 缓存严格模式，设为true时会抛出异常而非尝试切换缓存器自愈
+CACHE_STRICT_MODE=false
 
-            # APP_DEBUG=false
-            # TWIG_CACHE_ENABLE=true
-            # TWIG_CACHE_PATH=runtime/twig_cache
-            # TWIG_AUTO_RELOAD=false
-            #
-            # 默认策略说明：
-            # - 当 APP_DEBUG=false（生产环境），默认：启用缓存、禁用 debug、禁用 auto_reload
-            # - 当 APP_DEBUG=true（开发环境），默认：关闭缓存、启用 debug、启用 auto_reload
-            # - 若设置 TWIG_CACHE_ENABLE，则优先生效（true 启用缓存，false 关闭缓存）
-            # - 若设置 TWIG_AUTO_RELOAD，则优先生效（true 开启自动重载，false 关闭）
-            # - 缓存目录默认为 runtime/twig_cache，可用 TWIG_CACHE_PATH 覆盖
-            EOF;
+# APP_DEBUG=false
+# TWIG_CACHE_ENABLE=true
+# TWIG_CACHE_PATH=runtime/twig_cache
+# TWIG_AUTO_RELOAD=false
+#
+# 默认策略说明：
+# - 当 APP_DEBUG=false（生产环境），默认：启用缓存、禁用 debug、禁用 auto_reload
+# - 当 APP_DEBUG=true（开发环境），默认：关闭缓存、启用 debug、启用 auto_reload
+# - 若设置 TWIG_CACHE_ENABLE，则优先生效（true 启用缓存，false 关闭缓存）
+# - 若设置 TWIG_AUTO_RELOAD，则优先生效（true 开启自动重载，false 关闭）
+# - 缓存目录默认为 runtime/twig_cache，可用 TWIG_CACHE_PATH 覆盖
+
+# 请求耗时日志级别
+# 可选值：info, debug
+# 默认值：info
+# - info: 生产环境推荐，记录请求基本信息和耗时
+# - debug: 开发环境使用，更详细的日志信息
+REQUEST_LOGGER_TIMING_LEVEL=info
+
+# 是否启用 debug 模式（开启后会记录堆栈追踪）
+# 可选值：true, false, 1, 0
+# 默认值：继承 APP_DEBUG 的值
+# 注意：堆栈追踪会增加日志量和性能开销，生产环境建议关闭
+REQUEST_LOGGER_DEBUG_MODE=false
+
+# 是否启用链路追踪（显示请求生命周期的详细信息）
+# 可选值：true, false, 1, 0
+# 默认值：true
+# 注意：链路追踪会详细记录请求的每个阶段，包括初始化、业务处理等
+REQUEST_LOGGER_ENABLE_TRACE=false
+
+# 是否记录异常信息
+# 可选值：true, false, 1, 0
+# 默认值：true
+REQUEST_LOGGER_EXCEPTION_ENABLE=true
+EOF;
     }
 
     /**
@@ -943,76 +984,101 @@ class InstallController extends Base
             $sqlitePath = runtime_path($database);
         }
 
-        return <<<EOF
-            # 实例部署类型
-            DEPLOYMENT_TYPE=datacenter
-            DB_DEFAULT=sqlite
+        return
+            <<<EOF
+# 实例部署类型
+DEPLOYMENT_TYPE=datacenter
+DB_DEFAULT=sqlite
 
-            # 数据库配置 - SQLite
-            DB_SQLITE_DATABASE=$sqlitePath
+# 数据库配置 - SQLite
+DB_SQLITE_DATABASE=$sqlitePath
 
-            # 缓存配置
-            # CACHE_DRIVER 可选：none | memory | array | apcu | memcached | redis
-            # - none: 完全禁用缓存
-            # - memory/array: 进程内内存缓存（仅当前PHP进程/worker内有效，适合开发/单机）
-            # - apcu: 需开启 APCu 扩展；如在 CLI/常驻进程下需确保 php.ini 中 apc.enable_cli=1
-            # - memcached: 需安装 Memcached 扩展，使用 MEMCACHED_HOST/MEMCACHED_PORT
-            # - redis: 使用 REDIS_* 配置
-            CACHE_DRIVER=null
+# 缓存配置
+# CACHE_DRIVER 可选：none | memory | array | apcu | memcached | redis
+# - none: 完全禁用缓存
+# - memory/array: 进程内内存缓存（仅当前PHP进程/worker内有效，适合开发/单机）
+# - apcu: 需开启 APCu 扩展；如在 CLI/常驻进程下需确保 php.ini 中 apc.enable_cli=1
+# - memcached: 需安装 Memcached 扩展，使用 MEMCACHED_HOST/MEMCACHED_PORT
+# - redis: 使用 REDIS_* 配置
+CACHE_DRIVER=null
 
-            # 缓存键前缀，用于避免缓存键冲突，可为空或自定义字符串
-            CACHE_PREFIX=
+# 缓存键前缀，用于避免缓存键冲突，可为空或自定义字符串
+CACHE_PREFIX=
 
-            # 默认缓存过期时间（秒），默认为86400秒（24小时）
-            CACHE_DEFAULT_TTL=86400
+# 默认缓存过期时间（秒），默认为86400秒（24小时）
+CACHE_DEFAULT_TTL=86400
 
-            # 负面缓存过期时间（秒），用于缓存不存在的数据结果，防止缓存穿透，默认30秒
-            CACHE_NEGATIVE_TTL=30
+# 负面缓存过期时间（秒），用于缓存不存在的数据结果，防止缓存穿透，默认30秒
+CACHE_NEGATIVE_TTL=30
 
-            # 缓存抖动时间（秒），用于给缓存过期时间添加随机值，防止缓存雪崩，默认0秒
-            CACHE_JITTER_SECONDS=0
+# 缓存抖动时间（秒），用于给缓存过期时间添加随机值，防止缓存雪崩，默认0秒
+CACHE_JITTER_SECONDS=0
 
-            # 缓存忙等待时间（毫秒），当缓存正在重建时，其他请求等待的时间，默认50毫秒
-            CACHE_BUSY_WAIT_MS=50
+# 缓存忙等待时间（毫秒），当缓存正在重建时，其他请求等待的时间，默认50毫秒
+CACHE_BUSY_WAIT_MS=50
 
-            # 缓存忙等待最大重试次数，当缓存正在重建时，最多重试次数，默认3次
-            CACHE_BUSY_MAX_RETRIES=3
+# 缓存忙等待最大重试次数，当缓存正在重建时，最多重试次数，默认3次
+CACHE_BUSY_MAX_RETRIES=3
 
-            # 缓存锁过期时间（毫秒），用于防止缓存击穿，默认3000毫秒（3秒）
-            CACHE_LOCK_TTL_MS=3000
+# 缓存锁过期时间（毫秒），用于防止缓存击穿，默认3000毫秒（3秒）
+CACHE_LOCK_TTL_MS=3000
 
-            # Redis服务器主机地址
-            REDIS_HOST=127.0.0.1
+# Redis服务器主机地址
+REDIS_HOST=127.0.0.1
 
-            # Redis服务器端口
-            REDIS_PORT=6379
+# Redis服务器端口
+REDIS_PORT=6379
 
-            # Redis密码，如果未设置密码则留空
-            REDIS_PASSWORD=
+# Redis密码，如果未设置密码则留空
+REDIS_PASSWORD=
 
-            # Redis数据库索引，项目使用多库架构（DB0+DB1），此选项不可用
-            #REDIS_DATABASE=1
+# Redis数据库索引，项目使用多库架构（DB0+DB1），此选项不可用
+#REDIS_DATABASE=1
 
-            # Memcached服务器主机地址
-            MEMCACHED_HOST=127.0.0.1
+# Memcached服务器主机地址
+MEMCACHED_HOST=127.0.0.1
 
-            # Memcached服务器端口
-            MEMCACHED_PORT=11211
+# Memcached服务器端口
+MEMCACHED_PORT=11211
 
-            # 缓存严格模式，设为true时会抛出异常而非尝试切换缓存器自愈
-            CACHE_STRICT_MODE=false
+# 缓存严格模式，设为true时会抛出异常而非尝试切换缓存器自愈
+CACHE_STRICT_MODE=false
 
-            # APP_DEBUG=false
-            # TWIG_CACHE_ENABLE=true
-            # TWIG_CACHE_PATH=runtime/twig_cache
-            # TWIG_AUTO_RELOAD=false
-            #
-            # 默认策略说明：
-            # - 当 APP_DEBUG=false（生产环境），默认：启用缓存、禁用 debug、禁用 auto_reload
-            # - 当 APP_DEBUG=true（开发环境），默认：关闭缓存、启用 debug、启用 auto_reload
-            # - 若设置 TWIG_CACHE_ENABLE，则优先生效（true 启用缓存，false 关闭缓存）
-            # - 若设置 TWIG_AUTO_RELOAD，则优先生效（true 开启自动重载，false 关闭）
-            # - 缓存目录默认为 runtime/twig_cache，可用 TWIG_CACHE_PATH 覆盖
-            EOF;
+# APP_DEBUG=false
+# TWIG_CACHE_ENABLE=true
+# TWIG_CACHE_PATH=runtime/twig_cache
+# TWIG_AUTO_RELOAD=false
+#
+# 默认策略说明：
+# - 当 APP_DEBUG=false（生产环境），默认：启用缓存、禁用 debug、禁用 auto_reload
+# - 当 APP_DEBUG=true（开发环境），默认：关闭缓存、启用 debug、启用 auto_reload
+# - 若设置 TWIG_CACHE_ENABLE，则优先生效（true 启用缓存，false 关闭缓存）
+# - 若设置 TWIG_AUTO_RELOAD，则优先生效（true 开启自动重载，false 关闭）
+# - 缓存目录默认为 runtime/twig_cache，可用 TWIG_CACHE_PATH 覆盖
+
+# 请求耗时日志级别
+# 可选值：info, debug
+# 默认值：info
+# - info: 生产环境推荐，记录请求基本信息和耗时
+# - debug: 开发环境使用，更详细的日志信息
+REQUEST_LOGGER_TIMING_LEVEL=info
+
+# 是否启用 debug 模式（开启后会记录堆栈追踪）
+# 可选值：true, false, 1, 0
+# 默认值：继承 APP_DEBUG 的值
+# 注意：堆栈追踪会增加日志量和性能开销，生产环境建议关闭
+REQUEST_LOGGER_DEBUG_MODE=false
+
+# 是否启用链路追踪（显示请求生命周期的详细信息）
+# 可选值：true, false, 1, 0
+# 默认值：true
+# 注意：链路追踪会详细记录请求的每个阶段，包括初始化、业务处理等
+REQUEST_LOGGER_ENABLE_TRACE=false
+
+# 是否记录异常信息
+# 可选值：true, false, 1, 0
+# 默认值：true
+REQUEST_LOGGER_EXCEPTION_ENABLE=true
+EOF;
     }
 }

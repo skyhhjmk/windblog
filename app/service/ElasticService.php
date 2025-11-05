@@ -39,14 +39,14 @@ class ElasticService
                     'must' => [
                         ['term' => ['item_type' => 'tag']],
                         [
-                            'bool' => [
-                                'should' => [
-                                    ['match' => ['tag_name' => ['query' => $kw, 'operator' => 'and', 'fuzziness' => 'AUTO', 'analyzer' => $analyzer]]],
-                                    ['match_phrase_prefix' => ['tag_name' => ['query' => $kw]]],
-                                    ['term' => ['tag_slug' => $kw]],
-                                ],
-                                'minimum_should_match' => 1,
-                            ],
+                    'bool' => [
+                        'should' => [
+                            ['match' => ['tag_name' => ['query' => $kw, 'operator' => 'and', 'fuzziness' => 'AUTO', 'analyzer' => $analyzer]]],
+                            ['match_phrase_prefix' => ['tag_name' => ['query' => $kw]]],
+                            ['match' => ['tag_slug' => ['query' => strtolower($kw), 'operator' => 'and']]],
+                        ],
+                        'minimum_should_match' => 1,
+                    ],
                         ],
                     ],
                 ],
@@ -105,14 +105,14 @@ class ElasticService
                     'must' => [
                         ['term' => ['item_type' => 'category']],
                         [
-                            'bool' => [
-                                'should' => [
-                                    ['match' => ['category_name' => ['query' => $kw, 'operator' => 'and', 'fuzziness' => 'AUTO', 'analyzer' => $analyzer]]],
-                                    ['match_phrase_prefix' => ['category_name' => ['query' => $kw]]],
-                                    ['term' => ['category_slug' => $kw]],
-                                ],
-                                'minimum_should_match' => 1,
-                            ],
+                    'bool' => [
+                        'should' => [
+                            ['match' => ['category_name' => ['query' => $kw, 'operator' => 'and', 'fuzziness' => 'AUTO', 'analyzer' => $analyzer]]],
+                            ['match_phrase_prefix' => ['category_name' => ['query' => $kw]]],
+                            ['match' => ['category_slug' => ['query' => strtolower($kw), 'operator' => 'and']]],
+                        ],
+                        'minimum_should_match' => 1,
+                    ],
                         ],
                     ],
                 ],

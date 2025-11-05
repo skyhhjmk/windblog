@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of webman.
  *
@@ -12,11 +13,10 @@
  * @license   http://www.opensource.org/licenses/mit-license.php MIT License
  */
 
+use Webman\Log\Middleware;
+
 return [
-    'default' => [
-        'host' => '127.0.0.1',
-        'password' => null,
-        'port' => 6379,
-        'database' => 0,
+    '@' => [
+//        Middleware::class,
     ],
 ];

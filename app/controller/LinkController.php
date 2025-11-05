@@ -42,6 +42,10 @@ class LinkController
 {
     /**
      * 不需要登录的方法
+     * index: 友链广场首页，公开访问
+     * goto: 友链跳转，公开访问
+     * info: 友链详情页，公开访问
+     * request: 申请友链（GET显示页面，POST提交申请），公开访问
      */
     protected array $noNeedLogin = ['index', 'goto', 'info', 'request'];
 

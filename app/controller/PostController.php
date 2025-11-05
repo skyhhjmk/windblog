@@ -15,6 +15,10 @@ use support\Response;
 
 class PostController
 {
+    /**
+     * 不需要登录的方法
+     * index: 文章详情页，公开访问（包括公开文章和密码文章）
+     */
     protected array $noNeedLogin = ['index'];
 
     #[EnableInstantFirstPaint]
@@ -25,37 +29,13 @@ class PostController
             $keyword = substr($keyword, 0, -5);
         }
 
-        switch (blog_config('url_mode', 'mix', true)) {
-            case 'slug':
-                // slug模式
-                $post = Post::where('slug', $keyword)->first();
-                break;
-            case 'id':
-                // id模式
-                $post = Post::where('id', $keyword)->first();
-                if (!$post || $post['status'] != 'published') {
-                    return view('error/404');
-                }
-                break;
-            case 'mix':
-                // 混合模式
-                if (is_numeric($keyword)) {
-                    $post = Post::where('id', $keyword)->first();
-                    if ($post === null) {
-                        $post = Post::where('slug', $keyword)->first();
-                    }
-                } elseif (is_string($keyword)) {
-                    $post = Post::where('slug', $keyword)->first();
-                } else {
-                    return view('error/404');
-                }
+        // 统一使用 slug 模式，提高性能并降低错误率
+        $post = Post::where('slug', $keyword)
+            ->where('status', 'published')
+            ->first();
 
-                if (!$post || $post['status'] !== 'published') {
-                    return view('error/404');
-                }
-                break;
-            default:
-                return view('error/404');
+        if (!$post) {
+            return view('error/404');
         }
 
         // 使用PJAXHelper检测是否为PJAX请求
@@ -92,12 +72,68 @@ class PostController
             if (!$isPjax) {
                 $locale = $request->header('Accept-Language') ?? 'zh-CN';
                 $route = 'post.index';
-                $params = [
-                    'keyword' => $keyword,
-                    'mode' => blog_config('url_mode', 'mix', true),
-                ];
+                $params = ['slug' => $keyword];
                 $cacheKey = PJAXHelper::generateCacheKey($route, $params, 1, $locale);
             }
+
+            // 准备 SEO 数据，优先使用自定义 SEO 字段
+            $siteUrl = $request->host();
+            $postUrl = 'https://' . $siteUrl . '/post/' . $post->slug . '.html';
+
+            // SEO 标题：自定义 > 文章标题
+            $seoTitle = !empty($post->seo_title) ? $post->seo_title : $post->title;
+
+            // SEO 描述：自定义 > AI 摘要 > 内容截取
+            $description = !empty($post->seo_description)
+                ? $post->seo_description
+                : ($post->ai_summary ?? (mb_substr(strip_tags($post->content), 0, 150) . '...'));
+
+            // SEO 关键词：自定义 > 标签
+            if (!empty($post->seo_keywords)) {
+                $keywords = array_map('trim', explode(',', $post->seo_keywords));
+            } else {
+                $keywords = $post->tags->pluck('name')->toArray();
+            }
+
+            $categoryNames = $post->categories->pluck('name')->toArray();
+
+            $seoData = [
+                'title' => $seoTitle,
+                'description' => $description,
+                'keywords' => implode(', ', $keywords),
+                'author' => $authorName,
+                'og_type' => 'article',
+                'url' => $postUrl,
+                'canonical' => $postUrl,
+                'publish_date' => $post->created_at->toIso8601String(),
+                'modified_date' => $post->updated_at->toIso8601String(),
+                'site_name' => blog_config('title', 'WindBlog', true),
+                'locale' => 'zh_CN',
+                'section' => !empty($categoryNames) ? $categoryNames[0] : null,
+                'tags' => $keywords,
+                'image' => $post->featured_image ?? ('https://' . $siteUrl . blog_config('site_logo', '', true)),
+                'image_alt' => $post->title,
+                'twitter_card' => 'summary_large_image',
+            ];
+
+            // 准备 Schema.org 结构化数据
+            $schemaData = [
+                'type' => 'BlogPosting',
+                'headline' => $post->title,
+                'description' => $description,
+                'image' => [$post->featured_image ?? ('https://' . $siteUrl . blog_config('site_logo', '', true))],
+                'datePublished' => $post->created_at->toIso8601String(),
+                'dateModified' => $post->updated_at->toIso8601String(),
+                'author' => $authorName,
+                'publisher' => [
+                    'name' => blog_config('title', 'WindBlog', true),
+                    'logo' => 'https://' . $siteUrl . blog_config('site_logo', '', true),
+                ],
+                'url' => $postUrl,
+                'keywords' => $keywords,
+                'articleSection' => !empty($categoryNames) ? $categoryNames[0] : null,
+                'wordCount' => mb_strlen(strip_tags($post->content)),
+            ];
 
             // 创建带缓存的PJAX响应
             $resp = PJAXHelper::createResponse(
@@ -109,6 +145,8 @@ class PostController
                     'author' => $authorName,
                     'sidebar' => $sidebar,
                     'breadcrumbs' => $breadcrumbs,
+                    'seo' => $seoData,
+                    'schema' => $schemaData,
                 ],
                 $cacheKey,
                 120,
@@ -146,12 +184,68 @@ class PostController
                 if (!$isPjax) {
                     $locale = $request->header('Accept-Language') ?? 'zh-CN';
                     $route = 'post.index';
-                    $params = [
-                        'keyword' => $keyword,
-                        'mode' => blog_config('url_mode', 'mix', true),
-                    ];
+                    $params = ['slug' => $keyword];
                     $cacheKey = PJAXHelper::generateCacheKey($route, $params, 1, $locale);
                 }
+
+                // 准备 SEO 数据，优先使用自定义 SEO 字段（密码文章也需要SEO）
+                $siteUrl = $request->host();
+                $postUrl = 'https://' . $siteUrl . '/post/' . $post->slug . '.html';
+
+                // SEO 标题：自定义 > 文章标题
+                $seoTitle = !empty($post->seo_title) ? $post->seo_title : $post->title;
+
+                // SEO 描述：自定义 > AI 摘要 > 内容截取
+                $description = !empty($post->seo_description)
+                    ? $post->seo_description
+                    : ($post->ai_summary ?? (mb_substr(strip_tags($post->content), 0, 150) . '...'));
+
+                // SEO 关键词：自定义 > 标签
+                if (!empty($post->seo_keywords)) {
+                    $keywords = array_map('trim', explode(',', $post->seo_keywords));
+                } else {
+                    $keywords = $post->tags->pluck('name')->toArray();
+                }
+
+                $categoryNames = $post->categories->pluck('name')->toArray();
+
+                $seoData = [
+                    'title' => $seoTitle,
+                    'description' => $description,
+                    'keywords' => implode(', ', $keywords),
+                    'author' => $authorName,
+                    'og_type' => 'article',
+                    'url' => $postUrl,
+                    'canonical' => $postUrl,
+                    'publish_date' => $post->created_at->toIso8601String(),
+                    'modified_date' => $post->updated_at->toIso8601String(),
+                    'site_name' => blog_config('title', 'WindBlog', true),
+                    'locale' => 'zh_CN',
+                    'section' => !empty($categoryNames) ? $categoryNames[0] : null,
+                    'tags' => $keywords,
+                    'image' => $post->featured_image ?? ('https://' . $siteUrl . blog_config('site_logo', '', true)),
+                    'image_alt' => $post->title,
+                    'twitter_card' => 'summary_large_image',
+                ];
+
+                // 准备 Schema.org 结构化数据
+                $schemaData = [
+                    'type' => 'BlogPosting',
+                    'headline' => $post->title,
+                    'description' => $description,
+                    'image' => [$post->featured_image ?? ('https://' . $siteUrl . blog_config('site_logo', '', true))],
+                    'datePublished' => $post->created_at->toIso8601String(),
+                    'dateModified' => $post->updated_at->toIso8601String(),
+                    'author' => $authorName,
+                    'publisher' => [
+                        'name' => blog_config('title', 'WindBlog', true),
+                        'logo' => 'https://' . $siteUrl . blog_config('site_logo', '', true),
+                    ],
+                    'url' => $postUrl,
+                    'keywords' => $keywords,
+                    'articleSection' => !empty($categoryNames) ? $categoryNames[0] : null,
+                    'wordCount' => mb_strlen(strip_tags($post->content)),
+                ];
 
                 // 创建带缓存的PJAX响应
                 $resp = PJAXHelper::createResponse(
@@ -163,6 +257,8 @@ class PostController
                         'author' => $authorName,
                         'sidebar' => $sidebar,
                         'breadcrumbs' => $breadcrumbs,
+                        'seo' => $seoData,
+                        'schema' => $schemaData,
                     ],
                     $cacheKey,
                     120,

@@ -1,0 +1,120 @@
+{# Schema.org JSON-LD 结构化数据组件 #}
+{# 使用方法: {% include 'components/structured-data.html.twig' with {schema: schema_data} %} #}
+
+{% if schema %}
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    {% if schema.type == 'Article' %}
+    "@type": "{{ schema.type }}",
+    "headline": "{{ schema.headline|escape('js') }}",
+    "image": {{ schema.image|json_encode|raw }},
+    "datePublished": "{{ schema.datePublished }}",
+    {% if schema.dateModified %}
+    "dateModified": "{{ schema.dateModified }}",
+    {% endif %}
+    "author": {
+        "@type": "Person",
+        "name": "{{ schema.author|escape('js') }}"
+    },
+    "publisher": {
+        "@type": "Organization",
+        "name": "{{ schema.publisher.name|escape('js') }}",
+        "logo": {
+            "@type": "ImageObject",
+            "url": "{{ schema.publisher.logo }}"
+        }
+    },
+    {% if schema.description %}
+    "description": "{{ schema.description|escape('js') }}",
+    {% endif %}
+    {% if schema.articleSection %}
+    "articleSection": "{{ schema.articleSection|escape('js') }}",
+    {% endif %}
+    {% if schema.keywords %}
+    "keywords": {{ schema.keywords|json_encode|raw }},
+    {% endif %}
+    "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "{{ schema.url }}"
+    }
+    {% elseif schema.type == 'WebSite' %}
+    "@type": "WebSite",
+    "name": "{{ schema.name|escape('js') }}",
+    "url": "{{ schema.url }}",
+    {% if schema.description %}
+    "description": "{{ schema.description|escape('js') }}",
+    {% endif %}
+    "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+            "@type": "EntryPoint",
+            "urlTemplate": "{{ schema.searchUrl }}"
+        },
+        "query-input": "required name=search_term_string"
+    }
+    {% elseif schema.type == 'BreadcrumbList' %}
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+        {% for item in schema.items %}
+        {
+            "@type": "ListItem",
+            "position": {{ loop.index }},
+            "name": "{{ item.name|escape('js') }}",
+            "item": "{{ item.url }}"
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ]
+    {% elseif schema.type == 'BlogPosting' %}
+    "@type": "BlogPosting",
+    "headline": "{{ schema.headline|escape('js') }}",
+    "image": {{ schema.image|json_encode|raw }},
+    "datePublished": "{{ schema.datePublished }}",
+    {% if schema.dateModified %}
+    "dateModified": "{{ schema.dateModified }}",
+    {% endif %}
+    "author": {
+        "@type": "Person",
+        "name": "{{ schema.author|escape('js') }}"
+    },
+    "publisher": {
+        "@type": "Organization",
+        "name": "{{ schema.publisher.name|escape('js') }}",
+        "logo": {
+            "@type": "ImageObject",
+            "url": "{{ schema.publisher.logo }}"
+        }
+    },
+    {% if schema.description %}
+    "description": "{{ schema.description|escape('js') }}",
+    {% endif %}
+    {% if schema.wordCount %}
+    "wordCount": {{ schema.wordCount }},
+    {% endif %}
+    {% if schema.articleSection %}
+    "articleSection": "{{ schema.articleSection|escape('js') }}",
+    {% endif %}
+    {% if schema.keywords %}
+    "keywords": {{ schema.keywords|json_encode|raw }},
+    {% endif %}
+    "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "{{ schema.url }}"
+    }
+    {% elseif schema.type == 'Organization' %}
+    "@type": "Organization",
+    "name": "{{ schema.name|escape('js') }}",
+    "url": "{{ schema.url }}",
+    {% if schema.logo %}
+    "logo": "{{ schema.logo }}",
+    {% endif %}
+    {% if schema.description %}
+    "description": "{{ schema.description|escape('js') }}",
+    {% endif %}
+    {% if schema.sameAs %}
+    "sameAs": {{ schema.sameAs|json_encode|raw }}
+    {% endif %}
+    {% endif %}
+}
+</script>
+{% endif %}

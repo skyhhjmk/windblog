@@ -1,4 +1,15 @@
 <title>{{ page_title|default('WindBlog') }}</title>
+
+{# PJAX SEO 数据容器 - 隐藏但可被 JS 提取 #}
+<div id="pjax-seo-data" style="display:none;">
+    {% if seo is defined %}
+        {% include 'components/seo-meta.html.twig' with {'seo': seo} %}
+    {% endif %}
+    {% if schema is defined %}
+        {% include 'components/structured-data.html.twig' with {'schema': schema} %}
+    {% endif %}
+</div>
+
 <div id="pjax-container">
     <div class="max-w-full mx-auto px-4">
         <!-- 页面标题区域 - 优化响应式字体大小 -->
@@ -12,11 +23,17 @@
             <div class="space-y-6 sm:space-y-8">
                 {% for post in posts %}
                     <div
-                        class="bg-white rounded-2xl shadow-md sm:shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 group">
+                        class="bg-white rounded-2xl shadow-md sm:shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 group{% if post.featured %} border-2 border-yellow-400{% endif %}">
                         <div class="p-4 sm:p-6">
-                            <h2 class="text-xl sm:text-2xl font-bold text-gray-800 mb-2 group-hover:text-blue-600 transition-colors duration-200">
+                            <h2 class="text-xl sm:text-2xl font-bold text-gray-800 mb-2 group-hover:text-blue-600 transition-colors duration-200 flex items-center gap-2">
+                                {% if post.featured %}
+                                    <span
+                                        class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-gradient-to-r from-yellow-400 to-yellow-500 text-yellow-900 border border-yellow-600 shadow-sm">
+                                        <i class="fas fa-star mr-1"></i>精选
+                                    </span>
+                                {% endif %}
                                 <a href="/post/{{ post.slug }}.html"
-                                   class="block tap-highlight">
+                                   class="tap-highlight">
                                     {{ post.title }}
                                 </a>
                             </h2>

@@ -14,10 +14,16 @@ class OnlineController
 {
     /**
      * 不需要登录的方法
+     * count: 获取在线用户数量，公开访问
+     * list: 获取在线用户列表，公开访问
+     * stats: 获取在线统计信息，公开访问
+     * check: 检查指定用户是否在线，公开访问
      *
-     * @var array
+     * heartbeat: 用户心跳（需要登录）
+     * online: 用户上线（需要登录）
+     * offline: 用户下线（需要登录）
      */
-    protected $noNeedLogin = [];
+    protected array $noNeedLogin = ['count', 'list', 'stats', 'check'];
 
     /**
      * 在线用户服务

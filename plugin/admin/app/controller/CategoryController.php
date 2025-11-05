@@ -3,6 +3,8 @@
 namespace plugin\admin\app\controller;
 
 use app\model\Category;
+use app\service\SlugTranslateService;
+use Exception;
 use support\Log;
 use support\Request;
 use support\Response;
@@ -101,8 +103,15 @@ class CategoryController extends Base
             return $this->fail('分类名称不能为空');
         }
 
+        // 如果slug为空，使用翻译服务自动生成
         if (empty($data['slug'])) {
-            return $this->fail('分类别名不能为空');
+            $slugService = new SlugTranslateService();
+            $data['slug'] = $slugService->translate($data['name']);
+
+            // 如果翻译失败，返回错误
+            if (empty($data['slug'])) {
+                return $this->fail('分类别名生成失败，请手动输入');
+            }
         }
 
         // 检查别名是否已存在
@@ -120,7 +129,7 @@ class CategoryController extends Base
             $category->save();
 
             return $this->success('创建成功');
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('创建分类失败: ' . $e->getMessage());
 
             return $this->fail('创建失败');
@@ -149,8 +158,15 @@ class CategoryController extends Base
             return $this->fail('分类名称不能为空');
         }
 
+        // 如果slug为空，使用翻译服务自动生成
         if (empty($data['slug'])) {
-            return $this->fail('分类别名不能为空');
+            $slugService = new SlugTranslateService();
+            $data['slug'] = $slugService->translate($data['name']);
+
+            // 如果翻译失败，返回错误
+            if (empty($data['slug'])) {
+                return $this->fail('分类别名生成失败，请手动输入');
+            }
         }
 
         // 检查别名是否已被其他分类使用
@@ -167,7 +183,7 @@ class CategoryController extends Base
             $category->save();
 
             return $this->success('更新成功');
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('更新分类失败: ' . $e->getMessage());
 
             return $this->fail('更新失败');

@@ -4,6 +4,7 @@ namespace plugin\admin\app\controller;
 
 use app\model\Setting;
 use app\service\MediaLibraryService;
+use app\service\SlugTranslateService;
 use plugin\admin\app\common\Util;
 use support\Db;
 use support\exception\BusinessException;
@@ -21,7 +22,7 @@ class ConfigController extends Base
      *
      * @var string[]
      */
-    protected $noNeedAuth = ['get', 'get_url_mode', 'get_site_info'];
+    protected $noNeedAuth = ['get', 'get_url_mode', 'get_site_info', 'get_seo_config'];
 
     /**
      * 账户设置
@@ -584,6 +585,138 @@ class ConfigController extends Base
             blog_config('session_config', $sessionConfig, false, true, true);
 
             return $this->json(0, '保存成功，请重启服务以使配置生效');
+        } catch (Throwable $e) {
+            return $this->json(1, $e->getMessage());
+        }
+    }
+
+    /**
+     * 获取Slug翻译配置
+     *
+     * @return Response
+     */
+    public function get_slug_translate_config(): Response
+    {
+        try {
+            $config = [
+                'baidu_translate_appid' => blog_config('baidu_translate_appid', '', true),
+                'baidu_translate_secret' => blog_config('baidu_translate_secret', '', true),
+                'slug_translate_mode' => blog_config('slug_translate_mode', 'auto', true),
+                'slug_translate_ai_selection' => blog_config('slug_translate_ai_selection', '', true),
+            ];
+
+            return json($config);
+        } catch (Throwable $e) {
+            return $this->json(1, $e->getMessage());
+        }
+    }
+
+    /**
+     * 设置Slug翻译配置
+     *
+     * @param Request $request
+     *
+     * @return Response
+     */
+    public function set_slug_translate_config(Request $request): Response
+    {
+        try {
+            $config = $request->post();
+
+            // 保存百度翻译配置
+            blog_config('baidu_translate_appid', $config['baidu_translate_appid'] ?? '', true, true, true);
+            blog_config('baidu_translate_secret', $config['baidu_translate_secret'] ?? '', true, true, true);
+
+            // 保存slug翻译模式
+            $mode = $config['slug_translate_mode'] ?? 'auto';
+            if (!in_array($mode, ['baidu', 'ai', 'auto'])) {
+                return $this->json(1, '无效的翻译模式');
+            }
+            blog_config('slug_translate_mode', $mode, true, true, true);
+
+            // 保存AI选择
+            blog_config('slug_translate_ai_selection', $config['slug_translate_ai_selection'] ?? '', true, true, true);
+
+            return $this->json(0);
+        } catch (Throwable $e) {
+            return $this->json(1, $e->getMessage());
+        }
+    }
+
+    /**
+     * 测试Slug翻译配置
+     *
+     * @param Request $request
+     *
+     * @return Response
+     */
+    public function test_slug_translate(Request $request): Response
+    {
+        try {
+            $mode = $request->post('mode', 'auto');
+            $aiSelection = $request->post('ai_selection', '');
+
+            $service = new SlugTranslateService();
+            $result = $service->testConfig($mode, $aiSelection ?: null);
+
+            return json($result);
+        } catch (Throwable $e) {
+            return json([
+                'success' => false,
+                'message' => '测试异常: ' . $e->getMessage(),
+                'result' => '',
+            ]);
+        }
+    }
+
+    /**
+     * 获取SEO配置
+     *
+     * @return Response
+     */
+    public function get_seo_config(): Response
+    {
+        try {
+            $seoConfig = [
+                'seo_title_suffix' => blog_config('seo_title_suffix', '', true),
+                'seo_default_description' => blog_config('seo_default_description', '', true),
+                'seo_default_keywords' => blog_config('seo_default_keywords', '', true),
+                'seo_default_image' => blog_config('seo_default_image', '', true),
+                'seo_twitter_card_type' => blog_config('seo_twitter_card_type', 'summary_large_image', true),
+                'seo_twitter_username' => blog_config('seo_twitter_username', '', true),
+                'seo_organization_name' => blog_config('seo_organization_name', '', true),
+                'seo_organization_logo' => blog_config('seo_organization_logo', '', true),
+            ];
+
+            return json($seoConfig);
+        } catch (Throwable $e) {
+            return $this->json(1, $e->getMessage());
+        }
+    }
+
+    /**
+     * 设置SEO配置
+     *
+     * @param Request $request
+     *
+     * @return Response
+     */
+    public function set_seo_config(Request $request): Response
+    {
+        try {
+            $seoConfig = $request->post();
+
+            // 保存SEO配置
+            blog_config('seo_title_suffix', $seoConfig['seo_title_suffix'] ?? '', true, true, true);
+            blog_config('seo_default_description', $seoConfig['seo_default_description'] ?? '', true, true, true);
+            blog_config('seo_default_keywords', $seoConfig['seo_default_keywords'] ?? '', true, true, true);
+            blog_config('seo_default_image', $seoConfig['seo_default_image'] ?? '', true, true, true);
+            blog_config('seo_twitter_card_type', $seoConfig['seo_twitter_card_type'] ?? 'summary_large_image', true, true, true);
+            blog_config('seo_twitter_username', $seoConfig['seo_twitter_username'] ?? '', true, true, true);
+            blog_config('seo_organization_name', $seoConfig['seo_organization_name'] ?? '', true, true, true);
+            blog_config('seo_organization_logo', $seoConfig['seo_organization_logo'] ?? '', true, true, true);
+
+            return $this->json(0);
         } catch (Throwable $e) {
             return $this->json(1, $e->getMessage());
         }

@@ -28,6 +28,8 @@
                     <li>扩展设置</li>
                     <li>OAuth设置</li>
                     <li>Session设置</li>
+                    <li>Slug翻译</li>
+                    <li>SEO设置</li>
                 </ul>
                 <div class="layui-tab-content">
 
@@ -655,6 +657,226 @@
                         </form>
                     </div>
 
+                    <!-- Slug翻译设置 -->
+                    <div class="layui-tab-item">
+                        <form class="layui-form" lay-filter="slugTranslateInfo">
+                            <!-- 百度翻译配置 -->
+                            <fieldset class="layui-elem-field">
+                                <legend>百度翻译配置</legend>
+                                <div class="layui-field-box">
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">APP ID</label>
+                                        <div class="layui-input-inline">
+                                            <input autocomplete="off" class="layui-input"
+                                                   name="baidu_translate_appid"
+                                                   placeholder="请输入百度翻译APP ID" type="text">
+                                        </div>
+                                        <div class="layui-form-mid layui-word-aux">
+                                            <a href="https://fanyi-api.baidu.com/manage/developer" target="_blank">获取百度翻译API</a>
+                                        </div>
+                                    </div>
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">密钥</label>
+                                        <div class="layui-input-inline">
+                                            <input autocomplete="off" class="layui-input"
+                                                   name="baidu_translate_secret"
+                                                   placeholder="请输入百度翻译密钥" type="text">
+                                        </div>
+                                    </div>
+                                </div>
+                            </fieldset>
+
+                            <!-- Slug翻译模式 -->
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">翻译模式</label>
+                                <div class="layui-input-inline">
+                                    <select class="layui-select" lay-filter="slugMode" name="slug_translate_mode">
+                                        <option value="baidu">仅百度翻译</option>
+                                        <option value="ai">仅AI生成</option>
+                                        <option selected value="auto">自动模式(百度优先)</option>
+                                    </select>
+                                </div>
+                                <div class="layui-form-mid layui-word-aux">
+                                    <p style="margin: 2px 0;">百度翻译：快速、稳定，需要配置API</p>
+                                    <p style="margin: 2px 0;">AI生成：智能、灵活，使用AI生成SEO友好的slug</p>
+                                    <p style="margin: 2px 0;">自动模式：百度翻译失败时自动使用AI</p>
+                                </div>
+                            </div>
+
+                            <!-- AI提供者选择 -->
+                            <div class="layui-form-item" id="ai-selection-block" style="display:none;">
+                                <label class="layui-form-label">AI选择</label>
+                                <div class="layui-input-inline">
+                                    <select class="layui-select" lay-search name="slug_translate_ai_selection">
+                                        <option selected value="">不指定（使用默认）</option>
+                                        <!-- 动态加载 AI 提供者和轮询组 -->
+                                    </select>
+                                </div>
+                                <div class="layui-form-mid layui-word-aux">
+                                    不指定则使用AI摘要中的当前配置
+                                </div>
+                            </div>
+
+                            <!-- 测试按钮 -->
+                            <div class="layui-form-item">
+                                <div class="layui-input-block">
+                                    <button class="pear-btn pear-btn-warm pear-btn-md" id="test-slug-translate"
+                                            type="button">
+                                        <i class="layui-icon layui-icon-survey"></i> 测试配置
+                                    </button>
+                                    <button class="pear-btn pear-btn-primary pear-btn-md" lay-filter="saveSlugTranslate" lay-submit
+                                            type="submit">
+                                        <i class="layui-icon layui-icon-ok"></i> 保存配置
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- SEO设置 -->
+                    <div class="layui-tab-item">
+                        <form class="layui-form" lay-filter="seoInfo">
+                            <div class="layui-card" style="margin-bottom: 20px;">
+                                <div class="layui-card-body">
+                                    <blockquote class="layui-elem-quote" style="border-left: 5px solid #1E9FFF;">
+                                        <p style="margin: 0; padding: 5px 0;">
+                                            <i class="layui-icon layui-icon-tips" style="font-size: 18px; color: #1E9FFF;"></i>
+                                            <strong>SEO 全局设置</strong>
+                                        </p>
+                                        <p style="margin-top: 10px; font-size: 12px; color: #666;">
+                                            这些设置将应用于整个网站。单篇文章的自定义SEO信息在文章编辑页面中设置。
+                                        </p>
+                                    </blockquote>
+                                </div>
+                            </div>
+
+                            <!-- 默认SEO设置 -->
+                            <fieldset class="layui-elem-field">
+                                <legend>默认SEO配置</legend>
+                                <div class="layui-field-box">
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">默认SEO标题后缀</label>
+                                        <div class="layui-input-inline">
+                                            <input autocomplete="off" class="layui-input"
+                                                   name="seo_title_suffix"
+                                                   placeholder="例如: - 我的博客" type="text">
+                                        </div>
+                                        <div class="layui-form-mid layui-word-aux">将自动添加到文章标题后面</div>
+                                    </div>
+
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">默认SEO描述</label>
+                                        <div class="layui-input-inline">
+                                            <textarea class="layui-textarea"
+                                                      name="seo_default_description"
+                                                      placeholder="请输入网站默认描述"
+                                                      rows="3"></textarea>
+                                        </div>
+                                        <div class="layui-form-mid layui-word-aux">当文章没有自定义描述时使用</div>
+                                    </div>
+
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">默认关键词</label>
+                                        <div class="layui-input-inline">
+                                            <input autocomplete="off" class="layui-input"
+                                                   name="seo_default_keywords"
+                                                   placeholder="关键词1, 关键词2, 关键词3" type="text">
+                                        </div>
+                                        <div class="layui-form-mid layui-word-aux">多个关键词用英文逗号分隔</div>
+                                    </div>
+                                </div>
+                            </fieldset>
+
+                            <!-- Open Graph 设置 -->
+                            <fieldset class="layui-elem-field">
+                                <legend>Open Graph / Twitter Card</legend>
+                                <div class="layui-field-box">
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">默认分享图片</label>
+                                        <div class="layui-input-inline">
+                                            <input autocomplete="off" class="layui-input"
+                                                   name="seo_default_image"
+                                                   placeholder="请输入默认分享图片URL" type="text">
+                                        </div>
+                                        <div class="layui-input-inline">
+                                            <button class="pear-btn pear-btn-primary pear-btn-sm" id="seo-image-upload"
+                                                    permission="app.admin.upload.avatar" type="button">
+                                                <i class="layui-icon layui-icon-upload"></i>上传图片
+                                            </button>
+                                            <button class="pear-btn pear-btn-primary pear-btn-sm" id="seo-image-choose"
+                                                    permission="app.admin.upload.attachment" type="button">
+                                                <i class="layui-icon layui-icon-align-left"></i>选择图片
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">Twitter Card类型</label>
+                                        <div class="layui-input-inline">
+                                            <select class="layui-select" name="seo_twitter_card_type">
+                                                <option value="summary">Summary (小图)</option>
+                                                <option selected value="summary_large_image">Summary Large Image (大图)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">Twitter用户名</label>
+                                        <div class="layui-input-inline">
+                                            <input autocomplete="off" class="layui-input"
+                                                   name="seo_twitter_username"
+                                                   placeholder="@username" type="text">
+                                        </div>
+                                        <div class="layui-form-mid layui-word-aux">可选，用于Twitter Card</div>
+                                    </div>
+                                </div>
+                            </fieldset>
+
+                            <!-- 结构化数据设置 -->
+                            <fieldset class="layui-elem-field">
+                                <legend>结构化数据 (Schema.org)</legend>
+                                <div class="layui-field-box">
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">组织/作者名称</label>
+                                        <div class="layui-input-inline">
+                                            <input autocomplete="off" class="layui-input"
+                                                   name="seo_organization_name"
+                                                   placeholder="请输入组织或个人名称" type="text">
+                                        </div>
+                                    </div>
+
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">组织Logo</label>
+                                        <div class="layui-input-inline">
+                                            <input autocomplete="off" class="layui-input"
+                                                   name="seo_organization_logo"
+                                                   placeholder="请输入组织Logo URL" type="text">
+                                        </div>
+                                        <div class="layui-input-inline">
+                                            <button class="pear-btn pear-btn-primary pear-btn-sm" id="seo-logo-upload"
+                                                    permission="app.admin.upload.avatar" type="button">
+                                                <i class="layui-icon layui-icon-upload"></i>上传Logo
+                                            </button>
+                                            <button class="pear-btn pear-btn-primary pear-btn-sm" id="seo-logo-choose"
+                                                    permission="app.admin.upload.attachment" type="button">
+                                                <i class="layui-icon layui-icon-align-left"></i>选择Logo
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </fieldset>
+
+                            <div class="layui-form-item">
+                                <div class="layui-input-block">
+                                    <button class="pear-btn pear-btn-primary pear-btn-md" lay-filter="saveSeoInfo"
+                                            lay-submit="" type="submit">
+                                        提交
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
                 </div>
             </div>
 
@@ -961,6 +1183,260 @@
                 });
             });
 
+            // Slug翻译设置
+            layui.use(["form", "layer", "popup", "jquery"], function () {
+                let $ = layui.$;
+                let form = layui.form;
+
+                // 加载Slug翻译配置
+                function loadSlugTranslateConfig() {
+                    $.ajax({
+                        url: '/app/admin/config/get_slug_translate_config',
+                        type: 'GET',
+                        success: function (res) {
+                            form.val('slugTranslateInfo', res);
+                            // 根据模式显示/隐藏AI选择
+                            updateAISelectionVisibility(res.slug_translate_mode || 'auto');
+                        }
+                    });
+                }
+
+                // 根据翻译模式显示/隐藏AI选择
+                function updateAISelectionVisibility(mode) {
+                    if (mode === 'ai' || mode === 'auto') {
+                        $('#ai-selection-block').show();
+                        loadAIProviders(); // 加载AI提供者列表
+                    } else {
+                        $('#ai-selection-block').hide();
+                    }
+                }
+
+                // 加载AI提供者和轮询组
+                function loadAIProviders() {
+                    $.ajax({
+                        url: '/app/admin/ai_provider/list',
+                        type: 'GET',
+                        success: function (res) {
+                            let html = '<option value="">使用默认配置</option>';
+                            if (res.code === 0 && res.data) {
+                                // 添加提供者
+                                html += '<optgroup label="AI提供者">';
+                                res.data.forEach(function (provider) {
+                                    if (provider.enabled) {
+                                        html += '<option value="provider:' + provider.id + '">' + provider.name + '</option>';
+                                    }
+                                });
+                                html += '</optgroup>';
+                            }
+                            $('select[name="slug_translate_ai_selection"]').html(html);
+                            form.render('select');
+                        }
+                    });
+                }
+
+                // 监听翻译模式变化
+                form.on('select(slugMode)', function (data) {
+                    updateAISelectionVisibility(data.value);
+                });
+
+                // 保存Slug翻译配置
+                form.on('submit(saveSlugTranslate)', function (data) {
+                    $.ajax({
+                        url: '/app/admin/config/set_slug_translate_config',
+                        type: 'POST',
+                        data: data.field,
+                        success: function (res) {
+                            if (res.code === 0) {
+                                layui.popup.success('保存成功');
+                            } else {
+                                layui.popup.failure('保存失败: ' + res.msg);
+                            }
+                        },
+                        error: function () {
+                            layui.popup.failure('请求失败');
+                        }
+                    });
+                    return false;
+                });
+
+                // 测试Slug翻译
+                $('#test-slug-translate').click(function () {
+                    let mode = $('select[name="slug_translate_mode"]').val();
+                    let aiSelection = $('select[name="slug_translate_ai_selection"]').val();
+
+                    let loadIndex = layer.load(1, {shade: [0.1, '#fff']});
+                    $.ajax({
+                        url: '/app/admin/config/test_slug_translate',
+                        type: 'POST',
+                        data: {
+                            mode: mode,
+                            ai_selection: aiSelection
+                        },
+                        success: function (res) {
+                            layer.close(loadIndex);
+                            if (res.success) {
+                                layer.msg('测试成功！<br>测试结果: ' + res.result, {icon: 1, time: 3000});
+                            } else {
+                                layer.msg('测试失败: ' + res.message, {icon: 2, time: 3000});
+                            }
+                        },
+                        error: function () {
+                            layer.close(loadIndex);
+                            layer.msg('请求失败', {icon: 2});
+                        }
+                    });
+                });
+
+                // 页面加载时加载配置
+                loadSlugTranslateConfig();
+            });
+
+            // Slug翻译设置
+            layui.use(["form", "layer", "popup", "jquery"], function () {
+                let $ = layui.$;
+                let form = layui.form;
+
+                // 加载Slug翻译配置
+                function loadSlugTranslateConfig() {
+                    $.ajax({
+                        url: '/app/admin/config/get_slug_translate_config',
+                        type: 'GET',
+                        success: function (res) {
+                            form.val('slugTranslateInfo', res);
+                            // 根据模式显示/隐藏AI选择
+                            updateAISelectionVisibility(res.slug_translate_mode || 'auto');
+                        }
+                    });
+                }
+
+                // 根据翻译模式显示/隐藏AI选择
+                function updateAISelectionVisibility(mode) {
+                    if (mode === 'ai' || mode === 'auto') {
+                        $('#ai-selection-block').show();
+                        loadAIProviders();
+                    } else {
+                        $('#ai-selection-block').hide();
+                    }
+                }
+
+                // 加载AI提供者和轮询组
+                function loadAIProviders() {
+                    let html = '<option value="" selected>不指定（使用默认）</option>';
+                    let currentSelection = $('select[name="slug_translate_ai_selection"]').val();
+
+                    // 加载AI提供者
+                    $.ajax({
+                        url: '/app/admin/ai/providers/list',
+                        type: 'GET',
+                        success: function (providerRes) {
+                            if (providerRes.code === 0 && providerRes.data) {
+                                html += '<optgroup label="AI提供者">';
+                                providerRes.data.forEach(function (provider) {
+                                    if (provider.enabled) {
+                                        html += '<option value="provider:' + provider.id + '">' + provider.name + '</option>';
+                                    }
+                                });
+                                html += '</optgroup>';
+                            }
+
+                            // 加载轮询组
+                            $.ajax({
+                                url: '/app/admin/ai/polling-groups/list',
+                                type: 'GET',
+                                success: function (groupRes) {
+                                    if (groupRes.code === 0 && groupRes.data) {
+                                        html += '<optgroup label="轮询组">';
+                                        groupRes.data.forEach(function (group) {
+                                            if (group.enabled) {
+                                                html += '<option value="group:' + group.id + '">' + group.name + '</option>';
+                                            }
+                                        });
+                                        html += '</optgroup>';
+                                    }
+
+                                    // 更新选项
+                                    $('select[name="slug_translate_ai_selection"]').html(html);
+                                    // 恢复之前的选择
+                                    if (currentSelection) {
+                                        $('select[name="slug_translate_ai_selection"]').val(currentSelection);
+                                    }
+                                    form.render('select');
+                                },
+                                error: function () {
+                                    // 如果加载轮询组失败，仍然显示提供者
+                                    $('select[name="slug_translate_ai_selection"]').html(html);
+                                    if (currentSelection) {
+                                        $('select[name="slug_translate_ai_selection"]').val(currentSelection);
+                                    }
+                                    form.render('select');
+                                }
+                            });
+                        },
+                        error: function () {
+                            // 如果加载提供者失败，至少显示默认选项
+                            $('select[name="slug_translate_ai_selection"]').html(html);
+                            form.render('select');
+                        }
+                    });
+                }
+
+                // 监听翻译模式变化
+                form.on('select(slugMode)', function (data) {
+                    updateAISelectionVisibility(data.value);
+                });
+
+                // 保存Slug翻译配置
+                form.on('submit(saveSlugTranslate)', function (data) {
+                    $.ajax({
+                        url: '/app/admin/config/set_slug_translate_config',
+                        type: 'POST',
+                        data: data.field,
+                        success: function (res) {
+                            if (res.code === 0) {
+                                layui.popup.success('保存成功');
+                            } else {
+                                layui.popup.failure('保存失败: ' + res.msg);
+                            }
+                        },
+                        error: function () {
+                            layui.popup.failure('请求失败');
+                        }
+                    });
+                    return false;
+                });
+
+                // 测试Slug翻译
+                $('#test-slug-translate').click(function () {
+                    let mode = $('select[name="slug_translate_mode"]').val();
+                    let aiSelection = $('select[name="slug_translate_ai_selection"]').val();
+
+                    let loadIndex = layer.load(1, {shade: [0.1, '#fff']});
+                    $.ajax({
+                        url: '/app/admin/config/test_slug_translate',
+                        type: 'POST',
+                        data: {
+                            mode: mode,
+                            ai_selection: aiSelection
+                        },
+                        success: function (res) {
+                            layer.close(loadIndex);
+                            if (res.success) {
+                                layer.msg('测试成功！<br>测试结果: ' + res.result, {icon: 1, time: 3000});
+                            } else {
+                                layer.msg('测试失败: ' + res.message, {icon: 2, time: 3000});
+                            }
+                        },
+                        error: function () {
+                            layer.close(loadIndex);
+                            layer.msg('请求失败', {icon: 2});
+                        }
+                    });
+                });
+
+                // 页面加载时加载配置
+                loadSlugTranslateConfig();
+            });
+
             // OAuth设置
             layui.use(["form", "layer", "popup"], function () {
                 let $ = layui.$;
@@ -1180,6 +1656,83 @@
 
                 // 初始化加载配置
                 loadConfig();
+            });
+
+            // SEO设置
+            layui.use(["form", "layer", "popup", "jquery"], function() {
+                let $ = layui.$;
+                let form = layui.form;
+
+                // SEO图片上传和选择
+                $("#seo-image-upload").on("click", function() {
+                    currentMediaInput = $("[name='seo_default_image']");
+                    parent.layer.open({
+                        type: 2,
+                        title: "上传图片",
+                        content: "/app/admin/media/upload?targetType=iframe",
+                        area: ["95%", "90%"]
+                    });
+                });
+
+                $("#seo-image-choose").on("click", function() {
+                    currentMediaInput = $("[name='seo_default_image']");
+                    parent.layer.open({
+                        type: 2,
+                        title: "选择图片",
+                        content: "/app/admin/media/selector?multiple=false&targetType=iframe",
+                        area: ["95%", "90%"]
+                    });
+                });
+
+                // SEO Logo上传和选择
+                $("#seo-logo-upload").on("click", function() {
+                    currentMediaInput = $("[name='seo_organization_logo']");
+                    parent.layer.open({
+                        type: 2,
+                        title: "上传Logo",
+                        content: "/app/admin/media/upload?targetType=iframe",
+                        area: ["95%", "90%"]
+                    });
+                });
+
+                $("#seo-logo-choose").on("click", function() {
+                    currentMediaInput = $("[name='seo_organization_logo']");
+                    parent.layer.open({
+                        type: 2,
+                        title: "选择Logo",
+                        content: "/app/admin/media/selector?multiple=false&targetType=iframe",
+                        area: ["95%", "90%"]
+                    });
+                });
+
+                // 加载SEO配置
+                $.ajax({
+                    url: "/app/admin/config/get_seo_config",
+                    type: "GET",
+                    dataType: "json",
+                    success: function (seoConfig) {
+                        if (seoConfig) {
+                            form.val("seoInfo", seoConfig);
+                        }
+                    }
+                });
+
+                // 提交SEO设置
+                form.on("submit(saveSeoInfo)", function(data) {
+                    $.ajax({
+                        url: "/app/admin/config/set_seo_config",
+                        dataType: "json",
+                        type: "POST",
+                        data: data.field,
+                        success: function (res) {
+                            if (res.code) {
+                                return layui.popup.failure(res.msg);
+                            }
+                            return layui.popup.success("操作成功");
+                        }
+                    });
+                    return false;
+                });
             });
 
         </script>

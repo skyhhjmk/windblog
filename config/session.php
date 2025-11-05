@@ -40,7 +40,7 @@ $defaultConfig = [
             'port' => 6379,
             'auth' => '',
             'timeout' => 2,
-            'database' => '',
+            'database' => '0',
             'prefix' => 'redis_session_',
         ],
         'redis_cluster' => [

@@ -16,6 +16,7 @@ class AnimationDemoController
 {
     /**
      * 不需要登录的方法
+     * index: 动画效果演示页面，公开访问
      */
     protected array $noNeedLogin = ['index'];
 
