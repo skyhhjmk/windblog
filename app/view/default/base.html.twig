@@ -8,6 +8,13 @@
     <link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
     <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
     <title>{% block title %}{{ page_title|default('WindBlog') }}{% endblock %}</title>
+    
+    {# AMP 链接标签 #}
+    {% block amp_links %}
+        {% if amp_url is defined and amp_url %}
+            <link rel="amphtml" href="{{ amp_url }}">
+        {% endif %}
+    {% endblock %}
 
     {# SEO Meta 标签 #}
     {% if seo is defined %}

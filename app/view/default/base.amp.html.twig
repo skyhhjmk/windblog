@@ -1,0 +1,255 @@
+<!doctype html>
+<html amp lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,minimum-scale=1,initial-scale=1">
+    <title>{% block title %}{{ page_title|default('WindBlog') }}{% endblock %}</title>
+    <link rel="canonical" href="{{ canonical_url|default(request.url) }}" />
+    
+    {# AMP必需脚本 #}
+    <script async src="https://cdn.ampproject.org/v0.js"></script>
+    
+    {# SEO Meta 标签 #}
+    {% if seo is defined %}
+        {% if seo.description %}
+        <meta name="description" content="{{ seo.description }}">
+        {% endif %}
+        {% if seo.keywords %}
+        <meta name="keywords" content="{{ seo.keywords }}">
+        {% endif %}
+    {% endif %}
+    
+    {# Schema.org 结构化数据 #}
+    {% block structured_data %}
+        {% if schema is defined %}
+            <script type="application/ld+json">
+                {{ schema|json_encode|raw }}
+            </script>
+        {% endif %}
+    {% endblock %}
+    
+    {# AMP样式 - 必须内联，最大75KB #}
+    <style amp-boilerplate>body{-webkit-animation:-amp-start 8s steps(1,end) 0s 1 normal both;-moz-animation:-amp-start 8s steps(1,end) 0s 1 normal both;-ms-animation:-amp-start 8s steps(1,end) 0s 1 normal both;animation:-amp-start 8s steps(1,end) 0s 1 normal both}@-webkit-keyframes -amp-start{from{visibility:hidden}to{visibility:visible}}@-moz-keyframes -amp-start{from{visibility:hidden}to{visibility:visible}}@-ms-keyframes -amp-start{from{visibility:hidden}to{visibility:visible}}@-o-keyframes -amp-start{from{visibility:hidden}to{visibility:visible}}@keyframes -amp-start{from{visibility:hidden}to{visibility:visible}}</style><noscript><style amp-boilerplate>body{-webkit-animation:none;-moz-animation:none;-ms-animation:none;animation:none}</style></noscript>
+    
+    <style amp-custom>
+        /* 基础样式 */
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(to bottom, #f7f9fc 0%, #eef2f7 100%);
+            color: #333;
+        }
+        
+        /* 头部导航 */
+        .header {
+            background: rgba(255,255,255,0.95);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            padding: 1rem;
+        }
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            color: #667eea;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .logo-img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 0.75rem;
+        }
+        .nav a {
+            margin-left: 1.5rem;
+            text-decoration: none;
+            color: #666;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+        .nav a:hover {
+            color: #667eea;
+        }
+        
+        /* 容器 */
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        
+        /* 主内容区 */
+        .main-content {
+            background: white;
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        /* 文章卡片 */
+        .post-card {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border-left: 4px solid #667eea;
+        }
+        .post-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin: 0 0 0.5rem 0;
+            color: #1f2937;
+        }
+        .post-title a {
+            color: #1f2937;
+            text-decoration: none;
+        }
+        .post-title a:hover {
+            color: #667eea;
+        }
+        .post-meta {
+            display: flex;
+            align-items: center;
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-bottom: 1rem;
+        }
+        .post-meta span {
+            margin-right: 1rem;
+        }
+        .post-excerpt {
+            color: #4b5563;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+        
+        /* 图片 */
+        amp-img {
+            background-color: #f3f4f6;
+        }
+        .post-cover {
+            width: 100%;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        
+        /* 文章内容 */
+        .post-content {
+            line-height: 1.8;
+            color: #374151;
+        }
+        .post-content h1, 
+        .post-content h2, 
+        .post-content h3 {
+            color: #1f2937;
+            margin-top: 1.5em;
+            margin-bottom: 1em;
+        }
+        .post-content p {
+            margin: 1em 0;
+        }
+        .post-content pre {
+            background: #f3f4f6;
+            padding: 1rem;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .post-content code {
+            background: #f3f4f6;
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-size: 0.875em;
+        }
+        
+        /* 页脚 */
+        .footer {
+            background: linear-gradient(to bottom, #ffffff 0%, #f9fafb 100%);
+            border-top: 1px solid #f0f0f0;
+            padding: 2rem 1rem;
+            text-align: center;
+            color: #6b7280;
+            margin-top: 3rem;
+        }
+        
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .nav {
+                display: none;
+            }
+            .post-title {
+                font-size: 1.25rem;
+            }
+            .main-content {
+                padding: 1rem;
+            }
+        }
+        
+        /* AMP提示标签 */
+        .amp-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            margin-left: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- 头部导航 -->
+    <header class="header">
+        <div class="header-content">
+            <a href="/" class="logo">
+                {% set site_logo = blog_config('site_logo', '', true) %}
+                {% if site_logo %}
+                    <amp-img 
+                        src="{{ site_logo }}" 
+                        alt="{{ page_title|default('WindBlog') }}"
+                        width="40"
+                        height="40"
+                        class="logo-img">
+                    </amp-img>
+                {% endif %}
+                <span>{{ page_title|default('WindBlog') }}</span>
+                <span class="amp-badge">⚡ AMP</span>
+            </a>
+            <nav class="nav">
+                <a href="/">首页</a>
+                <a href="/link">友情链接</a>
+            </nav>
+        </div>
+    </header>
+    
+    <!-- 主要内容区 -->
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+    
+    <!-- 页脚 -->
+    <footer class="footer">
+        <p>
+            &copy; {{ 'now'|date('Y') }} {{ page_title|default('WindBlog') }} - 基于 Webman 框架构建
+        </p>
+        <p style="margin-top: 0.5rem; font-size: 0.875rem;">
+            <a href="{{ canonical_url|default(request.url) }}" style="color: #667eea; text-decoration: none;">
+                查看完整版本
+            </a>
+        </p>
+    </footer>
+</body>
+</html>
