@@ -20,7 +20,7 @@ class IndexController
      *
      * @var string[]
      */
-    protected $noNeedLogin = ['index'];
+    protected array $noNeedLogin = ['index'];
 
     /**
      * 不需要鉴权的方法

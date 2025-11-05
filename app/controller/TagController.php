@@ -15,6 +15,11 @@ use support\Response;
 
 class TagController
 {
+    /**
+     * 不需要登录的方法
+     * index: 标签文章列表页，公开访问
+     * list: 全部标签汇总页，公开访问
+     */
     protected array $noNeedLogin = ['index', 'list'];
 
     #[EnableInstantFirstPaint]

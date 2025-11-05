@@ -16,6 +16,26 @@ use Throwable;
 class UserController
 {
     /**
+     * 不需要登录的方法
+     * register: 用户注册
+     * login: 用户登录
+     * activate: 激活账户
+     * resendActivation: 重发激活邮件
+     * oauthRedirect: OAuth登录跳转
+     * oauthCallback: OAuth回调
+     * profileApi: 获取用户信息API
+     */
+    protected array $noNeedLogin = [
+        'register',
+        'login',
+        'activate',
+        'resendActivation',
+        'oauthRedirect',
+        'oauthCallback',
+        'profileApi',
+    ];
+
+    /**
      * 用户注册
      *
      * @param Request $request
@@ -319,6 +339,7 @@ class UserController
      * @param Request $request
      *
      * @return Response
+     * @throws Exception
      */
     public function profileApi(Request $request): Response
     {

@@ -13,8 +13,13 @@ class SitemapController
 {
     /**
      * 不需要登录的方法
-     *
-     * @var array
+     * sitemap: 站点地图XML（全部内容），公开访问
+     * index: 站点地图索引XML，公开访问
+     * posts: 文章列表XML，公开访问
+     * categories: 分类列表XML，公开访问
+     * tags: 标签列表XML，公开访问
+     * archives: 归档列表XML，公开访问
+     * graphical: 图形化站点地图页面，公开访问
      */
     protected array $noNeedLogin = [
         'sitemap',

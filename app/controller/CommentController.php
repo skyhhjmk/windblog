@@ -14,6 +14,13 @@ use Throwable;
 class CommentController
 {
     /**
+     * 不需要登录的方法
+     * submit: 提交评论，支持游客评论
+     * getList: 获取文章评论列表，公开访问
+     * status: 查询评论状态，公开访问
+     */
+    protected array $noNeedLogin = ['submit', 'getList', 'status'];
+    /**
      * 允许的HTML标签（用于评论内容）
      */
     private const ALLOWED_TAGS = '<p><br><strong><em><a><ul><ol><li><blockquote><code><pre>';

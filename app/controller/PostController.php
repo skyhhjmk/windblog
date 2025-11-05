@@ -15,6 +15,10 @@ use support\Response;
 
 class PostController
 {
+    /**
+     * 不需要登录的方法
+     * index: 文章详情页，公开访问（包括公开文章和密码文章）
+     */
     protected array $noNeedLogin = ['index'];
 
     #[EnableInstantFirstPaint]

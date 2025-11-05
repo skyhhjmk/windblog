@@ -18,6 +18,7 @@ class IndexController
 {
     /**
      * 不需要登录的方法
+     * index: 博客首页展示，公开访问
      */
     protected array $noNeedLogin = ['index'];
 

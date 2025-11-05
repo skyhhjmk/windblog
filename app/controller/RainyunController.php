@@ -16,6 +16,7 @@ class RainyunController
 {
     /**
      * 不需要登录的方法
+     * index: Rainyun API工具页面，公开访问
      */
     protected array $noNeedLogin = ['index'];
 

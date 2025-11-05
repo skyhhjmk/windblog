@@ -22,6 +22,11 @@ use Throwable;
  */
 class SearchController
 {
+    /**
+     * 不需要登录的方法
+     * index: 搜索结果页，公开访问
+     * ajax: AJAX搜索接口，公开访问
+     */
     protected array $noNeedLogin = ['index', 'ajax'];
 
     /**
