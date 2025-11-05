@@ -8,6 +8,19 @@
     <link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
     <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
     <title>{% block title %}{{ page_title|default('WindBlog') }}{% endblock %}</title>
+
+    {# SEO Meta 标签 #}
+    {% if seo is defined %}
+        {% include 'components/seo-meta.html.twig' with {'seo': seo} %}
+    {% endif %}
+
+    {# Schema.org 结构化数据 #}
+    {% block structured_data %}
+        {% if schema is defined %}
+            {% include 'components/structured-data.html.twig' with {'schema': schema} %}
+        {% endif %}
+    {% endblock %}
+
     <script src="https://cdn.tailwindcss.com/3.4.17"></script>
     <link rel="preload" as="style" href="{{ asset('/assets/css/font-awesome.css') }}">
     <link rel="stylesheet" href="{{ asset('/assets/css/font-awesome.css') }}">
@@ -930,6 +943,99 @@
                 }, outTotal);
             }
 
+            // 更新 SEO meta 标签和结构化数据
+            function updateSeoMetaTags(newDoc) {
+                if (!newDoc || !newDoc.querySelectorAll) {
+                    console.warn('PJAX SEO: newDoc 无效');
+                    return;
+                }
+
+                // console.log('PJAX SEO: 开始更新 SEO 标签...');
+
+                // 从响应中查找 pjax-seo-data 容器
+                const seoDataContainer = newDoc.getElementById('pjax-seo-data');
+                if (!seoDataContainer) {
+                    console.warn('PJAX SEO: 未找到 #pjax-seo-data 容器');
+                    return;
+                }
+
+                // console.log('PJAX SEO: 找到 SEO 数据容器');
+
+                // 要更新的 meta 标签类型
+                const metaSelectors = [
+                    'meta[name="description"]',
+                    'meta[name="keywords"]',
+                    'meta[name="author"]',
+                    'meta[property^="og:"]',
+                    'meta[property^="article:"]',
+                    'meta[name^="twitter:"]',
+                    'link[rel="canonical"]'
+                ];
+
+                let removedCount = 0;
+                let addedCount = 0;
+
+                // 移除旧的 meta 标签
+                metaSelectors.forEach(function(selector) {
+                    try {
+                        const oldMetas = document.head.querySelectorAll(selector);
+                        oldMetas.forEach(function(meta) {
+                            if (meta.parentNode) {
+                                meta.parentNode.removeChild(meta);
+                                removedCount++;
+                            }
+                        });
+                    } catch (e) {
+                        console.warn('PJAX SEO: 移除旧 meta 标签失败', selector, e);
+                    }
+                });
+
+                // console.log('PJAX SEO: 移除了', removedCount, '个旧 meta 标签');
+
+                // 从 SEO 数据容器中添加新的 meta 标签
+                metaSelectors.forEach(function(selector) {
+                    try {
+                        const newMetas = seoDataContainer.querySelectorAll(selector);
+                        if (newMetas.length > 0) {
+                            // console.log('PJAX SEO: 找到', newMetas.length, '个', selector, '标签');
+                        }
+                        newMetas.forEach(function(meta) {
+                            const clonedMeta = meta.cloneNode(true);
+                            document.head.appendChild(clonedMeta);
+                            addedCount++;
+                        });
+                    } catch (e) {
+                        console.warn('PJAX SEO: 添加新 meta 标签失败', selector, e);
+                    }
+                });
+
+                // console.log('PJAX SEO: 添加了', addedCount, '个新 meta 标签');
+
+                // 更新 Schema.org JSON-LD 结构化数据
+                try {
+                    // 移除旧的 JSON-LD
+                    const oldJsonLd = document.head.querySelectorAll('script[type="application/ld+json"]');
+                    // console.log('PJAX SEO: 移除', oldJsonLd.length, '个旧 JSON-LD');
+                    oldJsonLd.forEach(function(script) {
+                        if (script.parentNode) {
+                            script.parentNode.removeChild(script);
+                        }
+                    });
+
+                    // 从 SEO 数据容器中添加新的 JSON-LD
+                    const newJsonLd = seoDataContainer.querySelectorAll('script[type="application/ld+json"]');
+                    // console.log('PJAX SEO: 添加', newJsonLd.length, '个新 JSON-LD');
+                    newJsonLd.forEach(function(script) {
+                        const clonedScript = script.cloneNode(true);
+                        document.head.appendChild(clonedScript);
+                    });
+                } catch (e) {
+                    console.error('PJAX SEO: 更新 JSON-LD 结构化数据失败', e);
+                }
+
+                // console.log('PJAX SEO: SEO 标签更新完成');
+            }
+
             // 初始化
             function initPJAX() {
                 // 获取DOM元素
@@ -1134,14 +1240,16 @@
                         // 解析HTML获取内容（更鲁棒）
                         const $resp = $(response);
                         let newContent = '';
+                        let doc = null; // 在外层定义 doc 变量
                         try {
                             const parser = new DOMParser();
-                            const doc = parser.parseFromString(response, 'text/html');
+                            doc = parser.parseFromString(response, 'text/html');
                             const byId = doc.getElementById('pjax-container');
                             if (byId) {
                                 newContent = byId.innerHTML || '';
                             }
                         } catch (e) {
+                            console.warn('PJAX: 解析 HTML 失败', e);
                         }
                         if (!newContent) {
                             newContent = $resp.find('#pjax-container').html();
@@ -1312,6 +1420,17 @@
                                 if (topbar) {
                                     topbar.textContent = newTitle;
                                 }
+                            }
+
+                            // 更新 SEO meta 标签和结构化数据
+                            try {
+                                if (doc) {
+                                    updateSeoMetaTags(doc);
+                                } else {
+                                    console.warn('PJAX: 无法更新 SEO 标签，doc 为空');
+                                }
+                            } catch (e) {
+                                console.error('PJAX: 更新 SEO meta 标签失败', e);
                             }
 
                             // 添加到历史记录

@@ -74,6 +74,33 @@ class IndexController
             $cacheKey = PJAXHelper::generateCacheKey($route, $params, 1);
         }
 
+        // 准备 SEO 数据
+        $siteUrl = $request->host();
+        $siteTitle = blog_config('title', 'WindBlog', true);
+        $siteDescription = blog_config('description', '一个异常精致的博客系统', true);
+
+        $seoData = [
+            'title' => $siteTitle,
+            'description' => $siteDescription,
+            'og_type' => 'website',
+            'url' => 'https://' . $siteUrl,
+            'canonical' => 'https://' . $siteUrl,
+            'site_name' => $siteTitle,
+            'locale' => 'zh_CN',
+            'image' => 'https://' . $siteUrl . blog_config('site_logo', '', true),
+            'image_alt' => $siteTitle,
+            'twitter_card' => 'summary',
+        ];
+
+        // 准备 Schema.org WebSite 结构化数据
+        $schemaData = [
+            'type' => 'WebSite',
+            'name' => $siteTitle,
+            'description' => $siteDescription,
+            'url' => 'https://' . $siteUrl,
+            'searchUrl' => 'https://' . $siteUrl . '/search?q={search_term_string}',
+        ];
+
         // 创建带缓存的PJAX响应
         $resp = PJAXHelper::createResponse(
             $request,
@@ -83,6 +110,8 @@ class IndexController
                 'posts' => $result['posts'],
                 'pagination' => $result['pagination'],
                 'sidebar' => $sidebar,
+                'seo' => $seoData,
+                'schema' => $schemaData,
             ],
             $cacheKey,
             120,

@@ -137,6 +137,9 @@ CREATE TABLE IF NOT EXISTS posts
     content        TEXT                     NOT NULL,
     excerpt        TEXT                              DEFAULT NULL,
     ai_summary TEXT DEFAULT NULL,
+    seo_title VARCHAR(255) DEFAULT NULL,
+    seo_description TEXT DEFAULT NULL,
+    seo_keywords VARCHAR(500) DEFAULT NULL,
     status         VARCHAR(15)              NOT NULL DEFAULT 'draft',
     visibility     VARCHAR(20)              NOT NULL DEFAULT 'public',
     password       VARCHAR(255)                      DEFAULT NULL,
@@ -162,6 +165,10 @@ COMMENT ON COLUMN posts.slug IS '文章别名';
 COMMENT ON COLUMN posts.content_type IS '内容类型';
 COMMENT ON COLUMN posts.content IS '文章内容';
 COMMENT ON COLUMN posts.excerpt IS '文章摘要';
+COMMENT ON COLUMN posts.ai_summary IS 'AI生成的文章摘要';
+COMMENT ON COLUMN posts.seo_title IS '自定义 SEO 标题，如果为空则使用文章标题';
+COMMENT ON COLUMN posts.seo_description IS '自定义 SEO 描述，如果为空则使用摘要';
+COMMENT ON COLUMN posts.seo_keywords IS '自定义 SEO 关键词，逗号分隔';
 COMMENT ON COLUMN posts.status IS '文章状态';
 COMMENT ON COLUMN posts.visibility IS '文章可见性';
 COMMENT ON COLUMN posts.password IS '文章密码';
