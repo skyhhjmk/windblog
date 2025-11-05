@@ -29,6 +29,7 @@
                     <li>OAuth设置</li>
                     <li>Session设置</li>
                     <li>Slug翻译</li>
+                    <li>SEO设置</li>
                 </ul>
                 <div class="layui-tab-content">
 
@@ -726,6 +727,150 @@
                                     <button class="pear-btn pear-btn-primary pear-btn-md" lay-filter="saveSlugTranslate" lay-submit
                                             type="submit">
                                         <i class="layui-icon layui-icon-ok"></i> 保存配置
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- SEO设置 -->
+                    <div class="layui-tab-item">
+                        <form class="layui-form" lay-filter="seoInfo">
+                            <div class="layui-card" style="margin-bottom: 20px;">
+                                <div class="layui-card-body">
+                                    <blockquote class="layui-elem-quote" style="border-left: 5px solid #1E9FFF;">
+                                        <p style="margin: 0; padding: 5px 0;">
+                                            <i class="layui-icon layui-icon-tips" style="font-size: 18px; color: #1E9FFF;"></i>
+                                            <strong>SEO 全局设置</strong>
+                                        </p>
+                                        <p style="margin-top: 10px; font-size: 12px; color: #666;">
+                                            这些设置将应用于整个网站。单篇文章的自定义SEO信息在文章编辑页面中设置。
+                                        </p>
+                                    </blockquote>
+                                </div>
+                            </div>
+
+                            <!-- 默认SEO设置 -->
+                            <fieldset class="layui-elem-field">
+                                <legend>默认SEO配置</legend>
+                                <div class="layui-field-box">
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">默认SEO标题后缀</label>
+                                        <div class="layui-input-inline">
+                                            <input autocomplete="off" class="layui-input"
+                                                   name="seo_title_suffix"
+                                                   placeholder="例如: - 我的博客" type="text">
+                                        </div>
+                                        <div class="layui-form-mid layui-word-aux">将自动添加到文章标题后面</div>
+                                    </div>
+
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">默认SEO描述</label>
+                                        <div class="layui-input-inline">
+                                            <textarea class="layui-textarea"
+                                                      name="seo_default_description"
+                                                      placeholder="请输入网站默认描述"
+                                                      rows="3"></textarea>
+                                        </div>
+                                        <div class="layui-form-mid layui-word-aux">当文章没有自定义描述时使用</div>
+                                    </div>
+
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">默认关键词</label>
+                                        <div class="layui-input-inline">
+                                            <input autocomplete="off" class="layui-input"
+                                                   name="seo_default_keywords"
+                                                   placeholder="关键词1, 关键词2, 关键词3" type="text">
+                                        </div>
+                                        <div class="layui-form-mid layui-word-aux">多个关键词用英文逗号分隔</div>
+                                    </div>
+                                </div>
+                            </fieldset>
+
+                            <!-- Open Graph 设置 -->
+                            <fieldset class="layui-elem-field">
+                                <legend>Open Graph / Twitter Card</legend>
+                                <div class="layui-field-box">
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">默认分享图片</label>
+                                        <div class="layui-input-inline">
+                                            <input autocomplete="off" class="layui-input"
+                                                   name="seo_default_image"
+                                                   placeholder="请输入默认分享图片URL" type="text">
+                                        </div>
+                                        <div class="layui-input-inline">
+                                            <button class="pear-btn pear-btn-primary pear-btn-sm" id="seo-image-upload"
+                                                    permission="app.admin.upload.avatar" type="button">
+                                                <i class="layui-icon layui-icon-upload"></i>上传图片
+                                            </button>
+                                            <button class="pear-btn pear-btn-primary pear-btn-sm" id="seo-image-choose"
+                                                    permission="app.admin.upload.attachment" type="button">
+                                                <i class="layui-icon layui-icon-align-left"></i>选择图片
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">Twitter Card类型</label>
+                                        <div class="layui-input-inline">
+                                            <select class="layui-select" name="seo_twitter_card_type">
+                                                <option value="summary">Summary (小图)</option>
+                                                <option selected value="summary_large_image">Summary Large Image (大图)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">Twitter用户名</label>
+                                        <div class="layui-input-inline">
+                                            <input autocomplete="off" class="layui-input"
+                                                   name="seo_twitter_username"
+                                                   placeholder="@username" type="text">
+                                        </div>
+                                        <div class="layui-form-mid layui-word-aux">可选，用于Twitter Card</div>
+                                    </div>
+                                </div>
+                            </fieldset>
+
+                            <!-- 结构化数据设置 -->
+                            <fieldset class="layui-elem-field">
+                                <legend>结构化数据 (Schema.org)</legend>
+                                <div class="layui-field-box">
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">组织/作者名称</label>
+                                        <div class="layui-input-inline">
+                                            <input autocomplete="off" class="layui-input"
+                                                   name="seo_organization_name"
+                                                   placeholder="请输入组织或个人名称" type="text">
+                                        </div>
+                                    </div>
+
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">组织Logo</label>
+                                        <div class="layui-input-inline">
+                                            <input autocomplete="off" class="layui-input"
+                                                   name="seo_organization_logo"
+                                                   placeholder="请输入组织Logo URL" type="text">
+                                        </div>
+                                        <div class="layui-input-inline">
+                                            <button class="pear-btn pear-btn-primary pear-btn-sm" id="seo-logo-upload"
+                                                    permission="app.admin.upload.avatar" type="button">
+                                                <i class="layui-icon layui-icon-upload"></i>上传Logo
+                                            </button>
+                                            <button class="pear-btn pear-btn-primary pear-btn-sm" id="seo-logo-choose"
+                                                    permission="app.admin.upload.attachment" type="button">
+                                                <i class="layui-icon layui-icon-align-left"></i>选择Logo
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </fieldset>
+
+                            <div class="layui-form-item">
+                                <div class="layui-input-block">
+                                    <button class="pear-btn pear-btn-primary pear-btn-md" lay-filter="saveSeoInfo"
+                                            lay-submit="" type="submit">
+                                        提交
                                     </button>
                                 </div>
                             </div>
@@ -1511,6 +1656,83 @@
 
                 // 初始化加载配置
                 loadConfig();
+            });
+
+            // SEO设置
+            layui.use(["form", "layer", "popup", "jquery"], function() {
+                let $ = layui.$;
+                let form = layui.form;
+
+                // SEO图片上传和选择
+                $("#seo-image-upload").on("click", function() {
+                    currentMediaInput = $("[name='seo_default_image']");
+                    parent.layer.open({
+                        type: 2,
+                        title: "上传图片",
+                        content: "/app/admin/media/upload?targetType=iframe",
+                        area: ["95%", "90%"]
+                    });
+                });
+
+                $("#seo-image-choose").on("click", function() {
+                    currentMediaInput = $("[name='seo_default_image']");
+                    parent.layer.open({
+                        type: 2,
+                        title: "选择图片",
+                        content: "/app/admin/media/selector?multiple=false&targetType=iframe",
+                        area: ["95%", "90%"]
+                    });
+                });
+
+                // SEO Logo上传和选择
+                $("#seo-logo-upload").on("click", function() {
+                    currentMediaInput = $("[name='seo_organization_logo']");
+                    parent.layer.open({
+                        type: 2,
+                        title: "上传Logo",
+                        content: "/app/admin/media/upload?targetType=iframe",
+                        area: ["95%", "90%"]
+                    });
+                });
+
+                $("#seo-logo-choose").on("click", function() {
+                    currentMediaInput = $("[name='seo_organization_logo']");
+                    parent.layer.open({
+                        type: 2,
+                        title: "选择Logo",
+                        content: "/app/admin/media/selector?multiple=false&targetType=iframe",
+                        area: ["95%", "90%"]
+                    });
+                });
+
+                // 加载SEO配置
+                $.ajax({
+                    url: "/app/admin/config/get_seo_config",
+                    type: "GET",
+                    dataType: "json",
+                    success: function (seoConfig) {
+                        if (seoConfig) {
+                            form.val("seoInfo", seoConfig);
+                        }
+                    }
+                });
+
+                // 提交SEO设置
+                form.on("submit(saveSeoInfo)", function(data) {
+                    $.ajax({
+                        url: "/app/admin/config/set_seo_config",
+                        dataType: "json",
+                        type: "POST",
+                        data: data.field,
+                        success: function (res) {
+                            if (res.code) {
+                                return layui.popup.failure(res.msg);
+                            }
+                            return layui.popup.success("操作成功");
+                        }
+                    });
+                    return false;
+                });
             });
 
         </script>

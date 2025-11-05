@@ -22,7 +22,7 @@ class ConfigController extends Base
      *
      * @var string[]
      */
-    protected $noNeedAuth = ['get', 'get_url_mode', 'get_site_info'];
+    protected $noNeedAuth = ['get', 'get_url_mode', 'get_site_info', 'get_seo_config'];
 
     /**
      * 账户设置
@@ -666,6 +666,59 @@ class ConfigController extends Base
                 'message' => '测试异常: ' . $e->getMessage(),
                 'result' => '',
             ]);
+        }
+    }
+
+    /**
+     * 获取SEO配置
+     *
+     * @return Response
+     */
+    public function get_seo_config(): Response
+    {
+        try {
+            $seoConfig = [
+                'seo_title_suffix' => blog_config('seo_title_suffix', '', true),
+                'seo_default_description' => blog_config('seo_default_description', '', true),
+                'seo_default_keywords' => blog_config('seo_default_keywords', '', true),
+                'seo_default_image' => blog_config('seo_default_image', '', true),
+                'seo_twitter_card_type' => blog_config('seo_twitter_card_type', 'summary_large_image', true),
+                'seo_twitter_username' => blog_config('seo_twitter_username', '', true),
+                'seo_organization_name' => blog_config('seo_organization_name', '', true),
+                'seo_organization_logo' => blog_config('seo_organization_logo', '', true),
+            ];
+
+            return json($seoConfig);
+        } catch (Throwable $e) {
+            return $this->json(1, $e->getMessage());
+        }
+    }
+
+    /**
+     * 设置SEO配置
+     *
+     * @param Request $request
+     *
+     * @return Response
+     */
+    public function set_seo_config(Request $request): Response
+    {
+        try {
+            $seoConfig = $request->post();
+
+            // 保存SEO配置
+            blog_config('seo_title_suffix', $seoConfig['seo_title_suffix'] ?? '', true, true, true);
+            blog_config('seo_default_description', $seoConfig['seo_default_description'] ?? '', true, true, true);
+            blog_config('seo_default_keywords', $seoConfig['seo_default_keywords'] ?? '', true, true, true);
+            blog_config('seo_default_image', $seoConfig['seo_default_image'] ?? '', true, true, true);
+            blog_config('seo_twitter_card_type', $seoConfig['seo_twitter_card_type'] ?? 'summary_large_image', true, true, true);
+            blog_config('seo_twitter_username', $seoConfig['seo_twitter_username'] ?? '', true, true, true);
+            blog_config('seo_organization_name', $seoConfig['seo_organization_name'] ?? '', true, true, true);
+            blog_config('seo_organization_logo', $seoConfig['seo_organization_logo'] ?? '', true, true, true);
+
+            return $this->json(0);
+        } catch (Throwable $e) {
+            return $this->json(1, $e->getMessage());
         }
     }
 

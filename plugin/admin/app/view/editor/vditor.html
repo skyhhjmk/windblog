@@ -294,6 +294,49 @@
                     </div>
                 </div>
 
+                <!-- SEO设置 -->
+                <div class="bg-gradient-to-br from-green-50 to-teal-50 rounded border border-green-200">
+                    <div class="p-3 border-b border-green-200">
+                        <h3 class="text-sm font-semibold text-gray-700 flex items-center">
+                            <i class="fas fa-search mr-2 text-green-500"></i>SEO设置
+                        </h3>
+                    </div>
+                    <div class="p-3 space-y-3">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1.5" for="seo-title">SEO标题</label>
+                            <input class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" 
+                                   id="seo-title"
+                                   maxlength="60"
+                                   placeholder="留空使用文章标题"
+                                   type="text">
+                            <div class="text-xs text-gray-500 mt-1">
+                                <span id="seo-title-count">0</span>/60 字符 (建议50-60字符)
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1.5" for="seo-description">SEO描述</label>
+                            <textarea class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" 
+                                      id="seo-description"
+                                      maxlength="160"
+                                      placeholder="留空使用AI摘要或文章摘要"
+                                      rows="3"></textarea>
+                            <div class="text-xs text-gray-500 mt-1">
+                                <span id="seo-description-count">0</span>/160 字符 (建议150-160字符)
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1.5" for="seo-keywords">SEO关键词</label>
+                            <input class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" 
+                                   id="seo-keywords"
+                                   placeholder="用英文逗号分隔，留空使用文章标签"
+                                   type="text">
+                            <div class="text-xs text-gray-500 mt-1">
+                                建议3-5个关键词
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- 快捷操作 -->
                 <div class="space-y-2">
                     <button class="w-full px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm rounded transition-colors flex items-center justify-center border border-gray-300"
@@ -654,6 +697,23 @@
                                     allowCommentsCheckbox.checked = data.data.allow_comments !== false;
                                 }
 
+                                // 设置SEO字段
+                                const seoTitleInput = document.getElementById('seo-title');
+                                const seoDescriptionInput = document.getElementById('seo-description');
+                                const seoKeywordsInput = document.getElementById('seo-keywords');
+                                
+                                if (seoTitleInput && data.data.seo_title) {
+                                    seoTitleInput.value = data.data.seo_title;
+                                    updateSeoTitleCount();
+                                }
+                                if (seoDescriptionInput && data.data.seo_description) {
+                                    seoDescriptionInput.value = data.data.seo_description;
+                                    updateSeoDescriptionCount();
+                                }
+                                if (seoKeywordsInput && data.data.seo_keywords) {
+                                    seoKeywordsInput.value = data.data.seo_keywords;
+                                }
+
                                 // 设置精选文章
                                 const featuredCheckbox = document.getElementById('post-featured');
                                 if (featuredCheckbox) {
@@ -766,6 +826,35 @@
             }
         }
 
+        // SEO字符计数函数
+        function updateSeoTitleCount() {
+            const seoTitleInput = document.getElementById('seo-title');
+            const seoTitleCount = document.getElementById('seo-title-count');
+            if (seoTitleInput && seoTitleCount) {
+                seoTitleCount.textContent = seoTitleInput.value.length;
+            }
+        }
+
+        function updateSeoDescriptionCount() {
+            const seoDescriptionInput = document.getElementById('seo-description');
+            const seoDescriptionCount = document.getElementById('seo-description-count');
+            if (seoDescriptionInput && seoDescriptionCount) {
+                seoDescriptionCount.textContent = seoDescriptionInput.value.length;
+            }
+        }
+
+        // 添加SEO输入监听
+        const seoTitleInput = document.getElementById('seo-title');
+        const seoDescriptionInput = document.getElementById('seo-description');
+        
+        if (seoTitleInput) {
+            seoTitleInput.addEventListener('input', updateSeoTitleCount);
+        }
+        
+        if (seoDescriptionInput) {
+            seoDescriptionInput.addEventListener('input', updateSeoDescriptionCount);
+        }
+
         // 保存草稿按钮事件
         document.getElementById('save-draft-btn').addEventListener('click', function () {
             savePost('draft');
@@ -805,6 +894,11 @@
                     name: t.name
                 }));
 
+                // 准备SEO数据
+                const seoTitleInput = document.getElementById('seo-title');
+                const seoDescriptionInput = document.getElementById('seo-description');
+                const seoKeywordsInput = document.getElementById('seo-keywords');
+
                 // 准备保存数据
                 const saveData = {
                     post_id: postId,
@@ -816,7 +910,11 @@
                     featured: postFeatured.checked ? 1 : 0,
                     authors: authorIds,
                     categories: categories,
-                    tags: tags
+                    tags: tags,
+                    // SEO字段
+                    seo_title: seoTitleInput ? seoTitleInput.value.trim() : '',
+                    seo_description: seoDescriptionInput ? seoDescriptionInput.value.trim() : '',
+                    seo_keywords: seoKeywordsInput ? seoKeywordsInput.value.trim() : ''
                     // AI摘要相关字段通过单独的"保存摘要"按钮处理
                 };
 

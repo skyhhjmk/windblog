@@ -65,6 +65,10 @@ class EditorController
         $authors = $request->post('authors', []);
         $categories = $request->post('categories', []);
         $tags = $request->post('tags', []);
+        // SEO 字段
+        $seo_title = $request->post('seo_title', '');
+        $seo_description = $request->post('seo_description', '');
+        $seo_keywords = $request->post('seo_keywords', '');
         // AI 摘要相关字段现在通过单独的保存摘要接口处理
 
         // 验证输入
@@ -91,6 +95,9 @@ class EditorController
             'visibility' => $visibility,
             'allow_comments' => $allow_comments ? 1 : 0,
             'featured' => $featured ? 1 : 0,
+            'seo_title' => $seo_title ?: null,
+            'seo_description' => $seo_description ?: null,
+            'seo_keywords' => $seo_keywords ?: null,
             'updated_at' => utc_now_string('Y-m-d H:i:s'),
         ];
         // AI摘要相关字段通过单独的保存接口处理，不在此更新
@@ -655,6 +662,9 @@ class EditorController
                 'published_at' => $post->published_at,
                 'created_at' => $post->created_at,
                 'updated_at' => $post->updated_at,
+                'seo_title' => $post->seo_title ?? '',
+                'seo_description' => $post->seo_description ?? '',
+                'seo_keywords' => $post->seo_keywords ?? '',
                 'authors' => $post->authors ? $post->authors->toArray() : [],
                 'categories' => $post->categories ? $post->categories->toArray() : [],
                 'tags' => $post->tags ? $post->tags->toArray() : [],
