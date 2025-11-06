@@ -7,6 +7,10 @@ use League\CommonMark\Environment\Environment;
 use League\CommonMark\Exception\CommonMarkException;
 use League\CommonMark\Extension\Autolink\AutolinkExtension;
 use League\CommonMark\Extension\CommonMark\CommonMarkCoreExtension;
+use League\CommonMark\Extension\DefaultAttributes\DefaultAttributesExtension;
+use League\CommonMark\Extension\DescriptionList\DescriptionListExtension;
+use League\CommonMark\Extension\Footnote\FootnoteExtension;
+use League\CommonMark\Extension\HeadingPermalink\HeadingPermalinkExtension;
 use League\CommonMark\Extension\Strikethrough\StrikethroughExtension;
 use League\CommonMark\Extension\Table\TableExtension;
 use League\CommonMark\Extension\TaskList\TaskListExtension;
@@ -15,7 +19,8 @@ use League\CommonMark\MarkdownConverter;
 /**
  * Markdown 渲染服务
  * - 支持基本语法渲染为 HTML
- * - 支持自定义 CSS（注入或自定义容器 class）
+ * - 尽可能贴近 Vditor（Lute）的渲染风格：启用 GFM/脚注/任务列表/表格等，并输出锚点
+ * - 可配置容器 class 与内联样式
  * - 提供语法接口用于后期扩展（MarkdownSyntaxInterface）
  */
 class MarkdownService
@@ -28,12 +33,22 @@ class MarkdownService
 
     /** @var array 默认配置 */
     protected array $options = [
-        // 安全与渲染参数
-        'html_input' => 'allow',
+        // 安全与渲染参数（默认贴近 Vditor：不输出原始 HTML，禁用不安全链接）
+        'html_input' => 'strip',
         'allow_unsafe_links' => false,
         'max_nesting_level' => 20,
         'renderer' => [
             'soft_break' => "\n",
+        ],
+        // HeadingPermalink 配置，生成与 Vditor 兼容的锚点结构
+        'heading_permalink' => [
+            'html_class' => 'vditor-anchor',
+            'id_prefix' => 'vditorAnchor-',
+            'apply_id_to_heading' => true,
+            'insert' => 'before',
+            'symbol' => '',
+            'min_heading_level' => 1,
+            'max_heading_level' => 6,
         ],
         'commonmark' => [
             'enable_em' => true,
@@ -45,7 +60,7 @@ class MarkdownService
     ];
 
     /** 自定义容器 class（用于挂自定义样式） */
-    protected string $cssClass = 'markdown-body';
+    protected string $cssClass = 'vditor-reset';
 
     /** 需要内联注入的 CSS 内容（可为空） */
     protected ?string $inlineCss = null;
@@ -59,12 +74,12 @@ class MarkdownService
         $mdConfig = config('markdown', []);
         if (is_array($mdConfig) && $mdConfig) {
             $this->options = array_replace_recursive($this->options, $mdConfig['options'] ?? []);
-            $this->cssClass = (string)($mdConfig['css_class'] ?? $this->cssClass);
+            $this->cssClass = (string) ($mdConfig['css_class'] ?? $this->cssClass);
             $this->inlineCss = $mdConfig['inject_css'] ?? null;
         }
         if (is_array($config) && $config) {
             $this->options = array_replace_recursive($this->options, $config['options'] ?? []);
-            $this->cssClass = (string)($config['css_class'] ?? $this->cssClass);
+            $this->cssClass = (string) ($config['css_class'] ?? $this->cssClass);
             $this->inlineCss = $config['inject_css'] ?? $this->inlineCss;
         }
 
@@ -76,6 +91,11 @@ class MarkdownService
         $this->environment->addExtension(new StrikethroughExtension());
         $this->environment->addExtension(new TableExtension());
         $this->environment->addExtension(new TaskListExtension());
+        // 贴近 Vditor 的扩展
+        $this->environment->addExtension(new FootnoteExtension());
+        $this->environment->addExtension(new HeadingPermalinkExtension());
+        $this->environment->addExtension(new DefaultAttributesExtension());
+        $this->environment->addExtension(new DescriptionListExtension());
 
         // 通过配置自动注册自定义扩展（可选）
         $this->registerConfiguredSyntaxExtensions();
@@ -126,10 +146,10 @@ class MarkdownService
     public function render(string $markdown, array $options = []): string
     {
         $wrap = $options['wrap'] ?? true;
-        $cssClass = (string)($options['css_class'] ?? $this->cssClass);
+        $cssClass = (string) ($options['css_class'] ?? $this->cssClass);
         $injectCss = array_key_exists('inject_css', $options) ? $options['inject_css'] : $this->inlineCss;
 
-        $html = (string)$this->converter->convert($markdown);
+        $html = (string) $this->converter->convert($markdown);
 
         // 包裹容器
         if ($wrap) {

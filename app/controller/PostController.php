@@ -93,6 +93,26 @@ class PostController
             // 动态选择模板：PJAX 返回片段，非 PJAX 返回完整页面
             $viewName = PJAXHelper::getViewName('index/post', $isPjax);
 
+            // 先进行服务端 Markdown 渲染，保证与前端 Vditor 风格一致
+            $postHtml = $post->content ?? '';
+            $contentType = $post->content_type ?? 'markdown';
+            if ($postHtml !== '') {
+                if ($contentType === 'markdown' || $contentType === 'md' || $contentType === null) {
+                    $md = new MarkdownService([
+                        'options' => [
+                            // 贴近 Vditor：不输出原始 HTML，禁用不安全链接
+                            'html_input' => 'strip',
+                            'allow_unsafe_links' => false,
+                        ],
+                        'css_class' => 'vditor-reset',
+                    ]);
+                    $postHtml = $md->render($postHtml, [
+                        'wrap' => false,
+                        'inject_css' => '',
+                    ]);
+                }
+            }
+
             // 非 PJAX 请求启用页面级缓存（TTL=120）
             $cacheKey = null;
             if (!$isPjax) {
@@ -171,6 +191,7 @@ class PostController
                 [
                     'page_title' => $post['title'] . ' - ' . blog_config('title', 'WindBlog', true),
                     'post' => $post,
+                    'post_html' => $postHtml,
                     'author' => $authorName,
                     'sidebar' => $sidebar,
                     'breadcrumbs' => $breadcrumbs,
@@ -209,6 +230,25 @@ class PostController
 
                 // 动态选择模板：PJAX 返回片段，非 PJAX 返回完整页面
                 $viewName = PJAXHelper::getViewName('index/post', $isPjax);
+
+                // 先进行服务端 Markdown 渲染，保证与前端 Vditor 风格一致
+                $postHtml = $post->content ?? '';
+                $contentType = $post->content_type ?? 'markdown';
+                if ($postHtml !== '') {
+                    if ($contentType === 'markdown' || $contentType === 'md' || $contentType === null) {
+                        $md = new MarkdownService([
+                            'options' => [
+                                'html_input' => 'strip',
+                                'allow_unsafe_links' => false,
+                            ],
+                            'css_class' => 'vditor-reset',
+                        ]);
+                        $postHtml = $md->render($postHtml, [
+                            'wrap' => false,
+                            'inject_css' => '',
+                        ]);
+                    }
+                }
 
                 // 非 PJAX 请求启用页面级缓存（TTL=120）
                 $cacheKey = null;
@@ -285,6 +325,7 @@ class PostController
                     [
                         'page_title' => $post['title'] . ' - ' . blog_config('title', 'WindBlog', true),
                         'post' => $post,
+                        'post_html' => $postHtml,
                         'author' => $authorName,
                         'sidebar' => $sidebar,
                         'breadcrumbs' => $breadcrumbs,

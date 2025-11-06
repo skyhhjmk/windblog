@@ -77,15 +77,8 @@
                      id="post-container"
                      data-post-id="{{ post.id }}"
                      data-post-slug="{{ post.slug }}">
-                    <!-- 内容将由 Vditor 渲染 -->
+                    {{ post_html|default('')|raw }}
                 </div>
-                <!-- 将文章内容嵌入为 JSON 数据 -->
-                <script type="application/json" id="post-content-data">
-                {{ post.content|json_encode|raw }}
-
-
-
-                </script>
             </div>
 
             <!-- 文章底部 -->
@@ -200,96 +193,314 @@
                 return;
             }
 
-            // 从嵌入的 JSON 数据中读取内容
-            // 首先尝试通过ID查找
-            let contentDataEl = document.getElementById('post-content-data');
-
-            // 如果通过ID找不到，则尝试通过类型查找
-            if (!contentDataEl) {
-                const allScripts = document.querySelectorAll('script[type="application/json"]');
-                for (let i = 0; i < allScripts.length; i++) {
-                    // 查找内容长度较大的JSON脚本，这很可能是文章内容
-                    if (allScripts[i].textContent && allScripts[i].textContent.length > 100) {
-                        contentDataEl = allScripts[i];
-                        break;
-                    }
-                }
-            }
-
-            if (!contentDataEl) {
-                // 添加更多调试信息
-                console.log('[Post.content] 页面中的所有script标签:');
-                const allScripts = document.querySelectorAll('script');
-                allScripts.forEach((script, index) => {
-                    console.log(`  [${index}] type: ${script.type}, id: ${script.id}, content length: ${script.textContent ? script.textContent.length : 0}`);
-                });
-
-                console.error('[Post.content] 内容数据不存在');
-                container.innerHTML = '<div class="text-red-500 p-4 border border-red-300 rounded">' +
-                    '⚠️ 文章内容加载失败：数据丢失<br>' +
-                    '<button onclick="location.reload()" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">刷新页面</button>' +
-                    '</div>';
-                return;
-            }
-
             try {
-                const content = JSON.parse(contentDataEl.textContent || '""');
-                renderContent(container, content);
+                renderContent(container);
                 // 标记已渲染
                 window.__postRendered = true;
             } catch (error) {
-                console.error('[Post.content] 解析内容数据失败:', error);
-                container.innerHTML = '<div class="text-red-500 p-4 border border-red-300 rounded">' +
-                    '⚠️ 文章内容解析失败<br>' +
-                    '<button onclick="location.reload()" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">刷新页面</button>' +
-                    '</div>';
+                console.error('[Post.content] 渲染增强失败:', error);
             }
         }
 
-        function renderContent(container, content) {
-            function doPreview() {
-                if (!window.Vditor) {
-                    window.__rpTry = (window.__rpTry || 0) + 1;
-                    if (window.__rpTry < 200) {
-                        setTimeout(doPreview, 100);
-                    } else {
-                        container.innerHTML = '<div class="text-red-500 p-4 border border-red-300 rounded">' +
-                            '⚠️ Vditor 加载超时<br>' +
-                            '<button onclick="location.reload()" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">刷新页面</button>' +
-                            '</div>';
-                    }
-                    return;
-                }
-
-                Vditor.preview(container, content, {
-                    mode: 'light',
-                    lang: 'zh_CN',
-                    anchor: 1,
-                    lazyLoadImage: 'https://cdn.jsdelivr.net/npm/vditor/dist/images/img-loading.svg',
-                    after() {
-                        // 文章渲染完成
-                        if (window.PjaxProgress && typeof window.PjaxProgress.complete === 'function') {
-                            window.PjaxProgress.complete();
-                        }
-                        // 初始化评论功能
-                        if (typeof initComments === 'function') {
-                            initComments();
-                        }
-                        // 初始化划词评论功能
-                        if (typeof initTextSelection === 'function') {
-                            initTextSelection();
-                        }
+        function renderContent(container) {
+            // 代码高亮 & 图表渲染（前端执行，基础 Markdown 已由服务端渲染）
+            function loadScript(src, id) {
+                return new Promise(function (resolve, reject) {
+                    try {
+                        if (id && document.getElementById(id)) return resolve(true);
+                        if ([...document.getElementsByTagName('script')].some(function (s) {
+                            return s.src === src;
+                        })) return resolve(true);
+                        var s = document.createElement('script');
+                        if (id) s.id = id;
+                        s.src = src;
+                        s.async = true;
+                        s.onload = function () {
+                            resolve(true);
+                        };
+                        s.onerror = function () {
+                            reject(new Error('load failed: ' + src));
+                        };
+                        document.head.appendChild(s);
+                    } catch (e) {
+                        reject(e);
                     }
                 });
             }
 
-            // 使用 rAF + setTimeout 让页面先渲染
+            function highlightCodes(root) {
+                try {
+                    if (!window.hljs) return;
+                    var skip = /\blanguage-(mermaid|flowchart|echarts|graphviz|plantuml|markmap|abc|smiles|math)\b/;
+                    root.querySelectorAll('pre > code').forEach(function (code) {
+                        var cls = code.className || '';
+                        if (skip.test(cls)) return;
+                        window.hljs.highlightElement(code);
+                    });
+                } catch (_) {
+                }
+                try {
+                    addCopyButtons(root);
+                } catch (_) {
+                }
+            }
+
+            function addCopyButtons(root) {
+                var skip = /\blanguage-(mermaid|flowchart|echarts|graphviz|plantuml|markmap|abc|smiles|math)\b/;
+                root.querySelectorAll('pre').forEach(function (pre) {
+                    if (pre.querySelector('.code-copy-btn')) return;
+                    var code = pre.querySelector('code');
+                    if (!code) return;
+                    var cls = code.className || '';
+                    // 普通代码块添加复制按钮，图形类在渲染后另行追加
+                    if (skip.test(cls)) return;
+                    addCopyButtonToElement(pre, function () {
+                        return code.textContent || '';
+                    });
+                });
+            }
+
+            function addCopyButtonToElement(el, getText) {
+                try {
+                    var btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'code-copy-btn';
+                    btn.textContent = '复制';
+                    btn.addEventListener('click', function () {
+                        var text = '';
+                        try {
+                            text = (getText && getText()) || '';
+                        } catch (_) {
+                        }
+                        if (!text) return;
+                        var done = function () {
+                            var old = btn.textContent;
+                            btn.textContent = '已复制';
+                            btn.classList.add('copied');
+                            setTimeout(function () {
+                                btn.textContent = old;
+                                btn.classList.remove('copied');
+                            }, 1200);
+                        };
+                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                            navigator.clipboard.writeText(text).then(done).catch(function () {
+                                fallbackCopy(text, done);
+                            });
+                        } else {
+                            fallbackCopy(text, done);
+                        }
+                    });
+                    // 确保容器可相对定位
+                    var style = window.getComputedStyle(el);
+                    if (style.position === 'static') {
+                        el.style.position = 'relative';
+                    }
+                    el.appendChild(btn);
+                } catch (_) {
+                }
+            }
+
+            function fallbackCopy(text, done) {
+                try {
+                    var ta = document.createElement('textarea');
+                    ta.value = text;
+                    ta.style.position = 'fixed';
+                    ta.style.top = '-9999px';
+                    document.body.appendChild(ta);
+                    ta.focus();
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                    done();
+                } catch (_) {
+                }
+            }
+
+            function parseOptions(raw) {
+                var meta = {};
+                if (!raw) return {meta: meta, content: ''};
+                var lines = (raw || '').split(/\r?\n/);
+                if (!lines.length) return {meta: meta, content: raw};
+                var first = (lines[0] || '').trim();
+                if (/^@option\s+/i.test(first)) {
+                    var kvs = first.replace(/^@option\s+/i, '').trim().split(/\s+/);
+                    kvs.forEach(function (pair) {
+                        var i = pair.indexOf('=');
+                        if (i > 0) {
+                            var k = pair.slice(0, i).trim();
+                            var v = pair.slice(i + 1).trim();
+                            meta[k] = v;
+                        }
+                    });
+                    lines.shift();
+                }
+                return {meta: meta, content: lines.join('\n')};
+            }
+
+            function renderMermaid(root) {
+                var blocks = root.querySelectorAll('pre > code.language-mermaid');
+                if (!blocks.length) return Promise.resolve();
+                return loadScript('https://cdn.jsdelivr.net/npm/mermaid@11.9.0/dist/mermaid.min.js', 'mermaid-js').then(function () {
+                    blocks.forEach(function (code) {
+                        var pre = code.parentElement;
+                        var parsed = parseOptions(code.textContent || '');
+                        var theme = (parsed.meta.theme || '').toLowerCase();
+                        var height = parsed.meta.height || '';
+                        var content = parsed.content || '';
+                        // 如果指定主题，插入 mermaid init 指令
+                        if (theme && content.indexOf('%%{') !== 0) {
+                            content = "%%{init: { 'theme': '" + theme + "' }}%%\n" + content;
+                        }
+                        var div = document.createElement('div');
+                        div.className = 'diagram-container mermaid';
+                        if (height) {
+                            div.style.minHeight = height;
+                            div.style.height = height;
+                        }
+                        div.textContent = content;
+                        // 复制按钮（保持原始代码）
+                        var raw = code.textContent || '';
+                        pre.replaceWith(div);
+                        addCopyButtonToElement(div, function () {
+                            return raw;
+                        });
+                    });
+                    try {
+                        window.mermaid.initialize({startOnLoad: false, securityLevel: 'loose'});
+                    } catch (_) {
+                    }
+                    try {
+                        window.mermaid.run({querySelector: '#post-container .mermaid'});
+                    } catch (_) {
+                    }
+                }).catch(function (e) {
+                    console.warn(e);
+                });
+            }
+
+            function renderFlowchart(root) {
+                var blocks = root.querySelectorAll('pre > code.language-flowchart');
+                if (!blocks.length) return Promise.resolve();
+                return loadScript('https://cdn.jsdelivr.net/npm/flowchart.js@1.17.1/dist/flowchart.min.js', 'flowchart-js').then(function () {
+                    blocks.forEach(function (code) {
+                        try {
+                            var pre = code.parentElement;
+                            var parsed = parseOptions(code.textContent || '');
+                            var height = parsed.meta.height || '';
+                            var scale = parsed.meta.scale ? parseFloat(parsed.meta.scale) : undefined;
+                            var content = parsed.content || '';
+                            var div = document.createElement('div');
+                            div.className = 'diagram-container diagram-flowchart';
+                            if (height) {
+                                div.style.minHeight = height;
+                                div.style.height = height;
+                            }
+                            pre.replaceWith(div);
+                            var chart = flowchart.parse(content);
+                            var opts = {};
+                            if (scale && isFinite(scale)) {
+                                opts.scale = scale;
+                            }
+                            chart.drawSVG(div, opts);
+                            // 复制按钮（保持原始代码）
+                            var raw = code.textContent || '';
+                            addCopyButtonToElement(div, function () {
+                                return raw;
+                            });
+                        } catch (e) {
+                            console.warn('flowchart render error', e);
+                        }
+                    });
+                }).catch(function (e) {
+                    console.warn(e);
+                });
+            }
+
+            function renderEcharts(root) {
+                var blocks = root.querySelectorAll('pre > code.language-echarts');
+                if (!blocks.length) return Promise.resolve();
+                return loadScript('https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js', 'echarts-js').then(function () {
+                    blocks.forEach(function (code) {
+                        try {
+                            var pre = code.parentElement;
+                            var parsed = parseOptions(code.textContent || '');
+                            var height = parsed.meta.height || pre.style.height || '420px';
+                            var width = parsed.meta.width || '100%';
+                            var theme = parsed.meta.theme || undefined;
+                            var renderer = parsed.meta.renderer || undefined; // svg|canvas
+                            var dpr = parsed.meta.dpr ? parseFloat(parsed.meta.dpr) : undefined;
+                            var background = parsed.meta.background || undefined;
+                            var content = parsed.content || '';
+                            var div = document.createElement('div');
+                            div.className = 'diagram-container diagram-echarts';
+                            div.style.width = width;
+                            div.style.height = height;
+                            pre.replaceWith(div);
+                            var opt = {};
+                            try {
+                                opt = JSON.parse(content);
+                            } catch (e) {
+                                console.warn('echarts options must be JSON', e);
+                            }
+                            if (background && !opt.backgroundColor) {
+                                opt.backgroundColor = background;
+                            }
+                            if (window.echarts && opt && typeof opt === 'object') {
+                                var initOpts = {};
+                                if (renderer) initOpts.renderer = renderer;
+                                if (dpr && isFinite(dpr)) initOpts.devicePixelRatio = dpr;
+                                var inst = echarts.init(div, theme, initOpts);
+                                inst.setOption(opt);
+                                // 自适应
+                                var ro = new ResizeObserver(function () {
+                                    try {
+                                        inst.resize();
+                                    } catch (_) {
+                                    }
+                                });
+                                ro.observe(div);
+                            }
+                            // 复制按钮（保持原始代码）
+                            var raw = code.textContent || '';
+                            addCopyButtonToElement(div, function () {
+                                return raw;
+                            });
+                        } catch (e) {
+                            console.warn('echarts render error', e);
+                        }
+                    });
+                }).catch(function (e) {
+                    console.warn(e);
+                });
+            }
+
+            function enhanceClient(root) {
+                highlightCodes(root);
+                // 顺序执行以保证脚本按需加载后再渲染
+                renderMermaid(root).then(function () {
+                    return renderFlowchart(root);
+                }).then(function () {
+                    return renderEcharts(root);
+                }).finally(function () {
+                    if (window.PjaxProgress && typeof window.PjaxProgress.complete === 'function') {
+                        window.PjaxProgress.complete();
+                    }
+                    if (typeof initComments === 'function') initComments();
+                    if (typeof initTextSelection === 'function') initTextSelection();
+                });
+            }
+
+            // 使用 rAF + setTimeout 让页面先渲染，再执行必要的初始化
             if (window.requestAnimationFrame) {
                 requestAnimationFrame(function () {
-                    setTimeout(doPreview, 0);
+                    setTimeout(function () {
+                        enhanceClient(container);
+                    }, 0);
                 });
             } else {
-                setTimeout(doPreview, 0);
+                setTimeout(function () {
+                    enhanceClient(container);
+                }, 0);
             }
         }
 
