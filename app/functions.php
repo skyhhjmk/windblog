@@ -588,6 +588,22 @@ function sendtext(string|array $to, string $subject, string $text, array $option
     return sendmail($to, $subject, null, $opts);
 }
 
+/**
+ * 日志专用翻译函数
+ * 与 trans() 不同，该函数始终使用系统默认语言(zh_CN)，不受客户端语言影响
+ * 用于日志输出场景，确保日志内容的一致性和可读性
+ *
+ * @param string $key    翻译键
+ * @param array  $params 参数替换
+ * @param string $locale 强制使用的语言（默认 zh_CN）
+ *
+ * @return string
+ */
+function trans_log(string $key, array $params = [], string $locale = 'zh_CN'): string
+{
+    return trans($key, $params, null, $locale);
+}
+
 if (!function_exists('is_installed')) {
     /**
      * 检测系统是否已安装

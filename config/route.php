@@ -158,7 +158,6 @@ Route::any('/t/{slug}/page/{page}.html', [app\controller\TagController::class, '
 // Rainyun API工具路由
 Route::any('/rainyun', [app\controller\RainyunController::class, 'index'])->name('rainyun.index');
 
-
 // 友链互联API
 Route::post('/api/wind-connect', [app\controller\LinkController::class, 'windConnect'])->name('wind.connect');
 
@@ -176,8 +175,10 @@ Route::get('/sitemap/archives.xml', [app\controller\SitemapController::class, 'a
 Route::get('/g_sitemap', [app\controller\SitemapController::class, 'graphical'])->name('sitemap.graphical');
 Route::get('/g_sitemap.html', [app\controller\SitemapController::class, 'graphical'])->name('sitemap.graphical.html');
 
-// 语言切换
-Route::get('/lang/{code}', [app\controller\LangController::class, 'change'])->name('lang.change');
+// 语言切换路由
+Route::get('/lang/list', [app\controller\LangController::class, 'list'])->name('lang.list'); // 获取语言列表
+Route::get('/lang/{code}', [app\controller\LangController::class, 'change'])->name('lang.change'); // GET方式切换（页面跳转）
+Route::post('/lang/{code}', [app\controller\LangController::class, 'change'])->name('lang.change.post'); // POST方式切换（AJAX）
 
 Route::fallback(function () {
     return view('error/404')->withStatus(404);

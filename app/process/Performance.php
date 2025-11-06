@@ -87,7 +87,7 @@ class Performance
     {
         $t = utc_now_string('Y-m-d H:i:s');
         try {
-            $conns = ['default', 'cache'];
+            $conns = ['default'/*, 'cache'*/];
             $statsByConn = [];
 
             // Redis 采集（分别采集并写入各自连接）
@@ -109,29 +109,29 @@ class Performance
                 $this->trimList($r, 'perf:redis:series', $this->maxSeries);
 
                 // 调试日志：标注哪个连接采集到了什么
-                Log::debug(sprintf(
-                    'Redis采集: conn=%s used_memory_mb=%s keys=%s clients=%s ops=%s',
-                    $conn,
-                    $stats['used_memory_mb'] ?? 'null',
-                    $stats['keys'] ?? 'null',
-                    $stats['connected_clients'] ?? 'null',
-                    $stats['instantaneous_ops_per_sec'] ?? 'null'
-                ));
+                //                Log::debug(sprintf(
+                //                    'Redis采集: conn=%s used_memory_mb=%s keys=%s clients=%s ops=%s',
+                //                    $conn,
+                //                    $stats['used_memory_mb'] ?? 'null',
+                //                    $stats['keys'] ?? 'null',
+                //                    $stats['connected_clients'] ?? 'null',
+                //                    $stats['instantaneous_ops_per_sec'] ?? 'null'
+                //                ));
             }
 
             // OPcache 采集（保持原逻辑：snapshot写入cache，series写入default）
-            /** @var mixed $cache */
-            $cache = Redis::connection('cache');
+            //            /** @var mixed $cache */
+            //            $cache = Redis::connection('cache');
             /** @var mixed $default */
             $default = Redis::connection('default');
             $opStats = $this->collectOpcacheStats();
-            if ($cache) {
-                $cache->set('perf:opcache:snapshot', json_encode($opStats, JSON_UNESCAPED_UNICODE));
-            }
-            if ($default) {
-                $default->rPush('perf:opcache:series', json_encode(array_merge($opStats, ['t' => $t])));
-                $this->trimList($default, 'perf:opcache:series', $this->maxSeries);
-            }
+            //            if ($cache) {
+            //                $cache->set('perf:opcache:snapshot', json_encode($opStats, JSON_UNESCAPED_UNICODE));
+            //            }
+            //            if ($default) {
+            $default->rPush('perf:opcache:series', json_encode(array_merge($opStats, ['t' => $t])));
+            $this->trimList($default, 'perf:opcache:series', $this->maxSeries);
+            //            }
 
             Log::debug("Performance 采集完成: {$t}");
         } catch (Throwable $e) {

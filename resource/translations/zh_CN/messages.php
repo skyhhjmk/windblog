@@ -7,11 +7,14 @@ return [
     'Too Many Requests' => '请求频率受限',
     'Success' => '成功',
     'Import job created' => '导入任务创建成功',
+    'Import job enqueued' => '导入任务已添加到队列',
     'Server error :error' => '服务器错误 :error',
     'File upload failed' => '文件上传失败',
     'Please select a file to import' => '请选择要导入的文件',
     'Only XML files are supported' => '只支持 XML 文件',
     'Failed to process post excerpts' => '处理文章摘要失败',
+    'Post not found' => '文章不存在',
+    'Language switched successfully' => '语言切换成功',
     ':error_code error' => ':error_code 错误', // 通用错误码翻译
     'click to jump' => '点击跳转',
 ];
