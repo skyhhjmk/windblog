@@ -144,7 +144,6 @@ CREATE TABLE IF NOT EXISTS links (
   show_url INTEGER NOT NULL DEFAULT 1,
   content TEXT DEFAULT NULL,
   email TEXT DEFAULT NULL,
-  callback_url TEXT DEFAULT NULL,
   note TEXT DEFAULT NULL,
   seo_title TEXT DEFAULT NULL,
   seo_keywords TEXT DEFAULT NULL,
@@ -494,7 +493,10 @@ INSERT INTO wa_options (name, value, created_at, updated_at) VALUES
 
 INSERT INTO wa_roles (name, rules, created_at, updated_at) VALUES ('超级管理员', '*', '2022-08-13 16:15:01', '2022-12-23 12:05:07');
 
-INSERT INTO links (name, url, description, icon, image, sort_order, status, target, redirect_type, show_url, content, email, callback_url, note, seo_title, seo_keywords, seo_description, custom_fields, created_at, updated_at, deleted_at) VALUES ('雨云',
+INSERT INTO links (name, url, description, icon, image, sort_order, status, target, redirect_type, show_url, content,
+                   email, note, seo_title, seo_keywords, seo_description, custom_fields, created_at, updated_at,
+                   deleted_at)
+VALUES ('雨云',
         'https://www.rainyun.com/github_?s=blog-sys-ads',
         '超高性价比云服务商，使用优惠码github注册并绑定微信即可获得5折优惠',
         'https://www.rainyun.com/favicon.ico',
@@ -506,7 +508,6 @@ INSERT INTO links (name, url, description, icon, image, sort_order, status, targ
         0,
         '# 超高性价比云服务商，使用优惠码github注册并绑定微信即可获得5折优惠',
         'admin@biliwind.com',
-        '',
         null,
         '雨云',
         '雨云,云服务器,服务器,性价比',

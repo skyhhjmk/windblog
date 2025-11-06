@@ -23,13 +23,11 @@ use app\service\CatLevelService;
 use app\service\CSRFHelper;
 use app\service\LinkConnectQueueService;
 use app\service\LinkConnectService;
-use app\service\MQService;
 use app\service\PaginationService;
 use app\service\PJAXHelper;
 use app\service\SidebarService;
 use app\service\WindConnectVersion;
 use Exception;
-use PhpAmqpLib\Message\AMQPMessage;
 use support\Log;
 use support\Request;
 use support\Response;
@@ -82,7 +80,7 @@ class LinkController
         if ($this->isAmpRequest($request)) {
             $siteUrl = $request->host();
             $canonicalUrl = 'https://' . $siteUrl . '/link';
-            $totalPages = max(1, (int)ceil($count / max(1, $links_per_page)));
+            $totalPages = max(1, (int) ceil($count / max(1, $links_per_page)));
 
             return view('link/index.amp', [
                 'page_title' => '链接广场',
@@ -140,11 +138,6 @@ class LinkController
             return view('error/404', [
                 'message' => '链接已被禁用',
             ]);
-        }
-
-        // 异步发送回调请求（如果设置了callback_url）
-        if (!empty($link->callback_url)) {
-            $this->sendCallbackAsync($link);
         }
 
         // 根据跳转类型处理
@@ -261,7 +254,6 @@ class LinkController
             $supports_wind_connect = $request->post('supports_wind_connect') === 'on';
             $allows_crawling = $request->post('allows_crawling') === 'on';
             $hide_url = $request->post('hide_url') === 'on';
-            $callback_url = trim($request->post('callback_url', ''));
             $email = trim($request->post('email', ''));
             $full_description = trim($request->post('full_description', ''));
             $link_position = trim($request->post('link_position', ''));
@@ -344,18 +336,6 @@ class LinkController
                 }
             }
 
-            // 验证回调URL（如果提供了）
-            if (!empty($callback_url)) {
-                if (strlen($callback_url) > 500) {
-                    return json(['code' => 1, 'msg' => '回调地址过长']);
-                }
-
-                if (!filter_var($callback_url, FILTER_VALIDATE_URL) ||
-                    !preg_match('/^https?:\/\/[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+(:[0-9]{1,5})?(\/[-a-zA-Z0-9()@:%_+.~#?&\/=]*)?$/', $callback_url)) {
-                    return json(['code' => 1, 'msg' => '请输入有效的回调地址']);
-                }
-            }
-
             // 验证邮箱地址（如果提供了）
             if (!empty($email)) {
                 // 使用 PHP 内置过滤器进行基础验证
@@ -410,7 +390,6 @@ class LinkController
                 $link->show_url = $show_url;
                 $link->content = $full_description;
                 $link->email = $email;
-                $link->callback_url = $callback_url;
                 $link->custom_fields = $custom_fields;
 
                 // 构建内容信息 - 使用更结构化的格式
@@ -457,7 +436,6 @@ class LinkController
                     '',
                     '- 支持风屿互联协议: ' . ($supports_wind_connect ? '是' : '否'),
                     '- 允许资源爬虫访问: ' . ($allows_crawling ? '是' : '否'),
-                    '- 回调地址: ' . (!empty($callback_url) ? $callback_url : '未设置'),
                     '',
                     '### 审核记录',
                     '',
@@ -543,45 +521,6 @@ class LinkController
     private function notifyLinkRequest(Link $link): void
     {
         // 预留函数，由用户自行实现通知逻辑
-    }
-
-    /**
-     * 异步发送回调请求
-     *
-     * @param Link $link 友链对象
-     *
-     * @return void
-     * @throws Throwable
-     */
-    private function sendCallbackAsync(Link $link): void
-    {
-        try {
-            Log::debug('Sending callback to MQ because: ' . $link->url . ' .Requesting: ' . $link->callback_url);
-
-            // 准备回调数据
-            $callbackData = [
-                'link_id' => $link->id,
-                'link_name' => htmlspecialchars($link->name, ENT_QUOTES, 'UTF-8'),
-                'link_url' => $link->url,
-                'callback_url' => $link->callback_url,
-                'access_time' => utc_now_string('Y-m-d H:i:s'),
-                'access_ip' => request()->getRealIp(),
-                'user_agent' => htmlspecialchars(request()->header('User-Agent', ''), ENT_QUOTES, 'UTF-8'),
-            ];
-
-            // 发布到 http_callback 队列
-            $exchange = (string) blog_config('rabbitmq_http_callback_exchange', 'http_callback_exchange', true);
-            $routingKey = (string) blog_config('rabbitmq_http_callback_routing_key', 'http_callback', true);
-            $channel = MQService::getChannel();
-            $message = new AMQPMessage(json_encode($callbackData, JSON_UNESCAPED_UNICODE), [
-                'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT,
-                'content_type' => 'application/json',
-            ]);
-            $channel->basic_publish($message, $exchange, $routingKey);
-
-        } catch (Exception $e) {
-            Log::error('Callback error: ' . $e->getMessage());
-        }
     }
 
     /**
@@ -998,6 +937,7 @@ class LinkController
             return true;
         }
         $path = $request->path();
+
         return str_starts_with($path, '/amp/');
     }
 }

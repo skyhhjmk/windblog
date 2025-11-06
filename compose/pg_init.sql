@@ -237,7 +237,6 @@ CREATE TABLE IF NOT EXISTS links
     show_url        BOOLEAN      NOT NULL    DEFAULT true,
     content         TEXT                     DEFAULT NULL,
     email           VARCHAR(255)             DEFAULT NULL,
-    callback_url    VARCHAR(255)             DEFAULT NULL,
     note            TEXT                     DEFAULT NULL,
     seo_title       VARCHAR(255)             DEFAULT NULL,
     seo_keywords    VARCHAR(255)             DEFAULT NULL,
@@ -267,7 +266,6 @@ COMMENT ON COLUMN links.redirect_type IS '跳转方式: direct=直接跳转, got
 COMMENT ON COLUMN links.show_url IS '是否在中转页显示原始URL';
 COMMENT ON COLUMN links.content IS '链接详细介绍(Markdown格式)';
 COMMENT ON COLUMN links.email IS '所有者电子邮件';
-comment on column links.callback_url is '回调地址，用户访问链接时异步通知';
 COMMENT ON column links.note IS '管理员备注';
 COMMENT ON column links.seo_title IS 'SEO 标题';
 COMMENT ON column links.seo_keywords IS 'SEO 关键词';

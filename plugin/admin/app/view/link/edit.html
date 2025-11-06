@@ -60,14 +60,6 @@
                 </div>
             </div>
 
-            <div class="layui-form-item">
-                <label class="layui-form-label">回调链接</label>
-                <div class="layui-input-block">
-                    <input class="layui-input" lay-verify="url" name="callback_url" placeholder="请输入回调链接URL"
-                           type="text">
-                    <div class="layui-form-mid layui-word-aux">友链审核通过后的回调通知地址</div>
-                </div>
-            </div>
 
             <div class="layui-form-item">
                 <label class="layui-form-label">排序权重</label>
@@ -252,7 +244,6 @@
                         $('input[name="icon"]').val(link.icon).attr('maxlength', 255);
                         $('input[name="image"]').val(link.image || '').attr('maxlength', 255);
                         $('input[name="email"]').val(link.email || '').attr('maxlength', 255);
-                        $('input[name="callback_url"]').val(link.callback_url || '').attr('maxlength', 255);
                         $('input[name="sort_order"]').val(link.sort_order);
                         $('textarea[name="content"]').val(link.content);
                         $('textarea[name="note"]').val(link.note);

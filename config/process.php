@@ -80,15 +80,6 @@ if (strtolower(trim((string) $__cacheDriver)) === 'redis') {
 }
 
 if (getenv('DB_DEFAULT')) {
-    // HTTP回调处理进程（存在 .env 时注册）
-    $__processes['http_callback'] = [
-        'handler' => app\process\HttpCallback::class,
-        'reloadable' => false,
-        'constructor' => [
-            'verify_ssl' => false,
-            'ca_cert_path' => null,
-        ],
-    ];
     // 友链监控处理进程（存在 .env 时注册）
     $__processes['link_monitor'] = [
         'handler' => app\process\LinkMonitor::class,
