@@ -1,6 +1,10 @@
-{# 基础小工具包装模板 #}
-<div class="bg-white rounded-lg shadow-md p-6 mb-6 widget-container" data-widget-type="{{ type }}"
-     data-widget-id="{{ id }}">
+{# 基础小工具包装模板（支持 sticky 与滚动动画） #}
+{% set is_sticky = sticky|default(false) or (params.sticky|default(false)) %}
+{% set sticky_offset = params.sticky_offset|default(16) %}
+<div class="bg-white rounded-lg shadow-md p-6 mb-6 widget-container fade-in-on-scroll" data-widget-type="{{ type }}"
+     data-widget-id="{{ id }}"
+     {% if is_sticky %}data-sticky="1"{% endif %}
+     style="{% if is_sticky %}position: sticky; top: calc(var(--sidebar-sticky-top, 72px) + {{ sticky_offset }}px);{% endif %} will-change: transform, opacity;">
     {% if title is defined and title %}
         <h3 class="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">{{ title }}</h3>
     {% endif %}

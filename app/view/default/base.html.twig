@@ -520,6 +520,12 @@
             padding: 0;
         }
 
+        /* 侧栏 sticky 通用规则（支持 data-sticky 的任意元素） */
+        #sidebar-container [data-sticky="1"] {
+            position: sticky;
+            top: calc(var(--sidebar-sticky-top, 72px) + var(--sidebar-sticky-offset, 16px));
+        }
+
         /* 增强移动端触摸反馈 */
         .tap-highlight {
             -webkit-tap-highlight-color: rgba(59, 130, 246, 0.2);
@@ -779,6 +785,10 @@
                     </a>
                 </li>
             </ul>
+            <div id="mobile-menu-toc-section" class="mt-4 border-t pt-3 hidden">
+                <h3 class="text-xs text-gray-500 mb-2">文章目录</h3>
+                <div id="mobile-menu-toc" class="space-y-1 text-sm"></div>
+            </div>
         </nav>
     </div>
 </div>
@@ -1532,6 +1542,12 @@
                                         applySidebarDiff(sidebar, sidebarHtml);
                                         try {
                                             document.dispatchEvent(new Event('sidebar:updated'));
+                                        } catch (_) {
+                                        }
+                                        try {
+                                            if (window.AnimationUtils && typeof AnimationUtils.reinit === 'function') {
+                                                AnimationUtils.reinit();
+                                            }
                                         } catch (_) {
                                         }
                                     }
@@ -2649,6 +2665,30 @@
 
         // PJAX 后重新检查
         document.addEventListener('page:ready', checkTitleOverflow);
+    })();
+</script>
+
+<script>
+    // 全局设置侧栏 sticky 顶部偏移，避免被头部遮挡
+    (function () {
+        function updateSidebarStickyTop() {
+            try {
+                const header = document.querySelector('header');
+                const h = header ? header.getBoundingClientRect().height : 64;
+                const extra = 8; // 轻微留白
+                const val = Math.round((h || 64) + extra) + 'px';
+                document.documentElement.style.setProperty('--sidebar-sticky-top', val);
+            } catch (_) {
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', updateSidebarStickyTop);
+        } else {
+            updateSidebarStickyTop();
+        }
+        window.addEventListener('resize', updateSidebarStickyTop);
+        document.addEventListener('page:ready', updateSidebarStickyTop);
     })();
 </script>
 

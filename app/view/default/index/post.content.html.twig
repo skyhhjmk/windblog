@@ -14,7 +14,7 @@
     <div class="max-w-full mx-auto">
         {# 面包屑导航 #}
         {% include 'components/breadcrumb.html.twig' %}
-        <article class="bg-white rounded-xl shadow-md overflow-hidden no-animation">
+        <article class="bg-white rounded-xl shadow-md overflow-hidden no-animation" style="position: relative;">
             <!-- 文章头部 -->
             <div class="p-6 border-b border-gray-100">
                 <h1 class="text-3xl font-bold text-gray-800 mb-4">{{ post.title }}</h1>
@@ -56,6 +56,211 @@
                 </div>
             </div>
 
+            <!-- In-Content TOC UI (desktop, inside article) -->
+            <style>
+                /* Floating action button (absolute in article) */
+                #toc-fab {
+                    position: absolute;
+                    z-index: 5;
+                    width: 42px;
+                    height: 42px;
+                    border-radius: 9999px;
+                    display: none;
+                    align-items: center;
+                    justify-content: center;
+                    color: #fff;
+                    background: #667eea;
+                    box-shadow: none;
+                    transition: transform .15s ease, box-shadow .15s ease, opacity .2s ease;
+                    opacity: .92;
+                }
+
+                #toc-fab:hover {
+                    transform: none;
+                    box-shadow: none;
+                    opacity: 1;
+                }
+
+                @media (min-width: 1024px) {
+                    #toc-fab {
+                        display: flex;
+                    }
+                }
+
+                /* Drawer (absolute in article) */
+                #toc-drawer {
+                    position: absolute;
+                    z-index: 8;
+                    width: 300px;
+                    max-height: 60vh;
+                    background: #fff;
+                    border: 1px solid #e5e7eb;
+                    border-radius: 10px;
+                    box-shadow: 0 20px 40px rgba(0, 0, 0, .12);
+                    display: none;
+                    overflow: hidden;
+                }
+
+                #toc-drawer.active {
+                    display: block;
+                    animation: toc-in .20s ease-out both;
+                }
+
+                #toc-drawer.closing {
+                    animation: toc-out .16s ease-in both;
+                }
+
+                @keyframes toc-in {
+                    from {
+                        opacity: 0;
+                        transform: translateX(8px) scale(.98);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateX(0) scale(1);
+                    }
+                }
+
+                @keyframes toc-out {
+                    from {
+                        opacity: 1;
+                        transform: translateX(0) scale(1);
+                    }
+                    to {
+                        opacity: 0;
+                        transform: translateX(8px) scale(.98);
+                    }
+                }
+
+                #toc-drawer .toc-header {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    padding: 10px 12px;
+                    border-bottom: 1px solid #f3f4f6;
+                }
+
+                #toc-drawer .toc-title {
+                    font-size: 14px;
+                    font-weight: 600;
+                    color: #374151;
+                }
+
+                #toc-drawer .toc-actions button {
+                    color: #667eea;
+                    font-size: 12px;
+                    padding: 4px 6px;
+                    margin-left: 6px;
+                    border-radius: 6px;
+                    border: 1px solid #e5e7eb;
+                    background: #fff;
+                }
+
+                #toc-drawer .toc-body {
+                    padding: 10px 8px;
+                    overflow: auto;
+                    max-height: 55vh;
+                }
+
+                #toc-drawer .toc-row {
+                    position: relative;
+                }
+
+                #toc-drawer .toc-item {
+                    display: block;
+                    color: #374151;
+                    border-left: 2px solid transparent;
+                    padding: 6px 28px 6px 10px;
+                    border-radius: 6px;
+                    transition: all .15s ease;
+                    white-space: nowrap;
+                    text-overflow: ellipsis;
+                    overflow: hidden;
+                }
+
+                #toc-drawer .toc-item:hover {
+                    color: #2563eb;
+                    background: #f8fafc;
+                }
+
+                #toc-drawer .toc-item.active {
+                    color: #1d4ed8;
+                    background: #eff6ff;
+                    border-left-color: #667eea;
+                    font-weight: 600;
+                }
+
+                #toc-drawer .toc-indent-0 {
+                    padding-left: 8px;
+                }
+
+                #toc-drawer .toc-indent-1 {
+                    padding-left: 20px;
+                }
+
+                #toc-drawer .toc-indent-2 {
+                    padding-left: 32px;
+                }
+
+                #toc-drawer .toc-indent-3 {
+                    padding-left: 44px;
+                }
+
+                #toc-drawer .toc-caret {
+                    position: absolute;
+                    right: 8px;
+                    top: 50%;
+                    transform: translateY(-50%) rotate(90deg);
+                    width: 16px;
+                    height: 16px;
+                    color: #9ca3af;
+                    cursor: pointer;
+                    transition: transform .18s ease, color .18s ease;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+
+                #toc-drawer .toc-caret:hover {
+                    color: #6b7280;
+                }
+
+                #toc-drawer .toc-caret.collapsed {
+                    transform: translateY(-50%) rotate(0deg);
+                }
+
+                #toc-drawer .toc-children {
+                    overflow: hidden;
+                    height: auto;
+                    transition: height .18s ease;
+                }
+
+                /* Rail (absolute in article, no pointer events) */
+                #toc-rail {
+                    position: absolute;
+                    z-index: 4;
+                    width: 2px;
+                    background: linear-gradient(180deg, rgba(102, 126, 234, .0) 0%, rgba(102, 126, 234, .25) 15%, rgba(102, 126, 234, .35) 50%, rgba(102, 126, 234, .25) 85%, rgba(102, 126, 234, .0) 100%);
+                    display: none;
+                    pointer-events: none;
+                }
+            </style>
+            <div id="toc-rail" aria-hidden="true"></div>
+            <button id="toc-fab" title="文章目录" aria-label="文章目录">
+                <i class="fas fa-list-ul"></i>
+            </button>
+            <aside id="toc-drawer" role="complementary" aria-label="文章目录">
+                <div class="toc-header">
+                    <div class="toc-title">文章目录</div>
+                    <div class="toc-actions">
+                        <button id="toc-expand-all" type="button">展开</button>
+                        <button id="toc-collapse-all" type="button">折叠</button>
+                        <button id="toc-close" type="button">关闭</button>
+                    </div>
+                </div>
+                <div id="toc-list-desktop" class="toc-body"></div>
+            </aside>
+
             <!-- 文章内容 -->
             <div class="p-6">
                 {% if post.ai_summary %}
@@ -96,6 +301,7 @@
                 </div>
             </div>
         </article>
+
 
         <!-- 评论区域 -->
         <div class="mt-8 bg-white rounded-xl shadow-md p-6" id="comments-section">
@@ -487,6 +693,7 @@
                     }
                     if (typeof initComments === 'function') initComments();
                     if (typeof initTextSelection === 'function') initTextSelection();
+                    if (typeof buildInPageTOC === 'function') buildInPageTOC();
                 });
             }
 
@@ -501,6 +708,483 @@
                 setTimeout(function () {
                     enhanceClient(container);
                 }, 0);
+            }
+        }
+
+        // 目录构建（桌面与移动）
+        function buildInPageTOC() {
+            try {
+                const root = document.getElementById('post-container');
+                if (!root) return;
+                if (root.dataset.tocBuilt === '1') {
+                    return;
+                }
+                root.dataset.tocBuilt = '1';
+                const desktopList = document.getElementById('toc-list-desktop');
+                const fab = document.getElementById('toc-fab');
+                const drawer = document.getElementById('toc-drawer');
+                const btnClose = document.getElementById('toc-close');
+                const btnExpandAll = document.getElementById('toc-expand-all');
+                const btnCollapseAll = document.getElementById('toc-collapse-all');
+                const mobileSection = document.getElementById('mobile-menu-toc-section');
+                const mobileList = document.getElementById('mobile-menu-toc');
+                if (!desktopList || !fab || !drawer) {
+                    return;
+                }
+
+                const rail = document.getElementById('toc-rail');
+
+                // Collect H1-H4
+                // 仅收集 H2-H4，H1 作为“返回顶部”虚拟项处理
+                const nodes = Array.from(root.querySelectorAll('h2, h3, h4'));
+                // If no headings, hide UI
+                if (nodes.length === 0) {
+                    drawer.classList.remove('active');
+                    fab.style.display = 'none';
+                    if (rail) rail.style.display = 'none';
+                    if (mobileSection) mobileSection.classList.add('hidden');
+                    return;
+                }
+
+                // 有标题时展示按钮与竖线（仅桌面显示）
+                function updateTOCVisibility() {
+                    const isDesktop = window.innerWidth >= 1024;
+                    fab.style.display = isDesktop ? 'flex' : 'none';
+                    if (rail) rail.style.display = isDesktop ? 'block' : 'none';
+                    if (!isDesktop && drawer) drawer.classList.remove('active');
+                }
+
+                updateTOCVisibility();
+
+                // Build numbering
+                const counters = [1, 0, 0, 0]; // 预置一个 H1=1（返回顶部），H2/H3/H4 在其下编号
+                const items = [];
+
+                function levelIdx(tag) {
+                    return parseInt(tag.substring(1), 10) - 1;
+                }
+
+                function ensureId(el) {
+                    if (!el.id) {
+                        const base = (el.textContent || '').trim().replace(/\s+/g, '-').toLowerCase().replace(/[^\w\-\u4e00-\u9fa5]/g, '');
+                        let id = base || 'h-' + Math.random().toString(36).slice(2, 7);
+                        let i = 2;
+                        while (document.getElementById(id)) {
+                            id = base + '-' + i++;
+                        }
+                        el.id = id;
+                    }
+                    return el.id;
+                }
+
+                // Add a virtual top item as H1: 返回顶部
+                items.push({id: '__top__', text: '返回顶部', depth: 0, number: '1'});
+
+                nodes.forEach((el) => {
+                    const tag = el.tagName.toLowerCase();
+                    const idx = Math.min(3, Math.max(0, levelIdx(tag))); // 0..3
+                    // update counters
+                    counters[idx] += 1;
+                    for (let j = idx + 1; j < 4; j++) counters[j] = 0;
+                    const number = counters.slice(0, idx + 1).filter(n => n > 0).join('.');
+                    const id = ensureId(el);
+                    // base depth: treat h1 as depth 0
+                    const depth = idx;
+                    items.push({id, text: el.textContent || '', depth, number, el});
+                });
+
+                function smoothScrollToId(id) {
+                    if (id === '__top__') {
+                        window.scrollTo({top: 0, behavior: 'smooth'});
+                        return;
+                    }
+                    const target = document.getElementById(id);
+                    if (!target) return;
+                    const rect = target.getBoundingClientRect();
+                    const topOffset = (function () {
+                        try {
+                            const header = document.querySelector('header');
+                            const h = header ? header.getBoundingClientRect().height : 64;
+                            return (h || 64) + 12;
+                        } catch (_) {
+                            return 76;
+                        }
+                    })();
+                    const y = window.scrollY + rect.top - topOffset;
+                    window.scrollTo({top: Math.max(0, y), behavior: 'smooth'});
+                }
+
+                function buildTree(list) {
+                    const nodes = list.map(it => ({...it, children: []}));
+                    const roots = [];
+                    const stack = [];
+                    nodes.forEach(n => {
+                        while (stack.length && stack[stack.length - 1].depth >= n.depth) stack.pop();
+                        if (!stack.length) roots.push(n); else stack[stack.length - 1].children.push(n);
+                        stack.push(n);
+                    });
+                    return roots;
+                }
+
+                function renderTree(container, roots, isMobile) {
+                    if (!container) return;
+                    container.innerHTML = '';
+                    if (isMobile && mobileSection) {
+                        if (items.length === 0) mobileSection.classList.add('hidden');
+                        else mobileSection.classList.remove('hidden');
+                    }
+                    const frag = document.createDocumentFragment();
+
+                    function appendNode(parentEl, node) {
+                        const row = document.createElement('div');
+                        row.className = 'toc-row';
+                        const a = document.createElement('a');
+                        a.href = node.id === '__top__' ? '#' : ('#' + node.id);
+                        a.className = 'toc-item toc-indent-' + Math.min(3, Math.max(0, node.depth));
+                        a.textContent = (node.number ? (node.number + ' ') : '') + node.text;
+                        a.addEventListener('click', function (e) {
+                            e.preventDefault();
+                            smoothScrollToId(node.id);
+                        });
+                        row.appendChild(a);
+
+                        let kidsWrap = null;
+                        let caret = null;
+                        if (node.children && node.children.length) {
+                            caret = document.createElement('span');
+                            caret.className = 'toc-caret';
+                            caret.innerHTML = '<i class="fas fa-chevron-right"></i>';
+                            row.appendChild(caret);
+
+                            kidsWrap = document.createElement('div');
+                            kidsWrap.className = 'toc-children';
+
+                            node.children.forEach(ch => appendNode(kidsWrap, ch));
+
+                            // 初始折叠（默认不展开）
+                            try {
+                                kidsWrap.style.display = 'block';
+                                kidsWrap.style.height = '0px';
+                                caret.classList.add('collapsed');
+                            } catch (_) {
+                            }
+
+                            caret.addEventListener('click', function (e) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                toggleGroup(kidsWrap, caret);
+                            });
+                        }
+
+                        parentEl.appendChild(row);
+                        if (kidsWrap) parentEl.appendChild(kidsWrap);
+                    }
+
+                    function toggleGroup(kids, caretEl, expand) {
+                        const isCollapsed = caretEl && caretEl.classList.contains('collapsed');
+                        const willExpand = (typeof expand === 'boolean') ? expand : isCollapsed;
+                        if (willExpand) {
+                            caretEl && caretEl.classList.remove('collapsed');
+                            // 从 0 -> scrollHeight
+                            kids.style.display = 'block';
+                            const targetH = kids.scrollHeight;
+                            kids.style.height = '0px';
+                            requestAnimationFrame(function () {
+                                kids.style.height = targetH + 'px';
+                            });
+                            kids.addEventListener('transitionend', function onEnd() {
+                                kids.removeEventListener('transitionend', onEnd);
+                                kids.style.height = kids.scrollHeight + 'px';
+                            });
+                        } else {
+                            caretEl && caretEl.classList.add('collapsed');
+                            // 从当前高度 -> 0
+                            const h = kids.scrollHeight;
+                            kids.style.height = h + 'px';
+                            requestAnimationFrame(function () {
+                                kids.style.height = '0px';
+                            });
+                        }
+                    }
+
+                    roots.forEach(n => appendNode(frag, n));
+                    container.appendChild(frag);
+
+                    // 暴露全局控制以供“全部展开/全部收缩”使用
+                    container.__tocToggleAll = function (expand) {
+                        container.querySelectorAll('.toc-children').forEach(function (k) {
+                            const caret = k.previousElementSibling && k.previousElementSibling.querySelector('.toc-caret');
+                            if (!caret) return;
+                            const want = !!expand;
+                            const collapsed = caret.classList.contains('collapsed');
+                            if (want && collapsed) toggleGroup(k, caret, true);
+                            if (!want && !collapsed) toggleGroup(k, caret, false);
+                        });
+                    }
+                    // 展开某个目标节点的整条祖先链
+                    container.__tocExpandPath = function (targetId) {
+                        try {
+                            if (!targetId) return;
+                            let anchor = null;
+                            const anchors = container.querySelectorAll('a');
+                            for (let i = 0; i < anchors.length; i++) {
+                                const href = anchors[i].getAttribute('href') || '';
+                                if (href.replace(/^#/, '') === targetId) {
+                                    anchor = anchors[i];
+                                    break;
+                                }
+                            }
+                            if (!anchor) return;
+                            let p = anchor.parentElement; // row
+                            while (p && p !== container) {
+                                if (p.classList && p.classList.contains('toc-children')) {
+                                    const caret = p.previousElementSibling && p.previousElementSibling.querySelector('.toc-caret');
+                                    if (caret) toggleGroup(p, caret, true);
+                                    p = p.parentElement;
+                                } else {
+                                    p = p.parentElement;
+                                }
+                            }
+                        } catch (_) {
+                        }
+                    }
+                }
+
+                const roots = buildTree(items);
+                renderTree(desktopList, roots, false);
+                if (mobileList) renderTree(mobileList, roots, true);
+
+                // 默认只展开“当前标题”所在分支
+                function getCurrentHeadingId() {
+                    if (!nodes || !nodes.length) return null;
+                    const topOffset = (function () {
+                        try {
+                            const header = document.querySelector('header');
+                            const h = header ? header.getBoundingClientRect().height : 64;
+                            return (h || 64) + 12;
+                        } catch (_) {
+                            return 76;
+                        }
+                    })();
+                    let bestId = nodes[0] && nodes[0].id ? nodes[0].id : null;
+                    let bestScore = Infinity;
+                    nodes.forEach(function (n) {
+                        if (!n.id) return;
+                        const rect = n.getBoundingClientRect();
+                        const dist = Math.abs(rect.top - topOffset);
+                        if (dist < bestScore) {
+                            bestScore = dist;
+                            bestId = n.id;
+                        }
+                    });
+                    return bestId;
+                }
+
+                const currentId = getCurrentHeadingId();
+                if (desktopList && desktopList.__tocToggleAll) desktopList.__tocToggleAll(false);
+                if (desktopList && desktopList.__tocExpandPath && currentId) desktopList.__tocExpandPath(currentId);
+                if (mobileList && mobileList.__tocToggleAll) mobileList.__tocToggleAll(false);
+                if (mobileList && mobileList.__tocExpandPath && currentId) mobileList.__tocExpandPath(currentId);
+
+                // 使已标记为“展开”的分组在抽屉可见时同步到实际高度
+                function syncExpandedHeights(container) {
+                    try {
+                        if (!container) return;
+                        container.querySelectorAll('.toc-children').forEach(function (k) {
+                            const caret = k.previousElementSibling && k.previousElementSibling.querySelector('.toc-caret');
+                            if (caret && !caret.classList.contains('collapsed')) {
+                                k.style.display = 'block';
+                                const h = k.scrollHeight;
+                                if (h > 0) k.style.height = h + 'px';
+                            }
+                        });
+                    } catch (_) {
+                    }
+                }
+
+                // 定位：使 FAB / 抽屉 / 竖线 贴合内容列右侧（侧边栏左侧）
+                function positionTOCUI() {
+                    try {
+                        const article = root.closest('article');
+                        if (!article) {
+                            return;
+                        }
+                        article.style.position = article.style.position || 'relative';
+                        const headerDiv = article.querySelector('.p-6.border-b.border-gray-100');
+                        const contentWrapper = root.closest('.p-6');
+                        if (!headerDiv || !contentWrapper) {
+                            return;
+                        }
+                        const artRect = article.getBoundingClientRect();
+                        const headRect = headerDiv.getBoundingClientRect();
+                        const contRect = contentWrapper.getBoundingClientRect();
+                        const rightInside = contRect.right - artRect.left; // inside-article X (content right)
+                        const anchorTop = (headRect.bottom - artRect.top);  // inside-article Y (header bottom)
+                        const artW = Math.max(0, article.clientWidth || (artRect.right - artRect.left));
+
+                        // 文档坐标（用于粘滞定位与边界裁切）
+                        const articleDocTop = window.scrollY + artRect.top;
+                        const contentBottomDoc = window.scrollY + contRect.bottom;
+                        const headBottomDoc = window.scrollY + headRect.bottom;
+
+                        // FAB（水平绝对，垂直“粘滞”且限制在内容上下界内）
+                        let fabLeftVal = null, fabTopVal = null;
+                        if (fab) {
+                            const fabW = fab.offsetWidth || 42;
+                            const fabH = fab.offsetHeight || 42;
+                            let left = Math.round(rightInside - fabW - 6);
+                            // clamp within article
+                            left = Math.max(6, Math.min(left, artW - fabW - 6));
+                            fab.style.left = left + 'px';
+                            fabLeftVal = fab.style.left;
+                            fab.style.right = 'auto';
+
+                            // 记录初始视口内的目标偏移（首次定位时），让按钮在视口中“保持”这个相对位置
+                            if (typeof window.__tocFabViewportOffset !== 'number') {
+                                window.__tocFabViewportOffset = Math.max(8, headRect.bottom + 8); // 距视口顶部偏移
+                            }
+                            const desiredDocY = window.scrollY + window.__tocFabViewportOffset;
+                            const minDocY = articleDocTop + anchorTop + 8;
+                            let maxDocY = contentBottomDoc - fabH - 8;
+                            if (maxDocY < minDocY) maxDocY = minDocY;
+                            const docY = Math.max(minDocY, Math.min(desiredDocY, maxDocY));
+                            const topInside = docY - articleDocTop;
+                            fab.style.top = Math.round(topInside) + 'px';
+                            fabTopVal = fab.style.top;
+                        }
+                        // Rail height constrained to content block only（随文章滚动，非粘滞）
+                        let railLeftVal = null, railTopVal = null, railHVal = null;
+                        if (rail) {
+                            let left = Math.round(rightInside - 4);
+                            left = Math.max(2, Math.min(left, artW - 4));
+                            rail.style.left = left + 'px';
+                            railLeftVal = rail.style.left;
+                            rail.style.right = 'auto';
+                            rail.style.top = Math.round(anchorTop) + 'px';
+                            railTopVal = rail.style.top;
+                            const railH = Math.max(0, Math.round((contRect.bottom - artRect.top) - anchorTop));
+                            rail.style.height = railH + 'px';
+                            railHVal = rail.style.height;
+                        }
+                        // Drawer（与 FAB 垂直对齐，贴右）
+                        let drawerLeftVal = null, drawerTopVal = null;
+                        if (drawer) {
+                            const dw = drawer.offsetWidth || 300;
+                            let left = Math.round(rightInside - dw - 8);
+                            left = Math.max(8, Math.min(left, artW - dw - 8));
+                            drawer.style.left = left + 'px';
+                            drawerLeftVal = drawer.style.left;
+                            drawer.style.right = 'auto';
+                            // 若有 FAB，抽屉与其对齐；否则退化到 header 下
+                            if (fab && fab.style.top) {
+                                drawer.style.top = (parseInt(fab.style.top, 10) + 4) + 'px';
+                            } else {
+                                drawer.style.top = Math.round(anchorTop + 12) + 'px';
+                            }
+                            drawerTopVal = drawer.style.top;
+                        }
+                    } catch (_) {
+                    }
+                }
+
+                positionTOCUI();
+                // 页面加载后可能有图片延迟撑高，稍后再定位一次
+                setTimeout(positionTOCUI, 300);
+                window.addEventListener('resize', positionTOCUI);
+                // 同步不同视口尺寸下的可见性
+                window.addEventListener('resize', updateTOCVisibility);
+                // 调试：滚动时也尝试重新计算一次位置（保证你看到“跟随”），如需关闭可注释
+                let __tocRaf = 0;
+                window.addEventListener('scroll', function () {
+                    if (__tocRaf) return;
+                    __tocRaf = requestAnimationFrame(function () {
+                        __tocRaf = 0;
+                        positionTOCUI();
+                    });
+                }, {passive: true});
+
+                // Scroll spy
+                try {
+                    const map = new Map();
+                    // map id->anchor in desktop list
+                    Array.from(desktopList.querySelectorAll('a')).forEach(a => {
+                        const href = a.getAttribute('href') || '';
+                        const id = href.replace(/^#/, '');
+                        map.set(id, a);
+                    });
+                    const io = new IntersectionObserver((entries) => {
+                        entries.forEach(entry => {
+                            const id = entry.target.id;
+                            const a = map.get(id);
+                            if (!a) return;
+                            if (entry.isIntersecting) {
+                                // clear
+                                map.forEach(node => node.classList.remove('active'));
+                                a.classList.add('active');
+                            }
+                        });
+                    }, {rootMargin: '0px 0px -70% 0px', threshold: [0, 1]});
+                    nodes.forEach(n => {
+                        if (n.id) io.observe(n);
+                    });
+                } catch (_) {
+                }
+
+                // Drawer toggles（防重复绑定 + 关闭动画）
+                function closeDrawerAnimated() {
+                    if (!drawer.classList.contains('active')) return;
+                    drawer.classList.add('closing');
+                    const onEnd = function () {
+                        drawer.removeEventListener('animationend', onEnd);
+                        drawer.classList.remove('closing');
+                        drawer.classList.remove('active');
+                    };
+                    drawer.addEventListener('animationend', onEnd);
+                }
+
+                if (!fab.dataset.bound) {
+                    fab.dataset.bound = '1';
+                    fab.addEventListener('click', () => {
+                        if (!drawer.classList.contains('active')) {
+                            try {
+                                positionTOCUI();
+                            } catch (_) {
+                            }
+                            drawer.classList.remove('closing');
+                            drawer.classList.add('active');
+                            // 等抽屉可见后再同步展开分组的高度（两帧确保布局完成）
+                            requestAnimationFrame(function () {
+                                requestAnimationFrame(function () {
+                                    try {
+                                        syncExpandedHeights(desktopList);
+                                    } catch (_) {
+                                    }
+                                });
+                            });
+                        } else {
+                            closeDrawerAnimated();
+                        }
+                    });
+                }
+                if (btnClose && !btnClose.dataset.bound) {
+                    btnClose.dataset.bound = '1';
+                    btnClose.addEventListener('click', () => closeDrawerAnimated());
+                }
+
+                // Collapse/expand all（带动画）
+                if (btnCollapseAll && !btnCollapseAll.dataset.bound) {
+                    btnCollapseAll.dataset.bound = '1';
+                    btnCollapseAll.addEventListener('click', () => {
+                        if (desktopList && desktopList.__tocToggleAll) desktopList.__tocToggleAll(false);
+                    });
+                }
+                if (btnExpandAll && !btnExpandAll.dataset.bound) {
+                    btnExpandAll.dataset.bound = '1';
+                    btnExpandAll.addEventListener('click', () => {
+                        if (desktopList && desktopList.__tocToggleAll) desktopList.__tocToggleAll(true);
+                    });
+                }
+            } catch (_) {
             }
         }
 

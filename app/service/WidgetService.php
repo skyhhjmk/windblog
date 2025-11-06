@@ -565,7 +565,7 @@ class WidgetService
 
                 foreach ($posts as $p) {
                     $ext = $p->getExt('view_count');
-                    $p->views = $ext ? (int)(($ext->value['count'] ?? 0)) : 0;
+                    $p->views = $ext ? (int) (($ext->value['count'] ?? 0)) : 0;
                 }
 
                 $widget['popular_posts'] = $posts;
