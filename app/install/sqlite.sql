@@ -214,37 +214,6 @@ CREATE TABLE IF NOT EXISTS settings (
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- 多语言内容表
--- sqlite 不支持复杂的 schema 注释，直接建表
-CREATE TABLE IF NOT EXISTS i18n_contents
-(
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    entity_type TEXT    NOT NULL,
-    entity_id   INTEGER NOT NULL,
-    field_name  TEXT    NOT NULL,
-    locale      TEXT    NOT NULL,
-    content     TEXT    NOT NULL
-);
-CREATE UNIQUE INDEX IF NOT EXISTS unique_translation ON i18n_contents (entity_type, entity_id, field_name, locale);
-CREATE INDEX IF NOT EXISTS idx_i18n_entity ON i18n_contents (entity_type, entity_id);
-CREATE INDEX IF NOT EXISTS idx_i18n_locale ON i18n_contents (locale);
-
--- 语言配置表
-CREATE TABLE IF NOT EXISTS i18n_languages
-(
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    code        TEXT NOT NULL UNIQUE,
-    name        TEXT NOT NULL,
-    native_name TEXT NOT NULL,
-    enabled     INTEGER DEFAULT 1,
-    is_default  INTEGER DEFAULT 0,
-    sort_order  INTEGER DEFAULT 0
-);
-INSERT OR IGNORE INTO i18n_languages (code, name, native_name, enabled, is_default, sort_order)
-VALUES ('zh_CN', 'Simplified Chinese', '简体中文', 1, 1, 0);
-INSERT OR IGNORE INTO i18n_languages (code, name, native_name, enabled, is_default, sort_order)
-VALUES ('en', 'English', 'English', 1, 0, 1);
-
 -- 创建媒体附件表
 CREATE TABLE IF NOT EXISTS media (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

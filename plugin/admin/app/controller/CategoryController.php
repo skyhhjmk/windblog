@@ -66,7 +66,7 @@ class CategoryController extends Base
             ->get()
             ->toArray();
 
-        return $this->success(trans('Success'), $list, $total);
+        return $this->success('成功', $list, $total);
     }
 
     /**

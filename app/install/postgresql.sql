@@ -384,57 +384,6 @@ COMMENT ON COLUMN settings."group" IS '设置分组';
 COMMENT ON COLUMN settings.created_at IS '创建时间';
 COMMENT ON COLUMN settings.updated_at IS '更新时间';
 
--- 多语言内容表
-do
-$$
-    begin
-        create table if not exists i18n_contents
-        (
-            id          bigserial primary key,
-            entity_type varchar(50) not null,
-            entity_id   bigint      not null,
-            field_name  varchar(50) not null,
-            locale      varchar(10) not null,
-            content     text        not null,
-            created_at  timestamp with time zone default current_timestamp,
-            updated_at  timestamp with time zone default current_timestamp
-        );
-    exception
-        when others then null;
-    end
-$$;
-create unique index if not exists unique_translation on i18n_contents (entity_type, entity_id, field_name, locale);
-create index if not exists idx_i18n_entity on i18n_contents (entity_type, entity_id);
-create index if not exists idx_i18n_locale on i18n_contents (locale);
-
--- 语言配置表
-do
-$$
-    begin
-        create table if not exists i18n_languages
-        (
-            id          serial primary key,
-            code        varchar(10) not null unique,
-            name        varchar(50) not null,
-            native_name varchar(50) not null,
-            enabled     boolean                  default true,
-            is_default  boolean                  default false,
-            sort_order  integer                  default 0,
-            created_at  timestamp with time zone default current_timestamp,
-            updated_at  timestamp with time zone default current_timestamp
-        );
-    exception
-        when others then null;
-    end
-$$;
-
-insert into i18n_languages (code, name, native_name, enabled, is_default, sort_order)
-values ('zh_CN', 'Simplified Chinese', '简体中文', true, true, 0)
-on conflict (code) do update set enabled=excluded.enabled;
-insert into i18n_languages (code, name, native_name, enabled, is_default, sort_order)
-values ('en', 'English', 'English', true, false, 1)
-on conflict (code) do update set enabled=excluded.enabled;
-
 -- 创建媒体附件表
 CREATE TABLE IF NOT EXISTS media
 (

@@ -5,12 +5,11 @@ namespace app\controller;
 use app\annotation\EnableInstantFirstPaint;
 use app\helper\BreadcrumbHelper;
 use app\model\Post;
-use app\service\FloLinkService;
 use app\service\CSRFService;
-use app\service\I18nService;
+use app\service\FloLinkService;
+use app\service\markdown\MarkdownService;
 use app\service\PJAXHelper;
 use app\service\SidebarService;
-use app\service\markdown\MarkdownService;
 use Exception;
 use support\Log;
 use support\Request;
@@ -65,7 +64,7 @@ class PostController
             try {
                 $viewExt = $post->getExt('view_count');
                 $data = $viewExt ? (is_array($viewExt->value) ? $viewExt->value : []) : [];
-                $cnt = (int)($data['count'] ?? 0);
+                $cnt = (int) ($data['count'] ?? 0);
                 $data['count'] = $cnt + 1;
                 $data['updated_at'] = time();
                 $post->setExt('view_count', $data);
@@ -84,12 +83,6 @@ class PostController
                     Log::error('FloLink处理失败: ' . $e->getMessage());
                     // 处理失败时使用原始内容
                 }
-            }
-
-            // 应用多语言翻译（标题/摘要/正文）
-            try {
-                I18nService::applyPostTranslation($post, null, false);
-            } catch (\Throwable $e) {
             }
 
             // AMP请求使用专用渲染

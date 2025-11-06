@@ -76,7 +76,7 @@ class PostsController extends Base
             ->toArray();
 
         // 返回JSON数据
-        return $this->success(trans('Success'), $list, $total);
+        return $this->success('成功', $list, $total);
     }
 
     /**

@@ -618,7 +618,7 @@ class EditorController
         if (empty($id) || !is_numeric($id) || $id < 1 || $id > 2147483646/* int最大值-1 */) {
             return json([
                 'code' => 400,
-                'message' => trans('Missing input parameter :parameter', ['parameter' => 'id']), // 缺少输入参数 id
+                'message' => '缺少输入参数 id',
             ]);
         }
 
@@ -638,14 +638,14 @@ class EditorController
         if (!$post) {
             return json([
                 'code' => 404,
-                'message' => trans('Post not found'),
+                'message' => '文章不存在',
             ]);
         }
 
         // 返回文章详情
         return json([
             'code' => 200,
-            'message' => trans('Success'),
+            'message' => '成功',
             'data' => [
                 'id' => $post->id,
                 'title' => $post->title,

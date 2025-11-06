@@ -95,7 +95,7 @@ class LinkController extends Base
         }
 
         // 返回列表数据（无缓存）
-        return $this->success(trans('Success'), $list, $total)
+        return $this->success('成功', $list, $total)
             ->withHeaders([
                 'Cache-Control' => 'no-cache, no-store, must-revalidate',
                 'Pragma' => 'no-cache',
