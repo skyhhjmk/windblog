@@ -131,6 +131,8 @@
     <link rel="stylesheet" href="{{ asset('/assets/css/github-dark.min.css') }}">
     <!-- 高级动画样式 -->
     <link rel="stylesheet" href="{{ asset('/assets/css/animations.css') }}">
+    <!-- 视觉光效与毛玻璃样式 -->
+    <link rel="stylesheet" href="{{ asset('/assets/css/effects.css') }}">
     {# 可选：如需本地脚本，使用 defer 并指纹化（存在时再启用） #}
     <script src="{{ asset('/assets/js/common.js') }}"></script>
     <!-- 动画工具库 -->
@@ -900,10 +902,10 @@
     </style>
     {% block extra_css %}{% endblock %}
 </head>
-<body class="min-h-screen flex flex-col" style="background: linear-gradient(to bottom, #f7f9fc 0%, #eef2f7 100%);">
+<body class="min-h-screen flex flex-col ambient-bg"
+      style="background: linear-gradient(to bottom, #f7f9fc 0%, #eef2f7 100%);">
 <!-- 顶部导航 -->
-<header class="bg-white sticky top-0 z-10"
-        style="box-shadow: 0 2px 8px rgba(0,0,0,0.08); backdrop-filter: blur(10px); background: rgba(255,255,255,0.95);">
+<header class="bg-white sticky top-0 z-10 glass glass-nav">
     <div class="container mx-auto px-3 sm:px-4 py-3 sm:py-4 flex justify-between items-center">
         <a href="/" class="flex items-center hover-animate tap-highlight" style="text-decoration: none;">
             {% set site_logo = blog_config('site_logo', '', true) %}
@@ -945,7 +947,7 @@
                         <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
                     </div>
                     <div id="searchResults"
-                         class="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg hidden max-h-60 overflow-y-auto"></div>
+                         class="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg hidden max-h-60 overflow-y-auto glass-panel"></div>
                 </div>
             </form>
         </div>
@@ -1025,7 +1027,7 @@
                         <span id="userNickname">用户</span>
                         <i class="fas fa-chevron-down ml-1 text-xs"></i>
                     </button>
-                    <div class="user-dropdown">
+                    <div class="user-dropdown glass-panel">
                         <a href="/user/center">
                             <i class="fas fa-user-circle"></i>
                             <span>用户中心</span>
@@ -1075,7 +1077,7 @@
 
 <!-- 移动端导航菜单 -->
 <div class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden" id="mobileMenuOverlay">
-    <div class="absolute top-0 right-0 h-full w-64 bg-white shadow-lg p-4 mobile-menu" id="mobileMenu">
+    <div class="absolute top-0 right-0 h-full w-64 bg-white shadow-lg p-4 mobile-menu glass-card" id="mobileMenu">
         <div class="flex justify-between items-center mb-6">
             <h3 class="text-lg font-bold text-gray-800">菜单</h3>
             <button class="text-gray-500 hover:text-gray-800" id="closeMobileMenuBtn">
@@ -1284,6 +1286,13 @@
     }
 </style>
 <div id="pwaInstallBtn"><i class="fas fa-download"></i><span>安装应用</span></div>
+
+<!-- HDR 激活徽标（仅在支持 HDR 的设备/浏览器显示） -->
+<div id="hdrBadge" class="hdr-badge glass-panel" role="status" aria-live="polite" aria-label="HDR已启用"
+     title="HDR已启用">
+    <i class="fas fa-bolt"></i>
+    <span>HDR</span>
+</div>
 
 <!-- PJAX 初始化 -->
 <script>
