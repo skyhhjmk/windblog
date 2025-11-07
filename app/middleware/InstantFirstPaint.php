@@ -215,7 +215,11 @@ class InstantFirstPaint implements MiddlewareInterface
             <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width,initial-scale=1">
+            <meta name="color-scheme" content="light dark">
+            <meta name="theme-color" media="(prefers-color-scheme: light)" content="#667eea">
+            <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0b0f19">
             <title>加载中…</title>
+            <script>(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t)}}catch(e){}})()</script>
             <style>
             html,body{height:100%;margin:0;background:#f9fafb;font-family:system-ui,-apple-system,sans-serif}
             .c{display:flex;align-items:center;justify-content:center;height:100%;flex-direction:column}
@@ -223,6 +227,18 @@ class InstantFirstPaint implements MiddlewareInterface
             .t{margin-top:16px;color:#6b7280;font-size:14px}
             @keyframes s{to{transform:rotate(360deg)}}
             #p{position:fixed;top:0;left:0;height:2px;background:#3b82f6;width:0;transition:width .3s;z-index:9999}
+            /* 深色模式：优先跟随本地主题设置 */
+            html[data-theme=dark],html[data-theme=dark] body{background:#0b0f19;color:#e5e7eb}
+            html[data-theme=dark] .t{color:#cbd5e1}
+            html[data-theme=dark] .s{border-color:#374151;border-top-color:#8b5cf6}
+            html[data-theme=dark] #p{background:#8b5cf6}
+            /* 系统偏好兜底 */
+            @media (prefers-color-scheme: dark){
+              body{background:#0b0f19;color:#e5e7eb}
+              .t{color:#cbd5e1}
+              .s{border-color:#374151;border-top-color:#8b5cf6}
+              #p{background:#8b5cf6}
+            }
             </style>
             </head>
             <body>

@@ -3,6 +3,9 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,minimum-scale=1,initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#667eea">
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0b0f19">
     <title>{% block title %}{{ page_title|default('WindBlog') }}{% endblock %}</title>
     <link rel="canonical" href="{{ canonical_url|default(request.url) }}" />
 
@@ -212,6 +215,104 @@
             font-size: 0.75rem;
             font-weight: bold;
             margin-left: 0.5rem;
+        }
+
+        /* 统一页脚链接颜色，覆盖内联样式 */
+        .footer a {
+            color: #667eea !important;
+            text-decoration: none;
+        }
+
+        /* 深色模式：跟随系统偏好 */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: #0b0f19;
+                color: #e5e7eb;
+            }
+
+            .header {
+                background: rgba(17, 24, 39, 0.85);
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+                border-bottom: 1px solid #374151;
+            }
+
+            .logo {
+                color: #8b5cf6;
+            }
+
+            .nav a {
+                color: #cbd5e1;
+            }
+
+            .nav a:hover {
+                color: #8b5cf6;
+            }
+
+            .main-content {
+                background: #0f172a;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+            }
+
+            .post-card {
+                background: #0f172a;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+                border-left-color: #8b5cf6;
+            }
+
+            .post-title, .post-title a {
+                color: #e5e7eb;
+            }
+
+            .post-meta {
+                color: #9ca3af;
+            }
+
+            .post-excerpt {
+                color: #e5e7eb;
+            }
+
+            amp-img {
+                background-color: #111827;
+            }
+
+            .post-content {
+                color: #e5e7eb;
+            }
+
+            .post-content h1, .post-content h2, .post-content h3 {
+                color: #e5e7eb;
+            }
+
+            .post-content pre {
+                background: #111827;
+            }
+
+            .post-content code {
+                background: rgba(255, 255, 255, 0.06);
+            }
+
+            .footer {
+                background: #0b0f19;
+                border-top: 1px solid #374151;
+                color: #9ca3af;
+            }
+
+            .footer a {
+                color: #8b5cf6 !important;
+            }
+
+            .post-content a {
+                color: #8b5cf6;
+            }
+
+            .post-content a:hover {
+                color: #a78bfa;
+            }
+
+            ::selection {
+                background: rgba(99, 102, 241, .35);
+                color: #fff;
+            }
         }
     </style>
 </head>
