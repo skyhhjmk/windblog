@@ -47,7 +47,7 @@
                 }
                 document.documentElement.setAttribute('data-theme', t);
                 var meta = document.querySelector('meta[name="theme-color"]');
-                if (meta && t === 'dark') meta.setAttribute('content', '#0b0f19');
+                if (meta && t === 'dark') meta.setAttribute('content', '#0d1117');
                 if (window.matchMedia) {
                     try {
                         window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function (e) {
@@ -56,7 +56,7 @@
                                     var nt = e.matches ? 'dark' : 'light';
                                     document.documentElement.setAttribute('data-theme', nt);
                                     var m = document.querySelector('meta[name="theme-color"]');
-                                    if (m) m.setAttribute('content', nt === 'dark' ? '#0b0f19' : '#667eea');
+                                    if (m) m.setAttribute('content', nt === 'dark' ? '#0d1117' : '#667eea');
                                 }
                             } catch (_) {
                             }
@@ -73,7 +73,15 @@
                     } catch (_) {
                     }
                     var m2 = document.querySelector('meta[name="theme-color"]');
-                    if (m2) m2.setAttribute('content', theme === 'dark' ? '#0b0f19' : '#667eea');
+                    if (m2) m2.setAttribute('content', theme === 'dark' ? '#0d1117' : '#667eea');
+                    // 切换代码高亮主题（GitHub light/dark）
+                    var l = document.getElementById('hljs-theme-light');
+                    var d = document.getElementById('hljs-theme-dark');
+                    try {
+                        if (l) l.disabled = (theme !== 'light');
+                        if (d) d.disabled = (theme !== 'dark');
+                    } catch (_) {
+                    }
                     var btn = document.getElementById('themeToggleBtn');
                     if (btn) {
                         var i = btn.querySelector('i');
@@ -128,7 +136,10 @@
     <script src="https://cdn.tailwindcss.com/3.4.17"></script>
     <link rel="preload" as="style" href="{{ asset('/assets/css/font-awesome.css') }}">
     <link rel="stylesheet" href="{{ asset('/assets/css/font-awesome.css') }}">
-    <link rel="stylesheet" href="{{ asset('/assets/css/github-dark.min.css') }}">
+    <!-- Highlight.js 主题：根据明暗切换 -->
+    <link id="hljs-theme-light" rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+    <link id="hljs-theme-dark" rel="stylesheet" href="{{ asset('/assets/css/github-dark.min.css') }}" disabled>
     <!-- 高级动画样式 -->
     <link rel="stylesheet" href="{{ asset('/assets/css/animations.css') }}">
     <!-- 视觉光效与毛玻璃样式 -->
@@ -533,12 +544,12 @@
         }
 
         .prose a {
-            color: #3b82f6;
+            color: var(--accent);
             text-decoration: underline;
         }
 
         .prose a:hover {
-            color: #1d4ed8;
+            color: var(--accent-hover);
         }
 
         .prose blockquote {
@@ -636,16 +647,75 @@
     </style>
     <!-- 主题变量与暗色模式覆盖 -->
     <style>
+        /* GitHub 风格按钮与交互 */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.375rem;
+            border-radius: 0.5rem;
+            border: 1px solid var(--btn-outline-border);
+            padding: 0.5rem 1rem;
+            font-weight: 600;
+            transition: background-color .2s ease, border-color .2s ease, color .2s ease, box-shadow .2s ease, transform .1s ease;
+            text-decoration: none;
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        .btn-primary {
+            background: var(--btn-primary-bg);
+            color: var(--btn-primary-fg);
+            border-color: transparent;
+            box-shadow: 0 2px 8px rgba(45, 164, 78, 0.25);
+        }
+
+        .btn-primary:hover {
+            background: var(--btn-primary-hover);
+        }
+
+        .btn-primary:active {
+            background: var(--btn-primary-active);
+        }
+
+        .btn-outline {
+            background: var(--btn-outline-bg);
+            color: var(--btn-outline-fg);
+            border-color: var(--btn-outline-border);
+        }
+
+        .btn-outline:hover {
+            background: var(--btn-outline-hover-bg);
+            border-color: var(--btn-outline-border);
+        }
+
+        /* 导航 hover 统一为 accent */
+        .hover-animate:hover {
+            color: var(--accent) !important;
+        }
         :root {
-            --bg: #f7f9fc;
-            --bg-2: #eef2f7;
+            /* GitHub Light palette */
+            --bg: #f6f8fa;
+            --bg-2: #f6f8fa;
             --card: #ffffff;
-            --text: #1f2937;
-            --text-muted: #6b7280;
-            --border: #e5e7eb;
-            --accent: #667eea;
-            --accent-2: #764ba2;
-            --code-bg: #f3f4f6;
+            --text: #24292f;
+            --text-muted: #57606a;
+            --border: #d0d7de;
+            --accent: #0969da; /* link/accent */
+            --accent-2: #388bfd; /* lighter accent */
+            --accent-hover: #0759c9;
+            --code-bg: #f6f8fa;
+            /* Buttons (light) */
+            --btn-primary-bg: #2da44e; /* GitHub green */
+            --btn-primary-hover: #2c974b;
+            --btn-primary-active: #2a8f47;
+            --btn-primary-fg: #ffffff;
+            --btn-outline-bg: #f6f8fa;
+            --btn-outline-hover-bg: #f3f4f6;
+            --btn-outline-fg: #24292f;
+            --btn-outline-border: #d0d7de;
         }
 
         html[data-theme="light"] {
@@ -654,15 +724,26 @@
 
         html[data-theme="dark"] {
             color-scheme: dark;
-            --bg: #0b0f19;
-            --bg-2: #0b0f19;
-            --card: #0f172a;
-            --text: #e5e7eb;
-            --text-muted: #9ca3af;
-            --border: #374151;
-            --accent: #8b5cf6;
-            --accent-2: #6366f1;
-            --code-bg: #111827;
+            /* GitHub Dark palette */
+            --bg: #0d1117;
+            --bg-2: #0d1117;
+            --card: #161b22;
+            --text: #c9d1d9;
+            --text-muted: #8b949e;
+            --border: #30363d;
+            --accent: #58a6ff;
+            --accent-2: #79c0ff;
+            --accent-hover: #1f6feb;
+            --code-bg: #0d1117;
+            /* Buttons (dark) */
+            --btn-primary-bg: #238636;
+            --btn-primary-hover: #2ea043;
+            --btn-primary-active: #2ea043;
+            --btn-primary-fg: #ffffff;
+            --btn-outline-bg: #21262d;
+            --btn-outline-hover-bg: #30363d;
+            --btn-outline-fg: #c9d1d9;
+            --btn-outline-border: #30363d;
         }
 
         body {
@@ -676,7 +757,7 @@
         }
 
         html[data-theme="dark"] header {
-            background: rgba(17, 24, 39, 0.85) !important;
+            background: rgba(13, 17, 23, 0.85) !important; /* #0d1117 */
             color: var(--text);
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
             border-bottom: 1px solid var(--border) !important;
@@ -697,7 +778,8 @@
         }
 
         html[data-theme="dark"] .text-gray-600,
-        html[data-theme="dark"] .text-gray-500 {
+        html[data-theme="dark"] .text-gray-500,
+        html[data-theme="dark"] .text-gray-400 {
             color: var(--text-muted) !important;
         }
 
@@ -723,11 +805,11 @@
         }
 
         html[data-theme="dark"] .bg-gray-200 {
-            background-color: #1f2937 !important;
+            background-color: #161b22 !important; /* GitHub canvasSubtle */
         }
 
         html[data-theme="dark"] .hover\:bg-gray-300:hover {
-            background-color: #374151 !important;
+            background-color: #21262d !important; /* GitHub hover bg */
         }
 
         /* 灰阶边框颜色统一映射 */
@@ -735,7 +817,8 @@
         html[data-theme="dark"] .border-gray-100,
         html[data-theme="dark"] .border-gray-200,
         html[data-theme="dark"] .border-gray-300,
-        html[data-theme="dark"] .border-gray-400 {
+        html[data-theme="dark"] .border-gray-400,
+        html[data-theme="dark"] .border-gray-500 {
             border-color: var(--border) !important;
         }
 
@@ -743,7 +826,8 @@
         html[data-theme="dark"] .divide-gray-50 > :not([hidden]) ~ :not([hidden]),
         html[data-theme="dark"] .divide-gray-100 > :not([hidden]) ~ :not([hidden]),
         html[data-theme="dark"] .divide-gray-200 > :not([hidden]) ~ :not([hidden]),
-        html[data-theme="dark"] .divide-gray-300 > :not([hidden]) ~ :not([hidden]) {
+        html[data-theme="dark"] .divide-gray-300 > :not([hidden]) ~ :not([hidden]),
+        html[data-theme="dark"] .divide-gray-400 > :not([hidden]) ~ :not([hidden]) {
             border-color: var(--border) !important;
         }
 
@@ -766,17 +850,17 @@
         }
 
         html[data-theme="dark"] .text-blue-800 {
-            color: #93c5fd !important;
+            color: #58a6ff !important; /* GitHub accent fg */
         }
 
         html[data-theme="dark"] .text-green-800 {
-            color: #86efac !important;
+            color: #3fb950 !important; /* GitHub success fg */
         }
 
         html[data-theme="dark"] input,
         html[data-theme="dark"] textarea,
         html[data-theme="dark"] select {
-            background-color: #0b1220 !important;
+            background-color: #0d1117 !important;
             color: var(--text) !important;
             border-color: var(--border) !important;
         }
@@ -854,7 +938,7 @@
         }
 
         html[data-theme="dark"] .prose code {
-            background-color: rgba(255, 255, 255, 0.06) !important;
+            background-color: #161b22 !important; /* GitHub inline code bg */
         }
 
         html[data-theme="dark"] .code-copy-btn {
@@ -888,7 +972,7 @@
         }
 
         html[data-theme="dark"] ::placeholder {
-            color: #cbd5e1 !important;
+            color: #8b949e !important; /* GitHub muted fg */
         }
 
         html[data-theme="dark"] hr {
@@ -963,8 +1047,8 @@
             <a href="/"
                class="text-gray-600 font-medium transition-all duration-200 flex items-center hover-animate tap-highlight"
                style="position: relative; padding: 0.5rem 0;"
-               onmouseover="this.style.color='#667eea'; this.querySelector('.nav-underline').style.width='100%';"
-               onmouseout="this.style.color='#4b5563'; this.querySelector('.nav-underline').style.width='0';">
+               onmouseover="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--accent'); this.querySelector('.nav-underline').style.width='100%';"
+               onmouseout="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--text-muted'); this.querySelector('.nav-underline').style.width='0';">
                 <i class="fas fa-home mr-1"></i>
                 首页
                 <span class="nav-underline"
@@ -978,8 +1062,8 @@
             <a href="/link"
                class="text-gray-600 font-medium transition-all duration-200 flex items-center hover-animate tap-highlight"
                style="position: relative; padding: 0.5rem 0;"
-               onmouseover="this.style.color='#667eea'; this.querySelector('.nav-underline').style.width='100%';"
-               onmouseout="this.style.color='#4b5563'; this.querySelector('.nav-underline').style.width='0';">
+               onmouseover="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--accent'); this.querySelector('.nav-underline').style.width='100%';"
+               onmouseout="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--text-muted'); this.querySelector('.nav-underline').style.width='0';">
                 <i class="fas fa-link mr-1"></i>
                 友情链接
                 <span class="nav-underline"
@@ -1001,20 +1085,14 @@
                 <!-- 未登录状态 -->
                 <div id="userNotLoggedIn" class="flex items-center space-x-2">
                     <a href="/user/login"
-                       class="px-4 py-2 text-gray-600 font-medium transition-all duration-200 flex items-center hover-animate tap-highlight rounded-lg"
-                       style="border: 1px solid #e5e7eb;"
-                       onmouseover="this.style.background='linear-gradient(135deg, #667eea 0%, #764ba2 100%)'; this.style.color='white'; this.style.borderColor='transparent'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(102, 126, 234, 0.3)';"
-                       onmouseout="this.style.background='transparent'; this.style.color='#4b5563'; this.style.borderColor='#e5e7eb'; this.style.transform='translateY(0)'; this.style.boxShadow='none';">
-                        <i class="fas fa-sign-in-alt mr-1"></i>
-                        登录
+                       class="btn btn-outline hover-animate tap-highlight">
+                        <i class="fas fa-sign-in-alt"></i>
+                        <span class="ml-1">登录</span>
                     </a>
                     <a href="/user/register"
-                       class="px-4 py-2 text-white font-medium transition-all duration-200 flex items-center hover-animate tap-highlight rounded-lg"
-                       style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);"
-                       onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(102, 126, 234, 0.4)';"
-                       onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(102, 126, 234, 0.3)';">
-                        <i class="fas fa-user-plus mr-1"></i>
-                        注册
+                       class="btn btn-primary tap-highlight">
+                        <i class="fas fa-user-plus"></i>
+                        <span class="ml-1">注册</span>
                     </a>
                 </div>
 

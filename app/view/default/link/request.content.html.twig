@@ -459,8 +459,9 @@
     </script>
 
     <script>
-        // 处理锚点跳转和闪烁效果
-        document.addEventListener('DOMContentLoaded', function () {
+        // 处理锚点跳转 + JSON 配置展开/复制（支持 PJAX）
+        function setupConfigAndAnchors() {
+            // 首屏带哈希时滚动并高亮
             if (window.location.hash) {
                 const target = document.querySelector(window.location.hash);
                 if (target) {
@@ -469,7 +470,10 @@
                 }
             }
 
+            // 绑定站内锚点（避免重复绑定）
             document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                if (anchor.dataset.anchorBound === '1') return;
+                anchor.dataset.anchorBound = '1';
                 anchor.addEventListener('click', function (e) {
                     e.preventDefault();
                     const targetId = this.getAttribute('href');
@@ -481,43 +485,57 @@
                 });
             });
 
-            const toggleConfig = document.getElementById('toggleConfig');
+            // 展开/收起 JSON 配置（使用克隆避免重复绑定）
+            const toggleBtn = document.getElementById('toggleConfig');
             const configSection = document.getElementById('configSection');
-            const chevronIcon = toggleConfig ? toggleConfig.querySelector('i.fa-chevron-down') : null;
-
-            if (toggleConfig && configSection && chevronIcon) {
-                toggleConfig.addEventListener('click', function () {
+            if (toggleBtn && configSection) {
+                const newBtn = toggleBtn.cloneNode(true);
+                toggleBtn.parentNode.replaceChild(newBtn, toggleBtn);
+                const chevronIcon = newBtn.querySelector('i.fa-chevron-down');
+                newBtn.addEventListener('click', function () {
                     const isHidden = configSection.classList.contains('hidden');
                     if (isHidden) {
                         configSection.classList.remove('hidden');
-                        chevronIcon.classList.add('rotate-180');
+                        if (chevronIcon) chevronIcon.classList.add('rotate-180');
                     } else {
                         configSection.classList.add('hidden');
-                        chevronIcon.classList.remove('rotate-180');
+                        if (chevronIcon) chevronIcon.classList.remove('rotate-180');
                     }
                 });
             }
 
-            const copyConfig = document.getElementById('copyConfig');
+            // 复制 JSON 配置（使用克隆避免重复绑定）
+            const copyBtn = document.getElementById('copyConfig');
             const configCode = document.getElementById('configCode');
-            if (copyConfig && configCode) {
-                const codeContainer = copyConfig.parentElement;
+            if (copyBtn && configCode) {
+                const newCopy = copyBtn.cloneNode(true);
+                copyBtn.parentNode.replaceChild(newCopy, copyBtn);
+                const codeContainer = newCopy.parentElement;
                 codeContainer.classList.add('group');
-                copyConfig.addEventListener('click', function () {
+                newCopy.addEventListener('click', function () {
                     const textArea = document.createElement('textarea');
-                    textArea.value = configCode.textContent;
+                    textArea.value = configCode.textContent || '';
                     document.body.appendChild(textArea);
                     textArea.select();
                     document.execCommand('copy');
                     document.body.removeChild(textArea);
-                    const originalText = copyConfig.innerHTML;
-                    copyConfig.innerHTML = '<i class="fas fa-check mr-1"></i>已复制';
+                    const originalText = newCopy.innerHTML;
+                    newCopy.innerHTML = '<i class="fas fa-check mr-1"></i>已复制';
                     setTimeout(() => {
-                        copyConfig.innerHTML = originalText;
+                        newCopy.innerHTML = originalText;
                     }, 2000);
                 });
             }
-        });
+        }
+
+        // 初次加载或非 PJAX 情况
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setupConfigAndAnchors);
+        } else {
+            setupConfigAndAnchors();
+        }
+        // PJAX 导航后
+        document.addEventListener('page:ready', setupConfigAndAnchors);
 
         function scrollToCenter(element) {
             const elementRect = element.getBoundingClientRect();
