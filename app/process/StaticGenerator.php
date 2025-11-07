@@ -3,6 +3,7 @@
 namespace app\process;
 
 use app\model\Post;
+use app\service\AssetMinifyRegistry;
 use app\service\EnhancedStaticCacheConfig;
 use app\service\MQService;
 use MatthiasMullie\Minify\CSS;
@@ -452,7 +453,7 @@ class StaticGenerator
                     return $m[0];
                 }
 
-                $hash = md5($srcPath . '|' . (string) @filemtime($srcPath));
+                $hash = @md5_file($srcPath) ?: md5($srcPath . '|' . (string) @filemtime($srcPath));
                 $outRel = $minBaseUrl . '/' . $hash . '.js';
                 $outPath = $minBaseDir . DIRECTORY_SEPARATOR . $hash . '.js';
 
@@ -467,6 +468,13 @@ class StaticGenerator
                     }
                 }
 
+                // 记录映射
+                try {
+                    $mtime = (int) @filemtime($srcPath);
+                    AssetMinifyRegistry::put($hash, 'js', $srcPath, $mtime);
+                } catch (Throwable $e) {
+                }
+
                 return $m[1] . $outRel . $m[3];
             }, $replaced);
 
@@ -478,7 +486,7 @@ class StaticGenerator
                     return $m[0];
                 }
 
-                $hash = md5($hrefPath . '|' . (string) @filemtime($hrefPath));
+                $hash = @md5_file($hrefPath) ?: md5($hrefPath . '|' . (string) @filemtime($hrefPath));
                 $outRel = $minBaseUrl . '/' . $hash . '.css';
                 $outPath = $minBaseDir . DIRECTORY_SEPARATOR . $hash . '.css';
 
@@ -491,6 +499,13 @@ class StaticGenerator
 
                         return $m[0];
                     }
+                }
+
+                // 记录映射
+                try {
+                    $mtime = (int) @filemtime($hrefPath);
+                    AssetMinifyRegistry::put($hash, 'css', $hrefPath, $mtime);
+                } catch (Throwable $e) {
                 }
 
                 return $m[1] . $outRel . $m[3];
