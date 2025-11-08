@@ -15,4 +15,5 @@
 
 return [
     support\bootstrap\Session::class,
+    app\bootstrap\VersionAutoTasks::class,
 ];

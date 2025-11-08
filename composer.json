@@ -83,6 +83,15 @@
     "pre-package-uninstall": [
       "support\\Plugin::uninstall"
     ],
+    "post-install-cmd": [
+      "@php console system:post-update || true"
+    ],
+    "post-update-cmd": [
+      "@php console system:post-update || true"
+    ],
+    "post-autoload-dump": [
+      "@php -r \"echo 'Composer autoload dumped.'.PHP_EOL;\""
+    ],
     "test": "phpunit",
     "test:unit": "phpunit --testsuite 'Test Suite'",
     "test:coverage": "phpunit --coverage-html coverage",
