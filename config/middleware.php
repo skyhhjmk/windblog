@@ -36,12 +36,21 @@ if (getenv('DB_DEFAULT')) {
     $global = array_merge($global, $must_installed);
 }
 
+$super_global = [];
+
+if (env('APP_DEBUG', false)) {
+    $add_super_global = [
+        app\middleware\RequestLogger::class,
+    ];
+
+    $super_global = array_merge($super_global, $add_super_global);
+}
+
 $middleware = [
     // 全局中间件
     '' => $global,
-    '@' => [
-        app\middleware\RequestLogger::class,
-    ],
+    // 超全局
+    '@' => $super_global,
 ];
 
 return $middleware;
