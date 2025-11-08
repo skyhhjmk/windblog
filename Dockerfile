@@ -74,6 +74,7 @@ RUN if [ "$MIRROR" = "tsinghua" ]; then \
       libpq-dev \
       libsqlite3-dev \
       libcurl4-openssl-dev \
+      libssl-dev \
       libonig-dev \
       libxml2-dev \
       libevent-dev \
@@ -96,7 +97,7 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg && \
     docker-php-ext-install -j"$(nproc)" \
       sockets intl gd mbstring opcache fileinfo exif xml xsl zip pcntl && \
     docker-php-ext-install -j"$(nproc)" pdo_pgsql pdo_mysql pdo_sqlite curl && \
-    pecl install redis imagick && docker-php-ext-enable redis imagick && \
+    pecl install redis imagick event && docker-php-ext-enable redis imagick event && \
     rm -rf /tmp/* /var/tmp/*
 
 # 复制应用与 vendor（vendor 来自 builder 以复用缓存）
