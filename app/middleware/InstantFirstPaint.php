@@ -266,9 +266,9 @@ class InstantFirstPaint implements MiddlewareInterface
                 .then(function(h){
                 // 检测是否又返回了骨架页（含有特定标记）
                 if(h.indexOf('_ilc')!==-1&&h.length<2000){sessionStorage.removeItem('_ilc');location.href=location.href.split('?')[0]+'?no_instant=1&t='+Date.now();return}
-                p(100);try{sessionStorage.removeItem('_ilc')}catch(e){}setTimeout(function(){try{document.open();document.write(h);document.close()}catch(e){location.reload()}},50)
+                p(100);try{sessionStorage.removeItem('_ilc')}catch(e){}setTimeout(function(){try{document.open();document.write(h);document.close()}catch(e){try{sessionStorage.removeItem('_ilc')}catch(_){}location.replace(location.href.split('?')[0]+'?no_instant=1&t='+Date.now())}},50)
                 })
-                .catch(function(){location.reload()})
+                .catch(function(){try{sessionStorage.removeItem('_ilc')}catch(_){}location.replace(location.href.split('?')[0]+'?no_instant=1&t='+Date.now())})
                 }catch(e){location.reload()}
                 }
                 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',load);else load()

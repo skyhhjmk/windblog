@@ -681,9 +681,34 @@
             }
 
             function enhanceClient(root) {
-                highlightCodes(root);
-                // 顺序执行以保证脚本按需加载后再渲染
-                renderMermaid(root).then(function () {
+                // 若需要且未加载 highlight.js，则按需加载后再高亮
+                const needHighlight = (function () {
+                    try {
+                        const skip = /\blanguage-(mermaid|flowchart|echarts|graphviz|plantuml|markmap|abc|smiles|math)\b/;
+                        const codes = root.querySelectorAll('pre > code');
+                        for (let i = 0; i < codes.length; i++) {
+                            if (!skip.test(codes[i].className || '')) return true;
+                        }
+                        return false;
+                    } catch (_) {
+                        return false;
+                    }
+                })();
+
+                let start = Promise.resolve();
+                if (needHighlight && !window.hljs) {
+                    start = loadScript('{{ asset('/assets/js/highlight.min.js') }}', 'hljs-js').catch(function () { /* 忽略加载失败 */
+                    });
+                }
+
+                start.then(function () {
+                    try {
+                        highlightCodes(root);
+                    } catch (_) {
+                    }
+                }).then(function () {
+                    return renderMermaid(root);
+                }).then(function () {
                     return renderFlowchart(root);
                 }).then(function () {
                     return renderEcharts(root);
@@ -894,7 +919,8 @@
                             });
                             kids.addEventListener('transitionend', function onEnd() {
                                 kids.removeEventListener('transitionend', onEnd);
-                                kids.style.height = kids.scrollHeight + 'px';
+                                // 动画完成后恢复自适应高度，避免再次强制读取布局
+                                kids.style.height = 'auto';
                             });
                         } else {
                             caretEl && caretEl.classList.add('collapsed');
@@ -1093,15 +1119,16 @@
                 window.addEventListener('resize', positionTOCUI);
                 // 同步不同视口尺寸下的可见性
                 window.addEventListener('resize', updateTOCVisibility);
-                // 调试：滚动时也尝试重新计算一次位置（保证你看到“跟随”），如需关闭可注释
-                let __tocRaf = 0;
-                window.addEventListener('scroll', function () {
-                    if (__tocRaf) return;
-                    __tocRaf = requestAnimationFrame(function () {
-                        __tocRaf = 0;
-                        positionTOCUI();
-                    });
-                }, {passive: true});
+                // 追求性能：避免在滚动过程中频繁测量布局，仅在尺寸变化或抽屉打开时定位
+                // 如需开启随滚动跟随，请恢复下面代码
+                // let __tocRaf = 0;
+                // window.addEventListener('scroll', function () {
+                //     if (__tocRaf) return;
+                //     __tocRaf = requestAnimationFrame(function () {
+                //         __tocRaf = 0;
+                //         positionTOCUI();
+                //     });
+                // }, {passive: true});
 
                 // Scroll spy
                 try {

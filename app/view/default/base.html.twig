@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <link rel="dns-prefetch" href="//cdn.tailwindcss.com">
-    <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin="anonymous">
     <link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
-    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin="anonymous">
     <title>{% block title %}{{ page_title|default('WindBlog') }}{% endblock %}</title>
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json">
@@ -145,17 +145,16 @@
     <!-- 视觉光效与毛玻璃样式 -->
     <link rel="stylesheet" href="{{ asset('/assets/css/effects.css') }}">
     {# 可选：如需本地脚本，使用 defer 并指纹化（存在时再启用） #}
-    <script src="{{ asset('/assets/js/common.js') }}"></script>
+    <script src="{{ asset('/assets/js/common.js') }}" defer></script>
     <!-- 动画工具库 -->
     <script src="{{ asset('/assets/js/animation-utils.js') }}" defer></script>
     <!-- FloLink 悬浮链接样式 -->
     <link rel="preload" as="style" href="{{ asset('/assets/flolink/flolink.css') }}">
     <link rel="stylesheet" href="{{ asset('/assets/flolink/flolink.css') }}">
     <!-- FloLink 悬浮链接脚本 -->
-    <script src="{{ asset('/assets/flolink/flolink.js') }}"></script>
-    <script src="{{ asset('/assets/js/highlight.min.js') }}"></script>
+    <script src="{{ asset('/assets/flolink/flolink.js') }}" defer></script>
     <script src="{{ asset('/assets/js/pangu.umd.js') }}" defer></script>
-    <script src="{{ asset('/assets/js/sweetalert2.all.min.js') }}"></script>
+    <script src="{{ asset('/assets/js/sweetalert2.all.min.js') }}" defer></script>
     <style>
         .blog-container {
             max-width: 1200px;
@@ -1047,8 +1046,8 @@
             <a href="/"
                class="text-gray-600 font-medium transition-all duration-200 flex items-center hover-animate tap-highlight"
                style="position: relative; padding: 0.5rem 0;"
-               onmouseover="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--accent'); this.querySelector('.nav-underline').style.width='100%';"
-               onmouseout="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--text-muted'); this.querySelector('.nav-underline').style.width='0';">
+               onmouseover="this.style.color='var(--accent)'; this.querySelector('.nav-underline').style.width='100%';"
+               onmouseout="this.style.color='var(--text-muted)'; this.querySelector('.nav-underline').style.width='0';">
                 <i class="fas fa-home mr-1"></i>
                 首页
                 <span class="nav-underline"
@@ -1062,8 +1061,8 @@
             <a href="/link"
                class="text-gray-600 font-medium transition-all duration-200 flex items-center hover-animate tap-highlight"
                style="position: relative; padding: 0.5rem 0;"
-               onmouseover="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--accent'); this.querySelector('.nav-underline').style.width='100%';"
-               onmouseout="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--text-muted'); this.querySelector('.nav-underline').style.width='0';">
+               onmouseover="this.style.color='var(--accent)'; this.querySelector('.nav-underline').style.width='100%';"
+               onmouseout="this.style.color='var(--text-muted)'; this.querySelector('.nav-underline').style.width='0';">
                 <i class="fas fa-link mr-1"></i>
                 友情链接
                 <span class="nav-underline"
@@ -1290,8 +1289,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
         integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.pjax/2.0.1/jquery.pjax.min.js" crossorigin="anonymous"
-        referrerpolicy="no-referrer"></script>
 {% block extra_js %}{% endblock %}
 
 <!-- Service Worker 注册 & 安装提示 -->
@@ -1777,14 +1774,17 @@
                     pjaxConfig.container.style.transition = `opacity ${pjaxConfig.transitionSpeed}ms ease-out`;
                 }, 50);
 
-                // 更新进度条
+                // 更新进度条（使用 rAF 避免同步强制回流）
                 if (pjaxConfig.progressBar) {
-                    pjaxConfig.progressBar.style.transition = 'none';
-                    pjaxConfig.progressBar.style.width = '0';
-                    // 触发重绘
-                    void pjaxConfig.progressBar.offsetWidth;
-                    pjaxConfig.progressBar.style.transition = 'width 0.3s ease';
-                    pjaxConfig.progressBar.style.width = '10%';
+                    const bar = pjaxConfig.progressBar;
+                    bar.style.transition = 'none';
+                    bar.style.width = '0';
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                            bar.style.transition = 'width 0.3s ease';
+                            bar.style.width = '10%';
+                        });
+                    });
                 }
                 document.body.classList.add('pjax-loading');
 
