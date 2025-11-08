@@ -87,8 +87,12 @@ class BlogService
             }
         }
 
-        // 构建查询
-        $query = Post::where('status', 'published');
+        // 构建查询（仅展示已发布且发布时间不在未来的文章）
+        $query = Post::where('status', 'published')
+            ->where(function ($q) {
+                $q->whereNull('published_at')
+                    ->orWhere('published_at', '<=', utc_now());
+            });
 
         // 处理搜索筛选条件
         if (!empty($filters)) {

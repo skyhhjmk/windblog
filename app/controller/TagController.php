@@ -37,6 +37,46 @@ class TagController
         $sort = $request->get('sort', 'latest');
         $sort = in_array($sort, ['latest', 'hot']) ? $sort : 'latest';
 
+        // 构建筛选条件
+        $filters = [
+            'tag' => $this->sanitizeSlug($slug),
+            'sort' => $sort,
+        ];
+
+        // 获取文章列表
+        $result = BlogService::getBlogPosts($page, $filters);
+
+        // 获取标签名称用于标题展示
+        $tagModel = Tag::query()->where('slug', $slug)->first(['name', 'slug']);
+        $tag_name = $tagModel ? (string)$tagModel->name : $slug;
+
+        // 生成面包屑导航
+        $breadcrumbs = BreadcrumbHelper::forTag($tagModel, false);
+
+        // AMP 渲染
+        if ($this->isAmpRequest($request)) {
+            $siteUrl = $request->host();
+            $canonicalUrl = 'https://' . $siteUrl . '/tag/' . $slug . '.html';
+            $postsPerPage = (int)($result['postsPerPage'] ?? BlogService::getPostsPerPage());
+            $totalCount = (int)($result['totalCount'] ?? 0);
+            $totalPages = max(1, (int)ceil($totalCount / max(1, $postsPerPage)));
+
+            return view('tag/index.amp', [
+                'page_title' => "标签: {$tag_name}",
+                'tag_slug' => $slug,
+                'tag_name' => $tag_name,
+                'posts' => $result['posts'],
+                'amp_pagination' => [
+                    'current_page' => $page,
+                    'total_pages' => $totalPages,
+                ],
+                'sort' => $sort,
+                'breadcrumbs' => $breadcrumbs,
+                'canonical_url' => $canonicalUrl,
+                'request' => $request,
+            ]);
+        }
+
         // 使用PJAXHelper检测是否为PJAX请求
         $isPjax = PJAXHelper::isPJAX($request);
 
@@ -46,32 +86,14 @@ class TagController
             $cacheKey = sprintf('tag:%s:page:%d:sort:%s', $slug, $page, $sort);
         }
 
-        // 构建筛选条件
-        $filters = [
-            'tag' => $this->sanitize($slug),
-            'sort' => $sort,
-        ];
-
-        // 获取文章列表
-        $result = BlogService::getBlogPosts($page, $filters);
-
         // 标题
         $blog_title = BlogService::getBlogTitle();
-
-        // 这里不再需要重复的PJAX检测，因为前面已经检测过了
 
         // 侧边栏
         $sidebar = SidebarService::getSidebarContent($request, 'tag');
 
         // 动态选择模板：PJAX 返回片段，非 PJAX 返回完整页面
         $viewName = PJAXHelper::getViewName('tag/index', $isPjax);
-
-        // 获取标签名称用于标题展示
-        $tagModel = Tag::query()->where('slug', $slug)->first(['name', 'slug']);
-        $tag_name = $tagModel ? (string) $tagModel->name : $slug;
-
-        // 生成面包屑导航
-        $breadcrumbs = BreadcrumbHelper::forTag($tagModel, false);
 
         // 统一分页渲染
         $pagination_html = PaginationService::generatePagination(
@@ -111,15 +133,14 @@ class TagController
      */
     public function list(Request $request): Response
     {
-
-        $sidebar = SidebarService::getSidebarContent($request, 'tag');
-
         $cacheKey = 'tag_list_counts_v1';
         $enhancedCache = new EnhancedCacheService();
         $data = $enhancedCache->get($cacheKey, 'tag', null, 300);
         if ($data !== false) {
             $tags = json_decode($data, true) ?: [];
-        } else {
+        }
+        if (!isset($tags) || !is_array($tags) || count($tags) === 0) {
+            // 缓存未命中或解析失败时回源DB
             $tags = Tag::query()
                 ->withCount('posts')
                 ->orderBy('id', 'asc')
@@ -135,6 +156,23 @@ class TagController
         }
 
         $blog_title = BlogService::getBlogTitle();
+
+        // AMP 渲染
+        if ($this->isAmpRequest($request)) {
+            $siteUrl = $request->host();
+            $canonicalUrl = 'https://' . $siteUrl . '/tag';
+            $breadcrumbs = BreadcrumbHelper::forTag(null, true);
+
+            return view('tag/list.amp', [
+                'page_title' => "全部标签 - {$blog_title}",
+                'tags' => $tags,
+                'breadcrumbs' => $breadcrumbs,
+                'canonical_url' => $canonicalUrl,
+                'request' => $request,
+            ]);
+        }
+
+        $sidebar = SidebarService::getSidebarContent($request, 'tag');
         $viewName = PJAXHelper::isPJAX($request) ? 'tag/list.content' : 'tag/list';
 
         // 生成面包屑导航（标签列表页）
@@ -150,9 +188,22 @@ class TagController
 
     protected function sanitize(string $value): string
     {
-        $value = strip_tags($value);
-        $value = trim($value);
+        // 通用清洗：移除标签与首尾空白
+        return trim(strip_tags($value));
+    }
 
-        return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+    protected function sanitizeSlug(string $value): string
+    {
+        // 对 slug 仅做基础清洗，不做转义，避免中文被实体化
+        return trim(strip_tags($value));
+    }
+
+    protected function isAmpRequest(Request $request): bool
+    {
+        if ($request->get('amp') === '1' || $request->get('amp') === 'true') {
+            return true;
+        }
+        $path = $request->path();
+        return str_starts_with($path, '/amp/');
     }
 }

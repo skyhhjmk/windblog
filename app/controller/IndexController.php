@@ -45,6 +45,9 @@ class IndexController
     #[EnableInstantFirstPaint]
     public function index(Request $request, int $page = 1): Response
     {
+        // 检测是否为AMP请求
+        $isAmp = $this->isAmpRequest($request);
+
         // 构建筛选条件，并进行输入过滤
         $filters = $this->filterInput($request->get() ?: []);
 
@@ -53,6 +56,11 @@ class IndexController
 
         // 获取博客标题
         $blog_title = BlogService::getBlogTitle();
+
+        // AMP请求不使用PJAX
+        if ($isAmp) {
+            return $this->renderAmpIndex($request, $blog_title, $result);
+        }
 
         // 使用PJAXHelper检测是否为PJAX请求
         $isPjax = PJAXHelper::isPJAX($request);
@@ -101,7 +109,11 @@ class IndexController
             'searchUrl' => 'https://' . $siteUrl . '/search?q={search_term_string}',
         ];
 
-        // 创建带缓存的PJAX响应
+        // 生成AMP URL
+        $currentPath = $request->path();
+        $ampUrl = 'https://' . $siteUrl . $currentPath . (strpos($currentPath, '?') !== false ? '&' : '?') . 'amp=1';
+
+        // 创建AMP响应
         $resp = PJAXHelper::createResponse(
             $request,
             $viewName,
@@ -112,6 +124,7 @@ class IndexController
                 'sidebar' => $sidebar,
                 'seo' => $seoData,
                 'schema' => $schemaData,
+                'amp_url' => $ampUrl,
             ],
             $cacheKey,
             120,
@@ -169,5 +182,70 @@ class IndexController
         }
 
         return $value;
+    }
+
+    /**
+     * 检测是否为AMP请求
+     *
+     * @param Request $request
+     * @return bool
+     */
+    protected function isAmpRequest(Request $request): bool
+    {
+        // 通过查询参数检测
+        if ($request->get('amp') === '1' || $request->get('amp') === 'true') {
+            return true;
+        }
+
+        // 通过路径检测 (例如 /amp/post/123.html)
+        $path = $request->path();
+        if (str_starts_with($path, '/amp/')) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * 渲染AMP首页
+     *
+     * @param Request $request
+     * @param string $blog_title
+     * @param array $result
+     * @return Response
+     */
+    protected function renderAmpIndex(Request $request, string $blog_title, array $result): Response
+    {
+        $siteUrl = $request->host();
+        $siteTitle = blog_config('title', 'WindBlog', true);
+        $siteDescription = blog_config('description', '一个异常精致的博客系统', true);
+
+        // 准备 SEO 数据
+        $seoData = [
+            'title' => $siteTitle,
+            'description' => $siteDescription,
+        ];
+
+        // 准备 Schema.org WebSite 结构化数据
+        $schemaData = [
+            '@context' => 'https://schema.org',
+            '@type' => 'WebSite',
+            'name' => $siteTitle,
+            'description' => $siteDescription,
+            'url' => 'https://' . $siteUrl,
+        ];
+
+        // 生成规范URL（不含amp参数）
+        $canonicalUrl = 'https://' . $siteUrl . $request->path();
+
+        return view('index/index.amp', [
+            'page_title' => $blog_title,
+            'posts' => $result['posts'],
+            'pagination' => $result['pagination'],
+            'seo' => $seoData,
+            'schema' => $schemaData,
+            'canonical_url' => $canonicalUrl,
+            'request' => $request,
+        ]);
     }
 }

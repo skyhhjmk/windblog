@@ -1,0 +1,47 @@
+{% extends "base.amp.html.twig" %}
+
+{% block title %}链接广场 - {{ page_title|default('WindBlog') }}{% endblock %}
+
+{% block content %}
+    <article class="main-content">
+        <h1 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 1rem;">链接广场</h1>
+
+        {% if links is defined and links|length > 0 %}
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;">
+                {% for link in links %}
+                    <a href="/link/info/{{ link.id }}?amp=1" class="post-card"
+                       style="display:block;text-decoration:none;">
+                        <div style="display:flex;align-items:center;gap:.5rem;">
+                            {% if link.icon %}
+                                <amp-img src="{{ link.icon }}" width="24" height="24" alt="{{ link.name }}"
+                                         style="border-radius:50%;"></amp-img>
+                            {% endif %}
+                            <div class="post-title" style="margin:0;">{{ link.name }}</div>
+                        </div>
+                        {% if link.description %}
+                            <div class="post-excerpt"
+                                 style="margin-top:.5rem;">{{ link.description|striptags|raw }}</div>
+                        {% endif %}
+                    </a>
+                {% endfor %}
+            </div>
+
+            {% if amp_pagination is defined and amp_pagination.total_pages > 1 %}
+                <div style="display:flex;justify-content:center;gap:0.5rem;margin-top:1.5rem;">
+                    {% if amp_pagination.current_page > 1 %}
+                        <a href="/link/page/{{ amp_pagination.current_page - 1 }}?amp=1"
+                           style="padding:.5rem 1rem;background:#667eea;color:#fff;border-radius:4px;text-decoration:none;">←
+                            上一页</a>
+                    {% endif %}
+                    {% if amp_pagination.current_page < amp_pagination.total_pages %}
+                        <a href="/link/page/{{ amp_pagination.current_page + 1 }}?amp=1"
+                           style="padding:.5rem 1rem;background:#667eea;color:#fff;border-radius:4px;text-decoration:none;">下一页
+                            →</a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        {% else %}
+            <p style="color:#6b7280;">暂无链接</p>
+        {% endif %}
+    </article>
+{% endblock %}

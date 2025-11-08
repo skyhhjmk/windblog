@@ -80,15 +80,6 @@ if (strtolower(trim((string) $__cacheDriver)) === 'redis') {
 }
 
 if (getenv('DB_DEFAULT')) {
-    // HTTP回调处理进程（存在 .env 时注册）
-    $__processes['http_callback'] = [
-        'handler' => app\process\HttpCallback::class,
-        'reloadable' => false,
-        'constructor' => [
-            'verify_ssl' => false,
-            'ca_cert_path' => null,
-        ],
-    ];
     // 友链监控处理进程（存在 .env 时注册）
     $__processes['link_monitor'] = [
         'handler' => app\process\LinkMonitor::class,
@@ -113,6 +104,13 @@ if (getenv('DB_DEFAULT')) {
     // 邮件发送处理进程（存在 .env 时注册）
     $__processes['mail_worker'] = [
         'handler' => app\process\MailWorker::class,
+        'reloadable' => false,
+        'constructor' => [],
+    ];
+
+    // 定时发布处理进程（存在 .env 时注册）
+    $__processes['scheduled_publish_worker'] = [
+        'handler' => app\process\ScheduledPublishWorker::class,
         'reloadable' => false,
         'constructor' => [],
     ];

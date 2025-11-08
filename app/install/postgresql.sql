@@ -25,6 +25,9 @@ CREATE TABLE IF NOT EXISTS wa_users
     email_verified_at           TIMESTAMP WITH TIME ZONE DEFAULT NULL,
     activation_token            VARCHAR(64)              DEFAULT NULL,
     activation_token_expires_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+    password_reset_token  VARCHAR(255)             DEFAULT NULL,
+    password_reset_expire TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+    timezone              VARCHAR(50)              DEFAULT 'UTC',
     created_at                  TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at                  TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     deleted_at                  TIMESTAMP WITH TIME ZONE DEFAULT NULL,
@@ -34,6 +37,7 @@ CREATE TABLE IF NOT EXISTS wa_users
 );
 
 CREATE INDEX IF NOT EXISTS idx_wa_users_activation_token ON wa_users (activation_token);
+CREATE INDEX IF NOT EXISTS idx_wa_users_password_reset_token ON wa_users (password_reset_token);
 
 COMMENT ON TABLE wa_users IS '用户表';
 COMMENT ON COLUMN wa_users.username IS '用户名';
@@ -55,6 +59,9 @@ COMMENT ON COLUMN wa_users.token IS 'token';
 COMMENT ON COLUMN wa_users.email_verified_at IS '邮箱验证时间';
 COMMENT ON COLUMN wa_users.activation_token IS '激活令牌';
 COMMENT ON COLUMN wa_users.activation_token_expires_at IS '激活令牌过期时间';
+COMMENT ON COLUMN wa_users.timezone IS '用户时区';
+COMMENT ON COLUMN wa_users.password_reset_token IS '密码重置令牌';
+COMMENT ON COLUMN wa_users.password_reset_expire IS '密码重置令牌过期时间';
 COMMENT ON COLUMN wa_users.created_at IS '创建时间';
 COMMENT ON COLUMN wa_users.updated_at IS '更新时间';
 COMMENT ON COLUMN wa_users.deleted_at IS '删除时间';
@@ -237,7 +244,6 @@ CREATE TABLE IF NOT EXISTS links
     show_url        BOOLEAN      NOT NULL    DEFAULT true,
     content         TEXT                     DEFAULT NULL,
     email           VARCHAR(255)             DEFAULT NULL,
-    callback_url    VARCHAR(255)             DEFAULT NULL,
     note            TEXT                     DEFAULT NULL,
     seo_title       VARCHAR(255)             DEFAULT NULL,
     seo_keywords    VARCHAR(255)             DEFAULT NULL,
@@ -267,7 +273,6 @@ COMMENT ON COLUMN links.redirect_type IS '跳转方式: direct=直接跳转, got
 COMMENT ON COLUMN links.show_url IS '是否在中转页显示原始URL';
 COMMENT ON COLUMN links.content IS '链接详细介绍(Markdown格式)';
 COMMENT ON COLUMN links.email IS '所有者电子邮件';
-comment on column links.callback_url is '回调地址，用户访问链接时异步通知';
 COMMENT ON column links.note IS '管理员备注';
 COMMENT ON column links.seo_title IS 'SEO 标题';
 COMMENT ON column links.seo_keywords IS 'SEO 关键词';
@@ -1740,7 +1745,6 @@ VALUES (default, '雨云',
         false,
         '# 超高性价比云服务商，使用优惠码github注册并绑定微信即可获得5折优惠',
         'admin@biliwind.com',
-        '',
         null,
         '雨云',
         '雨云,云服务器,服务器,性价比',

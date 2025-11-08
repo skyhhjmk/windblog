@@ -1,0 +1,77 @@
+{% extends "base.amp.html.twig" %}
+
+{% block title %}{{ page_title|default('WindBlog') }}{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    {% if posts is defined and posts|length > 0 %}
+        {% for post in posts %}
+        <article class="post-card">
+            <h2 class="post-title">
+                <a href="/post/{{ post.slug }}.html?amp=1">{{ post.title }}</a>
+            </h2>
+
+            <div class="post-meta">
+                {% if post.author %}
+                <span>👤 {{ post.author }}</span>
+                {% endif %}
+                {% if post.created_at %}
+                <span>📅 {{ post.created_at|date('Y-m-d') }}</span>
+                {% endif %}
+                {% if post.views %}
+                <span>👁 {{ post.views }}</span>
+                {% endif %}
+            </div>
+
+            {% if post.cover %}
+            <amp-img
+                src="{{ post.cover }}"
+                alt="{{ post.title }}"
+                width="600"
+                height="400"
+                layout="responsive"
+                class="post-cover">
+            </amp-img>
+            {% endif %}
+
+            {% if post.excerpt %}
+            <div class="post-excerpt">
+                {{ post.excerpt|striptags|raw }}
+            </div>
+            {% endif %}
+
+            <a href="/post/{{ post.slug }}.html?amp=1" style="color: #667eea; text-decoration: none; font-weight: 500;">
+                阅读全文 →
+            </a>
+        </article>
+        {% endfor %}
+
+        {# 分页 #}
+        {% if pagination is defined and pagination.total_pages > 1 %}
+        <div style="display: flex; justify-content: center; gap: 0.5rem; margin-top: 2rem;">
+            {% if pagination.current_page > 1 %}
+                <a href="/page/{{ pagination.current_page - 1 }}.html?amp=1"
+               style="padding: 0.5rem 1rem; background: #667eea; color: white; text-decoration: none; border-radius: 4px;">
+                ← 上一页
+            </a>
+            {% endif %}
+
+            <span style="padding: 0.5rem 1rem; background: #f3f4f6; border-radius: 4px;">
+                {{ pagination.current_page }} / {{ pagination.total_pages }}
+            </span>
+
+            {% if pagination.current_page < pagination.total_pages %}
+                <a href="/page/{{ pagination.current_page + 1 }}.html?amp=1"
+               style="padding: 0.5rem 1rem; background: #667eea; color: white; text-decoration: none; border-radius: 4px;">
+                下一页 →
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    {% else %}
+        <div style="text-align: center; padding: 3rem; color: #6b7280;">
+            <p>暂无文章</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

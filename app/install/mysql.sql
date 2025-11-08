@@ -25,6 +25,15 @@ CREATE TABLE IF NOT EXISTS `wa_users` (
     64
 ) DEFAULT NULL COMMENT '激活令牌',
     ` activation_token_expires_at ` datetime DEFAULT NULL COMMENT '激活令牌过期时间',
+    ` password_reset_token ` varchar
+(
+    255
+) DEFAULT NULL COMMENT '密码重置令牌',
+    ` password_reset_expire ` datetime DEFAULT NULL COMMENT '密码重置令牌过期时间',
+    ` timezone ` varchar
+(
+    50
+) DEFAULT 'UTC' COMMENT '用户时区',
   `created_at` datetime DEFAULT NULL COMMENT '创建时间',
   `updated_at` datetime DEFAULT NULL COMMENT '更新时间',
   `role` int(11) NOT NULL DEFAULT '1' COMMENT '角色',
@@ -46,6 +55,9 @@ CREATE TABLE IF NOT EXISTS `wa_users` (
     `
 )
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户表';
+
+-- 为用户表添加密码重置索引
+CREATE INDEX ` idx_password_reset_token ` ON ` wa_users `(` password_reset_token `);
 
 -- 创建用户OAuth绑定表
 CREATE TABLE IF NOT EXISTS ` user_oauth_bindings `
@@ -223,7 +235,6 @@ CREATE TABLE IF NOT EXISTS `links` (
   `show_url` tinyint(1) NOT NULL DEFAULT 1,
   `content` longtext DEFAULT NULL,
   `email` varchar(255) DEFAULT NULL,
-  `callback_url` varchar(255) DEFAULT NULL,
   `note` text DEFAULT NULL,
   `seo_title` varchar(255) DEFAULT NULL,
   `seo_keywords` varchar(255) DEFAULT NULL,
@@ -603,7 +614,6 @@ INSERT INTO `links` VALUES (default, '雨云',
         false,
         '# 超高性价比云服务商，使用优惠码github注册并绑定微信即可获得5折优惠',
         'admin@biliwind.com',
-        '',
         null,
         '雨云',
         '雨云,云服务器,服务器,性价比',

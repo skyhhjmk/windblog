@@ -72,7 +72,7 @@ class WpImportController extends Base
             ->toArray();
 
         // 返回JSON数据
-        return $this->success(trans('Success'), $list, $total);
+        return $this->success('成功', $list, $total);
     }
 
     /**
@@ -207,7 +207,7 @@ class WpImportController extends Base
             // 成功响应（兼容layui）
             return json([
                 'code' => 0,
-                'msg' => trans('Import job enqueued'),
+                'msg' => '导入任务已添加到队列',
             ]);
         } catch (Exception $e) {
             // 记录错误日志
@@ -216,7 +216,7 @@ class WpImportController extends Base
             // 错误响应格式兼容layui
             return json([
                 'code' => 500,
-                'msg' => trans('Server error :error', ['error' => $e->getMessage()]),
+                'msg' => '服务器错误 ' . $e->getMessage(),
             ]);
         }
     }

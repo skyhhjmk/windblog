@@ -37,15 +37,6 @@ class CategoryController
         $sort = $request->get('sort', 'latest');
         $sort = in_array($sort, ['latest', 'hot']) ? $sort : 'latest';
 
-        // 使用PJAXHelper检测是否为PJAX请求
-        $isPjax = PJAXHelper::isPJAX($request);
-
-        // 为PJAX请求生成缓存键
-        $cacheKey = null;
-        if ($isPjax) {
-            $cacheKey = sprintf('category:%s:page:%d:sort:%s', $slug, $page, $sort);
-        }
-
         // 构建筛选条件：传递 slug，由服务层适配
         $filters = [
             'category' => $this->sanitize($slug),
@@ -55,6 +46,46 @@ class CategoryController
         // 获取文章列表
         $result = BlogService::getBlogPosts($page, $filters);
 
+        // 获取分类名称用于标题展示
+        $categoryModel = Category::query()->where('slug', $slug)->first(['name', 'slug']);
+        $category_name = $categoryModel ? (string)$categoryModel->name : $slug;
+
+        // 生成面包屑导航
+        $breadcrumbs = BreadcrumbHelper::forCategory($categoryModel, false);
+
+        // AMP 渲染
+        if ($this->isAmpRequest($request)) {
+            $siteUrl = $request->host();
+            $canonicalUrl = 'https://' . $siteUrl . '/category/' . $slug . '.html';
+            $postsPerPage = (int)($result['postsPerPage'] ?? BlogService::getPostsPerPage());
+            $totalCount = (int)($result['totalCount'] ?? 0);
+            $totalPages = max(1, (int)ceil($totalCount / max(1, $postsPerPage)));
+
+            return view('category/index.amp', [
+                'page_title' => "分类: {$category_name}",
+                'category_slug' => $slug,
+                'category_name' => $category_name,
+                'posts' => $result['posts'],
+                'amp_pagination' => [
+                    'current_page' => $page,
+                    'total_pages' => $totalPages,
+                ],
+                'sort' => $sort,
+                'breadcrumbs' => $breadcrumbs,
+                'canonical_url' => $canonicalUrl,
+                'request' => $request,
+            ]);
+        }
+
+        // 使用PJAXHelper检测是否为PJAX请求
+        $isPjax = PJAXHelper::isPJAX($request);
+
+        // 为PJAX请求生成缓存键
+        $cacheKey = null;
+        if ($isPjax) {
+            $cacheKey = sprintf('category:%s:page:%d:sort:%s', $slug, $page, $sort);
+        }
+
         // 标题
         $blog_title = BlogService::getBlogTitle();
 
@@ -63,13 +94,6 @@ class CategoryController
 
         // 动态选择模板：PJAX 返回片段，非 PJAX 返回完整页面
         $viewName = PJAXHelper::getViewName('category/index', $isPjax);
-
-        // 获取分类名称用于标题展示
-        $categoryModel = Category::query()->where('slug', $slug)->first(['name', 'slug']);
-        $category_name = $categoryModel ? (string) $categoryModel->name : $slug;
-
-        // 生成面包屑导航
-        $breadcrumbs = BreadcrumbHelper::forCategory($categoryModel, false);
 
         // 使用项目统一的分页渲染，保证路由正确
         $pagination_html = PaginationService::generatePagination(
@@ -109,8 +133,6 @@ class CategoryController
      */
     public function list(Request $request): Response
     {
-        $sidebar = SidebarService::getSidebarContent($request, 'category');
-
         $cacheKey = 'category_list_counts_v1';
         $enhancedCache = new EnhancedCacheService();
         $data = $enhancedCache->get($cacheKey, 'category', null, 300);
@@ -132,6 +154,23 @@ class CategoryController
         }
 
         $blog_title = BlogService::getBlogTitle();
+
+        // AMP 渲染
+        if ($this->isAmpRequest($request)) {
+            $siteUrl = $request->host();
+            $canonicalUrl = 'https://' . $siteUrl . '/category';
+            $breadcrumbs = BreadcrumbHelper::forCategory(null, true);
+
+            return view('category/list.amp', [
+                'page_title' => "全部分类 - {$blog_title}",
+                'categories' => $categories,
+                'breadcrumbs' => $breadcrumbs,
+                'canonical_url' => $canonicalUrl,
+                'request' => $request,
+            ]);
+        }
+
+        $sidebar = SidebarService::getSidebarContent($request, 'category');
         $viewName = PJAXHelper::isPJAX($request) ? 'category/list.content' : 'category/list';
 
         // 生成面包屑导航（分类列表页）
@@ -147,9 +186,16 @@ class CategoryController
 
     protected function sanitize(string $value): string
     {
-        $value = strip_tags($value);
-        $value = trim($value);
+        // 对 slug 仅做基础清洗，不做转义，避免中文被实体化
+        return trim(strip_tags($value));
+    }
 
-        return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+    protected function isAmpRequest(Request $request): bool
+    {
+        if ($request->get('amp') === '1' || $request->get('amp') === 'true') {
+            return true;
+        }
+        $path = $request->path();
+        return str_starts_with($path, '/amp/');
     }
 }

@@ -95,7 +95,7 @@ class LinkController extends Base
         }
 
         // 返回列表数据（无缓存）
-        return $this->success(trans('Success'), $list, $total)
+        return $this->success('成功', $list, $total)
             ->withHeaders([
                 'Cache-Control' => 'no-cache, no-store, must-revalidate',
                 'Pragma' => 'no-cache',
@@ -234,7 +234,6 @@ class LinkController extends Base
                 'icon' => $data['icon'] ?? '',
                 'image' => $data['image'] ?? '',
                 'email' => $data['email'] ?? '',
-                'callback_url' => $data['callback_url'] ?? '',
                 'sort_order' => (int) ($data['sort_order'] ?? 999),
                 'status' => $status,
                 'target' => $data['target'] ?? '_blank',
@@ -1330,7 +1329,7 @@ class LinkController extends Base
 
     /**
      * CAT5: 已建立关系后静默推送扩展信息
-     * 若存在 custom_fields.peer_api 或 callback_url 则POST推送
+     * 若存在 custom_fields.peer_api 则POST推送
      */
     public function pushExtendedInfo(Request $request, int $id): Response
     {
@@ -1361,7 +1360,7 @@ class LinkController extends Base
      */
     private function pushExtendedInfoInternal(Link $link): array
     {
-        $peerApi = $link->getCustomField('peer_api', '') ?: ($link->callback_url ?? '');
+        $peerApi = $link->getCustomField('peer_api', '');
         if (empty($peerApi)) {
             return ['success' => false, 'error' => '未配置对方接收API'];
         }
@@ -1454,7 +1453,7 @@ class LinkController extends Base
     private function enqueuePushTask(Link $link): void
     {
         try {
-            $peerApi = $link->getCustomField('peer_api', '') ?: ($link->callback_url ?? '');
+            $peerApi = $link->getCustomField('peer_api', '');
             if (empty($peerApi)) {
                 Log::warning("无法入队推送任务 - Link ID: {$link->id}, 原因: 未配置 peer_api");
 
@@ -1503,7 +1502,7 @@ class LinkController extends Base
         try {
             // 获取对方的回链ID
             $peerBacklinkId = $link->getCustomField('peer_backlink_id');
-            $peerApi = $link->getCustomField('peer_api', '') ?: ($link->callback_url ?? '');
+            $peerApi = $link->getCustomField('peer_api', '');
 
             if (empty($peerApi)) {
                 Log::info("跳过 CAT5 推送 - Link ID: {$link->id}, 原因: 未配置 peer_api");

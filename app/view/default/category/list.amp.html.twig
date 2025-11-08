@@ -1,0 +1,40 @@
+{% extends "base.amp.html.twig" %}
+
+{% block title %}全部分类 - {{ page_title|default('WindBlog') }}{% endblock %}
+
+{% block content %}
+    <article class="main-content">
+        {% if breadcrumbs is defined and breadcrumbs|length > 0 %}
+            <nav style="margin-bottom: 1rem; font-size: 0.875rem; color: #6b7280;">
+                {% for item in breadcrumbs %}
+                    {% if not loop.last %}
+                        <a href="{{ item.url ~ (( '?' in item.url ) ? '&' : '?') ~ 'amp=1' }}"
+                           style="color: #667eea; text-decoration: none;">{{ item.name }}</a>
+                        <span> / </span>
+                    {% else %}
+                        <span>{{ item.name }}</span>
+                    {% endif %}
+                {% endfor %}
+            </nav>
+        {% endif %}
+
+        <h1 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 1rem;">全部分类</h1>
+
+        {% if categories is defined and categories|length > 0 %}
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem;">
+                {% for c in categories %}
+                    <a href="/category/{{ c.slug|url_encode }}.html?amp=1" class="post-card"
+                       style="display:block;text-decoration:none;">
+                        <div class="post-title">{{ c.name }}</div>
+                        <div class="post-meta">共 {{ c.count|default(0) }} 篇</div>
+                        {% if c.description %}
+                            <div class="post-excerpt" style="margin-top:.5rem;">{{ c.description|striptags|raw }}</div>
+                        {% endif %}
+                    </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p style="color:#6b7280;">暂无分类</p>
+        {% endif %}
+    </article>
+{% endblock %}

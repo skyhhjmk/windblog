@@ -1,0 +1,130 @@
+{% extends "base.amp.html.twig" %}
+
+{% block title %}{{ post.title }} - {{ page_title|default('WindBlog') }}{% endblock %}
+
+{% block content %}
+<article class="main-content">
+    {# 面包屑导航 #}
+    {% if breadcrumbs is defined and breadcrumbs|length > 0 %}
+    <nav style="margin-bottom: 1.5rem; font-size: 0.875rem; color: #6b7280;">
+        {% for item in breadcrumbs %}
+            {% if not loop.last %}
+                <a href="{{ item.url ~ (( '?' in item.url ) ? '&' : '?') ~ 'amp=1' }}"
+                   style="color: #667eea; text-decoration: none;">{{ item.name }}</a
+                <span> / </span>
+            {% else %}
+                <span>{{ item.name }}</span>
+            {% endif %}
+        {% endfor %}
+    </nav>
+    {% endif %}
+
+    {# 文章标题 #}
+    <h1 style="font-size: 2rem; font-weight: bold; margin-bottom: 1rem; color: #1f2937;">
+        {{ post.title }}
+    </h1>
+
+    {# 文章元信息 #}
+    <div style="display: flex; align-items: center; font-size: 0.875rem; color: #6b7280; margin-bottom: 1.5rem; flex-wrap: wrap;">
+        {% if post.created_at %}
+        <span style="margin-right: 1rem;">
+            📅 {{ post.created_at|date('Y-m-d') }}
+        </span>
+        {% endif %}
+        {% if author %}
+        <span style="margin-right: 1rem;">
+            👤 {{ author }}
+        </span>
+        {% endif %}
+        {% if post.views %}
+        <span style="margin-right: 1rem;">
+            👁 {{ post.views }}
+        </span>
+        {% endif %}
+    </div>
+
+    {# 分类和标签 #}
+    {% if (post.categories is defined and post.categories|length > 0) or (post.tags is defined and post.tags|length > 0) %}
+    <div style="margin-bottom: 1.5rem; font-size: 0.875rem; display: flex; flex-wrap: wrap; gap: 0.5rem;">
+        {% if post.categories is defined and post.categories|length > 0 %}
+            {% for c in post.categories %}
+                <a href="/category/{{ c.slug|url_encode }}.html?amp=1"
+               style="padding: 0.25rem 0.75rem; background: #dbeafe; color: #1e40af; border-radius: 4px; text-decoration: none;">
+                #{{ c.name }}
+            </a>
+            {% endfor %}
+        {% endif %}
+
+        {% if post.tags is defined and post.tags|length > 0 %}
+            {% for t in post.tags %}
+                <a href="/tag/{{ t.slug|url_encode }}.html?amp=1"
+               style="padding: 0.25rem 0.75rem; background: #f3e8ff; color: #6b21a8; border-radius: 4px; text-decoration: none;">
+                #{{ t.name }}
+            </a>
+            {% endfor %}
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {# 封面图 #}
+    {% if post.cover %}
+    <amp-img
+        src="{{ post.cover }}"
+        alt="{{ post.title }}"
+        width="800"
+        height="450"
+        layout="responsive"
+        class="post-cover">
+    </amp-img>
+    {% endif %}
+
+    {# AI摘要 #}
+    {% if post.ai_summary %}
+    <div style="margin: 1.5rem 0; padding: 1rem; background: linear-gradient(to right, #faf5ff, #eff6ff); border-left: 4px solid #a855f7; border-radius: 4px;">
+        <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
+            <span style="font-size: 0.875rem; font-weight: 600; color: #7c3aed; padding: 0.25rem 0.5rem; background: rgba(168, 85, 247, 0.1); border: 1px solid #a855f7; border-radius: 4px;">
+                🤖 AI摘要
+            </span>
+        </div>
+        <p style="color: #374151; line-height: 1.6; margin: 0;">
+            {{ post.ai_summary }}
+        </p>
+    </div>
+    {% endif %}
+
+    {# 文章内容 - 直接输出预渲染的 HTML（由 MarkdownService 渲染） #}
+    <div class="post-content">
+        {% if amp_content is defined and amp_content %}
+            {{ amp_content|raw }}
+        {% elseif post.content %}
+            {# 兜底：保留更多语义标签，避免表格等被剔除 #}
+            {{ post.content|striptags('<p><br><h1><h2><h3><h4><h5><h6><ul><ol><li><blockquote><pre><code><a><strong><em><img><table><thead><tbody><tfoot><tr><th><td><hr><figure><figcaption>')|raw }}
+        {% else %}
+            <p style="color: #6b7280;">文章内容暂无</p>
+        {% endif %}
+    </div>
+
+    {# 文章底部 #}
+    <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+        <a href="/?amp=1" style="color: #667eea; text-decoration: none; font-weight: 500;">
+            ← 返回首页
+        </a>
+        {% if post.updated_at %}
+        <span style="font-size: 0.875rem; color: #6b7280;">
+            最后更新: {{ post.updated_at|date('Y-m-d') }}
+        </span>
+        {% endif %}
+    </div>
+
+    {# AMP版本提示 #}
+    <div style="margin-top: 2rem; padding: 1rem; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; text-align: center;">
+        <p style="color: #6b7280; font-size: 0.875rem; margin: 0;">
+            您正在浏览AMP加速版本，评论功能在完整版中可用。
+        </p>
+        <a href="{{ canonical_url|default('/post/' ~ post.slug ~ '.html') }}"
+           style="display: inline-block; margin-top: 0.5rem; padding: 0.5rem 1rem; background: #667eea; color: white; text-decoration: none; border-radius: 4px; font-weight: 500;">
+            查看完整版本
+        </a>
+    </div>
+</article>
+{% endblock %}

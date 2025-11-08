@@ -12,6 +12,7 @@ class ScrollAnimationManager {
         this.isActive = true;
         this.throttleTimeout = null;
         this.throttleDelay = 100;
+        this.observer = null;
         this.init();
     }
 
@@ -31,34 +32,64 @@ class ScrollAnimationManager {
             return;
         }
 
-        // 初始检查可见性
-        this.checkVisibility();
-
-        // 绑定滚动事件（使用节流函数优化性能）
-        window.addEventListener('scroll', this.throttle(() => {
-            if (this.isActive) {
-                this.checkVisibility();
+        // 优先使用 IntersectionObserver，避免滚动测量引发布局抖动/强制回流
+        if ('IntersectionObserver' in window) {
+            // 清理旧观察器
+            if (this.observer && typeof this.observer.disconnect === 'function') {
+                this.observer.disconnect();
             }
-        }, this.throttleDelay));
+            this.observer = new IntersectionObserver((entries, obs) => {
+                entries.forEach(entry => {
+                    const el = entry.target;
+                    if (entry.isIntersecting) {
+                        const animationDelay = el.dataset.animationDelay || 0;
+                        setTimeout(() => {
+                            el.classList.add('visible');
+                        }, parseInt(animationDelay) * 100);
+                        obs.unobserve(el);
+                    }
+                });
+            }, {root: null, rootMargin: '0px 0px -100px 0px', threshold: 0});
 
-        // 绑定窗口调整事件
-        window.addEventListener('resize', this.throttle(() => {
-            if (this.isActive) {
-                this.checkVisibility();
-            }
-        }, this.throttleDelay));
+            this.animatedElements.forEach(el => {
+                if (!el.classList.contains('visible')) {
+                    this.observer.observe(el);
+                }
+            });
+        } else {
+            // 回退：使用节流的滚动/尺寸监听做一次性检查
+            this.checkVisibility();
+            const onScroll = this.throttle(() => {
+                if (this.isActive) {
+                    this.checkVisibility();
+                }
+            }, this.throttleDelay);
+            const onResize = this.throttle(() => {
+                if (this.isActive) {
+                    this.checkVisibility();
+                }
+            }, this.throttleDelay);
+            window.addEventListener('scroll', onScroll);
+            window.addEventListener('resize', onResize);
+        }
 
-        // 绑定页面加载完成事件
+        // 页面加载完成时再兜底检查一次（仅在无 IO 时）
         window.addEventListener('load', () => {
-            if (this.isActive) {
+            if (this.isActive && !('IntersectionObserver' in window)) {
                 this.checkVisibility();
             }
         });
 
-        // 绑定PJAX页面切换完成事件
+        // PJAX页面切换完成事件：刷新目标集合/观察器
         document.addEventListener('page:ready', () => {
             this.animatedElements = document.querySelectorAll('.fade-in-on-scroll');
-            if (this.isActive) {
+            if ('IntersectionObserver' in window && this.observer) {
+                this.animatedElements.forEach(el => {
+                    if (!el.classList.contains('visible')) {
+                        this.observer.observe(el);
+                    }
+                });
+            } else if (this.isActive) {
                 this.checkVisibility();
             }
         });
@@ -74,11 +105,11 @@ class ScrollAnimationManager {
                 return;
             }
 
-            const elementTop = el.getBoundingClientRect().top;
-            const elementBottom = el.getBoundingClientRect().bottom;
+            // 单次测量，减少布局读取次数
+            const rect = el.getBoundingClientRect();
             const isVisible = (
-                elementTop < window.innerHeight - 100 &&
-                elementBottom > 0
+                rect.top < window.innerHeight - 100 &&
+                rect.bottom > 0
             );
 
             if (isVisible) {
@@ -129,27 +160,15 @@ class ScrollAnimationManager {
      * PJAX页面切换时重新初始化动画管理器
      */
     reinit() {
-        // 移除旧的事件监听器（使用命名函数以便正确移除）
-        const scrollHandler = this.throttle(() => {
-            if (this.isActive) {
-                this.checkVisibility();
+        // 清理观察器并重置属性后重新初始化
+        try {
+            if (this.observer && typeof this.observer.disconnect === 'function') {
+                this.observer.disconnect();
             }
-        }, this.throttleDelay);
-
-        const resizeHandler = this.throttle(() => {
-            if (this.isActive) {
-                this.checkVisibility();
-            }
-        }, this.throttleDelay);
-
-        window.removeEventListener('scroll', scrollHandler);
-        window.removeEventListener('resize', resizeHandler);
-
-        // 重置属性
+        } catch (_) {
+        }
         this.animatedElements = [];
         this.throttleTimeout = null;
-
-        // 重新初始化
         this.init();
     }
 }
@@ -360,7 +379,7 @@ const AnimationUtils = {
                 }
 
                 lastScrollTop = scrollTop <= 0 ? 0 : scrollTop; // 避免负值
-            }, 150));
+            }, 150), {passive: true});
         }
     },
 

@@ -113,38 +113,41 @@ class SidebarService
      */
     protected static function getDefaultSidebar(string $pageKey = 'default'): array
     {
+        // 基础默认小工具
+        $widgets = [
+            [
+                'id' => 'about',
+                'title' => '关于博主',
+                'type' => 'about',
+                'content' => '欢迎访问我的博客，这里记录了我的技术分享和生活感悟。',
+                'enabled' => true,
+            ],
+            [
+                'id' => 'recent_posts',
+                'title' => '最新文章',
+                'type' => 'recent_posts',
+                'enabled' => true,
+                'limit' => 5,
+            ],
+            [
+                'id' => 'categories',
+                'title' => '文章分类',
+                'type' => 'categories',
+                'enabled' => true,
+            ],
+            [
+                'id' => 'tags',
+                'title' => '标签云',
+                'type' => 'tags',
+                'enabled' => true,
+                'params' => ['count' => 50, 'visible' => 30],
+            ],
+        ];
+
         return [
             'page_key' => $pageKey,
             'title' => '侧边栏',
-            'widgets' => [
-                [
-                    'id' => 'about',
-                    'title' => '关于博主',
-                    'type' => 'about',
-                    'content' => '欢迎访问我的博客，这里记录了我的技术分享和生活感悟。',
-                    'enabled' => true,
-                ],
-                [
-                    'id' => 'recent_posts',
-                    'title' => '最新文章',
-                    'type' => 'recent_posts',
-                    'enabled' => true,
-                    'limit' => 5,
-                ],
-                [
-                    'id' => 'categories',
-                    'title' => '文章分类',
-                    'type' => 'categories',
-                    'enabled' => true,
-                ],
-                [
-                    'id' => 'tags',
-                    'title' => '标签云',
-                    'type' => 'tags',
-                    'enabled' => true,
-                    'params' => ['count' => 50, 'visible' => 30],
-                ],
-            ],
+            'widgets' => $widgets,
         ];
     }
 
@@ -163,8 +166,29 @@ class SidebarService
         }
 
         // 渲染每个启用的小工具为HTML
+        $pageKey = $sidebarConfig['page_key'] ?? 'default';
+
         foreach ($sidebarConfig['widgets'] as $key => &$widget) {
-            if (isset($widget['enabled']) && $widget['enabled'] === true) {
+            // 路由级可见性控制：visible_on / exclude_on
+            $isEnabled = (isset($widget['enabled']) ? (bool) $widget['enabled'] : true);
+            if ($isEnabled) {
+                // 仅在指定页面显示
+                if (!empty($widget['visible_on'])) {
+                    $visibleOn = is_array($widget['visible_on']) ? $widget['visible_on'] : [$widget['visible_on']];
+                    if (!in_array($pageKey, $visibleOn, true) && !in_array('all', $visibleOn, true)) {
+                        $isEnabled = false;
+                    }
+                }
+                // 指定页面不显示
+                if ($isEnabled && !empty($widget['exclude_on'])) {
+                    $excludeOn = is_array($widget['exclude_on']) ? $widget['exclude_on'] : [$widget['exclude_on']];
+                    if (in_array($pageKey, $excludeOn, true)) {
+                        $isEnabled = false;
+                    }
+                }
+            }
+
+            if ($isEnabled) {
                 try {
                     // 规范化键值：确保每个小工具具有稳定的 id/key，便于前端 data-widget-key 使用
                     if (empty($widget['id'])) {
@@ -173,7 +197,7 @@ class SidebarService
                     if (empty($widget['key'])) {
                         $widget['key'] = $widget['id'];
                     }
-                    // 调用重构后的WidgetService渲染小工具为HTML
+                    // 调用小工具服务渲染HTML（Twig模板）
                     $widget['html'] = WidgetService::renderToHtml($widget);
                 } catch (Throwable $e) {
                     Log::error('[SidebarService] Failed to render widget: ' . $e->getMessage());

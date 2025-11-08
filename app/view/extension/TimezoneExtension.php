@@ -122,7 +122,7 @@ class TimezoneExtension extends AbstractExtension
             // 转换到目标时区后计算相对时间
             $carbon->setTimezone($targetTimezone);
 
-            // 使用Carbon的diffForHumans方法
+            // 使用Carbon的diffForHumans方法（简体中文）
             return $carbon->locale('zh_CN')->diffForHumans();
         } catch (Exception $e) {
             return is_string($date) ? $date : '';

@@ -5,7 +5,9 @@ namespace app\controller;
 use app\annotation\EnableInstantFirstPaint;
 use app\helper\BreadcrumbHelper;
 use app\model\Post;
+use app\service\CSRFService;
 use app\service\FloLinkService;
+use app\service\markdown\MarkdownService;
 use app\service\PJAXHelper;
 use app\service\SidebarService;
 use Exception;
@@ -32,11 +34,18 @@ class PostController
         // 统一使用 slug 模式，提高性能并降低错误率
         $post = Post::where('slug', $keyword)
             ->where('status', 'published')
+            ->where(function ($q) {
+                $q->whereNull('published_at')
+                    ->orWhere('published_at', '<=', utc_now());
+            })
             ->first();
 
         if (!$post) {
             return view('error/404');
         }
+
+        // 检测是否为AMP请求
+        $isAmp = $this->isAmpRequest($request);
 
         // 使用PJAXHelper检测是否为PJAX请求
         $isPjax = PJAXHelper::isPJAX($request);
@@ -51,11 +60,23 @@ class PostController
 
         if ($post->visibility === 'public') {
 
+            // 记录浏览量（post_ext:view_count）
+            try {
+                $viewExt = $post->getExt('view_count');
+                $data = $viewExt ? (is_array($viewExt->value) ? $viewExt->value : []) : [];
+                $cnt = (int) ($data['count'] ?? 0);
+                $data['count'] = $cnt + 1;
+                $data['updated_at'] = time();
+                $post->setExt('view_count', $data);
+            } catch (\Throwable $e) {
+                Log::warning('记录浏览量失败: ' . $e->getMessage());
+            }
+
             // 生成面包屑导航
             $breadcrumbs = BreadcrumbHelper::forPost($post);
 
-            // 使用FloLink处理文章内容
-            if (blog_config('flolink_enabled', true)) {
+            // 使用FloLink处理文章内容(仅非AMP请求)
+            if (!$isAmp && blog_config('flolink_enabled', true)) {
                 try {
                     $post->content = FloLinkService::processContent($post->content);
                 } catch (Exception $e) {
@@ -64,8 +85,33 @@ class PostController
                 }
             }
 
+            // AMP请求使用专用渲染
+            if ($isAmp) {
+                return $this->renderAmpPost($request, $post, $authorName, $breadcrumbs);
+            }
+
             // 动态选择模板：PJAX 返回片段，非 PJAX 返回完整页面
             $viewName = PJAXHelper::getViewName('index/post', $isPjax);
+
+            // 先进行服务端 Markdown 渲染，保证与前端 Vditor 风格一致
+            $postHtml = $post->content ?? '';
+            $contentType = $post->content_type ?? 'markdown';
+            if ($postHtml !== '') {
+                if ($contentType === 'markdown' || $contentType === 'md' || $contentType === null) {
+                    $md = new MarkdownService([
+                        'options' => [
+                            // 贴近 Vditor：不输出原始 HTML，禁用不安全链接
+                            'html_input' => 'strip',
+                            'allow_unsafe_links' => false,
+                        ],
+                        'css_class' => 'vditor-reset',
+                    ]);
+                    $postHtml = $md->render($postHtml, [
+                        'wrap' => false,
+                        'inject_css' => '',
+                    ]);
+                }
+            }
 
             // 非 PJAX 请求启用页面级缓存（TTL=120）
             $cacheKey = null;
@@ -135,18 +181,24 @@ class PostController
                 'wordCount' => mb_strlen(strip_tags($post->content)),
             ];
 
-            // 创建带缓存的PJAX响应
+            // 生成AMP URL
+            $ampUrl = $postUrl . '?amp=1';
+
+            // 创建帧缓存的PJAX响应
             $resp = PJAXHelper::createResponse(
                 $request,
                 $viewName,
                 [
                     'page_title' => $post['title'] . ' - ' . blog_config('title', 'WindBlog', true),
                     'post' => $post,
+                    'post_html' => $postHtml,
                     'author' => $authorName,
                     'sidebar' => $sidebar,
                     'breadcrumbs' => $breadcrumbs,
                     'seo' => $seoData,
                     'schema' => $schemaData,
+                    'amp_url' => $ampUrl,
+                    'csrf_token' => (new CSRFService())->generateToken($request, '_token'),
                 ],
                 $cacheKey,
                 120,
@@ -178,6 +230,25 @@ class PostController
 
                 // 动态选择模板：PJAX 返回片段，非 PJAX 返回完整页面
                 $viewName = PJAXHelper::getViewName('index/post', $isPjax);
+
+                // 先进行服务端 Markdown 渲染，保证与前端 Vditor 风格一致
+                $postHtml = $post->content ?? '';
+                $contentType = $post->content_type ?? 'markdown';
+                if ($postHtml !== '') {
+                    if ($contentType === 'markdown' || $contentType === 'md' || $contentType === null) {
+                        $md = new MarkdownService([
+                            'options' => [
+                                'html_input' => 'strip',
+                                'allow_unsafe_links' => false,
+                            ],
+                            'css_class' => 'vditor-reset',
+                        ]);
+                        $postHtml = $md->render($postHtml, [
+                            'wrap' => false,
+                            'inject_css' => '',
+                        ]);
+                    }
+                }
 
                 // 非 PJAX 请求启用页面级缓存（TTL=120）
                 $cacheKey = null;
@@ -254,11 +325,13 @@ class PostController
                     [
                         'page_title' => $post['title'] . ' - ' . blog_config('title', 'WindBlog', true),
                         'post' => $post,
+                        'post_html' => $postHtml,
                         'author' => $authorName,
                         'sidebar' => $sidebar,
                         'breadcrumbs' => $breadcrumbs,
                         'seo' => $seoData,
                         'schema' => $schemaData,
+                        'csrf_token' => (new CSRFService())->generateToken($request, '_token'),
                     ],
                     $cacheKey,
                     120,
@@ -280,5 +353,128 @@ class PostController
         }
 
         return $resp;
+    }
+
+    /**
+     * 检测是否为AMP请求
+     *
+     * @param Request $request
+     * @return bool
+     */
+    protected function isAmpRequest(Request $request): bool
+    {
+        // 通过查询参数检测
+        if ($request->get('amp') === '1' || $request->get('amp') === 'true') {
+            return true;
+        }
+
+        // 通过路径检测 (例如 /amp/post/123.html)
+        $path = $request->path();
+        if (str_starts_with($path, '/amp/')) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * 渲染AMP文章页面
+     *
+     * @param Request $request
+     * @param Post $post
+     * @param string $authorName
+     * @param array $breadcrumbs
+     * @return Response
+     */
+    protected function renderAmpPost(Request $request, Post $post, string $authorName, array $breadcrumbs): Response
+    {
+        $siteUrl = $request->host();
+        $postUrl = 'https://' . $siteUrl . '/post/' . $post->slug . '.html';
+
+        // 在 AMP 下将 Markdown 渲染为 HTML，且禁止内联 CSS 注入与包裹容器
+        $ampContent = $post->content ?? '';
+        $contentType = $post->content_type ?? 'markdown';
+        if ($ampContent !== '') {
+            if ($contentType === 'markdown' || $contentType === 'md' || $contentType === null) {
+                $md = new MarkdownService([
+                    'options' => [
+                        // AMP 下移除原始 HTML 以避免不被允许的标签
+                        'html_input' => 'strip',
+                        'allow_unsafe_links' => false,
+                    ],
+                ]);
+                $ampContent = $md->render($ampContent, [
+                    'wrap' => false,
+                    'inject_css' => '',
+                ]);
+            }
+            // 可选：后续如需将 <img> 转换为 <amp-img>，可以在此处做正则替换
+            // 为了保持内容纯净与兼容性，此处先直接输出渲染后的基本 HTML
+        }
+
+        // SEO 标题：自定义 > 文章标题
+        $seoTitle = !empty($post->seo_title) ? $post->seo_title : $post->title;
+
+        // SEO 描述：自定义 > AI 摘要 > 内容截取
+        $description = !empty($post->seo_description)
+            ? $post->seo_description
+            : ($post->ai_summary ?? (mb_substr(strip_tags($post->content), 0, 150) . '...'));
+
+        // SEO 关键词：自定义 > 标签
+        if (!empty($post->seo_keywords)) {
+            $keywords = array_map('trim', explode(',', $post->seo_keywords));
+        } else {
+            $keywords = $post->tags->pluck('name')->toArray();
+        }
+
+        $categoryNames = $post->categories->pluck('name')->toArray();
+
+        // 准备 SEO 数据
+        $seoData = [
+            'title' => $seoTitle,
+            'description' => $description,
+            'keywords' => implode(', ', $keywords),
+            'author' => $authorName,
+        ];
+
+        // 准备 Schema.org 结构化数据
+        $schemaData = [
+            '@context' => 'https://schema.org',
+            '@type' => 'BlogPosting',
+            'headline' => $post->title,
+            'description' => $description,
+            'image' => [$post->featured_image ?? ('https://' . $siteUrl . blog_config('site_logo', '', true))],
+            'datePublished' => $post->created_at->toIso8601String(),
+            'dateModified' => $post->updated_at->toIso8601String(),
+            'author' => [
+                '@type' => 'Person',
+                'name' => $authorName,
+            ],
+            'publisher' => [
+                '@type' => 'Organization',
+                'name' => blog_config('title', 'WindBlog', true),
+                'logo' => [
+                    '@type' => 'ImageObject',
+                    'url' => 'https://' . $siteUrl . blog_config('site_logo', '', true),
+                ],
+            ],
+            'url' => $postUrl,
+            'mainEntityOfPage' => [
+                '@type' => 'WebPage',
+                '@id' => $postUrl,
+            ],
+        ];
+
+        return view('index/post.amp', [
+            'page_title' => $post->title . ' - ' . blog_config('title', 'WindBlog', true),
+            'post' => $post,
+            'author' => $authorName,
+            'breadcrumbs' => $breadcrumbs,
+            'seo' => $seoData,
+            'schema' => $schemaData,
+            'canonical_url' => $postUrl,
+            'request' => $request,
+            'amp_content' => $ampContent,
+        ]);
     }
 }
