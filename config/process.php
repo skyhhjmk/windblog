@@ -20,7 +20,109 @@ use support\Request;
 
 global $argv;
 $__cacheDriver = env('CACHE_DRIVER');
+$__deployment = strtolower(trim((string) env('DEPLOYMENT_TYPE', 'datacenter')));
 
+// 部署模式拆分（均强制附带 task 进程）
+if ($__deployment === 'mailserver') {
+    $procs = [
+        'mail_worker' => [
+            'handler' => app\process\MailWorker::class,
+            'reloadable' => false,
+            'constructor' => [],
+            // 可按需设置并发：'count' => max(1, cpu_count()),
+        ],
+    ];
+    // 无论如何，task 必须存在
+    $procs['task'] = [
+        'handler' => app\process\Task::class,
+    ];
+
+    return $procs;
+}
+
+if ($__deployment === 'ai-service') {
+    $procs = [
+        'ai_summary_worker' => [
+            'handler' => app\process\AiSummaryWorker::class,
+            'reloadable' => false,
+            'constructor' => [],
+        ],
+        'ai_moderation_worker' => [
+            'handler' => app\process\AiModerationWorker::class,
+            'reloadable' => false,
+            'constructor' => [],
+        ],
+    ];
+    $procs['task'] = [
+        'handler' => app\process\Task::class,
+    ];
+
+    return $procs;
+}
+
+if ($__deployment === 'link-service') {
+    $procs = [
+        'link_monitor' => [
+            'handler' => app\process\LinkMonitor::class,
+            'reloadable' => false,
+            'constructor' => [],
+        ],
+        'link_connect_worker' => [
+            'handler' => app\process\LinkConnectWorker::class,
+            'reloadable' => false,
+            'constructor' => [],
+        ],
+        'link_push_worker' => [
+            'handler' => app\process\LinkPushWorker::class,
+            'reloadable' => false,
+            'constructor' => [],
+        ],
+        'link_audit_worker' => [
+            'handler' => app\process\LinkAuditWorker::class,
+            'reloadable' => false,
+            'constructor' => [],
+        ],
+    ];
+    $procs['task'] = [
+        'handler' => app\process\Task::class,
+    ];
+
+    return $procs;
+}
+
+if ($__deployment === 'importer') {
+    $procs = [
+        'importer' => [
+            'handler' => app\process\ImportProcess::class,
+            'reloadable' => false,
+            'constructor' => [],
+        ],
+    ];
+    $procs['task'] = [
+        'handler' => app\process\Task::class,
+    ];
+
+    return $procs;
+}
+
+if ($__deployment === 'perf') {
+    $procs = [];
+    if (strtolower(trim((string) $__cacheDriver)) === 'redis') {
+        $procs['performance'] = [
+            'handler' => Performance::class,
+            'count' => 1,
+            'reloadable' => true,
+            'constructor' => [60, 500],
+        ];
+    }
+    $procs['task'] = [
+        'handler' => app\process\Task::class,
+    ];
+
+    return $procs;
+}
+
+// 默认：datacenter 全量服务
 $__processes = [
     'webman' => [
         'handler' => Http::class,
