@@ -170,6 +170,27 @@ Route::group('/app/admin', function () {
         Route::get('/parents', [CategoryController::class, 'parents']);
     });
 
+    // Ads 路由
+    Route::group('/ads', function () {
+        Route::get('', [plugin\admin\app\controller\AdsController::class, 'index']);
+        Route::get('/', [plugin\admin\app\controller\AdsController::class, 'index']);
+        Route::get('/index', [plugin\admin\app\controller\AdsController::class, 'index']);
+        Route::get('/list', [plugin\admin\app\controller\AdsController::class, 'list']);
+        Route::get('/add', [plugin\admin\app\controller\AdsController::class, 'add']);
+        Route::post('/add', [plugin\admin\app\controller\AdsController::class, 'add']);
+        Route::get('/edit/{id}', [plugin\admin\app\controller\AdsController::class, 'edit']);
+        Route::post('/edit/{id}', [plugin\admin\app\controller\AdsController::class, 'edit']);
+        Route::get('/get/{id}', [plugin\admin\app\controller\AdsController::class, 'get']);
+        Route::post('/remove/{id}', [plugin\admin\app\controller\AdsController::class, 'remove']);
+        Route::post('/restore/{id}', [plugin\admin\app\controller\AdsController::class, 'restore']);
+        Route::post('/toggleEnabled/{id}', [plugin\admin\app\controller\AdsController::class, 'toggleEnabled']);
+
+        // 全局 Google AdSense 配置
+        Route::get('/config', [plugin\admin\app\controller\AdsController::class, 'config']);
+        Route::get('/config/get', [plugin\admin\app\controller\AdsController::class, 'getConfig']);
+        Route::post('/config/save', [plugin\admin\app\controller\AdsController::class, 'saveConfig']);
+    });
+
     // Tag 路由
     Route::group('/tag', function () {
         Route::get('', [TagController::class, 'index']);

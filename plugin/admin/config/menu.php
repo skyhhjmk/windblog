@@ -158,6 +158,13 @@ return [
                 'type' => 1,
                 'weight' => 0,
             ],
+            [
+                'title' => '广告管理',
+                'key' => 'plugin\\admin\\app\\controller\\TableController@view',
+                'href' => '/app/admin/ads/index',
+                'type' => 1,
+                'weight' => 945,
+            ],
         ],
     ],
     [

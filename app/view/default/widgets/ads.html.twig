@@ -1,0 +1,46 @@
+{% extends "widgets/base.html.twig" %}
+{% set ad_badge = '广告' %}
+
+{% block widget_content %}
+    <div class="space-y-4">
+        {% for ad in ads|default([]) %}
+            <div class="bg-white rounded-lg border border-gray-100 p-3 hover:shadow-sm transition-shadow relative">
+                <span
+                    class="absolute top-2 right-2 text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 border border-gray-200">{{ ad_badge }}</span>
+
+                <div class="mb-2">
+                    {% if ad.type != 'google' and ad.link_url %}
+                        <a href="{{ ad.link_url }}" target="{{ ad.link_target|default('_blank') }}"
+                           rel="noopener noreferrer"
+                           class="block text-sm font-medium text-gray-800 hover:text-blue-600 truncate">
+                            {{ ad.title|default('广告') }}
+                        </a>
+                    {% else %}
+                        <div class="text-sm font-medium text-gray-800 truncate">{{ ad.title|default('广告') }}</div>
+                    {% endif %}
+                </div>
+
+                {% if ad.type == 'image' and ad.image_url %}
+                    {% if ad.link_url %}
+                        <a href="{{ ad.link_url }}" target="{{ ad.link_target|default('_blank') }}"
+                           rel="noopener noreferrer" class="block">
+                            <img src="{{ ad.image_url }}" alt="{{ ad.title|default('广告') }}"
+                                 class="w-full h-auto rounded-md" loading="lazy"/>
+                        </a>
+                    {% else %}
+                        <img src="{{ ad.image_url }}" alt="{{ ad.title|default('广告') }}"
+                             class="w-full h-auto rounded-md" loading="lazy"/>
+                    {% endif %}
+                {% elseif ad.snippet_html %}
+                    {{ ad.snippet_html|raw }}
+                {% elseif ad.html %}
+                    <div class="prose max-w-none">{{ ad.html|raw }}</div>
+                {% else %}
+                    <div class="text-xs text-gray-400">暂无内容</div>
+                {% endif %}
+            </div>
+        {% else %}
+            <div class="text-gray-400 text-sm">暂无可展示广告</div>
+        {% endfor %}
+    </div>
+{% endblock %}

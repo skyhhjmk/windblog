@@ -5,6 +5,7 @@ namespace app\controller;
 use app\annotation\EnableInstantFirstPaint;
 use app\helper\BreadcrumbHelper;
 use app\model\Post;
+use app\service\AdService;
 use app\service\CSRFService;
 use app\service\FloLinkService;
 use app\service\markdown\MarkdownService;
@@ -111,6 +112,15 @@ class PostController
                         'inject_css' => '',
                     ]);
                 }
+            }
+
+            // 注入内嵌广告（非 AMP）
+            try {
+                if (!$isAmp) {
+                    $postHtml = AdService::injectInlineAds((string) $postHtml, ['slug' => $post->slug]);
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Inline ads injection failed: ' . $e->getMessage());
             }
 
             // 非 PJAX 请求启用页面级缓存（TTL=120）
@@ -248,6 +258,15 @@ class PostController
                             'inject_css' => '',
                         ]);
                     }
+                }
+
+                // 注入内嵌广告（非 AMP）
+                try {
+                    if (!$isAmp) {
+                        $postHtml = AdService::injectInlineAds((string) $postHtml, ['slug' => $post->slug]);
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning('Inline ads injection failed: ' . $e->getMessage());
                 }
 
                 // 非 PJAX 请求启用页面级缓存（TTL=120）
@@ -465,6 +484,48 @@ class PostController
             ],
         ];
 
+        // 准备 AMP 广告（Google）
+        $ampAds = [];
+        try {
+            $ads = \app\service\AdService::getActiveAdsByPosition('inline', 1, ['slug' => $post->slug]);
+            if (!$ads) {
+                $ads = \app\service\AdService::getActiveAdsByPosition('sidebar', 1);
+            }
+            // 全局 Ad Client 兜底
+            $globalCfg = blog_config('google_adsense', [], false, true);
+            $globalClient = is_array($globalCfg) ? (string) ($globalCfg['client'] ?? '') : '';
+            foreach ($ads as $ad) {
+                if (($ad['type'] ?? '') !== 'google') {
+                    continue;
+                }
+                $client = trim((string) ($ad['google_ad_client'] ?? '')) ?: $globalClient;
+                $slot = trim((string) ($ad['google_ad_slot'] ?? ''));
+                if (!$client || !$slot) {
+                    continue;
+                }
+                $p = is_array($ad['placements'] ?? null) ? $ad['placements'] : [];
+                $g = is_array($p['google'] ?? null) ? $p['google'] : [];
+                $layout = (string) ($g['amp_layout'] ?? 'fixed');
+                $width = (int) ($g['amp_width'] ?? 270);
+                $height = (int) ($g['amp_height'] ?? 300);
+                if ($width <= 0) {
+                    $width = 270;
+                }
+                if ($height <= 0) {
+                    $height = 300;
+                }
+                $ampAds[] = [
+                    'client' => $client,
+                    'slot' => $slot,
+                    'layout' => $layout,
+                    'width' => $width,
+                    'height' => $height,
+                ];
+            }
+        } catch (\Throwable $e) {
+            // 忽略广告获取异常
+        }
+
         return view('index/post.amp', [
             'page_title' => $post->title . ' - ' . blog_config('title', 'WindBlog', true),
             'post' => $post,
@@ -475,6 +536,7 @@ class PostController
             'canonical_url' => $postUrl,
             'request' => $request,
             'amp_content' => $ampContent,
+            'amp_ads' => $ampAds,
         ]);
     }
 }

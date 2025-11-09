@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="utf-8">
+    <title>广告管理</title>
+    <link href="/app/admin/component/layui/css/layui.css?v=2.8.12" rel="stylesheet"/>
+    <link href="/app/admin/component/pear/css/pear.css" rel="stylesheet"/>
+    <link href="/app/admin/admin/css/reset.css" rel="stylesheet"/>
+</head>
+<body class="pear-container">
+<div class="layui-card">
+    <div class="layui-card-header">
+        <span class="layui-badge layui-bg-gray">广告</span>
+        <span class="ml-2">广告管理</span>
+    </div>
+    <div class="layui-card-body">
+        <div class="layui-form layui-row layui-col-space10">
+            <div class="layui-col-md3">
+                <input class="layui-input" id="kw_title" placeholder="标题" type="text"/>
+            </div>
+            <div class="layui-col-md2">
+                <select class="layui-select" id="kw_type">
+                    <option value="">全部类型</option>
+                    <option value="image">图文</option>
+                    <option value="google">Google</option>
+                    <option value="html">HTML</option>
+                </select>
+            </div>
+            <div class="layui-col-md2">
+                <select class="layui-select" id="kw_enabled">
+                    <option value="">启用状态</option>
+                    <option value="1">启用</option>
+                    <option value="0">禁用</option>
+                </select>
+            </div>
+            <div class="layui-col-md2" style="display:flex;align-items:center;gap:6px;">
+                <button class="pear-btn pear-btn-primary" id="btn-search"><i class="layui-icon layui-icon-search"></i>
+                    查询
+                </button>
+                <button class="pear-btn" id="btn-reset"><i class="layui-icon layui-icon-refresh"></i> 重置</button>
+                <input id="kw_trash" lay-skin="switch" lay-text="回收站|正常" type="checkbox"/>
+            </div>
+            <div class="layui-col-md3" style="text-align:right;display:flex;justify-content:flex-end;gap:6px;">
+                <button class="pear-btn" id="btn-config"><i class="layui-icon layui-icon-set"></i> Google 配置</button>
+                <button class="pear-btn pear-btn-primary" id="btn-add"><i class="layui-icon layui-icon-add-1"></i> 新增广告
+                </button>
+            </div>
+        </div>
+
+        <table id="ads-table" lay-filter="ads-table"></table>
+
+        <script id="col-enabled" type="text/html">
+            <input type="checkbox" lay-skin="switch" lay-text="启用|禁用" lay-filter="switch-enabled"
+                   data-id="{{ d.id }}" {{ d.enabled ? 'checked' : '' }} />
+        </script>
+        <script id="col-positions" type="text/html">
+            {{# var p=(d.placements||{}).positions||[]; if(p.length===0){ }}
+            <span class="layui-badge layui-bg-gray">sidebar</span>
+            {{# } else { for(var i=0;i
+            <p.length;i++){ }}
+            <span class="layui-badge">{{ p[i] }}</span>
+            {{# } } }}
+        </script>
+        <script id="col-ops" type="text/html">
+            <button class="pear-btn pear-btn-xs" lay-event="edit">编辑</button>
+            <button class="pear-btn pear-btn-xs pear-btn-danger" lay-event="{{ d.deleted_at ? 'restore' : 'remove' }}">
+                {{ d.deleted_at ? '恢复' : '删除' }}
+            </button>
+        </script>
+    </div>
+</div>
+
+<script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+<script src="/app/admin/component/pear/pear.js"></script>
+<script src="/app/admin/admin/js/common.js"></script>
+<script>
+    layui.use(['table', 'form', 'layer'], function () {
+        var table = layui.table, form = layui.form, layer = layui.layer, $ = layui.$;
+
+        var cols = [[
+            {field: 'id', title: 'ID', width: 80, sort: true},
+            {field: 'title', title: '标题', minWidth: 180},
+            {field: 'type', title: '类型', width: 90},
+            {field: 'placements', title: '位置', minWidth: 140, templet: '#col-positions'},
+            {field: 'weight', title: '权重', width: 90, sort: true},
+            {field: 'enabled', title: '启用', width: 100, templet: '#col-enabled'},
+            {field: 'updated_at', title: '更新时间', minWidth: 160},
+            {fixed: 'right', title: '操作', toolbar: '#col-ops', width: 160}
+        ]];
+
+        var inTrash = false;
+        table.render({
+            elem: '#ads-table',
+            url: '/app/admin/ads/list',
+            where: {isTrashed: 'false'},
+            page: true,
+            cols: cols,
+            skin: 'line', size: 'lg'
+        });
+
+        // 查询
+        $('#btn-search').on('click', function () {
+            table.reload('ads-table', {
+                where: {
+                    title: $('#kw_title').val(),
+                    type: $('#kw_type').val(),
+                    enabled: $('#kw_enabled').val()
+                }, page: {curr: 1}
+            });
+        });
+        $('#btn-reset').on('click', function () {
+            $('#kw_title').val('');
+            $('#kw_type').val('');
+            $('#kw_enabled').val('');
+            form.render('select');
+            inTrash = false;
+            $('#kw_trash')[0].checked = false;
+            form.render('checkbox');
+            table.reload('ads-table', {where: {isTrashed: 'false'}, page: {curr: 1}});
+        });
+
+        // 新增
+        $('#btn-add').on('click', function () {
+            layer.open({type: 2, title: '新增广告', area: ['98%', '95%'], content: '/app/admin/ads/add'});
+        });
+
+        // 全局配置（弹窗）
+        $('#btn-config').on('click', function () {
+            layer.open({
+                type: 2,
+                title: 'Google 广告全局配置',
+                area: ['760px', '560px'],
+                shadeClose: true,
+                content: '/app/admin/ads/config'
+            });
+        });
+
+        // 行事件
+        table.on('tool(ads-table)', function (obj) {
+            var data = obj.data;
+            if (obj.event === 'edit') {
+                layer.open({
+                    type: 2,
+                    title: '编辑广告',
+                    area: ['98%', '95%'],
+                    content: '/app/admin/ads/edit/' + data.id
+                });
+            } else if (obj.event === 'remove') {
+                layer.confirm('确定删除该广告吗？', function () {
+                    $.post('/app/admin/ads/remove/' + data.id, {}, function (res) {
+                        if (res.code === 0) {
+                            layer.msg('已删除');
+                            table.reload('ads-table');
+                        } else {
+                            layer.msg(res.msg || '删除失败');
+                        }
+                    });
+                });
+            } else if (obj.event === 'restore') {
+                layer.confirm('确定恢复该广告吗？', function () {
+                    $.post('/app/admin/ads/restore/' + data.id, {}, function (res) {
+                        if (res.code === 0) {
+                            layer.msg('已恢复');
+                            table.reload('ads-table');
+                        } else {
+                            layer.msg(res.msg || '恢复失败');
+                        }
+                    });
+                });
+            }
+        });
+
+        // 启用开关
+        form.on('switch(switch-enabled)', function (obj) {
+            var id = $(this).attr('data-id');
+            var val = obj.elem.checked ? 1 : 0;
+            $.post('/app/admin/ads/toggleEnabled/' + id, {value: val}, function (res) {
+                if (res.code !== 0) {
+                    layer.msg(res.msg || '更新失败');
+                    obj.elem.checked = !obj.elem.checked;
+                    form.render('checkbox');
+                }
+            });
+        });
+
+        // 回收站开关
+        form.on('switch', function (obj) {
+            if (obj.elem.id === 'kw_trash') {
+                inTrash = obj.elem.checked;
+                table.reload('ads-table', {
+                    where: {
+                        isTrashed: inTrash ? 'true' : 'false',
+                        title: $('#kw_title').val(),
+                        type: $('#kw_type').val(),
+                        enabled: $('#kw_enabled').val()
+                    }, page: {curr: 1}
+                });
+            }
+        });
+    });
+</script>
+</body>
+</html>

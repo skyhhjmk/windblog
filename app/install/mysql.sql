@@ -1695,3 +1695,78 @@ VALUES ('table_form_schema_wa_users', '{
            "name": "附件分类"
          }
        ]', '2022-08-15 00:00:00', '2022-12-20 19:42:51');
+
+-- 创建广告表
+CREATE TABLE IF NOT EXISTS ` ads `
+(
+    `
+    id
+    `
+    bigint
+(
+    20
+) unsigned NOT NULL AUTO_INCREMENT,
+    ` title ` varchar
+(
+    255
+) NOT NULL COMMENT '标题',
+    ` type ` varchar
+(
+    20
+) NOT NULL DEFAULT 'image' COMMENT '类型:image|google|html',
+    ` enabled ` tinyint
+(
+    1
+) NOT NULL DEFAULT 1 COMMENT '启用',
+    ` image_url ` varchar
+(
+    512
+) DEFAULT NULL COMMENT '图片URL',
+    ` link_url ` varchar
+(
+    512
+) DEFAULT NULL COMMENT '跳转链接',
+    ` link_target ` varchar
+(
+    20
+) DEFAULT '_blank' COMMENT '打开方式',
+    ` html ` longtext DEFAULT NULL COMMENT '自定义HTML',
+    ` google_ad_client ` varchar
+(
+    64
+) DEFAULT NULL COMMENT 'Ad Client',
+    ` google_ad_slot ` varchar
+(
+    64
+) DEFAULT NULL COMMENT 'Ad Slot',
+    ` placements ` json DEFAULT NULL COMMENT '投放设置',
+    ` weight ` int
+(
+    11
+) DEFAULT 100 COMMENT '权重',
+    ` created_at ` timestamp NULL DEFAULT NULL,
+    ` updated_at ` timestamp NULL DEFAULT NULL,
+    ` deleted_at ` timestamp NULL DEFAULT NULL,
+    PRIMARY KEY
+(
+    `
+    id
+    `
+)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE =utf8mb4_unicode_ci COMMENT ='广告表';
+
+-- 广告表索引
+CREATE INDEX ` idx_ads_enabled ` ON ` ads ` (` enabled `);
+CREATE INDEX ` idx_ads_weight ` ON ` ads ` (` weight `);
+
+-- 示例广告（侧边栏）
+INSERT INTO ` ads ` (` title `, ` type `, ` enabled `, ` image_url `, ` link_url `, ` link_target `, ` html `, `
+                     google_ad_client `, ` google_ad_slot `, ` placements `, ` weight `, ` created_at `, ` updated_at `,
+                     ` deleted_at `)
+VALUES (
+    '雨云-高性价比云服务商', 'image', 1, 'https://www.rainyun.com/favicon.ico', 'https://www.rainyun.com/github_', '_blank', NULL, NULL, NULL, '{"positions":["sidebar"]}', 100, NOW(), NOW(), NULL
+    );
+
+-- 广告表管理表单
+INSERT INTO ` settings ` (` key `, ` value `, ` created_at `, ` updated_at `)
+VALUES ('table_form_schema_ads', '{"id":{"field":"id","comment":"主键","control":"inputNumber","form_show":false,"list_show":true,"enable_sort":true},"title":{"field":"title","comment":"标题","control":"input","form_show":true,"list_show":true,"searchable":true},"type":{"field":"type","comment":"类型","control":"select","control_args":"data:image:自定义图文,google:Google广告,html:自定义HTML","form_show":true,"list_show":true},"enabled":{"field":"enabled","comment":"启用","control":"switch","control_args":"lay-text:启用|禁用","form_show":true,"list_show":true},"image_url":{"field":"image_url","comment":"图片","control":"uploadImage","control_args":"url:/app/admin/media/upload","form_show":true,"list_show":false},"link_url":{"field":"link_url","comment":"链接","control":"input","form_show":true,"list_show":true},"link_target":{"field":"link_target","comment":"打开方式","control":"select","control_args":"data:_blank:新窗口,_self:本窗口","form_show":true,"list_show":true},"google_ad_client":{"field":"google_ad_client","comment":"Ad Client","control":"input","form_show":true,"list_show":false},"google_ad_slot":{"field":"google_ad_slot","comment":"Ad Slot","control":"input","form_show":true,"list_show":false},"html":{"field":"html","comment":"HTML代码","control":"textArea","form_show":true,"list_show":false},"placements":{"field":"placements","comment":"投放设置(JSON)","control":"textArea","form_show":true,"list_show":false},"weight":{"field":"weight","comment":"权重","control":"inputNumber","form_show":true,"list_show":true,"enable_sort":true}}', '2022-08-15 00:00:00', '2022-12-23 15:28:13');
