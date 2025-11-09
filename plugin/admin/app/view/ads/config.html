@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="utf-8">
+    <title>Google 广告全局配置</title>
+    <link href="/app/admin/component/layui/css/layui.css?v=2.8.12" rel="stylesheet"/>
+    <link href="/app/admin/component/pear/css/pear.css" rel="stylesheet"/>
+    <link href="/app/admin/admin/css/reset.css" rel="stylesheet"/>
+    <style>
+        .field-note {
+            color: #999;
+            font-size: 12px
+        }
+
+        .code-box {
+            background: #0b1021;
+            color: #cbd5e1;
+            border-radius: 6px;
+            padding: 10px;
+            overflow: auto;
+            font-size: 12px
+        }
+    </style>
+</head>
+<body class="pear-container">
+<div class="layui-card">
+    <div class="layui-card-header">Google AdSense 全局配置</div>
+    <div class="layui-card-body">
+        <form class="layui-form" id="cfg-form" lay-filter="cfg-form" style="max-width:720px;">
+            <div class="layui-form-item">
+                <label class="layui-form-label">Ad Client</label>
+                <div class="layui-input-inline" style="width:320px;">
+                    <input class="layui-input" name="client" placeholder="ca-pub-xxxxxxxxxxxxxxxx" type="text"/>
+                </div>
+                <div class="layui-form-mid field-note">用于前台 AdSense 脚本加载</div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">自动广告</label>
+                <div class="layui-input-block">
+                    <input lay-skin="switch" lay-text="开启|关闭" name="auto_ads" type="checkbox"/>
+                    <div class="field-note" style="margin-top:6px;">
+                        开启后，需在前台模板中加载自动广告脚本（可根据本配置自动注入，或手动添加）。
+                    </div>
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">示例代码</label>
+                <div class="layui-input-block">
+                    <pre class="code-box" id="auto-code"></pre>
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <div class="layui-input-block">
+                    <button class="pear-btn pear-btn-primary" lay-filter="save" lay-submit>保存</button>
+                    <button class="pear-btn" id="btn-close" type="button">关闭</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+<script src="/app/admin/component/pear/pear.js"></script>
+<script>
+    layui.use(['form', 'layer'], function () {
+        var form = layui.form, layer = layui.layer, $ = layui.$;
+
+        function refreshCode() {
+            var client = $('input[name=client]').val().trim();
+            var auto = $('input[name=auto_ads]')[0].checked; // 保留选项，仅作标识
+            var code = '';
+            if (client) {
+                // 按 Google 最新推荐，仅需加载带 client 的脚本
+                code += '<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' + client + '" crossorigin="anonymous"><\/script>';
+            } else {
+                code = '// 请输入 Ad Client 以显示自动广告示例代码';
+            }
+            $('#auto-code').text(code);
+        }
+
+        // 加载
+        $.get('/app/admin/ads/config/get', function (res) {
+            if (res.code === 0) {
+                $('input[name=client]').val(res.data.client || '');
+                $('input[name=auto_ads]')[0].checked = !!res.data.auto_ads;
+                form.render();
+                refreshCode();
+            }
+        });
+
+        $('input[name=client], input[name=auto_ads]').on('input change', refreshCode);
+
+        // 保存
+        form.on('submit(save)', function (obj) {
+            var fd = obj.field;
+            fd.auto_ads = fd.auto_ads ? 1 : 0;
+            $.post('/app/admin/ads/config/save', fd, function (res) {
+                if (res.code === 0) {
+                    layer.msg('保存成功');
+                } else {
+                    layer.msg(res.msg || '保存失败');
+                }
+            });
+            return false;
+        });
+
+        $('#btn-close').on('click', function () {
+            try {
+                if (window.parent && window.parent.layer) {
+                    var idx = window.parent.layer.getFrameIndex(window.name);
+                    window.parent.layer.close(idx);
+                } else {
+                    window.close();
+                }
+            } catch (e) {
+                window.close();
+            }
+        });
+    });
+</script>
+</body>
+</html>

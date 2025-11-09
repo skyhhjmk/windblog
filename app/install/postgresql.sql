@@ -1751,3 +1751,134 @@ VALUES (default, '雨云',
         '超高性价比云服务商，使用优惠码github注册并绑定微信即可获得5折优惠',
         null, '2025-9-26 11:00:00+08', '2022-12-23 12:05:07',
         null);
+
+-- 创建广告表
+CREATE TABLE IF NOT EXISTS ads
+(
+    id               BIGSERIAL PRIMARY KEY,
+    title            VARCHAR(255) NOT NULL,
+    type             VARCHAR(20)  NOT NULL    DEFAULT 'image',
+    enabled          BOOLEAN      NOT NULL    DEFAULT TRUE,
+    image_url        VARCHAR(512)             DEFAULT NULL,
+    link_url         VARCHAR(512)             DEFAULT NULL,
+    link_target      VARCHAR(20)              DEFAULT '_blank',
+    html             TEXT                     DEFAULT NULL,
+    google_ad_client VARCHAR(64)              DEFAULT NULL,
+    google_ad_slot   VARCHAR(64)              DEFAULT NULL,
+    placements       JSONB                    DEFAULT NULL,
+    weight           INTEGER                  DEFAULT 100,
+    created_at       TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at       TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    deleted_at       TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+    CONSTRAINT chk_ads_type CHECK (type IN ('image', 'google', 'html'))
+);
+
+-- 广告表索引
+CREATE INDEX IF NOT EXISTS idx_ads_enabled ON ads (enabled);
+CREATE INDEX IF NOT EXISTS idx_ads_weight ON ads (weight);
+
+-- 示例广告（侧边栏）
+INSERT INTO public.ads (title, type, enabled, image_url, link_url, link_target, html, google_ad_client, google_ad_slot,
+                        placements, weight, created_at, updated_at, deleted_at)
+VALUES ('雨云-高性价比云服务商', 'image', TRUE, 'https://www.rainyun.com/favicon.ico',
+        'https://www.rainyun.com/github_', '_blank', NULL, NULL, NULL, '{
+    "positions": [
+      "sidebar"
+    ]
+  }'::jsonb, 100, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, NULL);
+
+INSERT INTO settings (key, value, created_at, updated_at)
+VALUES ('table_form_schema_ads', '{
+  "id": {
+    "field": "id",
+    "comment": "主键",
+    "control": "inputNumber",
+    "form_show": false,
+    "list_show": true,
+    "enable_sort": true
+  },
+  "title": {
+    "field": "title",
+    "comment": "标题",
+    "control": "input",
+    "form_show": true,
+    "list_show": true,
+    "searchable": true
+  },
+  "type": {
+    "field": "type",
+    "comment": "类型",
+    "control": "select",
+    "control_args": "data:image:自定义图文,google:Google广告,html:自定义HTML",
+    "form_show": true,
+    "list_show": true
+  },
+  "enabled": {
+    "field": "enabled",
+    "comment": "启用",
+    "control": "switch",
+    "control_args": "lay-text:启用|禁用",
+    "form_show": true,
+    "list_show": true
+  },
+  "image_url": {
+    "field": "image_url",
+    "comment": "图片",
+    "control": "uploadImage",
+    "control_args": "url:/app/admin/media/upload",
+    "form_show": true,
+    "list_show": false
+  },
+  "link_url": {
+    "field": "link_url",
+    "comment": "链接",
+    "control": "input",
+    "form_show": true,
+    "list_show": true
+  },
+  "link_target": {
+    "field": "link_target",
+    "comment": "打开方式",
+    "control": "select",
+    "control_args": "data:_blank:新窗口,_self:本窗口",
+    "form_show": true,
+    "list_show": true
+  },
+  "google_ad_client": {
+    "field": "google_ad_client",
+    "comment": "Ad Client",
+    "control": "input",
+    "form_show": true,
+    "list_show": false
+  },
+  "google_ad_slot": {
+    "field": "google_ad_slot",
+    "comment": "Ad Slot",
+    "control": "input",
+    "form_show": true,
+    "list_show": false
+  },
+  "html": {
+    "field": "html",
+    "comment": "HTML代码",
+    "control": "textArea",
+    "form_show": true,
+    "list_show": false
+  },
+  "placements": {
+    "field": "placements",
+    "comment": "投放设置(JSON)",
+    "control": "textArea",
+    "form_show": true,
+    "list_show": false
+  },
+  "weight": {
+    "field": "weight",
+    "comment": "权重",
+    "control": "inputNumber",
+    "form_show": true,
+    "list_show": true,
+    "enable_sort": true
+  }
+}', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+

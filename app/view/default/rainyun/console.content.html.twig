@@ -1,0 +1,758 @@
+<!-- Rainyun 控制台 -->
+<div id="pjax-sidebar-html" style="display:none">
+    {% if sidebar is defined and sidebar.widgets is defined %}
+        {% for widget in sidebar.widgets %}
+            {% if widget.enabled and widget.html is defined %}
+                <div class="sidebar-widget"
+                     data-widget-key="{{ widget.key ?? widget.id ?? widget.slug ?? widget.name ?? loop.index }}"
+                     data-widget-type="{{ widget.type ?? '' }}">
+                    {{ widget.html|raw }}
+                </div>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+</div>
+
+<div id="ry-console" class="ry-console">
+    <!-- 顶部工具栏 -->
+    <div class="flex items-center justify-between px-4 py-4 border-b border-gray-200">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">Rainyun 控制台</h1>
+            <p class="text-gray-500 text-sm">在“控制台设置”中配置 API Base 与 API Key 后使用各模块。</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <div id="ry-key-status" class="text-sm text-gray-600"></div>
+            <button type="button" id="ry-open-settings"
+                    class="px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700">控制台设置
+            </button>
+        </div>
+    </div>
+
+    <!-- 动态面包屑 -->
+    <div id="ry-breadcrumbs" class="px-4 pt-3">
+        <div id="ry-bc-overview" class="ry-bc hidden" data-ry-bc="overview">
+            {% set breadcrumbs = [
+                {'name':'首页','url':'/'},
+                {'name':'Rainyun 控制台','url':'/rainyun'}
+            ] %}
+            {% include 'components/breadcrumb.html.twig' %}
+        </div>
+        <div id="ry-bc-settings" class="ry-bc hidden" data-ry-bc="settings">
+            {% set breadcrumbs = [
+                {'name':'首页','url':'/'},
+                {'name':'Rainyun 控制台','url':'/rainyun'},
+                {'name':'控制台设置','url':'#'}
+            ] %}
+            {% include 'components/breadcrumb.html.twig' %}
+        </div>
+        <div id="ry-bc-cloudapps" class="ry-bc hidden" data-ry-bc="cloudapps">
+            {% set breadcrumbs = [
+                {'name':'首页','url':'/'},
+                {'name':'Rainyun 控制台','url':'/rainyun'},
+                {'name':'云应用','url':'#'}
+            ] %}
+            {% include 'components/breadcrumb.html.twig' %}
+        </div>
+        <div id="ry-bc-newapp" class="ry-bc hidden" data-ry-bc="newapp">
+            {% set breadcrumbs = [
+                {'name':'首页','url':'/'},
+                {'name':'Rainyun 控制台','url':'/rainyun'},
+                {'name':'云应用','url':'#'},
+                {'name':'新建应用','url':'#'}
+            ] %}
+            {% include 'components/breadcrumb.html.twig' %}
+        </div>
+        <div id="ry-bc-manage" class="ry-bc hidden" data-ry-bc="manage">
+            {% set breadcrumbs = [
+                {'name':'首页','url':'/'},
+                {'name':'Rainyun 控制台','url':'/rainyun'},
+                {'name':'云应用','url':'#'},
+                {'name':'管理','url':'#'}
+            ] %}
+            {% include 'components/breadcrumb.html.twig' %}
+        </div>
+    </div>
+
+    <!-- 主体：侧边导航 + 右侧视图 -->
+    <div class="flex">
+        <!-- 侧边导航 -->
+        <aside class="w-56 border-r border-gray-200 p-3">
+            <nav id="ry-nav" class="space-y-1">
+                <button data-tab="overview"
+                        class="ry-nav-btn w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 font-medium text-gray-700">
+                    <i class="fas fa-chart-pie mr-2"></i>概览
+                </button>
+                <button data-tab="settings"
+                        class="ry-nav-btn w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 font-medium text-gray-700">
+                    <i class="fas fa-sliders-h mr-2"></i>控制台设置
+                </button>
+                <button data-tab="cloudapps"
+                        class="ry-nav-btn w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 font-medium text-gray-700">
+                    <i class="fas fa-cloud mr-2"></i>云应用
+                </button>
+            </nav>
+        </aside>
+
+        <!-- 右侧内容区 -->
+        <section class="flex-1 p-4">
+            <!-- 概览 -->
+            <div id="ry-view-overview" class="ry-view hidden">
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <h2 class="text-lg font-semibold mb-2">快速开始</h2>
+                    <ol class="list-decimal pl-5 text-gray-600 space-y-1 text-sm">
+                        <li>进入“控制台设置”，填写 API Base 与 API Key，点击保存。</li>
+                        <li>切换到“云应用”模块，浏览与管理你的 App。</li>
+                        <li>在“云应用”模块可新建应用、查看与管理版本。</li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- 控制台设置 -->
+            <div id="ry-view-settings" class="ry-view hidden">
+                <div class="max-w-2xl space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">API Base</label>
+                        <input id="ry-api-base" type="text" placeholder="https://api.v2.rainyun.com"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <p class="text-xs text-gray-500 mt-1">可指向官方 API，或你的后端代理地址以避免 CORS。</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">API Key</label>
+                        <input id="ry-api-key" type="password" placeholder="请输入 API Key"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button id="ry-save-settings"
+                                class="px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700">
+                            保存
+                        </button>
+                        <button id="ry-test-settings"
+                                class="px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50">
+                            测试
+                        </button>
+                        <button id="ry-clear-settings"
+                                class="px-4 py-2 rounded-md border border-red-300 text-red-600 hover:bg-red-50">
+                            清除
+                        </button>
+                        <button id="ry-copy-key"
+                                class="px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50">
+                            复制 Key（到剪贴板）
+                        </button>
+                    </div>
+                    <div id="ry-settings-msg" class="text-sm"></div>
+                </div>
+            </div>
+
+            <!-- 云应用模块 -->
+            <div id="ry-view-cloudapps" class="ry-view hidden">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <input id="ry-search" type="text" placeholder="搜索名称/标题..."
+                               class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-64">
+                        <button id="ry-refresh"
+                                class="px-3 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50">
+                            刷新
+                        </button>
+                        <button id="ry-new-app" class="px-3 py-2 rounded-md bg-green-600 text-white hover:bg-green-700">
+                            新建应用
+                        </button>
+                    </div>
+                </div>
+                <div id="ry-empty"
+                     class="hidden p-4 border border-yellow-200 bg-yellow-50 text-yellow-800 rounded-md text-sm"></div>
+                <div id="ry-table-wrap" class="overflow-x-auto border border-gray-200 rounded-lg">
+                    <table class="min-w-full text-sm">
+                        <thead class="bg-gray-50">
+                        <tr class="text-left text-gray-600">
+                            <th class="px-3 py-2">ID</th>
+                            <th class="px-3 py-2">名称</th>
+                            <th class="px-3 py-2">标题</th>
+                            <th class="px-3 py-2">下载量</th>
+                            <th class="px-3 py-2">更新时间</th>
+                            <th class="px-3 py-2">操作</th>
+                        </tr>
+                        </thead>
+                        <tbody id="ry-tbody" class="divide-y"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 管理模块（嵌入旧页面功能） -->
+            <div id="ry-view-manage" class="ry-view hidden">
+                {% include 'rainyun/manage.embed.html.twig' %}
+            </div>
+
+            <!-- 新建应用表单视图 -->
+            <div id="ry-view-newapp" class="ry-view hidden">
+                <div class="mb-4 flex items-center gap-2">
+                    <button type="button" id="ry-back-to-list"
+                            class="px-3 py-1.5 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50">←
+                        返回云应用列表
+                    </button>
+                    <button type="button" id="ry-back-to-console"
+                            class="px-3 py-1.5 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50">⤺ 返回控制台
+                    </button>
+                </div>
+                <form id="ry-new-form" class="max-w-3xl space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">名称 name（英文标识，必填）</label>
+                            <input id="ry-new-name" type="text"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                   required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">标题 title（必填）</label>
+                            <input id="ry-new-title" type="text"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                   required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">官网 website（必填）</label>
+                            <input id="ry-new-website" type="url"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                   required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">项目链接
+                                project_link（必填）</label>
+                            <input id="ry-new-project" type="url"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                   required>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">描述 description（必填）</label>
+                            <textarea id="ry-new-desc" rows="3"
+                                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                      required></textarea>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">介绍
+                                readme（Markdown，必填）</label>
+                            <textarea id="ry-new-readme" rows="6"
+                                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"># this is markdown</textarea>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">标签 tags（逗号分隔，必填）</label>
+                            <input id="ry-new-tags" type="text" value="Website"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">跨版本更新
+                                cross_version_update</label>
+                            <select id="ry-new-cross"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <option value="false" selected>否</option>
+                                <option value="true">是</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">禁用更新 disable_update</label>
+                            <select id="ry-new-disable"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <option value="false" selected>否</option>
+                                <option value="true">是</option>
+                            </select>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Logo（Base64，可留空）</label>
+                            <textarea id="ry-new-logo" rows="3"
+                                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></textarea>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button type="submit" class="px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700">
+                            创建
+                        </button>
+                        <button type="button" id="ry-new-cancel"
+                                class="px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50">取消
+                        </button>
+                    </div>
+                    <div id="ry-new-msg" class="text-sm mt-2"></div>
+                </form>
+            </div>
+        </section>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const LS_KEY_BASE = 'rainyun_api_base';
+        const LS_KEY_KEY = 'rainyun_api_key';
+
+        const $ = (sel, root = document) => root.querySelector(sel);
+        const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+
+        function getCfg() {
+            const apiBase = (localStorage.getItem(LS_KEY_BASE) || 'https://api.v2.rainyun.com').trim();
+            const apiKey = (localStorage.getItem(LS_KEY_KEY) || '').trim();
+            return {apiBase, apiKey};
+        }
+
+        function setCfg({apiBase, apiKey}) {
+            if (typeof apiBase === 'string') localStorage.setItem(LS_KEY_BASE, apiBase.trim());
+            if (typeof apiKey === 'string') localStorage.setItem(LS_KEY_KEY, apiKey.trim());
+        }
+
+        function maskKey(k) {
+            if (!k) return '未配置';
+            if (k.length <= 8) return k.replace(/.(?=.{2})/g, '*');
+            return k.slice(0, 4) + '****' + k.slice(-4);
+        }
+
+        function updateKeyStatus() {
+            const st = $('#ry-key-status');
+            if (!st) return;
+            const {apiBase, apiKey} = getCfg();
+            const ok = !!apiKey;
+            st.innerHTML = `Base: <span class="font-mono">${apiBase}</span> · Key: <span class="font-mono">${maskKey(apiKey)}</span>`;
+            st.className = 'text-sm ' + (ok ? 'text-green-700' : 'text-red-600');
+        }
+
+        function updateBreadcrumb(tab) {
+            $$('.ry-bc').forEach(b => b.classList.add('hidden'));
+            const bc = $('#ry-bc-' + tab);
+            if (bc) bc.classList.remove('hidden');
+        }
+
+        function switchTab(tab) {
+            $$('.ry-view').forEach(v => v.classList.add('hidden'));
+            const view = $('#ry-view-' + tab);
+            if (view) view.classList.remove('hidden');
+            // 高亮nav
+            $$('#ry-nav .ry-nav-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-50', 'text-blue-700');
+                if (btn.getAttribute('data-tab') === tab) btn.classList.add('bg-blue-50', 'text-blue-700');
+            });
+            updateBreadcrumb(tab);
+            // 进入云应用时自动加载
+            if (tab === 'cloudapps') loadAppsList();
+        }
+
+        const APIS = {
+            base() {
+                return (getCfg().apiBase || '').replace(/\/$/, '');
+            },
+            headers() {
+                const {apiKey} = getCfg();
+                const h = {'Content-Type': 'application/json'};
+                if (apiKey) h['x-api-key'] = apiKey;
+                return h;
+            },
+            // 列出 App（使用雨云提供的列表接口）
+            async listApps({page = 1, page_size = 20/*, q=''*/} = {}) {
+                const options = {
+                    columnFilters: {id: '', tags: ''},
+                    sort: [{field: 'downloads', type: 'desc'}],
+                    page: page,
+                    perPage: page_size,
+                    page_size: page_size
+                };
+                const url = `${this.base()}/product/rca/appstore/?options=${encodeURIComponent(JSON.stringify(options))}&private=true`;
+                return new Promise((resolve, reject) => {
+                    try {
+                        const xhr = new XMLHttpRequest();
+                        xhr.open('GET', url, true);
+                        const {apiKey} = getCfg();
+                        if (apiKey) xhr.setRequestHeader('x-api-key', apiKey);
+                        xhr.onload = function () {
+                            if (xhr.status === 200) {
+                                try {
+                                    resolve(JSON.parse(xhr.responseText));
+                                } catch (e) {
+                                    reject(e);
+                                }
+                            } else if (xhr.status === 0) {
+                                reject(new Error('网络请求失败，可能是跨域限制导致'));
+                            } else {
+                                reject(new Error(`获取应用列表失败: HTTP状态码 ${xhr.status}`));
+                            }
+                        };
+                        xhr.onerror = function () {
+                            reject(new Error('网络请求错误'));
+                        };
+                        xhr.timeout = 10000;
+                        xhr.ontimeout = function () {
+                            reject(new Error('请求超时'));
+                        };
+                        xhr.send();
+                    } catch (err) {
+                        reject(err);
+                    }
+                });
+            },
+            // 获取单个应用详情
+            async getAppDetail(appId) {
+                const url = `${this.base()}/product/rca/appstore/${encodeURIComponent(appId)}/`;
+                const res = await fetch(url, {headers: this.headers()});
+                if (!res.ok) throw new Error(`获取应用详情失败: ${res.status}`);
+                return res.json();
+            },
+            // 新建应用（基于已发现的 API 风格推测，如不符请提供正确创建接口）
+            async createApp({
+                                name,
+                                title,
+                                description = '',
+                                website = '',
+                                project_link = '',
+                                tags = [],
+                                readme = '',
+                                logo = '',
+                                cross_version_update = false,
+                                disable_update = false
+                            } = {}) {
+                if (!name || !title) throw new Error('缺少必要参数 name/title');
+                const url = `${this.base()}/product/rca/appstore/`;
+                return new Promise((resolve, reject) => {
+                    try {
+                        const xhr = new XMLHttpRequest();
+                        xhr.open('POST', url, true);
+                        const {apiKey} = getCfg();
+                        if (apiKey) xhr.setRequestHeader('x-api-key', apiKey);
+                        xhr.setRequestHeader('Content-Type', 'application/json');
+                        const body = {name, title};
+                        if (description) body.description = description;
+                        if (website) body.website = website;
+                        if (project_link) body.project_link = project_link;
+                        if (Array.isArray(tags) && tags.length) body.tags = tags;
+                        if (readme) body.readme = readme;
+                        if (logo !== undefined) body.logo = logo; // 允许空字符串
+                        body.cross_version_update = !!cross_version_update;
+                        body.disable_update = !!disable_update;
+                        xhr.onload = function () {
+                            if (xhr.status === 200 || xhr.status === 201) {
+                                try {
+                                    resolve(JSON.parse(xhr.responseText));
+                                } catch (e) {
+                                    resolve({});
+                                }
+                            } else if (xhr.status === 0) {
+                                reject(new Error('网络请求失败，可能是跨域限制导致'));
+                            } else if (xhr.status === 404 || xhr.status === 405) {
+                                reject(new Error(`创建接口不可用（${xhr.status}），请提供“创建应用”API规范`));
+                            } else {
+                                reject(new Error(`创建应用失败: HTTP状态码 ${xhr.status}`));
+                            }
+                        };
+                        xhr.onerror = function () {
+                            reject(new Error('网络请求错误'));
+                        };
+                        xhr.timeout = 15000;
+                        xhr.ontimeout = function () {
+                            reject(new Error('请求超时'));
+                        };
+                        xhr.send(JSON.stringify(body));
+                    } catch (err) {
+                        reject(err);
+                    }
+                });
+            }
+        };
+
+        function rowHtml(item) {
+            const id = item.id ?? item.app_id ?? '';
+            const name = item.name ?? '';
+            const title = item.title ?? '';
+            const downloads = (item.downloads != null) ? item.downloads : '-';
+            // 处理时间戳（Rainyun返回 create_date 为秒级时间戳）
+            const ts = item.update_time ?? item.updated_at ?? (item.create_date ? (Number(item.create_date) * 1000) : null);
+            const updated = ts ? new Date(ts).toLocaleString() : '-';
+            return `
+      <tr>
+        <td class="px-3 py-2 font-mono">${id}</td>
+        <td class="px-3 py-2">${name}</td>
+        <td class="px-3 py-2">${title}</td>
+        <td class="px-3 py-2">${downloads}</td>
+        <td class="px-3 py-2 text-gray-500">${updated}</td>
+        <td class="px-3 py-2">
+          <button class="ry-view-btn text-blue-600 hover:underline" data-id="${id}">查看</button>
+        </td>
+      </tr>`;
+        }
+
+        async function loadAppsList() {
+            const {apiKey} = getCfg();
+            const empty = $('#ry-empty');
+            const tbody = $('#ry-tbody');
+            if (!tbody || !empty) return;
+
+            if (!apiKey) {
+                empty.classList.remove('hidden');
+                empty.textContent = '未配置 API Key，请先前往“控制台设置”保存。';
+                tbody.innerHTML = '';
+                return;
+            }
+
+            empty.classList.add('hidden');
+            tbody.innerHTML = '<tr><td class="px-3 py-4 text-gray-500" colspan="6">加载中...</td></tr>';
+
+            try {
+                const q = ($('#ry-search')?.value || '').trim();
+                // 这里调用需要你提供的列表 API
+                const resp = await APIS.listApps({page: 1, page_size: 20});
+
+                // 期待的数据格式：{ code:200, data:{ TotalRecords, Records: [...] } }
+                const list = (resp && resp.data && (resp.data.Records || resp.data.list || resp.data)) || [];
+                if (!Array.isArray(list) || list.length === 0) {
+                    tbody.innerHTML = '<tr><td class="px-3 py-4 text-gray-500" colspan="6">暂无数据</td></tr>';
+                } else {
+                    tbody.innerHTML = list.map(rowHtml).join('');
+                }
+            } catch (e) {
+                console.warn(e);
+                tbody.innerHTML = '';
+                empty.classList.remove('hidden');
+                empty.innerHTML = `
+        <div class="font-medium mb-1">无法加载应用列表：${e.message || e}</div>
+        <div class="text-xs leading-6 text-gray-600">请检查网络、API Base 或 API Key 配置后重试。</div>`;
+            }
+        }
+
+        async function onClickView(e) {
+            const btn = e.target.closest('.ry-view-btn');
+            if (!btn) return;
+            const id = btn.getAttribute('data-id');
+            if (!id) return;
+            try {
+                btn.disabled = true;
+                btn.textContent = '进入管理...';
+                // 将 AppID 和 API Key 写入本地存储，供管理视图自动加载
+                const {apiKey} = getCfg();
+                try {
+                    localStorage.setItem('rainyun_appId', id);
+                    if (apiKey) localStorage.setItem('rainyun_apiKey', apiKey);
+                } catch (_) {
+                }
+                // 切换到管理视图并触发加载
+                switchTab('manage');
+                try {
+                    setTimeout(() => {
+                        if (typeof window.RY_manage_reload === 'function') window.RY_manage_reload();
+                    }, 0);
+                } catch (_) {
+                }
+            } catch (err) {
+                alert('跳转失败：' + (err.message || err));
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '查看';
+            }
+        }
+
+        function init() {
+            // 导航
+            $('#ry-nav')?.addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-tab]');
+                if (!btn) return;
+                switchTab(btn.getAttribute('data-tab'));
+            });
+            $('#ry-open-settings')?.addEventListener('click', () => switchTab('settings'));
+
+            // 设置表单
+            const baseInput = $('#ry-api-base');
+            const keyInput = $('#ry-api-key');
+            const saveBtn = $('#ry-save-settings');
+            const clearBtn = $('#ry-clear-settings');
+            const testBtn = $('#ry-test-settings');
+            const copyBtn = $('#ry-copy-key');
+            const msg = $('#ry-settings-msg');
+
+            // 还原配置
+            const {apiBase, apiKey} = getCfg();
+            if (baseInput) baseInput.value = apiBase;
+            if (keyInput) keyInput.value = apiKey;
+            updateKeyStatus();
+
+            saveBtn?.addEventListener('click', () => {
+                setCfg({apiBase: baseInput.value, apiKey: keyInput.value});
+                updateKeyStatus();
+                if (msg) {
+                    msg.className = 'text-green-700';
+                    msg.textContent = '已保存';
+                }
+            });
+
+            clearBtn?.addEventListener('click', () => {
+                setCfg({apiBase: '', apiKey: ''});
+                if (baseInput) baseInput.value = 'https://api.v2.rainyun.com';
+                if (keyInput) keyInput.value = '';
+                updateKeyStatus();
+                if (msg) {
+                    msg.className = 'text-gray-600';
+                    msg.textContent = '已清除本地存储';
+                }
+            });
+
+            copyBtn?.addEventListener('click', async () => {
+                try {
+                    await navigator.clipboard.writeText(keyInput?.value || getCfg().apiKey || '');
+                    if (msg) {
+                        msg.className = 'text-green-700';
+                        msg.textContent = '已复制到剪贴板';
+                    }
+                } catch {
+                    if (msg) {
+                        msg.className = 'text-red-600';
+                        msg.textContent = '复制失败';
+                    }
+                }
+            });
+
+            testBtn?.addEventListener('click', async () => {
+                const {apiBase, apiKey} = getCfg();
+                if (!apiKey) {
+                    msg.className = 'text-red-600';
+                    msg.textContent = '请先保存 API Key';
+                    return;
+                }
+                // 尝试以一个最小可行请求测试（如需自定义请提供可用的健康检查API）
+                try {
+                    const ping = `${apiBase.replace(/\/$/, '')}/product/rca/appstore/1/`;
+                    const r = await fetch(ping, {headers: {'x-api-key': apiKey}});
+                    if (r.status === 200 || r.status === 404) {
+                        msg.className = 'text-green-700';
+                        msg.textContent = '看起来可用（返回状态 ' + r.status + '）';
+                    } else {
+                        msg.className = 'text-yellow-700';
+                        msg.textContent = '远端响应状态 ' + r.status + '，可能需要配置代理或提供健康检查API';
+                    }
+                } catch (err) {
+                    msg.className = 'text-red-600';
+                    msg.textContent = '请求失败：' + (err.message || err);
+                }
+            });
+
+            // 云应用行为
+            $('#ry-refresh')?.addEventListener('click', loadAppsList);
+            $('#ry-search')?.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    loadAppsList();
+                }
+            });
+            $('#ry-tbody')?.addEventListener('click', onClickView);
+
+            // 新建应用（切换到表单视图）
+            $('#ry-new-app')?.addEventListener('click', () => {
+                resetNewForm();
+                switchTab('newapp');
+            });
+
+            // 新建应用：返回按钮
+            $('#ry-back-to-list')?.addEventListener('click', () => switchTab('cloudapps'));
+            $('#ry-back-to-console')?.addEventListener('click', () => switchTab('overview'));
+            $('#ry-new-cancel')?.addEventListener('click', () => switchTab('cloudapps'));
+
+            function resetNewForm() {
+                $('#ry-new-name').value = '';
+                $('#ry-new-title').value = '';
+                $('#ry-new-website').value = '';
+                $('#ry-new-project').value = '';
+                $('#ry-new-desc').value = '';
+                $('#ry-new-readme').value = '# this is markdown';
+                $('#ry-new-tags').value = 'Website';
+                $('#ry-new-cross').value = 'false';
+                $('#ry-new-disable').value = 'false';
+                $('#ry-new-logo').value = '';
+                const msg = $('#ry-new-msg');
+                if (msg) {
+                    msg.textContent = '';
+                    msg.className = 'text-sm';
+                }
+            }
+
+            // 新建应用：表单提交
+            $('#ry-new-form')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const name = $('#ry-new-name')?.value?.trim();
+                const title = $('#ry-new-title')?.value?.trim();
+                const website = $('#ry-new-website')?.value?.trim();
+                const project_link = $('#ry-new-project')?.value?.trim();
+                const description = $('#ry-new-desc')?.value?.trim();
+                const readme = $('#ry-new-readme')?.value?.trim();
+                const tagsCSV = $('#ry-new-tags')?.value?.trim();
+                const cross_version_update = ($('#ry-new-cross')?.value || 'false') === 'true';
+                const disable_update = ($('#ry-new-disable')?.value || 'false') === 'true';
+                const logo = $('#ry-new-logo')?.value ?? '';
+                const msg = $('#ry-new-msg');
+
+                function setMsg(t, ok) {
+                    if (!msg) return;
+                    msg.className = 'text-sm ' + (ok ? 'text-green-700' : 'text-red-600');
+                    msg.textContent = t;
+                }
+
+                if (!name || !title || !website || !project_link || !description || !readme || !tagsCSV) {
+                    setMsg('请完整填写必填项', false);
+                    return;
+                }
+                const tags = tagsCSV.split(',').map(s => s.trim()).filter(Boolean);
+                if (!tags.length) {
+                    setMsg('请至少填写一个标签', false);
+                    return;
+                }
+                try {
+                    const res = await APIS.createApp({
+                        name,
+                        title,
+                        description,
+                        website,
+                        readme,
+                        tags,
+                        cross_version_update,
+                        disable_update,
+                        project_link,
+                        logo
+                    });
+                    setMsg('创建成功', true);
+                    const id = res?.data?.id;
+                    if (id) {
+                        try {
+                            localStorage.setItem('rainyun_appId', String(id));
+                        } catch (_) {
+                        }
+                        switchTab('manage');
+                        try {
+                            setTimeout(() => {
+                                if (typeof window.RY_manage_reload === 'function') window.RY_manage_reload();
+                            }, 0);
+                        } catch (_) {
+                        }
+                    } else {
+                        // 回到列表刷新
+                        switchTab('cloudapps');
+                        loadAppsList();
+                    }
+                } catch (err) {
+                    setMsg('创建失败：' + (err.message || err), false);
+                }
+            });
+
+            // 监听管理视图加载以刷新面包屑尾项
+            document.addEventListener('ry:manage:loaded', (ev) => {
+                try {
+                    const app = ev.detail && ev.detail.app || {};
+                    const nav = document.querySelector('#ry-bc-manage');
+                    const span = nav && nav.querySelector('nav ol li:last-child span');
+                    if (span) span.textContent = '管理：' + (app.name || app.title || ('#' + (app.id || localStorage.getItem('rainyun_appId') || '')));
+                } catch (_) {
+                }
+            });
+
+            // 默认打开云应用（或概览）
+            switchTab('cloudapps');
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+        document.addEventListener('page:ready', () => {
+            try {
+                updateKeyStatus();
+            } catch (_) {
+            }
+        });
+    })();
+</script>

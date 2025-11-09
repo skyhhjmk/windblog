@@ -104,6 +104,22 @@
         {% endif %}
     </div>
 
+    {# AMP 广告位（文末） #}
+    {% if amp_ads is defined and amp_ads|length > 0 %}
+        <div style="margin: 1rem 0; display:flex; justify-content:center;">
+            {% for ad in amp_ads %}
+                <amp-ad
+                    layout="{{ ad.layout|default('fixed') }}"
+                    width="{{ ad.width|default(270) }}"
+                    height="{{ ad.height|default(300) }}"
+                    type="adsense"
+                    data-ad-client="{{ ad.client }}"
+                    data-ad-slot="{{ ad.slot }}">
+                </amp-ad>
+            {% endfor %}
+        </div>
+    {% endif %}
+
     {# 文章底部 #}
     <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
         <a href="/?amp=1" style="color: #667eea; text-decoration: none; font-weight: 500;">

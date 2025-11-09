@@ -52,6 +52,7 @@ class WidgetService
         'popular_posts' => '热门文章',
         'random_posts' => '随机文章',
         'html' => '自定义HTML',
+        'ads' => '广告',
     ];
 
     /**
@@ -333,6 +334,7 @@ class WidgetService
             'html' => ['自定义HTML', '自定义HTML内容'],
             'popular_posts' => ['热门文章', '显示最受欢迎的文章列表'],
             'random_posts' => ['随机文章', '随机显示博客中的文章'],
+            'ads' => ['广告', '显示广告位（侧边栏）'],
         ];
 
         foreach ($widgets as $type => $info) {
@@ -598,6 +600,21 @@ class WidgetService
 
             return $widget;
         }, $widget, 'random_posts', []);
+    }
+
+    /**
+     * 渲染广告小工具（侧边栏）
+     */
+    protected static function renderAds(array $widget): array
+    {
+        $limit = (int) ($widget['params']['count'] ?? 1);
+        $ads = AdService::getActiveAdsByPosition('sidebar', $limit > 0 ? $limit : null);
+        foreach ($ads as $i => $ad) {
+            $ads[$i]['snippet_html'] = AdService::renderAdHtml($ad, 'sidebar');
+        }
+        $widget['ads'] = $ads;
+
+        return $widget;
     }
 
     /**

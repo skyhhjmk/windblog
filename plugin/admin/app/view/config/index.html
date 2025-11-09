@@ -30,6 +30,7 @@
                     <li>Session设置</li>
                     <li>Slug翻译</li>
                     <li>SEO设置</li>
+                    <li>嵌入代码</li>
                 </ul>
                 <div class="layui-tab-content">
 
@@ -877,6 +878,55 @@
                         </form>
                     </div>
 
+                    <!-- 嵌入代码 -->
+                    <div class="layui-tab-item">
+                        <form class="layui-form" lay-filter="embedCodeInfo">
+                            <div class="layui-card" style="margin-bottom: 20px;">
+                                <div class="layui-card-body">
+                                    <blockquote class="layui-elem-quote" style="border-left: 5px solid #FFB800;">
+                                        <p style="margin:0;padding:5px 0;"><i class="layui-icon layui-icon-tips"
+                                                                              style="color:#FFB800;"></i> 为站点
+                                            head、body 起始与结束位置注入自定义 CSS/JS。</p>
+                                        <p style="margin:4px 0 0;color:#999;font-size:12px;">
+                                            请仅粘贴可信代码；保存后将直接渲染到前台模板。</p>
+                                    </blockquote>
+                                </div>
+                            </div>
+
+                            <div class="layui-form-item layui-form-text">
+                                <label class="layui-form-label">Head 区域</label>
+                                <div class="layui-input-block">
+                                    <textarea class="layui-textarea" name="embed_head"
+                                              placeholder="例如：全局样式、第三方统计、Meta、脚本等" rows="8"></textarea>
+                                </div>
+                            </div>
+
+                            <div class="layui-form-item layui-form-text">
+                                <label class="layui-form-label">Body 开始</label>
+                                <div class="layui-input-block">
+                                    <textarea class="layui-textarea" name="embed_body_start"
+                                              placeholder="例如：全站公告条、布局所需脚本" rows="6"></textarea>
+                                </div>
+                            </div>
+
+                            <div class="layui-form-item layui-form-text">
+                                <label class="layui-form-label">Body 结束</label>
+                                <div class="layui-input-block">
+                                    <textarea class="layui-textarea" name="embed_body_end"
+                                              placeholder="例如：统计脚本、客服组件、离线分析等" rows="6"></textarea>
+                                </div>
+                            </div>
+
+                            <div class="layui-form-item">
+                                <div class="layui-input-block">
+                                    <button class="pear-btn pear-btn-primary pear-btn-md" lay-filter="saveEmbedCodeInfo"
+                                            lay-submit>保存
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
                 </div>
             </div>
 
@@ -1484,6 +1534,46 @@
                     });
                     return false;
                 });
+            });
+
+            // 嵌入代码设置
+            layui.use(["form", "layer", "popup"], function () {
+                let $ = layui.$;
+                let form = layui.form;
+
+                function loadEmbedCode() {
+                    $.ajax({
+                        url: "/app/admin/config/get_embed_code_config",
+                        type: "GET",
+                        dataType: "json",
+                        success: function (res) {
+                            form.val("embedCodeInfo", res || {});
+                        }
+                    });
+                }
+
+                form.on("submit(saveEmbedCodeInfo)", function (data) {
+                    $.ajax({
+                        url: "/app/admin/config/set_embed_code_config",
+                        type: "POST",
+                        dataType: "json",
+                        data: data.field,
+                        success: function (res) {
+                            if (res && res.code === 0) {
+                                layui.popup.success("保存成功");
+                            } else {
+                                layui.popup.failure((res && res.msg) ? res.msg : "保存失败");
+                            }
+                        },
+                        error: function () {
+                            layui.popup.failure("请求失败");
+                        }
+                    });
+                    return false;
+                });
+
+                // 初始化加载
+                loadEmbedCode();
             });
 
             layui.use(["form", "jquery"], function () {

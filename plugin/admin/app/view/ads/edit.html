@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="utf-8">
+    <title>编辑广告</title>
+    <link href="/app/admin/component/layui/css/layui.css?v=2.8.12" rel="stylesheet"/>
+    <link href="/app/admin/component/pear/css/pear.css" rel="stylesheet"/>
+    <link href="/app/admin/admin/css/reset.css" rel="stylesheet"/>
+    <style>
+        .field-note {
+            color: #999;
+            font-size: 12px
+        }
+
+        .ads-preview {
+            border: 1px dashed #ddd;
+            padding: 12px;
+            border-radius: 6px;
+            background: #fafafa
+        }
+
+        .code-box {
+            background: #0b1021;
+            color: #cbd5e1;
+            border-radius: 6px;
+            padding: 10px;
+            overflow: auto;
+            font-size: 12px
+        }
+
+        .tag {
+            display: inline-block;
+            margin-right: 6px;
+            margin-bottom: 6px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: #f3f4f6;
+            color: #374151;
+            font-size: 12px
+        }
+    </style>
+</head>
+<body class="pear-container">
+<form class="layui-form" lay-filter="ad-form" style="padding:16px;">
+    <input id="ad-id" name="id" type="hidden" value=""/>
+    <div class="layui-row layui-col-space16">
+        <div class="layui-col-md8">
+            <div class="layui-card">
+                <div class="layui-card-header">基础信息</div>
+                <div class="layui-card-body">
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">标题</label>
+                        <div class="layui-input-block">
+                            <input class="layui-input" lay-verify="required" name="title" placeholder="请输入标题" required
+                                   type="text" value=""/>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">类型</label>
+                        <div class="layui-input-block">
+                            <select lay-filter="ad-type" name="type">
+                                <option value="image">图文</option>
+                                <option value="google">Google</option>
+                                <option value="html">HTML</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">启用</label>
+                        <div class="layui-input-block">
+                            <input lay-skin="switch" lay-text="启用|禁用" name="enabled" type="checkbox"/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="layui-card" id="box-image" style="display:none;">
+                <div class="layui-card-header">图文配置</div>
+                <div class="layui-card-body">
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">图片URL</label>
+                        <div class="layui-input-block">
+                            <input class="layui-input" name="image_url" placeholder="https://..." type="text" value=""/>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">跳转链接</label>
+                        <div class="layui-input-block">
+                            <input class="layui-input" name="link_url" placeholder="https://..." type="text" value=""/>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">打开方式</label>
+                        <div class="layui-input-block">
+                            <select name="link_target">
+                                <option value="_blank">新窗口</option>
+                                <option value="_self">本窗口</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="layui-card" id="box-google" style="display:none;">
+                <div class="layui-card-header">Google 广告配置<span class="field-note" style="margin-left:8px;">(支持可视化设置)</span>
+                </div>
+                <div class="layui-card-body">
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">Ad Client</label>
+                        <div class="layui-input-inline" style="width:320px;">
+                            <input class="layui-input" name="google_ad_client" placeholder="ca-pub-xxxxxxxxxxxxxxxx" type="text"
+                                   value=""/>
+                        </div>
+                        <div class="layui-input-inline">
+                            <button class="pear-btn pear-btn-sm" id="btn-fill-client" type="button">使用全局</button>
+                        </div>
+                        <div class="layui-input-inline">
+                            <button class="pear-btn pear-btn-sm pear-btn-primary btn-open-global-config" type="button">
+                                全局配置
+                            </button>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">Ad Slot</label>
+                        <div class="layui-input-block">
+                            <input class="layui-input" name="google_ad_slot" placeholder="xxxxxxxxxx" type="text"
+                                   value=""/>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">展示形式</label>
+                        <div class="layui-input-inline">
+                            <select id="g_format">
+                                <option value="auto">自适应展示 (auto)</option>
+                                <option value="in-article">文章内 (in-article)</option>
+                                <option value="in-feed">信息流 (in-feed)</option>
+                            </select>
+                        </div>
+                        <div class="layui-input-inline" style="width:180px;">
+                            <input class="layui-input" id="g_style" placeholder="容器样式CSS, 如 display:block" type="text"
+                                   value="display:block"/>
+                        </div>
+                        <div class="layui-form-mid">
+                            <input checked id="g_full" lay-skin="switch" lay-text="全宽|固定" type="checkbox"/>
+                        </div>
+                    </div>
+                    <div class="layui-form-item" id="row-layout-key" style="display:none;">
+                        <label class="layui-form-label">布局Key</label>
+                        <div class="layui-input-block">
+                            <input class="layui-input" id="g_layout_key" placeholder="in-feed 需要 layout key"
+                                   type="text"/>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">预览</label>
+                        <div class="layui-input-block">
+                            <div class="ads-preview" id="ads-preview-box">
+                                <div style="height:120px;background:#f1f5f9;border:1px solid #e5e7eb;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#64748b;font-size:12px;">
+                                    AdSense 预览 (后台不实际加载广告)
+                                </div>
+                            </div>
+                            <div class="field-note" style="margin-top:6px;">下面代码会根据设置自动生成，前台实际渲染。
+                            </div>
+                            <pre class="code-box" id="ads-code"></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="layui-card" id="box-html" style="display:none;">
+                <div class="layui-card-header">自定义 HTML</div>
+                <div class="layui-card-body">
+                    <div class="layui-form-item layui-form-text">
+                        <label class="layui-form-label">HTML代码</label>
+                        <div class="layui-input-block">
+                            <textarea class="layui-textarea" name="html" placeholder="自定义广告HTML"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="layui-card">
+                <div class="layui-card-header">权重</div>
+                <div class="layui-card-body">
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">权重</label>
+                        <div class="layui-input-block">
+                            <input class="layui-input" name="weight" type="number" value="100"/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="layui-form-item" style="margin-top:12px;">
+                <div class="layui-input-block">
+                    <input id="placements_json" name="placements" type="hidden"/>
+                    <button class="pear-btn pear-btn-primary" lay-filter="submit" lay-submit>保存</button>
+                    <button class="pear-btn" id="btn-cancel" type="button">取消</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="layui-col-md4">
+            <div class="layui-card">
+                <div class="layui-card-header">投放设置（可视化）</div>
+                <div class="layui-card-body">
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">位置</label>
+                        <div class="layui-input-block">
+                            <input id="pos_sidebar" title="侧边栏 (sidebar)" type="checkbox"/>
+                            <input id="pos_inline" title="文内 (inline)" type="checkbox"/>
+                        </div>
+                    </div>
+                    <div id="inline-config" style="display:none;">
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">间隔</label>
+                            <div class="layui-input-inline"><input class="layui-input" id="inline_interval"
+                                                                   type="number" value="4"/></div>
+                            <div class="layui-form-mid">段</div>
+                        </div>
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">起始</label>
+                            <div class="layui-input-inline"><input class="layui-input" id="inline_start_after"
+                                                                   type="number" value="2"/></div>
+                            <div class="layui-form-mid">段后</div>
+                        </div>
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">最多</label>
+                            <div class="layui-input-inline"><input class="layui-input" id="inline_max_inserts"
+                                                                   type="number" value="2"/></div>
+                            <div class="layui-form-mid">次</div>
+                        </div>
+                    </div>
+                    <div class="layui-form-item layui-form-text">
+                        <label class="layui-form-label">高级(JSON)</label>
+                        <div class="layui-input-block">
+                            <textarea class="layui-textarea" id="placements_textarea"
+                                      placeholder='可选：手动填写 JSON，会覆盖上面的可视化设置'></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+<script src="/app/admin/component/pear/pear.js"></script>
+<script>
+    layui.use(['form', 'layer'], function () {
+        var form = layui.form, layer = layui.layer, $ = layui.$;
+
+        function parsePlacements() {
+            try {
+                var txt = $('#placements_textarea').val().trim();
+                return txt ? JSON.parse(txt) : null;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function applyPlacements(p) {
+            if (!p) return;
+            var pos = p.positions || [];
+            $('#pos_sidebar').prop('checked', pos.indexOf('sidebar') >= 0);
+            $('#pos_inline').prop('checked', pos.indexOf('inline') >= 0).trigger('change');
+            if (p.interval) $('#inline_interval').val(p.interval);
+            if (p.start_after) $('#inline_start_after').val(p.start_after);
+            if (p.max_inserts) $('#inline_max_inserts').val(p.max_inserts);
+            if (p.google) {
+                if (p.google.format) $('#g_format').val(p.google.format);
+                if (typeof p.google.full_width_responsive !== 'undefined') $('#g_full').prop('checked', !!p.google.full_width_responsive);
+                if (p.google.style) $('#g_style').val(p.google.style);
+                if (p.google.layout_key) $('#g_layout_key').val(p.google.layout_key);
+            }
+            form.render();
+        }
+
+        function buildPlacements() {
+            var txt = $('#placements_textarea').val().trim();
+            if (txt) return txt; // 手写优先
+            var p = {};
+            var pos = [];
+            if ($('#pos_sidebar').prop('checked')) pos.push('sidebar');
+            if ($('#pos_inline').prop('checked')) pos.push('inline');
+            if (pos.length) p.positions = pos;
+            if ($('#pos_inline').prop('checked')) {
+                p.interval = parseInt($('#inline_interval').val() || '4') || 4;
+                p.start_after = parseInt($('#inline_start_after').val() || '2') || 2;
+                p.max_inserts = parseInt($('#inline_max_inserts').val() || '2') || 2;
+            }
+            if ($('select[name=type]').val() === 'google') {
+                p.google = {
+                    format: $('#g_format').val(),
+                    full_width_responsive: $('#g_full')[0].checked,
+                    style: $('#g_style').val().trim()
+                };
+                var lk = $('#g_layout_key').val().trim();
+                if (lk) p.google.layout_key = lk;
+            }
+            return JSON.stringify(p);
+        }
+
+        function updatePreview() {
+            var client = $('input[name=google_ad_client]').val().trim();
+            var slot = $('input[name=google_ad_slot]').val().trim();
+            var fmt = $('#g_format').val();
+            var full = $('#g_full')[0].checked;
+            var style = $('#g_style').val().trim() || 'display:block';
+            var code = '';
+            if (!client || !slot) {
+                code = '// 填写 Ad Client 与 Ad Slot 后显示代码示例';
+            } else {
+                code += '<script>(function(){if(!window.__adsbygoogleLoaded){var s=document.createElement("script");s.async=true;s.src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' + client + '";s.crossOrigin="anonymous";document.head.appendChild(s);window.__adsbygoogleLoaded=true;}})();<\/script>\n';
+                code += '<ins class="adsbygoogle" style="' + style + '" data-ad-client="' + client + '" data-ad-slot="' + slot + '"';
+                if (fmt === 'in-article') code += ' data-ad-format="fluid" data-ad-layout="in-article"';
+                else if (fmt === 'in-feed') {
+                    code += ' data-ad-format="fluid"';
+                    var lk = $('#g_layout_key').val().trim();
+                    if (lk) code += ' data-ad-layout-key="' + lk + '"';
+                } else code += ' data-ad-format="auto"';
+                if (full) code += ' data-full-width-responsive="true"';
+                code += '></ins>\n';
+                code += '<script>(adsbygoogle=window.adsbygoogle||[]).push({});<\/script>';
+            }
+            $('#ads-code').text(code);
+        }
+
+        function toggleType(v) {
+            $('#box-image').toggle(v === 'image');
+            $('#box-google').toggle(v === 'google');
+            $('#box-html').toggle(v === 'html');
+        }
+
+        form.on('select(ad-type)', function (data) {
+            toggleType(data.value);
+        });
+        toggleType($('select[name=type]').val());
+
+        $('#pos_inline').on('change', function () {
+            $('#inline-config').toggle(this.checked);
+        });
+        $('#g_format,#g_full,#g_style,#g_layout_key,input[name=google_ad_client],input[name=google_ad_slot]').on('input change', updatePreview);
+        $('#btn-fill-client').on('click', function () {
+            $.get('/app/admin/ads/config/get', function (res) {
+                if (res.code === 0 && res.data && res.data.client) {
+                    $('input[name=google_ad_client]').val(res.data.client);
+                    updatePreview();
+                } else {
+                    layer.msg('尚未配置全局 Ad Client');
+                }
+            });
+        });
+
+        // 打开全局配置（弹窗）
+        $('.btn-open-global-config').on('click', function () {
+            layer.open({
+                type: 2,
+                title: 'Google 广告全局配置',
+                area: ['760px', '560px'],
+                shadeClose: true,
+                content: '/app/admin/ads/config'
+            });
+        });
+
+        form.on('submit(submit)', function (obj) {
+            var fd = obj.field;
+            fd.enabled = fd.enabled ? 1 : 0;
+            fd.placements = buildPlacements();
+            var m = location.pathname.match(/\/ads\/edit\/(\d+)/);
+            var id = m ? m[1] : '';
+            $.post('/app/admin/ads/edit/' + id, fd, function (res) {
+                if (res.code === 0) {
+                    layer.msg('保存成功');
+                    setTimeout(function () {
+                        parent.layer.close(parent.layer.getFrameIndex(window.name));
+                        parent.layui.table.reload('ads-table');
+                    }, 600);
+                } else {
+                    layer.msg(res.msg || '保存失败');
+                }
+            });
+            return false;
+        });
+
+        $('#btn-cancel').on('click', function () {
+            var idx = parent.layer.getFrameIndex(window.name);
+            parent.layer.close(idx);
+        });
+
+        // 加载数据后再渲染
+        (function init() {
+            var m = location.pathname.match(/\/ads\/edit\/(\d+)/);
+            var id = m ? m[1] : '';
+            if (!id) return;
+            $('#ad-id').val(id);
+            $.get('/app/admin/ads/get/' + id, function (res) {
+                if (res.code === 0 && res.data) {
+                    var d = res.data;
+                    $('input[name=title]').val(d.title || '');
+                    $('select[name=type]').val(d.type || 'image');
+                    if (d.enabled) $('input[name=enabled]')[0].checked = !!d.enabled; else $('input[name=enabled]')[0].checked = false;
+                    $('input[name=image_url]').val(d.image_url || '');
+                    $('input[name=link_url]').val(d.link_url || '');
+                    $('select[name=link_target]').val(d.link_target || '_blank');
+                    $('textarea[name=html]').val(d.html || '');
+                    $('input[name=google_ad_client]').val(d.google_ad_client || '');
+                    $('input[name=google_ad_slot]').val(d.google_ad_slot || '');
+                    $('input[name=weight]').val(d.weight || 100);
+                    form.render();
+                    toggleType(d.type || 'image');
+                    if (d.placements) applyPlacements(d.placements);
+                    updatePreview();
+                } else {
+                    layer.msg(res.msg || '加载失败');
+                }
+            });
+        })();
+    });
+</script>
+</body>
+</html>

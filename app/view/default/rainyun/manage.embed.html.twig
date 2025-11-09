@@ -1,17 +1,18 @@
-<!-- Rainyun API 工具内容 -->
-<div id="pjax-sidebar-html" style="display:none">
-    {% if sidebar is defined and sidebar.widgets is defined %}
-        {% for widget in sidebar.widgets %}
-            {% if widget.enabled and widget.html is defined %}
-                <div class="sidebar-widget"
-                     data-widget-key="{{ widget.key ?? widget.id ?? widget.slug ?? widget.name ?? loop.index }}"
-                     data-widget-type="{{ widget.type ?? '' }}">
-                    {{ widget.html|raw }}
-                </div>
-            {% endif %}
-        {% endfor %}
-    {% endif %}
+<!-- Rainyun 管理嵌入视图（集成旧页面功能到控制台） -->
+<div class="mb-4 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+        <button type="button" id="ry-back-to-list"
+                class="px-3 py-1.5 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50">
+            ← 返回云应用列表
+        </button>
+        <button type="button" id="ry-back-to-console"
+                class="px-3 py-1.5 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50">
+            ⤺ 返回控制台
+        </button>
+    </div>
+    <div class="text-sm text-gray-500">管理应用与发布版本</div>
 </div>
+
 <div class="mb-8">
     <!-- 基础信息输入 -->
     <div class="mb-8 bg-gray-50 rounded-xl p-5 border border-gray-200">
@@ -92,7 +93,6 @@
 
         <!-- 配置表单 -->
         <form id="versionConfigForm" class="space-y-4">
-            <!-- 配置字段将通过JavaScript动态生成 -->
             <div id="configFields" class="space-y-4"></div>
         </form>
 
@@ -136,7 +136,7 @@
         </div>
     </div>
 
-    <!-- 应用详情表单 -->
+    <!-- 应用详情表单（旧页中的“应用信息”） -->
     <form id="appForm" class="space-y-6 hidden">
         <h2 class="text-xl font-semibold text-gray-800 mb-4">应用信息</h2>
 
@@ -232,7 +232,6 @@
     <!-- 操作结果提示 -->
     <div id="resultMessage" class="mt-6 p-4 rounded-lg hidden"></div>
 </div>
-
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -407,6 +406,11 @@
                                 versionSelection.classList.remove('hidden');
                             }
 
+                            // 通知控制台更新面包屑
+                            try {
+                                document.dispatchEvent(new CustomEvent('ry:manage:loaded', {detail: {app: appData}}));
+                            } catch (_) {
+                            }
                             showResult('应用详情获取成功');
                         } else {
                             showResult('无效的响应数据', false);
@@ -1713,7 +1717,7 @@
             const card = document.createElement('div');
             card.className = 'volume-new-card bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-2';
             card.innerHTML = `
-                <div class="flex justify-between items-center">
+<div class=\"flex justify-between items-center\">
                     <input type="text" class="vol-name px-3 py-2 border border-gray-300 rounded-lg flex-1 mr-3" placeholder="卷名称 name">
                     <button type="button" class="text-red-500 hover:text-red-700 transition-colors"><i class="fas fa-trash-alt"></i></button>
                 </div>
@@ -2656,25 +2660,36 @@
         });
     });
 </script>
+
 <script>
     (function () {
-        function injectSidebar() {
-            var t = document.getElementById('pjax-sidebar-html');
-            var c = document.getElementById('sidebar-container');
-            if (t && c) {
-                if (window.PJAX || window.jQuery) {
-                    try {
-                        document.dispatchEvent(new CustomEvent('pjax:sidebarReady'));
-                    } catch (_) {
-                    }
-                } else {
-                    c.innerHTML = t.innerHTML || '';
-                }
+        // Back 按钮
+        document.getElementById('ry-back-to-console')?.addEventListener('click', function () {
+            try {
+                document.querySelector('#ry-nav [data-tab="overview"]').click();
+            } catch (_) {
             }
-            c.innerHTML = t.innerHTML || '';
-        }
+        });
+        document.getElementById('ry-back-to-list')?.addEventListener('click', function () {
+            try {
+                document.querySelector('#ry-nav [data-tab="cloudapps"]').click();
+            } catch (_) {
+            }
+        });
 
-        injectSidebar();
-        document.addEventListener('page:ready', injectSidebar);
+        // 导出一个可被控制台调用的刷新函数
+        window.RY_manage_reload = function () {
+            try {
+                const appId = localStorage.getItem('rainyun_appId') || '';
+                const apiKey = localStorage.getItem('rainyun_apiKey') || localStorage.getItem('rainyun_api_key') || '';
+                const appIdInput = document.getElementById('appId');
+                const apiKeyInput = document.getElementById('apiKey');
+                const fetchBtn = document.getElementById('fetchAppData');
+                if (appId && appIdInput) appIdInput.value = appId;
+                if (apiKey && apiKeyInput) apiKeyInput.value = apiKey;
+                if (appId && apiKey && fetchBtn) fetchBtn.click();
+            } catch (_) {
+            }
+        };
     })();
 </script>

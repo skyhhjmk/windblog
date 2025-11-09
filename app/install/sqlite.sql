@@ -493,6 +493,42 @@ INSERT INTO wa_options (name, value, created_at, updated_at) VALUES
 
 INSERT INTO wa_roles (name, rules, created_at, updated_at) VALUES ('超级管理员', '*', '2022-08-13 16:15:01', '2022-12-23 12:05:07');
 
+-- 创建广告表
+CREATE TABLE IF NOT EXISTS ads
+(
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    title            TEXT    NOT NULL,
+    type             TEXT    NOT NULL DEFAULT 'image',
+    enabled          INTEGER NOT NULL DEFAULT 1,
+    image_url        TEXT             DEFAULT NULL,
+    link_url         TEXT             DEFAULT NULL,
+    link_target      TEXT             DEFAULT '_blank',
+    html             TEXT             DEFAULT NULL,
+    google_ad_client TEXT             DEFAULT NULL,
+    google_ad_slot   TEXT             DEFAULT NULL,
+    placements       TEXT             DEFAULT NULL,
+    weight           INTEGER          DEFAULT 100,
+    created_at       DATETIME         DEFAULT CURRENT_TIMESTAMP,
+    updated_at       DATETIME         DEFAULT CURRENT_TIMESTAMP,
+    deleted_at       DATETIME         DEFAULT NULL
+);
+
+-- 广告表索引
+CREATE INDEX IF NOT EXISTS idx_ads_enabled ON ads (enabled);
+CREATE INDEX IF NOT EXISTS idx_ads_weight ON ads (weight);
+
+-- 示例广告（侧边栏）
+INSERT INTO ads (title, type, enabled, image_url, link_url, link_target, html, google_ad_client, google_ad_slot,
+                 placements, weight, created_at, updated_at, deleted_at)
+VALUES ('雨云-高性价比云服务商', 'image', 1, 'https://www.rainyun.com/favicon.ico', 'https://www.rainyun.com/github_',
+        '_blank', NULL, NULL, NULL, '{"positions":["sidebar"]}', 100, datetime('now'), datetime('now'), NULL);
+
+-- 广告表管理表单
+INSERT INTO settings (key, value, created_at, updated_at)
+VALUES ('table_form_schema_ads',
+        '{"id":{"field":"id","comment":"主键","control":"inputNumber","form_show":false,"list_show":true,"enable_sort":true},"title":{"field":"title","comment":"标题","control":"input","form_show":true,"list_show":true,"searchable":true},"type":{"field":"type","comment":"类型","control":"select","control_args":"data:image:自定义图文,google:Google广告,html:自定义HTML","form_show":true,"list_show":true},"enabled":{"field":"enabled","comment":"启用","control":"switch","control_args":"lay-text:启用|禁用","form_show":true,"list_show":true},"image_url":{"field":"image_url","comment":"图片","control":"uploadImage","control_args":"url:/app/admin/media/upload","form_show":true,"list_show":false},"link_url":{"field":"link_url","comment":"链接","control":"input","form_show":true,"list_show":true},"link_target":{"field":"link_target","comment":"打开方式","control":"select","control_args":"data:_blank:新窗口,_self:本窗口","form_show":true,"list_show":true},"google_ad_client":{"field":"google_ad_client","comment":"Ad Client","control":"input","form_show":true,"list_show":false},"google_ad_slot":{"field":"google_ad_slot","comment":"Ad Slot","control":"input","form_show":true,"list_show":false},"html":{"field":"html","comment":"HTML代码","control":"textArea","form_show":true,"list_show":false},"placements":{"field":"placements","comment":"投放设置(JSON)","control":"textArea","form_show":true,"list_show":false},"weight":{"field":"weight","comment":"权重","control":"inputNumber","form_show":true,"list_show":true,"enable_sort":true}}',
+        '2022-08-15 00:00:00', '2022-12-23 15:28:13');
+
 INSERT INTO links (name, url, description, icon, image, sort_order, status, target, redirect_type, show_url, content,
                    email, note, seo_title, seo_keywords, seo_description, custom_fields, created_at, updated_at,
                    deleted_at)
