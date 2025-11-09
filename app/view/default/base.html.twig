@@ -984,9 +984,13 @@
         }
     </style>
     {% block extra_css %}{% endblock %}
+    {# 自定义嵌入代码：HEAD #}
+    {{ blog_config('embed_head', '', true)|raw }}
 </head>
 <body class="min-h-screen flex flex-col ambient-bg"
       style="background: linear-gradient(to bottom, #f7f9fc 0%, #eef2f7 100%);">
+{# 自定义嵌入代码：BODY 开始 #}
+{{ blog_config('embed_body_start', '', true)|raw }}
 <!-- 顶部导航 -->
 <header class="bg-white sticky top-0 z-10 glass glass-nav">
     <div class="container mx-auto px-3 sm:px-4 py-3 sm:py-4 flex justify-between items-center">
@@ -3245,5 +3249,7 @@
         }
     })();
 </script>
+{# 自定义嵌入代码：BODY 结束 #}
+{{ blog_config('embed_body_end', '', true)|raw }}
 </body>
 </html>

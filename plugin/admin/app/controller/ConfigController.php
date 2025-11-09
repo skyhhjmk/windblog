@@ -22,7 +22,7 @@ class ConfigController extends Base
      *
      * @var string[]
      */
-    protected $noNeedAuth = ['get', 'get_url_mode', 'get_site_info', 'get_seo_config'];
+    protected $noNeedAuth = ['get', 'get_url_mode', 'get_site_info', 'get_seo_config', 'get_embed_code_config'];
 
     /**
      * 账户设置
@@ -715,6 +715,41 @@ class ConfigController extends Base
             blog_config('seo_twitter_username', $seoConfig['seo_twitter_username'] ?? '', true, true, true);
             blog_config('seo_organization_name', $seoConfig['seo_organization_name'] ?? '', true, true, true);
             blog_config('seo_organization_logo', $seoConfig['seo_organization_logo'] ?? '', true, true, true);
+
+            return $this->json(0);
+        } catch (Throwable $e) {
+            return $this->json(1, $e->getMessage());
+        }
+    }
+
+    /**
+     * 获取嵌入代码配置
+     */
+    public function get_embed_code_config(): Response
+    {
+        try {
+            $config = [
+                'embed_head' => blog_config('embed_head', '', true),
+                'embed_body_start' => blog_config('embed_body_start', '', true),
+                'embed_body_end' => blog_config('embed_body_end', '', true),
+            ];
+
+            return json($config);
+        } catch (Throwable $e) {
+            return $this->json(1, $e->getMessage());
+        }
+    }
+
+    /**
+     * 设置嵌入代码配置
+     */
+    public function set_embed_code_config(Request $request): Response
+    {
+        try {
+            $post = $request->post();
+            blog_config('embed_head', $post['embed_head'] ?? '', true, true, true);
+            blog_config('embed_body_start', $post['embed_body_start'] ?? '', true, true, true);
+            blog_config('embed_body_end', $post['embed_body_end'] ?? '', true, true, true);
 
             return $this->json(0);
         } catch (Throwable $e) {
