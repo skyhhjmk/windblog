@@ -102,7 +102,7 @@
                     <ol class="list-decimal pl-5 text-gray-600 space-y-1 text-sm">
                         <li>进入“控制台设置”，填写 API Base 与 API Key，点击保存。</li>
                         <li>切换到“云应用”模块，浏览与管理你的 App。</li>
-                        <li>如需更多操作（创建/更新/删除/发布版本等），请提供相应 API。</li>
+                        <li>在“云应用”模块可新建应用、查看与管理版本。</li>
                     </ol>
                 </div>
             </div>
@@ -157,7 +157,6 @@
                             新建应用
                         </button>
                     </div>
-                    <div class="text-sm text-gray-500">需要更多操作？请提供相关 API。</div>
                 </div>
                 <div id="ry-empty"
                      class="hidden p-4 border border-yellow-200 bg-yellow-50 text-yellow-800 rounded-md text-sm"></div>
@@ -505,17 +504,7 @@
                 empty.classList.remove('hidden');
                 empty.innerHTML = `
         <div class="font-medium mb-1">无法加载应用列表：${e.message || e}</div>
-        <div class="text-xs leading-6">
-          请提供以下 API（地址、方法、请求、响应示例）：
-          <ul class="list-disc pl-5 mt-1">
-            <li>GET 列出 App：分页、搜索参数（返回 id/name/title/versions/updated_at 等）</li>
-            <li>GET 获取 App 详情：已使用 /product/rca/appstore/{appId}/</li>
-            <li>GET 获取发布详情：/product/rca/appstore/{appId}/release?version=...</li>
-            <li>POST/PUT/PATCH 更新 App 信息（如标题/描述/标签等）</li>
-            <li>POST 创建/发布新版本（含配置数据）</li>
-            <li>DELETE 删除 App 或版本（如需要）</li>
-          </ul>
-        </div>`;
+        <div class="text-xs leading-6 text-gray-600">请检查网络、API Base 或 API Key 配置后重试。</div>`;
             }
         }
 
