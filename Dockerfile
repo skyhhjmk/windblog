@@ -99,9 +99,6 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg && \
     docker-php-ext-install -j"$(nproc)" pdo_pgsql pdo_mysql pdo_sqlite curl && \
     pecl install redis imagick event && \
     docker-php-ext-enable redis imagick && \
-    rm -f "$PHP_INI_DIR/conf.d/docker-php-ext-sockets.ini" "$PHP_INI_DIR/conf.d/docker-php-ext-event.ini" && \
-    echo "extension=sockets" > "$PHP_INI_DIR/conf.d/10-sockets.ini" && \
-    echo "extension=event"   > "$PHP_INI_DIR/conf.d/20-event.ini" && \
     rm -rf /tmp/* /var/tmp/*
 
 # 复制应用与 vendor（vendor 来自 builder 以复用缓存）
@@ -124,7 +121,10 @@ RUN cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" && \
       echo 'opcache.jit=tracing'; \
       echo 'opcache.jit_buffer_size=256M'; \
       echo 'pcre.jit=1'; \
-    } > "$PHP_INI_DIR/conf.d/zz-opcache.ini"
+    } > "$PHP_INI_DIR/conf.d/zz-opcache.ini" && \
+    rm -f "$PHP_INI_DIR/conf.d"/*-event.ini "$PHP_INI_DIR/conf.d"/*-sockets.ini "$PHP_INI_DIR/conf.d"/docker-php-ext-event.ini "$PHP_INI_DIR/conf.d"/docker-php-ext-sockets.ini && \
+    echo "extension=sockets" > "$PHP_INI_DIR/conf.d/00-sockets.ini" && \
+    echo "extension=event"   > "$PHP_INI_DIR/conf.d/99-event.ini"
 
 # 清理 apt 缓存
 RUN rm -rf /var/lib/apt/lists/*

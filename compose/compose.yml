@@ -1,7 +1,7 @@
 services:
   # 应用服务
   app:
-    image: ghcr.1ms.run/skyhhjmk/windblog:latest
+    image: hhjmk/windblog:latest
     container_name: windblog_app
     user: "1000:1000"  # 非 root 用户
     ports:
@@ -27,6 +27,7 @@ services:
       - LOGSTASH_PORT=5000
       - ENABLE_LOGSTASH=${ENABLE_LOGSTASH}
       - IN_CONTAINER=true # 注意：容器内必须设置此环境变量
+      - DEPLOYMENT_TYPE=${DEPLOYMENT_TYPE}
     depends_on:
       postgres:
         condition: service_healthy
