@@ -134,6 +134,9 @@ class MailWorker
                 throw new RuntimeException('Message body invalid JSON');
             }
 
+            // 刷新平台配置，确保使用最新的管理员保存结果（读取走缓存，开销极低）
+            $this->providers = $this->loadProviders();
+
             // 指定平台优先
             $specified = isset($data['provider']) ? (string) $data['provider'] : null;
             if ($specified !== null) {
@@ -375,6 +378,9 @@ class MailWorker
         // 过滤可用
         $candidates = [];
         foreach ($this->providers as $id => $p) {
+            // 尝试恢复已过期的惩罚状态（每次选择前检查一次）
+            $this->tryRecover($id);
+
             if (!empty($exclude) && in_array($id, $exclude, true)) {
                 continue;
             }

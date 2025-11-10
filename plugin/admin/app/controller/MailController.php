@@ -124,6 +124,22 @@ class MailController
             // 直接调用 MailWorker 的发送方法（构造一次实例）
             $worker = new MailWorker();
             $ref = new ReflectionClass($worker);
+
+            // 注入最新的 providers 配置到 MailWorker 实例，避免 provider-test 因未初始化而失败
+            $raw = blog_config('mail_providers', '[]', false, true, false);
+            $list = is_string($raw) ? json_decode($raw, true) : $raw;
+            $map = [];
+            if (is_array($list)) {
+                foreach ($list as $item) {
+                    if (is_array($item) && !empty($item['id'])) {
+                        $map[(string) $item['id']] = $item;
+                    }
+                }
+            }
+            $prop = $ref->getProperty('providers');
+            $prop->setAccessible(true);
+            $prop->setValue($worker, $map);
+
             $method = $ref->getMethod('sendViaProvider');
             $method->setAccessible(true);
             $ok = (bool) $method->invoke($worker, $data, $provider);
