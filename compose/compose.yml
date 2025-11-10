@@ -11,6 +11,7 @@ services:
       - ./data/windblog/uploads:/app/public/uploads
       - ./data/windblog/static_cache:/app/public/cache
     environment:
+      - DB_DEFAULT=pgsql
       - DB_PGSQL_HOST=postgres
       - DB_PGSQL_PORT=5432
       - DB_PGSQL_DATABASE=${POSTGRES_DB}

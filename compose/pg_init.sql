@@ -130,26 +130,26 @@ COMMENT ON COLUMN categories.deleted_at IS '删除时间';
 -- 创建文章表
 CREATE TABLE IF NOT EXISTS posts
 (
-    id             BIGSERIAL PRIMARY KEY,
-    title          VARCHAR(255)             NOT NULL,
-    slug           VARCHAR(255)             NOT NULL,
-    content_type   VARCHAR(10)              NOT NULL DEFAULT 'markdown',
-    content        TEXT                     NOT NULL,
-    excerpt        TEXT                              DEFAULT NULL,
-    ai_summary TEXT DEFAULT NULL,
-    seo_title VARCHAR(255) DEFAULT NULL,
-    seo_description TEXT DEFAULT NULL,
-    seo_keywords VARCHAR(500) DEFAULT NULL,
-    status         VARCHAR(15)              NOT NULL DEFAULT 'draft',
-    visibility     VARCHAR(20)              NOT NULL DEFAULT 'public',
-    password       VARCHAR(255)                      DEFAULT NULL,
-    featured       BOOLEAN                  NOT NULL DEFAULT false,
-    allow_comments BOOLEAN                  NOT NULL DEFAULT true,
-    comment_count  INTEGER                  NOT NULL DEFAULT 0,
-    published_at   TIMESTAMP WITH TIME ZONE NULL     DEFAULT NULL,
-    created_at     TIMESTAMP WITH TIME ZONE          DEFAULT CURRENT_TIMESTAMP,
-    updated_at     TIMESTAMP WITH TIME ZONE          DEFAULT CURRENT_TIMESTAMP,
-    deleted_at     TIMESTAMP WITH TIME ZONE NULL     DEFAULT NULL,
+    id              BIGSERIAL PRIMARY KEY,
+    title           VARCHAR(255)             NOT NULL,
+    slug            VARCHAR(255)             NOT NULL,
+    content_type    VARCHAR(10)              NOT NULL DEFAULT 'markdown',
+    content         TEXT                     NOT NULL,
+    excerpt         TEXT                              DEFAULT NULL,
+    ai_summary      TEXT                              DEFAULT NULL,
+    seo_title       VARCHAR(255)                      DEFAULT NULL,
+    seo_description TEXT                              DEFAULT NULL,
+    seo_keywords    VARCHAR(500)                      DEFAULT NULL,
+    status          VARCHAR(15)              NOT NULL DEFAULT 'draft',
+    visibility      VARCHAR(20)              NOT NULL DEFAULT 'public',
+    password        VARCHAR(255)                      DEFAULT NULL,
+    featured        BOOLEAN                  NOT NULL DEFAULT false,
+    allow_comments  BOOLEAN                  NOT NULL DEFAULT true,
+    comment_count   INTEGER                  NOT NULL DEFAULT 0,
+    published_at    TIMESTAMP WITH TIME ZONE NULL     DEFAULT NULL,
+    created_at      TIMESTAMP WITH TIME ZONE          DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP WITH TIME ZONE          DEFAULT CURRENT_TIMESTAMP,
+    deleted_at      TIMESTAMP WITH TIME ZONE NULL     DEFAULT NULL,
     UNIQUE (slug),
     CONSTRAINT chk_posts_content_type CHECK (content_type IN ('markdown', 'html', 'text', 'visual')),
     CONSTRAINT chk_posts_status CHECK (status IN ('draft', 'published', 'archived')),
@@ -446,24 +446,24 @@ COMMENT ON COLUMN import_jobs.completed_at IS '完成时间';
 -- 创建评论表
 CREATE TABLE IF NOT EXISTS comments
 (
-    id          BIGSERIAL PRIMARY KEY,
-    post_id     BIGINT                   NOT NULL,
-    user_id     INTEGER                           DEFAULT NULL,
-    parent_id   BIGINT                            DEFAULT NULL,
-    guest_name  VARCHAR(255)                      DEFAULT NULL,
-    guest_email VARCHAR(255)                      DEFAULT NULL,
-    content     TEXT                     NOT NULL,
-    quoted_data TEXT                              DEFAULT NULL,
-    status      VARCHAR(10)              NOT NULL DEFAULT 'pending',
-    ai_moderation_result     VARCHAR(20)   DEFAULT NULL,
-    ai_moderation_reason     TEXT          DEFAULT NULL,
-    ai_moderation_confidence DECIMAL(3, 2) DEFAULT NULL,
-    ai_moderation_categories JSONB         DEFAULT NULL,
-    ip_address  VARCHAR(45)                       DEFAULT NULL,
-    user_agent  VARCHAR(255)                      DEFAULT NULL,
-    created_at  TIMESTAMP WITH TIME ZONE          DEFAULT CURRENT_TIMESTAMP,
-    updated_at  TIMESTAMP WITH TIME ZONE          DEFAULT CURRENT_TIMESTAMP,
-    deleted_at  TIMESTAMP WITH TIME ZONE NULL     DEFAULT NULL,
+    id                       BIGSERIAL PRIMARY KEY,
+    post_id                  BIGINT                   NOT NULL,
+    user_id                  INTEGER                           DEFAULT NULL,
+    parent_id                BIGINT                            DEFAULT NULL,
+    guest_name               VARCHAR(255)                      DEFAULT NULL,
+    guest_email              VARCHAR(255)                      DEFAULT NULL,
+    content                  TEXT                     NOT NULL,
+    quoted_data              TEXT                              DEFAULT NULL,
+    status                   VARCHAR(10)              NOT NULL DEFAULT 'pending',
+    ai_moderation_result     VARCHAR(20)                       DEFAULT NULL,
+    ai_moderation_reason     TEXT                              DEFAULT NULL,
+    ai_moderation_confidence DECIMAL(3, 2)                     DEFAULT NULL,
+    ai_moderation_categories JSONB                             DEFAULT NULL,
+    ip_address               VARCHAR(45)                       DEFAULT NULL,
+    user_agent               VARCHAR(255)                      DEFAULT NULL,
+    created_at               TIMESTAMP WITH TIME ZONE          DEFAULT CURRENT_TIMESTAMP,
+    updated_at               TIMESTAMP WITH TIME ZONE          DEFAULT CURRENT_TIMESTAMP,
+    deleted_at               TIMESTAMP WITH TIME ZONE NULL     DEFAULT NULL,
     CONSTRAINT chk_comments_status CHECK (status IN ('pending', 'approved', 'spam', 'trash')),
     CONSTRAINT comments_post_id_foreign FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE,
     CONSTRAINT comments_user_id_foreign FOREIGN KEY (user_id) REFERENCES wa_users (id) ON DELETE SET NULL,
@@ -1739,12 +1739,48 @@ VALUES (default, '雨云',
         '# 超高性价比云服务商，使用优惠码github注册并绑定微信即可获得5折优惠',
         'admin@biliwind.com',
         '',
-        null,
         '雨云',
         '雨云,云服务器,服务器,性价比',
         '超高性价比云服务商，使用优惠码github注册并绑定微信即可获得5折优惠',
-        null, '2025-9-26 11:00:00+08', '2022-12-23 12:05:07',
+        '{}',
+        '2025-9-26 11:00:00+08',
+        '2022-12-23 12:05:07',
         null);
+
+-- 创建广告表
+CREATE TABLE IF NOT EXISTS ads
+(
+    id               BIGSERIAL PRIMARY KEY,
+    title            VARCHAR(255) NOT NULL,
+    type             VARCHAR(20)  NOT NULL    DEFAULT 'image',
+    enabled          BOOLEAN      NOT NULL    DEFAULT TRUE,
+    image_url        VARCHAR(512)             DEFAULT NULL,
+    link_url         VARCHAR(512)             DEFAULT NULL,
+    link_target      VARCHAR(20)              DEFAULT '_blank',
+    html             TEXT                     DEFAULT NULL,
+    google_ad_client VARCHAR(64)              DEFAULT NULL,
+    google_ad_slot   VARCHAR(64)              DEFAULT NULL,
+    placements       JSONB                    DEFAULT NULL,
+    weight           INTEGER                  DEFAULT 100,
+    created_at       TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at       TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    deleted_at       TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+    CONSTRAINT chk_ads_type CHECK (type IN ('image', 'google', 'html'))
+);
+
+-- 广告表索引
+CREATE INDEX IF NOT EXISTS idx_ads_enabled ON ads (enabled);
+CREATE INDEX IF NOT EXISTS idx_ads_weight ON ads (weight);
+
+-- 示例广告（侧边栏）
+INSERT INTO public.ads (title, type, enabled, image_url, link_url, link_target, html, google_ad_client, google_ad_slot,
+                        placements, weight, created_at, updated_at, deleted_at)
+VALUES ('雨云-高性价比云服务商', 'image', TRUE, 'https://www.rainyun.com/favicon.ico',
+        'https://www.rainyun.com/github_', '_blank', NULL, NULL, NULL, '{
+    "positions": [
+      "sidebar"
+    ]
+  }'::jsonb, 100, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, NULL);
 
 INSERT INTO settings (id, key, value, "group", created_at, updated_at)
 VALUES (default, 'rabbitmq_host', '"rabbitmq"', 'general', '2025-10-16 04:01:11.000000 +00:00',
