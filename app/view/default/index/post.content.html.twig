@@ -97,9 +97,11 @@
                     }
                 }
 
-                /* Drawer (absolute in article) */
+                /* Drawer (absolute inside sticky wrap, anchored to .p-6 right) */
                 #toc-drawer {
                     position: absolute;
+                    top: 0;
+                    right: calc(42px + 8px); /* 按钮宽度 + 间距 */
                     z-index: 8;
                     width: 300px;
                     max-height: 60vh;
@@ -109,6 +111,7 @@
                     box-shadow: 0 20px 40px rgba(0, 0, 0, .12);
                     display: none;
                     overflow: hidden;
+                    pointer-events: auto;
                 }
 
                 #toc-drawer.active {
@@ -256,17 +259,6 @@
                 }
             </style>
             <div id="toc-rail" aria-hidden="true"></div>
-            <aside id="toc-drawer" role="complementary" aria-label="文章目录">
-                <div class="toc-header">
-                    <div class="toc-title">文章目录</div>
-                    <div class="toc-actions">
-                        <button id="toc-expand-all" type="button">展开</button>
-                        <button id="toc-collapse-all" type="button">折叠</button>
-                        <button id="toc-close" type="button">关闭</button>
-                    </div>
-                </div>
-                <div id="toc-list-desktop" class="toc-body"></div>
-            </aside>
 
             <!-- 文章内容 -->
             <div class="p-6">
@@ -274,6 +266,17 @@
                     <button id="toc-fab" title="文章目录" aria-label="文章目录">
                         <i class="fas fa-list-ul"></i>
                     </button>
+                    <aside id="toc-drawer" role="complementary" aria-label="文章目录">
+                        <div class="toc-header">
+                            <div class="toc-title">文章目录</div>
+                            <div class="toc-actions">
+                                <button id="toc-expand-all" type="button">展开</button>
+                                <button id="toc-collapse-all" type="button">折叠</button>
+                                <button id="toc-close" type="button">关闭</button>
+                            </div>
+                        </div>
+                        <div id="toc-list-desktop" class="toc-body"></div>
+                    </aside>
                 </div>
                 {% if post.ai_summary %}
                     <!-- AI摘要块（深色模式适配） -->
@@ -1115,24 +1118,11 @@
                             rail.style.height = railH + 'px';
                             railHVal = rail.style.height;
                         }
-                        // Drawer（与 FAB 垂直对齐，贴右）
-                        let drawerLeftVal = null, drawerTopVal = null;
+                        // Drawer：固定到 .p-6 右侧边缘（由 CSS 负责 right: calc(42px + 8px); top:0），此处仅清理可能的旧样式
                         if (drawer) {
-                            const dw = drawer.offsetWidth || 300;
-                            let left = Math.round(rightInside - dw - 8);
-                            left = Math.max(8, Math.min(left, artW - dw - 8));
-                            drawer.style.left = left + 'px';
-                            drawerLeftVal = drawer.style.left;
-                            drawer.style.right = 'auto';
-                            // 与 FAB 垂直对齐（读取实时几何而非依赖 style.top）
-                            if (fab) {
-                                const fabRect = fab.getBoundingClientRect();
-                                const topInside = Math.round((fabRect.top - artRect.top) + 4);
-                                drawer.style.top = topInside + 'px';
-                            } else {
-                                drawer.style.top = Math.round(anchorTop + 12) + 'px';
-                            }
-                            drawerTopVal = drawer.style.top;
+                            drawer.style.left = 'auto';
+                            drawer.style.right = 'calc(42px + 8px)';
+                            drawer.style.top = '0px';
                         }
                     } catch (_) {
                     }
