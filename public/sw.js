@@ -5,11 +5,13 @@
  * - CDN resources (cross-origin from allowlist): Cache First (opaque allowed)
  * - Versioned caches with cleanup on activate
  */
-const SW_VERSION = 'v1.2.6';
+const SW_VERSION = 'v1.2.8';
 const CACHE_PAGES = `pages-${SW_VERSION}`;
 const CACHE_STATIC = `static-${SW_VERSION}`;
 const CACHE_CDN = `cdn-${SW_VERSION}`;
+const CACHE_API = `api-${SW_VERSION}`;
 const SLOW_NETWORK_THRESHOLD_MS = 2000;
+const API_CACHE_MAX_AGE = 5 * 60 * 1000; // API 缓存最长 5 分钟
 
 const PRECACHE_URLS = ['/'];
 
@@ -26,6 +28,18 @@ function isStaticPath(url) {
     const ext = url.pathname.split('.').pop().toLowerCase();
     const staticExts = ['css', 'js', 'mjs', 'json', 'map', 'png', 'jpg', 'jpeg', 'webp', 'gif', 'svg', 'ico', 'avif', 'woff', 'woff2', 'ttf', 'otf', 'eot', 'mp3', 'mp4', 'webm', 'ogg'];
     return staticExts.includes(ext);
+}
+
+function isApiPath(url) {
+    // API 路径：/captcha/config, /comment/list/*, /user/profile/api 等
+    const apiPaths = [
+        '/captcha/config',
+        '/captcha/image',
+        '/comment/list/',
+        '/comment/status/',
+        '/user/profile/api'
+    ];
+    return apiPaths.some(p => url.pathname.startsWith(p));
 }
 
 function isCdn(url) {
@@ -56,6 +70,109 @@ async function cacheFirst(req, cacheName) {
     } catch (err) {
         return cached || new Response('', {status: 408, statusText: 'Offline'});
     }
+}
+
+// 网络优先但带超时的 API 缓存策略（Stale While Revalidate with timeout）
+async function apiCacheStrategy(req, event) {
+    const cache = await caches.open(CACHE_API);
+    const url = new URL(req.url);
+
+    // 创建网络请求 Promise（带超时）
+    const networkPromise = (async () => {
+        try {
+            const res = await fetch(req);
+            if (res && res.ok) {
+                // 为响应添加时间戳
+                const cloned = res.clone();
+                const headers = new Headers(cloned.headers);
+                headers.set('sw-cached-at', Date.now().toString());
+                const newRes = new Response(cloned.body, {
+                    status: cloned.status,
+                    statusText: cloned.statusText,
+                    headers: headers
+                });
+                cache.put(req, newRes.clone());
+            }
+            return res;
+        } catch (err) {
+            return null;
+        }
+    })();
+
+    // 1.5 秒超时竞速（API 要求更快响应）
+    const timeoutPromise = new Promise(resolve => {
+        setTimeout(() => resolve(null), 1500);
+    });
+
+    const raced = await Promise.race([networkPromise, timeoutPromise]);
+
+    // 网络快速返回则直接使用
+    if (raced) {
+        return raced;
+    }
+
+    // 网络慢或失败，尝试使用缓存
+    const cached = await cache.match(req, {ignoreVary: true});
+    if (cached) {
+        // 检查缓存是否过期
+        const cachedAt = cached.headers.get('sw-cached-at');
+        const isExpired = cachedAt ? (Date.now() - parseInt(cachedAt)) > API_CACHE_MAX_AGE : true;
+
+        if (!isExpired) {
+            // 后台继续更新
+            event.waitUntil((async () => {
+                try {
+                    const res = await networkPromise;
+                    if (res && res.ok) {
+                        const headers = new Headers(res.headers);
+                        headers.set('sw-cached-at', Date.now().toString());
+                        const newRes = new Response(res.body, {
+                            status: res.status,
+                            statusText: res.statusText,
+                            headers: headers
+                        });
+                        await cache.put(req, newRes);
+                    }
+                } catch (_) {
+                }
+            })());
+
+            // 发送提示
+            if (event) {
+                event.waitUntil(notifyClient(event, {
+                    type: 'SHOW_STALE_NOTICE',
+                    reason: 'slow_api',
+                    message: '网络欠佳，已使用缓存数据。'
+                }));
+            }
+            return cached;
+        }
+    }
+
+    // 无有效缓存，继续等待网络
+    try {
+        const res = await networkPromise;
+        if (res) return res;
+    } catch (_) {
+    }
+
+    // 网络完全失败，返回缓存（即使过期）或空响应
+    if (cached) {
+        if (event) {
+            event.waitUntil(notifyClient(event, {
+                type: 'SHOW_STALE_NOTICE',
+                reason: 'offline_api',
+                message: '当前离线，已使用旧缓存数据。'
+            }));
+        }
+        return cached;
+    }
+
+    // 完全无法获取数据，返回空的 JSON 响应
+    return new Response(JSON.stringify({code: -1, msg: '网络不可用', data: null}), {
+        status: 200,
+        headers: {'Content-Type': 'application/json; charset=utf-8'}
+    });
 }
 
 async function notifyClient(event, payload) {
@@ -306,7 +423,7 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', (event) => {
     event.waitUntil((async () => {
         const keys = await caches.keys();
-        const allow = new Set([CACHE_PAGES, CACHE_STATIC, CACHE_CDN]);
+        const allow = new Set([CACHE_PAGES, CACHE_STATIC, CACHE_CDN, CACHE_API]);
         await Promise.all(keys.map(k => {
             if (!allow.has(k)) return caches.delete(k);
         }));
@@ -344,83 +461,141 @@ self.addEventListener('fetch', (event) => {
         // 检查是否为骨架屏绕过请求
         const isInstantBypass = req.headers.get('x-instant-bypass') === '1' || url.searchParams.has('_instant_bypass') || url.searchParams.has('no_instant');
         if (isPjaxLike || isInstantBypass) {
-            // PJAX/骨架屏请求：优先网络，离线时回退到缓存
+            // PJAX/骨架屏请求：使用网络优先策略，支持慢网缓存回退和网络不佳提示
             event.respondWith((async () => {
                 const cache = await caches.open(CACHE_PAGES);
+                let wasTimeout = false;
+                let networkFailed = false;
 
-                // 尝试网络请求（在线时必须优先网络）
+                // 创建网络请求 Promise（带超时检测）
+                const networkPromise = (async () => {
+                    try {
+                        const res = await fetch(req);
+                        // 如果是真实页面（非骨架页），缓存它
+                        if (res && res.ok) {
+                            try {
+                                const ct = res.headers.get('content-type') || '';
+                                if (ct.includes('text/html')) {
+                                    const copy = res.clone();
+                                    const html = await copy.text();
+                                    const isSkeleton = html.length < 2000 && html.indexOf('skeleton_page') !== -1;
+
+                                    // 对于非骨架页，缓存到原始 URL（清除特殊参数）
+                                    if (!isSkeleton) {
+                                        try {
+                                            const cleanUrl = new URL(url);
+                                            cleanUrl.searchParams.delete('_instant_bypass');
+                                            cleanUrl.searchParams.delete('_pjax');
+                                            cleanUrl.searchParams.delete('t');
+                                            cleanUrl.searchParams.delete('no_instant');
+                                            const cleanReq = new Request(cleanUrl.toString(), {credentials: req.credentials});
+                                            cache.put(cleanReq, res.clone());
+                                        } catch (_) {
+                                        }
+                                    }
+                                }
+                            } catch (_) {
+                            }
+                        }
+                        return res;
+                    } catch (err) {
+                        return null;
+                    }
+                })();
+
+                // 慢网检测：2秒超时竞速
+                const timeoutPromise = new Promise(resolve => {
+                    setTimeout(() => resolve(null), SLOW_NETWORK_THRESHOLD_MS);
+                });
+
+                const raced = await Promise.race([networkPromise, timeoutPromise]);
+
+                // 如果网络在2秒内返回，直接使用
+                if (raced) {
+                    return raced;
+                }
+
+                // 网络超时或失败，尝试使用缓存
+                wasTimeout = !raced;
+
+                // 尝试匹配原始 URL（清除所有特殊参数）
+                let cached = null;
                 try {
-                    const res = await fetch(req);
-                    // 如果是真实页面（非骨架页），缓存它
-                    if (res && res.ok) {
+                    const cleanUrl = new URL(url);
+                    cleanUrl.searchParams.delete('_instant_bypass');
+                    cleanUrl.searchParams.delete('_pjax');
+                    cleanUrl.searchParams.delete('t');
+                    cleanUrl.searchParams.delete('no_instant');
+                    const cleanReq = new Request(cleanUrl.toString(), {credentials: req.credentials});
+                    cached = await cache.match(cleanReq, {ignoreVary: true, ignoreSearch: true});
+                } catch (_) {
+                }
+
+                // 如果没找到，再尝试匹配带参数的请求
+                if (!cached) {
+                    cached = await cache.match(req, {ignoreVary: true, ignoreSearch: false});
+                }
+
+                if (cached) {
+                    // 后台继续等待网络，更新缓存
+                    event.waitUntil((async () => {
                         try {
-                            const ct = res.headers.get('content-type') || '';
-                            if (ct.includes('text/html')) {
-                                const copy = res.clone();
-                                const html = await copy.text();
-                                const isSkeleton = html.length < 2000 && html.indexOf('skeleton_page') !== -1;
-                                if (!isSkeleton && isInstantBypass) {
-                                    // 缓存真实页面到原始 URL（不含参数）
-                                    try {
-                                        const cleanUrl = new URL(url);
-                                        cleanUrl.searchParams.delete('_instant_bypass');
-                                        cleanUrl.searchParams.delete('t');
-                                        cleanUrl.searchParams.delete('no_instant');
-                                        const cleanReq = new Request(cleanUrl.toString(), {credentials: req.credentials});
-                                        cache.put(cleanReq, res.clone());
-                                    } catch (_) {
+                            const res = await networkPromise;
+                            if (res && res.ok) {
+                                const ct = res.headers.get('content-type') || '';
+                                if (ct.includes('text/html')) {
+                                    const copy = res.clone();
+                                    const html = await copy.text();
+                                    const isSkeleton = html.length < 2000 && html.indexOf('skeleton_page') !== -1;
+                                    if (!isSkeleton) {
+                                        try {
+                                            const cleanUrl = new URL(url);
+                                            cleanUrl.searchParams.delete('_instant_bypass');
+                                            cleanUrl.searchParams.delete('_pjax');
+                                            cleanUrl.searchParams.delete('t');
+                                            cleanUrl.searchParams.delete('no_instant');
+                                            const cleanReq = new Request(cleanUrl.toString(), {credentials: req.credentials});
+                                            await cache.put(cleanReq, res.clone());
+                                        } catch (_) {
+                                        }
                                     }
                                 }
                             }
                         } catch (_) {
                         }
-                    }
-                    return res;
-                } catch (err) {
-                    // 网络失败（离线），尝试从缓存获取
-                    let cached = null;
+                    })());
 
-                    // 尝试匹配原始 URL（清除所有特殊参数）
-                    try {
-                        const cleanUrl = new URL(url);
-                        cleanUrl.searchParams.delete('_instant_bypass');
-                        cleanUrl.searchParams.delete('_pjax');
-                        cleanUrl.searchParams.delete('t');
-                        cleanUrl.searchParams.delete('no_instant');
-                        const cleanReq = new Request(cleanUrl.toString(), {credentials: req.credentials});
-                        cached = await cache.match(cleanReq, {ignoreVary: true, ignoreSearch: true});
-                    } catch (_) {
-                    }
-
-                    // 如果没找到，再尝试匹配带参数的请求
-                    if (!cached) {
-                        cached = await cache.match(req, {ignoreVary: true, ignoreSearch: false});
-                    }
-
-                    if (cached) {
-                        // 发送通知到页面
-                        notifyClient(event, {
-                            type: 'SHOW_STALE_NOTICE',
-                            reason: 'offline_page_cache',
-                            message: '当前离线，已为您展示该页面的缓存副本。'
-                        });
-                        return cached;
-                    }
-
-                    // 无缓存：PJAX 请求返回 200 状态 + 离线提示片段，普通请求返回完整页面
-                    if (isPjaxLike) {
-                        notifyClient(event, {
-                            type: 'SHOW_STALE_NOTICE',
-                            reason: 'offline_no_cache',
-                            message: '当前离线，且该页面没有缓存。'
-                        });
-                        return new Response('<div style="padding:40px 20px;text-align:center;"><div style="font-size:48px;margin-bottom:16px;opacity:0.6">🚫</div><div style="font-size:18px;font-weight:600;color:#1f2937;margin-bottom:8px">页面不可用</div><div style="font-size:14px;color:#6b7280;line-height:1.6">当前离线，且该页面没有缓存。<br>请检查网络连接后再试。</div></div>', {
-                            status: 200,
-                            headers: {'Content-Type': 'text/html; charset=utf-8'}
-                        });
-                    }
-                    return createOfflinePage();
+                    // 发送网络欠佳提示
+                    event.waitUntil(notifyClient(event, {
+                        type: 'SHOW_STALE_NOTICE',
+                        reason: 'slow_network',
+                        message: '网络欠佳，已为您展示缓存副本。'
+                    }));
+                    return cached;
                 }
+
+                // 无缓存：继续等待网络
+                try {
+                    const res = await networkPromise;
+                    if (res) return res;
+                    networkFailed = true;
+                } catch (_) {
+                    networkFailed = true;
+                }
+
+                // 网络完全失败且无缓存：PJAX 请求返回 200 状态 + 离线提示片段，普通请求返回完整页面
+                if (isPjaxLike) {
+                    event.waitUntil(notifyClient(event, {
+                        type: 'SHOW_STALE_NOTICE',
+                        reason: 'offline_no_cache',
+                        message: '当前离线，且该页面没有缓存。'
+                    }));
+                    return new Response('<div style="padding:40px 20px;text-align:center;"><div style="font-size:48px;margin-bottom:16px;opacity:0.6">🚫</div><div style="font-size:18px;font-weight:600;color:#1f2937;margin-bottom:8px">页面不可用</div><div style="font-size:14px;color:#6b7280;line-height:1.6">当前离线，且该页面没有缓存。<br>请检查网络连接后再试。</div></div>', {
+                        status: 200,
+                        headers: {'Content-Type': 'text/html; charset=utf-8'}
+                    });
+                }
+                return createOfflinePage();
             })());
             return;
         }
@@ -466,6 +641,12 @@ self.addEventListener('fetch', (event) => {
     // 保持原始请求（含 CORS 与 SRI 校验），避免破坏 integrity
     if (isCdn(url)) {
         event.respondWith(cacheFirst(req, CACHE_CDN));
+        return;
+    }
+
+    // API 请求：网络优先 + 超时缓存回退
+    if (isSameOrigin(url) && isApiPath(url)) {
+        event.respondWith(apiCacheStrategy(req, event));
         return;
     }
 

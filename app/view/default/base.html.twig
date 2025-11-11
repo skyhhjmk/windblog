@@ -1451,11 +1451,22 @@
             // 侧边栏切换动画（统一右滑出 → 统一右→左滑入），兼容PJAX，减少抖动
             function applySidebarDiff(sidebarEl, newHtml) {
                 if (!sidebarEl) return;
+
+                // 如果新内容为空或无效，保留现有侧边栏，不做任何操作
+                if (!newHtml || newHtml.trim() === '') {
+                    return;
+                }
+
                 const temp = document.createElement('div');
-                temp.innerHTML = newHtml || '';
+                temp.innerHTML = newHtml;
 
                 const oldChildren = Array.from(sidebarEl.children);
                 const newChildren = Array.from(temp.children);
+
+                // 如果解析后的新内容为空，也保留现有侧边栏
+                if (newChildren.length === 0) {
+                    return;
+                }
 
                 // 锁定高度，避免布局抖动
                 try {
