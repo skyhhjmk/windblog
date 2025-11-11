@@ -1,5 +1,6 @@
 (function () {
   const TOAST_TTL = 4500; // ms
+    const INDICATOR_ID = 'sw-offline-indicator';
 
   function ensureHost() {
     let host = document.getElementById('sw-toast-host');
@@ -62,6 +63,39 @@
     }
   }
 
+    function ensureIndicator() {
+        let el = document.getElementById(INDICATOR_ID);
+        if (!el) {
+            el = document.createElement('div');
+            el.id = INDICATOR_ID;
+            el.className = 'fixed left-4 bottom-4 px-3 py-1.5 rounded-full text-sm font-medium bg-amber-500 text-white shadow-lg transition-opacity duration-200 pointer-events-none';
+            el.style.opacity = '0';
+            el.style.zIndex = '9998';
+            el.setAttribute('role', 'status');
+            el.setAttribute('aria-live', 'polite');
+            el.textContent = '离线模式';
+            document.body.appendChild(el);
+        }
+        return el;
+    }
+
+    function setIndicatorVisible(visible) {
+        const el = ensureIndicator();
+        el.style.opacity = visible ? '1' : '0';
+    }
+
+    function updateOnlineStatus(evt) {
+        const online = navigator.onLine;
+        setIndicatorVisible(!online);
+        if (evt) {
+            if (online) {
+                showToast({title: '已恢复网络', message: '已切回在线模式。', tone: 'info'});
+            } else {
+                showToast({title: '离线模式', message: '当前离线，页面将使用缓存内容（如有）。', tone: 'warn'});
+            }
+        }
+    }
+
   function handleSWMessage(event) {
     const data = event.data || {};
     if (data.type === 'SHOW_STALE_NOTICE') {
@@ -78,6 +112,11 @@
           tone = 'warn';
           message = data.message || '当前离线，已为您展示该页面的缓存副本。';
           break;
+          case 'offline_no_cache':
+              title = '页面不可用';
+              tone = 'warn';
+              message = data.message || '当前离线，且该页面没有缓存。';
+              break;
         default:
           title = '网络欠佳';
           tone = 'info';
@@ -92,5 +131,16 @@
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.addEventListener('message', handleSWMessage);
+      navigator.serviceWorker.addEventListener('controllerchange', function () {
+          showToast({title: '页面已更新', message: '已切换到最新版本。', tone: 'info'});
+      });
+  }
+
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', updateOnlineStatus);
+    } else {
+        updateOnlineStatus();
   }
 })();

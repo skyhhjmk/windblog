@@ -5,7 +5,7 @@
  * - CDN resources (cross-origin from allowlist): Cache First (opaque allowed)
  * - Versioned caches with cleanup on activate
  */
-const SW_VERSION = 'v1.1.13';
+const SW_VERSION = 'v1.2.6';
 const CACHE_PAGES = `pages-${SW_VERSION}`;
 const CACHE_STATIC = `static-${SW_VERSION}`;
 const CACHE_CDN = `cdn-${SW_VERSION}`;
@@ -73,8 +73,8 @@ async function notifyClient(event, payload) {
 
 function extractAssetUrls(html) {
     try {
-        // 如果检测到是骨架屏页面，则不提取资源
-        if (html.indexOf('skeleton_page') !== -1) {
+        // 如果检测到是骨架屏页面（通常 <2KB），则不提取资源
+        if (html.length < 2000 && html.indexOf('skeleton_page') !== -1) {
             return [];
         }
 
@@ -118,25 +118,40 @@ async function networkFirst(req, event, useTimeout = true) {
         try {
             const res = await fetch(req);
             if (res && res.ok) {
-                cache.put(req, res.clone());
-                // 如果是 HTML，后台解析并预缓存 /assets 下的 .css/.js
+                // 检查是否为骨架页：小于 2KB 且含 skeleton_page 标记
+                let isSkeleton = false;
                 try {
                     const ct = res.headers.get('content-type') || '';
-                    if (ct.includes('text/html') && event) {
+                    if (ct.includes('text/html')) {
                         const copy = res.clone();
-                        event.waitUntil((async () => {
-                            try {
-                                const html = await copy.text();
-                                const assetUrls = extractAssetUrls(html);
-                                if (assetUrls.length) {
-                                    const staticCache = await caches.open(CACHE_STATIC);
-                                    await Promise.all(assetUrls.map(u => staticCache.add(new Request(u, {credentials: 'same-origin'}))));
-                                }
-                            } catch (_) {
-                            }
-                        })());
+                        const html = await copy.text();
+                        isSkeleton = html.length < 2000 && html.indexOf('skeleton_page') !== -1;
                     }
                 } catch (_) {
+                }
+
+                // 只缓存真实页面，不缓存骨架页
+                if (!isSkeleton) {
+                    cache.put(req, res.clone());
+                    // 如果是 HTML，后台解析并预缓存 /assets 下的 .css/.js
+                    try {
+                        const ct = res.headers.get('content-type') || '';
+                        if (ct.includes('text/html') && event) {
+                            const copy = res.clone();
+                            event.waitUntil((async () => {
+                                try {
+                                    const html = await copy.text();
+                                    const assetUrls = extractAssetUrls(html);
+                                    if (assetUrls.length) {
+                                        const staticCache = await caches.open(CACHE_STATIC);
+                                        await Promise.all(assetUrls.map(u => staticCache.add(new Request(u, {credentials: 'same-origin'}))));
+                                    }
+                                } catch (_) {
+                                }
+                            })());
+                        }
+                    } catch (_) {
+                    }
                 }
             }
             return res;
@@ -221,7 +236,40 @@ async function networkFirst(req, event, useTimeout = true) {
     } catch (_) {
     }
 
-    return new Response('<h1>离线</h1><p>当前无网络连接，且无可用缓存。</p>', {
+    return createOfflinePage();
+}
+
+function createOfflinePage() {
+    const html = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>离线模式</title>
+<style>
+html,body{height:100%;margin:0;background:#f9fafb;font-family:system-ui,-apple-system,sans-serif}
+.container{display:flex;align-items:center;justify-content:center;min-height:100%;padding:20px}
+.card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:32px;max-width:420px;text-align:center;box-shadow:0 4px 6px rgba(0,0,0,0.05)}
+.icon{font-size:56px;margin-bottom:16px;filter:grayscale(1);opacity:0.7}
+.title{font-size:22px;font-weight:600;color:#1f2937;margin-bottom:12px}
+.msg{font-size:14px;line-height:1.7;color:#6b7280;margin-bottom:24px}
+.btn{display:inline-block;background:#3b82f6;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:500;transition:background 0.2s}
+.btn:hover{background:#2563eb}
+@media(prefers-color-scheme:dark){html,body{background:#0b0f19}.card{background:#1f2937;border-color:#374151}.title{color:#f3f4f6}.msg{color:#d1d5db}}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="card">
+<div class="icon">🚫</div>
+<div class="title">页面不可用</div>
+<div class="msg">当前无网络连接，且该页面没有缓存。<br>请检查网络连接后再试。</div>
+<a href="/" class="btn">返回首页</a>
+</div>
+</div>
+</body>
+</html>`;
+    return new Response(html, {
         status: 503,
         headers: {'Content-Type': 'text/html; charset=utf-8'}
     });
@@ -229,10 +277,27 @@ async function networkFirst(req, event, useTimeout = true) {
 
 self.addEventListener('install', event => {
     event.waitUntil((async () => {
-        self.skipWaiting(); // 快速激活
-        const cache = await caches.open(CACHE_PAGES);
         try {
-            await cache.addAll(['/', '/index.html']);
+            self.skipWaiting();
+        } catch (_) {
+        }
+        // 预缓存首页及关键静态资源，确保离线可用
+        const pagesCache = await caches.open(CACHE_PAGES);
+        const staticCache = await caches.open(CACHE_STATIC);
+        try {
+            await pagesCache.addAll(['/', '/index.html']);
+        } catch (_) {
+        }
+        // 从首页提取 /assets 下的 .css/.js 并预缓存
+        try {
+            const resp = await fetch('/');
+            if (resp && resp.ok) {
+                const html = await resp.clone().text();
+                const assets = extractAssetUrls(html);
+                if (assets && assets.length) {
+                    await Promise.all(assets.map(u => staticCache.add(new Request(u, {credentials: 'same-origin'}))));
+                }
+            }
         } catch (_) {
         }
     })());
@@ -279,7 +344,84 @@ self.addEventListener('fetch', (event) => {
         // 检查是否为骨架屏绕过请求
         const isInstantBypass = req.headers.get('x-instant-bypass') === '1' || url.searchParams.has('_instant_bypass') || url.searchParams.has('no_instant');
         if (isPjaxLike || isInstantBypass) {
-            event.respondWith(fetch(req));
+            // PJAX/骨架屏请求：优先网络，离线时回退到缓存
+            event.respondWith((async () => {
+                const cache = await caches.open(CACHE_PAGES);
+
+                // 尝试网络请求（在线时必须优先网络）
+                try {
+                    const res = await fetch(req);
+                    // 如果是真实页面（非骨架页），缓存它
+                    if (res && res.ok) {
+                        try {
+                            const ct = res.headers.get('content-type') || '';
+                            if (ct.includes('text/html')) {
+                                const copy = res.clone();
+                                const html = await copy.text();
+                                const isSkeleton = html.length < 2000 && html.indexOf('skeleton_page') !== -1;
+                                if (!isSkeleton && isInstantBypass) {
+                                    // 缓存真实页面到原始 URL（不含参数）
+                                    try {
+                                        const cleanUrl = new URL(url);
+                                        cleanUrl.searchParams.delete('_instant_bypass');
+                                        cleanUrl.searchParams.delete('t');
+                                        cleanUrl.searchParams.delete('no_instant');
+                                        const cleanReq = new Request(cleanUrl.toString(), {credentials: req.credentials});
+                                        cache.put(cleanReq, res.clone());
+                                    } catch (_) {
+                                    }
+                                }
+                            }
+                        } catch (_) {
+                        }
+                    }
+                    return res;
+                } catch (err) {
+                    // 网络失败（离线），尝试从缓存获取
+                    let cached = null;
+
+                    // 尝试匹配原始 URL（清除所有特殊参数）
+                    try {
+                        const cleanUrl = new URL(url);
+                        cleanUrl.searchParams.delete('_instant_bypass');
+                        cleanUrl.searchParams.delete('_pjax');
+                        cleanUrl.searchParams.delete('t');
+                        cleanUrl.searchParams.delete('no_instant');
+                        const cleanReq = new Request(cleanUrl.toString(), {credentials: req.credentials});
+                        cached = await cache.match(cleanReq, {ignoreVary: true, ignoreSearch: true});
+                    } catch (_) {
+                    }
+
+                    // 如果没找到，再尝试匹配带参数的请求
+                    if (!cached) {
+                        cached = await cache.match(req, {ignoreVary: true, ignoreSearch: false});
+                    }
+
+                    if (cached) {
+                        // 发送通知到页面
+                        notifyClient(event, {
+                            type: 'SHOW_STALE_NOTICE',
+                            reason: 'offline_page_cache',
+                            message: '当前离线，已为您展示该页面的缓存副本。'
+                        });
+                        return cached;
+                    }
+
+                    // 无缓存：PJAX 请求返回 200 状态 + 离线提示片段，普通请求返回完整页面
+                    if (isPjaxLike) {
+                        notifyClient(event, {
+                            type: 'SHOW_STALE_NOTICE',
+                            reason: 'offline_no_cache',
+                            message: '当前离线，且该页面没有缓存。'
+                        });
+                        return new Response('<div style="padding:40px 20px;text-align:center;"><div style="font-size:48px;margin-bottom:16px;opacity:0.6">🚫</div><div style="font-size:18px;font-weight:600;color:#1f2937;margin-bottom:8px">页面不可用</div><div style="font-size:14px;color:#6b7280;line-height:1.6">当前离线，且该页面没有缓存。<br>请检查网络连接后再试。</div></div>', {
+                            status: 200,
+                            headers: {'Content-Type': 'text/html; charset=utf-8'}
+                        });
+                    }
+                    return createOfflinePage();
+                }
+            })());
             return;
         }
     } catch (_) {
@@ -309,7 +451,7 @@ self.addEventListener('fetch', (event) => {
             }
             event.waitUntil(notifyClient(event, {type: 'SW_DEBUG', stage: 'navigate_intercept', url: req.url}));
 
-            return networkFirst(req, event, false);
+            return networkFirst(req, event, true);
         })());
         return;
     }
@@ -324,7 +466,7 @@ self.addEventListener('fetch', (event) => {
     // 保持原始请求（含 CORS 与 SRI 校验），避免破坏 integrity
     if (isCdn(url)) {
         event.respondWith(cacheFirst(req, CACHE_CDN));
-
+        return;
     }
 
     // Default: passthrough
