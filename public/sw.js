@@ -5,7 +5,7 @@
  * - CDN resources (cross-origin from allowlist): Cache First (opaque allowed)
  * - Versioned caches with cleanup on activate
  */
-const SW_VERSION = 'v1.2.8';
+const SW_VERSION = 'v1.2.9';
 const CACHE_PAGES = `pages-${SW_VERSION}`;
 const CACHE_STATIC = `static-${SW_VERSION}`;
 const CACHE_CDN = `cdn-${SW_VERSION}`;
@@ -230,6 +230,7 @@ async function networkFirst(req, event, useTimeout = true) {
     let wasTimeout = false;
     let networkFailed = false;
     const cache = await caches.open(CACHE_PAGES);
+    const networkStartTime = Date.now();
 
     const networkPromise = (async () => {
         try {
@@ -271,10 +272,10 @@ async function networkFirst(req, event, useTimeout = true) {
                     }
                 }
             }
-            return res;
+            return {success: true, response: res};
         } catch (e) {
-            // 防止 Promise.race 因网络错误直接 reject
-            return null;
+            // 网络请求失败（真正离线）
+            return {success: false, response: null};
         }
     })();
 
@@ -286,44 +287,52 @@ async function networkFirst(req, event, useTimeout = true) {
         });
         raced = await Promise.race([networkPromise, timeoutPromise]);
 
-        // 网络先返回则直接使用（已在上方写入缓存）
+        // 网络先返回则直接使用
         if (raced) {
-            return raced;
+            // 检查是真正离线还是成功返回
+            if (!raced.success) {
+                // 网络快速失败（真正离线）
+                networkFailed = true;
+            } else if (raced.response && raced.response.ok) {
+                // 网络成功返回
+                return raced.response;
+            }
+        } else {
+            // 超时，说明网络慢
+            wasTimeout = true;
         }
-        wasTimeout = true;
     } else {
-        // 在线导航不做超时竞速，直接等待网络（失败再走缓存兜底）
-        try {
-            const direct = await networkPromise;
-            if (direct) return direct;
-            networkFailed = true;
-        } catch (_) {
-            networkFailed = true;
+        // 在线导航不做超时竞速，直接等待网络
+        const result = await networkPromise;
+        if (result.success && result.response && result.response.ok) {
+            return result.response;
         }
+        networkFailed = true;
     }
 
-    // 慢网络：尝试使用旧缓存副本
+    // 慢网络或离线：尝试使用旧缓存副本
     const cached = await cache.match(req, {ignoreVary: true});
     if (cached) {
         // 后台刷新缓存
         if (event) {
             event.waitUntil((async () => {
                 try {
-                    const res = await networkPromise;
-                    if (res && res.ok) {
-                        await cache.put(req, res.clone());
+                    const result = await networkPromise;
+                    if (result.success && result.response && result.response.ok) {
+                        await cache.put(req, result.response.clone());
                     }
                 } catch (_) {
                 }
             })());
-            const noticePayload = wasTimeout ? {
+            // 发送相应的通知
+            const noticePayload = networkFailed ? {
+                type: 'SHOW_STALE_NOTICE',
+                reason: 'offline_page_cache',
+                message: '当前离线，已为您展示该页面的缓存副本。'
+            } : {
                 type: 'SHOW_STALE_NOTICE',
                 reason: 'slow_network',
                 message: '网络欠佳，已为您展示缓存副本。'
-            } : {
-                type: 'SHOW_STALE_NOTICE',
-                reason: networkFailed ? 'offline_page_cache' : 'slow_network',
-                message: networkFailed ? '当前离线，已为您展示该页面的缓存副本。' : '网络欠佳，已为您展示缓存副本。'
             };
             event.waitUntil(notifyClient(event, noticePayload));
         }
@@ -332,8 +341,8 @@ async function networkFirst(req, event, useTimeout = true) {
 
     // 无缓存：继续等待网络
     try {
-        const res = await networkPromise;
-        if (res) return res;
+        const result = await networkPromise;
+        if (result.success && result.response) return result.response;
     } catch (_) {
     }
 
@@ -497,9 +506,9 @@ self.addEventListener('fetch', (event) => {
                             } catch (_) {
                             }
                         }
-                        return res;
+                        return {success: true, response: res};
                     } catch (err) {
-                        return null;
+                        return {success: false, response: null};
                     }
                 })();
 
@@ -510,13 +519,21 @@ self.addEventListener('fetch', (event) => {
 
                 const raced = await Promise.race([networkPromise, timeoutPromise]);
 
-                // 如果网络在2秒内返回，直接使用
+                // 如果网络在2秒内返回
                 if (raced) {
-                    return raced;
+                    if (!raced.success) {
+                        // 真正离线
+                        networkFailed = true;
+                    } else if (raced.response && raced.response.ok) {
+                        // 直接使用网络结果
+                        return raced.response;
+                    }
+                } else {
+                    // 超时则标记慢网
+                    wasTimeout = true;
                 }
 
                 // 网络超时或失败，尝试使用缓存
-                wasTimeout = !raced;
 
                 // 尝试匹配原始 URL（清除所有特殊参数）
                 let cached = null;
@@ -540,8 +557,9 @@ self.addEventListener('fetch', (event) => {
                     // 后台继续等待网络，更新缓存
                     event.waitUntil((async () => {
                         try {
-                            const res = await networkPromise;
-                            if (res && res.ok) {
+                            const result = await networkPromise;
+                            if (result.success && result.response && result.response.ok) {
+                                const res = result.response;
                                 const ct = res.headers.get('content-type') || '';
                                 if (ct.includes('text/html')) {
                                     const copy = res.clone();
@@ -565,19 +583,24 @@ self.addEventListener('fetch', (event) => {
                         }
                     })());
 
-                    // 发送网络欠佳提示
-                    event.waitUntil(notifyClient(event, {
+                    // 发送提示：根据网络状态选择离线或慢网
+                    const noticePayload = networkFailed ? {
+                        type: 'SHOW_STALE_NOTICE',
+                        reason: 'offline_page_cache',
+                        message: '当前离线，已为您展示该页面的缓存副本。'
+                    } : {
                         type: 'SHOW_STALE_NOTICE',
                         reason: 'slow_network',
                         message: '网络欠佳，已为您展示缓存副本。'
-                    }));
+                    };
+                    event.waitUntil(notifyClient(event, noticePayload));
                     return cached;
                 }
 
                 // 无缓存：继续等待网络
                 try {
-                    const res = await networkPromise;
-                    if (res) return res;
+                    const result = await networkPromise;
+                    if (result.success && result.response) return result.response;
                     networkFailed = true;
                 } catch (_) {
                     networkFailed = true;

@@ -18,9 +18,9 @@
 
 > Ads: 雨云 5 折优惠码 `github` ，绑定微信即可领取，aff 连接：[https://www.rainyun.com/github_](https://www.rainyun.com/github_)
 
-> Ads: 云驰互联不定期零元购，aff 链接：[https://cloud.zyidc.net/aff/TKYFRZBG](https://cloud.zyidc.net/aff/TKYFRZBG)
-
 > Ads: 毫秒镜像，好用的 Docker 镜像站，aff 链接：[https://1ms.run/?aff=2853](https://1ms.run/?aff=2853)
+
+> **Warning** 虽然本项目已经进入正式发布版本，但仍然存在一些问题，请勿用于生产环境，这可能造成严重的数据丢失或数据损坏问题。
 
 本项目版本号命名于 `1.0.0` 后开始遵循`语义化版本 2.0 规范`
 

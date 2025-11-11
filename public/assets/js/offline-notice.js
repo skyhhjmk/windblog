@@ -84,16 +84,53 @@
         el.style.opacity = visible ? '1' : '0';
     }
 
+    // 共享状态变量
+    let lastOnlineState = navigator.onLine; // 跟踪上一次的在线状态
+    let isInitializing = true; // 标记是否处于初始化期
+    let hasInitialized = false; // 标记是否已完成初始化
+    let swDetectedOffline = false; // SW 检测到的离线状态
+    let lastSwNoticeTime = 0; // 上次 SW 通知的时间
+
+    // 页面加载后 500ms 内忽略网络状态变化事件，避免虚假提示
+    setTimeout(() => {
+        isInitializing = false;
+        hasInitialized = true;
+        console.debug('[NetworkStatus] Initialization complete, current state:', navigator.onLine ? 'online' : 'offline');
+    }, 500);
+
     function updateOnlineStatus(evt) {
         const online = navigator.onLine;
+        const stateChanged = lastOnlineState !== online;
+
+        console.debug('[NetworkStatus] updateOnlineStatus called:', {
+            hasEvent: !!evt,
+            isInitializing,
+            hasInitialized,
+            online,
+            lastOnlineState,
+            stateChanged,
+            swDetectedOffline
+        });
+
         setIndicatorVisible(!online);
-        if (evt) {
+
+        // 只有在以下情况才显示提示：
+        // 1. 已完成初始化（避免页面加载时的虚假事件）
+        // 2. 有事件对象（说明是由 online/offline 事件触发）
+        // 3. 状态真正发生了变化
+        if (hasInitialized && evt && stateChanged) {
+            console.debug('[NetworkStatus] Browser detected network state change');
             if (online) {
+                swDetectedOffline = false; // 同步 SW 状态
                 showToast({title: '已恢复网络', message: '已切回在线模式。', tone: 'info'});
             } else {
+                swDetectedOffline = true; // 同步 SW 状态
                 showToast({title: '离线模式', message: '当前离线，页面将使用缓存内容（如有）。', tone: 'warn'});
             }
         }
+
+        // 总是更新状态记录
+        lastOnlineState = online;
     }
 
   function handleSWMessage(event) {
@@ -101,21 +138,40 @@
     if (data.type === 'SHOW_STALE_NOTICE') {
       const reason = data.reason || 'info';
       let title, message, tone;
+        const now = Date.now();
+
+        // 检测是否是离线相关的通知
+        const isOfflineNotice = ['offline_fallback', 'offline_page_cache', 'offline_no_cache', 'offline_api'].includes(reason);
+
       switch (reason) {
         case 'offline_fallback':
-          title = '离线模式';
-          tone = 'warn';
-          message = data.message || '当前离线，已为您展示缓存的首页副本。';
-          break;
         case 'offline_page_cache':
-          title = '离线模式';
-          tone = 'warn';
-          message = data.message || '当前离线，已为您展示该页面的缓存副本。';
-          break;
           case 'offline_no_cache':
-              title = '页面不可用';
-              tone = 'warn';
-              message = data.message || '当前离线，且该页面没有缓存。';
+          case 'offline_api':
+              // 如果 SW 检测到离线，且距离上次通知超过 5 秒，显示离线通知
+              if (!swDetectedOffline || (now - lastSwNoticeTime > 5000)) {
+                  title = '离线模式';
+                  tone = 'warn';
+                  message = '当前离线，页面将使用缓存内容（如有）。';
+                  swDetectedOffline = true;
+                  lastSwNoticeTime = now;
+                  showToast({title, message, tone});
+                  console.debug('[NetworkStatus] SW detected offline');
+              }
+              return; // 不再显示额外的缓存副本通知
+          case 'slow_network':
+          case 'slow_api':
+              title = '网络欠佳';
+              tone = 'info';
+              message = data.message || '网络较慢，已为您展示缓存副本。';
+              // 如果之前是离线状态，现在能访问网络（虽然慢），说明恢复了
+              if (swDetectedOffline && (now - lastSwNoticeTime > 3000)) {
+                  swDetectedOffline = false;
+                  lastSwNoticeTime = now;
+                  showToast({title: '已恢复网络', message: '已切回在线模式。', tone: 'info'});
+                  console.debug('[NetworkStatus] SW detected back online');
+                  return;
+              }
               break;
         default:
           title = '网络欠佳';
