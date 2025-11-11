@@ -14,7 +14,7 @@
     <div class="max-w-full mx-auto">
         {# 面包屑导航 #}
         {% include 'components/breadcrumb.html.twig' %}
-        <article class="bg-white rounded-xl shadow-md overflow-hidden no-animation" style="position: relative;">
+        <article class="bg-white rounded-xl shadow-md no-animation" style="position: relative;">
             <!-- 文章头部 -->
             <div class="p-6 border-b border-gray-100">
                 <h1 class="text-3xl font-bold text-gray-800 mb-4">{{ post.title }}</h1>
@@ -58,10 +58,20 @@
 
             <!-- In-Content TOC UI (desktop, inside article) -->
             <style>
-                /* Floating action button (absolute in article) */
-                #toc-fab {
-                    position: absolute;
+                /* Sticky wrapper (controls vertical stickiness within .p-6) */
+                #toc-fab-wrap {
+                    position: sticky; /* 跟随视口滚动，受父容器（.p-6）底部边界限制 */
+                    top: var(--toc-fab-top, 88px); /* 视口顶部偏移，可在全局覆写变量 */
+                    pointer-events: none; /* 不拦截，点击落到内部按钮 */
                     z-index: 5;
+                }
+
+                /* Floating action button anchored to .p-6 right edge */
+                #toc-fab {
+                    position: absolute; /* 相对 sticky 包裹层定位，水平固定在右侧 */
+                    right: 0;
+                    top: 0;
+                    z-index: 6;
                     width: 42px;
                     height: 42px;
                     border-radius: 9999px;
@@ -73,10 +83,10 @@
                     box-shadow: none;
                     transition: transform .15s ease, box-shadow .15s ease, opacity .2s ease;
                     opacity: .92;
+                    pointer-events: auto; /* 允许按钮自身可点击 */
                 }
 
                 #toc-fab:hover {
-                    transform: none;
                     box-shadow: none;
                     opacity: 1;
                 }
@@ -246,9 +256,6 @@
                 }
             </style>
             <div id="toc-rail" aria-hidden="true"></div>
-            <button id="toc-fab" title="文章目录" aria-label="文章目录">
-                <i class="fas fa-list-ul"></i>
-            </button>
             <aside id="toc-drawer" role="complementary" aria-label="文章目录">
                 <div class="toc-header">
                     <div class="toc-title">文章目录</div>
@@ -263,15 +270,33 @@
 
             <!-- 文章内容 -->
             <div class="p-6">
+                <div id="toc-fab-wrap">
+                    <button id="toc-fab" title="文章目录" aria-label="文章目录">
+                        <i class="fas fa-list-ul"></i>
+                    </button>
+                </div>
                 {% if post.ai_summary %}
-                    <!-- AI摘要块 -->
+                    <!-- AI摘要块（深色模式适配） -->
+                    <style>
+                        /* Dark mode fix for AI summary block */
+                        html[data-theme="dark"] #pjax-container .ai-summary {
+                            background: linear-gradient(90deg, rgba(99, 102, 241, .12), rgba(59, 130, 246, .10)) !important;
+                            border-left-color: rgba(147, 51, 234, .45) !important;
+                        }
+
+                        html[data-theme="dark"] #pjax-container .ai-summary-badge {
+                            background: linear-gradient(90deg, rgba(139, 92, 246, .20), rgba(96, 165, 250, .18)) !important;
+                            color: var(--text) !important;
+                            border-color: rgba(99, 102, 241, .35) !important;
+                        }
+                    </style>
                     <div
-                        class="mb-6 p-4 bg-gradient-to-r from-purple-50 to-blue-50 border-l-4 border-purple-400 rounded-r-lg">
+                        class="ai-summary mb-6 p-4 bg-gradient-to-r from-purple-50 to-blue-50 border-l-4 border-purple-400 rounded-r-lg">
                         <div class="flex items-center mb-2">
-                        <span
-                            class="inline-flex items-center px-2.5 py-0.5 rounded text-sm font-semibold bg-gradient-to-r from-purple-100 to-blue-100 text-purple-700 border border-purple-200">
-                            <i class="fas fa-robot mr-1.5"></i>AI摘要
-                        </span>
+                            <span
+                                class="ai-summary-badge inline-flex items-center px-2.5 py-0.5 rounded text-sm font-semibold bg-gradient-to-r from-purple-100 to-blue-100 text-purple-700 border border-purple-200">
+                                <i class="fas fa-robot mr-1.5"></i>AI摘要
+                            </span>
                         </div>
                         <p class="text-gray-700 leading-relaxed">
                             {{ post.ai_summary }}
@@ -1048,35 +1073,33 @@
                         const anchorTop = (headRect.bottom - artRect.top);  // inside-article Y (header bottom)
                         const artW = Math.max(0, article.clientWidth || (artRect.right - artRect.left));
 
+                        // 容器/侧栏与列间距（取 flex 容器的 column-gap，确保跨断点一致）
+                        const pjax = document.getElementById('pjax-container');
+                        let colsWrap = pjax ? pjax.parentElement : null;
+                        try {
+                            while (colsWrap && getComputedStyle(colsWrap).display !== 'flex') colsWrap = colsWrap.parentElement;
+                        } catch (_) {
+                        }
+                        let columnGap = 0;
+                        try {
+                            if (colsWrap) {
+                                const cs = getComputedStyle(colsWrap);
+                                const g = cs.columnGap || cs.gap || '0';
+                                columnGap = parseFloat(g) || 0;
+                            }
+                        } catch (_) {
+                        }
+                        const cwRect = contentWrapper.getBoundingClientRect();
+
                         // 文档坐标（用于粘滞定位与边界裁切）
                         const articleDocTop = window.scrollY + artRect.top;
                         const contentBottomDoc = window.scrollY + contRect.bottom;
                         const headBottomDoc = window.scrollY + headRect.bottom;
 
-                        // FAB（水平绝对，垂直“粘滞”且限制在内容上下界内）
-                        let fabLeftVal = null, fabTopVal = null;
+                        // FAB 水平位置：固定到 .p-6 右侧边缘（由 CSS 负责 right:0），此处仅清理可能的旧样式
                         if (fab) {
-                            const fabW = fab.offsetWidth || 42;
-                            const fabH = fab.offsetHeight || 42;
-                            let left = Math.round(rightInside - fabW - 6);
-                            // clamp within article
-                            left = Math.max(6, Math.min(left, artW - fabW - 6));
-                            fab.style.left = left + 'px';
-                            fabLeftVal = fab.style.left;
-                            fab.style.right = 'auto';
-
-                            // 记录初始视口内的目标偏移（首次定位时），让按钮在视口中“保持”这个相对位置
-                            if (typeof window.__tocFabViewportOffset !== 'number') {
-                                window.__tocFabViewportOffset = Math.max(8, headRect.bottom + 8); // 距视口顶部偏移
-                            }
-                            const desiredDocY = window.scrollY + window.__tocFabViewportOffset;
-                            const minDocY = articleDocTop + anchorTop + 8;
-                            let maxDocY = contentBottomDoc - fabH - 8;
-                            if (maxDocY < minDocY) maxDocY = minDocY;
-                            const docY = Math.max(minDocY, Math.min(desiredDocY, maxDocY));
-                            const topInside = docY - articleDocTop;
-                            fab.style.top = Math.round(topInside) + 'px';
-                            fabTopVal = fab.style.top;
+                            fab.style.left = 'auto';
+                            fab.style.right = '0px';
                         }
                         // Rail height constrained to content block only（随文章滚动，非粘滞）
                         let railLeftVal = null, railTopVal = null, railHVal = null;
@@ -1101,9 +1124,11 @@
                             drawer.style.left = left + 'px';
                             drawerLeftVal = drawer.style.left;
                             drawer.style.right = 'auto';
-                            // 若有 FAB，抽屉与其对齐；否则退化到 header 下
-                            if (fab && fab.style.top) {
-                                drawer.style.top = (parseInt(fab.style.top, 10) + 4) + 'px';
+                            // 与 FAB 垂直对齐（读取实时几何而非依赖 style.top）
+                            if (fab) {
+                                const fabRect = fab.getBoundingClientRect();
+                                const topInside = Math.round((fabRect.top - artRect.top) + 4);
+                                drawer.style.top = topInside + 'px';
                             } else {
                                 drawer.style.top = Math.round(anchorTop + 12) + 'px';
                             }
@@ -1119,6 +1144,11 @@
                 window.addEventListener('resize', positionTOCUI);
                 // 同步不同视口尺寸下的可见性
                 window.addEventListener('resize', updateTOCVisibility);
+                // 侧栏动态更新后重新定位（PJAX 注入后触发）
+                try {
+                    document.addEventListener('sidebar:updated', positionTOCUI);
+                } catch (_) {
+                }
                 // 追求性能：避免在滚动过程中频繁测量布局，仅在尺寸变化或抽屉打开时定位
                 // 如需开启随滚动跟随，请恢复下面代码
                 // let __tocRaf = 0;
