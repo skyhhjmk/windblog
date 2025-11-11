@@ -104,9 +104,16 @@ class AzureOpenAiProvider extends OpenAiProvider
                 return ['ok' => false, 'error' => 'Invalid response format'];
             }
 
-            return [
+            $rawContent = (string) ($data['choices'][0]['message']['content'] ?? '');
+            $check = $this->validateThinkBlocks($rawContent);
+            if (!$check['valid']) {
+                return ['ok' => false, 'error' => $check['error'] ?? 'AI 响应格式错误：<think></think> 标签不完整或不匹配'];
+            }
+            $parsed = $this->extractThinkFromText($rawContent);
+
+            $result = [
                 'ok' => true,
-                'result' => $data['choices'][0]['message']['content'],
+                'result' => $parsed['content'],
                 'usage' => [
                     'prompt_tokens' => $data['usage']['prompt_tokens'] ?? 0,
                     'completion_tokens' => $data['usage']['completion_tokens'] ?? 0,
@@ -115,6 +122,12 @@ class AzureOpenAiProvider extends OpenAiProvider
                 'model' => $data['model'] ?? null,
                 'finish_reason' => $data['choices'][0]['finish_reason'] ?? null,
             ];
+
+            if (!empty($parsed['thinking'])) {
+                $result['reasoning'] = $parsed['thinking'];
+            }
+
+            return $result;
         } catch (\Throwable $e) {
             \support\Log::error('Azure OpenAI API call failed: ' . $e->getMessage());
 

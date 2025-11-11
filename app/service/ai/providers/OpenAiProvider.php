@@ -492,9 +492,17 @@ class OpenAiProvider extends BaseAiProvider
                 return ['ok' => false, 'error' => 'Invalid response format: missing choices[0].message.content'];
             }
 
-            return [
+            // 自动抽离 <think>...</think> 推理内容，避免直接展示在结果中；同时校验标签闭合
+            $rawContent = (string) ($data['choices'][0]['message']['content'] ?? '');
+            $check = $this->validateThinkBlocks($rawContent);
+            if (!$check['valid']) {
+                return ['ok' => false, 'error' => $check['error'] ?? 'AI 响应格式错误：<think></think> 标签不完整或不匹配'];
+            }
+            $parsed = $this->extractThinkFromText($rawContent);
+
+            $result = [
                 'ok' => true,
-                'result' => $data['choices'][0]['message']['content'],
+                'result' => $parsed['content'],
                 'usage' => [
                     'prompt_tokens' => $data['usage']['prompt_tokens'] ?? 0,
                     'completion_tokens' => $data['usage']['completion_tokens'] ?? 0,
@@ -503,6 +511,12 @@ class OpenAiProvider extends BaseAiProvider
                 'model' => $data['model'] ?? null,
                 'finish_reason' => $data['choices'][0]['finish_reason'] ?? null,
             ];
+
+            if (!empty($parsed['thinking'])) {
+                $result['reasoning'] = $parsed['thinking'];
+            }
+
+            return $result;
         } catch (Throwable $e) {
             Log::error('OpenAI API call failed: ' . $e->getMessage());
 

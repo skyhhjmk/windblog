@@ -285,6 +285,7 @@ class AiSummaryWorker
             Log::debug("AI generic task completed: {$taskId}");
             AISummaryService::setTaskStatus($taskId, 'completed', [
                 'result' => $result['result'] ?? '',
+                'reasoning' => $result['reasoning'] ?? null,
                 'usage' => $result['usage'] ?? null,
                 'model' => $result['model'] ?? null,
                 'finish_reason' => $result['finish_reason'] ?? null,

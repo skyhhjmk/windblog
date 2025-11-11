@@ -249,9 +249,16 @@ class ClaudeProvider extends BaseAiProvider
                 return ['ok' => false, 'error' => 'Invalid response format'];
             }
 
-            return [
+            $rawContent = (string) ($data['content'][0]['text'] ?? '');
+            $check = $this->validateThinkBlocks($rawContent);
+            if (!$check['valid']) {
+                return ['ok' => false, 'error' => $check['error'] ?? 'AI 响应格式错误：<think></think> 标签不完整或不匹配'];
+            }
+            $parsed = $this->extractThinkFromText($rawContent);
+
+            $result = [
                 'ok' => true,
-                'result' => $data['content'][0]['text'],
+                'result' => $parsed['content'],
                 'usage' => [
                     'input_tokens' => $data['usage']['input_tokens'] ?? 0,
                     'output_tokens' => $data['usage']['output_tokens'] ?? 0,
@@ -259,6 +266,12 @@ class ClaudeProvider extends BaseAiProvider
                 'model' => $data['model'] ?? null,
                 'stop_reason' => $data['stop_reason'] ?? null,
             ];
+
+            if (!empty($parsed['thinking'])) {
+                $result['reasoning'] = $parsed['thinking'];
+            }
+
+            return $result;
         } catch (GuzzleException $e) {
             Log::error('Claude API call failed: ' . $e->getMessage());
 

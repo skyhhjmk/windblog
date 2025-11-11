@@ -250,9 +250,16 @@ class GeminiProvider extends BaseAiProvider
                 return ['ok' => false, 'error' => 'Invalid response format'];
             }
 
-            return [
+            $rawContent = (string) ($data['candidates'][0]['content']['parts'][0]['text'] ?? '');
+            $check = $this->validateThinkBlocks($rawContent);
+            if (!$check['valid']) {
+                return ['ok' => false, 'error' => $check['error'] ?? 'AI 响应格式错误：<think></think> 标签不完整或不匹配'];
+            }
+            $parsed = $this->extractThinkFromText($rawContent);
+
+            $result = [
                 'ok' => true,
-                'result' => $data['candidates'][0]['content']['parts'][0]['text'],
+                'result' => $parsed['content'],
                 'usage' => [
                     'prompt_tokens' => $data['usageMetadata']['promptTokenCount'] ?? 0,
                     'completion_tokens' => $data['usageMetadata']['candidatesTokenCount'] ?? 0,
@@ -260,6 +267,12 @@ class GeminiProvider extends BaseAiProvider
                 ],
                 'finish_reason' => $data['candidates'][0]['finishReason'] ?? null,
             ];
+
+            if (!empty($parsed['thinking'])) {
+                $result['reasoning'] = $parsed['thinking'];
+            }
+
+            return $result;
         } catch (GuzzleException $e) {
             Log::error('Gemini API call failed: ' . $e->getMessage());
 

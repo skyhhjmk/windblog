@@ -136,6 +136,87 @@ abstract class BaseAiProvider implements AiProviderInterface
     }
 
     /**
+     * 从文本中抽离 <think>...</think> 内容，并返回清理后的正文
+     *
+     * @return array{content:string,thinking:string}
+     */
+    protected function extractThinkFromText(string $text): array
+    {
+        $thinking = '';
+
+        // 提取并移除所有 <think>...</think> 片段（大小写不敏感，跨行）
+        if (preg_match_all('/<think>([\s\S]*?)<\/think>/i', $text, $matches)) {
+            $parts = array_map(static function ($s) {
+                return trim($s);
+            }, $matches[1]);
+            $thinking = trim(implode("\n\n", $parts));
+            $text = preg_replace('/<think>[\s\S]*?<\/think>/i', '', $text) ?? $text;
+        }
+
+        // 兼容性处理：去除可能出现的 <reasoning> 包裹标签（极少数提供方会输出）
+        $text = preg_replace('/<\/?reason(?:ing)?>/i', '', $text) ?? $text;
+
+        return [
+            'content' => trim($text),
+            'thinking' => $thinking,
+        ];
+    }
+
+    /**
+     * 校验 <think></think> 标签是否成对、顺序正确
+     * - 若文本中不存在任何 <think> 或 </think>，视为有效
+     * - 若存在，则需满足：打开数==关闭数且顺序不出现先关后开
+     *
+     * @return array{valid:bool,error?:string}
+     */
+    protected function validateThinkBlocks(string $text): array
+    {
+        $openCount = preg_match_all('/<think>/i', $text, $m1);
+        $closeCount = preg_match_all('/<\/think>/i', $text, $m2);
+
+        // 无任何标签，视为有效
+        if (($openCount === 0) && ($closeCount === 0)) {
+            return ['valid' => true];
+        }
+
+        // 数量不相等或没有成对出现
+        if ($openCount !== $closeCount || $openCount === 0) {
+            return [
+                'valid' => false,
+                'error' => "AI 响应格式错误：<think></think> 标签不完整或数量不匹配（open={$openCount}, close={$closeCount}）",
+            ];
+        }
+
+        // 顺序校验：不允许先出现关闭标签，且最终平衡为0
+        $balance = 0;
+        if (preg_match_all('/<\/?think>/i', $text, $matches, PREG_OFFSET_CAPTURE)) {
+            foreach ($matches[0] as $token) {
+                $tag = strtolower($token[0]);
+                if ($tag === '<think>') {
+                    $balance++;
+                } elseif ($tag === '</think>') {
+                    $balance--;
+                    if ($balance < 0) {
+                        return [
+                            'valid' => false,
+                            'error' => 'AI 响应格式错误：<think></think> 标签闭合顺序不正确',
+                        ];
+                    }
+                }
+            }
+        }
+
+        if ($balance !== 0) {
+            return [
+                'valid' => false,
+                'error' => 'AI 响应格式错误：<think></think> 标签未正确闭合',
+            ];
+        }
+
+        return ['valid' => true];
+    }
+
+    /**
      * 默认流式调用实现（子类可以覆盖）
      * 默认实现不支持流式，返回 false
      */

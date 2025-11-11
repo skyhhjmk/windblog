@@ -438,17 +438,39 @@
             btnDelete.className = 'px-3 py-1 text-xs bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 rounded transition';
             btnDelete.innerHTML = '<span style="margin-right: 4px;">🗑</span>删除';
             btnDelete.addEventListener('click', function () {
-                layer.confirm('确定删除提供方 "' + card.name + '" 吗？', {
+                layer.confirm('确定删除提供方 \"' + card.name + '\" 吗？', {
                     icon: 3,
                     title: '确认删除'
                 }, function (index) {
-                    providerCards = providerCards.filter(function (c) {
-                        return c.id !== card.id;
+                    // 未保存过的卡片只删除本地
+                    if (!card._savedBefore) {
+                        providerCards = providerCards.filter(function (c) {
+                            return c.id !== card.id;
+                        });
+                        renderCards();
+                        updateCount();
+                        layer.close(index);
+                        layer.msg('已删除', {icon: 1});
+                        return;
+                    }
+                    // 已保存的卡片，调用后端删除
+                    post('/app/admin/ai/providers/delete', {id: card.id}).then(function (res) {
+                        if (res.code === 0) {
+                            providerCards = providerCards.filter(function (c) {
+                                return c.id !== card.id;
+                            });
+                            renderCards();
+                            updateCount();
+                            layer.close(index);
+                            layer.msg('已删除', {icon: 1});
+                        } else {
+                            layer.close(index);
+                            layer.alert('删除失败：' + (res.msg || 'Unknown error'), {icon: 2});
+                        }
+                    }).catch(function (err) {
+                        layer.close(index);
+                        layer.alert('删除异常：' + err.message, {icon: 2});
                     });
-                    renderCards();
-                    updateCount();
-                    layer.close(index);
-                    layer.msg('已删除', {icon: 1});
                 });
             });
             actions.appendChild(btnDelete);
