@@ -7,12 +7,12 @@
         <div class="max-w-6xl mx-auto">
             {# 面包屑导航 #}
             {% include 'components/breadcrumb.html.twig' %}
-            
-            <h1 class="text-3xl font-bold mb-8">用户中心</h1>
+
+            <h1 class="text-3xl font-bold mb-8 text-gray-900 dark:text-gray-100">用户中心</h1>
 
             <!-- 标签页导航 -->
-            <div class="bg-white shadow rounded-lg mb-6">
-                <div class="border-b border-gray-200">
+            <div class="bg-white dark:bg-gray-800 shadow rounded-lg mb-6">
+                <div class="border-b border-gray-200 dark:border-gray-700">
                     <nav class="flex -mb-px" role="tablist">
                         <button
                             class="tab-button active px-6 py-4 border-b-2 border-blue-500 font-medium text-blue-600 focus:outline-none"
@@ -21,19 +21,19 @@
                             <i class="fas fa-user mr-2"></i>个人资料
                         </button>
                         <button
-                            class="tab-button px-6 py-4 border-b-2 border-transparent font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none"
+                            class="tab-button px-6 py-4 border-b-2 border-transparent font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600 focus:outline-none"
                             onclick="switchTab('oauth')"
                             id="tab-oauth">
                             <i class="fas fa-link mr-2"></i>账号绑定
                         </button>
                         <button
-                            class="tab-button px-6 py-4 border-b-2 border-transparent font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none"
+                            class="tab-button px-6 py-4 border-b-2 border-transparent font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600 focus:outline-none"
                             onclick="switchTab('security')"
                             id="tab-security">
                             <i class="fas fa-shield-alt mr-2"></i>安全设置
                         </button>
                         <button
-                            class="tab-button px-6 py-4 border-b-2 border-transparent font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none"
+                            class="tab-button px-6 py-4 border-b-2 border-transparent font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600 focus:outline-none"
                             onclick="switchTab('preferences')"
                             id="tab-preferences">
                             <i class="fas fa-cog mr-2"></i>偏好设置
@@ -44,8 +44,8 @@
 
             <!-- 个人资料标签页 -->
             <div id="content-profile" class="tab-content">
-                <div class="bg-white shadow rounded-lg p-6">
-                    <h2 class="text-xl font-semibold mb-6">个人资料</h2>
+                <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+                    <h2 class="text-xl font-semibold mb-6 text-gray-900 dark:text-gray-100">个人资料</h2>
 
                     <!-- 头像 -->
                     <div class="flex items-center space-x-6 mb-8">
@@ -59,16 +59,16 @@
                             </div>
                         </div>
                         <div class="flex-1">
-                            <h3 class="text-2xl font-semibold text-gray-800">{{ user.nickname }}</h3>
-                            <p class="text-gray-500 text-base mt-1">@{{ user.username }}</p>
+                            <h3 class="text-2xl font-semibold text-gray-800 dark:text-gray-200">{{ user.nickname }}</h3>
+                            <p class="text-gray-500 dark:text-gray-400 text-base mt-1">@{{ user.username }}</p>
                             <div class="mt-3 flex items-center space-x-4">
-                            <span class="inline-flex items-center text-sm text-gray-600">
+                            <span class="inline-flex items-center text-sm text-gray-600 dark:text-gray-400">
                                 <i class="fas fa-envelope mr-2 text-gray-400"></i>
                                 {{ user.email }}
                             </span>
                             </div>
                             <div class="mt-3 flex items-center space-x-2">
-                            <span class="text-xs text-gray-500">
+                            <span class="text-xs text-gray-500 dark:text-gray-400">
                                 <i class="fas fa-image mr-1"></i>头像由
                             </span>
                                 <a href="https://cn.cravatar.com" target="_blank"
@@ -90,24 +90,28 @@
                     <div class="space-y-6">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">用户名</label>
-                                <div class="px-4 py-3 bg-gray-50 rounded-lg text-gray-700">{{ user.username }}</div>
-                                <p class="text-xs text-gray-500 mt-1">用户名不可修改</p>
+                                <label
+                                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">用户名</label>
+                                <div
+                                    class="px-4 py-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-gray-700 dark:text-gray-300">{{ user.username }}</div>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">用户名不可修改</p>
                             </div>
 
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">昵称</label>
+                                <label
+                                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">昵称</label>
                                 <input type="text" value="{{ user.nickname }}"
-                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                       class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-gray-100 dark:bg-gray-700">
                             </div>
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">邮箱</label>
+                                <label
+                                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">邮箱</label>
                                 <div class="flex items-center">
                                     <input type="email" value="{{ user.email }}"
-                                           class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                           class="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-gray-100 dark:bg-gray-700">
                                     {% if user.email_verified_at %}
                                         <span class="ml-2 px-3 py-1 text-xs bg-green-100 text-green-800 rounded-full">
                                         <i class="fas fa-check-circle mr-1"></i>已验证
@@ -122,26 +126,33 @@
                             </div>
 
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">手机</label>
+                                <label
+                                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">手机</label>
                                 <input type="tel" value="{{ user.mobile }}" placeholder="请输入手机号"
-                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                       class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-gray-100 dark:bg-gray-700">
                             </div>
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">等级</label>
-                                <div class="px-4 py-3 bg-gray-50 rounded-lg text-gray-700">LV.{{ user.level }}</div>
+                                <label
+                                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">等级</label>
+                                <div
+                                    class="px-4 py-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-gray-700 dark:text-gray-300">
+                                    LV.{{ user.level }}</div>
                             </div>
 
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">积分</label>
-                                <div class="px-4 py-3 bg-gray-50 rounded-lg text-gray-700">{{ user.score }}</div>
+                                <label
+                                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">积分</label>
+                                <div
+                                    class="px-4 py-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-gray-700 dark:text-gray-300">{{ user.score }}</div>
                             </div>
 
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">账户状态</label>
-                                <div class="px-4 py-3 bg-gray-50 rounded-lg">
+                                <label
+                                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">账户状态</label>
+                                <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                                     {% if user.status == 0 %}
                                         <span class="text-yellow-600">未激活</span>
                                     {% elseif user.status == 1 %}
@@ -155,16 +166,18 @@
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">注册时间</label>
+                                <label
+                                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">注册时间</label>
                                 <div
-                                    class="px-4 py-3 bg-gray-50 rounded-lg text-gray-700">{{ user.join_time|local_date('Y-m-d H:i:s') }}</div>
+                                    class="px-4 py-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-gray-700 dark:text-gray-300">{{ user.join_time|local_date('Y-m-d H:i:s') }}</div>
                             </div>
 
                             {% if user.last_time %}
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">最后登录</label>
+                                    <label
+                                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">最后登录</label>
                                     <div
-                                        class="px-4 py-3 bg-gray-50 rounded-lg text-gray-700">{{ user.last_time|local_date('Y-m-d H:i:s') }}</div>
+                                        class="px-4 py-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-gray-700 dark:text-gray-300">{{ user.last_time|local_date('Y-m-d H:i:s') }}</div>
                                 </div>
                             {% endif %}
                         </div>
@@ -183,9 +196,9 @@
 
             <!-- 账号绑定标签页 -->
             <div id="content-oauth" class="tab-content hidden">
-                <div class="bg-white shadow rounded-lg p-6">
-                    <h2 class="text-xl font-semibold mb-4">第三方账号绑定</h2>
-                    <p class="text-gray-600 mb-6">绑定第三方账号后，您可以使用这些账号快速登录</p>
+                <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+                    <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">第三方账号绑定</h2>
+                    <p class="text-gray-600 dark:text-gray-400 mb-6">绑定第三方账号后，您可以使用这些账号快速登录</p>
 
                     <div class="space-y-4">
                         {% for providerKey, providerInfo in supportedProviders %}
@@ -200,7 +213,7 @@
                                 {% endfor %}
 
                                 <div
-                                    class="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition">
+                                    class="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                                     <div class="flex items-center space-x-4">
                                         {% if providerKey == 'wind' %}
                                             <div class="w-12 h-12 flex items-center justify-center rounded-full"
@@ -213,14 +226,14 @@
                                                style="color: {{ providerInfo.color }}"></i>
                                         {% endif %}
                                         <div>
-                                            <p class="font-medium text-lg">{{ providerInfo.name }}</p>
+                                            <p class="font-medium text-lg text-gray-900 dark:text-gray-100">{{ providerInfo.name }}</p>
                                             {% if isBound and binding %}
-                                                <p class="text-sm text-green-600">
+                                                <p class="text-sm text-green-600 dark:text-green-400">
                                                     <i class="fas fa-check-circle mr-1"></i>
                                                     已绑定: {{ binding.provider_username ?? binding.provider_email ?? binding.provider_user_id }}
                                                 </p>
                                             {% else %}
-                                                <p class="text-sm text-gray-500">未绑定</p>
+                                                <p class="text-sm text-gray-500 dark:text-gray-400">未绑定</p>
                                             {% endif %}
                                         </div>
                                     </div>
@@ -249,27 +262,30 @@
 
             <!-- 安全设置标签页 -->
             <div id="content-security" class="tab-content hidden">
-                <div class="bg-white shadow rounded-lg p-6">
-                    <h2 class="text-xl font-semibold mb-6">安全设置</h2>
+                <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+                    <h2 class="text-xl font-semibold mb-6 text-gray-900 dark:text-gray-100">安全设置</h2>
 
                     <!-- 修改密码 -->
                     <div class="mb-8">
-                        <h3 class="text-lg font-medium mb-4">修改密码</h3>
+                        <h3 class="text-lg font-medium mb-4 text-gray-900 dark:text-gray-100">修改密码</h3>
                         <div class="space-y-4 max-w-md">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">当前密码</label>
+                                <label
+                                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">当前密码</label>
                                 <input type="password" placeholder="请输入当前密码"
-                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                       class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-gray-100 dark:bg-gray-700">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">新密码</label>
+                                <label
+                                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">新密码</label>
                                 <input type="password" placeholder="请输入新密码（至少6位）"
-                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                       class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-gray-100 dark:bg-gray-700">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">确认新密码</label>
+                                <label
+                                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">确认新密码</label>
                                 <input type="password" placeholder="请再次输入新密码"
-                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                       class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-gray-100 dark:bg-gray-700">
                             </div>
                             <button class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
                                 修改密码
@@ -281,8 +297,8 @@
 
                     <!-- 登录设备 -->
                     <div>
-                        <h3 class="text-lg font-medium mb-4">登录设备</h3>
-                        <div class="text-gray-600 text-sm">
+                        <h3 class="text-lg font-medium mb-4 text-gray-900 dark:text-gray-100">登录设备</h3>
+                        <div class="text-gray-600 dark:text-gray-400 text-sm">
                             <p>此功能正在开发中...</p>
                         </div>
                     </div>
@@ -291,28 +307,28 @@
 
             <!-- 偏好设置标签页 -->
             <div id="content-preferences" class="tab-content hidden">
-                <div class="bg-white shadow rounded-lg p-6">
-                    <h2 class="text-xl font-semibold mb-6">偏好设置</h2>
+                <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+                    <h2 class="text-xl font-semibold mb-6 text-gray-900 dark:text-gray-100">偏好设置</h2>
 
                     <div class="space-y-6">
                         <!-- 通知设置 -->
                         <div>
-                            <h3 class="text-lg font-medium mb-4">通知偏好</h3>
+                            <h3 class="text-lg font-medium mb-4 text-gray-900 dark:text-gray-100">通知偏好</h3>
                             <div class="space-y-3">
                                 <label class="flex items-center">
                                     <input type="checkbox" checked
                                            class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                                    <span class="ml-3 text-gray-700">接收评论通知</span>
+                                    <span class="ml-3 text-gray-700 dark:text-gray-300">接收评论通知</span>
                                 </label>
                                 <label class="flex items-center">
                                     <input type="checkbox" checked
                                            class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                                    <span class="ml-3 text-gray-700">接收系统通知</span>
+                                    <span class="ml-3 text-gray-700 dark:text-gray-300">接收系统通知</span>
                                 </label>
                                 <label class="flex items-center">
                                     <input type="checkbox"
                                            class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                                    <span class="ml-3 text-gray-700">接收营销邮件</span>
+                                    <span class="ml-3 text-gray-700 dark:text-gray-300">接收营销邮件</span>
                                 </label>
                             </div>
                         </div>
@@ -321,12 +337,13 @@
 
                         <!-- 界面设置 -->
                         <div>
-                            <h3 class="text-lg font-medium mb-4">界面设置</h3>
+                            <h3 class="text-lg font-medium mb-4 text-gray-900 dark:text-gray-100">界面设置</h3>
                             <div class="space-y-4">
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">语言</label>
+                                    <label
+                                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">语言</label>
                                     <select
-                                        class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                        class="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-gray-100 dark:bg-gray-700">
                                         <option value="zh-CN" selected>简体中文</option>
                                         <option value="en-US">English</option>
                                     </select>

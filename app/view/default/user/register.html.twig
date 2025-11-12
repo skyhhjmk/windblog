@@ -3,13 +3,13 @@
 {% block title %}用户注册 - {{ page_title|default('WindBlog') }}{% endblock %}
 
 {% block content %}
-    <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
         <div class="max-w-md w-full space-y-8">
             <div>
-                <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-gray-100">
                     创建您的账户
                 </h2>
-                <p class="mt-2 text-center text-sm text-gray-600">
+                <p class="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
                     或者
                     <a href="/user/login" class="font-medium text-blue-600 hover:text-blue-500">
                         登录已有账户
@@ -20,45 +20,46 @@
                 <input type="hidden" name="_token" value="{{ csrf_token|default('') }}">
                 <div class="rounded-md shadow-sm space-y-4">
                     <div>
-                        <label for="username" class="block text-sm font-medium text-gray-700">
+                        <label for="username" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                             用户名 <span class="text-red-500">*</span>
                         </label>
                         <input id="username" name="username" type="text" required
-                               class="mt-1 appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                               class="mt-1 appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-gray-100 dark:bg-gray-700 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
                                placeholder="请输入用户名（3-32个字符）">
-                        <p class="mt-1 text-xs text-gray-500">只能包含字母、数字和下划线</p>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">只能包含字母、数字和下划线</p>
                     </div>
                     <div>
-                        <label for="email" class="block text-sm font-medium text-gray-700">
+                        <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                             邮箱 <span class="text-red-500">*</span>
                         </label>
                         <input id="email" name="email" type="email" required
-                               class="mt-1 appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                               class="mt-1 appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-gray-100 dark:bg-gray-700 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
                                placeholder="请输入邮箱">
-                        <p class="mt-1 text-xs text-gray-500">用于接收激活邮件和找回密码</p>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">用于接收激活邮件和找回密码</p>
                     </div>
                     <div>
-                        <label for="nickname" class="block text-sm font-medium text-gray-700">
+                        <label for="nickname" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                             昵称
                         </label>
                         <input id="nickname" name="nickname" type="text"
-                               class="mt-1 appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                               class="mt-1 appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-gray-100 dark:bg-gray-700 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
                                placeholder="请输入昵称（可选，默认为用户名）">
                     </div>
                     <div>
-                        <label for="password" class="block text-sm font-medium text-gray-700">
+                        <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                             密码 <span class="text-red-500">*</span>
                         </label>
                         <input id="password" name="password" type="password" required
-                               class="mt-1 appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                               class="mt-1 appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-gray-100 dark:bg-gray-700 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
                                placeholder="请输入密码（至少6个字符）">
                     </div>
                     <div>
-                        <label for="password_confirm" class="block text-sm font-medium text-gray-700">
+                        <label for="password_confirm"
+                               class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                             确认密码 <span class="text-red-500">*</span>
                         </label>
                         <input id="password_confirm" name="password_confirm" type="password" required
-                               class="mt-1 appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                               class="mt-1 appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-gray-100 dark:bg-gray-700 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
                                placeholder="请再次输入密码">
                     </div>
                 </div>
@@ -76,7 +77,7 @@
                     </button>
                 </div>
 
-                <div class="text-center text-sm text-gray-600">
+                <div class="text-center text-sm text-gray-600 dark:text-gray-400">
                     <p>注册即表示您同意我们的服务条款和隐私政策</p>
                 </div>
             </form>
@@ -95,10 +96,11 @@
             <div class="mt-6">
                 <div class="relative">
                     <div class="absolute inset-0 flex items-center">
-                        <div class="w-full border-t border-gray-300"></div>
+                        <div class="w-full border-t border-gray-300 dark:border-gray-600"></div>
                     </div>
                     <div class="relative flex justify-center text-sm">
-                        <span class="px-2 bg-gray-50 text-gray-500">或使用第三方账号登录</span>
+                        <span
+                            class="px-2 bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400">或使用第三方账号登录</span>
                     </div>
                 </div>
 
@@ -107,7 +109,7 @@
                         {% if providerInfo.enabled %}
                             <a href="/oauth/{{ provider }}/redirect"
                                data-no-pjax
-                               class="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+                               class="w-full inline-flex justify-center py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
                                title="使用 {{ providerInfo.name }} 登录">
                                 {% if provider == 'wind' %}
                                     <span style="color: {{ providerInfo.color }}; font-weight: 600;">Wind OAuth</span>
@@ -148,8 +150,8 @@
                     const box = document.createElement('div');
                     box.className = 'flex items-center space-x-2';
                     box.innerHTML = `
-                        <input name="captcha" placeholder="请输入验证码" class="mt-1 flex-1 appearance-none rounded-md px-3 py-2 border border-gray-300 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
-                        <img id="captchaImg" src="/captcha/image?ts=${Date.now()}" alt="验证码" class="h-10 w-28 cursor-pointer border border-gray-300 rounded" title="点击刷新" />
+                        <input name="captcha" placeholder="请输入验证码" class="mt-1 flex-1 appearance-none rounded-md px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 dark:bg-gray-700 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+                        <img id="captchaImg" src="/captcha/image?ts=${Date.now()}" alt="验证码" class="h-10 w-28 cursor-pointer border border-gray-300 dark:border-gray-600 rounded" title="点击刷新" />
                     `;
                     wrap.appendChild(box);
                     box.querySelector('#captchaImg').addEventListener('click', function () {

@@ -5,9 +5,9 @@
 {% block content %}
     <div class="container mx-auto px-4 py-8">
         <div class="max-w-3xl mx-auto">
-            <h1 class="text-3xl font-bold mb-8">个人资料</h1>
+            <h1 class="text-3xl font-bold mb-8 text-gray-900 dark:text-gray-100">个人资料</h1>
 
-            <div class="bg-white shadow rounded-lg p-6 space-y-6">
+            <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-6 space-y-6">
                 {# 头像 #}
                 <div class="flex items-center space-x-4">
                     <div>
@@ -21,8 +21,8 @@
                         {% endif %}
                     </div>
                     <div>
-                        <h2 class="text-2xl font-semibold">{{ user.nickname }}</h2>
-                        <p class="text-gray-600">@{{ user.username }}</p>
+                        <h2 class="text-2xl font-semibold text-gray-900 dark:text-gray-100">{{ user.nickname }}</h2>
+                        <p class="text-gray-600 dark:text-gray-400">@{{ user.username }}</p>
                     </div>
                 </div>
 
@@ -31,18 +31,18 @@
                 {# 基本信息 #}
                 <div class="space-y-4">
                     <div class="grid grid-cols-3 gap-4">
-                        <div class="text-gray-600">用户名</div>
-                        <div class="col-span-2 font-medium">{{ user.username }}</div>
+                        <div class="text-gray-600 dark:text-gray-400">用户名</div>
+                        <div class="col-span-2 font-medium text-gray-900 dark:text-gray-100">{{ user.username }}</div>
                     </div>
 
                     <div class="grid grid-cols-3 gap-4">
-                        <div class="text-gray-600">昵称</div>
-                        <div class="col-span-2 font-medium">{{ user.nickname }}</div>
+                        <div class="text-gray-600 dark:text-gray-400">昵称</div>
+                        <div class="col-span-2 font-medium text-gray-900 dark:text-gray-100">{{ user.nickname }}</div>
                     </div>
 
                     <div class="grid grid-cols-3 gap-4">
-                        <div class="text-gray-600">邮箱</div>
-                        <div class="col-span-2 font-medium">
+                        <div class="text-gray-600 dark:text-gray-400">邮箱</div>
+                        <div class="col-span-2 font-medium text-gray-900 dark:text-gray-100">
                             {{ user.email }}
                             {% if user.email_verified_at %}
                                 <span class="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">已验证</span>
@@ -54,36 +54,38 @@
 
                     {% if user.mobile %}
                         <div class="grid grid-cols-3 gap-4">
-                            <div class="text-gray-600">手机</div>
-                            <div class="col-span-2 font-medium">{{ user.mobile }}</div>
+                            <div class="text-gray-600 dark:text-gray-400">手机</div>
+                            <div class="col-span-2 font-medium text-gray-900 dark:text-gray-100">{{ user.mobile }}</div>
                         </div>
                     {% endif %}
 
                     <div class="grid grid-cols-3 gap-4">
-                        <div class="text-gray-600">等级</div>
-                        <div class="col-span-2 font-medium">LV.{{ user.level }}</div>
+                        <div class="text-gray-600 dark:text-gray-400">等级</div>
+                        <div class="col-span-2 font-medium text-gray-900 dark:text-gray-100">LV.{{ user.level }}</div>
                     </div>
 
                     <div class="grid grid-cols-3 gap-4">
-                        <div class="text-gray-600">积分</div>
-                        <div class="col-span-2 font-medium">{{ user.score }}</div>
+                        <div class="text-gray-600 dark:text-gray-400">积分</div>
+                        <div class="col-span-2 font-medium text-gray-900 dark:text-gray-100">{{ user.score }}</div>
                     </div>
 
                     <div class="grid grid-cols-3 gap-4">
-                        <div class="text-gray-600">注册时间</div>
-                        <div class="col-span-2 font-medium">{{ user.join_time|local_date('Y-m-d H:i:s') }}</div>
+                        <div class="text-gray-600 dark:text-gray-400">注册时间</div>
+                        <div
+                            class="col-span-2 font-medium text-gray-900 dark:text-gray-100">{{ user.join_time|local_date('Y-m-d H:i:s') }}</div>
                     </div>
 
                     {% if user.last_time %}
                         <div class="grid grid-cols-3 gap-4">
-                            <div class="text-gray-600">最后登录</div>
-                            <div class="col-span-2 font-medium">{{ user.last_time|local_date('Y-m-d H:i:s') }}</div>
+                            <div class="text-gray-600 dark:text-gray-400">最后登录</div>
+                            <div
+                                class="col-span-2 font-medium text-gray-900 dark:text-gray-100">{{ user.last_time|local_date('Y-m-d H:i:s') }}</div>
                         </div>
                     {% endif %}
 
                     <div class="grid grid-cols-3 gap-4">
-                        <div class="text-gray-600">账户状态</div>
-                        <div class="col-span-2 font-medium">
+                        <div class="text-gray-600 dark:text-gray-400">账户状态</div>
+                        <div class="col-span-2 font-medium text-gray-900 dark:text-gray-100">
                             {% if user.status == 0 %}
                                 <span class="text-yellow-600">未激活</span>
                             {% elseif user.status == 1 %}
