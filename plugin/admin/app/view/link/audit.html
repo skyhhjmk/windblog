@@ -310,12 +310,24 @@
                 </div>
             `;
 
+            // 检查是否有对方友链页链接
+            const linkPosition = linkData.custom_fields?.link_position || '';
+            const pageLink = linkData.custom_fields?.page_link || '';
+
+            // 构建请求参数
+            let requestBody = `url=${encodeURIComponent(linkData.url)}&my_domain=${encodeURIComponent(window.location.origin)}`;
+
+            // 如果有友链页链接且不是首页，传递额外参数
+            if (pageLink && linkPosition !== 'homepage') {
+                requestBody += `&link_position=${encodeURIComponent(linkPosition)}&page_link=${encodeURIComponent(pageLink)}`;
+            }
+
             fetch('/app/admin/link/detectSite', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: `url=${encodeURIComponent(linkData.url)}&my_domain=${encodeURIComponent(window.location.origin)}`
+                body: requestBody
             })
             .then(response => response.json())
             .then(data => {
@@ -506,7 +518,17 @@
                 `;
             };
 
-            iframe.src = linkData.url;
+            // 检查是否有对方友链页链接，且位置不是首页
+            const linkPosition = linkData.custom_fields?.link_position || '';
+            const pageLink = linkData.custom_fields?.page_link || '';
+
+            if (pageLink && linkPosition !== 'homepage') {
+                // 如果有友链页链接且不是放在首页，优先加载友链页
+                iframe.src = pageLink;
+            } else {
+                // 否则加载网站首页
+                iframe.src = linkData.url;
+            }
         }
 
         // 工具栏功能

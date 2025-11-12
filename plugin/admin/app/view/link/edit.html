@@ -179,13 +179,17 @@
             <div class="layui-form-item">
                 <label class="layui-form-label">对方友链位置</label>
                 <div class="layui-input-block">
-                    <input class="layui-input" name="link_position" placeholder="如：首页底部、友链页面、侧边栏等"
-                           type="text">
-                    <div class="layui-form-mid layui-word-aux">对方友链放置位置描述</div>
+                    <select class="layui-input" lay-filter="link_position" name="link_position">
+                        <option value="">请选择</option>
+                        <option value="homepage">首页</option>
+                        <option value="links_page">友链页面</option>
+                        <option value="other">其他</option>
+                    </select>
+                    <div class="layui-form-mid layui-word-aux">对方友链放置位置</div>
                 </div>
             </div>
 
-            <div class="layui-form-item">
+            <div class="layui-form-item" id="page-link-item" style="display: none;">
                 <label class="layui-form-label">对方友链页链接</label>
                 <div class="layui-input-block">
                     <input class="layui-input" lay-verify="url" name="page_link" placeholder="https://example.com/links"
@@ -268,7 +272,9 @@
                                 $('input[name="enable_auto_report"]').prop('checked', true);
                             }
                             if (link.custom_fields.link_position) {
-                                $('input[name="link_position"]').val(link.custom_fields.link_position);
+                                $('select[name="link_position"]').val(link.custom_fields.link_position);
+                                // 根据位置显示/隐藏页链接字段
+                                togglePageLinkField(link.custom_fields.link_position);
                             }
                             if (link.custom_fields.page_link) {
                                 $('input[name="page_link"]').val(link.custom_fields.page_link);
@@ -291,7 +297,9 @@
                                     $('input[name="enable_auto_report"]').prop('checked', true);
                                 }
                                 if (_tmp.link_position) {
-                                    $('input[name="link_position"]').val(_tmp.link_position);
+                                    $('select[name="link_position"]').val(_tmp.link_position);
+                                    // 根据位置显示/隐藏页链接字段
+                                    togglePageLinkField(_tmp.link_position);
                                 }
                                 if (_tmp.page_link) {
                                     $('input[name="page_link"]').val(_tmp.page_link);
@@ -329,6 +337,29 @@
 
         // 页面加载完成后获取数据
         loadLinkData();
+
+        // 监听对方友链位置选择变化
+        form.on('select(link_position)', function (data) {
+            togglePageLinkField(data.value);
+        });
+
+        // 根据链接位置显示/隐藏页链接字段
+        function togglePageLinkField(position) {
+            var $pageLinkItem = $('#page-link-item');
+            var $pageLinkInput = $('input[name="page_link"]');
+
+            if (position === 'homepage') {
+                // 首页：隐藏字段，清空值
+                $pageLinkItem.hide();
+                $pageLinkInput.val('');
+            } else if (position === 'links_page' || position === 'other') {
+                // 友链页面或其他：显示字段
+                $pageLinkItem.show();
+            } else {
+                // 未选择：隐藏字段
+                $pageLinkItem.hide();
+            }
+        }
 
         // 自定义验证规则
         form.verify({

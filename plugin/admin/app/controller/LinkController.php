@@ -743,6 +743,8 @@ class LinkController extends Base
     {
         $url = $request->post('url');
         $myDomain = $request->post('my_domain', ''); // 本站域名，用于反向链接检查
+        $linkPosition = $request->post('link_position', ''); // 友链位置
+        $pageLink = $request->post('page_link', ''); // 友链页面链接
 
         if (empty($url)) {
             return $this->fail('URL不能为空');
@@ -792,8 +794,41 @@ class LinkController extends Base
         $result['seo'] = $this->runSeoDetector($dom, $xpath);
         $result['security'] = $this->runSecurityDetector($url, $html);
 
+        // 反向链接检查：如果有友链页面且不是首页，同时检测首页和友链页
         if (!empty($myDomain)) {
-            $result['backlink_check'] = $this->runBacklinkDetector($html, $myDomain, $url);
+            $backlinkResult = $this->runBacklinkDetector($html, $myDomain, $url);
+
+            // 如果有友链页面且不是首页，需要额外检测友链页面
+            if (!empty($pageLink) && $linkPosition !== 'homepage') {
+                try {
+                    $pageFetch = $this->fetchWebContent($pageLink);
+                    if ($pageFetch['success']) {
+                        $pageBacklink = $this->runBacklinkDetector($pageFetch['html'], $myDomain, $pageLink);
+
+                        // 合并反链结果：只要其中一个页面找到反链就认为找到了
+                        if ($pageBacklink['found'] ?? false) {
+                            $backlinkResult['found'] = true;
+                            $backlinkResult['link_count'] = ($backlinkResult['link_count'] ?? 0) + ($pageBacklink['link_count'] ?? 0);
+                            $backlinkResult['links'] = array_merge(
+                                $backlinkResult['links'] ?? [],
+                                $pageBacklink['links'] ?? []
+                            );
+                            $backlinkResult['page_link_checked'] = true;
+                            $backlinkResult['page_link_url'] = $pageLink;
+                        } else {
+                            $backlinkResult['page_link_checked'] = true;
+                            $backlinkResult['page_link_url'] = $pageLink;
+                            $backlinkResult['page_link_found'] = false;
+                        }
+                    } else {
+                        $result['errors'][] = '无法访问友链页面：' . $pageFetch['error'];
+                    }
+                } catch (Exception $e) {
+                    $result['errors'][] = '检测友链页面异常：' . $e->getMessage();
+                }
+            }
+
+            $result['backlink_check'] = $backlinkResult;
         }
 
         return $this->success('检测完成', $result)

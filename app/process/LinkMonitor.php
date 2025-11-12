@@ -230,6 +230,7 @@ class LinkMonitor
                 return;
             }
 
+            // 首页监控
             $fetch = $this->fetchWebContent($url);
             if (!$fetch['success']) {
                 $this->recordFailure($url, $fetch['error']);
@@ -249,21 +250,81 @@ class LinkMonitor
                 'errors' => [],
             ];
 
+            // 反链检查：首页
+            $backlinkResult = ['found' => false, 'link_count' => 0];
             if ($myDomain) {
-                $back = $this->checkBacklink($html, $myDomain);
-                $summary['backlink'] = [
-                    'found' => $back['found'] ?? false,
-                    'count' => $back['link_count'] ?? 0,
-                ];
+                $backlinkResult = $this->checkBacklink($html, $myDomain);
             }
 
+            // 如果有 link_id，检查是否需要监控友链页面，并保存结果
+            $linkModel = null;
             if ($linkId) {
                 try {
-                    $model = Link::find((int) $linkId);
-                    if ($model) {
-                        $model->setCustomField('monitor', $summary);
-                        $model->save();
+                    $linkModel = Link::find((int) $linkId);
+                    if ($linkModel) {
+                        $linkPosition = $linkModel->getCustomField('link_position', '');
+                        $pageLink = $linkModel->getCustomField('page_link', '');
+
+                        // 如果有友链页面且不是首页，需要额外监控友链页面
+                        if (!empty($pageLink) && $linkPosition !== 'homepage' && $myDomain) {
+                            try {
+                                $pageFetch = $this->fetchWebContent($pageLink);
+                                if ($pageFetch['success']) {
+                                    $pageBacklink = $this->checkBacklink($pageFetch['html'], $myDomain);
+
+                                    // 合并反链结果：只要其中一个页面找到反链就认为找到了
+                                    if ($pageBacklink['found'] ?? false) {
+                                        $backlinkResult['found'] = true;
+                                        $backlinkResult['link_count'] = ($backlinkResult['link_count'] ?? 0) + ($pageBacklink['link_count'] ?? 0);
+                                    }
+
+                                    // 记录检测信息
+                                    $summary['page_link_checked'] = true;
+                                    $summary['page_link_url'] = $pageLink;
+                                    $summary['page_link_found'] = $pageBacklink['found'] ?? false;
+                                    $summary['page_link_count'] = $pageBacklink['link_count'] ?? 0;
+
+                                    Log::debug('LinkMonitor 检测友链页面', [
+                                        'link_id' => $linkId,
+                                        'page_link' => $pageLink,
+                                        'homepage_found' => $backlinkResult['found'] ?? false,
+                                        'pagepage_found' => $pageBacklink['found'] ?? false,
+                                        'total_count' => $backlinkResult['link_count'] ?? 0,
+                                    ]);
+                                } else {
+                                    $summary['errors'][] = '无法访问友链页面：' . $pageFetch['error'];
+                                    Log::warning('LinkMonitor: 无法访问友链页面', [
+                                        'link_id' => $linkId,
+                                        'page_link' => $pageLink,
+                                        'error' => $pageFetch['error'],
+                                    ]);
+                                }
+                            } catch (Throwable $e) {
+                                $summary['errors'][] = '检测友链页面异常：' . $e->getMessage();
+                                Log::error('LinkMonitor: 检测友链页面异常', [
+                                    'link_id' => $linkId,
+                                    'page_link' => $pageLink,
+                                    'error' => $e->getMessage(),
+                                ]);
+                            }
+                        }
                     }
+                } catch (Throwable $e) {
+                    Log::warning('LinkMonitor 获取友链信息失败: ' . $e->getMessage());
+                }
+            }
+
+            // 设置最终反链结果
+            $summary['backlink'] = [
+                'found' => $backlinkResult['found'] ?? false,
+                'count' => $backlinkResult['link_count'] ?? 0,
+            ];
+
+            // 保存监控结果
+            if ($linkModel) {
+                try {
+                    $linkModel->setCustomField('monitor', $summary);
+                    $linkModel->save();
                 } catch (Throwable $e) {
                     Log::warning('LinkMonitor 保存概要失败: ' . $e->getMessage());
                 }

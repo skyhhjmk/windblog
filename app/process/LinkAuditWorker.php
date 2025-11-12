@@ -170,8 +170,47 @@ class LinkAuditWorker
         $html = $fetch['html'];
         $myDomain = blog_config('site_url', '', true);
 
-        // 检查反链
+        // 检查反链：首页检测
         $backlink = $this->checkBacklink($html, $myDomain);
+
+        // 如果有友链页面且不是首页，需要额外检测友链页面
+        $linkPosition = $link->getCustomField('link_position', '');
+        $pageLink = $link->getCustomField('page_link', '');
+
+        if (!empty($pageLink) && $linkPosition !== 'homepage') {
+            try {
+                $pageFetch = $this->fetchWebContent($pageLink);
+                if ($pageFetch['success']) {
+                    $pageBacklink = $this->checkBacklink($pageFetch['html'], $myDomain);
+
+                    // 合并反链结果：只要其中一个页面找到反链就认为找到了
+                    if ($pageBacklink['found'] ?? false) {
+                        $backlink['found'] = true;
+                        $backlink['link_count'] = ($backlink['link_count'] ?? 0) + ($pageBacklink['link_count'] ?? 0);
+                    }
+
+                    Log::debug('Link audit checked page_link', [
+                        'link_id' => $linkId,
+                        'page_link' => $pageLink,
+                        'homepage_found' => $backlink['found'] ?? false,
+                        'pagepage_found' => $pageBacklink['found'] ?? false,
+                        'total_count' => $backlink['link_count'] ?? 0,
+                    ]);
+                } else {
+                    Log::warning('Link audit: failed to fetch page_link', [
+                        'link_id' => $linkId,
+                        'page_link' => $pageLink,
+                        'error' => $pageFetch['error'] ?? 'unknown',
+                    ]);
+                }
+            } catch (Throwable $e) {
+                Log::error('Link audit: exception when checking page_link', [
+                    'link_id' => $linkId,
+                    'page_link' => $pageLink,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
 
         // 清理并格式化 HTML，提取关键内容
         $cleanedHtml = $this->cleanHtml($html);
