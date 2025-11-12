@@ -132,7 +132,7 @@ class User extends Model
             return false;
         }
 
-        return now() < $this->activation_token_expires_at;
+        return utc_now() < $this->activation_token_expires_at;
     }
 
     /**
