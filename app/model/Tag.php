@@ -19,9 +19,9 @@ use Throwable;
  * @property string $name        标签名称
  * @property string $slug        标签别名
  * @property string $description 标签描述
- * @property string $created_at  创建时间
- * @property string $updated_at  更新时间
- * @property string $deleted_at  删除时间
+ * @property \Illuminate\Support\Carbon|null $created_at  创建时间
+ * @property \Illuminate\Support\Carbon|null $updated_at  更新时间
+ * @property \Illuminate\Support\Carbon|null $deleted_at  删除时间
  *
  * @method static Builder|Tag where(string|Closure|array $column, mixed $operator = null, mixed $value = null, string $boolean = 'and') 查询构造器
  * @method static Builder|Tag find(int|string $id, array $columns = ['*']) 根据主键查找记录

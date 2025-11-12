@@ -7,6 +7,7 @@ use app\helper\BreadcrumbHelper;
 use app\model\User;
 use app\model\UserOAuthBinding;
 use app\service\CaptchaService;
+use app\service\CSRFService;
 use app\service\MailService;
 use app\service\OAuthService;
 use Exception;
@@ -377,6 +378,7 @@ class UserController
                 'username' => $user->username,
                 'nickname' => $user->nickname,
                 'email' => $user->email,
+                'mobile' => $user->mobile,
                 'avatar' => $user->avatar,
                 'avatar_url' => $user->getAvatarUrl(200, 'identicon'),
                 'level' => $user->level,
@@ -385,6 +387,102 @@ class UserController
                 'created_at' => $user->created_at?->format('Y-m-d H:i:s'),
             ],
         ]);
+    }
+
+    /**
+     * 更新用户资料 API
+     *
+     * @param Request $request
+     *
+     * @return Response
+     */
+    #[CSRFVerify(tokenName: '_token', methods: ['POST'])]
+    public function updateProfile(Request $request): Response
+    {
+        $session = $request->session();
+        $userId = $session->get('user_id');
+
+        if (!$userId) {
+            return json(['code' => 401, 'msg' => '未登录']);
+        }
+
+        $user = User::find($userId);
+        if (!$user) {
+            return json(['code' => 404, 'msg' => '用户不存在']);
+        }
+
+        // 获取要更新的字段
+        $nickname = trim($request->post('nickname', ''));
+        $email = trim($request->post('email', ''));
+        $mobile = trim($request->post('mobile', ''));
+
+        // 验证昵称
+        if (!empty($nickname)) {
+            if (mb_strlen($nickname, 'UTF-8') < 2) {
+                return json(['code' => 400, 'msg' => '昵称至少需要2个字符']);
+            }
+            if (mb_strlen($nickname, 'UTF-8') > 32) {
+                return json(['code' => 400, 'msg' => '昵称不能超过32个字符']);
+            }
+            $user->nickname = $nickname;
+        }
+
+        // 验证邮箱
+        if (!empty($email)) {
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                return json(['code' => 400, 'msg' => '邮箱格式不正确']);
+            }
+            // 检查邮箱是否已被其他用户使用
+            $existingUser = User::where('email', $email)
+                ->where('id', '!=', $userId)
+                ->first();
+            if ($existingUser) {
+                return json(['code' => 400, 'msg' => '该邮箱已被其他用户使用']);
+            }
+
+            // 如果邮箱改变，需要重新验证
+            if ($email !== $user->email) {
+                $user->email = $email;
+                $user->email_verified_at = null;
+                // 可以在这里发送新的验证邮件
+            }
+        }
+
+        // 验证手机号
+        if (!empty($mobile)) {
+            if (!preg_match('/^1[3-9]\d{9}$/', $mobile)) {
+                return json(['code' => 400, 'msg' => '手机号格式不正确']);
+            }
+            $user->mobile = $mobile;
+        } elseif ($request->post('mobile') === '') {
+            // 允许清空手机号
+            $user->mobile = null;
+        }
+
+        try {
+            if ($user->save()) {
+                // 更新session中的昵称
+                $session->set('nickname', $user->nickname);
+
+                return json([
+                    'code' => 0,
+                    'msg' => '资料更新成功',
+                    'data' => [
+                        'nickname' => $user->nickname,
+                        'email' => $user->email,
+                        'mobile' => $user->mobile,
+                        'email_verified' => $user->isEmailVerified(),
+                        'avatar_url' => $user->getAvatarUrl(200, 'identicon'),
+                    ],
+                ]);
+            }
+
+            return json(['code' => 500, 'msg' => '更新失败，请稍后重试']);
+        } catch (Exception $e) {
+            Log::error('Update profile failed: ' . $e->getMessage());
+
+            return json(['code' => 500, 'msg' => '更新失败，请稍后重试']);
+        }
     }
 
     /**
@@ -452,7 +550,8 @@ class UserController
      */
     public function forgotPasswordPage(Request $request): Response
     {
-        $csrf = (new \app\service\CSRFService())->generateToken($request, '_token');
+        $csrf = (new CSRFService())->generateToken($request, '_token');
+
         return view('user/forgot-password', ['csrf_token' => $csrf]);
     }
 
@@ -462,7 +561,7 @@ class UserController
     #[CSRFVerify(tokenName: '_token', methods: ['POST'])]
     public function forgotPassword(Request $request): Response
     {
-        $email = trim((string)$request->post('email', ''));
+        $email = trim((string) $request->post('email', ''));
         if ($email === '') {
             return json(['code' => 400, 'msg' => '邮箱不能为空']);
         }
@@ -483,6 +582,7 @@ class UserController
                 Log::error('generate reset token failed: ' . $e->getMessage());
             }
         }
+
         // 统一返回，避免枚举邮箱
         return json(['code' => 0, 'msg' => '如果该邮箱已注册，我们将发送重置链接至您的邮箱']);
     }
@@ -492,7 +592,7 @@ class UserController
      */
     public function resetPasswordPage(Request $request): Response
     {
-        $token = (string)$request->get('token', '');
+        $token = (string) $request->get('token', '');
         if ($token === '') {
             return view('user/reset-password-error', ['message' => '重置链接无效']);
         }
@@ -500,7 +600,8 @@ class UserController
         if (!$user || !$user->password_reset_expire || utc_now()->gt($user->password_reset_expire)) {
             return view('user/reset-password-error', ['message' => '重置链接无效或已过期']);
         }
-        $csrf = (new \app\service\CSRFService())->generateToken($request, '_token');
+        $csrf = (new CSRFService())->generateToken($request, '_token');
+
         return view('user/reset-password', ['token' => $token, 'csrf_token' => $csrf]);
     }
 
@@ -510,9 +611,9 @@ class UserController
     #[CSRFVerify(tokenName: '_token', methods: ['POST'])]
     public function resetPassword(Request $request): Response
     {
-        $token = (string)$request->post('token', '');
-        $pwd = (string)$request->post('password', '');
-        $pwd2 = (string)$request->post('password_confirm', '');
+        $token = (string) $request->post('token', '');
+        $pwd = (string) $request->post('password', '');
+        $pwd2 = (string) $request->post('password_confirm', '');
         if ($token === '' || $pwd === '' || $pwd2 === '') {
             return json(['code' => 400, 'msg' => '参数错误']);
         }
@@ -530,6 +631,7 @@ class UserController
         $user->password_reset_token = null;
         $user->password_reset_expire = null;
         $user->save();
+
         return json(['code' => 0, 'msg' => '密码重置成功，请使用新密码登录']);
     }
 
@@ -626,24 +728,24 @@ class UserController
             $session = $request->session();
             $state = $session->get('oauth_state');
             if (!$state || $state !== $request->get('state')) {
-                return view('user/oauth-error', ['message' => '非法请求，请重试']);
+                return view('user/oauth-error', array_merge($this->getSiteData(), ['message' => '非法请求，请重试']));
             }
 
             $code = $request->get('code');
             if (!$code) {
-                return view('user/oauth-error', ['message' => '授权失败，未获取授权码']);
+                return view('user/oauth-error', array_merge($this->getSiteData(), ['message' => '授权失败，未获取授权码']));
             }
 
             // 获取OAuth用户信息
             $userData = $this->getOAuthUserData($provider, $code);
             if (!$userData) {
-                return view('user/oauth-error', ['message' => '获取用户信息失败']);
+                return view('user/oauth-error', array_merge($this->getSiteData(), ['message' => '获取用户信息失败']));
             }
 
             // 查找或创建用户
             $user = $this->findOrCreateUserFromOAuth($provider, $userData);
             if (!$user) {
-                return view('user/oauth-error', ['message' => '用户创建失败']);
+                return view('user/oauth-error', array_merge($this->getSiteData(), ['message' => '用户创建失败']));
             }
 
             // 登录用户
@@ -660,7 +762,7 @@ class UserController
         } catch (Exception $e) {
             Log::error('OAuth callback failed: ' . $e->getMessage());
 
-            return view('user/oauth-error', ['message' => 'OAuth登录失败']);
+            return view('user/oauth-error', array_merge($this->getSiteData(), ['message' => 'OAuth登录失败']));
         }
     }
 
@@ -807,15 +909,33 @@ class UserController
         // 生成面包屑导航
         $breadcrumbs = BreadcrumbHelper::forUserCenter('用户中心');
 
-        return view('user/center', [
+        // 生成CSRF token
+        $csrf = (new CSRFService())->generateToken($request, '_token');
+
+        return view('user/center', array_merge($this->getSiteData(), [
             'user' => $user,
             'bindings' => $bindings,
             'supportedProviders' => $supportedProviders,
             'breadcrumbs' => $breadcrumbs,
-        ]);
+            'csrf_token' => $csrf,
+        ]));
     }
 
     // ==================== 私有方法 ====================
+
+    /**
+     * 获取站点信息用于视图
+     *
+     * @return array
+     */
+    private function getSiteData(): array
+    {
+        $siteTitle = blog_config('title', 'WindBlog', true);
+
+        return [
+            'page_title' => $siteTitle,
+        ];
+    }
 
     /**
      * 获取OAuth配置

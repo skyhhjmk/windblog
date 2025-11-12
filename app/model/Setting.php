@@ -10,8 +10,8 @@ use support\Model;
  * @property int    $id         主键
  * @property string $key        设置键名
  * @property string $value      设置值
- * @property string|null $created_at 创建时间
- * @property string|null $updated_at 更新时间
+ * @property \Illuminate\Support\Carbon|null $created_at 创建时间
+ * @property \Illuminate\Support\Carbon|null $updated_at 更新时间
  */
 class Setting extends Model
 {

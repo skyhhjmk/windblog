@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}用户中心 - {{ site.name }}{% endblock %}
+{% block title %}{{ user.nickname }}的用户中心 - {{ page_title|default('WindBlog') }}{% endblock %}
 
 {% block content %}
     <div class="container mx-auto px-4 py-8">
@@ -100,7 +100,7 @@
                             <div>
                                 <label
                                     class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">昵称</label>
-                                <input type="text" value="{{ user.nickname }}"
+                                <input type="text" id="user-nickname" value="{{ user.nickname }}"
                                        class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-gray-100 dark:bg-gray-700">
                             </div>
                         </div>
@@ -110,7 +110,7 @@
                                 <label
                                     class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">邮箱</label>
                                 <div class="flex items-center">
-                                    <input type="email" value="{{ user.email }}"
+                                    <input type="email" id="user-email" value="{{ user.email }}"
                                            class="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-gray-100 dark:bg-gray-700">
                                     {% if user.email_verified_at %}
                                         <span class="ml-2 px-3 py-1 text-xs bg-green-100 text-green-800 rounded-full">
@@ -128,7 +128,7 @@
                             <div>
                                 <label
                                     class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">手机</label>
-                                <input type="tel" value="{{ user.mobile }}" placeholder="请输入手机号"
+                                <input type="tel" id="user-mobile" value="{{ user.mobile }}" placeholder="请输入手机号"
                                        class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-gray-100 dark:bg-gray-700">
                             </div>
                         </div>
@@ -183,10 +183,12 @@
                         </div>
 
                         <div class="flex justify-end space-x-4 pt-4">
-                            <button class="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400">
+                            <button id="btn-reset"
+                                    class="px-6 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500">
                                 重置
                             </button>
-                            <button class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+                            <button id="btn-save"
+                                    class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700">
                                 保存修改
                             </button>
                         </div>
@@ -241,14 +243,14 @@
                                         {% if isBound %}
                                             <button
                                                 onclick="unbindOAuth('{{ providerKey }}')"
-                                                class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition">
+                                                class="px-4 py-2 bg-red-500 dark:bg-red-600 text-white rounded-lg hover:bg-red-600 dark:hover:bg-red-700 transition">
                                                 <i class="fas fa-unlink mr-1"></i>解绑
                                             </button>
                                         {% else %}
                                             <a
                                                 href="/oauth/{{ providerKey }}/redirect"
                                                 data-no-pjax
-                                                class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 inline-block transition">
+                                                class="px-4 py-2 bg-blue-500 dark:bg-blue-600 text-white rounded-lg hover:bg-blue-600 dark:hover:bg-blue-700 inline-block transition">
                                                 <i class="fas fa-link mr-1"></i>绑定
                                             </a>
                                         {% endif %}
@@ -352,7 +354,8 @@
                         </div>
 
                         <div class="flex justify-end space-x-4 pt-4">
-                            <button class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+                            <button
+                                class="px-6 py-2 bg-blue-500 dark:bg-blue-600 text-white rounded-lg hover:bg-blue-600 dark:hover:bg-blue-700">
                                 保存设置
                             </button>
                         </div>
@@ -371,6 +374,19 @@
         .tab-button:not(.active):hover {
             border-color: #d1d5db;
             color: #4b5563;
+        }
+
+        /* 深色模式下的标签页样式优化 */
+        @media (prefers-color-scheme: dark) {
+            .dark .tab-button.active {
+                border-color: #60a5fa;
+                color: #60a5fa;
+            }
+
+            .dark .tab-button:not(.active):hover {
+                border-color: #4b5563;
+                color: #9ca3af;
+            }
         }
     </style>
 
@@ -391,10 +407,118 @@
             document.getElementById('content-' + tabName).classList.remove('hidden');
 
             // 激活当前标签
-            const activeButton = document.getElementById('tab-' + tabName);
+            var activeButton = document.getElementById('tab-' + tabName);
             activeButton.classList.add('active', 'border-blue-500', 'text-blue-600');
             activeButton.classList.remove('border-transparent', 'text-gray-500');
         }
+
+        // 使用IIFE避免重复声明问题
+        (function () {
+            // 检查是否已初始化
+            if (window.__userCenterInitialized) {
+                return;
+            }
+            window.__userCenterInitialized = true;
+
+            var btnSave = document.getElementById('btn-save');
+            var btnReset = document.getElementById('btn-reset');
+            var csrfToken = '{{ csrf_token }}';
+
+            // 保存原始数据，用于重置
+            var originalData = {
+                nickname: document.getElementById('user-nickname') ? document.getElementById('user-nickname').value : '',
+                email: document.getElementById('user-email') ? document.getElementById('user-email').value : '',
+                mobile: document.getElementById('user-mobile') ? document.getElementById('user-mobile').value : ''
+            };
+
+            if (btnSave && !btnSave.dataset.bound) {
+                btnSave.dataset.bound = 'true';
+                btnSave.addEventListener('click', function () {
+                    var nickname = document.getElementById('user-nickname').value.trim();
+                    var email = document.getElementById('user-email').value.trim();
+                    var mobile = document.getElementById('user-mobile').value.trim();
+
+                    // 简单验证
+                    if (!nickname) {
+                        showMessage('昵称不能为空', 'error');
+                        return;
+                    }
+                    if (!email) {
+                        showMessage('邮箱不能为空', 'error');
+                        return;
+                    }
+
+                    // 禁用按钮，显示加载状态
+                    btnSave.disabled = true;
+                    var originalText = btnSave.innerHTML;
+                    btnSave.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>保存中...';
+
+                    // 发送请求
+                    var formData = new FormData();
+                    formData.append('nickname', nickname);
+                    formData.append('email', email);
+                    formData.append('mobile', mobile);
+                    formData.append('_token', csrfToken);
+
+                    fetch('/user/profile/update', {
+                        method: 'POST',
+                        body: formData
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            btnSave.disabled = false;
+                            btnSave.innerHTML = originalText;
+
+                            if (data.code === 0) {
+                                showMessage(data.msg || '保存成功', 'success');
+                                // 更新页面显示的数据
+                                originalData.nickname = data.data.nickname;
+                                originalData.email = data.data.email;
+                                originalData.mobile = data.data.mobile;
+                                // 更新头像（如果邮箱变更）
+                                if (data.data.avatar_url) {
+                                    var avatarImg = document.querySelector('img[alt="{{ user.nickname }}"]');
+                                    if (avatarImg) {
+                                        avatarImg.src = data.data.avatar_url;
+                                    }
+                                }
+                            } else {
+                                showMessage(data.msg || '保存失败', 'error');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            btnSave.disabled = false;
+                            btnSave.innerHTML = originalText;
+                            showMessage('保存失败，请稍后重试', 'error');
+                        });
+                });
+            }
+
+            if (btnReset && !btnReset.dataset.bound) {
+                btnReset.dataset.bound = 'true';
+                btnReset.addEventListener('click', function () {
+                    document.getElementById('user-nickname').value = originalData.nickname;
+                    document.getElementById('user-email').value = originalData.email;
+                    document.getElementById('user-mobile').value = originalData.mobile;
+                    showMessage('已重置', 'success');
+                });
+            }
+
+            // 显示消息函数
+            function showMessage(message, type) {
+                if (window.Swal) {
+                    Swal.fire({
+                        icon: type,
+                        title: message,
+                        showConfirmButton: false,
+                        timer: 2000
+                    });
+                } else {
+                    alert(message);
+                }
+            }
+        })(); // IIFE结束
 
         function unbindOAuth(provider) {
             if (window.Swal) {

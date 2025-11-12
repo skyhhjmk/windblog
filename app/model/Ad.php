@@ -20,9 +20,9 @@ use support\Model;
  * @property string|null $google_ad_slot
  * @property array|null  $placements
  * @property int         $weight
- * @property string|null $created_at
- * @property string|null $updated_at
- * @property string|null $deleted_at
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property \Illuminate\Support\Carbon|null $deleted_at
  */
 class Ad extends Model
 {

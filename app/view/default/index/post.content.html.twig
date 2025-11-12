@@ -332,8 +332,8 @@
 
 
         <!-- 评论区域 -->
-        <div class="mt-8 bg-white rounded-xl shadow-md p-6" id="comments-section">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4">评论</h2>
+        <div class="mt-8 bg-white dark:bg-gray-800 rounded-xl shadow-md p-6" id="comments-section">
+            <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4">评论</h2>
 
             <!-- 评论列表 -->
             <div id="comments-list" class="mb-8">
@@ -342,8 +342,8 @@
 
             {% if post.allow_comments %}
                 <!-- 评论表单 -->
-                <div class="border-t border-gray-200 pt-6">
-                    <h3 class="text-lg font-medium text-gray-800 mb-4">发表评论</h3>
+                <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+                    <h3 class="text-lg font-medium text-gray-800 dark:text-gray-100 mb-4">发表评论</h3>
                     <form id="comment-form" class="space-y-4">
                         <input type="hidden" name="_token" value="{{ csrf_token|default('') }}">
                         <input type="hidden" id="post-id" name="post_id" value="{{ post.id }}">
@@ -353,31 +353,36 @@
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label for="guest_name" class="block text-sm font-medium text-gray-700 mb-1">昵称
+                                <label for="guest_name"
+                                       class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">昵称
                                     *</label>
                                 <input type="text" id="guest_name" name="guest_name" required
                                        placeholder="展示在评论区的名称"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                             </div>
                             <div>
-                                <label for="guest_email" class="block text-sm font-medium text-gray-700 mb-1">邮箱
+                                <label for="guest_email"
+                                       class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">邮箱
                                     *</label>
                                 <input type="email" id="guest_email" name="guest_email" required
                                        placeholder="仅用于头像与通知，不会公开"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                             </div>
                         </div>
 
                         <div>
-                            <label for="content" class="block text-sm font-medium text-gray-700 mb-1">评论内容 *</label>
+                            <label for="content"
+                                   class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">评论内容
+                                *</label>
                             <textarea id="content" name="content" rows="4" required
                                       placeholder="友善发言，理性讨论，禁止广告与人身攻击"
-                                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
                             <div id="selected-text-quote"
-                                 class="mt-2 p-2 bg-gray-100 border-l-4 border-blue-500 text-sm text-gray-600 hidden">
+                                 class="mt-2 p-2 bg-gray-100 dark:bg-gray-700 border-l-4 border-blue-500 text-sm text-gray-600 dark:text-gray-300 hidden">
                                 <span class="font-medium">引用:</span>
                                 <span id="selected-text-content"></span>
-                                <button type="button" id="remove-quote" class="ml-2 text-red-500 hover:text-red-700">
+                                <button type="button" id="remove-quote"
+                                        class="ml-2 text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300">
                                     &times;
                                 </button>
                             </div>
@@ -388,17 +393,17 @@
 
                         <div>
                             <button type="submit"
-                                    class="px-6 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors">
+                                    class="px-6 py-2 bg-blue-600 dark:bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 dark:hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors">
                                 提交评论
                             </button>
-                            <div id="comment-status" class="text-sm text-gray-500 mt-2 hidden"></div>
+                            <div id="comment-status" class="text-sm text-gray-500 dark:text-gray-400 mt-2 hidden"></div>
                         </div>
                     </form>
                 </div>
             {% else %}
                 <!-- 关闭评论提示 -->
-                <div class="border-t border-gray-200 pt-6">
-                    <p class="text-gray-500 text-center py-4">该文章已关闭评论功能</p>
+                <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+                    <p class="text-gray-500 dark:text-gray-400 text-center py-4">该文章已关闭评论功能</p>
                 </div>
             {% endif %}
         </div>
@@ -1348,20 +1353,57 @@
                 return;
             }
 
-            // 读取cookie填充昵称与邮箱
-            try {
-                const cn = getCookie('cmt_name');
-                const ce = getCookie('cmt_email');
-                if (cn) {
-                    const n = document.getElementById('guest_name');
-                    if (n) n.value = cn;
-                }
-                if (ce) {
-                    const e = document.getElementById('guest_email');
-                    if (e) e.value = ce;
-                }
-            } catch (_) {
-            }
+            // 优先从服务器获取已登录用户的最新信息，实现用户中心联动
+            fetch('/user/profile/api')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 0 && data.data) {
+                        // 登录用户：使用用户中心的最新信息
+                        const nameField = document.getElementById('guest_name');
+                        const emailField = document.getElementById('guest_email');
+                        if (nameField) {
+                            nameField.value = data.data.nickname;
+                            nameField.readOnly = true; // 登录用户不能修改昵称
+                            nameField.classList.add('bg-gray-100');
+                        }
+                        if (emailField) {
+                            emailField.value = data.data.email;
+                            emailField.readOnly = true; // 登录用户不能修改邮箱
+                            emailField.classList.add('bg-gray-100');
+                        }
+                    } else {
+                        // 未登录：使用cookie缓存的游客信息
+                        try {
+                            const cn = getCookie('cmt_name');
+                            const ce = getCookie('cmt_email');
+                            if (cn) {
+                                const n = document.getElementById('guest_name');
+                                if (n) n.value = cn;
+                            }
+                            if (ce) {
+                                const e = document.getElementById('guest_email');
+                                if (e) e.value = ce;
+                            }
+                        } catch (_) {
+                        }
+                    }
+                })
+                .catch(() => {
+                    // API失败，降级使用cookie
+                    try {
+                        const cn = getCookie('cmt_name');
+                        const ce = getCookie('cmt_email');
+                        if (cn) {
+                            const n = document.getElementById('guest_name');
+                            if (n) n.value = cn;
+                        }
+                        if (ce) {
+                            const e = document.getElementById('guest_email');
+                            if (e) e.value = ce;
+                        }
+                    } catch (_) {
+                    }
+                });
 
             // 恢复上次未通过/待审核的本地评论（cookie）
             try {
@@ -1457,13 +1499,13 @@
                     if (data.code === 0) {
                         renderComments(commentsList, data.data);
                     } else {
-                        commentsList.innerHTML = '<p class="text-gray-500">加载评论失败</p>';
+                        commentsList.innerHTML = '<p class="text-gray-500 dark:text-gray-400">加载评论失败</p>';
                     }
                 })
                 .catch(error => {
                     console.error('[Post.content] 评论加载失败:', error);
                     if (commentsList) {
-                        commentsList.innerHTML = '<p class="text-gray-500">加载评论失败</p>';
+                        commentsList.innerHTML = '<p class="text-gray-500 dark:text-gray-400">加载评论失败</p>';
                     }
                 });
         }
@@ -1479,7 +1521,7 @@
             const commentsList = Array.isArray(comments) ? comments : (comments.comments || []);
 
             if (!commentsList || commentsList.length === 0) {
-                container.innerHTML = '<p class="text-gray-500">暂无评论</p>';
+                container.innerHTML = '<p class="text-gray-500 dark:text-gray-400">暂无评论</p>';
                 return;
             }
 
@@ -1494,9 +1536,9 @@
                     const quoteType = comment.quote.type || 'post';
                     const quoteAuthor = comment.quote.author ? `@${comment.quote.author}` : '文章内容';
                     quoteHtml = `
-                    <div class="border-l-4 border-blue-500 pl-3 py-2 mb-3 bg-blue-50 rounded">
-                        <div class="text-xs text-gray-500 mb-1">${quoteAuthor}:</div>
-                        <div class="text-sm text-gray-700">${comment.quote.content}</div>
+                    <div class="border-l-4 border-blue-500 pl-3 py-2 mb-3 bg-blue-50 dark:bg-gray-700 rounded">
+                        <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">${quoteAuthor}:</div>
+                        <div class="text-sm text-gray-700 dark:text-gray-300">${comment.quote.content}</div>
                     </div>
                 `;
                 }
@@ -1504,29 +1546,29 @@
                 // 生成Gravatar头像URL
                 const avatarUrl = comment.guest_email ? getGravatarUrl(comment.guest_email, 80, 'identicon') : '';
                 const avatarHtml = avatarUrl
-                    ? `<img src="${avatarUrl}" alt="${comment.guest_name}" class="w-10 h-10 rounded-full border border-gray-200" loading="lazy">`
-                    : `<div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                    <span class="text-gray-600 font-medium">${comment.guest_name.charAt(0)}</span>
+                    ? `<img src="${avatarUrl}" alt="${comment.guest_name}" class="w-10 h-10 rounded-full border border-gray-200 dark:border-gray-600" loading="lazy">`
+                    : `<div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                    <span class="text-gray-600 dark:text-gray-300 font-medium">${comment.guest_name.charAt(0)}</span>
                 </div>`;
 
                 commentsHtml += `
-                <div class="mb-6 border-b border-gray-100 pb-6" data-comment-id="${comment.id}">
+                <div class="mb-6 border-b border-gray-100 dark:border-gray-700 pb-6" data-comment-id="${comment.id}">
                     <div class="flex items-start">
                         <div class="flex-shrink-0 mr-3">
                             ${avatarHtml}
                         </div>
                         <div class="flex-1">
                             <div class="flex items-center">
-                                <h4 class="text-sm font-medium text-gray-900">${comment.guest_name}</h4>
-                                <span class="mx-2 text-gray-300">•</span>
-                                <span class="text-xs text-gray-500">${formatDate(comment.created_at)}</span>
+                                <h4 class="text-sm font-medium text-gray-900 dark:text-gray-100">${comment.guest_name}</h4>
+                                <span class="mx-2 text-gray-300 dark:text-gray-600">•</span>
+                                <span class="text-xs text-gray-500 dark:text-gray-400">${formatDate(comment.created_at)}</span>
                             </div>
-                            <div class="mt-2 text-gray-700">
+                            <div class="mt-2 text-gray-700 dark:text-gray-300">
                                 ${quoteHtml}
                                 ${content}
                             </div>
                             <div class="mt-2">
-                                <button class="text-xs text-blue-600 hover:text-blue-800 reply-btn"
+                                <button class="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 reply-btn"
                                         data-comment-id="${comment.id}"
                                         data-comment-name="${comment.guest_name}">
                                     回复
@@ -1545,9 +1587,9 @@
                     if (reply.quote && reply.quote.content) {
                         const quoteAuthor = reply.quote.author ? `@${reply.quote.author}` : '文章内容';
                         replyQuoteHtml = `
-                                                <div class="border-l-4 border-blue-500 pl-2 py-1 mb-2 bg-blue-50 rounded">
-                                                    <div class="text-xs text-gray-500 mb-1">${quoteAuthor}:</div>
-                                                    <div class="text-xs text-gray-700">${reply.quote.content}</div>
+                                                <div class="border-l-4 border-blue-500 pl-2 py-1 mb-2 bg-blue-50 dark:bg-gray-700 rounded">
+                                                    <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">${quoteAuthor}:</div>
+                                                    <div class="text-xs text-gray-700 dark:text-gray-300">${reply.quote.content}</div>
                                                 </div>
                                             `;
                     }
@@ -1555,9 +1597,9 @@
                     // 生成回复者头像
                     const replyAvatarUrl = reply.guest_email ? getGravatarUrl(reply.guest_email, 64, 'identicon') : '';
                     const replyAvatarHtml = replyAvatarUrl
-                        ? `<img src="${replyAvatarUrl}" alt="${reply.guest_name}" class="w-8 h-8 rounded-full border border-gray-200" loading="lazy">`
-                        : `<div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-                                                <span class="text-gray-500 text-xs">${reply.guest_name.charAt(0)}</span>
+                        ? `<img src="${replyAvatarUrl}" alt="${reply.guest_name}" class="w-8 h-8 rounded-full border border-gray-200 dark:border-gray-600" loading="lazy">`
+                        : `<div class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                                                <span class="text-gray-500 dark:text-gray-300 text-xs">${reply.guest_name.charAt(0)}</span>
                                             </div>`;
 
                     return `
@@ -1567,11 +1609,11 @@
                                                 </div>
                                                 <div class="flex-1">
                                                     <div class="flex items-center">
-                                                        <h5 class="text-xs font-medium text-gray-900">${reply.guest_name}</h5>
-                                                        <span class="mx-1 text-gray-300">•</span>
-                                                        <span class="text-xs text-gray-500">${formatDate(reply.created_at)}</span>
+                                                        <h5 class="text-xs font-medium text-gray-900 dark:text-gray-100">${reply.guest_name}</h5>
+                                                        <span class="mx-1 text-gray-300 dark:text-gray-600">•</span>
+                                                        <span class="text-xs text-gray-500 dark:text-gray-400">${formatDate(reply.created_at)}</span>
                                                     </div>
-                                                    <div class="mt-1 text-sm text-gray-700">
+                                                    <div class="mt-1 text-sm text-gray-700 dark:text-gray-300">
                                                         ${replyQuoteHtml}
                                                         ${replyContent}
                                                     </div>

@@ -30,9 +30,9 @@ use Throwable;
  * @property string                    $join_time  注册时间
  * @property string                    $join_ip    注册ip
  * @property string                    $token      token
- * @property string                    $created_at 创建时间
- * @property string                    $updated_at 更新时间
- * @property string|null               $deleted_at 软删除时间
+ * @property \Illuminate\Support\Carbon|null $created_at 创建时间
+ * @property \Illuminate\Support\Carbon|null $updated_at 更新时间
+ * @property \Illuminate\Support\Carbon|null $deleted_at 软删除时间
  * @property int                       $role       角色
  * @property int                       $status     禁用
  * @property-read Collection|Comment[] $comments   关联的评论

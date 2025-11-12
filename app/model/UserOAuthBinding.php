@@ -20,10 +20,10 @@ use Throwable;
  * @property string|null $provider_avatar
  * @property string|null $access_token
  * @property string|null $refresh_token
- * @property string|null $expires_at
+ * @property \Illuminate\Support\Carbon|null $expires_at
  * @property array|null  $extra_data
- * @property string|null $created_at
- * @property string|null $updated_at
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
  */
 class UserOAuthBinding extends Model
 {

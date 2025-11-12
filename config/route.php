@@ -80,6 +80,7 @@ Route::post('/user/forgot-password', [app\controller\UserController::class, 'for
 Route::get('/user/reset-password', [app\controller\UserController::class, 'resetPasswordPage'])->name('user.reset.password.page');
 Route::post('/user/reset-password', [app\controller\UserController::class, 'resetPassword'])->name('user.reset.password');
 Route::get('/user/profile/api', [app\controller\UserController::class, 'profileApi'])->name('user.profile.api');
+Route::post('/user/profile/update', [app\controller\UserController::class, 'updateProfile'])->name('user.profile.update');
 Route::get('/user/center', [app\controller\UserController::class, 'center'])->name('user.center');
 
 // OAuth 2.0 预留路由

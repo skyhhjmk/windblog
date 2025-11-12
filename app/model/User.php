@@ -11,19 +11,27 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /**
  * 前端用户模型
  *
- * @property int         $id
- * @property string      $username
- * @property string      $nickname
- * @property string      $password
- * @property string      $email
- * @property string|null $mobile
- * @property string|null $avatar
- * @property string|null $email_verified_at
- * @property string|null $activation_token
- * @property string|null $activation_token_expires_at
- * @property int         $status 0=未激活, 1=正常, 2=禁用
- * @property string|null $created_at
- * @property string|null $updated_at
+ * @property int                             $id
+ * @property string                          $username
+ * @property string                          $nickname
+ * @property string                          $password
+ * @property string                          $email
+ * @property string|null                     $mobile
+ * @property string|null                     $avatar
+ * @property \Illuminate\Support\Carbon|null $email_verified_at
+ * @property string|null                     $activation_token
+ * @property \Illuminate\Support\Carbon|null $activation_token_expires_at
+ * @property \Illuminate\Support\Carbon|null $password_reset_expire
+ * @property int                             $status 0=未激活, 1=正常, 2=禁用
+ * @property int                             $level
+ * @property int                             $score
+ * @property float                           $money
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property \Illuminate\Support\Carbon|null $last_time
+ * @property \Illuminate\Support\Carbon|null $join_time
+ * @property string|null                     $last_ip
+ * @property string|null                     $join_ip
  *
  * @method static Builder|User where(string|Closure|array $column, mixed $operator = null, mixed $value = null, string $boolean = 'and') 查询构造器
  * @method static User|null find(int|string $id, array $columns = ['*']) 根据主键查找记录

@@ -16,8 +16,8 @@ use support\Model;
  * @property string|null $config
  * @property int         $weight
  * @property bool        $enabled
- * @property string      $created_at
- * @property string      $updated_at
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
  */
 class AiProvider extends Model
 {

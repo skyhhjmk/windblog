@@ -229,13 +229,23 @@ class Comment extends Model
     }
 
     /**
-     * 获取关联的作者
+     * 获取关联的作者（使用Author模型）
      *
      * @return BelongsTo
      */
     public function author(): BelongsTo
     {
         return $this->belongsTo(Author::class, 'user_id', 'id');
+    }
+
+    /**
+     * 获取关联的用户（使用User模型，用于评论系统）
+     *
+     * @return BelongsTo
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id', 'id');
     }
 
     /**

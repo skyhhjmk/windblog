@@ -14,8 +14,8 @@ use support\Model;
  * @property string|null $description
  * @property string      $strategy
  * @property bool        $enabled
- * @property string      $created_at
- * @property string      $updated_at
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
  */
 class AiPollingGroup extends Model
 {

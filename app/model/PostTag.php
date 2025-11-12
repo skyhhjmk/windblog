@@ -10,7 +10,7 @@ use support\Model;
  *
  * @property int       $post_id    文章ID(主键)
  * @property int       $tag_id     标签ID(主键)
- * @property string    $created_at 创建时间
+ * @property \Illuminate\Support\Carbon|null $created_at 创建时间
  * @property-read Post $post       关联的文章
  * @property-read Tag  $tag        关联的标签
  */

@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}个人资料 - {{ site.name }}{% endblock %}
+{% block title %}个人资料 - {{ page_title|default('WindBlog') }}{% endblock %}
 
 {% block content %}
     <div class="container mx-auto px-4 py-8">

@@ -60,6 +60,7 @@ class CommentController
         $userId = $session->get('user_id');
         $user = null;
         if ($userId) {
+            // 从数据库实时获取最新的用户信息，确保联动性
             $user = User::find($userId);
             if (!$user || !$user->canComment()) {
                 return json(['code' => 403, 'msg' => '账户不可用，无法评论']);
@@ -69,7 +70,8 @@ class CommentController
         // 获取评论数据
         $content = trim($request->post('content', ''));
         $parentId = (int) $request->post('parent_id', 0);
-        // 游客或用户均允许提交，登录用户优先使用账号昵称/邮箱
+        // 登录用户：强制使用用户中心的最新信息，实现实时联动
+        // 游客：使用表单提交的信息
         $guestName = $user ? $user->nickname : trim((string) $request->post('guest_name', ''));
         $guestEmail = $user ? $user->email : trim((string) $request->post('guest_email', ''));
         $quotedText = trim($request->post('quoted_text', ''));
@@ -299,16 +301,16 @@ class CommentController
         $sortOrder = $request->get('sort', 'asc');
         $sortOrder = in_array(strtolower($sortOrder), ['asc', 'desc']) ? strtolower($sortOrder) : 'asc';
 
-        // 获取评论列表，包含回复
+        // 获取评论列表，包含回复，预加载user关联避免N+1查询
         $query = Comment::where('post_id', $postId)
             ->where('status', 'approved')
             ->whereNull('parent_id')
             ->with(['replies' => function ($query) use ($sortOrder) {
                 $query->where('status', 'approved')
-                    ->with('author')
+                    ->with('user')  // 预加载user关联
                     ->orderBy('created_at', $sortOrder);
             }])
-            ->with('author')
+            ->with('user')  // 预加载user关联
             ->orderBy('created_at', $sortOrder);
 
         // 获取总数
@@ -396,6 +398,7 @@ class CommentController
 
     /**
      * 格式化评论数据（包含引用信息）
+     * 如果是已登录用户的评论，动态获取用户中心的最新信息
      *
      * @param Comment $comment
      *
@@ -404,6 +407,35 @@ class CommentController
     private function formatComment(Comment $comment): array
     {
         $data = $comment->toArray();
+
+        // 如果评论关联了用户ID，使用用户中心的最新信息（实现实时联动）
+        if (!empty($comment->user_id)) {
+            // 优先使用预加载的user关联，避免N+1查询
+            if ($comment->relationLoaded('user') && $comment->user) {
+                $user = $comment->user;
+            } else {
+                // 如果没有预加载，才动态查询
+                $user = User::find($comment->user_id);
+            }
+
+            if ($user) {
+                $data['guest_name'] = $user->nickname;
+                $data['guest_email'] = $user->email;
+                $data['author'] = [
+                    'id' => $user->id,
+                    'username' => $user->username,
+                    'nickname' => $user->nickname,
+                    'email' => $user->email,
+                    'avatar_url' => $user->getAvatarUrl(80, 'identicon'),
+                ];
+            } else {
+                // 用户不存在，使用存储的信息
+                $data['author'] = null;
+            }
+        } else {
+            // 游客评论，使用存储的guest_name和guest_email
+            $data['author'] = null;
+        }
 
         // 解析引用数据
         if (!empty($comment->quoted_data)) {
