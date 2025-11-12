@@ -46,6 +46,7 @@
                     t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
                 }
                 document.documentElement.setAttribute('data-theme', t);
+                document.documentElement.classList.toggle('dark', t === 'dark');
                 var meta = document.querySelector('meta[name="theme-color"]');
                 if (meta && t === 'dark') meta.setAttribute('content', '#0d1117');
                 if (window.matchMedia) {
@@ -54,9 +55,7 @@
                             try {
                                 if (!localStorage.getItem(storageKey)) {
                                     var nt = e.matches ? 'dark' : 'light';
-                                    document.documentElement.setAttribute('data-theme', nt);
-                                    var m = document.querySelector('meta[name="theme-color"]');
-                                    if (m) m.setAttribute('content', nt === 'dark' ? '#0d1117' : '#667eea');
+                                    applyTheme(nt, false);
                                 }
                             } catch (_) {
                             }
@@ -68,6 +67,7 @@
                 function applyTheme(theme, persist) {
                     if (theme !== 'dark' && theme !== 'light') return;
                     document.documentElement.setAttribute('data-theme', theme);
+                    document.documentElement.classList.toggle('dark', theme === 'dark');
                     try {
                         if (persist) localStorage.setItem(storageKey, theme);
                     } catch (_) {
@@ -132,6 +132,21 @@
             } catch (_) {
             }
         })();
+    </script>
+    <script>
+        // Tailwind Play CDN config MUST be defined on `tailwind` before the CDN script loads
+        // Use class strategy so `dark:` variants only apply when html has `.dark`.
+        // Do not wrap in an IIFE that only writes to window.tailwind; the CDN reads `tailwind.config`.
+        /* eslint-disable no-undef */
+        try {
+            tailwind = (typeof tailwind === 'undefined' ? {} : tailwind);
+        } catch (e) { /* globals in non-strict mode */
+        }
+        try {
+            tailwind.config = Object.assign({}, tailwind.config || {}, {darkMode: 'class'});
+        } catch (e) {
+        }
+        /* eslint-enable no-undef */
     </script>
     <script src="https://cdn.tailwindcss.com/3.4.17"></script>
     <link rel="preload" as="style" href="{{ asset('/assets/css/font-awesome.css') }}">
@@ -981,6 +996,68 @@
         html[data-theme="dark"] ::selection {
             background: rgba(99, 102, 241, .35);
             color: #fff;
+        }
+
+        /* Fix: when OS is dark but site theme is light, neutralize common Tailwind `dark:` utilities inside content */
+        html[data-theme="light"] #pjax-container .dark\:bg-gray-900 {
+            background-color: #ffffff !important;
+        }
+
+        html[data-theme="light"] #pjax-container .dark\:bg-gray-800 {
+            background-color: #ffffff !important;
+        }
+
+        html[data-theme="light"] #pjax-container .dark\:bg-gray-700 {
+            background-color: #f3f4f6 !important;
+        }
+
+        html[data-theme="light"] #pjax-container .dark\:bg-gray-600 {
+            background-color: #f9fafb !important;
+        }
+
+        html[data-theme="light"] #pjax-container .dark\:text-gray-100 {
+            color: #111827 !important;
+        }
+
+        html[data-theme="light"] #pjax-container .dark\:text-gray-300 {
+            color: #4b5563 !important;
+        }
+
+        html[data-theme="light"] #pjax-container .dark\:text-gray-400 {
+            color: #6b7280 !important;
+        }
+
+        html[data-theme="light"] #pjax-container .dark\:text-blue-400 {
+            color: #2563eb !important;
+        }
+
+        html[data-theme="light"] #pjax-container .dark\:text-green-400 {
+            color: #16a34a !important;
+        }
+
+        html[data-theme="light"] #pjax-container .dark\:text-red-400 {
+            color: #ef4444 !important;
+        }
+
+        html[data-theme="light"] #pjax-container .dark\:border-gray-600,
+        html[data-theme="light"] #pjax-container .dark\:border-gray-700 {
+            border-color: #e5e7eb !important;
+        }
+
+        html[data-theme="light"] #pjax-container .dark\:hover\:bg-gray-700:hover {
+            background-color: #f3f4f6 !important;
+        }
+
+        html[data-theme="light"] #pjax-container .dark\:bg-blue-600 {
+            background-color: #2563eb !important;
+        }
+
+        html[data-theme="light"] #pjax-container .dark\:hover\:bg-blue-700:hover {
+            background-color: #1d4ed8 !important;
+        }
+
+        html[data-theme="light"] #pjax-container .dark\:hover\:border-gray-600:hover {
+            border-color: #d1d5db !important;
         }
     </style>
     {% block extra_css %}{% endblock %}

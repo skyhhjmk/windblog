@@ -59,7 +59,7 @@
                             </div>
                         </div>
                         <div class="flex-1">
-                            <h3 class="text-2xl font-semibold text-gray-800 dark:text-gray-200">{{ user.nickname }}</h3>
+                            <h3 class="text-2xl font-semibold text-gray-900 dark:text-gray-100">{{ user.nickname }}</h3>
                             <p class="text-gray-500 dark:text-gray-400 text-base mt-1">@{{ user.username }}</p>
                             <div class="mt-3 flex items-center space-x-4">
                             <span class="inline-flex items-center text-sm text-gray-600 dark:text-gray-400">
@@ -376,17 +376,15 @@
             color: #4b5563;
         }
 
-        /* 深色模式下的标签页样式优化 */
-        @media (prefers-color-scheme: dark) {
-            .dark .tab-button.active {
-                border-color: #60a5fa;
-                color: #60a5fa;
-            }
+        /* 深色模式下的标签页样式（跟随站点主题） */
+        html.dark .tab-button.active {
+            border-color: #60a5fa;
+            color: #60a5fa;
+        }
 
-            .dark .tab-button:not(.active):hover {
-                border-color: #4b5563;
-                color: #9ca3af;
-            }
+        html.dark .tab-button:not(.active):hover {
+            border-color: #4b5563;
+            color: #9ca3af;
         }
     </style>
 

@@ -219,7 +219,7 @@ class InstantFirstPaint implements MiddlewareInterface
             <meta name="theme-color" media="(prefers-color-scheme: light)" content="#667eea">
             <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0b0f19">
             <title>加载中…</title>
-            <script>(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t)}}catch(e){}})()</script>
+            <script>(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);document.documentElement.classList.toggle('dark',t==='dark')}}catch(e){}})()</script>
             <style>
             html,body{height:100%;margin:0;background:#f9fafb;font-family:system-ui,-apple-system,sans-serif}
             .c{display:flex;align-items:center;justify-content:center;height:100%;flex-direction:column}
