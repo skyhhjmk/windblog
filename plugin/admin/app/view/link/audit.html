@@ -217,10 +217,13 @@
 
     <script src="/app/admin/component/layui/layui.js"></script>
     <script>
-        // 从URL获取链接ID
+        // 从 URL 获取链接 ID
         const linkId = window.location.pathname.split('/').pop();
         let linkData = null;
         let isMobileView = false;
+
+        // 从后端传递的 site_url 配置
+        const siteUrl = '<?= $site_url ?? '' ?>';
 
         // 页面初始化
         layui.use(['layer', 'form', 'element'], function() {
@@ -314,8 +317,8 @@
             const linkPosition = linkData.custom_fields?.link_position || '';
             const pageLink = linkData.custom_fields?.page_link || '';
 
-            // 构建请求参数
-            let requestBody = `url=${encodeURIComponent(linkData.url)}&my_domain=${encodeURIComponent(window.location.origin)}`;
+            // 构建请求参数，使用 site_url 配置
+            let requestBody = `url=${encodeURIComponent(linkData.url)}&my_domain=${encodeURIComponent(siteUrl)}`;
 
             // 如果有友链页链接且不是首页，传递额外参数
             if (pageLink && linkPosition !== 'homepage') {

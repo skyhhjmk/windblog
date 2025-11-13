@@ -729,7 +729,13 @@ class LinkController extends Base
             return $this->fail('链接不存在');
         }
 
-        return view('link/audit', ['link' => $link]);
+        // 传递 site_url 配置到视图
+        $siteUrl = blog_config('site_url', '', true);
+
+        return view('link/audit', [
+            'link' => $link,
+            'site_url' => $siteUrl,
+        ]);
     }
 
     /**
