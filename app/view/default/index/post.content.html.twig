@@ -752,6 +752,21 @@
                     if (typeof initComments === 'function') initComments();
                     if (typeof initTextSelection === 'function') initTextSelection();
                     if (typeof buildInPageTOC === 'function') buildInPageTOC();
+
+                    // 按需加载 Pangu.js 并应用排版优化
+                    if (window.loadPangu && typeof window.loadPangu === 'function') {
+                        loadPangu().then(function () {
+                            if (window.pangu && typeof pangu.spacingElementById === 'function') {
+                                try {
+                                    pangu.spacingElementById('post-container');
+                                } catch (e) {
+                                    console.warn('[Pangu] Failed to apply spacing:', e);
+                                }
+                            }
+                        }).catch(function () {
+                            // 静默失败，不影响页面
+                        });
+                    }
                 });
             }
 

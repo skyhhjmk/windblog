@@ -121,6 +121,22 @@
     };
 
     /**
+     * 懒加载 Pangu.js（中英文排版优化）
+     * @returns {Promise<void>}
+     */
+    window.loadPangu = function () {
+        if (window.pangu) {
+            return Promise.resolve();
+        }
+
+        return loadScript('/assets/js/pangu.umd.js')
+            .catch(err => {
+                console.error('Failed to load Pangu:', err);
+                throw err;
+            });
+    };
+
+    /**
      * 懒加载 Markdown 编辑器
      * @param {string} editorType - 编辑器类型: 'vditor' 或 'easymde'
      * @returns {Promise<void>}
@@ -190,6 +206,6 @@
         css: loadCSS
     };
 
-    console.log('[LazyLoader] Initialized - Use window.loadSwal(), loadHighlightJS(), loadMarkdownEditor()');
+    console.log('[LazyLoader] Initialized - Use window.loadSwal(), loadHighlightJS(), loadPangu(), loadMarkdownEditor()');
 
 })(window);
