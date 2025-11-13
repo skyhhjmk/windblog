@@ -159,22 +159,6 @@
         return Promise.reject(new Error(`Unknown editor type: ${editorType}`));
     };
 
-    /**
-     * 懒加载 Axios（HTTP 客户端）
-     * 注意：建议迁移到 Fetch API
-     * @returns {Promise<void>}
-     */
-    window.loadAxios = function () {
-        if (window.axios) {
-            return Promise.resolve();
-        }
-
-        return loadScript('/assets/js/axios.js')
-            .catch(err => {
-                console.error('Failed to load Axios:', err);
-                throw err;
-            });
-    };
 
     /**
      * 自动按需加载 Highlight.js
