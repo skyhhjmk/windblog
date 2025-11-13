@@ -4,7 +4,9 @@
 {% block widget_content %}
     <div class="space-y-4">
         {% for ad in ads|default([]) %}
-            <div class="bg-white rounded-lg border border-gray-100 p-3 hover:shadow-sm transition-shadow relative">
+            <div
+                class="bg-white rounded-lg border border-gray-100 p-3 hover:shadow-sm transition-shadow relative {% if ad.type == 'google' %}ad-container-google{% endif %}"
+                style="{% if ad.type == 'google' %}min-width: 250px; min-height: 250px;{% endif %}">
                 <span
                     class="absolute top-2 right-2 text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 border border-gray-200">{{ ad_badge }}</span>
 

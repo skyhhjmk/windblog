@@ -643,6 +643,31 @@
             top: calc(var(--sidebar-sticky-top, 72px) + var(--sidebar-sticky-offset, 16px));
         }
 
+        /* 确保侧边栏和广告容器有最小宽度 */
+        #sidebar-container {
+            min-width: 250px;
+        }
+
+        /* Google 广告容器样式 */
+        .ad-container-google {
+            min-width: 250px !important;
+            min-height: 250px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .ad-google {
+            width: 100%;
+            min-height: 250px;
+        }
+
+        /* 在移动端隐藏侧边栏时，确保不加载广告 */
+        @media (max-width: 768px) {
+            #sidebar-container .ad-container-google {
+                display: none !important;
+            }
+        }
+
         /* 增强移动端触摸反馈 */
         .tap-highlight {
             -webkit-tap-highlight-color: rgba(59, 130, 246, 0.2);
