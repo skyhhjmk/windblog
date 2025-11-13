@@ -151,10 +151,7 @@
     <script src="https://cdn.tailwindcss.com/3.4.17"></script>
     <link rel="preload" as="style" href="{{ asset('/assets/css/font-awesome.css') }}">
     <link rel="stylesheet" href="{{ asset('/assets/css/font-awesome.css') }}">
-    <!-- Highlight.js 主题：根据明暗切换 -->
-    <link id="hljs-theme-light" rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
-    <link id="hljs-theme-dark" rel="stylesheet" href="{{ asset('/assets/css/github-dark.min.css') }}" disabled>
+    <!-- Highlight.js 主题：按需加载（通过 lazy-loaders.js） -->
     <!-- 高级动画样式 -->
     <link rel="stylesheet" href="{{ asset('/assets/css/animations.css') }}">
     <!-- 视觉光效与毛玻璃样式 -->
@@ -170,6 +167,8 @@
     <script src="{{ asset('/assets/flolink/flolink.js') }}" defer></script>
     <script src="{{ asset('/assets/js/pangu.umd.js') }}" defer></script>
     <script src="{{ asset('/assets/js/sweetalert2.all.min.js') }}" defer></script>
+    <!-- 懒加载工具：按需加载 Highlight.js、编辑器等 -->
+    <script src="{{ asset('/assets/js/lazy-loaders.js') }}" defer></script>
     <style>
         .blog-container {
             max-width: 1200px;
