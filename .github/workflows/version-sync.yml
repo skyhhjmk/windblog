@@ -37,6 +37,11 @@ jobs:
           jq ".version = \"${ver}\"" composer.json > composer.json.tmp
           mv composer.json.tmp composer.json
 
+      - name: Update service worker version
+        run: |
+          ver='${{ steps.ver.outputs.version }}'
+          sed -i "s/const SW_VERSION = 'v[0-9]\+\.[0-9]\+\.[0-9]\+';/const SW_VERSION = 'v${ver}';/" public/sw.js
+
       - name: Commit and push to master
         id: push_changes
         run: |
@@ -46,7 +51,7 @@ jobs:
             echo "changed=false" >> $GITHUB_OUTPUT
             echo "No version change to commit"
           else
-            git add composer.json
+            git add composer.json public/sw.js
             git commit -m "chore(version): bump to v${{ steps.ver.outputs.version }} [skip ci]"
             git push origin master
             echo "changed=true" >> $GITHUB_OUTPUT
