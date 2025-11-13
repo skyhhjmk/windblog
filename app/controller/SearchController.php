@@ -164,9 +164,9 @@ class SearchController
             $siteUrl = $request->host();
             // canonical 保留原查询
             $canonicalUrl = 'https://' . $siteUrl . '/search?q=' . rawurlencode($keyword);
-            $postsPerPage = (int)($result['postsPerPage'] ?? BlogService::getPostsPerPage());
-            $totalCount = (int)($result['totalCount'] ?? 0);
-            $totalPages = max(1, (int)ceil($totalCount / max(1, $postsPerPage)));
+            $postsPerPage = (int) ($result['postsPerPage'] ?? BlogService::getPostsPerPage());
+            $totalCount = (int) ($result['totalCount'] ?? 0);
+            $totalPages = max(1, (int) ceil($totalCount / max(1, $postsPerPage)));
 
             return view('search/index.amp', [
                 'page_title' => "搜索: {$keyword}",
@@ -233,6 +233,7 @@ class SearchController
             return true;
         }
         $path = $request->path();
+
         return str_starts_with($path, '/amp/');
     }
 
@@ -311,7 +312,7 @@ class SearchController
                     if ($degraded && empty($tags)) {
                         try {
                             $kwLower = mb_strtolower($keyword);
-                            $tagModel = Tag::where(function ($q) use ($keyword, $kwLower) {
+                            $tagModel = Tag::where(function ($q) use ($kwLower) {
                                 $q->whereRaw('LOWER(name) like ?', ['%' . $kwLower . '%'])
                                     ->orWhereRaw('LOWER(slug) like ?', ['%' . $kwLower . '%']);
                             })->limit(10)->get(['id', 'name', 'slug']);
@@ -337,7 +338,7 @@ class SearchController
                     if ($degraded && empty($cats)) {
                         try {
                             $kwLower = mb_strtolower($keyword);
-                            $catModel = Category::where(function ($q) use ($keyword, $kwLower) {
+                            $catModel = Category::where(function ($q) use ($kwLower) {
                                 $q->whereRaw('LOWER(name) like ?', ['%' . $kwLower . '%'])
                                     ->orWhereRaw('LOWER(slug) like ?', ['%' . $kwLower . '%']);
                             })->limit(10)->get(['id', 'name', 'slug']);
@@ -361,7 +362,7 @@ class SearchController
                 if ($type === 'all' || $type === 'tag') {
                     try {
                         $kwLower = mb_strtolower($keyword);
-                        $tagModel = Tag::where(function ($q) use ($keyword, $kwLower) {
+                        $tagModel = Tag::where(function ($q) use ($kwLower) {
                             $q->whereRaw('LOWER(name) like ?', ['%' . $kwLower . '%'])
                                 ->orWhereRaw('LOWER(slug) like ?', ['%' . $kwLower . '%']);
                         })->limit(10)->get(['id', 'name', 'slug']);
@@ -379,7 +380,7 @@ class SearchController
                 if ($type === 'all' || $type === 'category') {
                     try {
                         $kwLower = mb_strtolower($keyword);
-                        $catModel = Category::where(function ($q) use ($keyword, $kwLower) {
+                        $catModel = Category::where(function ($q) use ($kwLower) {
                             $q->whereRaw('LOWER(name) like ?', ['%' . $kwLower . '%'])
                                 ->orWhereRaw('LOWER(slug) like ?', ['%' . $kwLower . '%']);
                         })->limit(10)->get(['id', 'name', 'slug']);

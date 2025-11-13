@@ -2092,4 +2092,19 @@
             }, 250);
         }
     </script>
+
+    <!-- PJAX 隐藏侧栏片段：完成后注入到布局右侧栏 -->
+    <div id="pjax-sidebar-html" style="display:none">
+        {% if sidebar is defined and sidebar.widgets is defined %}
+            {% for widget in sidebar.widgets %}
+                {% if widget.enabled and widget.html is defined %}
+                    <div class="sidebar-widget"
+                         data-widget-key="{{ widget.key ?? widget.id ?? widget.slug ?? widget.name ?? loop.index }}"
+                         data-widget-type="{{ widget.type ?? '' }}">
+                        {{ widget.html|raw }}
+                    </div>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    </div>
 </div>

@@ -74,12 +74,9 @@ class BlogService
     public static function getBlogPosts(int $page = 1, array $filters = []): array
     {
         $posts_per_page = self::getPostsPerPage();
+        $cache_key = self::generateCacheKey($page, $posts_per_page, $filters);
 
-        // 生成缓存键，包含筛选条件
-        $filter_key = empty($filters) ? '' : '_' . md5(serialize($filters));
-        $cache_key = 'blog_posts_page_' . $page . '_per_' . $posts_per_page . $filter_key;
-
-        // 当没有筛选条件时尝试从缓存获取
+        // 尝试从缓存获取
         if (empty($filters)) {
             $cached = self::getFromCache($cache_key);
             if ($cached) {
@@ -87,149 +84,23 @@ class BlogService
             }
         }
 
-        // 构建查询（仅展示已发布且发布时间不在未来的文章）
-        $query = Post::where('status', 'published')
-            ->where(function ($q) {
-                $q->whereNull('published_at')
-                    ->orWhere('published_at', '<=', utc_now());
-            });
+        // 尝试使用 ES 搜索
+        $esSearch = self::tryElasticSearch($filters, $page, $posts_per_page);
 
-        // 处理搜索筛选条件
-        if (!empty($filters)) {
-            foreach ($filters as $key => $value) {
-                switch ($key) {
-                    case 'search':
-                        if (!empty($value)) {
-                            // 安全地转义搜索词，防止 SQL 注入
-                            $searchTerm = (string) $value;
-                            $searchTermLower = mb_strtolower(addcslashes($searchTerm, '%_\\'));
-                            $query->where(function ($q) use ($searchTermLower) {
-                                $q->whereRaw('LOWER(title) like ?', ['%' . $searchTermLower . '%'])
-                                    ->orWhereRaw('LOWER(content) like ?', ['%' . $searchTermLower . '%'])
-                                    ->orWhereRaw('LOWER(excerpt) like ?', ['%' . $searchTermLower . '%']);
-                            });
-                        }
-                        break;
-                    case 'category':
-                        if (!empty($value)) {
-                            // 统一使用 slug 过滤，提高性能并降低错误率
-                            $query->whereHas('categories', function ($q) use ($value) {
-                                $q->where('categories.slug', (string) $value);
-                            });
-                        }
-                        break;
-                    case 'tag':
-                        if (!empty($value)) {
-                            // 统一使用 slug 过滤，提高性能并降低错误率
-                            $query->whereHas('tags', function ($q) use ($value) {
-                                $q->where('tags.slug', (string) $value);
-                            });
-                        }
-                        break;
-                    case 'author':
-                        if (!empty($value)) {
-                            $query->whereHas('author', function ($q) use ($value) {
-                                $q->where('name', $value);
-                            });
-                        }
-                        break;
-                }
-            }
-        }
-
-        // 如果开启了 ES 并且存在搜索关键字，则优先走 ES
-        $esSearch = null;
-        if (!empty($filters['search']) && (bool) self::getConfig('es.enabled', false)) {
-            $esSearch = ElasticService::searchPosts((string) $filters['search'], $page, $posts_per_page);
-        }
-
-        if (is_array($esSearch) && ($esSearch['used'] ?? false) && !empty($esSearch['ids'])) {
-            // 使用 ES 返回的顺序与总数
-            $total_count = (int) $esSearch['total'];
-            $ids = $esSearch['ids'];
-
-            // 拉取文章并根据 ES 命中顺序排序
-            $posts = Post::whereIn('id', $ids)
-                ->with(['authors', 'primaryAuthor', 'categories:id,name,slug', 'tags:id,name,slug'])
-                ->get();
-
-            $orderMap = array_flip($ids);
-            $posts = $posts->sortBy(function ($post) use ($orderMap) {
-                $pid = (int) $post->id;
-
-                return $orderMap[$pid] ?? PHP_INT_MAX;
-            })->values();
-
+        // 获取文章数据
+        if (self::shouldUseElasticResult($esSearch)) {
+            [$posts, $total_count] = self::fetchPostsByElastic($esSearch);
         } else {
-            // 统计总文章数
-            $total_count = $query->count();
-
-            // 排序：支持 latest(默认) 与 hot(按评论数)
-            $sort = $filters['sort'] ?? 'latest';
-
-            // 获取文章列表并预加载作者信息
-            if (!empty($filters['search'])) {
-                // 安全地处理搜索词，防止 SQL 注入
-                $searchTerm = '%' . mb_strtolower(addcslashes((string) $filters['search'], '%_\\')) . '%';
-                $query = $query->orderByRaw(
-                    'CASE WHEN LOWER(title) LIKE ? THEN 0 WHEN LOWER(excerpt) LIKE ? THEN 1 WHEN LOWER(content) LIKE ? THEN 2 ELSE 3 END',
-                    [$searchTerm, $searchTerm, $searchTerm]
-                );
-            }
-
-            if ($sort === 'hot') {
-                $query = $query->withCount('comments')->orderByDesc('featured')->orderByDesc('comments_count')->orderByDesc('id');
-            } else {
-                $query = $query->orderByDesc('featured')->orderByDesc('id');
-            }
-
-            $posts = $query
-                ->forPage($page, $posts_per_page)
-                ->with(['authors', 'primaryAuthor', 'categories:id,name,slug', 'tags:id,name,slug'])
-                ->get();
+            $query = self::buildBaseQuery();
+            self::applyFilters($query, $filters);
+            [$posts, $total_count] = self::fetchPostsByQuery($query, $page, $posts_per_page, $filters);
         }
 
         // 处理文章摘要
-        if (empty($post->excerpt) && empty($post->ai_summary) && !empty($post->content)) {
-            try {
-                self::processPostExcerpts($posts);
-            } catch (CommonMarkException $e) {
-                Log::error('Failed to process post excerpts: ' . $e->getMessage());
-                throw $e;
-            }
-        }
+        self::ensurePostExcerpts($posts);
 
-        // 生成分页HTML
-        $pagination_html = PaginationService::generatePagination(
-            $page,
-            $total_count,
-            $posts_per_page,
-            'index.page',
-            [],
-            10
-        );
-
-        // 构建结果数组
-        $esMeta = [];
-        if (is_array($esSearch) && ($esSearch['used'] ?? false)) {
-            $esMeta = [
-                'highlights' => $esSearch['highlights'] ?? [],
-                'signals' => $esSearch['signals'] ?? [],
-            ];
-        } elseif (!empty($filters['search']) && (bool) self::getConfig('es.enabled', false)) {
-            $esMeta = [
-                'signals' => ['degraded' => true],
-            ];
-        }
-
-        $result = [
-            'posts' => $posts,
-            'pagination' => $pagination_html,
-            'totalCount' => $total_count,
-            'currentPage' => $page,
-            'postsPerPage' => $posts_per_page,
-            'esMeta' => $esMeta,
-        ];
+        // 构建并返回结果
+        $result = self::buildResult($posts, $total_count, $page, $posts_per_page, $esSearch, $filters);
 
         // 缓存结果
         if (empty($filters)) {
@@ -237,6 +108,261 @@ class BlogService
         }
 
         return $result;
+    }
+
+    /**
+     * 生成缓存键
+     */
+    protected static function generateCacheKey(int $page, int $perPage, array $filters): string
+    {
+        $filter_key = empty($filters) ? '' : '_' . md5(serialize($filters));
+
+        return 'blog_posts_page_' . $page . '_per_' . $perPage . $filter_key;
+    }
+
+    /**
+     * 构建基础查询
+     */
+    protected static function buildBaseQuery()
+    {
+        return Post::where('status', 'published')
+            ->where(function ($q) {
+                $q->whereNull('published_at')
+                    ->orWhere('published_at', '<=', utc_now());
+            });
+    }
+
+    /**
+     * 应用筛选条件
+     */
+    protected static function applyFilters($query, array $filters): void
+    {
+        if (empty($filters)) {
+            return;
+        }
+
+        foreach ($filters as $key => $value) {
+            if (empty($value)) {
+                continue;
+            }
+
+            match ($key) {
+                'search' => self::applySearchFilter($query, $value),
+                'category' => self::applyCategoryFilter($query, $value),
+                'tag' => self::applyTagFilter($query, $value),
+                'author' => self::applyAuthorFilter($query, $value),
+                default => null,
+            };
+        }
+    }
+
+    /**
+     * 应用搜索筛选
+     */
+    protected static function applySearchFilter($query, string $value): void
+    {
+        $searchTermLower = mb_strtolower(addcslashes($value, '%_\\'));
+        $query->where(function ($q) use ($searchTermLower) {
+            $q->whereRaw('LOWER(title) like ?', ['%' . $searchTermLower . '%'])
+                ->orWhereRaw('LOWER(content) like ?', ['%' . $searchTermLower . '%'])
+                ->orWhereRaw('LOWER(excerpt) like ?', ['%' . $searchTermLower . '%']);
+        });
+    }
+
+    /**
+     * 应用分类筛选
+     */
+    protected static function applyCategoryFilter($query, string $value): void
+    {
+        $query->whereHas('categories', function ($q) use ($value) {
+            $q->where('categories.slug', $value);
+        });
+    }
+
+    /**
+     * 应用标签筛选
+     */
+    protected static function applyTagFilter($query, string $value): void
+    {
+        $query->whereHas('tags', function ($q) use ($value) {
+            $q->where('tags.slug', $value);
+        });
+    }
+
+    /**
+     * 应用作者筛选
+     */
+    protected static function applyAuthorFilter($query, string $value): void
+    {
+        $query->whereHas('author', function ($q) use ($value) {
+            $q->where('name', $value);
+        });
+    }
+
+    /**
+     * 尝试使用 ElasticSearch
+     */
+    protected static function tryElasticSearch(array $filters, int $page, int $perPage): ?array
+    {
+        if (empty($filters['search'])) {
+            return null;
+        }
+
+        if (!(bool) self::getConfig('es.enabled', false)) {
+            return null;
+        }
+
+        return ElasticService::searchPosts((string) $filters['search'], $page, $perPage);
+    }
+
+    /**
+     * 判断是否应使用 ES 结果
+     */
+    protected static function shouldUseElasticResult(?array $esSearch): bool
+    {
+        return is_array($esSearch)
+            && ($esSearch['used'] ?? false)
+            && !empty($esSearch['ids']);
+    }
+
+    /**
+     * 通过 ES 结果获取文章
+     */
+    protected static function fetchPostsByElastic(array $esSearch): array
+    {
+        $total_count = (int) $esSearch['total'];
+        $ids = $esSearch['ids'];
+
+        $posts = Post::whereIn('id', $ids)
+            ->with(['authors', 'primaryAuthor', 'categories:id,name,slug', 'tags:id,name,slug'])
+            ->get();
+
+        // 按 ES 返回的顺序排序
+        $orderMap = array_flip($ids);
+        $posts = $posts->sortBy(function ($post) use ($orderMap) {
+            return $orderMap[(int) $post->id] ?? PHP_INT_MAX;
+        })->values();
+
+        return [$posts, $total_count];
+    }
+
+    /**
+     * 通过查询获取文章
+     */
+    protected static function fetchPostsByQuery($query, int $page, int $perPage, array $filters): array
+    {
+        $total_count = $query->count();
+
+        self::applySearchOrdering($query, $filters);
+        self::applySorting($query, $filters);
+
+        $posts = $query
+            ->forPage($page, $perPage)
+            ->with(['authors', 'primaryAuthor', 'categories:id,name,slug', 'tags:id,name,slug'])
+            ->get();
+
+        return [$posts, $total_count];
+    }
+
+    /**
+     * 应用搜索排序
+     */
+    protected static function applySearchOrdering($query, array $filters): void
+    {
+        if (empty($filters['search'])) {
+            return;
+        }
+
+        $searchTerm = '%' . mb_strtolower(addcslashes((string) $filters['search'], '%_\\')) . '%';
+        $query->orderByRaw(
+            'CASE WHEN LOWER(title) LIKE ? THEN 0 WHEN LOWER(excerpt) LIKE ? THEN 1 WHEN LOWER(content) LIKE ? THEN 2 ELSE 3 END',
+            [$searchTerm, $searchTerm, $searchTerm]
+        );
+    }
+
+    /**
+     * 应用排序规则
+     */
+    protected static function applySorting($query, array $filters): void
+    {
+        $sort = $filters['sort'] ?? 'latest';
+
+        if ($sort === 'hot') {
+            $query->withCount('comments')
+                ->orderByDesc('featured')
+                ->orderByDesc('comments_count')
+                ->orderByDesc('id');
+        } else {
+            $query->orderByDesc('featured')->orderByDesc('id');
+        }
+    }
+
+    /**
+     * 确保文章有摘要
+     *
+     * @throws CommonMarkException
+     */
+    protected static function ensurePostExcerpts(Collection $posts): void
+    {
+        if (empty($posts->excerpt) && empty($posts->ai_summary) && !empty($posts->content)) {
+            try {
+                self::processPostExcerpts($posts);
+            } catch (CommonMarkException $e) {
+                Log::error('Failed to process post excerpts: ' . $e->getMessage());
+                throw $e;
+            }
+        }
+    }
+
+    /**
+     * 构建返回结果
+     */
+    protected static function buildResult(
+        Collection $posts,
+        int $totalCount,
+        int $page,
+        int $perPage,
+        ?array $esSearch,
+        array $filters
+    ): array {
+        $pagination_html = PaginationService::generatePagination(
+            $page,
+            $totalCount,
+            $perPage,
+            'index.page',
+            [],
+            10
+        );
+
+        $esMeta = self::buildEsMeta($esSearch, $filters);
+
+        return [
+            'posts' => $posts,
+            'pagination' => $pagination_html,
+            'totalCount' => $totalCount,
+            'currentPage' => $page,
+            'postsPerPage' => $perPage,
+            'esMeta' => $esMeta,
+        ];
+    }
+
+    /**
+     * 构建 ES 元数据
+     */
+    protected static function buildEsMeta(?array $esSearch, array $filters): array
+    {
+        if (is_array($esSearch) && ($esSearch['used'] ?? false)) {
+            return [
+                'highlights' => $esSearch['highlights'] ?? [],
+                'signals' => $esSearch['signals'] ?? [],
+            ];
+        }
+
+        if (!empty($filters['search']) && (bool) self::getConfig('es.enabled', false)) {
+            return ['signals' => ['degraded' => true]];
+        }
+
+        return [];
     }
 
     /**

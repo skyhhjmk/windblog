@@ -498,6 +498,9 @@ class UserController
         try {
             // 生成激活链接
             $activationUrl = request()->host() . '/user/activate?token=' . $token;
+            // HTML 转义 URL 防止 XSS
+            $safeActivationUrl = htmlspecialchars($activationUrl, ENT_QUOTES, 'UTF-8');
+            $safeUsername = htmlspecialchars($user->username, ENT_QUOTES, 'UTF-8');
 
             // 邮件内容
             $subject = '激活您的账户';
@@ -511,16 +514,16 @@ class UserController
                 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
                     <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
                         <h2 style="color: #4a90e2;">欢迎注册 WindBlog！</h2>
-                        <p>您好，{$user->username}！</p>
+                        <p>您好，{$safeUsername}！</p>
                         <p>感谢您注册我们的网站。请点击下方按钮激活您的账户：</p>
                         <div style="text-align: center; margin: 30px 0;">
-                            <a href="{$activationUrl}"
+                            <a href="{$safeActivationUrl}"
                                style="background-color: #4a90e2; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">
                                 激活账户
                             </a>
                         </div>
                         <p>或者复制以下链接到浏览器中打开：</p>
-                        <p style="word-break: break-all; color: #666;">{$activationUrl}</p>
+                        <p style="word-break: break-all; color: #666;">{$safeActivationUrl}</p>
                         <p style="color: #999; font-size: 14px;">此链接将在24小时后失效。</p>
                         <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
                         <p style="color: #999; font-size: 12px;">如果您没有注册此账户，请忽略此邮件。</p>
@@ -639,6 +642,10 @@ class UserController
     {
         try {
             $resetUrl = request()->host() . '/user/reset-password?token=' . $token;
+            // HTML 转义 URL 防止 XSS
+            $safeResetUrl = htmlspecialchars($resetUrl, ENT_QUOTES, 'UTF-8');
+            $safeUsername = htmlspecialchars($user->username, ENT_QUOTES, 'UTF-8');
+
             $subject = '重置您的密码';
             $html = <<<HTML
                 <!DOCTYPE html>
@@ -650,16 +657,16 @@ class UserController
                 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
                     <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
                         <h2 style="color: #4a90e2;">重置您的密码</h2>
-                        <p>您好，{$user->username}！</p>
+                        <p>您好，{$safeUsername}！</p>
                         <p>我们收到了您的密码重置请求。请点击下方按钮重置您的密码：</p>
                         <div style="text-align: center; margin: 30px 0;">
-                            <a href="{$resetUrl}"
+                            <a href="{$safeResetUrl}"
                                style="background-color: #4a90e2; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">
                                 重置密码
                             </a>
                         </div>
                         <p>或者复制以下链接到浏览器中打开：</p>
-                        <p style="word-break: break-all; color: #666;">{$resetUrl}</p>
+                        <p style="word-break: break-all; color: #666;">{$safeResetUrl}</p>
                         <p style="color: #999; font-size: 14px;">此链接将在1小时后失效。</p>
                         <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
                         <p style="color: #999; font-size: 12px;">如果您没有请求重置密码，请忽略此邮件。</p>

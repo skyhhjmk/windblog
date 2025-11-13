@@ -171,7 +171,7 @@ class AdService
 
                 // 懒加载并避免重复加载 Adsense 脚本
                 $s = '';
-                $s .= '<div class="ad ad-google my-4" style="min-width: 250px; min-height: 250px;">';
+                $s .= '<div class="ad ad-google my-4" style="min-height: 100px; overflow: hidden;">';
                 $s .= '<script>(function(){if(!window.__adsbygoogleLoaded){var s=document.createElement("script");s.async=true;s.src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' . htmlspecialchars($client, ENT_QUOTES) . '";s.crossOrigin="anonymous";document.head.appendChild(s);window.__adsbygoogleLoaded=true;}})();</script>';
                 $ins = '<ins class="adsbygoogle" style="' . htmlspecialchars($style, ENT_QUOTES) . '" data-ad-client="' . htmlspecialchars($client, ENT_QUOTES) . '" data-ad-slot="' . htmlspecialchars($slot, ENT_QUOTES) . '"';
                 if ($format === 'in-article') {
@@ -189,24 +189,38 @@ class AdService
                 }
                 $ins .= '></ins>';
                 $s .= $ins;
-                // 延迟执行 push() 直到容器有宽度
+                // 延迟执行 push() 直到容器有宽度，并检测广告加载状态
                 $s .= '<script>';
                 $s .= '(function(){';
                 $s .= 'var ins=document.currentScript.previousElementSibling;';
+                $s .= 'var container=ins.parentElement;';
                 $s .= 'var attempts=0;';
                 $s .= 'var maxAttempts=50;';  // 最多尝试 5 秒
+                $s .= 'var pushed=false;';
                 $s .= 'function tryPush(){';
                 $s .= 'attempts++;';
                 // 检查容器是否可见且有宽度
                 $s .= 'if(ins&&ins.offsetWidth>0&&ins.offsetParent!==null){';
                 $s .= 'try{';
                 $s .= '(adsbygoogle=window.adsbygoogle||[]).push({});';
-                $s .= '}catch(e){console.error("AdSense push error:",e);}';
+                $s .= 'pushed=true;';
+                // 监听广告加载状态
+                $s .= 'setTimeout(function(){';
+                $s .= 'if(ins.innerHTML.trim()===""||ins.offsetHeight<50){';
+                $s .= 'container.style.display="none";';
+                $s .= 'console.warn("AdSense: No ad content, hiding container");';
+                $s .= '}';
+                $s .= '},2000);';
+                $s .= '}catch(e){';
+                $s .= 'console.error("AdSense push error:",e);';
+                $s .= 'container.style.display="none";';
+                $s .= '}';
                 $s .= 'return;';
                 $s .= '}';
-                // 如果超过最大尝试次数，放弃
+                // 如果超过最大尝试次数，隐藏容器
                 $s .= 'if(attempts>=maxAttempts){';
                 $s .= 'console.warn("AdSense: Container not ready after "+attempts+" attempts");';
+                $s .= 'if(!pushed){container.style.display="none";}';
                 $s .= 'return;';
                 $s .= '}';
                 $s .= 'setTimeout(tryPush,100);';

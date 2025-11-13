@@ -23,9 +23,28 @@ class CommentController
      */
     protected array $noNeedLogin = ['submit', 'getList', 'status'];
     /**
-     * 允许的HTML标签（用于评论内容）
+     * 允许的HTML标签及属性（用于评论内容）
      */
-    private const ALLOWED_TAGS = '<p><br><strong><em><a><ul><ol><li><blockquote><code><pre>';
+    private const ALLOWED_TAGS = [
+        'p' => [],
+        'br' => [],
+        'strong' => [],
+        'b' => [],
+        'em' => [],
+        'i' => [],
+        'ul' => [],
+        'ol' => [],
+        'li' => [],
+        'blockquote' => [],
+        'code' => [],
+        'pre' => [],
+        'a' => ['href', 'title'],  // 链接只允许 href 和 title 属性
+    ];
+
+    /**
+     * 允许的URL协议白名单
+     */
+    private const ALLOWED_PROTOCOLS = ['http', 'https', 'mailto'];
 
     /**
      * 提交评论
@@ -77,14 +96,15 @@ class CommentController
         $quotedText = trim($request->post('quoted_text', ''));
         $quotedCommentId = (int) $request->post('quoted_comment_id', 0);
 
-        // 1. 基本验证
+        // 基本验证
         if (empty($content)) {
             return json(['code' => 400, 'msg' => '评论内容不能为空']);
         }
 
         // 检查最小长度
-        if (mb_strlen($content, 'UTF-8') < 2) {
-            return json(['code' => 400, 'msg' => '评论内容至少需要2个字符']);
+        $minLength = (int) blog_config('comment_min_length', 2, true);
+        if (mb_strlen($content, 'UTF-8') < $minLength) {
+            return json(['code' => 400, 'msg' => "评论内容至少需要{$minLength}个字符"]);
         }
 
         // 游客必填校验
@@ -98,11 +118,12 @@ class CommentController
         }
 
         // 检查最大长度
-        if (mb_strlen($content, 'UTF-8') > 1000) {
-            return json(['code' => 400, 'msg' => '评论内容不能超过1000个字符']);
+        $maxLength = (int) blog_config('comment_max_length', 1000, true);
+        if (mb_strlen($content, 'UTF-8') > $maxLength) {
+            return json(['code' => 400, 'msg' => "评论内容不能超过{$maxLength}个字符"]);
         }
 
-        // 2. 检查父评论是否存在
+        // 检查父评论是否存在
         $parentComment = null;
         if ($parentId > 0) {
             $parentComment = Comment::where('id', $parentId)
@@ -115,18 +136,19 @@ class CommentController
             }
         }
 
-        // 4. 安全处理内容 - 防止XSS攻击
+        // 安全处理内容 - 防止XSS攻击
         $sanitizedContent = $this->sanitizeContent($content);
 
-        // 5. 处理引用内容（增强功能）
+        // 处理引用内容（增强功能）
         $quoteData = null;
         if (!empty($quotedText)) {
             // 安全处理引用文本
             $sanitizedQuotedText = $this->sanitizeQuotedText($quotedText);
 
             // 限制引用长度
-            if (mb_strlen($sanitizedQuotedText, 'UTF-8') > 200) {
-                $sanitizedQuotedText = mb_substr($sanitizedQuotedText, 0, 200, 'UTF-8') . '...';
+            $maxQuoteLength = (int) blog_config('comment_max_quote_length', 200, true);
+            if (mb_strlen($sanitizedQuotedText, 'UTF-8') > $maxQuoteLength) {
+                $sanitizedQuotedText = mb_substr($sanitizedQuotedText, 0, $maxQuoteLength, 'UTF-8') . '...';
             }
 
             // 如果引用的是评论（quoted_comment_id > 0），需要验证评论是否存在
@@ -156,39 +178,43 @@ class CommentController
             }
         }
 
-        // 6. 额外的安全检查
+        // 额外的安全检查
         // 检查是否包含过多URL（防止垃圾评论）
+        $maxUrls = (int) blog_config('comment_max_urls', 3, true);
         $urlCount = preg_match_all('/https?:\/\/[^\s]+/i', $sanitizedContent);
-        if ($urlCount > 3) {
+        if ($urlCount > $maxUrls) {
             return json(['code' => 400, 'msg' => '评论中包含过多链接']);
         }
 
         // 检查是否重复评论（增强防刷）
-        // 1. 检查相同内容的重复评论（5分钟内）
+        // 检查相同内容的重复评论
+        $duplicateWindow = (int) blog_config('comment_duplicate_window', 300, true);
         $recentComment = Comment::where('post_id', $postId)
             ->where('guest_email', $guestEmail)
-            ->where('created_at', '>', utc_now()->subSeconds(300))
+            ->where('created_at', '>', utc_now()->subSeconds($duplicateWindow))
             ->first();
 
         if ($recentComment && $recentComment->content === $sanitizedContent) {
             return json(['code' => 400, 'msg' => '请不要重复提交相同的评论']);
         }
 
-        // 2. 检查评论频率（1分钟内最多3条）
+        // 检查评论频率
+        $frequencyWindow = (int) blog_config('comment_frequency_window', 60, true);
+        $maxComments = (int) blog_config('comment_max_frequency', 3, true);
         $recentCommentCount = Comment::where('post_id', $postId)
             ->where('guest_email', $guestEmail)
-            ->where('created_at', '>', utc_now()->subSeconds(60))
+            ->where('created_at', '>', utc_now()->subSeconds($frequencyWindow))
             ->count();
 
-        if ($recentCommentCount >= 3) {
+        if ($recentCommentCount >= $maxComments) {
             return json(['code' => 429, 'msg' => '评论过于频繁,请稍后再试']);
         }
 
-        // 6. AI自动审核（改为非阻塞：入队由独立进程处理）
+        // AI自动审核（改为非阻塞：入队由独立进程处理）
         $aiModerationEnabled = blog_config('comment_ai_moderation_enabled', false, true);
         $aiModerationResult = null;
 
-        // 7. 创建评论
+        // 创建评论
         try {
             $comment = new Comment();
             $comment->post_id = $postId;
@@ -202,25 +228,23 @@ class CommentController
 
             // 存储引用数据（JSON格式）
             if ($quoteData) {
-                $comment->quoted_data = json_encode($quoteData, JSON_UNESCAPED_UNICODE);
+                $comment->quoted_data = json_encode($quoteData, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
             }
 
             // 非阻塞：先设置状态，AI结果由Worker回写
             $requireModeration = blog_config('comment_moderation', true, true);
-            if ($aiModerationEnabled) {
-                $comment->status = $requireModeration ? 'pending' : 'approved';
-            } else {
-                $comment->status = $requireModeration ? 'pending' : 'approved';
-            }
+            $comment->status = $requireModeration ? 'pending' : 'approved';
 
             if ($comment->save()) {
-                // 返回新创建的评论
-                $newComment = Comment::where('id', $comment->id)->with('author')->first();
+                // 预加载关联关系，避免重新查询
+                $comment->load('author');
+                $newComment = $comment;
 
                 // 入队AI审核（若开启）
                 if ($aiModerationEnabled) {
                     try {
-                        \app\service\AIModerationService::enqueue(['comment_id' => $comment->id, 'priority' => 5]);
+                        $aiPriority = (int) blog_config('comment_ai_moderation_priority', 5, true);
+                        \app\service\AIModerationService::enqueue(['comment_id' => $comment->id, 'priority' => $aiPriority]);
                     } catch (\Throwable $e) {
                         Log::warning('Enqueue moderation failed: ' . $e->getMessage());
                     }
@@ -342,6 +366,7 @@ class CommentController
 
     /**
      * 净化评论内容（防止XSS）
+     * 使用 DOMDocument 精确控制允许的标签和属性
      *
      * @param string $content
      *
@@ -349,30 +374,209 @@ class CommentController
      */
     private function sanitizeContent(string $content): string
     {
-        // 1. 移除潜在危险的标签，只保留安全的HTML标签
-        $content = strip_tags($content, self::ALLOWED_TAGS);
-
-        // 2. 转义特殊字符
-        // 注意：如果允许HTML标签，需要更精细的处理
-        // 这里我们采用更安全的策略：完全转义HTML
-        $content = htmlspecialchars($content, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-
-        // 3. 移除潜在的脚本和事件处理器
-        $content = preg_replace('/on\w+\s*=\s*["\'][^"\']*["\']|on\w+\s*=\s*\S+/i', '', $content);
-
-        // 4. 移除javascript:伪协议
-        $content = preg_replace('/javascript:/i', '', $content);
-
-        // 5. 过滤null字节
+        // 预处理：过滤null字节和标准化换行
         $content = str_replace(chr(0), '', $content);
-
-        // 6. 标准化换行符
         $content = str_replace(["\r\n", "\r"], "\n", $content);
-
-        // 7. 限制连续换行
         $content = preg_replace("/\n{3,}/", "\n\n", $content);
+        $content = trim($content);
 
-        return trim($content);
+        if (empty($content)) {
+            return '';
+        }
+
+        // 使用 DOMDocument 进行 HTML 过滤
+        libxml_use_internal_errors(true);
+        $dom = new \DOMDocument('1.0', 'UTF-8');
+
+        // 加载 HTML，使用 UTF-8 编码
+        $dom->loadHTML(
+            '<?xml encoding="UTF-8">' . '<div>' . $content . '</div>',
+            LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD
+        );
+        libxml_clear_errors();
+
+        // 递归清理节点
+        $this->sanitizeNode($dom->documentElement);
+
+        // 获取清理后的 HTML
+        $sanitized = '';
+        $body = $dom->getElementsByTagName('div')->item(0);
+        if ($body) {
+            foreach ($body->childNodes as $child) {
+                $sanitized .= $dom->saveHTML($child);
+            }
+        }
+
+        // 最后的安全检查：移除残留的危险内容
+        $sanitized = $this->removeRemainingThreats($sanitized);
+
+        return trim($sanitized);
+    }
+
+    /**
+     * 递归清理 DOM 节点
+     *
+     * @param \DOMNode $node
+     *
+     * @return void
+     */
+    private function sanitizeNode(\DOMNode $node): void
+    {
+        // 从后往前遍历子节点，以便安全删除
+        $children = [];
+        foreach ($node->childNodes as $child) {
+            $children[] = $child;
+        }
+
+        foreach ($children as $child) {
+            if ($child->nodeType === XML_ELEMENT_NODE) {
+                $tagName = strtolower($child->nodeName);
+
+                // 检查标签是否在白名单中
+                if (!isset(self::ALLOWED_TAGS[$tagName])) {
+                    // 不允许的标签：保留文本内容，移除标签
+                    while ($child->firstChild) {
+                        $node->insertBefore($child->firstChild, $child);
+                    }
+                    $node->removeChild($child);
+                } else {
+                    // 允许的标签：清理属性
+                    $this->sanitizeAttributes($child, self::ALLOWED_TAGS[$tagName]);
+                    // 递归处理子节点
+                    $this->sanitizeNode($child);
+                }
+            } elseif ($child->nodeType === XML_TEXT_NODE || $child->nodeType === XML_CDATA_SECTION_NODE) {
+                // 文本节点保留
+                continue;
+            } else {
+                // 其他类型节点（如注释）：删除
+                $node->removeChild($child);
+            }
+        }
+    }
+
+    /**
+     * 清理节点属性
+     *
+     * @param \DOMElement $element
+     * @param array       $allowedAttrs
+     *
+     * @return void
+     */
+    private function sanitizeAttributes(\DOMElement $element, array $allowedAttrs): void
+    {
+        $attributesToRemove = [];
+
+        // 遍历所有属性
+        foreach ($element->attributes as $attr) {
+            $attrName = strtolower($attr->name);
+            $attrValue = $attr->value;
+
+            // 移除事件处理器属性（on*）
+            if (str_starts_with($attrName, 'on')) {
+                $attributesToRemove[] = $attr->name;
+                continue;
+            }
+
+            // 移除危险属性
+            if (in_array($attrName, ['style', 'class', 'id', 'data-*'], true)) {
+                $attributesToRemove[] = $attr->name;
+                continue;
+            }
+
+            // 检查是否在允许列表中
+            if (!in_array($attrName, $allowedAttrs, true)) {
+                $attributesToRemove[] = $attr->name;
+                continue;
+            }
+
+            // 特殊处理 href 属性：验证 URL 协议
+            if ($attrName === 'href') {
+                if (!$this->isUrlSafe($attrValue)) {
+                    $attributesToRemove[] = $attr->name;
+                }
+            }
+        }
+
+        // 删除不允许的属性
+        foreach ($attributesToRemove as $attrName) {
+            $element->removeAttribute($attrName);
+        }
+    }
+
+    /**
+     * 检查 URL 是否安全
+     *
+     * @param string $url
+     *
+     * @return bool
+     */
+    private function isUrlSafe(string $url): bool
+    {
+        $url = trim($url);
+
+        if (empty($url)) {
+            return false;
+        }
+
+        // 移除空白字符和控制字符
+        if (preg_match('/[\x00-\x1f\x7f\s]/', $url)) {
+            return false;
+        }
+
+        // 检查危险协议
+        $dangerousProtocols = [
+            'javascript:', 'data:', 'vbscript:', 'file:', 'about:',
+            'javascript&colon;', 'data&colon;',  // HTML 实体编码绕过
+        ];
+
+        $urlLower = strtolower($url);
+        foreach ($dangerousProtocols as $protocol) {
+            if (str_starts_with($urlLower, $protocol)) {
+                return false;
+            }
+        }
+
+        // 如果是相对 URL 或锚点，允许
+        if (str_starts_with($url, '/') || str_starts_with($url, '#')) {
+            return true;
+        }
+
+        // 解析 URL 并验证协议
+        $parsed = parse_url($url);
+        if ($parsed === false || !isset($parsed['scheme'])) {
+            // 没有协议的相对 URL，允许
+            return true;
+        }
+
+        $scheme = strtolower($parsed['scheme']);
+
+        return in_array($scheme, self::ALLOWED_PROTOCOLS, true);
+    }
+
+    /**
+     * 移除残留的威胁（最后一道防线）
+     *
+     * @param string $content
+     *
+     * @return string
+     */
+    private function removeRemainingThreats(string $content): string
+    {
+        // 移除可能的 JavaScript 伪协议（各种编码形式）
+        $patterns = [
+            '/javascript\s*:/i',
+            '/&#(0*106|0*74|x0*6a|x0*4a);/i',  // j
+            '/vbscript\s*:/i',
+            '/data\s*:[^,]*script/i',
+            '/on\w+\s*=/i',  // 事件处理器
+        ];
+
+        foreach ($patterns as $pattern) {
+            $content = preg_replace($pattern, '', $content);
+        }
+
+        return $content;
     }
 
     /**
@@ -437,11 +641,12 @@ class CommentController
             $data['author'] = null;
         }
 
-        // 解析引用数据
+        // 解析引用数据（数据在存储时已经过安全清理）
         if (!empty($comment->quoted_data)) {
             try {
-                $data['quote'] = json_decode($comment->quoted_data, true);
-            } catch (Exception $e) {
+                $data['quote'] = json_decode($comment->quoted_data, true, 512, JSON_THROW_ON_ERROR);
+            } catch (\JsonException $e) {
+                Log::warning('Invalid quoted_data JSON for comment ' . $comment->id . ': ' . $e->getMessage());
                 $data['quote'] = null;
             }
         } else {

@@ -3,7 +3,6 @@ parameters:
   paths:
     - app
     - plugin/admin/app
-    - plugin/sms/app
   excludePaths:
     - vendor
     - tests
