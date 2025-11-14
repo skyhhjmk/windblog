@@ -1,7 +1,7 @@
 {# 基础小工具包装模板（支持 sticky 与滚动动画） #}
 {% set is_sticky = sticky|default(false) or (params.sticky|default(false)) %}
 {% set sticky_offset = params.sticky_offset|default(16) %}
-<div class="bg-white rounded-lg shadow-md p-6 mb-6 widget-container fade-in-on-scroll glass glass-card"
+<div class="bg-white rounded-lg shadow-md p-6 mb-6 widget-container glass glass-card"
      data-widget-type="{{ type }}"
      data-widget-id="{{ id }}"
      {% if is_sticky %}data-sticky="1"{% endif %}

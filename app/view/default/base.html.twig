@@ -1548,19 +1548,17 @@
                 }
             }
 
-            // 侧边栏切换动画（统一右滑出 → 统一右→左滑入），兼容PJAX，减少抖动
+            // 侧边栏内容切换：取消动画，改为静态替换，提升稳定性和性能
             function applySidebarDiff(sidebarEl, newHtml) {
                 if (!sidebarEl) return;
 
-                // 如果新内容为空或无效，保留现有侧边栏，不做任何操作
+                // 如果新内容为空或无效，保留现有侧边栏
                 if (!newHtml || newHtml.trim() === '') {
                     return;
                 }
 
                 const temp = document.createElement('div');
                 temp.innerHTML = newHtml;
-
-                const oldChildren = Array.from(sidebarEl.children);
                 const newChildren = Array.from(temp.children);
 
                 // 如果解析后的新内容为空，也保留现有侧边栏
@@ -1568,78 +1566,17 @@
                     return;
                 }
 
-                // 锁定高度，避免布局抖动
+                // 简单静态替换：不做任何过渡动画，避免闪烁和额外回流
+                sidebarEl.innerHTML = '';
+                newChildren.forEach(child => sidebarEl.appendChild(child));
+
+                // 桌面端强制显示侧边栏（避免 hidden/md:block 顺序问题导致误隐藏）
                 try {
-                    const initialHeight = sidebarEl.offsetHeight;
-                    if (initialHeight && isFinite(initialHeight)) {
-                        sidebarEl.style.minHeight = initialHeight + 'px';
+                    if (window.innerWidth >= 768) {
+                        sidebarEl.style.display = 'block';
                     }
                 } catch (_) {
                 }
-
-                const duration = 400;
-                const ease = 'cubic-bezier(0.22, 1, 0.36, 1)';
-                const stagger = 35;
-
-                // 统一退场：旧侧栏元素右滑并淡出
-                oldChildren.forEach((el, idx) => {
-                    const delay = idx * stagger;
-                    el.style.willChange = 'opacity, transform';
-                    el.style.transition = `opacity ${duration}ms ${ease}, transform ${duration}ms ${ease}`;
-                    setTimeout(() => {
-                        el.style.opacity = '0';
-                        el.style.transform = 'translateX(40px)';
-                    }, delay);
-                });
-
-                // 旧元素动画总时长
-                const outTotal = (oldChildren.length ? (oldChildren.length - 1) * stagger : 0) + duration + 20;
-
-                setTimeout(() => {
-                    // 清空并插入新的侧栏HTML
-                    sidebarEl.innerHTML = '';
-                    newChildren.forEach(n => sidebarEl.appendChild(n));
-
-                    // 容器轻微缩放（移动端淡入保留）
-                    try {
-                        sidebarEl.style.transformOrigin = 'top right';
-                        sidebarEl.style.transition = (window.innerWidth < 768)
-                            ? 'transform 200ms ease-out, opacity 200ms ease-out'
-                            : 'transform 200ms ease-out';
-                        if (window.innerWidth < 768) {
-                            sidebarEl.style.opacity = '0.95';
-                        }
-                        sidebarEl.style.transform = 'scale(0.98)';
-                        setTimeout(() => {
-                            sidebarEl.style.transform = 'scale(1)';
-                            if (window.innerWidth < 768) {
-                                sidebarEl.style.opacity = '1';
-                            }
-                        }, 0);
-                    } catch (_) {
-                    }
-
-                    // 统一入场：新侧栏元素从右向左滑入并淡入
-                    newChildren.forEach((el, idx) => {
-                        const delay = idx * stagger;
-                        el.style.opacity = '0';
-                        el.style.transform = 'translateX(40px)';
-                        el.style.willChange = 'opacity, transform';
-                        requestAnimationFrame(() => {
-                            setTimeout(() => {
-                                el.style.transition = `opacity ${duration}ms ${ease}, transform ${duration}ms ${ease}`;
-                                el.style.opacity = '1';
-                                el.style.transform = 'translateX(0)';
-                            }, delay);
-                        });
-                    });
-
-                    // 释放高度锁
-                    const inTotal = (newChildren.length ? (newChildren.length - 1) * stagger : 0) + duration + 40;
-                    setTimeout(() => {
-                        sidebarEl.style.minHeight = '';
-                    }, inTotal);
-                }, outTotal);
             }
 
             // 更新 SEO meta 标签和结构化数据
