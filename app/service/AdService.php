@@ -189,50 +189,37 @@ class AdService
                 }
                 $ins .= '></ins>';
                 $s .= $ins;
-                // 延迟执行 push() 直到容器有宽度，并检测广告加载状态
+                // 延迟执行 push()，直到容器真正有可用宽度，并检测广告加载状态
                 $s .= '<script>';
                 $s .= '(function(){';
                 $s .= 'var ins=document.currentScript.previousElementSibling;';
+                $s .= 'if(!ins){return;}';
                 $s .= 'var container=ins.parentElement;';
                 $s .= 'var attempts=0;';
-                $s .= 'var maxAttempts=50;';  // 最多尝试 5 秒
+                $s .= 'var maxAttempts=50;'; // 最多尝试 5 秒
                 $s .= 'var pushed=false;';
+                // 判断元素是否有可用宽度（避免 availableWidth=0 错误）
+                $s .= 'function hasUsableWidth(el){if(!el){return false;}var rect=el.getBoundingClientRect();if(rect.width<=0||rect.height<=0){return false;}if(window.getComputedStyle){var st=window.getComputedStyle(el);if(st.display==="none"||st.visibility==="hidden"){return false;}}return el.offsetParent!==null;}';
                 $s .= 'function tryPush(){';
                 $s .= 'attempts++;';
-                // 检查容器是否可见且有宽度
-                $s .= 'if(ins&&ins.offsetWidth>0&&ins.offsetParent!==null){';
+                $s .= 'if(!hasUsableWidth(container)){';
+                $s .= 'if(attempts>=maxAttempts){console.warn("AdSense: Container not ready after "+attempts+" attempts");if(!pushed){container.style.display="none";}return;}';
+                $s .= 'setTimeout(tryPush,100);return;}';
                 $s .= 'try{';
                 $s .= '(adsbygoogle=window.adsbygoogle||[]).push({});';
                 $s .= 'pushed=true;';
                 // 监听广告加载状态
                 $s .= 'setTimeout(function(){';
-                $s .= 'if(ins.innerHTML.trim()===""||ins.offsetHeight<50){';
-                $s .= 'container.style.display="none";';
-                $s .= 'console.warn("AdSense: No ad content, hiding container");';
-                $s .= '}';
-                $s .= '},2000);';
+                $s .= 'if(ins.innerHTML.trim()===""||ins.offsetHeight<50){container.style.display="none";console.warn("AdSense: No ad content, hiding container");}},2000);';
                 $s .= '}catch(e){';
                 $s .= 'console.error("AdSense push error:",e);';
                 $s .= 'container.style.display="none";';
                 $s .= '}';
-                $s .= 'return;';
-                $s .= '}';
-                // 如果超过最大尝试次数，隐藏容器
-                $s .= 'if(attempts>=maxAttempts){';
-                $s .= 'console.warn("AdSense: Container not ready after "+attempts+" attempts");';
-                $s .= 'if(!pushed){container.style.display="none";}';
-                $s .= 'return;';
-                $s .= '}';
-                $s .= 'setTimeout(tryPush,100);';
                 $s .= '}';
                 // 根据页面加载状态决定何时开始尝试
-                $s .= 'if(document.readyState==="complete"){';
-                $s .= 'setTimeout(tryPush,100);';
-                $s .= '}else{';
-                $s .= 'window.addEventListener("load",function(){setTimeout(tryPush,100);});';
-                $s .= '}';
-                // PJAX 支持
-                $s .= 'document.addEventListener("pjax:complete",function(){setTimeout(tryPush,100);});';
+                $s .= 'if(document.readyState==="complete"){setTimeout(tryPush,100);}else{window.addEventListener("load",function(){setTimeout(tryPush,100);});}';
+                // PJAX 支持：页面切换后重新尝试
+                $s .= 'document.addEventListener("pjax:complete",function(){attempts=0;pushed=false;setTimeout(tryPush,100);});';
                 $s .= '})();';
                 $s .= '</script>';
                 $s .= '</div>';

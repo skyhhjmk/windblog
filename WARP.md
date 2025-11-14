@@ -2,11 +2,20 @@
 
 This file provides guidance to WARP (warp.dev) when working with code in this repository.
 
-仓库概览
+## TL;DR（给 Warp 助手的快速指引）
+
+- 运行/调试时优先使用 composer 脚本与 `php start.php ...`，在 Windows 上使用 `php windows.php` 或 `windows.bat`。
+- 本项目基于常驻进程，**任何代码改动都需要 reload/restart**（`php start.php reload`）才能生效；Windows 由 `windows.php`
+  模拟热重载。
+- 默认推荐 PostgreSQL + `CACHE_DRIVER=memory` 进行本地开发测试，Redis/RabbitMQ/ElasticSearch 可按需启用。
+- 新增能力集中在：AI 摘要系统（`AiSummaryWorker` + `AISummaryService`）、在线用户统计（`OnlineUserService` +
+  `OnlineController` + WebSocket）、OAuth 2.0 登录（`OAuthService`）。
+- 若修改认证、CSRF、防注入、上传或评论相关逻辑，请结合文末“安全审计与代码质量分析”一并检查。
+
+## 仓库概览
 - 技术栈：PHP 8.3+、Webman（基于 WorkerMan 的常驻进程框架）、Twig、PostgreSQL（主库），可选 Redis（缓存）、RabbitMQ（消息队列）、ElasticSearch（搜索）
 - 运行模式：常驻进程。代码变更需要重载/重启进程才能生效
 - 首次安装：首次启动后访问 /app/admin 完成安装；根目录存在 .env 表示“已安装”，并会启用更多工作进程
-
 先决条件与初始化
 - PHP：>= 8.3，建议启用 pdo_pgsql 扩展（PostgreSQL）
 - 依赖安装：composer install（生产环境可用 --no-dev --optimize-autoloader）
@@ -106,6 +115,7 @@ Docker 与 Compose
 - 服务器（config/server.php）：PID/状态/日志文件、max_package_size 等
 - 数据库（config/database.php）：默认 pgsql，同时提供 mysql 与 sqlite 配置
 - Redis（config/redis.php）：default 与 cache 两个逻辑库及连接池参数
+- 更详细的配置项含义请参考 `doc/config-reference.md`
 
 在本仓库工作的注意事项
 - 常驻进程：代码变更后使用 php start.php reload；Windows 环境推荐使用 php windows.php 以获得文件变更感知与重载
@@ -307,53 +317,207 @@ FloLinkService.php 包含内置 AFF 规则，使用前需修改 rewriteAffiliate
 ⚠️ PostgreSQL 优先
 项目从 MySQL 重构为 PostgreSQL，推荐使用 PostgreSQL 以获得最佳性能与特性支持
 
+安全审计与代码质量分析（更新日期：2025-11-13）
+
+本次审计范围：
+
+- 用户认证与授权系统
+- 输入验证与输出编码
+- SQL注入防护
+- XSS防护
+- CSRF防护
+- 文件上传安全
+- 代码逻辑错误
+
+✅ 安全优势
+
+1. 认证与授权
+
+- 使用 password_hash() 和 password_verify() 进行密码加密
+- 实现了 AuthCheck 中间件进行统一认证
+- 支持多种用户状态管理（未激活、正常、禁用）
+- OAuth 2.0 实现使用 state 参数防止 CSRF
+- Session 管理规范，登录状态检查完善
+
+2. CSRF 防护
+
+- 实现了完整的 CSRFMiddleware 和 CSRFService
+- 支持基于注解的 CSRF 验证（@CSRFVerify）
+- 支持一次性令牌、限时令牌、绑定参数等高级特性
+- 所有写操作（POST/PUT/DELETE）均有 CSRF 保护
+
+3. XSS 防护
+
+- CommentController 实现了 sanitizeContent() 方法
+- 使用 htmlspecialchars() 进行输出转义
+- strip_tags() 移除危险 HTML 标签
+- SecurityService 提供统一的 XSS 防护规则
+
+4. SQL 注入防护
+
+- 主要使用 Eloquent ORM 的参数绑定
+- whereRaw() 使用时配合占位符（?）和 addcslashes() 转义
+- 搜索功能对用户输入进行了适当转义（addcslashes($term, '%_\\')）
+- SecurityService 提供 SQL 注入特征检测
+
+5. 文件上传安全
+
+- SecureFileUpload 中间件进行严格验证
+- 文件扩展名黑名单（php, exe, bat 等）
+- MIME 类型白名单验证
+- 文件大小限制
+- 文件内容检查（检测 PHP 代码、恶意脚本）
+- 生成安全的随机文件名
+
+6. 输入验证
+
+- 用户注册：用户名正则验证、邮箱格式验证、密码长度检查
+- 评论系统：长度限制、URL 数量限制、频率限制（1分钟3条）
+- 手机号码格式验证
+- 验证码集成（CaptchaService）
+
+⚠️ 需要注意的问题
+
+1. 潜在安全隐患（低风险）
+   a. SearchController.php 和 BlogService.php 中的 LIKE 查询
+
+- 位置：SearchController.php L315-385, BlogService.php L107-109
+- 问题：使用 whereRaw() 与 LIKE 查询
+- 当前状态：已使用参数绑定和 addcslashes() 转义，风险较低
+- 建议：考虑使用 where()->like() 方法替代 whereRaw()
+
+b. 激活链接拼接
+
+- 位置：UserController.php L500
+- 问题：激活 URL 直接拼接到 HTML 邮件中
+- 当前状态：token 本身是随机生成的，但未对 URL 进行 HTML 转义
+- 建议：使用 htmlspecialchars() 转义 URL
+
+c. CSRFMiddleware 使用 $_SERVER 全局变量
+
+- 位置：CSRFMiddleware.php L269
+- 问题：直接使用 $_SERVER['HTTPS']
+- 当前状态：在协议检测的特定场景下使用，可接受
+- 建议：保持现状或进一步封装到 Request 对象方法中
+
+2. 代码 Bug
+   a. BlogService.php 未定义变量
+
+- 位置：BlogService.php L193
+- 问题：使用 $post 变量但未定义，应该是 $posts 数组元素
+- 严重程度：中等
+- 修复建议：
+  ```php
+  // 当前代码
+  if (empty($post->excerpt) && empty($post->ai_summary) && !empty($post->content)) {
+  
+  // 应该改为遍历 $posts
+  foreach ($posts as $post) {
+      if (empty($post->excerpt) && empty($post->ai_summary) && !empty($post->content)) {
+          // ...
+      }
+  }
+  ```
+
+b. UserController.php 未实现记住我功能
+
+- 位置：UserController.php L214
+- 问题：记住我功能只有注释，未实现
+- 严重程度：低
+- 建议：实现或移除相关代码
+
+c. CacheService.php 潜在并发问题
+
+- 位置：CacheService.php L47-62
+- 问题：fallback 模式的并发安全性
+- 当前状态：在常驻进程模式下单线程执行，问题不大
+- 建议：如果启用多进程，考虑使用进程间锁
+
+3. 代码质量问题
+   a. 变量未初始化
+
+- SearchController 和 BlogService 中部分变量在条件分支中可能未初始化
+- 建议：在使用前进行 isset() 检查或提前初始化
+
+b. 魔法数字
+
+- 多处使用硬编码的数字（如评论频率限制 60 秒、3 条）
+- 建议：提取为常量或配置项
+
+c. 重复代码
+
+- SearchController 中标签和分类的搜索逻辑重复
+- 建议：提取为独立方法
+
+🔧 修复建议优先级
+
+高优先级（建议立即修复）：
+
+1. ✅ BlogService.php L193 未定义变量 $post - 已修复
+2. ✅ 评论频率限制等魔法数字提取为配置 - 已修复，使用 blog_config() 函数
+
+中优先级（建议近期修复）：
+
+1. SearchController 和 BlogService 中的 whereRaw() 改用安全方法
+2. ✅ 激活链接 URL 添加 HTML 转义 - 已修复
+3. 提取重复代码
+
+低优先级（可选优化）：
+
+1. 实现或移除记住我功能
+2. 改善 CacheService 并发安全性
+3. 统一变量初始化规范
+
+📊 安全评分
+
+- 认证与授权：A（优秀）
+- CSRF 防护：A+（卓越）
+- XSS 防护：A（优秀）
+- SQL 注入防护：B+（良好，建议改进 whereRaw 使用）
+- 文件上传安全：A（优秀）
+- 输入验证：A（优秀）
+- 代码质量：B（良好，存在一些小 bug）
+
+总体评价：★★★★☆（4/5 星）
+
+项目整体安全性良好，实现了完善的安全机制。主要问题集中在代码质量和小的逻辑错误上，
+没有发现严重的安全漏洞。建议修复上述 bug 后可以用于生产环境。
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-深度技术文档：请参阅 WARP_FUNCTIONS.md
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-本文档（WARP.md）提供快速参考与开发指南；WARP_FUNCTIONS.md 提供完整的架构分析、数据流说明、代码示例及最佳实践。
+附加建议
 
-关键章节索引（WARP_FUNCTIONS.md）：
+1. 安全加固
 
--
-  1. 博客基础功能（模型、控制器、路由）
--
-  2. 缓存架构（多驱动、高级特性）
--
-  3. 消息队列架构（MQService + Worker 进程）
--
-  4. 静态化生成系统
--
-  5. 视图与主题系统
--
-  6. 搜索系统（ElasticSearch + 数据库回退）
--
-  7. 安全与中间件
--
-  8. OAuth 2.0 系统
--
-  9. AI 摘要系统★
--
-  10. 在线用户统计系统★
--
-  11. 性能监控与优化
--
-  12. 插件系统
--
-  13. 友链系统（普通友链 + FloLink + WindConnect API）
--
-  14. 媒体库
--
-  15. 数据库架构（PostgreSQL/MySQL/SQLite + 迁移）
--
-  16. 命令行工具
--
-  17. 测试覆盖
--
-  18. 代码质量工具
--
-  19. Docker 部署
--
-  20. 开发工作流最佳实践
--
-  21. 已知限制与注意事项
+- 考虑实现 Rate Limiting 中间件限制 API 请求频率
+- 添加账户锁定机制（登录失败 N 次后锁定）
+- 实现 IP 黑名单/白名单功能
+- 考虑添加 Content Security Policy (CSP) 头
+- 启用 HSTS（如果使用 HTTPS）
+
+2. 日志与监控
+
+- 记录所有认证失败尝试
+- 记录文件上传被拒绝的事件
+- 实现安全事件告警机制
+- 定期审计日志文件
+
+3. 依赖管理
+
+- 定期运行 composer update 更新依赖
+- 使用 composer audit 检查已知漏洞
+- 关注 Webman 框架的安全更新
+
+4. 测试覆盖
+
+- 为安全关键功能添加单元测试
+- 实现渗透测试流程
+- 考虑使用 OWASP ZAP 等工具进行自动化安全扫描
+
+5. 文档改进
+
+- 编写安全配置指南
+- 记录已知的安全限制
+- 提供安全最佳实践文档

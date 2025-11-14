@@ -2,19 +2,90 @@ name: CI
 
 on:
   push:
-    branches: ['**']  # 任何分支推送都触发
+    branches: [ '**' ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
   pull_request:
-    branches: ['**']  # 任何分支的PR都触发
+    branches: [ '**' ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
+  syntax-check:
+    runs-on: ubuntu-latest
+    name: Quick Syntax Check
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: parallel-lint
+
+      - name: Check PHP syntax
+        run: |
+          find . -name "*.php" -not -path "./vendor/*" -print0 | xargs -0 -n1 -P8 php -l
+
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      composer-cache-hit: ${{ steps.composer-cache.outputs.cache-hit }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, pdo_pgsql, pgsql, bcmath, intl, gd, exif, iconv
+          tools: composer:v2
+
+      - name: Get composer cache directory
+        id: composer-cache-dir
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache composer dependencies
+        id: composer-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ steps.composer-cache-dir.outputs.dir }}
+            vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Install dependencies
+        if: steps.composer-cache.outputs.cache-hit != 'true'
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Upload vendor as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vendor
+          path: vendor
+          retention-days: 1
+
   test:
+    needs: [ syntax-check, prepare ]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
         php: ['8.3', '8.4']
-        dependency-version: [prefer-lowest, prefer-stable]
+        dependency-version: [ prefer-stable ]
+        include:
+          - php: '8.3'
+            dependency-version: prefer-lowest
+            os: ubuntu-latest
 
     name: PHP ${{ matrix.php }} - ${{ matrix.dependency-version }} - ${{ matrix.os }}
 
@@ -27,35 +98,34 @@ jobs:
       with:
         php-version: ${{ matrix.php }}
         extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, pdo_pgsql, pgsql, bcmath, intl, gd, exif, iconv
-        coverage: xdebug
+        coverage: ${{ matrix.php == '8.3' && matrix.dependency-version == 'prefer-stable' && 'xdebug' || 'none' }}
         tools: composer:v2
 
-    - name: Get composer cache directory
-      id: composer-cache
-      run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
-
-    - name: Cache composer dependencies
-      uses: actions/cache@v4
+    - name: Download vendor
+      uses: actions/download-artifact@v4
       with:
-        path: ${{ steps.composer-cache.outputs.dir }}
-        key: ${{ runner.os }}-composer-${{ matrix.dependency-version }}-${{ hashFiles('**/composer.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-composer-${{ matrix.dependency-version }}-
-          ${{ runner.os }}-composer-
+        name: vendor
+        path: vendor
 
-    - name: Install dependencies
-      run: |
-        composer update --${{ matrix.dependency-version }} --prefer-dist --no-interaction --no-progress
+    - name: Update dependencies for prefer-lowest
+      if: matrix.dependency-version == 'prefer-lowest'
+      run: composer update --prefer-lowest --prefer-dist --no-interaction --no-progress
 
     - name: Copy .env
       run: |
         cp .env.example .env
-        # 设置测试环境变量
         echo "APP_DEBUG=true" >> .env
-        echo "CACHE_DRIVER=memory" >> .env
+        echo "CACHE_DRIVER=array" >> .env
+        echo "DB_CONNECTION=sqlite" >> .env
+        echo "DB_DATABASE=:memory:" >> .env
 
     - name: Execute tests
-      run: vendor/bin/phpunit --coverage-clover coverage.xml
+      run: |
+        if [ "${{ matrix.php }}" = "8.3" ] && [ "${{ matrix.dependency-version }}" = "prefer-stable" ]; then
+          vendor/bin/phpunit --coverage-clover coverage.xml --coverage-text
+        else
+          vendor/bin/phpunit --no-coverage
+        fi
 
     - name: Upload coverage to Codecov
       if: matrix.php == '8.3' && matrix.dependency-version == 'prefer-stable'
@@ -63,3 +133,17 @@ jobs:
       with:
         files: ./coverage.xml
         fail_ci_if_error: false
+
+  status-check:
+    if: always()
+    needs: [ syntax-check, test ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check status
+        run: |
+          if [ "${{ needs.syntax-check.result }}" != "success" ] || \
+             [ "${{ needs.test.result }}" != "success" ]; then
+            echo "::error::Required checks failed"
+            exit 1
+          fi
+          echo "✅ All required checks passed!"

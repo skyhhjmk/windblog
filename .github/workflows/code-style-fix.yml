@@ -12,6 +12,10 @@ on:
         required: true
         type: string
 
+concurrency:
+  group: cs-fix-${{ github.workflow }}-${{ github.event.inputs.pr_number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   fix-code-style:
     runs-on: ubuntu-latest
