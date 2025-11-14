@@ -173,7 +173,8 @@ class AdService
                 $s = '';
                 $s .= '<div class="ad ad-google my-4" style="min-height: 100px; overflow: hidden;">';
                 $s .= '<script>(function(){if(!window.__adsbygoogleLoaded){var s=document.createElement("script");s.async=true;s.src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' . htmlspecialchars($client, ENT_QUOTES) . '";s.crossOrigin="anonymous";document.head.appendChild(s);window.__adsbygoogleLoaded=true;}})();</script>';
-                $ins = '<ins class="adsbygoogle" style="' . htmlspecialchars($style, ENT_QUOTES) . '" data-ad-client="' . htmlspecialchars($client, ENT_QUOTES) . '" data-ad-slot="' . htmlspecialchars($slot, ENT_QUOTES) . '"';
+                // 在全局脚本中统一初始化 .adsbygoogle 槽位，这里只渲染占位元素
+                $ins = '<ins class="adsbygoogle" data-wb-ad="1" style="' . htmlspecialchars($style, ENT_QUOTES) . '" data-ad-client="' . htmlspecialchars($client, ENT_QUOTES) . '" data-ad-slot="' . htmlspecialchars($slot, ENT_QUOTES) . '"';
                 if ($format === 'in-article') {
                     $ins .= ' data-ad-format="fluid" data-ad-layout="in-article"';
                 } elseif ($format === 'in-feed') {
@@ -189,39 +190,6 @@ class AdService
                 }
                 $ins .= '></ins>';
                 $s .= $ins;
-                // 延迟执行 push()，直到容器真正有可用宽度，并检测广告加载状态
-                $s .= '<script>';
-                $s .= '(function(){';
-                $s .= 'var ins=document.currentScript.previousElementSibling;';
-                $s .= 'if(!ins){return;}';
-                $s .= 'var container=ins.parentElement;';
-                $s .= 'var attempts=0;';
-                $s .= 'var maxAttempts=50;'; // 最多尝试 5 秒
-                $s .= 'var pushed=false;';
-                // 判断元素是否有可用宽度（避免 availableWidth=0 错误）
-                $s .= 'function hasUsableWidth(el){if(!el){return false;}var rect=el.getBoundingClientRect();if(rect.width<=0||rect.height<=0){return false;}if(window.getComputedStyle){var st=window.getComputedStyle(el);if(st.display==="none"||st.visibility==="hidden"){return false;}}return el.offsetParent!==null;}';
-                $s .= 'function tryPush(){';
-                $s .= 'attempts++;';
-                $s .= 'if(!hasUsableWidth(container)){';
-                $s .= 'if(attempts>=maxAttempts){console.warn("AdSense: Container not ready after "+attempts+" attempts");if(!pushed){container.style.display="none";}return;}';
-                $s .= 'setTimeout(tryPush,100);return;}';
-                $s .= 'try{';
-                $s .= '(adsbygoogle=window.adsbygoogle||[]).push({});';
-                $s .= 'pushed=true;';
-                // 监听广告加载状态
-                $s .= 'setTimeout(function(){';
-                $s .= 'if(ins.innerHTML.trim()===""||ins.offsetHeight<50){container.style.display="none";console.warn("AdSense: No ad content, hiding container");}},2000);';
-                $s .= '}catch(e){';
-                $s .= 'console.error("AdSense push error:",e);';
-                $s .= 'container.style.display="none";';
-                $s .= '}';
-                $s .= '}';
-                // 根据页面加载状态决定何时开始尝试
-                $s .= 'if(document.readyState==="complete"){setTimeout(tryPush,100);}else{window.addEventListener("load",function(){setTimeout(tryPush,100);});}';
-                // PJAX 支持：页面切换后重新尝试
-                $s .= 'document.addEventListener("pjax:complete",function(){attempts=0;pushed=false;setTimeout(tryPush,100);});';
-                $s .= '})();';
-                $s .= '</script>';
                 $s .= '</div>';
 
                 return $s;

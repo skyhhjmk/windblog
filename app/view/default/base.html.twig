@@ -3257,6 +3257,136 @@
     })();
 </script>
 
+{# 全局 Google AdSense 槽位初始化（侧边栏等） #}
+<script>
+    (function () {
+        var MAX_ATTEMPTS = 50;
+        var attemptMap = new WeakMap();
+        var io = null;
+        var resizeTimer = null;
+
+        function inHiddenPjaxSidebar(el) {
+            var p = el;
+            while (p) {
+                if (p.id === 'pjax-sidebar-html') return true;
+                p = p.parentElement;
+            }
+            return false;
+        }
+
+        function hasUsableWidth(el) {
+            if (!el || !document.body.contains(el)) return false;
+            if (inHiddenPjaxSidebar(el)) return false;
+            var rect = el.getBoundingClientRect();
+            if (!rect || rect.width <= 0 || rect.height <= 0) return false;
+            if (window.getComputedStyle) {
+                var st = window.getComputedStyle(el);
+                if (!st || st.display === 'none' || st.visibility === 'hidden') return false;
+            }
+            return true;
+        }
+
+        function initSlot(ins) {
+            if (!ins || ins.dataset.wbAdInited === '1') return;
+            var container = ins.closest('.ad-google') || ins.parentElement;
+            if (!container) return;
+
+            var attempts = attemptMap.get(ins) || 0;
+            attempts++;
+            attemptMap.set(ins, attempts);
+
+            if (!hasUsableWidth(container)) {
+                if (attempts >= MAX_ATTEMPTS) {
+                    try {
+                        console.warn('AdSense: Container not ready after ' + attempts + ' attempts');
+                    } catch (_) {
+                    }
+                    container.style.display = 'none';
+                    return;
+                }
+                setTimeout(function () {
+                    initSlot(ins);
+                }, 100);
+                return;
+            }
+
+            try {
+                (adsbygoogle = window.adsbygoogle || []).push({});
+                ins.dataset.wbAdInited = '1';
+                // 2 秒后检查是否有填充内容
+                setTimeout(function () {
+                    try {
+                        if (ins.innerHTML.trim() === '' || ins.offsetHeight < 50) {
+                            container.style.display = 'none';
+                            console.warn('AdSense: No ad content, hiding container');
+                        }
+                    } catch (_) {
+                    }
+                }, 2000);
+            } catch (e) {
+                try {
+                    console.error('AdSense push error:', e);
+                } catch (_) {
+                }
+                container.style.display = 'none';
+            }
+        }
+
+        function observeSlot(ins) {
+            if (!('IntersectionObserver' in window)) {
+                initSlot(ins);
+                return;
+            }
+            if (!io) {
+                io = new IntersectionObserver(function (entries) {
+                    entries.forEach(function (entry) {
+                        var target = entry.target;
+                        if (!entry.isIntersecting) return;
+                        io.unobserve(target);
+                        initSlot(target);
+                    });
+                }, {root: null, rootMargin: '0px 0px -80px 0px', threshold: 0});
+            }
+            io.observe(ins);
+        }
+
+        function scanAndInit() {
+            try {
+                var slots = document.querySelectorAll('.adsbygoogle[data-wb-ad="1"]');
+                slots.forEach(function (ins) {
+                    if (ins.dataset.wbAdInited === '1') return;
+                    if (ins.closest('#pjax-sidebar-html')) return; // 跳过隐藏模板容器
+                    observeSlot(ins);
+                });
+            } catch (_) {
+            }
+        }
+
+        function bootstrap() {
+            scanAndInit();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function () {
+                setTimeout(bootstrap, 100);
+            });
+        } else {
+            setTimeout(bootstrap, 100);
+        }
+
+        document.addEventListener('sidebar:updated', function () {
+            setTimeout(bootstrap, 100);
+        });
+        document.addEventListener('page:ready', function () {
+            setTimeout(bootstrap, 100);
+        });
+        window.addEventListener('resize', function () {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(bootstrap, 600);
+        });
+    })();
+</script>
+
 <script src="{{ asset('/assets/js/offline-notice.js') }}"></script>
 <!-- 顶部 PJAX 进度条 -->
 <div id="pjax-progress"

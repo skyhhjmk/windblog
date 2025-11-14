@@ -255,21 +255,25 @@
             function injectSidebar() {
                 var t = document.getElementById('pjax-sidebar-html');
                 var c = document.getElementById('sidebar-container');
-                if (t && c) {
-                    if (window.PJAX || window.jQuery) {
-                        try {
-                            document.dispatchEvent(new CustomEvent('pjax:sidebarReady'));
-                        } catch (_) {
-                        }
-                    } else {
-                        c.innerHTML = t.innerHTML || '';
+                if (!t || !c) return;
+
+                if (window.PJAX || window.jQuery) {
+                    try {
+                        document.dispatchEvent(new CustomEvent('pjax:sidebarReady'));
+                    } catch (_) {
                     }
+                } else {
+                    c.innerHTML = t.innerHTML || '';
                 }
+
                 // 仅在内容不同时才更新，避免不必要的DOM操作
                 if (c.innerHTML !== t.innerHTML) {
                     c.innerHTML = t.innerHTML || '';
                     // 通知侧边栏内容已更新
-                    document.dispatchEvent(new Event('sidebar:updated'));
+                    try {
+                        document.dispatchEvent(new Event('sidebar:updated'));
+                    } catch (_) {
+                    }
                 }
             }
 
