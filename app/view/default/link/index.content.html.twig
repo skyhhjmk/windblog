@@ -53,7 +53,13 @@
                             <div class="flex items-start mb-4">
                                 <div
                                     class="bg-gray-200 border-2 border-dashed rounded-xl w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center mr-3 sm:mr-4 flex-shrink-0 transition-all duration-300 group-hover:bg-blue-100">
-                                    <i class="fas fa-link text-gray-500 text-lg sm:text-xl group-hover:text-blue-500"></i>
+                                    {% if link.icon %}
+                                        <img src="{{ link.icon }}"
+                                             alt="{{ link.name }}"
+                                             class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg object-cover">
+                                    {% else %}
+                                        <i class="fas fa-link text-gray-500 text-lg sm:text-xl group-hover:text-blue-500"></i>
+                                    {% endif %}
                                 </div>
                                 <div class="flex-1 min-w-0">
                                     <h2 class="text-lg sm:text-xl font-bold text-gray-800 mb-1 group-hover:text-blue-600 transition-colors duration-200 truncate">

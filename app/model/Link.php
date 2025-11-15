@@ -302,6 +302,30 @@ class Link extends Model
         }
     }
 
+    /**
+     * 获取规范化后的链接名称
+     *
+     * - 去掉首尾空白
+     * - 压缩中间的空格/换行
+     * - 尝试解码一次或两次 HTML 实体（解决 Zeruns&amp;#039;s 这种情况）
+     */
+    public function getNameAttribute($value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+
+        // 标准化空白字符（空格、换行、Tab 等）
+        $normalized = preg_replace('/\s+/u', ' ', (string) $value);
+        $normalized = trim($normalized ?? '');
+
+        // 防御性地做两次解码，处理 &amp;#039; 这类双重转义
+        $decoded = html_entity_decode($normalized, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $decoded = html_entity_decode($decoded, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        return $decoded;
+    }
+
     // -----------------------------------------------------
     // 自定义字段访问器
     // -----------------------------------------------------
