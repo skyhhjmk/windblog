@@ -11,10 +11,9 @@
         </testsuite>
     </testsuites>
 
-    <coverage>
+    <source>
         <include>
-            <!-- 只对业务代码目录 app 统计覆盖率，避免 PHPUnit 提示未配置过滤器 -->
             <directory suffix=".php">./app</directory>
         </include>
-    </coverage>
+    </source>
 </phpunit>
