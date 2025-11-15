@@ -1395,20 +1395,9 @@
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 {% block extra_js %}{% endblock %}
 
-<!-- Service Worker 注册 & 安装提示 -->
+<!-- PWA 安装提示（Service Worker 注册逻辑在下方统一处理） -->
 <script>
     (function () {
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function () {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(function (reg) {
-                        console.log('[PWA] SW registered', reg.scope);
-                    })
-                    .catch(function (err) {
-                        console.log('[PWA] SW registration failed', err);
-                    });
-            });
-        }
         // 自定义安装提示
         let deferredPrompt = null;
         window.addEventListener('beforeinstallprompt', (e) => {
