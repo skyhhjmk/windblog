@@ -74,11 +74,17 @@ jobs:
         uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
         with:
           context: .
+          # 支持多平台构建: linux/amd64, linux/arm64, linux/arm/v7
+          platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          # 使用GitHub Actions缓存来加速构建
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          # 启用内联缓存以进一步优化
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
 
       # Sign the resulting Docker image digest except on PRs.
       # This will only write to the public Rekor transparency log when the Docker
