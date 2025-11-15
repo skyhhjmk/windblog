@@ -49,6 +49,13 @@ ARG MIRROR=tsinghua
 ARG APP_ENV=prod
 ARG APP_PORT=8787
 
+# OCI image metadata labels for registries (e.g. GHCR package page)
+LABEL org.opencontainers.image.title="windblog" \
+      org.opencontainers.image.description="A high-performance blog system based on Webman framework." \
+      org.opencontainers.image.url="https://www.biliwind.com" \
+      org.opencontainers.image.source="https://github.com/skyhhjmk/windblog" \
+      org.opencontainers.image.licenses="BSD-3-Clause"
+
 ENV TZ=UTC \
     APP_ENV=${APP_ENV} \
     APP_PORT=${APP_PORT} \
