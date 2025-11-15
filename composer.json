@@ -23,7 +23,7 @@
     "issues": "https://github.com/skyhhjmk/windblog/issues",
     "source": "https://github.com/skyhhjmk/windblog"
   },
-  "version": "1.8.15",
+  "version": "1.8.16",
   "require": {
     "php": ">=8.3",
     "workerman/webman-framework": "^2.1",
