@@ -35,7 +35,6 @@ class UserController
         'resendActivation',
         'oauthRedirect',
         'oauthCallback',
-        'profileApi',
     ];
 
     /**
@@ -234,6 +233,7 @@ class UserController
      *
      * @return Response
      */
+    #[CSRFVerify(tokenName: '_logout_token', methods: ['POST'])]
     public function logout(Request $request): Response
     {
         $session = $request->session();

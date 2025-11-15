@@ -65,7 +65,7 @@ Route::get('/user/login', function () {
     ]);
 })->name('user.login.page');
 Route::post('/user/login', [app\controller\UserController::class, 'login'])->name('user.login');
-Route::any('/user/logout', [app\controller\UserController::class, 'logout'])->name('user.logout');
+Route::post('/user/logout', [app\controller\UserController::class, 'logout'])->name('user.logout');
 Route::get('/user/activate', [app\controller\UserController::class, 'activate'])->name('user.activate');
 Route::post('/user/resend-activation', [app\controller\UserController::class, 'resendActivation'])->name('user.resend.activation');
 
