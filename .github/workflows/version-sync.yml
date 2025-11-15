@@ -12,6 +12,8 @@ env:
 permissions:
   contents: write
   packages: write
+  # Allow GitHub Actions to mint an OIDC ID token for keyless cosign signing
+  id-token: write
 
 concurrency:
   group: release-${{ github.ref }}
