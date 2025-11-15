@@ -85,7 +85,7 @@ class PaginationService
             . ' data-page-url-template="' . htmlspecialchars($pageUrlTemplate, ENT_QUOTES, 'UTF-8') . '">';
 
         // 顶部主行：首/上 + Wind-BLOG 文字区 + 下/末
-        $paginationHtml .= '<div class="flex items-center space-x-4 mb-1">';
+        $paginationHtml .= '<div class="wind-blog-main-row flex mb-1">';
 
         // 第一页按钮
         if ($currentPage <= 1) {
@@ -196,15 +196,23 @@ class PaginationService
 .wind-blog-pagination {
     font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
+/* 顶部主行：首/上 + Wind-BLOG 文字区 + 右侧快捷按钮 */
+.wind-blog-pagination .wind-blog-main-row {
+    display: flex;
+    align-items: center;          /* 图标圆形 + 文本整体垂直居中，更自然 */
+    gap: 0.5rem;                  /* 左右两侧按钮与中间单词的间距略缩小 */
+}
 .wind-blog-pagination .wind-blog-word {
-    letter-spacing: 0.04em;
-    align-items: baseline; /* 所有字母与 n 的底部对齐 */
-    font-size: 1.6rem;      /* 统一字号，方便 O 与其他字母对齐 */
-    line-height: 1;
+    display: inline-flex;
+    align-items: baseline;        /* 只保证单词内部按基线对齐 */
+    letter-spacing: 0.03em;
+    font-size: 1.6rem;
+    line-height: 1.05;
 }
 .wind-blog-pagination .wind-blog-letter {
-    display: inline-flex;
-    align-items: baseline; /* 与基线对齐，不是 flex-end */
+    display: inline-block;
+    vertical-align: baseline;
+    margin: 0 0.05rem;            /* 字母之间稍微留一点间距，避免太挤 */
 }
 /* n 的容器垂直堆叠，但底部与字母对齐 */
 .wind-blog-pagination .wind-blog-n {
@@ -212,7 +220,7 @@ class PaginationService
     flex-direction: column;
     align-items: center;
     justify-content: flex-end; /* 将 n 和小数字推向底部 */
-    margin: 0 0.1rem;
+    margin: 0 0.06rem;         /* 与字母间距更接近，视觉更统一 */
     text-decoration: none;
     vertical-align: baseline; /* 使 n 容器在 inline-flex 中与字母底部对齐 */
 }
@@ -242,20 +250,24 @@ class PaginationService
     width: 1.6rem;
     height: 1.6rem;
     border-radius: 9999px;
-    border: 1px solid rgba(148, 163, 184, 0.9);
-    font-size: 0.8rem;           /* 数字略小于主字号 */
+    border: 1px solid rgba(100, 116, 139, 1); /* 边框略加深，提升可见度 */
+    font-size: 0.82rem;          /* 比单词略小一点，看起来像一个“附属控件” */
     font-weight: 600;
     text-align: center;
     color: var(--text);
     background-color: transparent;
     padding: 0;
-    margin: 0 0.12rem;
     line-height: 1.6rem;         /* 让数字在圆内垂直居中 */
-    vertical-align: middle;      /* 与字母中心对齐，避免上/下偏移 */
+    vertical-align: middle;      /* 用中线对齐，更协调 */
     position: relative;
-    top: -1px;                   /* 轻微上移 1px，视觉上完全居中 */
+    top: 0;                      /* 不需要额外偏移，middle 已经处理好了 */
     -moz-appearance: textfield;
     appearance: textfield;
+}
+/* 作为 Wind-BLOG 单词的一部分时，让 O 与 L/G 之间的可见间距相等 */
+.wind-blog-pagination .wind-blog-word > .wind-blog-o-input {
+    margin-left: 0.16rem;        /* O 左侧距离 L */
+    margin-right: 0.16rem;       /* O 右侧距离 G */
 }
 .wind-blog-pagination .wind-blog-o-input::-webkit-outer-spin-button,
 .wind-blog-pagination .wind-blog-o-input::-webkit-inner-spin-button {
@@ -271,46 +283,59 @@ class PaginationService
     background-color: rgba(37, 99, 235, 0.06);
     outline: none;
 }
-/* Go 按钮：宽度由完整 "Go >" 决定，避免展开时改变布局，只通过透明度切换尾部 "o >" */
+/* Go 按钮：默认状态仅在 G 附近收紧，激活时优雅地向右扩展背景 */
 .wind-blog-pagination .wind-blog-go-button {
     display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    align-items: center;             /* 按钮内容垂直居中 */
+    justify-content: flex-start;     /* 内容靠左，让 G 始终在同一位置 */
     border-radius: 9999px;
     border: 1px solid transparent;
-    padding: 0.15rem 0.65rem;
-    margin-left: 0.12rem; /* 更贴近 O，视觉上几乎连在一起 */
+    padding: 0.20rem 0.35rem 0.20rem 0.50rem;  /* 增加上下 padding，确保文字垂直居中 */
+    overflow: hidden;                /* 裁剪超出部分的 o > */
     font-size: 1em;
+    line-height: 1;                  /* 确保文字高度与字号一致 */
     font-weight: 700;
     background-color: transparent;
     color: var(--text);
     cursor: pointer;
     white-space: nowrap;
-    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
-    vertical-align: baseline;
+    transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);  /* 优雅动画曲线 */
+    vertical-align: middle;          /* 用中线对齐，与 O 保持一致 */
+    position: relative;
+    top: 0;                          /* 不需要额外偏移 */
+    max-width: 2.4rem;               /* 限制默认最大宽度为 G 的大小 */
+}
+/* 作为 Wind-BLOG 单词中的最后一个字母时，与 O 之间的距离已经由 O 的 margin-right 控制 */
+.wind-blog-pagination .wind-blog-word > .wind-blog-go-button {
+    margin-left: 0;                  /* 不再额外加距离 */
 }
 .wind-blog-pagination .wind-blog-go-text-collapsed {
     display: inline;
+    line-height: 1;                  /* 确保 G 文字垂直居中 */
 }
-/* 默认让 "o >" 占位但不可见，保证按钮宽度按完整 "Go >" 计算 */
+/* 默认让 "o >" 占位但不可见，保证按钮能向右扩展 */
 .wind-blog-pagination .wind-blog-go-text-expanded {
     display: inline-block;
+    max-width: 0;                    /* 默认不占用宽度 */
     opacity: 0;
-    transform: scaleX(0);              /* 从 G 右侧向外展开的视觉效果 */
-    transform-origin: left center;
-    transition: opacity 0.2s ease, transform 0.2s ease;
+    overflow: hidden;
+    line-height: 1;                  /* 确保 "o >" 文字垂直居中 */
+    transition: max-width 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.28s cubic-bezier(0.4, 0, 0.2, 1);
 }
-/* O 获得焦点或输入有值时：按钮高亮，显示完整 "Go >" */
+/* O 获得焦点或输入有值时：按钮向右扩展并高亮 */
 .wind-blog-pagination .wind-blog-o-input:focus ~ .wind-blog-go-button,
 .wind-blog-pagination.wind-blog-has-value .wind-blog-go-button {
+    max-width: 5.5rem;               /* 增大扩展后的宽度，确保 "Go >" 完全展示 */
+    padding-right: 0.80rem;          /* 扩展时右侧 padding 增加，给 "o >" 留出更多空间 */
     background-color: var(--accent);
     color: #ffffff;
     border-color: var(--accent);
 }
 .wind-blog-pagination .wind-blog-o-input:focus ~ .wind-blog-go-button .wind-blog-go-text-expanded,
 .wind-blog-pagination.wind-blog-has-value .wind-blog-go-button .wind-blog-go-text-expanded {
+    max-width: 4rem;                 /* 增大 "o >" 的宽度，确保完全显示 */
     opacity: 1;
-    transform: scaleX(1);              /* 向右展开显示 o > */
+    margin-left: 0.15rem;            /* "o >" 与 G 之间留一点间隙 */
 }
 /* 导航按钮样式 */
 .wind-blog-pagination .wind-blog-nav-btn {
