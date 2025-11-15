@@ -304,13 +304,22 @@ class BlogService
      */
     protected static function ensurePostExcerpts(Collection $posts): void
     {
-        if (empty($posts->excerpt) && empty($posts->ai_summary) && !empty($posts->content)) {
-            try {
-                self::processPostExcerpts($posts);
-            } catch (CommonMarkException $e) {
-                Log::error('Failed to process post excerpts: ' . $e->getMessage());
-                throw $e;
-            }
+        // 仅当集合中至少有一篇文章缺少摘要且存在内容时才进行处理，避免不必要的开销
+        $needsProcessing = $posts->contains(function ($post) {
+            return empty($post->excerpt)
+                && empty($post->ai_summary)
+                && !empty($post->content);
+        });
+
+        if (!$needsProcessing) {
+            return;
+        }
+
+        try {
+            self::processPostExcerpts($posts);
+        } catch (CommonMarkException $e) {
+            Log::error('Failed to process post excerpts: ' . $e->getMessage());
+            throw $e;
         }
     }
 

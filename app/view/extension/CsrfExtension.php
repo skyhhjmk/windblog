@@ -21,12 +21,14 @@ class CsrfExtension extends AbstractExtension
     /**
      * 获取CSRF令牌
      *
+     * @param string $tokenName token名称
+     *
      * @return string
      * @throws Exception
      */
-    public function getCsrfToken(): string
+    public function getCsrfToken(string $tokenName = '_token'): string
     {
-        return CSRFHelper::generateValue(request());
+        return CSRFHelper::generateValue(request(), $tokenName);
     }
 
     public function getOneTimeCsrfToken(): string

@@ -1218,7 +1218,7 @@
                             <span>我的评论</span>
                         </a>
                         <hr>
-                        <a href="/user/logout" onclick="return confirmLogout();" data-no-pjax>
+                        <a href="javascript:void(0)" onclick="return confirmLogout();" data-no-pjax>
                             <i class="fas fa-sign-out-alt"></i>
                             <span>退出登录</span>
                         </a>
@@ -1329,7 +1329,7 @@
                     </a>
                 </li>
                 <li id="mobileUserLogout" class="hidden">
-                    <a href="/user/logout" onclick="return confirmLogout();" data-no-pjax
+                    <a href="javascript:void(0)" onclick="return confirmLogout();" data-no-pjax
                        class="block text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 flex items-center py-2 tap-highlight">
                         <i class="fas fa-sign-out-alt mr-3 w-5 text-center"></i>
                         退出登录
@@ -1395,20 +1395,9 @@
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 {% block extra_js %}{% endblock %}
 
-<!-- Service Worker 注册 & 安装提示 -->
+<!-- PWA 安装提示（Service Worker 注册逻辑在下方统一处理） -->
 <script>
     (function () {
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function () {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(function (reg) {
-                        console.log('[PWA] SW registered', reg.scope);
-                    })
-                    .catch(function (err) {
-                        console.log('[PWA] SW registration failed', err);
-                    });
-            });
-        }
         // 自定义安装提示
         let deferredPrompt = null;
         window.addEventListener('beforeinstallprompt', (e) => {
@@ -3089,8 +3078,75 @@
         document.addEventListener('page:ready', checkUserStatus);
     })();
 
+    // 退出登录使用的 CSRF Token（独立于表单 _token，避免冲突）
+    var logoutCsrfToken = "{{ csrf_token('_logout_token') }}";
+
     // 确认退出登录
     function confirmLogout() {
+        function doLogout() {
+            if (!logoutCsrfToken) {
+                if (window.Swal) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: '安全令牌缺失',
+                        text: '当前页面缺少安全令牌，请刷新页面后重试。',
+                        confirmButtonText: '确定'
+                    });
+                } else {
+                    alert('当前页面缺少安全令牌，请刷新后重试。');
+                }
+                return;
+            }
+
+            fetch('/user/logout', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                    'X-CSRF-TOKEN': logoutCsrfToken
+                },
+                body: '_logout_token=' + encodeURIComponent(logoutCsrfToken)
+            })
+                .then(function (response) {
+                    return response.json().catch(function () {
+                        return {code: -1, msg: '退出失败'};
+                    });
+                })
+                .then(function (data) {
+                    if (window.Swal) {
+                        Swal.fire({
+                            icon: data.code === 0 ? 'success' : 'error',
+                            title: data.code === 0 ? '退出成功' : '退出失败',
+                            text: data.msg || (data.code === 0 ? '已退出登录' : '请求失败，请稍后重试'),
+                            timer: data.code === 0 ? 1500 : undefined,
+                            showConfirmButton: data.code !== 0
+                        }).then(function () {
+                            if (data.code === 0) {
+                                window.location.href = '/';
+                            }
+                        });
+                    } else {
+                        if (data.code === 0) {
+                            alert('已退出登录');
+                            window.location.href = '/';
+                        } else {
+                            alert(data.msg || '退出失败，请稍后重试');
+                        }
+                    }
+                })
+                .catch(function () {
+                    if (window.Swal) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: '网络错误',
+                            text: '网络异常，退出失败，请稍后重试。'
+                        });
+                    } else {
+                        alert('网络异常，退出失败，请稍后重试。');
+                    }
+                });
+        }
+
         if (window.Swal) {
             Swal.fire({
                 title: '确认退出？',
@@ -3101,29 +3157,16 @@
                 cancelButtonText: '取消',
                 confirmButtonColor: '#3085d6',
                 cancelButtonColor: '#d33'
-            }).then((result) => {
+            }).then(function (result) {
                 if (result.isConfirmed) {
-                    fetch('/user/logout', {method: 'POST'})
-                        .then(response => response.json())
-                        .then(data => {
-                            Swal.fire({
-                                icon: 'success',
-                                title: '退出成功',
-                                text: data.msg || '已退出登录',
-                                timer: 1500,
-                                showConfirmButton: false
-                            }).then(() => {
-                                window.location.href = '/';
-                            });
-                        })
-                        .catch(() => {
-                            window.location.href = '/user/logout';
-                        });
+                    doLogout();
                 }
             });
-            return false;
+        } else if (confirm('确定要退出登录吗？')) {
+            doLogout();
         }
-        return confirm('确定要退出登录吗？');
+
+        return false;
     }
 
     // 查看我的评论

@@ -653,11 +653,15 @@ class CommentController
             $data['quote'] = null;
         }
 
-        // 递归处理回复
-        if (!empty($data['replies'])) {
-            $data['replies'] = array_map(function ($reply) {
-                return $this->formatComment(Comment::find($reply['id']));
-            }, $data['replies']);
+        // 递归处理回复（避免 N+1 查询，优先使用已预加载的 replies 关系）
+        if ($comment->relationLoaded('replies') && $comment->replies) {
+            $data['replies'] = $comment->replies
+                ->map(function (Comment $reply) {
+                    return $this->formatComment($reply);
+                })
+                ->all();
+        } else {
+            $data['replies'] = [];
         }
 
         return $data;

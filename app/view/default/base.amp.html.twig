@@ -130,6 +130,14 @@
         .post-title a:hover {
             color: #667eea;
         }
+
+        /* AMP 文章页主标题 */
+        .amp-post-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 0 0 1rem 0;
+            color: #1f2937;
+        }
         .post-meta {
             display: flex;
             align-items: center;
@@ -182,6 +190,19 @@
             padding: 0.2em 0.4em;
             border-radius: 3px;
             font-size: 0.875em;
+        }
+
+        .post-content img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 1rem auto;
+        }
+
+        .post-content amp-img {
+            max-width: 100%;
+            display: block;
+            margin: 1rem auto;
         }
 
         /* 页脚 */
@@ -261,7 +282,7 @@
                 border-left-color: #8b5cf6;
             }
 
-            .post-title, .post-title a {
+            .post-title, .post-title a, .amp-post-title {
                 color: #e5e7eb;
             }
 

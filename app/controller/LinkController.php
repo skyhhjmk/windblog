@@ -44,8 +44,20 @@ class LinkController
      * goto: 友链跳转，公开访问
      * info: 友链详情页，公开访问
      * request: 申请友链（GET显示页面，POST提交申请），公开访问
+     * connectApply / checkTaskStatus / connectReceive / quickConnect / windConnect:
+     *   互联协议接口，基于 Token 鉴权，对端站点调用不依赖前台登录态
      */
-    protected array $noNeedLogin = ['index', 'goto', 'info', 'request'];
+    protected array $noNeedLogin = [
+        'index',
+        'goto',
+        'info',
+        'request',
+        'connectApply',
+        'checkTaskStatus',
+        'connectReceive',
+        'quickConnect',
+        'windConnect',
+    ];
 
     #[EnableInstantFirstPaint]
     public function index(Request $request, int $page = 1)
@@ -65,15 +77,21 @@ class LinkController
         );
 
         if (empty($request->get())) {
-            $cached = cache('blog_links_page_' . $page);
-            if ($cached) {
-                return $cached;
-            } else {
-                $links = Link::where('status', 'true')->orderByDesc('id')->forPage($page, $links_per_page)->get();
-                cache('blog_links_page_' . $page . '_per_' . $links_per_page, $links, true);
+            // 仅缓存链接数据本身，避免直接缓存 Response 导致序列化问题
+            $cacheKey = 'blog_links_page_' . $page . '_per_' . $links_per_page;
+            $links = cache($cacheKey);
+            if (!$links) {
+                $links = Link::where('status', 'true')
+                    ->orderByDesc('id')
+                    ->forPage($page, $links_per_page)
+                    ->get();
+                cache($cacheKey, $links, true);
             }
         } else {
-            $links = Link::where('status', 'true')->orderByDesc('id')->forPage($page, $links_per_page)->get();
+            $links = Link::where('status', 'true')
+                ->orderByDesc('id')
+                ->forPage($page, $links_per_page)
+                ->get();
         }
 
         // AMP 渲染

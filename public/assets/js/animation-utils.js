@@ -288,9 +288,10 @@ const AnimationUtils = {
             this.scrollManager = new ScrollAnimationManager();
         }
 
-        // 重新初始化其他动画功能
-        this.enhanceButtonInteractions();
-        this.enhanceCardInteractions();
+        // 重新初始化其他动画功能，仅针对主内容区，避免每次全局扫描
+        const contentRoot = document.getElementById('pjax-container') || document;
+        this.enhanceButtonInteractions(contentRoot);
+        this.enhanceCardInteractions(contentRoot);
         this.optimizeNavigationAnimation();
         this.initTypewriterEffect();
         this.enhanceTouchInteractions();
@@ -301,9 +302,10 @@ const AnimationUtils = {
 
     /**
      * 增强按钮交互效果
+     * @param {ParentNode} [root=document] - 限定扫描范围，避免每次全局遍历
      */
-    enhanceButtonInteractions() {
-        const buttons = document.querySelectorAll('button, a');
+    enhanceButtonInteractions(root = document) {
+        const buttons = root.querySelectorAll('button, a');
         buttons.forEach(button => {
             // 为没有特定交互类的按钮添加触摸反馈
             if (!button.classList.contains('touch-feedback')) {
@@ -321,9 +323,10 @@ const AnimationUtils = {
 
     /**
      * 增强卡片交互效果
+     * @param {ParentNode} [root=document] - 限定扫描范围，避免每次全局遍历
      */
-    enhanceCardInteractions() {
-        const cards = document.querySelectorAll('.bg-white.rounded-xl, .bg-white.rounded-2xl');
+    enhanceCardInteractions(root = document) {
+        const cards = root.querySelectorAll('.bg-white.rounded-xl, .bg-white.rounded-2xl');
         cards.forEach((card, index) => {
             // 跳过自身或祖先含 no-animation，或正文容器
             if (card.classList.contains('no-animation') || card.closest('.no-animation') || card.id === 'post-container') {
@@ -364,23 +367,37 @@ const AnimationUtils = {
 
         // 添加导航栏滚动效果
         const header = document.querySelector('header');
-        if (header) {
-            let lastScrollTop = 0;
-
-            window.addEventListener('scroll', this.throttle(() => {
-                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-
-                if (scrollTop > lastScrollTop && scrollTop > 100) {
-                    // 向下滚动且已滚动一定距离，隐藏导航栏
-                    header.classList.add('nav-hidden');
-                } else if (scrollTop < lastScrollTop - 20) {
-                    // 向上滚动，显示导航栏
-                    header.classList.remove('nav-hidden');
-                }
-
-                lastScrollTop = scrollTop <= 0 ? 0 : scrollTop; // 避免负值
-            }, 150), {passive: true});
+        if (!header) {
+            return;
         }
+
+        // 如果之前已经绑定过滚动监听，先移除，避免重复绑定导致的性能问题
+        if (this._navScrollHandler) {
+            try {
+                window.removeEventListener('scroll', this._navScrollHandler);
+            } catch (e) {
+                // 忽略移除失败
+            }
+        }
+
+        let lastScrollTop = 0;
+
+        const handler = this.throttle(() => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+
+            if (scrollTop > lastScrollTop && scrollTop > 100) {
+                // 向下滚动且已滚动一定距离，隐藏导航栏
+                header.classList.add('nav-hidden');
+            } else if (scrollTop < lastScrollTop - 20) {
+                // 向上滚动，显示导航栏
+                header.classList.remove('nav-hidden');
+            }
+
+            lastScrollTop = scrollTop <= 0 ? 0 : scrollTop; // 避免负值
+        }, 150);
+
+        this._navScrollHandler = handler;
+        window.addEventListener('scroll', handler, {passive: true});
     },
 
     /**
@@ -424,27 +441,32 @@ const AnimationUtils = {
      * 增强触摸设备交互
      */
     enhanceTouchInteractions() {
-        if ('ontouchstart' in document.documentElement) {
-            // 为触摸设备添加特殊处理
-            document.body.classList.add('touch-device');
-
-            // 为交互元素添加触摸事件处理
-            const interactiveElements = document.querySelectorAll('.hover-lift, .hover-animate');
-            interactiveElements.forEach(element => {
-                // 添加触摸反馈
-                element.addEventListener('touchstart', function() {
-                    this.style.transform = 'translateY(-2px)';
-                }, { passive: true });
-
-                element.addEventListener('touchend', function() {
-                    this.style.transform = 'translateY(0)';
-                }, { passive: true });
-
-                element.addEventListener('touchcancel', function() {
-                    this.style.transform = 'translateY(0)';
-                }, { passive: true });
-            });
+        if (!('ontouchstart' in document.documentElement)) {
+            return;
         }
+
+        // 为触摸设备添加特殊处理
+        document.body.classList.add('touch-device');
+
+        // 为交互元素添加触摸事件处理（每个元素只绑定一次）
+        const interactiveElements = document.querySelectorAll('.hover-lift, .hover-animate');
+        interactiveElements.forEach(element => {
+            if (element.dataset.touchEnhanced === '1') {
+                return;
+            }
+            element.dataset.touchEnhanced = '1';
+
+            const setDown = function () {
+                this.style.transform = 'translateY(-2px)';
+            };
+            const setUp = function () {
+                this.style.transform = 'translateY(0)';
+            };
+
+            element.addEventListener('touchstart', setDown, {passive: true});
+            element.addEventListener('touchend', setUp, {passive: true});
+            element.addEventListener('touchcancel', setUp, {passive: true});
+        });
     },
 
     /**
