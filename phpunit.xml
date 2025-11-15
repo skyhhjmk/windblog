@@ -3,10 +3,18 @@
          xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/12.2/phpunit.xsd"
          bootstrap="support/bootstrap.php"
          colors="true"
-         cacheDirectory=".phpunit.cache">
+         cacheDirectory=".phpunit.cache"
+         failOnWarning="false">
     <testsuites>
         <testsuite name="Test Suite">
             <directory suffix="Test.php">./tests</directory>
         </testsuite>
     </testsuites>
+
+    <coverage>
+        <include>
+            <!-- 只对业务代码目录 app 统计覆盖率，避免 PHPUnit 提示未配置过滤器 -->
+            <directory suffix=".php">./app</directory>
+        </include>
+    </coverage>
 </phpunit>
