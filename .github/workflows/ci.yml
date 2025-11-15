@@ -82,6 +82,10 @@ jobs:
         os: [ubuntu-latest]
         php: ['8.3', '8.4']
         dependency-version: [ prefer-stable ]
+        exclude:
+          # 不对 PHP 8.3 运行 prefer-stable 流水线，只保留 lowest
+          - php: '8.3'
+            dependency-version: prefer-stable
         include:
           - php: '8.3'
             dependency-version: prefer-lowest
@@ -98,7 +102,7 @@ jobs:
       with:
         php-version: ${{ matrix.php }}
         extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, pdo_pgsql, pgsql, bcmath, intl, gd, exif, iconv
-        coverage: ${{ matrix.php == '8.3' && matrix.dependency-version == 'prefer-stable' && 'xdebug' || 'none' }}
+        coverage: ${{ matrix.php == '8.4' && matrix.dependency-version == 'prefer-stable' && 'xdebug' || 'none' }}
         tools: composer:v2
 
     - name: Download vendor
@@ -121,14 +125,14 @@ jobs:
 
     - name: Execute tests
       run: |
-        if [ "${{ matrix.php }}" = "8.3" ] && [ "${{ matrix.dependency-version }}" = "prefer-stable" ]; then
+        if [ "${{ matrix.php }}" = "8.4" ] && [ "${{ matrix.dependency-version }}" = "prefer-stable" ]; then
           php vendor/bin/phpunit --coverage-clover coverage.xml --coverage-text
         else
           php vendor/bin/phpunit --no-coverage
         fi
 
     - name: Upload coverage to Codecov
-      if: matrix.php == '8.3' && matrix.dependency-version == 'prefer-stable'
+      if: matrix.php == '8.4' && matrix.dependency-version == 'prefer-stable'
       uses: codecov/codecov-action@v3
       with:
         files: ./coverage.xml
