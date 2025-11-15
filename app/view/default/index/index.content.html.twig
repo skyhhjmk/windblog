@@ -156,38 +156,4 @@
         }
     </style>
 
-    <script>
-        function jumpToPage(maxPage) {
-            const input = document.getElementById('page-input');
-            const page = parseInt(input.value);
-            if (isNaN(page) || page < 1 || page > maxPage) {
-                alert('请输入有效的页码 (1-' + maxPage + ')');
-                return;
-            }
-            window.location.href = '/?page=' + page;
-        }
-
-        // 分页输入框事件
-        document.addEventListener('DOMContentLoaded', function () {
-            const input = document.getElementById('page-input');
-            if (input) {
-                input.addEventListener('keypress', function (e) {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        const maxPage = parseInt(this.getAttribute('max'));
-                        jumpToPage(maxPage);
-                    }
-                });
-            }
-
-            // 修复移动端分页输入框样式问题
-            if (window.innerWidth <= 768) {
-                const pageInput = document.getElementById('page-input');
-                if (pageInput) {
-                    pageInput.classList.add('w-20', 'text-center');
-                }
-            }
-        });
-    </script>
-
 </div>
