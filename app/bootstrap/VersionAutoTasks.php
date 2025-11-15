@@ -32,8 +32,8 @@ class VersionAutoTasks implements Bootstrap
             return;
         }
 
-        // 仅在 workerId==0 尝试触发，减少并发概率（非严格保证）
-        if (property_exists($worker, 'id') && $worker->id !== 0) {
+        // 仅在 workerId==0 尝试触发
+        if (!$worker || $worker->id !== 0) {
             return;
         }
 
