@@ -22,14 +22,7 @@ use Workerman\Worker;
  */
 class LinkMonitor
 {
-    protected int $interval = 5;
-
     protected int $timerId;
-
-    protected int $timerId2;
-
-    // 是否正在消费，避免重复启动多个消费循环
-    protected bool $consuming = false;
 
     // 请求限制
     protected int $requestTimeout = 30;
@@ -58,39 +51,32 @@ class LinkMonitor
     {
         if ($this->mqChannel === null) {
             $this->mqChannel = MQService::getChannel();
-        } else {
-            // 轻量探测，若已断开则重建
-            try {
-                $this->mqChannel->basic_qos(0, 1, false);
-            } catch (Throwable $e) {
-                Log::warning('检测到MQ通道异常，尝试重建: ' . $e->getMessage());
-                $this->rebuildMqChannel();
-            }
-        }
 
-        return $this->mqChannel;
-    }
-
-    protected function rebuildMqChannel(): void
-    {
-        try {
-            MQService::reconnect();
-            $channel = MQService::getChannel();
-
+            // 初始化队列和交换机
             $exchange = (string) blog_config('rabbitmq_link_monitor_exchange', 'link_monitor_exchange', true);
             $routingKey = (string) blog_config('rabbitmq_link_monitor_routing_key', 'link_monitor', true);
             $queueName = (string) blog_config('rabbitmq_link_monitor_queue', 'link_monitor_queue', true);
+
+            // 为 LinkMonitor 使用专属 DLX/DLQ，不共用
             $dlxExchange = (string) blog_config('rabbitmq_link_monitor_dlx_exchange', 'link_monitor_dlx_exchange', true);
             $dlxQueue = (string) blog_config('rabbitmq_link_monitor_dlx_queue', 'link_monitor_dlx_queue', true);
 
-            MQService::declareDlx($channel, $dlxExchange, $dlxQueue);
-            MQService::setupQueueWithDlx($channel, $exchange, $routingKey, $queueName, $dlxExchange, $dlxQueue);
+            MQService::declareDlx($this->mqChannel, $dlxExchange, $dlxQueue);
+            MQService::setupQueueWithDlx($this->mqChannel, $exchange, $routingKey, $queueName, $dlxExchange, $dlxQueue);
 
-            $this->mqChannel = $channel;
-            Log::info('RabbitMQ 通道已重建(LinkMonitor)');
-        } catch (Throwable $e) {
-            Log::error('RabbitMQ 通道重建失败(LinkMonitor): ' . $e->getMessage());
+            // 注册消费者
+            $this->mqChannel->basic_consume(
+                $queueName,
+                '',
+                false,
+                false, // no_ack
+                false,
+                false,
+                [$this, 'handleMessage']
+            );
         }
+
+        return $this->mqChannel;
     }
 
     public function onWorkerStart(Worker $worker): void
@@ -103,23 +89,10 @@ class LinkMonitor
         }
 
         Log::info('LinkMonitor 进程已启动 - PID: ' . getmypid());
+
         try {
-            // 使用 MQService 通道与通用方法初始化本进程专属的交换机/队列/死信
-            $channel = MQService::getChannel();
-
-            $exchange = (string) blog_config('rabbitmq_link_monitor_exchange', 'link_monitor_exchange', true);
-            $routingKey = (string) blog_config('rabbitmq_link_monitor_routing_key', 'link_monitor', true);
-            $queueName = (string) blog_config('rabbitmq_link_monitor_queue', 'link_monitor_queue', true);
-
-            // 为 LinkMonitor 使用专属 DLX/DLQ，不共用
-            $dlxExchange = (string) blog_config('rabbitmq_link_monitor_dlx_exchange', 'link_monitor_dlx_exchange', true);
-            $dlxQueue = (string) blog_config('rabbitmq_link_monitor_dlx_queue', 'link_monitor_dlx_queue', true);
-
-            MQService::declareDlx($channel, $dlxExchange, $dlxQueue);
-            MQService::setupQueueWithDlx($channel, $exchange, $routingKey, $queueName, $dlxExchange, $dlxQueue);
-
-            $this->mqChannel = $channel;
-            Log::info('RabbitMQ连接初始化成功(LinkMonitor)');
+            // 初始化MQ通道
+            $this->getMqChannel();
         } catch (Exception $e) {
             Log::error('RabbitMQ连接初始化失败(LinkMonitor): ' . $e->getMessage());
         }
@@ -129,6 +102,7 @@ class LinkMonitor
             $peak = memory_get_peak_usage(true) / 1024 / 1024;
             Log::debug("LinkMonitor 状态 - 内存: {$memoryUsage}MB, 峰值: {$peak}MB");
         });
+
         // 每60秒进行一次 MQ 健康检查
         Timer::add(60, function () {
             try {
@@ -138,73 +112,34 @@ class LinkMonitor
             }
         });
 
-        $this->processMessages();
-        $this->timerId2 = Timer::add($this->interval, [$this, 'processMessages']);
-    }
-
-    public function processMessages(): void
-    {
-        if ($this->consuming) {
-            return; // 避免重复消费循环
-        }
-        $this->consuming = true;
-        try {
-            $queueName = blog_config('rabbitmq_link_monitor_queue', 'link_monitor_queue', true);
-            $channel = $this->getMqChannel();
-
-            // 若通道异常，尝试重建
+        // 使用事件驱动模式处理消息
+        Timer::add(1, function () {
             try {
-                $channel->basic_qos(0, 1, false);
-            } catch (Throwable $e) {
-                Log::warning('LinkMonitor 通道不可用，触发自愈: ' . $e->getMessage());
-                $this->rebuildMqChannel();
-                $channel = $this->getMqChannel();
-            }
-
-            // 注册消费者
-            try {
-                $channel->basic_consume(
-                    $queueName,
-                    '',
-                    false,
-                    false, // no_ack
-                    false,
-                    false,
-                    [$this, 'handleMessage']
-                );
-            } catch (Throwable $e) {
-                Log::warning('LinkMonitor 注册消费者失败，尝试自愈: ' . $e->getMessage());
-                $this->rebuildMqChannel();
-                $channel = $this->getMqChannel();
-                $channel->basic_consume(
-                    $queueName,
-                    '',
-                    false,
-                    false,
-                    false,
-                    false,
-                    [$this, 'handleMessage']
-                );
-            }
-
-            while ($channel->is_consuming()) {
-                try {
-                    $channel->wait(null, false, 1.0);
-                } catch (AMQPTimeoutException $e) {
-                    // 正常超时，无消息到达，忽略
-                } catch (Throwable $e) {
-                    Log::warning('LinkMonitor 消费轮询异常: ' . $e->getMessage());
-                    // 可能是连接/通道断开，标记并跳出，由定时器再次触发
+                if ($this->mqChannel === null) {
+                    Log::warning('LinkMonitor: channel is null, reconnecting...');
+                    // 重新初始化通道
                     $this->mqChannel = null;
-                    break;
+                    $this->getMqChannel();
+
+                    return;
+                }
+                $this->mqChannel->wait(null, false, 1.0);
+            } catch (AMQPTimeoutException $e) {
+                // noop
+            } catch (Throwable $e) {
+                $errorMsg = $e->getMessage();
+                Log::warning('LinkMonitor 消费轮询异常: ' . $errorMsg);
+
+                // 检测通道连接断开，触发自愈
+                if (strpos($errorMsg, 'Channel connection is closed') !== false ||
+                    strpos($errorMsg, 'Broken pipe') !== false ||
+                    strpos($errorMsg, 'connection is closed') !== false) {
+                    Log::warning('LinkMonitor 检测到连接断开，尝试重建连接');
+                    $this->mqChannel = null;
+                    $this->getMqChannel();
                 }
             }
-        } catch (Exception $e) {
-            Log::error('LinkMonitor 消费异常: ' . $e->getMessage());
-            $this->mqChannel = null;
-        } finally {
-            $this->consuming = false;
-        }
+        });
     }
 
     public function handleMessage(AMQPMessage $message): void
@@ -506,9 +441,6 @@ class LinkMonitor
     {
         if (isset($this->timerId)) {
             Timer::del($this->timerId);
-        }
-        if (isset($this->timerId2)) {
-            Timer::del($this->timerId2);
         }
         $this->closeMqConnection();
     }

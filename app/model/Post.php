@@ -35,7 +35,7 @@ use Throwable;
  * @property Carbon|null         $deleted_at      软删除时间
  * @property-read PostAuthor[]   $postAuthors     文章-作者关联记录
  * @property-read Author[]       $authors         通过中间表关联的所有作者
- * @property-read Author         $primaryAuthor   文章的主要作者
+ * @property-read Author|null $primaryAuthor   文章的主要作者
  * @property-read PostCategory[] $postCategories  文章-分类关联记录
  * @property-read Category[]     $categories      通过中间表关联的所有分类
  * @property-read PostTag[]      $postTags        文章-标签关联记录
@@ -249,8 +249,8 @@ class Post extends Model
     }
 
     /**
-     * 获取文章的主要作者。
-     * 通过 post_author 中间表，筛选出 is_primary = true 的作者。
+     * 获取文章的主要作者关系。
+     * 通过 post_author 中间表，筛选出 is_primary = true 的作者关系。
      *
      * @return BelongsToMany
      */
@@ -258,6 +258,17 @@ class Post extends Model
     {
         return $this->belongsToMany(Author::class, 'post_author', 'post_id', 'author_id')
             ->wherePivot('is_primary', true);
+    }
+
+    /**
+     * 获取文章的主要作者实例。
+     * 通过 post_author 中间表，筛选出 is_primary = true 的作者。
+     *
+     * @return Author|null
+     */
+    public function getPrimaryAuthor(): ?Author
+    {
+        return $this->primaryAuthor()->first();
     }
 
     /**
@@ -328,22 +339,17 @@ class Post extends Model
      */
     public function setExt(string $key, array $value): PostExt
     {
-        // 查找是否已存在该键的扩展属性
-        $ext = $this->getExt($key);
-
-        if ($ext) {
-            // 更新现有记录
-            $ext->value = $value;
-            $ext->save();
-        } else {
-            // 创建新记录
-            $ext = new PostExt([
+        // 使用 updateOrCreate 替代先查询后更新，减少数据库查询次数
+        /** @var PostExt $ext */
+        $ext = PostExt::updateOrCreate(
+            [
                 'post_id' => $this->id,
                 'key' => $key,
+            ],
+            [
                 'value' => $value,
-            ]);
-            $ext->save();
-        }
+            ]
+        );
 
         return $ext;
     }
@@ -448,7 +454,7 @@ class Post extends Model
         Log::debug('Soft delete config value: ' . var_export($useSoftDelete, true));
         Log::debug('Force delete flag: ' . var_export($forceDelete, true));
 
-        // 修夏逻辑：先判断强制删除,再判断软删除配置
+        // 修正逻辑：先判断强制删除,再判断软删除配置
         if ($forceDelete) {
             // 硬删除：直接从数据库中删除记录
             Log::debug('Executing hard delete for post ID: ' . $this->id);

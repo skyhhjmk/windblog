@@ -3,6 +3,7 @@
 namespace app\service;
 
 use app\model\Post;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use League\CommonMark\Environment\Environment;
 use League\CommonMark\Exception\CommonMarkException;
@@ -115,18 +116,20 @@ class BlogService
      */
     protected static function generateCacheKey(int $page, int $perPage, array $filters): string
     {
-        $filter_key = empty($filters) ? '' : '_' . md5(serialize($filters));
+        $filter_key = empty($filters) ? '' : '_' . hash('crc32b', serialize($filters));
 
         return 'blog_posts_page_' . $page . '_per_' . $perPage . $filter_key;
     }
 
     /**
      * 构建基础查询
+     *
+     * @return Builder 基础查询构建器
      */
-    protected static function buildBaseQuery()
+    protected static function buildBaseQuery(): Builder
     {
         return Post::where('status', 'published')
-            ->where(function ($q) {
+            ->where(function (Builder $q) {
                 $q->whereNull('published_at')
                     ->orWhere('published_at', '<=', utc_now());
             });
@@ -194,7 +197,7 @@ class BlogService
      */
     protected static function applyAuthorFilter($query, string $value): void
     {
-        $query->whereHas('author', function ($q) use ($value) {
+        $query->whereHas('authors', function ($q) use ($value) {
             $q->where('name', $value);
         });
     }
@@ -383,34 +386,36 @@ class BlogService
      */
     protected static function processPostExcerpts(Collection $posts): void
     {
+        // 创建MarkdownConverter实例
+        $config = [
+            'html_input' => 'allow',
+            'allow_unsafe_links' => false,
+            'max_nesting_level' => 10,
+            'renderer' => [
+                'soft_break' => '<br />
+',
+            ],
+            'commonmark' => [
+                'enable_em' => true,
+                'enable_strong' => true,
+                'use_asterisk' => true,
+                'use_underscore' => true,
+                'unordered_list_markers' => ['-', '+', '*'],
+            ],
+        ];
+
+        $environment = new Environment($config);
+        $environment->addExtension(new CommonMarkCoreExtension());
+        $environment->addExtension(new AutolinkExtension());
+        $environment->addExtension(new StrikethroughExtension());
+        $environment->addExtension(new TableExtension());
+        $environment->addExtension(new TaskListExtension());
+
+        $converter = new MarkdownConverter($environment);
+
         foreach ($posts as $post) {
             if (empty($post->excerpt)) {
                 // 使用CommonMarkConverter将内容转换为HTML，再删除HTML标签生成摘要
-                $config = [
-                    'html_input' => 'allow',
-                    'allow_unsafe_links' => false,
-                    'max_nesting_level' => 10,
-                    'renderer' => [
-                        'soft_break' => "<br />\n",
-                    ],
-                    'commonmark' => [
-                        'enable_em' => true,
-                        'enable_strong' => true,
-                        'use_asterisk' => true,
-                        'use_underscore' => true,
-                        'unordered_list_markers' => ['-', '+', '*'],
-                    ],
-                ];
-
-                $environment = new Environment($config);
-                $environment->addExtension(new CommonMarkCoreExtension());
-                $environment->addExtension(new AutolinkExtension());
-                $environment->addExtension(new StrikethroughExtension());
-                $environment->addExtension(new TableExtension());
-                $environment->addExtension(new TaskListExtension());
-
-                $converter = new MarkdownConverter($environment);
-
                 $html = $converter->convert($post->content);
                 $excerpt = mb_substr(strip_tags((string) $html), 0, 200, 'UTF-8');
 

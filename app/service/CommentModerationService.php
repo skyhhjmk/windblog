@@ -114,12 +114,12 @@ class CommentModerationService
 
             // 获取审核选项（支持后台配置）
             $options = [
-                'temperature' => (float)blog_config('comment_ai_moderation_temperature', 0.1, true),
+                'temperature' => (float) blog_config('comment_ai_moderation_temperature', 0.1, true),
                 'model' => blog_config('comment_ai_moderation_model', '', true) ?: $provider->getDefaultModel(),
             ];
 
             // 在服务层拼装提示词与消息，提供者保持可复用
-            $template = (string)blog_config('comment_ai_moderation_prompt', '', true);
+            $template = (string) blog_config('comment_ai_moderation_prompt', '', true);
             if (trim($template) === '') {
                 // 默认模板仅在运行时使用，不写入提供者
                 $template = <<<EOT
