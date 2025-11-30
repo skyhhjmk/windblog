@@ -226,8 +226,14 @@ class Post extends Model
 
                 foreach ($mediaUrls as $url) {
                     // 只处理外部媒体URL，本地URL不需要记录引用
-                    if (filter_var($url, FILTER_VALIDATE_URL) && strpos($url, config('app.url')) === false) {
-                        $externalMediaUrls[] = $url;
+                    if (filter_var($url, FILTER_VALIDATE_URL)) {
+                        $siteUrl = blog_config('site_url', '', true);
+                        if (!empty($siteUrl) && strpos($url, $siteUrl) === false) {
+                            $externalMediaUrls[] = $url;
+                        } elseif (empty($siteUrl)) {
+                            // 如果站点URL未配置，将所有URL视为外部URL
+                            $externalMediaUrls[] = $url;
+                        }
                     }
                 }
 
