@@ -7,6 +7,7 @@ use app\model\Author;
 use app\model\Category;
 use app\model\Comment;
 use app\model\ImportJob;
+use app\model\Media;
 use app\model\Post;
 use app\model\Tag;
 use DOMDocument;
@@ -570,20 +571,25 @@ class WordpressImporter
         }
 
         // 替换内容中的附件链接
+        $referencedMediaIds = [];
         if (!empty($content) && !empty($this->attachmentMap)) {
-            $content = $this->replaceAttachmentLinks($content, $content_type);
+            [$content, $contentReferencedMediaIds] = $this->replaceAttachmentLinks($content, $content_type);
+            $referencedMediaIds = array_merge($referencedMediaIds, $contentReferencedMediaIds);
             // 格式化markdown内容中的图片链接
             if ($content_type === 'markdown') {
                 $content = $this->formatMarkdownImages($content);
             }
         }
         if (!empty($excerpt) && !empty($this->attachmentMap)) {
-            $excerpt = $this->replaceAttachmentLinks($excerpt, $content_type);
+            [$excerpt, $excerptReferencedMediaIds] = $this->replaceAttachmentLinks($excerpt, $content_type);
+            $referencedMediaIds = array_merge($referencedMediaIds, $excerptReferencedMediaIds);
             // 格式化markdown摘要中的图片链接
             if ($content_type === 'markdown') {
                 $excerpt = $this->formatMarkdownImages($excerpt);
             }
         }
+        // 去重被引用的媒体ID
+        $referencedMediaIds = array_unique($referencedMediaIds);
 
         // 处理作者
         $authorId = $this->processAuthor($xpath, $node);
@@ -754,6 +760,9 @@ class WordpressImporter
                         $this->postIdMap[$wpPostId] = $existing->id;
                     }
 
+                    // 更新现有文章引用的媒体
+                    $this->updateMediaReferences($existing->id, $referencedMediaIds);
+
                     return; // 使用现有文章，后续评论将映射到该文章
                 }
             }
@@ -795,7 +804,47 @@ class WordpressImporter
             $post->tags()->sync([]);
         }
 
+        // 更新媒体引用计数
+        $this->updateMediaReferences($post->id, $referencedMediaIds);
+
         Log::debug('文章保存完成，ID: ' . $post->id);
+    }
+
+    /**
+     * 更新媒体引用计数
+     *
+     * @param int   $postId             文章ID
+     * @param array $referencedMediaIds 被引用的媒体ID列表
+     *
+     * @return void
+     */
+    protected function updateMediaReferences(int $postId, array $referencedMediaIds): void
+    {
+        if (empty($referencedMediaIds)) {
+            return;
+        }
+
+        Log::debug('更新媒体引用计数，文章ID: ' . $postId . ', 媒体ID列表: ' . implode(',', $referencedMediaIds));
+
+        // 遍历被引用的媒体ID
+        foreach ($referencedMediaIds as $mediaId) {
+            try {
+                // 获取媒体实例
+                $media = Media::find($mediaId);
+                if (!$media) {
+                    Log::warning('媒体ID不存在: ' . $mediaId);
+                    continue;
+                }
+
+                // 更新媒体引用计数
+                $media->addPostReference($postId);
+                $media->save();
+
+                Log::debug('更新媒体引用计数成功，媒体ID: ' . $mediaId . ', 文章ID: ' . $postId);
+            } catch (Exception $e) {
+                Log::error('更新媒体引用计数失败，媒体ID: ' . $mediaId . ', 错误: ' . $e->getMessage());
+            }
+        }
     }
 
     /**
@@ -1188,9 +1237,7 @@ class WordpressImporter
                     $totalDuration = round((microtime(true) - $startTime) * 1000, 2);
                     Log::info('附件下载成功 (尝试 ' . $attempts . '/' . $maxRetries . '), 耗时: ' . $totalDuration . 'ms, 媒体ID: ' . ($media->id ?? '未知') . ', URL: ' . $url);
 
-                    // 记录外部URL引用信息到媒体的custom_fields
-                    $media->addExternalUrlReference($url);
-                    $media->save();
+                    // 不需要记录外部URL引用信息，只记录文章引用
 
                     // 将Media对象转换为数组格式返回
                     $mediaInfo = [
@@ -1406,12 +1453,12 @@ class WordpressImporter
      * @param string $content     原始内容
      * @param string $contentType 内容类型（html/markdown）
      *
-     * @return string 替换后的内容
+     * @return array [替换后的内容, 被引用的媒体ID列表]
      */
-    protected function replaceAttachmentLinks(string $content, string $contentType): string
+    protected function replaceAttachmentLinks(string $content, string $contentType): array
     {
         if (empty($content) || empty($this->attachmentMap)) {
-            return $content;
+            return [$content, []];
         }
 
         Log::debug('开始替换附件链接，内容类型: ' . $contentType . ', 附件数量: ' . count($this->attachmentMap));
@@ -1420,6 +1467,7 @@ class WordpressImporter
         $urlMap = [];
         $baseUrlToNewUrl = [];
         $validUrlMap = [];
+        $referencedMediaIds = [];
 
         // 首先，创建完整的URL映射关系，并验证新URL的有效性
         foreach ($this->attachmentMap as $originalUrl => $attachmentInfo) {
@@ -1433,19 +1481,29 @@ class WordpressImporter
 
             // 验证文件是否存在
             if (file_exists($filePath)) {
-                $urlMap[$originalUrl] = $newUrl;
-                $validUrlMap[$originalUrl] = $newUrl;
+                $urlMap[$originalUrl] = [
+                    'new_url' => $newUrl,
+                    'media_id' => $attachmentInfo['id'],
+                ];
+                $validUrlMap[$originalUrl] = [
+                    'new_url' => $newUrl,
+                    'media_id' => $attachmentInfo['id'],
+                ];
 
                 // 获取基础URL（去除尺寸参数）
                 $baseUrl = $this->getBaseAttachmentUrl($originalUrl);
                 if ($baseUrl) {
-                    $baseUrlToNewUrl[$baseUrl] = $newUrl;
+                    $baseUrlToNewUrl[$baseUrl] = [
+                        'new_url' => $newUrl,
+                        'media_id' => $attachmentInfo['id'],
+                    ];
                 } else {
                     // 如果原始URL没有尺寸参数，直接将原始URL作为基础URL
-                    $baseUrlToNewUrl[$originalUrl] = $newUrl;
+                    $baseUrlToNewUrl[$originalUrl] = [
+                        'new_url' => $newUrl,
+                        'media_id' => $attachmentInfo['id'],
+                    ];
                 }
-
-                Log::debug('URL映射有效: ' . $originalUrl . ' => ' . $newUrl . ', 文件存在: ' . $filePath);
             } else {
                 Log::warning('URL映射无效: ' . $originalUrl . ' => ' . $newUrl . ', 文件不存在: ' . $filePath);
             }
@@ -1453,11 +1511,9 @@ class WordpressImporter
 
         // 反向创建映射：对于每个带尺寸参数的URL，提取其基础URL并映射到新URL
         // 这确保了即使原始URL没有尺寸参数，我们也能处理带尺寸参数的变体
-        foreach ($validUrlMap as $originalUrl => $newUrl) {
-            // 对于每个有效URL，我们需要确保它能处理所有带尺寸参数的变体
-            // 例如：originalUrl是 https://example.com/image.png
-            // 我们需要确保 https://example.com/image-1024x526.png 也能被替换
-            // 因此，我们需要将所有可能的带尺寸参数的URL变体映射到同一个新URL
+        foreach ($validUrlMap as $originalUrl => $info) {
+            $newUrl = $info['new_url'];
+            $mediaId = $info['media_id'];
 
             // 提取文件名和扩展名
             $parsedUrl = parse_url($originalUrl);
@@ -1475,23 +1531,42 @@ class WordpressImporter
             // 那么 https://example.com/image-1024x526.png 也应该映射到 /uploads/new-image.png
             $baseUrl = $baseUrlWithoutFilename . $baseFilename . '.' . $extension;
             if (!isset($baseUrlToNewUrl[$baseUrl])) {
-                $baseUrlToNewUrl[$baseUrl] = $newUrl;
-                Log::debug('添加基础URL映射: ' . $baseUrl . ' => ' . $newUrl);
+                $baseUrlToNewUrl[$baseUrl] = [
+                    'new_url' => $newUrl,
+                    'media_id' => $mediaId,
+                ];
             }
         }
 
         // 合并所有URL映射，包括原始URL和带尺寸参数的变体
         $allUrlMap = array_merge($validUrlMap, $baseUrlToNewUrl);
 
-        // 先处理所有带尺寸参数的URL变体
+        // 保存原始内容的副本，用于检查URL是否存在
+        $contentCopy = $content;
+
+        // 先处理所有带尺寸参数的URL变体，只执行一次
         if ($contentType === 'html') {
             $content = $this->replaceSizeVariantUrlsInHtml($content, $baseUrlToNewUrl);
         } else {
             $content = $this->replaceSizeVariantUrlsInMarkdown($content, $baseUrlToNewUrl);
         }
 
-        // 然后处理所有URL，包括原始URL和带尺寸参数的变体
-        foreach ($allUrlMap as $originalUrl => $newUrl) {
+        // 首先，遍历所有URL映射，收集被引用的媒体ID
+        foreach ($allUrlMap as $originalUrl => $info) {
+            $mediaId = $info['media_id'];
+
+            // 在替换URL之前，检查原始URL是否存在于内容中
+            if (strpos($contentCopy, $originalUrl) !== false && !in_array($mediaId, $referencedMediaIds)) {
+                $referencedMediaIds[] = $mediaId;
+                Log::info('添加被引用媒体ID: ' . $mediaId . ' (URL: ' . $originalUrl . ')');
+            }
+        }
+
+        // 然后，遍历所有URL映射，替换内容中的URL
+        foreach ($allUrlMap as $originalUrl => $info) {
+            $newUrl = $info['new_url'];
+            $mediaId = $info['media_id'];
+
             // 根据内容类型进行不同的替换策略
             if ($contentType === 'html') {
                 // 改进HTML内容替换，支持更多属性和更灵活的匹配
@@ -1561,8 +1636,6 @@ class WordpressImporter
                     }, $content);
                 }
             }
-
-            Log::debug('替换附件链接: ' . $originalUrl . ' => ' . $newUrl);
         }
 
         // 最后，进行全局URL替换，确保所有可能的URL都被替换，使用合并后的URL映射
@@ -1571,11 +1644,11 @@ class WordpressImporter
         // 验证替换后的URL有效性
         $this->validateReplacedUrls($content, $contentType);
 
-        return $content;
+        return [$content, $referencedMediaIds];
     }
 
     /**
-     * 格式化markdown内容中的图片链接，确保连续图片之间有适当的换行符
+     * 格式化markdown内容中的图片链接，确保图片单独占一行
      *
      * @param string $markdown markdown内容
      *
@@ -1583,12 +1656,24 @@ class WordpressImporter
      */
     protected function formatMarkdownImages(string $markdown): string
     {
-        // 匹配连续的图片链接，确保它们之间有换行符
-        // 模式：匹配![alt](url)或![alt](url "title")格式的图片链接
-        $pattern = '/(!\[[^\]]*\]\([^\)]+\))\s*(?=!\[[^\]]*\]\()/';
+        // 1. 匹配连续的图片链接，确保它们之间有换行符
+        $pattern1 = '/(!\[[^\]]*\]\([^\)]+\))\s*(?=!\[[^\]]*\]\()/';
+        $formattedMarkdown = preg_replace($pattern1, "$1\n\n", $markdown);
 
-        // 替换为：图片链接 + 两个换行符
-        $formattedMarkdown = preg_replace($pattern, '$1\n\n', $markdown);
+        // 2. 匹配图片链接前面有文本的情况，在图片前面添加换行符
+        $pattern2 = '/([^\n])(!\[[^\]]*\]\([^\)]+\))/';
+        $formattedMarkdown = preg_replace($pattern2, "$1\n$2", $formattedMarkdown);
+
+        // 3. 匹配图片链接后面有文本的情况，在图片后面添加换行符
+        $pattern3 = '/(!\[[^\]]*\]\([^\)]+\))([^\n])/';
+        $formattedMarkdown = preg_replace($pattern3, "$1\n$2", $formattedMarkdown);
+
+        // 4. 确保连续的换行符不会超过两个
+        $pattern4 = '/\n{3,}/';
+        $formattedMarkdown = preg_replace($pattern4, "\n\n", $formattedMarkdown);
+
+        // 5. 确保文件开头和结尾没有多余的换行符
+        $formattedMarkdown = trim($formattedMarkdown, "\n");
 
         return $formattedMarkdown;
     }
@@ -1649,7 +1734,6 @@ class WordpressImporter
             $filePath = public_path($url);
             if (file_exists($filePath)) {
                 $validCount++;
-                Log::debug('URL有效: ' . $url . ', 文件存在: ' . $filePath);
             } else {
                 $invalidCount++;
                 $invalidUrls[] = $url;
@@ -1680,7 +1764,9 @@ class WordpressImporter
         });
 
         // 全局替换所有剩余的URL
-        foreach ($urlMap as $originalUrl => $newUrl) {
+        foreach ($urlMap as $originalUrl => $info) {
+            $newUrl = $info['new_url'];
+
             // 避免重复替换
             if (strpos($content, $originalUrl) === false) {
                 continue;
@@ -1740,7 +1826,7 @@ class WordpressImporter
                 // 获取基础URL
                 $baseUrl = $this->getBaseAttachmentUrl($url);
                 if ($baseUrl && isset($baseUrlToNewUrl[$baseUrl])) {
-                    $newUrl = $baseUrlToNewUrl[$baseUrl];
+                    $newUrl = $baseUrlToNewUrl[$baseUrl]['new_url'];
 
                     // 构建替换模式，支持更灵活的匹配
                     $pattern = '/(' . $attr . '=["\'])([^"\']*?' . preg_quote($url, '/') . '[^"\']*?)(["\'])/i';
@@ -1810,7 +1896,7 @@ class WordpressImporter
 
             // 如果获取到基础URL，检查是否在映射表中
             if ($baseUrl && isset($baseUrlToNewUrl[$baseUrl])) {
-                $newUrl = $baseUrlToNewUrl[$baseUrl];
+                $newUrl = $baseUrlToNewUrl[$baseUrl]['new_url'];
                 Log::debug('基础URL在映射表中，替换为: ' . $newUrl);
 
                 // 构建替换后的内容，保留原有的标题和引用
@@ -1833,7 +1919,7 @@ class WordpressImporter
             } else {
                 // 如果基础URL不在映射表中，尝试直接匹配原始URL
                 if (isset($baseUrlToNewUrl[$url])) {
-                    $newUrl = $baseUrlToNewUrl[$url];
+                    $newUrl = $baseUrlToNewUrl[$url]['new_url'];
                     Log::debug('直接URL在映射表中，替换为: ' . $newUrl);
 
                     // 构建替换后的内容，保留原有的标题和引用
@@ -1862,25 +1948,21 @@ class WordpressImporter
             // 确保匹配结果数组不为空
             if (!empty($directUrlMatch)) {
                 $matchedUrl = $directUrlMatch[0];
-                Log::debug('检查独立URL: ' . $matchedUrl);
 
                 // 获取基础URL
                 $baseUrl = $this->getBaseAttachmentUrl($matchedUrl);
-                Log::debug('提取的基础URL: ' . ($baseUrl ?: 'null'));
 
                 // 尝试使用基础URL替换
                 if ($baseUrl && isset($baseUrlToNewUrl[$baseUrl])) {
-                    $newUrl = $baseUrlToNewUrl[$baseUrl];
+                    $newUrl = $baseUrlToNewUrl[$baseUrl]['new_url'];
                     // 执行替换
                     $content = str_replace($matchedUrl, $newUrl, $content);
-                    Log::debug('替换带尺寸参数的直接URL: ' . $matchedUrl . ' => ' . $newUrl);
                 } else {
                     // 尝试直接匹配原始URL
                     if (isset($baseUrlToNewUrl[$matchedUrl])) {
-                        $newUrl = $baseUrlToNewUrl[$matchedUrl];
+                        $newUrl = $baseUrlToNewUrl[$matchedUrl]['new_url'];
                         // 执行替换
                         $content = str_replace($matchedUrl, $newUrl, $content);
-                        Log::debug('直接替换独立URL: ' . $matchedUrl . ' => ' . $newUrl);
                     }
                 }
             }
@@ -1888,7 +1970,8 @@ class WordpressImporter
 
         // 最后，使用正则表达式全局替换所有带尺寸参数的URL
         // 例如：https://example.com/image-1024x526.png => /uploads/new-image.png
-        foreach ($baseUrlToNewUrl as $baseUrl => $newUrl) {
+        foreach ($baseUrlToNewUrl as $baseUrl => $info) {
+            $newUrl = $info['new_url'];
             // 构建带尺寸参数的URL模式
             $parsedBaseUrl = parse_url($baseUrl);
             $basePath = $parsedBaseUrl['path'] ?? '';
@@ -1901,7 +1984,6 @@ class WordpressImporter
 
             // 全局替换所有匹配的URL
             $content = preg_replace($pattern, $newUrl, $content);
-            Log::debug('使用正则表达式替换带尺寸参数的URL: ' . $pattern . ' => ' . $newUrl);
         }
 
         return $content;
@@ -1937,7 +2019,6 @@ class WordpressImporter
         foreach ($sizePatterns as $pattern) {
             if (preg_match($pattern, $url, $matches)) {
                 $baseUrl = preg_replace($pattern, '$1', $url);
-                Log::debug("使用模式 {$pattern} 提取完整URL基础URL: $url => $baseUrl");
 
                 return $baseUrl;
             }
@@ -1985,8 +2066,6 @@ class WordpressImporter
                 return $baseUrl;
             }
         }
-
-        Log::debug("无法提取基础URL: $url");
 
         return null;
     }

@@ -299,6 +299,51 @@ class Media extends Model
     }
 
     /**
+     * 添加文章引用
+     *
+     * @param int|null $postId 文章ID
+     * @param int|null $pageId 页面ID（预留）
+     *
+     * @return $this
+     */
+    public function addPostReference(?int $postId = null, ?int $pageId = null): self
+    {
+        // 获取当前custom_fields的副本
+        $customFields = $this->custom_fields ?? [];
+
+        // 确保reference_info存在
+        if (!isset($customFields['reference_info'])) {
+            $customFields['reference_info'] = [];
+        }
+
+        // 初始化引用信息
+        if (!isset($customFields['reference_info']['references'])) {
+            $customFields['reference_info']['references'] = [
+                'posts' => [],
+                'pages' => [],
+                'count' => 0,
+            ];
+        }
+
+        // 添加文章引用
+        if ($postId && !in_array($postId, $customFields['reference_info']['references']['posts'])) {
+            $customFields['reference_info']['references']['posts'][] = $postId;
+            $customFields['reference_info']['references']['count']++;
+        }
+
+        // 添加页面引用（预留）
+        if ($pageId && !in_array($pageId, $customFields['reference_info']['references']['pages'])) {
+            $customFields['reference_info']['references']['pages'][] = $pageId;
+            $customFields['reference_info']['references']['count']++;
+        }
+
+        // 重新赋值以确保修改生效
+        $this->custom_fields = $customFields;
+
+        return $this;
+    }
+
+    /**
      * 移除外部URL引用
      *
      * @param string   $externalUrl 外部URL
