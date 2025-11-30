@@ -30,11 +30,18 @@ class ImportProcess
     protected int $timerId;
 
     /**
-     * 当前处理中的任务
+     * 当前处理中的任务列表
      *
-     * @var ImportJob|null
+     * @var array
      */
-    protected ?ImportJob $currentJob = null;
+    protected array $currentJobs = [];
+
+    /**
+     * 最大并发任务数
+     *
+     * @var int
+     */
+    protected int $maxConcurrentJobs = 5;
 
     // MQ
     protected $mqChannel = null;
@@ -179,8 +186,13 @@ class ImportProcess
         try {
             Log::info('开始数据库轮询检查待处理导入任务');
 
-            // 查找所有pending状态的任务
+            // 查找所有pending状态的任务，且排除最近1小时内已执行过的任务
             $pendingJobs = ImportJob::where('status', 'pending')
+                ->where(function ($query) {
+                    // 排除最近1小时内已执行过的任务
+                    $query->where('updated_at', '<', date('Y-m-d H:i:s', strtotime('-1 hour')))
+                        ->orWhereNull('updated_at');
+                })
                 ->orderBy('created_at', 'asc')
                 ->get();
 
@@ -192,42 +204,59 @@ class ImportProcess
 
             Log::info('数据库轮询：发现 ' . $pendingJobs->count() . ' 个待处理任务');
 
-            foreach ($pendingJobs as $job) {
-                try {
-                    // 检查任务是否正在被处理（避免重复处理）
-                    $currentProcessing = ImportJob::where('id', $job->id)
-                        ->where('status', 'pending')
-                        ->first();
+            // 计算可处理的任务数量
+            $availableSlots = $this->maxConcurrentJobs - count($this->currentJobs);
+            if ($availableSlots <= 0) {
+                Log::info('当前并发任务数已达上限，跳过数据库轮询');
 
-                    if (!$currentProcessing) {
-                        Log::info("任务 {$job->id} 已被其他进程处理，跳过");
+                return;
+            }
+
+            // 只处理可用槽位数量的任务
+            $jobsToProcess = $pendingJobs->take($availableSlots);
+            Log::info('将处理 ' . $jobsToProcess->count() . ' 个任务，当前并发数: ' . count($this->currentJobs) . '/' . $this->maxConcurrentJobs);
+
+            foreach ($jobsToProcess as $job) {
+                try {
+                    // 使用数据库事务和乐观锁，确保任务不会被重复处理
+                    $updated = ImportJob::where('id', $job->id)
+                        ->where('status', 'pending')
+                        ->update([
+                            'status' => 'processing',
+                            'message' => '数据库轮询开始处理',
+                            'updated_at' => date('Y-m-d H:i:s'),
+                        ]);
+
+                    if (!$updated) {
+                        Log::info("任务 {$job->id} 已被其他进程处理或状态已改变，跳过");
                         continue;
                     }
 
-                    // 更新任务状态为processing
-                    $job->update([
-                        'status' => 'processing',
-                        'message' => '数据库轮询开始处理',
-                    ]);
-
                     Log::info('数据库轮询开始处理任务: ID=' . $job->id . ', 文件=' . $job->name);
 
+                    // 重新获取更新后的任务
+                    $updatedJob = ImportJob::find($job->id);
+                    if (!$updatedJob) {
+                        Log::warning("任务 {$job->id} 不存在，跳过");
+                        continue;
+                    }
+
                     // 执行导入任务
-                    $this->executeImportJob($job);
+                    $this->executeImportJob($updatedJob);
 
                 } catch (Throwable $e) {
                     Log::error('数据库轮询处理任务失败: ID=' . $job->id . ', 错误: ' . $e->getMessage());
 
                     // 更新任务状态为failed
-                    $job->update([
+                    ImportJob::where('id', $job->id)->update([
                         'status' => 'failed',
                         'message' => '数据库轮询处理失败: ' . $e->getMessage(),
+                        'updated_at' => date('Y-m-d H:i:s'),
                     ]);
                 }
             }
 
             Log::info('数据库轮询处理完成');
-
         } catch (Throwable $e) {
             Log::error('数据库轮询异常: ' . $e->getMessage());
         }
@@ -243,14 +272,41 @@ class ImportProcess
     protected function executeImportJob(ImportJob $job): bool
     {
         try {
-            $this->currentJob = $job;
+            // 将任务添加到当前处理列表
+            $this->currentJobs[$job->id] = $job;
+            Log::info('开始处理导入任务: ' . $job->name . ', ID: ' . $job->id . ', 当前并发数: ' . count($this->currentJobs));
 
             // 执行导入
+            $result = false;
             switch ($job->type) {
                 case 'wordpress_xml':
                     Log::info('开始处理WordPress XML导入任务: ' . $job->name);
                     $importer = new WordpressImporter($job);
+                    // 定期发送心跳，防止连接超时
+                    $heartbeatTimer = null;
+                    if (class_exists(Timer::class)) {
+                        // 每30秒发送一次心跳
+                        $heartbeatTimer = Timer::add(30, function () {
+                            try {
+                                // 发送MQ心跳，保持连接活跃
+                                if ($this->mqChannel && $this->mqChannel->is_consuming()) {
+                                    // 执行一个轻量操作来保持连接活跃
+                                    $this->mqChannel->basic_qos(0, 1, false);
+                                }
+                            } catch (Throwable $e) {
+                                Log::warning('发送心跳失败: ' . $e->getMessage());
+                            }
+                        });
+                    }
+
+                    // 执行导入
                     $result = $importer->execute();
+
+                    // 清除心跳定时器
+                    if ($heartbeatTimer) {
+                        Timer::del($heartbeatTimer);
+                    }
+
                     $job->update([
                         'status' => $result ? 'completed' : 'failed',
                         'progress' => 100,
@@ -269,7 +325,9 @@ class ImportProcess
                     break;
             }
 
-            $this->currentJob = null;
+            // 从当前处理列表中移除任务
+            unset($this->currentJobs[$job->id]);
+            Log::info('导入任务处理完成: ' . $job->name . ', ID: ' . $job->id . ', 当前并发数: ' . count($this->currentJobs));
 
             return $result;
         } catch (Throwable $e) {
@@ -281,7 +339,9 @@ class ImportProcess
                 'message' => '导入执行错误: ' . $e->getMessage(),
             ]);
 
-            $this->currentJob = null;
+            // 从当前处理列表中移除任务
+            unset($this->currentJobs[$job->id]);
+            Log::info('导入任务执行失败: ' . $job->name . ', ID: ' . $job->id . ', 当前并发数: ' . count($this->currentJobs));
 
             return false;
         }
@@ -293,6 +353,15 @@ class ImportProcess
     public function handleMessage(AMQPMessage $message): void
     {
         try {
+            // 检查当前并发任务数是否超过限制
+            if (count($this->currentJobs) >= $this->maxConcurrentJobs) {
+                Log::warning('当前并发任务数已达上限: ' . count($this->currentJobs) . '/' . $this->maxConcurrentJobs . ', 消息将被重新排队');
+                // 拒绝消息，让它重新排队
+                $message->nack(false, true);
+
+                return;
+            }
+
             $data = json_decode($message->getBody(), true) ?: [];
             if (empty($data['type']) || empty($data['file_path']) || empty($data['name'])) {
                 Log::warning('ImportProcess 收到无效消息: ' . $message->getBody());
@@ -304,10 +373,30 @@ class ImportProcess
             // 检查是否已有对应的数据库记录
             $job = null;
             if (!empty($data['job_id'])) {
-                $job = ImportJob::find($data['job_id']);
+                // 使用数据库事务和乐观锁，确保任务不会被重复处理
+                $updated = ImportJob::where('id', $data['job_id'])
+                    ->whereIn('status', ['pending', 'failed'])
+                    ->update([
+                        'status' => 'processing',
+                        'message' => '消息队列开始处理',
+                        'updated_at' => date('Y-m-d H:i:s'),
+                    ]);
+
+                if ($updated) {
+                    $job = ImportJob::find($data['job_id']);
+                } else {
+                    // 检查任务是否已经在处理中
+                    $existingJob = ImportJob::find($data['job_id']);
+                    if ($existingJob && $existingJob->status === 'processing') {
+                        Log::info("任务 {$data['job_id']} 已经在处理中，跳过");
+                        $message->ack();
+
+                        return;
+                    }
+                }
             }
 
-            // 如果没有找到对应的数据库记录，则创建新的记录
+            // 如果没有找到对应的数据库记录，或者更新失败，则创建新的记录
             if (!$job) {
                 $job = new ImportJob();
                 $job->name = (string) $data['name'];
@@ -319,22 +408,17 @@ class ImportProcess
                 $job->progress = 0;
                 $job->message = '消息队列开始处理';
                 $job->save();
-            } else {
-                // 如果已有记录，更新状态为processing
-                $job->update([
-                    'status' => 'processing',
-                    'message' => '消息队列开始处理',
-                ]);
             }
+
+            // 立即ack消息，避免因为心跳超时导致消息重新排队
+            $message->ack();
+            Log::info('消息已ack，开始处理任务: ' . $job->name . ', ID: ' . $job->id);
 
             // 执行导入任务
             $this->executeImportJob($job);
-
-            $message->ack();
         } catch (Throwable $e) {
             Log::error('导入任务执行错误: ' . $e->getMessage());
-            // 简易处理：进入 DLX（队列已配置DLX），避免阻塞
-            $message->nack(false);
+            // 已经ack过的消息不会重新排队，所以这里不需要nack
         }
     }
 

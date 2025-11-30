@@ -48,7 +48,7 @@ class TagController
 
         // 获取标签名称用于标题展示
         $tagModel = Tag::query()->where('slug', $slug)->first(['name', 'slug']);
-        $tag_name = $tagModel ? (string)$tagModel->name : $slug;
+        $tag_name = $tagModel ? (string) $tagModel->name : $slug;
 
         // 生成面包屑导航
         $breadcrumbs = BreadcrumbHelper::forTag($tagModel, false);
@@ -57,9 +57,9 @@ class TagController
         if ($this->isAmpRequest($request)) {
             $siteUrl = $request->host();
             $canonicalUrl = 'https://' . $siteUrl . '/tag/' . $slug . '.html';
-            $postsPerPage = (int)($result['postsPerPage'] ?? BlogService::getPostsPerPage());
-            $totalCount = (int)($result['totalCount'] ?? 0);
-            $totalPages = max(1, (int)ceil($totalCount / max(1, $postsPerPage)));
+            $postsPerPage = (int) ($result['postsPerPage'] ?? BlogService::getPostsPerPage());
+            $totalCount = (int) ($result['totalCount'] ?? 0);
+            $totalPages = max(1, (int) ceil($totalCount / max(1, $postsPerPage)));
 
             return view('tag/index.amp', [
                 'page_title' => "标签: {$tag_name}",
@@ -204,6 +204,7 @@ class TagController
             return true;
         }
         $path = $request->path();
+
         return str_starts_with($path, '/amp/');
     }
 }

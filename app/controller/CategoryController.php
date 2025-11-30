@@ -48,7 +48,7 @@ class CategoryController
 
         // 获取分类名称用于标题展示
         $categoryModel = Category::query()->where('slug', $slug)->first(['name', 'slug']);
-        $category_name = $categoryModel ? (string)$categoryModel->name : $slug;
+        $category_name = $categoryModel ? (string) $categoryModel->name : $slug;
 
         // 生成面包屑导航
         $breadcrumbs = BreadcrumbHelper::forCategory($categoryModel, false);
@@ -57,9 +57,9 @@ class CategoryController
         if ($this->isAmpRequest($request)) {
             $siteUrl = $request->host();
             $canonicalUrl = 'https://' . $siteUrl . '/category/' . $slug . '.html';
-            $postsPerPage = (int)($result['postsPerPage'] ?? BlogService::getPostsPerPage());
-            $totalCount = (int)($result['totalCount'] ?? 0);
-            $totalPages = max(1, (int)ceil($totalCount / max(1, $postsPerPage)));
+            $postsPerPage = (int) ($result['postsPerPage'] ?? BlogService::getPostsPerPage());
+            $totalCount = (int) ($result['totalCount'] ?? 0);
+            $totalPages = max(1, (int) ceil($totalCount / max(1, $postsPerPage)));
 
             return view('category/index.amp', [
                 'page_title' => "分类: {$category_name}",
@@ -196,6 +196,7 @@ class CategoryController
             return true;
         }
         $path = $request->path();
+
         return str_starts_with($path, '/amp/');
     }
 }

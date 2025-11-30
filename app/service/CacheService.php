@@ -24,14 +24,36 @@ class CacheService
     private static string $prefix = '';
 
     /**
+     * 环境变量缓存
+     */
+    private static array $envCache = [];
+
+    /**
+     * 获取环境变量，带缓存
+     *
+     * @param string $key     环境变量键名
+     * @param mixed  $default 默认值
+     *
+     * @return mixed 环境变量值
+     */
+    private static function getEnv(string $key, mixed $default = null): mixed
+    {
+        if (!isset(self::$envCache[$key])) {
+            self::$envCache[$key] = getenv($key) ?: $default;
+        }
+
+        return self::$envCache[$key];
+    }
+
+    /**
      * 获取缓存处理器
      *
      * @throws Exception
      */
     public static function getHandler()
     {
-        // 每次都重新获取环境变量，确保测试环境的正确性
-        $rawDriver = getenv('CACHE_DRIVER') ?: 'null';
+        // 从缓存获取环境变量，减少系统调用
+        $rawDriver = self::getEnv('CACHE_DRIVER', 'null');
         $cacheDriver = is_string($rawDriver) ? strtolower(trim($rawDriver)) : '';
         if ($cacheDriver === '' || $cacheDriver === 'null' || $cacheDriver === 'none' || $rawDriver === false) {
             $cacheDriver = 'none';
@@ -41,7 +63,10 @@ class CacheService
         }
 
         // 统一初始化前缀（设置默认前缀以支持模式匹配的缓存清除）
-        self::$prefix = getenv('CACHE_PREFIX') ?: 'blog_';
+        // 只有当前缀为空时才设置，避免重复赋值
+        if (self::$prefix === '') {
+            self::$prefix = self::getEnv('CACHE_PREFIX', 'blog_');
+        }
 
         // 如果不是在回退模式，且驱动没有失败，则返回现有处理器
         if (self::$handler !== null && !self::$fallbackMode &&
@@ -61,7 +86,7 @@ class CacheService
             }
         }
 
-        $strictMode = filter_var(getenv('CACHE_STRICT_MODE') ?: 'false', FILTER_VALIDATE_BOOLEAN);
+        $strictMode = filter_var(self::getEnv('CACHE_STRICT_MODE', 'false'), FILTER_VALIDATE_BOOLEAN);
 
         // 显式禁用缓存时直接返回无缓存处理器，避免进入连接测试/回退模式
         if ($cacheDriver === 'none') {
@@ -428,94 +453,313 @@ class CacheService
     }
 
     /**
+     * 验证缓存键
+     */
+    private static function validateCacheKey(string $key): bool
+    {
+        if (empty($key)) {
+            Log::warning('[cache] empty key provided');
+
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * 序列化值
+     */
+    private static function serializeValue(mixed $value, bool $use_igbinary): ?string
+    {
+        // 序列化策略：JSON优先，失败回退 igbinary/serialize，并打标前缀
+        $serialized_value = null;
+        $serializer = self::getEnv('CACHE_SERIALIZER', 'json');
+        if ($serializer === 'json') {
+            $json = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            if ($json !== false && $json !== null) {
+                $serialized_value = 'json:' . $json;
+            }
+        }
+        if ($serialized_value === null && $use_igbinary) {
+            $bin = igbinary_serialize($value);
+            if ($bin !== false) {
+                $serialized_value = 'igb:' . $bin;
+            }
+        }
+        if ($serialized_value === null) {
+            $ser = serialize($value);
+            if ($ser !== false) {
+                $serialized_value = 'ser:' . $ser;
+            }
+        }
+        if ($serialized_value === null) {
+            Log::error('[cache] failed to serialize value');
+        }
+
+        return $serialized_value;
+    }
+
+    /**
+     * 计算 TTL
+     */
+    private static function calculateTTL(?int $ttl, mixed $value, bool $isConfigKey): int
+    {
+        // 默认TTL + 负缓存TTL + 随机抖动
+        $default_ttl = (int) self::getEnv('CACHE_DEFAULT_TTL', 86400);
+        $expire_time = is_numeric($ttl) ? (int) $ttl : $default_ttl;
+        if ($expire_time < 0) {
+            $expire_time = $default_ttl;
+        }
+        $is_negative = ($value === null) || ($value === '') || (is_array($value) && count($value) === 0);
+        // blog_config_* 键禁用负缓存
+        if ($is_negative && !$isConfigKey) {
+            $neg_ttl = (int) self::getEnv('CACHE_NEGATIVE_TTL', 30);
+            $expire_time = max(1, $neg_ttl);
+        }
+        // 抖动，避免同时过期雪崩
+        $jitter_sec = (int) self::getEnv('CACHE_JITTER_SECONDS', 0);
+        if ($jitter_sec > 0 && $expire_time > 1) {
+            $expire_time += random_int(0, $jitter_sec);
+        }
+
+        return $expire_time;
+    }
+
+    /**
+     * 处理特殊键
+     */
+    private static function handleSpecialKeys(string $key, mixed $value, $cache_handler, string $cache_driver): ?bool
+    {
+        $isConfigKey = str_starts_with($key, 'blog_config_');
+        $is_negative = ($value === null) || ($value === '') || (is_array($value) && count($value) === 0);
+        // blog_config_* 空值不缓存：避免将空配置写入缓存导致下游连接失败
+        if ($isConfigKey && $is_negative) {
+            try {
+                // 清理可能存在的旧值（正常键与负缓存键）
+                $cache_handler->del(self::prefixKey($key));
+                $cache_handler->del(self::prefixKey($key . '::neg'));
+            } catch (Exception $e) {
+                Log::warning('[cache] blog_config skip cache and cleanup warn: ' . $e->getMessage());
+            }
+            // 跳过写入缓存，直接返回原值（空），由上层处理重新加载或报错
+            // 同时释放锁
+            self::releaseLock($key, $cache_driver);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * 生成存储键
+     */
+    private static function generateStoreKey(string $key, mixed $value, bool $isConfigKey): string
+    {
+        $is_negative = ($value === null) || ($value === '') || (is_array($value) && count($value) === 0);
+
+        // 设置存储键：负缓存追加 ::neg 后缀（blog_config_* 不使用负缓存）
+        return self::prefixKey($key . (($is_negative && !$isConfigKey) ? '::neg' : ''));
+    }
+
+    /**
+     * 释放锁
+     */
+    private static function releaseLock(string $key, string $cache_driver): void
+    {
+        try {
+            $lockKey = self::prefixKey('__cache_lock:' . $key);
+            if ($cache_driver === 'redis') {
+                $redis = Redis::connection('cache');
+                $redis->del($lockKey);
+            } elseif (function_exists('apcu_delete') && apcu_enabled()) {
+                apcu_delete($lockKey);
+            }
+        } catch (Exception $e) {
+            Log::warning('[cache] unlock warn: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 处理负缓存
+     */
+    private static function handleNegativeCache(string $key, $cache_handler): bool
+    {
+        $isConfigKey = str_starts_with($key, 'blog_config_');
+        if (!$isConfigKey) {
+            $negPrefKey = self::prefixKey($key . '::neg');
+            $negHit = $cache_handler->get($negPrefKey);
+            if ($negHit !== false) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * 防止缓存击穿
+     */
+    private static function preventCacheStampede(string $key, string $cache_driver, $cache_handler, &$cached): void
+    {
+        $isConfigKey = str_starts_with($key, 'blog_config_');
+        if ($cached === false) {
+            // 防缓存击穿：在计算锁存在期间进行可配置的多次退避重试
+            $busyWaitMs = (int) self::getEnv('CACHE_BUSY_WAIT_MS', 50);
+            $maxRetries = (int) self::getEnv('CACHE_BUSY_MAX_RETRIES', 3);
+            $lockTtlMs = (int) self::getEnv('CACHE_LOCK_TTL_MS', 3000);
+            $lockKey = self::prefixKey('__cache_lock:' . $key);
+            $prefKey = self::prefixKey($key);
+            try {
+                $acquired = false;
+                if ($cache_driver === 'redis') {
+                    $redis = Redis::connection('cache');
+                    // 尝试设置计算锁，若失败说明已有计算者
+                    $acquired = (bool) $redis->set($lockKey, '1', ['nx', 'px' => $lockTtlMs]);
+                    if (!$acquired) {
+                        for ($i = 0; $i < $maxRetries; $i++) {
+                            usleep(max(0, $busyWaitMs) * 1000);
+                            $cached = $cache_handler->get($prefKey);
+                            if ($cached !== false) {
+                                break;
+                            }
+                            // 再次检查负缓存（blog_config_* 跳过）
+                            if (!$isConfigKey) {
+                                $negHit = $cache_handler->get(self::prefixKey($key . '::neg'));
+                                if ($negHit !== false) {
+                                    $cached = false;
+                                    break;
+                                }
+                            }
+                            // 简单指数退避，并参考锁剩余时间进行上限控制
+                            $pttl = method_exists($redis, 'pttl') ? $redis->pttl($lockKey) : -1;
+                            if ($pttl > 0) {
+                                $busyWaitMs = min($busyWaitMs * 2, max(50, (int) ($pttl / 2)));
+                            } else {
+                                $busyWaitMs = min($busyWaitMs * 2, 500);
+                            }
+                        }
+                    }
+                } elseif (function_exists('apcu_add') && apcu_enabled()) {
+                    $acquired = apcu_add($lockKey, 1, (int) ceil($lockTtlMs / 1000));
+                    if (!$acquired) {
+                        for ($i = 0; $i < $maxRetries; $i++) {
+                            usleep(max(0, $busyWaitMs) * 1000);
+                            $cached = $cache_handler->get($prefKey);
+                            if ($cached !== false) {
+                                break;
+                            }
+                            // APCU 路径下同样跳过 blog_config_* 的负缓存短路
+                            if (!$isConfigKey) {
+                                $negHit = $cache_handler->get(self::prefixKey($key . '::neg'));
+                                if ($negHit !== false) {
+                                    $cached = false;
+                                    break;
+                                }
+                            }
+                            $busyWaitMs = min($busyWaitMs * 2, 500);
+                        }
+                    }
+                }
+            } catch (Exception $e) {
+                Log::warning('[cache] stampede warn: ' . $e->getMessage());
+            }
+        }
+    }
+
+    /**
+     * 解码缓存值
+     */
+    private static function decodeCachedValue(string $key, string $raw, bool $use_igbinary): mixed
+    {
+        // 新版标记解码，兼容旧数据
+        // blog_config_* 空值防护：命中到 json:"" 或 json:null 则视为未命中，并删除问题键
+        if (str_starts_with($key, 'blog_config_')) {
+            if ($raw === 'json:""' || $raw === 'json:null') {
+                try {
+                    $cache_handler = self::getHandler();
+                    $cache_handler->del(self::prefixKey($key));
+                } catch (Exception $e) {
+                    Log::warning('[cache] blog_config empty value cleanup warn: ' . $e->getMessage());
+                }
+
+                return false;
+            }
+        }
+        if (str_starts_with($raw, 'json:')) {
+            $decoded = json_decode(substr($raw, 5), true);
+
+            return $decoded !== null ? $decoded : substr($raw, 5);
+        } elseif (str_starts_with($raw, 'igb:')) {
+            $payload = substr($raw, 4);
+            if (function_exists('igbinary_unserialize')) {
+                $unserialized = @igbinary_unserialize($payload);
+
+                return $unserialized !== null ? $unserialized : $payload;
+            } else {
+                $unserialized = @unserialize($payload);
+
+                return $unserialized !== false ? $unserialized : $payload;
+            }
+        } elseif (str_starts_with($raw, 'ser:')) {
+            $payload = substr($raw, 4);
+            $unserialized = @unserialize($payload);
+
+            return $unserialized !== false ? $unserialized : $payload;
+        } else {
+            // 兼容旧逻辑
+            if ($use_igbinary) {
+                $unserialized = igbinary_unserialize($raw);
+                if ($unserialized === null && $raw !== igbinary_serialize(null)) {
+                    $unserialized = @unserialize($raw);
+
+                    return $unserialized !== false ? $unserialized : $raw;
+                } else {
+                    return $unserialized;
+                }
+            } else {
+                if ($raw !== '' && str_starts_with($raw, "\x00\x00\x00\x02") && function_exists('igbinary_unserialize')) {
+                    $unserialized = @igbinary_unserialize($raw);
+                    if ($unserialized !== null) {
+                        return $unserialized;
+                    }
+                }
+                $unserialized = @unserialize($raw);
+
+                return $unserialized !== false ? $unserialized : $raw;
+            }
+        }
+    }
+
+    /**
      * 获取或设置缓存
      */
     public static function cache(string $key, mixed $value = null, bool $set = false, ?int $ttl = null): mixed
     {
         try {
-            if (empty($key)) {
-                Log::warning('[cache] empty key provided');
-
+            if (!self::validateCacheKey($key)) {
                 return false;
             }
 
             $cache_handler = self::getHandler();
             $use_igbinary = extension_loaded('igbinary');
-            $cache_driver = getenv('CACHE_DRIVER') ?: 'redis';
+            $cache_driver = self::getEnv('CACHE_DRIVER', 'redis');
 
             if ($set) {
-                // 序列化策略：JSON优先，失败回退 igbinary/serialize，并打标前缀
-                $serialized_value = null;
-                $serializer = getenv('CACHE_SERIALIZER') ?: 'json';
-                if ($serializer === 'json') {
-                    $json = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                    if ($json !== false && $json !== null) {
-                        $serialized_value = 'json:' . $json;
-                    }
-                }
-                if ($serialized_value === null && $use_igbinary) {
-                    $bin = igbinary_serialize($value);
-                    if ($bin !== false) {
-                        $serialized_value = 'igb:' . $bin;
-                    }
-                }
+                $serialized_value = self::serializeValue($value, $use_igbinary);
                 if ($serialized_value === null) {
-                    $ser = serialize($value);
-                    if ($ser !== false) {
-                        $serialized_value = 'ser:' . $ser;
-                    }
-                }
-                if ($serialized_value === null) {
-                    Log::error('[cache] failed to serialize value');
-
                     return false;
                 }
 
-                // 默认TTL + 负缓存TTL + 随机抖动
-                $default_ttl = (int) (getenv('CACHE_DEFAULT_TTL') ?: 86400);
-                $expire_time = is_numeric($ttl) ? (int) $ttl : $default_ttl;
-                if ($expire_time < 0) {
-                    $expire_time = $default_ttl;
-                }
-                $is_negative = ($value === null) || ($value === '') || (is_array($value) && count($value) === 0);
-                // blog_config_* 键禁用负缓存
                 $isConfigKey = str_starts_with($key, 'blog_config_');
-                if ($is_negative && !$isConfigKey) {
-                    $neg_ttl = (int) (getenv('CACHE_NEGATIVE_TTL') ?: 30);
-                    $expire_time = max(1, $neg_ttl);
-                }
-                // 抖动，避免同时过期雪崩
-                $jitter_sec = (int) (getenv('CACHE_JITTER_SECONDS') ?: 0);
-                if ($jitter_sec > 0 && $expire_time > 1) {
-                    $expire_time += random_int(0, $jitter_sec);
-                }
-                // blog_config_* 空值不缓存：避免将空配置写入缓存导致下游连接失败
-                if ($isConfigKey && $is_negative) {
-                    try {
-                        // 清理可能存在的旧值（正常键与负缓存键）
-                        $cache_handler->del(self::prefixKey($key));
-                        $cache_handler->del(self::prefixKey($key . '::neg'));
-                    } catch (Exception $e) {
-                        Log::warning('[cache] blog_config skip cache and cleanup warn: ' . $e->getMessage());
-                    }
-                    // 跳过写入缓存，直接返回原值（空），由上层处理重新加载或报错
-                    // 同时释放锁
-                    try {
-                        $lockKey = self::prefixKey('__cache_lock:' . $key);
-                        if ($cache_driver === 'redis') {
-                            $redis = Redis::connection('cache');
-                            $redis->del($lockKey);
-                        } elseif (function_exists('apcu_delete') && apcu_enabled()) {
-                            apcu_delete($lockKey);
-                        }
-                    } catch (Exception $e) {
-                        Log::warning('[cache] unlock warn: ' . $e->getMessage());
-                    }
+                $expire_time = self::calculateTTL($ttl, $value, $isConfigKey);
 
+                // 处理特殊键
+                if (self::handleSpecialKeys($key, $value, $cache_handler, $cache_driver)) {
                     return $value;
                 }
-                // 设置存储键：负缓存追加 ::neg 后缀（blog_config_* 不使用负缓存）
-                $storeKey = self::prefixKey($key . (($is_negative && !$isConfigKey) ? '::neg' : ''));
+
+                $storeKey = self::generateStoreKey($key, $value, $isConfigKey);
 
                 // 统一前缀写入 + 锁释放
                 if ($expire_time === 0 && method_exists($cache_handler, 'set')) {
@@ -529,157 +773,161 @@ class CacheService
 
                     return false;
                 }
+
                 // 结束计算，清理锁
-                try {
-                    $lockKey = self::prefixKey('__cache_lock:' . $key);
-                    if ($cache_driver === 'redis') {
-                        $redis = Redis::connection('cache');
-                        $redis->del($lockKey);
-                    } elseif (function_exists('apcu_delete') && apcu_enabled()) {
-                        apcu_delete($lockKey);
-                    }
-                } catch (Exception $e) {
-                    Log::warning('[cache] unlock warn: ' . $e->getMessage());
-                }
+                self::releaseLock($key, $cache_driver);
 
                 return $value;
             } else {
                 $prefKey = self::prefixKey($key);
                 $cached = $cache_handler->get($prefKey);
                 if ($cached === false) {
-                    // blog_config_* 键跳过负缓存快速返回，允许上层继续查库/初始化
-                    $isConfigKey = str_starts_with($key, 'blog_config_');
-                    if (!$isConfigKey) {
-                        $negPrefKey = self::prefixKey($key . '::neg');
-                        $negHit = $cache_handler->get($negPrefKey);
-                        if ($negHit !== false) {
-                            return false;
-                        }
+                    // 处理负缓存
+                    if (self::handleNegativeCache($key, $cache_handler)) {
+                        return false;
                     }
 
-                    // 防缓存击穿：在计算锁存在期间进行可配置的多次退避重试
-                    $busyWaitMs = (int) (getenv('CACHE_BUSY_WAIT_MS') ?: 50);
-                    $maxRetries = (int) (getenv('CACHE_BUSY_MAX_RETRIES') ?: 3);
-                    $lockTtlMs = (int) (getenv('CACHE_LOCK_TTL_MS') ?: 3000);
-                    $lockKey = self::prefixKey('__cache_lock:' . $key);
-                    try {
-                        $acquired = false;
-                        if ($cache_driver === 'redis') {
-                            $redis = Redis::connection('cache');
-                            // 尝试设置计算锁，若失败说明已有计算者
-                            $acquired = (bool) $redis->set($lockKey, '1', ['nx', 'px' => $lockTtlMs]);
-                            if (!$acquired) {
-                                for ($i = 0; $i < $maxRetries; $i++) {
-                                    usleep(max(0, $busyWaitMs) * 1000);
-                                    $cached = $cache_handler->get($prefKey);
-                                    if ($cached !== false) {
-                                        break;
-                                    }
-                                    // 再次检查负缓存（blog_config_* 跳过）
-                                    if (!$isConfigKey) {
-                                        $negHit = $cache_handler->get(self::prefixKey($key . '::neg'));
-                                        if ($negHit !== false) {
-                                            return false;
-                                        }
-                                    }
-                                    // 简单指数退避，并参考锁剩余时间进行上限控制
-                                    $pttl = method_exists($redis, 'pttl') ? $redis->pttl($lockKey) : -1;
-                                    if ($pttl > 0) {
-                                        $busyWaitMs = min($busyWaitMs * 2, max(50, (int) ($pttl / 2)));
-                                    } else {
-                                        $busyWaitMs = min($busyWaitMs * 2, 500);
-                                    }
-                                }
-                            }
-                        } elseif (function_exists('apcu_add') && apcu_enabled()) {
-                            $acquired = apcu_add($lockKey, 1, (int) ceil($lockTtlMs / 1000));
-                            if (!$acquired) {
-                                for ($i = 0; $i < $maxRetries; $i++) {
-                                    usleep(max(0, $busyWaitMs) * 1000);
-                                    $cached = $cache_handler->get($prefKey);
-                                    if ($cached !== false) {
-                                        break;
-                                    }
-                                    // APCU 路径下同样跳过 blog_config_* 的负缓存短路
-                                    if (!$isConfigKey) {
-                                        $negHit = $cache_handler->get(self::prefixKey($key . '::neg'));
-                                        if ($negHit !== false) {
-                                            return false;
-                                        }
-                                    }
-                                    $busyWaitMs = min($busyWaitMs * 2, 500);
-                                }
-                            }
-                        }
-                    } catch (Exception $e) {
-                        Log::warning('[cache] stampede warn: ' . $e->getMessage());
-                    }
+                    // 防止缓存击穿
+                    self::preventCacheStampede($key, $cache_driver, $cache_handler, $cached);
+
                     if ($cached === false) {
                         return false;
                     }
                 }
 
-                // 新版标记解码，兼容旧数据
-                $raw = (string) $cached;
-                // blog_config_* 空值防护：命中到 json:"" 或 json:null 则视为未命中，并删除问题键
-                if (str_starts_with($key, 'blog_config_')) {
-                    if ($raw === 'json:""' || $raw === 'json:null') {
-                        try {
-                            $cache_handler->del($prefKey);
-                        } catch (Exception $e) {
-                            Log::warning('[cache] blog_config empty value cleanup warn: ' . $e->getMessage());
-                        }
-
-                        return false;
-                    }
-                }
-                if (str_starts_with($raw, 'json:')) {
-                    $decoded = json_decode(substr($raw, 5), true);
-                    $return = $decoded !== null ? $decoded : substr($raw, 5);
-                } elseif (str_starts_with($raw, 'igb:')) {
-                    $payload = substr($raw, 4);
-                    if (function_exists('igbinary_unserialize')) {
-                        $unserialized = @igbinary_unserialize($payload);
-                        $return = $unserialized !== null ? $unserialized : $payload;
-                    } else {
-                        $unserialized = @unserialize($payload);
-                        $return = $unserialized !== false ? $unserialized : $payload;
-                    }
-                } elseif (str_starts_with($raw, 'ser:')) {
-                    $payload = substr($raw, 4);
-                    $unserialized = @unserialize($payload);
-                    $return = $unserialized !== false ? $unserialized : $payload;
-                } else {
-                    // 兼容旧逻辑
-                    if ($use_igbinary) {
-                        $unserialized = igbinary_unserialize($raw);
-                        if ($unserialized === null && $raw !== igbinary_serialize(null)) {
-                            $unserialized = @unserialize($raw);
-                            $return = $unserialized !== false ? $unserialized : $raw;
-                        } else {
-                            $return = $unserialized;
-                        }
-                    } else {
-                        if ($raw !== '' && str_starts_with($raw, "\x00\x00\x00\x02") && function_exists('igbinary_unserialize')) {
-                            $unserialized = @igbinary_unserialize($raw);
-                            if ($unserialized !== null) {
-                                return $unserialized;
-                            }
-                        }
-                        $unserialized = @unserialize($raw);
-                        $return = $unserialized !== false ? $unserialized : $raw;
-                    }
-                }
+                // 解码缓存值
+                return self::decodeCachedValue($key, (string) $cached, $use_igbinary);
             }
         } catch (Exception $e) {
             Log::error('[cache] exception: ' . $e->getMessage());
-            $return = null;
+
+            return null;
         } catch (Error $e) {
             Log::error('[cache] error: ' . $e->getMessage());
-            $return = null;
+
+            return null;
+        }
+    }
+
+    /**
+     * 验证清除缓存的模式
+     *
+     * @param string $pattern   缓存模式
+     * @param string $logPrefix 日志前缀
+     *
+     * @return bool 是否验证通过
+     */
+    private static function validateClearPattern(string $pattern, string $logPrefix): bool
+    {
+        // 安全保护：当前缀为空且请求清理 '*' 时，需要显式确认
+        if (self::$prefix === '') {
+            $allowAll = filter_var(self::getEnv('CACHE_ALLOW_CLEAR_ALL', 'false'), FILTER_VALIDATE_BOOLEAN);
+            if (!$allowAll) {
+                Log::warning("[{$logPrefix}] prefix is empty and pattern contains *, refused (set CACHE_ALLOW_CLEAR_ALL=true)");
+
+                return false;
+            }
         }
 
-        return $return ?? false;
+        return true;
+    }
+
+    /**
+     * 清除 Redis 缓存
+     *
+     * @param string $patternWithPrefix 带前缀的缓存模式
+     * @param string $logPrefix         日志前缀
+     *
+     * @return bool 是否清除成功
+     */
+    private static function clearRedisCache(string $patternWithPrefix, string $logPrefix): bool
+    {
+        try {
+            $redis = Redis::connection('cache');
+            if (!$redis) {
+                return true;
+            }
+
+            $regex = '/^' . str_replace('*', '.*', preg_quote($patternWithPrefix, '/')) . '$/';
+            $cursor = 0;
+            $deleted = 0;
+            do {
+                [$cursor, $keys] = $redis->scan($cursor, ['match' => self::$prefix . '*', 'count' => 1000]);
+                if (is_array($keys) && !empty($keys)) {
+                    $matchKeys = array_values(array_filter($keys, function ($k) use ($regex) {
+                        return preg_match($regex, $k) === 1;
+                    }));
+                    if (!empty($matchKeys)) {
+                        $deleted += $redis->del($matchKeys);
+                    }
+                }
+            } while ($cursor !== 0);
+
+            return $deleted >= 0;
+        } catch (Exception $e) {
+            Log::warning("[{$logPrefix}] Redis clear warn: " . $e->getMessage());
+
+            return false;
+        }
+    }
+
+    /**
+     * 清除 APCU 缓存
+     *
+     * @param string $patternWithPrefix 带前缀的缓存模式
+     * @param string $logPrefix         日志前缀
+     *
+     * @return bool 是否清除成功
+     */
+    private static function clearApcCache(string $patternWithPrefix, string $logPrefix): bool
+    {
+        try {
+            if (!function_exists('apcu_enabled') || !apcu_enabled()) {
+                return true;
+            }
+
+            $regex = '/^' . str_replace('*', '.*', preg_quote($patternWithPrefix, '/')) . '$/';
+            $iterator = new APCUIterator($regex, APC_ITER_KEY);
+            $success = true;
+            foreach ($iterator as $key => $value) {
+                if (!apcu_delete($key)) {
+                    $success = false;
+                }
+            }
+
+            return $success;
+        } catch (Exception $e) {
+            Log::warning("[{$logPrefix}] APCU clear warn: " . $e->getMessage());
+
+            return false;
+        }
+    }
+
+    /**
+     * 清除 Memcached 缓存
+     *
+     * @param string $logPrefix 日志前缀
+     *
+     * @return bool 是否清除成功
+     */
+    private static function clearMemcachedCache(string $logPrefix): bool
+    {
+        try {
+            if (!extension_loaded('memcached')) {
+                return true;
+            }
+
+            $memcached = new Memcached();
+            $memcached->addServer(self::getEnv('MEMCACHED_HOST', '127.0.0.1'), (int) self::getEnv('MEMCACHED_PORT', 11211));
+            // Memcached不支持模式删除，只能选择flush（风险较大）；这里按前缀无法精准删除，选择跳过
+            Log::warning("[{$logPrefix}] Memcached pattern clearing not supported; consider flush if needed");
+
+            return true;
+        } catch (Exception $e) {
+            Log::warning("[{$logPrefix}] Memcached clear warn: " . $e->getMessage());
+
+            return false;
+        }
     }
 
     /**
@@ -691,51 +939,20 @@ class CacheService
             $cache_handler = self::getHandler();
 
             if (str_contains($pattern, '*')) {
-                $cache_driver = getenv('CACHE_DRIVER') ?? 'redis';
+                $cache_driver = self::getEnv('CACHE_DRIVER', 'redis');
                 $patternWithPrefix = self::$prefix . $pattern;
 
-                // 安全保护：当前缀为空且请求清理 '*' 时，需要显式确认
-                if (self::$prefix === '') {
-                    $allowAll = filter_var(getenv('CACHE_ALLOW_CLEAR_ALL') ?: 'false', FILTER_VALIDATE_BOOLEAN);
-                    if (!$allowAll) {
-                        Log::warning('[clear_cache] prefix is empty and pattern contains *, refused without explicit confirmation (set CACHE_ALLOW_CLEAR_ALL=true to proceed)');
-
-                        return false;
-                    }
+                // 验证清除模式
+                if (!self::validateClearPattern($pattern, 'clear_cache')) {
+                    return false;
                 }
 
                 switch ($cache_driver) {
                     case 'redis':
-                        $redis = Redis::connection('cache');
-                        // 使用非阻塞 SCAN 代替 KEYS，按前缀化正则匹配
-                        $regex = '/^' . str_replace('*', '.*', preg_quote($patternWithPrefix, '/')) . '$/';
-                        $cursor = 0;
-                        $deleted = 0;
-                        do {
-                            [$cursor, $keys] = $redis->scan($cursor, ['match' => self::$prefix . '*', 'count' => 1000]);
-                            if (is_array($keys) && !empty($keys)) {
-                                $matchKeys = array_values(array_filter($keys, function ($k) use ($regex) {
-                                    return preg_match($regex, $k) === 1;
-                                }));
-                                if (!empty($matchKeys)) {
-                                    $deleted += $redis->del($matchKeys);
-                                }
-                            }
-                        } while ($cursor !== 0);
-
-                        return $deleted >= 0;
+                        return self::clearRedisCache($patternWithPrefix, 'clear_cache');
 
                     case 'apcu':
-                        $regex = '/^' . str_replace('*', '.*', preg_quote($patternWithPrefix, '/')) . '$/';
-                        $iterator = new APCUIterator($regex, APC_ITER_KEY);
-                        $success = true;
-                        foreach ($iterator as $key => $value) {
-                            if (!apcu_delete($key)) {
-                                $success = false;
-                            }
-                        }
-
-                        return $success;
+                        return self::clearApcCache($patternWithPrefix, 'clear_cache');
 
                     case 'memcached':
                         Log::warning('[clear_cache] Memcached does not support pattern-based cache clearing');
@@ -773,67 +990,21 @@ class CacheService
         try {
             $patternWithPrefix = self::$prefix . $pattern;
 
-            // 安全防护
-            if (self::$prefix === '') {
-                $allowAll = filter_var(getenv('CACHE_ALLOW_CLEAR_ALL') ?: 'false', FILTER_VALIDATE_BOOLEAN);
-                if (!$allowAll) {
-                    Log::warning('[clear_cache_all] prefix is empty and pattern contains *, refused (set CACHE_ALLOW_CLEAR_ALL=true)');
-
-                    return false;
-                }
+            // 验证清除模式
+            if (!self::validateClearPattern($pattern, 'clear_cache_all')) {
+                return false;
             }
 
             $ok = true;
 
             // Redis
-            try {
-                $redis = Redis::connection('cache');
-                if ($redis) {
-                    $regex = '/^' . str_replace('*', '.*', preg_quote($patternWithPrefix, '/')) . '$/';
-                    $cursor = 0;
-                    do {
-                        [$cursor, $keys] = $redis->scan($cursor, ['match' => self::$prefix . '*', 'count' => 1000]);
-                        if (is_array($keys) && !empty($keys)) {
-                            $matchKeys = array_values(array_filter($keys, function ($k) use ($regex) {
-                                return preg_match($regex, $k) === 1;
-                            }));
-                            if (!empty($matchKeys)) {
-                                $redis->del($matchKeys);
-                            }
-                        }
-                    } while ($cursor !== 0);
-                }
-            } catch (Exception $e) {
-                Log::warning('[clear_cache_all] Redis clear warn: ' . $e->getMessage());
-                $ok = false;
-            }
+            $ok = $ok && self::clearRedisCache($patternWithPrefix, 'clear_cache_all');
 
             // APCU
-            try {
-                if (function_exists('apcu_enabled') && apcu_enabled()) {
-                    $regex = '/^' . str_replace('*', '.*', preg_quote($patternWithPrefix, '/')) . '$/';
-                    $iterator = new APCUIterator($regex, APC_ITER_KEY);
-                    foreach ($iterator as $key => $value) {
-                        apcu_delete($key);
-                    }
-                }
-            } catch (Exception $e) {
-                Log::warning('[clear_cache_all] APCU clear warn: ' . $e->getMessage());
-                $ok = false;
-            }
+            $ok = $ok && self::clearApcCache($patternWithPrefix, 'clear_cache_all');
 
             // Memcached
-            try {
-                if (extension_loaded('memcached')) {
-                    $memcached = new Memcached();
-                    $memcached->addServer(getenv('MEMCACHED_HOST') ?: '127.0.0.1', (int) (getenv('MEMCACHED_PORT') ?: 11211));
-                    // Memcached不支持模式删除，只能选择flush（风险较大）；这里按前缀无法精准删除，选择跳过
-                    Log::warning('[clear_cache_all] Memcached pattern clearing not supported; consider flush if needed');
-                }
-            } catch (Exception $e) {
-                Log::warning('[clear_cache_all] Memcached clear warn: ' . $e->getMessage());
-                $ok = false;
-            }
+            $ok = $ok && self::clearMemcachedCache('clear_cache_all');
 
             return $ok;
         } catch (Exception $e) {
@@ -858,7 +1029,7 @@ class CacheService
     {
         // 如果静态前缀为空，尝试从环境变量获取，否则使用默认前缀
         if (self::$prefix === '') {
-            self::$prefix = getenv('CACHE_PREFIX') ?: 'blog_';
+            self::$prefix = self::getEnv('CACHE_PREFIX', 'blog_');
         }
 
         return self::$prefix . $key;
@@ -1105,5 +1276,6 @@ class CacheService
         self::$lastFallbackTime = 0;
         self::$failedDrivers = [];
         self::$prefix = '';
+        self::$envCache = [];
     }
 }

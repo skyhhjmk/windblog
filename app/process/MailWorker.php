@@ -77,6 +77,19 @@ class MailWorker
             // 使用 MQService 的通用初始化（专属 DLX/DLQ）
             MQService::declareDlx($this->mqChannel, $this->dlxExchange, $this->mailDlxQueue);
             MQService::setupQueueWithDlx($this->mqChannel, $this->exchange, $this->routingKey, $this->queueName, $this->dlxExchange, $this->mailDlxQueue);
+
+            // 注册消费者
+            $this->mqChannel->basic_consume(
+                $this->queueName,
+                '',
+                false, // no_local
+                false, // no_ack
+                false, // exclusive
+                false, // nowait
+                function (AMQPMessage $message) {
+                    $this->handleMessage($message);
+                }
+            );
         }
 
         return $this->mqChannel;
@@ -88,7 +101,7 @@ class MailWorker
         $this->providers = $this->loadProviders();
         $this->strategy = (string) blog_config('mail_strategy', 'weighted', true) ?: 'weighted';
 
-        $channel = $this->getMqChannel();
+        $this->getMqChannel();
 
         // 每60秒进行一次 MQ 健康检查
         Timer::add(60, function () {
@@ -99,27 +112,34 @@ class MailWorker
             }
         });
 
-        $channel->basic_consume(
-            $this->queueName,
-            '',
-            false, // no_local
-            false, // no_ack
-            false, // exclusive
-            false, // nowait
-            function (AMQPMessage $message) {
-                $this->handleMessage($message);
-            }
-        );
-
-        while (true) {
+        // 使用事件驱动模式处理消息
+        Timer::add(1, function () {
             try {
-                $channel->wait(null, false, 1.0);
+                if ($this->mqChannel === null) {
+                    Log::warning('MailWorker: channel is null, reconnecting...');
+                    // 重新初始化通道
+                    $this->mqChannel = null;
+                    $this->getMqChannel();
+
+                    return;
+                }
+                $this->mqChannel->wait(null, false, 1.0);
             } catch (AMQPTimeoutException $e) {
-                // 正常超时，无消息到达
+                // noop
             } catch (Throwable $e) {
-                //                Log::error('MailWorker wait error: ' . $e->getMessage());
+                $errorMsg = $e->getMessage();
+                Log::warning('MailWorker wait error: ' . $errorMsg);
+
+                // 检测通道连接断开，触发自愈
+                if (strpos($errorMsg, 'Channel connection is closed') !== false ||
+                    strpos($errorMsg, 'Broken pipe') !== false ||
+                    strpos($errorMsg, 'connection is closed') !== false) {
+                    Log::warning('MailWorker 检测到连接断开，尝试重建连接');
+                    $this->mqChannel = null;
+                    $this->getMqChannel();
+                }
             }
-        }
+        });
     }
 
     protected function handleMessage(AMQPMessage $message): void
