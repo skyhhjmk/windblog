@@ -816,31 +816,36 @@ class MediaLibraryService
             $uniqueFilename = time() . '_' . uniqid() . '.' . ($fileExtension ?: 'bin');
             $filePath = $fullUploadDir . DIRECTORY_SEPARATOR . $uniqueFilename;
 
-            // 下载文件
-            $context = stream_context_create([
-                'http' => [
-                    'timeout' => 30, // 30秒超时
-                    'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                ],
-                'ssl' => [
-                    'verify_peer' => false,
-                    'verify_peer_name' => false,
+            // 使用Guzzle下载文件，增加超时时间并使用流式下载
+            $client = new \GuzzleHttp\Client([
+                'timeout' => 120, // 增加超时时间到120秒
+                'connect_timeout' => 30, // 连接超时30秒
+                'verify' => false, // 禁用SSL验证，与原代码保持一致
+                'headers' => [
+                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                 ],
             ]);
 
-            $fileContent = @file_get_contents($url, false, $context);
-            if ($fileContent === false) {
-                return ['code' => 400, 'msg' => '文件下载失败'];
-            }
+            // 使用流式下载，避免内存占用过高
+            $response = $client->request('GET', $url, [
+                'sink' => $filePath, // 直接写入文件，不占用内存
+            ]);
 
-            // 保存文件
-            if (file_put_contents($filePath, $fileContent) === false) {
-                return ['code' => 500, 'msg' => '文件保存失败'];
+            // 检查响应状态
+            if ($response->getStatusCode() !== 200) {
+                return ['code' => 400, 'msg' => '文件下载失败，HTTP状态码: ' . $response->getStatusCode()];
             }
 
             // 获取文件信息
             $fileSize = filesize($filePath);
             $mimeType = mime_content_type($filePath) ?: 'application/octet-stream';
+
+            // 检查文件是否为空
+            if ($fileSize === 0) {
+                unlink($filePath); // 删除空文件
+
+                return ['code' => 400, 'msg' => '文件内容为空'];
+            }
 
             // 检查文件类型是否允许
             if (!$this->isAllowedFile($mimeType, $fileExtension)) {
