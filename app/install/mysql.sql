@@ -365,6 +365,7 @@ CREATE TABLE IF NOT EXISTS `media` (
   `description` text DEFAULT NULL,
   `author_id` int(11) DEFAULT NULL,
   `author_type` varchar(10) DEFAULT 'user',
+    ` custom_fields ` json DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   `deleted_at` timestamp NULL DEFAULT NULL,

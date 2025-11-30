@@ -3,6 +3,9 @@
 namespace plugin\admin\app\controller;
 
 use app\model\ImportJob;
+use app\model\Media;
+use app\model\Post;
+use app\service\MediaLibraryService;
 use app\service\MQService;
 use Exception;
 use PhpAmqpLib\Message\AMQPMessage;
@@ -24,6 +27,18 @@ class WpImportController extends Base
     public function index(Request $request)
     {
         return view('tools/wp-import/index');
+    }
+
+    /**
+     * 显示失败媒体列表页面
+     *
+     * @param Request $request
+     *
+     * @return Response
+     */
+    public function failedMedia(Request $request)
+    {
+        return view('tools/wp-import/failed-media');
     }
 
     /**
@@ -316,6 +331,204 @@ class WpImportController extends Base
             Log::error('删除导入任务错误: ' . $e->getMessage(), ['exception' => $e]);
 
             return json(['code' => 500, 'msg' => '服务器内部错误']);
+        }
+    }
+
+    /**
+     * 获取失败媒体列表
+     *
+     * @param Request $request
+     *
+     * @return Response
+     */
+    public function failedMediaList(Request $request): Response
+    {
+        try {
+            // 获取请求参数
+            $page = (int) $request->get('page', 1);
+            $limit = (int) $request->get('limit', 15);
+            $jobId = $request->get('id', 0);
+
+            if ($jobId <= 0) {
+                return $this->success('成功', [], 0);
+            }
+
+            // 获取导入任务
+            $job = ImportJob::find($jobId);
+            if (!$job) {
+                return json(['code' => 404, 'msg' => '任务不存在']);
+            }
+
+            // 解析任务选项
+            $options = json_decode($job->options, true) ?? [];
+            $failedMedia = $options['failed_media'] ?? [];
+
+            // 获取总数
+            $total = count($failedMedia);
+
+            // 分页处理
+            $offset = ($page - 1) * $limit;
+            $list = array_slice($failedMedia, $offset, $limit);
+
+            // 格式化数据，确保结构与前端期望一致
+            $formattedList = [];
+            foreach ($list as $index => $media) {
+                $formattedList[] = [
+                    'id' => $jobId . '_' . $index,
+                    'filename' => 'failed-' . $media['created_at'],
+                    'original_name' => $media['title'],
+                    'file_path' => '',
+                    'thumb_path' => null,
+                    'file_size' => 0,
+                    'mime_type' => 'application/octet-stream',
+                    'alt_text' => null,
+                    'caption' => null,
+                    'description' => null,
+                    'author_id' => $job->author_id,
+                    'author_type' => 'admin',
+                    'created_at' => date('Y-m-d\TH:i:s.000000Z', $media['created_at']),
+                    'updated_at' => date('Y-m-d\TH:i:s.000000Z', $media['created_at']),
+                    'deleted_at' => null,
+                    'custom_fields' => [
+                        'reference_info' => [
+                            'failed_external_urls' => [
+                                [
+                                    'url' => $media['url'],
+                                    'error' => $media['error'],
+                                    'retry_count' => $media['retry_count'] ?? 0,
+                                    'job_id' => $jobId,
+                                ],
+                            ],
+                        ],
+                    ],
+                ];
+            }
+
+            // 返回JSON数据
+            return $this->success('成功', $formattedList, $total);
+        } catch (Exception $e) {
+            Log::error('获取失败媒体列表错误: ' . $e->getMessage(), ['exception' => $e]);
+
+            return json(['code' => 500, 'msg' => '服务器内部错误']);
+        }
+    }
+
+    /**
+     * 重试下载失败媒体
+     *
+     * @param Request $request
+     * @param string  $id 格式为 jobId_index 的失败媒体ID
+     *
+     * @return Response
+     */
+    public function retryFailedMedia(Request $request, string $id): Response
+    {
+        try {
+            // 解析ID，格式为 jobId_index
+            $parts = explode('_', $id);
+            if (count($parts) !== 2) {
+                return json(['code' => 400, 'msg' => '无效的媒体ID格式']);
+            }
+
+            $jobId = (int) $parts[0];
+            $mediaIndex = (int) $parts[1];
+
+            // 获取导入任务
+            $job = ImportJob::find($jobId);
+            if (!$job) {
+                return json(['code' => 404, 'msg' => '任务不存在']);
+            }
+
+            // 解析任务选项
+            $options = json_decode($job->options, true) ?? [];
+            $failedMedia = $options['failed_media'] ?? [];
+
+            if (!isset($failedMedia[$mediaIndex])) {
+                return json(['code' => 404, 'msg' => '失败媒体记录不存在']);
+            }
+
+            // 获取失败的媒体信息
+            $failedMediaItem = $failedMedia[$mediaIndex];
+            $externalUrl = $failedMediaItem['url'];
+            $title = $failedMediaItem['title'];
+
+            // 创建MediaLibraryService实例
+            $mediaLibraryService = new MediaLibraryService();
+
+            // 重试下载
+            $result = $mediaLibraryService->downloadRemoteFile(
+                $externalUrl,
+                $title,
+                $job->author_id,
+                'admin'
+            );
+
+            if ($result['code'] === 0) {
+                // 下载成功，从失败列表中移除该媒体
+                array_splice($failedMedia, $mediaIndex, 1);
+                $options['failed_media'] = $failedMedia;
+
+                // 更新任务选项
+                $job->options = json_encode($options, JSON_UNESCAPED_UNICODE);
+                $job->save();
+
+                // 更新文章中的引用
+                $this->updatePostReferences($externalUrl, $result['data']);
+
+                return json(['code' => 200, 'msg' => '媒体下载重试成功']);
+            } else {
+                // 下载失败，增加重试次数
+                $failedMedia[$mediaIndex]['retry_count'] = ($failedMedia[$mediaIndex]['retry_count'] ?? 0) + 1;
+                $failedMedia[$mediaIndex]['last_retry_at'] = time();
+                $options['failed_media'] = $failedMedia;
+
+                // 更新任务选项
+                $job->options = json_encode($options, JSON_UNESCAPED_UNICODE);
+                $job->save();
+
+                return json(['code' => 500, 'msg' => '媒体下载重试失败: ' . $result['msg']]);
+            }
+        } catch (Exception $e) {
+            Log::error('重试下载失败媒体错误: ' . $e->getMessage(), ['exception' => $e]);
+
+            return json(['code' => 500, 'msg' => '服务器内部错误: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * 更新文章中的媒体引用
+     *
+     * @param string $externalUrl 外部URL
+     * @param Media  $media       媒体对象
+     *
+     * @return void
+     */
+    protected function updatePostReferences(string $externalUrl, Media $media): void
+    {
+        try {
+            // 获取新的媒体URL
+            $newUrl = '/uploads/' . $media->file_path;
+
+            // 查找所有包含该外部URL的文章
+            $posts = Post::where(function ($query) use ($externalUrl) {
+                $query->where('content', 'LIKE', '%' . $externalUrl . '%')
+                    ->orWhere('excerpt', 'LIKE', '%' . $externalUrl . '%');
+            })->get();
+
+            foreach ($posts as $post) {
+                // 更新文章内容中的引用
+                $post->content = str_replace($externalUrl, $newUrl, $post->content);
+                $post->excerpt = str_replace($externalUrl, $newUrl, $post->excerpt);
+                $post->save();
+
+                // 记录到媒体的引用信息中
+                $media->addExternalUrlReference($externalUrl, $post->id);
+            }
+
+            // 保存媒体的引用更新
+            $media->save();
+        } catch (Exception $e) {
+            Log::error('更新文章引用错误: ' . $e->getMessage(), ['exception' => $e]);
         }
     }
 }

@@ -1188,6 +1188,10 @@ class WordpressImporter
                     $totalDuration = round((microtime(true) - $startTime) * 1000, 2);
                     Log::info('附件下载成功 (尝试 ' . $attempts . '/' . $maxRetries . '), 耗时: ' . $totalDuration . 'ms, 媒体ID: ' . ($media->id ?? '未知') . ', URL: ' . $url);
 
+                    // 记录外部URL引用信息到媒体的custom_fields
+                    $media->addExternalUrlReference($url);
+                    $media->save();
+
                     // 将Media对象转换为数组格式返回
                     $mediaInfo = [
                         'id' => $media->id ?? null,
@@ -1235,6 +1239,29 @@ class WordpressImporter
                 'last_error' => $lastError,
                 'total_duration' => $totalDuration,
             ], JSON_UNESCAPED_UNICODE));
+
+        // 将失败媒体记录存储到import job的options字段中
+        $options = json_decode($this->importJob->options, true) ?? [];
+
+        // 确保failed_media数组存在
+        if (!isset($options['failed_media'])) {
+            $options['failed_media'] = [];
+        }
+
+        // 添加失败媒体记录
+        $options['failed_media'][] = [
+            'url' => $url,
+            'title' => $title,
+            'error' => $lastError,
+            'retry_count' => 0,
+            'created_at' => time(),
+        ];
+
+        // 更新import job的options字段
+        $this->importJob->options = json_encode($options, JSON_UNESCAPED_UNICODE);
+        $this->importJob->save();
+
+        Log::info('已将失败媒体记录存储到任务选项中，URL: ' . $url);
 
         return null;
     }
