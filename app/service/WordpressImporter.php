@@ -555,14 +555,34 @@ class WordpressImporter
             case 'html':
                 $content_type = 'html';
                 break;
+            default:
+                // 默认使用markdown格式
+                $content_type = 'markdown';
+                // 将HTML内容转换为Markdown
+                if (!empty($content)) {
+                    $content = $this->convertHtmlToMarkdown($content);
+                }
+
+                if (!empty($excerpt)) {
+                    $excerpt = $this->convertHtmlToMarkdown($excerpt);
+                }
+                break;
         }
 
         // 替换内容中的附件链接
         if (!empty($content) && !empty($this->attachmentMap)) {
             $content = $this->replaceAttachmentLinks($content, $content_type);
+            // 格式化markdown内容中的图片链接
+            if ($content_type === 'markdown') {
+                $content = $this->formatMarkdownImages($content);
+            }
         }
         if (!empty($excerpt) && !empty($this->attachmentMap)) {
             $excerpt = $this->replaceAttachmentLinks($excerpt, $content_type);
+            // 格式化markdown摘要中的图片链接
+            if ($content_type === 'markdown') {
+                $excerpt = $this->formatMarkdownImages($excerpt);
+            }
         }
 
         // 处理作者
@@ -1484,7 +1504,7 @@ class WordpressImporter
                 ];
 
                 foreach ($patterns as $pattern) {
-                    $content = preg_replace_callback($pattern, function ($matches) use ($originalUrl, $newUrl) {
+                    $content = preg_replace_callback($pattern, function ($matches) use ($originalUrl, $newUrl, $pattern) {
                         if (str_contains($pattern, '!\[')) {
                             // 图片链接替换
                             $altText = $matches[1];
@@ -1525,6 +1545,25 @@ class WordpressImporter
         $this->validateReplacedUrls($content, $contentType);
 
         return $content;
+    }
+
+    /**
+     * 格式化markdown内容中的图片链接，确保连续图片之间有适当的换行符
+     *
+     * @param string $markdown markdown内容
+     *
+     * @return string 格式化后的markdown内容
+     */
+    protected function formatMarkdownImages(string $markdown): string
+    {
+        // 匹配连续的图片链接，确保它们之间有换行符
+        // 模式：匹配![alt](url)或![alt](url "title")格式的图片链接
+        $pattern = '/(!\[[^\]]*\]\([^\)]+\))\s*(?=!\[[^\]]*\]\()/';
+
+        // 替换为：图片链接 + 两个换行符
+        $formattedMarkdown = preg_replace($pattern, '$1\n\n', $markdown);
+
+        return $formattedMarkdown;
     }
 
     /**
@@ -1932,6 +1971,7 @@ class WordpressImporter
      * @param int    $totalItems 总项目数
      *
      * @return void
+     * @throws Exception
      */
     protected function processAllComments(string $xmlFile, int $totalItems): void
     {
