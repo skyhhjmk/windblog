@@ -1215,56 +1215,72 @@ class WordpressImporter
 
         Log::info('开始下载附件: ' . $url . ', 标题: ' . $title);
 
+        // 获取基础URL（去除尺寸参数）
+        $baseUrl = $this->getBaseAttachmentUrl($url);
+        $downloadUrls = [];
+
+        // 如果URL带有尺寸参数，先尝试使用基础URL，再回退到原始URL
+        if ($baseUrl && $baseUrl !== $url) {
+            $downloadUrls[] = $baseUrl;
+            $downloadUrls[] = $url;
+        } else {
+            $downloadUrls[] = $url;
+        }
+
         // 修复重试逻辑：当$attempts < $maxRetries时继续重试，确保不超过最大重试次数
         while ($attempts < $maxRetries) {
             $attempts++;
             $attemptStartTime = microtime(true);
-            try {
-                Log::debug('下载附件 (尝试 ' . $attempts . '/' . $maxRetries . '): ' . $url);
 
-                // 使用MediaLibraryService下载远程文件
-                $result = $this->mediaLibraryService->downloadRemoteFile(
-                    $url,
-                    $title,
-                    $this->defaultAuthorId,
-                    'admin'
-                );
+            // 尝试使用所有可能的URL下载
+            foreach ($downloadUrls as $downloadUrl) {
+                try {
+                    Log::debug('下载附件 (尝试 ' . $attempts . '/' . $maxRetries . '): ' . $downloadUrl);
 
-                $attemptDuration = round((microtime(true) - $attemptStartTime) * 1000, 2);
+                    // 使用MediaLibraryService下载远程文件
+                    $result = $this->mediaLibraryService->downloadRemoteFile(
+                        $downloadUrl,
+                        $title,
+                        $this->defaultAuthorId,
+                        'admin'
+                    );
 
-                if ($result['code'] === 0) {
-                    $media = $result['data'];
-                    $totalDuration = round((microtime(true) - $startTime) * 1000, 2);
-                    Log::info('附件下载成功 (尝试 ' . $attempts . '/' . $maxRetries . '), 耗时: ' . $totalDuration . 'ms, 媒体ID: ' . ($media->id ?? '未知') . ', URL: ' . $url);
+                    $attemptDuration = round((microtime(true) - $attemptStartTime) * 1000, 2);
 
-                    // 不需要记录外部URL引用信息，只记录文章引用
+                    if ($result['code'] === 0) {
+                        $media = $result['data'];
+                        $totalDuration = round((microtime(true) - $startTime) * 1000, 2);
+                        Log::info('附件下载成功 (尝试 ' . $attempts . '/' . $maxRetries . '), 耗时: ' . $totalDuration . 'ms, 媒体ID: ' . ($media->id ?? '未知') . ', URL: ' . $downloadUrl);
 
-                    // 将Media对象转换为数组格式返回
-                    $mediaInfo = [
-                        'id' => $media->id ?? null,
-                        'file_path' => $media->file_path ?? null,
-                        'file_name' => $media->filename ?? null,
-                        'file_size' => $media->file_size ?? null,
-                        'mime_type' => $media->mime_type ?? null,
-                        'title' => $media->original_name ?? $title,
-                        'url' => '/uploads/' . ($media->file_path ?? ''),
-                        'original_url' => $url,
-                        'download_attempts' => $attempts,
-                        'download_duration' => $totalDuration,
-                    ];
+                        // 不需要记录外部URL引用信息，只记录文章引用
 
-                    // 记录详细的媒体信息
-                    Log::debug('附件详细信息: ' . json_encode($mediaInfo, JSON_UNESCAPED_UNICODE));
+                        // 将Media对象转换为数组格式返回
+                        $mediaInfo = [
+                            'id' => $media->id ?? null,
+                            'file_path' => $media->file_path ?? null,
+                            'file_name' => $media->filename ?? null,
+                            'file_size' => $media->file_size ?? null,
+                            'mime_type' => $media->mime_type ?? null,
+                            'title' => $media->original_name ?? $title,
+                            'url' => '/uploads/' . ($media->file_path ?? ''),
+                            'original_url' => $url,
+                            'download_attempts' => $attempts,
+                            'download_duration' => $totalDuration,
+                        ];
 
-                    return $mediaInfo;
-                } else {
-                    $lastError = $result['msg'];
-                    Log::warning('附件下载失败 (尝试 ' . $attempts . '/' . $maxRetries . '), 耗时: ' . $attemptDuration . 'ms, 错误: ' . $result['msg'] . ', URL: ' . $url);
+                        // 记录详细的媒体信息
+                        Log::debug('附件详细信息: ' . json_encode($mediaInfo, JSON_UNESCAPED_UNICODE));
+
+                        return $mediaInfo;
+                    } else {
+                        $lastError = $result['msg'];
+                        Log::warning('附件下载失败 (尝试 ' . $attempts . '/' . $maxRetries . '), 耗时: ' . $attemptDuration . 'ms, 错误: ' . $result['msg'] . ', URL: ' . $downloadUrl);
+                    }
+                } catch (Exception $e) {
+                    $lastError = $e->getMessage();
+                    $attemptDuration = round((microtime(true) - $attemptStartTime) * 1000, 2);
+                    Log::error('下载附件时出错 (尝试 ' . $attempts . '/' . $maxRetries . '), 耗时: ' . $attemptDuration . 'ms, 错误: ' . $e->getMessage() . ', URL: ' . $downloadUrl, ['exception' => $e]);
                 }
-            } catch (Exception $e) {
-                $lastError = $e->getMessage();
-                $attemptDuration = round((microtime(true) - $attemptStartTime) * 1000, 2);
-                Log::error('下载附件时出错 (尝试 ' . $attempts . '/' . $maxRetries . '), 耗时: ' . $attemptDuration . 'ms, 错误: ' . $e->getMessage() . ', URL: ' . $url, ['exception' => $e]);
             }
 
             // 如果不是最后一次尝试，等待一段时间后重试
@@ -1469,6 +1485,9 @@ class WordpressImporter
         $validUrlMap = [];
         $referencedMediaIds = [];
 
+        // 保存原始内容的副本，用于检查URL是否存在
+        $contentCopy = $content;
+
         // 首先，创建完整的URL映射关系，并验证新URL的有效性
         foreach ($this->attachmentMap as $originalUrl => $attachmentInfo) {
             // 修复键名错误：使用id而不是media_id，使用file_path而不是media_path
@@ -1481,6 +1500,18 @@ class WordpressImporter
 
             // 验证文件是否存在
             if (file_exists($filePath)) {
+                // 先获取原始URL的基础URL（去除尺寸参数）
+                $baseUrl = $this->getBaseAttachmentUrl($originalUrl);
+
+                // 如果获取到基础URL，将基础URL映射到新URL
+                if ($baseUrl) {
+                    $baseUrlToNewUrl[$baseUrl] = [
+                        'new_url' => $newUrl,
+                        'media_id' => $attachmentInfo['id'],
+                    ];
+                }
+
+                // 同时将原始URL映射到新URL，作为回退
                 $urlMap[$originalUrl] = [
                     'new_url' => $newUrl,
                     'media_id' => $attachmentInfo['id'],
@@ -1490,15 +1521,8 @@ class WordpressImporter
                     'media_id' => $attachmentInfo['id'],
                 ];
 
-                // 获取基础URL（去除尺寸参数）
-                $baseUrl = $this->getBaseAttachmentUrl($originalUrl);
-                if ($baseUrl) {
-                    $baseUrlToNewUrl[$baseUrl] = [
-                        'new_url' => $newUrl,
-                        'media_id' => $attachmentInfo['id'],
-                    ];
-                } else {
-                    // 如果原始URL没有尺寸参数，直接将原始URL作为基础URL
+                // 如果原始URL没有尺寸参数，直接将原始URL作为基础URL
+                if (!$baseUrl) {
                     $baseUrlToNewUrl[$originalUrl] = [
                         'new_url' => $newUrl,
                         'media_id' => $attachmentInfo['id'],
@@ -1541,9 +1565,6 @@ class WordpressImporter
         // 合并所有URL映射，包括原始URL和带尺寸参数的变体
         $allUrlMap = array_merge($validUrlMap, $baseUrlToNewUrl);
 
-        // 保存原始内容的副本，用于检查URL是否存在
-        $contentCopy = $content;
-
         // 先处理所有带尺寸参数的URL变体，只执行一次
         if ($contentType === 'html') {
             $content = $this->replaceSizeVariantUrlsInHtml($content, $baseUrlToNewUrl);
@@ -1561,6 +1582,10 @@ class WordpressImporter
                 Log::info('添加被引用媒体ID: ' . $mediaId . ' (URL: ' . $originalUrl . ')');
             }
         }
+
+        // 遍历内容中的所有URL，检查是否有带尺寸参数的变体URL
+        // 如果有，先尝试使用基础URL，如果基础URL不存在再回退到原始URL
+        $this->processUrlVariants($contentCopy, $contentType, $baseUrlToNewUrl, $validUrlMap, $referencedMediaIds);
 
         // 然后，遍历所有URL映射，替换内容中的URL
         foreach ($allUrlMap as $originalUrl => $info) {
@@ -1990,11 +2015,81 @@ class WordpressImporter
     }
 
     /**
-     * 获取附件的基础URL（移除尺寸参数）
+     * 处理内容中的URL变体，确保先尝试使用基础URL，如果基础URL不存在再回退到原始URL
+     *
+     * @param string $contentCopy        原始内容副本
+     * @param string $contentType        内容类型（html/markdown）
+     * @param array  $baseUrlToNewUrl    基础URL到新URL的映射
+     * @param array  $validUrlMap        有效URL映射
+     * @param array  $referencedMediaIds 被引用的媒体ID列表
+     *
+     * @return void
+     */
+    protected function processUrlVariants(string $contentCopy, string $contentType, array $baseUrlToNewUrl, array $validUrlMap, array &$referencedMediaIds): void
+    {
+        // 提取内容中的所有URL
+        $urls = [];
+
+        if ($contentType === 'html') {
+            // 提取HTML中的所有URL
+            preg_match_all('/(?:src|href|srcset|data-src|data-href)=["\']([^"\']*)["\']/', $contentCopy, $matches);
+            if (!empty($matches[1])) {
+                $urls = array_merge($urls, $matches[1]);
+            }
+        } else {
+            // 提取Markdown中的所有URL
+            preg_match_all('/!\[([^\]]*)\]\(([^\)]+)\)|\[([^\]]*)\]\(([^\)]+)\)/i', $contentCopy, $matches);
+            if (!empty($matches[2])) {
+                $urls = array_merge($urls, $matches[2]);
+            }
+            if (!empty($matches[4])) {
+                $urls = array_merge($urls, $matches[4]);
+            }
+            // 提取直接URL
+            preg_match_all('/https?:\/\/[^\s\)]+/i', $contentCopy, $matches);
+            if (!empty($matches[0])) {
+                $urls = array_merge($urls, $matches[0]);
+            }
+        }
+
+        // 去重并过滤空URL
+        $urls = array_unique(array_filter($urls));
+
+        // 处理每个URL
+        foreach ($urls as $url) {
+            // 检查URL是否带有尺寸参数
+            $baseUrl = $this->getBaseAttachmentUrl($url);
+            if ($baseUrl && $baseUrl !== $url) {
+                // 这个URL带有尺寸参数
+
+                // 先检查基础URL是否存在于映射表中
+                if (isset($baseUrlToNewUrl[$baseUrl])) {
+                    // 基础URL存在，使用基础URL的映射关系
+                    $mediaId = $baseUrlToNewUrl[$baseUrl]['media_id'];
+                    if (!in_array($mediaId, $referencedMediaIds)) {
+                        $referencedMediaIds[] = $mediaId;
+                        Log::info('添加被引用媒体ID: ' . $mediaId . ' (URL: ' . $baseUrl . ', 变体URL: ' . $url . ')');
+                    }
+                } else {
+                    // 基础URL不存在，检查原始URL是否存在于映射表中
+                    if (isset($validUrlMap[$url])) {
+                        $mediaId = $validUrlMap[$url]['media_id'];
+                        if (!in_array($mediaId, $referencedMediaIds)) {
+                            $referencedMediaIds[] = $mediaId;
+                            Log::info('添加被引用媒体ID: ' . $mediaId . ' (原始URL: ' . $url . ')');
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 获取基础附件URL，移除尺寸参数
      *
      * @param string $url 原始URL
      *
-     * @return string|null 基础URL，如果无法提取则返回null
+     * @return string|null 基础URL，或null如果无法提取
      */
     protected function getBaseAttachmentUrl(string $url): ?string
     {

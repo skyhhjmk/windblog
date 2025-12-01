@@ -11,7 +11,7 @@ class MediaLibrary {
         this.mediaList = [];
         this.isLoading = false;
         this.apiBase = '/app/admin/media/';
-        
+
         this.init();
     }
 
@@ -58,10 +58,10 @@ class MediaLibrary {
 
         // 上传模态框事件
         this.bindUploadModalEvents();
-        
+
         // 编辑模态框事件
         this.bindEditModalEvents();
-        
+
         // 预览模态框事件
         this.bindPreviewModalEvents();
     }
@@ -198,6 +198,11 @@ class MediaLibrary {
             this.cancelTextEdit();
         });
 
+        // 引用文章折叠面板事件
+        safeAddEventListener('toggle-references-btn', 'click', () => {
+            this.toggleReferencesPanel();
+        });
+
         // 模态框外点击关闭
         previewModal.addEventListener('click', (e) => {
             if (e.target === previewModal) {
@@ -208,14 +213,14 @@ class MediaLibrary {
 
     async loadMediaList() {
         if (this.isLoading) return;
-        
+
         this.isLoading = true;
         this.showLoading(true);
 
         try {
             const searchValue = document.getElementById('search-input').value;
             const typeFilter = document.getElementById('type-filter').value;
-            
+
             const params = new URLSearchParams({
                 page: this.currentPage,
                 limit: this.pageSize,
@@ -245,7 +250,7 @@ class MediaLibrary {
 
     renderMediaGrid() {
         const grid = document.getElementById('media-grid');
-        
+
         if (!this.mediaList || this.mediaList.length === 0) {
             grid.innerHTML = `
                 <div class="col-span-full text-center py-16">
@@ -268,7 +273,7 @@ class MediaLibrary {
         const html = this.mediaList.map((item, index) => {
             const isSelected = this.selectedItems.some(selected => selected.id === item.id);
             const selectedClass = isSelected ? 'selected ring-2 ring-blue-500 bg-blue-50' : '';
-            
+
             let thumbnailHtml = '';
             if (item.mime_type && item.mime_type.startsWith('image/')) {
                 const imageSrc = item.thumb_path ? `/uploads/${item.thumb_path}` : `/uploads/${item.file_path}`;
@@ -308,11 +313,11 @@ class MediaLibrary {
             }
 
             return `
-                <div class="media-item bg-white rounded-xl border border-gray-200 overflow-hidden cursor-pointer hover:shadow-lg transition-all duration-300 ${selectedClass} animate-fade-in" 
+                <div class="media-item bg-white rounded-xl border border-gray-200 overflow-hidden cursor-pointer hover:shadow-lg transition-all duration-300 ${selectedClass} animate-fade-in"
                      data-id="${item.id}" style="animation-delay: ${index * 0.05}s">
                     <div class="aspect-square relative group">
                         ${thumbnailHtml}
-                        
+
                         <!-- 选择指示器 - 更显眼的版本 -->
                         ${isSelected ? `
                         <div class="absolute top-2 left-2">
@@ -323,23 +328,23 @@ class MediaLibrary {
                             </div>
                         </div>
                         ` : ''}
-                        
+
                         <!-- 操作按钮 -->
                         <div class="absolute bottom-3 right-3 flex space-x-1 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
-                            <button class="w-8 h-8 bg-white bg-opacity-90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all" 
+                            <button class="w-8 h-8 bg-white bg-opacity-90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all"
                                     onclick="event.stopPropagation(); mediaLibrary.previewMedia(${item.id})" title="预览">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
                                 </svg>
                             </button>
-                            <button class="w-8 h-8 bg-white bg-opacity-90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-green-600 hover:text-white transition-all" 
+                            <button class="w-8 h-8 bg-white bg-opacity-90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-green-600 hover:text-white transition-all"
                                     onclick="event.stopPropagation(); mediaLibrary.editMedia(${item.id})" title="编辑">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                 </svg>
                             </button>
-                            <button class="w-8 h-8 bg-white bg-opacity-90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-red-600 hover:text-white transition-all" 
+                            <button class="w-8 h-8 bg-white bg-opacity-90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-red-600 hover:text-white transition-all"
                                     onclick="event.stopPropagation(); mediaLibrary.deleteMedia(${item.id})" title="删除">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
@@ -347,7 +352,7 @@ class MediaLibrary {
                             </button>
                         </div>
                     </div>
-                    
+
                     <div class="p-4">
                         <h3 class="font-medium text-gray-900 truncate mb-1" title="${item.original_name}">${item.original_name}</h3>
                         <div class="flex items-center justify-between text-sm text-gray-500">
@@ -447,7 +452,7 @@ class MediaLibrary {
 
         const isSelected = this.selectedItems.some(selected => selected.id === id);
         const checkIndicator = mediaItem.querySelector('.absolute.top-3.left-3 .w-6.h-6');
-        
+
         if (isSelected) {
             // 添加选中样式
             mediaItem.classList.add('selected', 'ring-2', 'ring-blue-500', 'bg-blue-50');
@@ -562,7 +567,7 @@ class MediaLibrary {
 
         const fileList = document.getElementById('file-list');
         fileList.classList.remove('hidden');
-        
+
         let html = '';
         Array.from(files).forEach((file, index) => {
             const fileType = this.getFileTypeIcon(file.type);
@@ -630,7 +635,7 @@ class MediaLibrary {
     async uploadFiles() {
         const fileInput = document.getElementById('file-input');
         const files = fileInput.files;
-        
+
         if (!files || files.length === 0) {
             this.showToast('请选择文件', 'error');
             return;
@@ -753,19 +758,19 @@ class MediaLibrary {
         if (!item) return;
 
         this.currentPreviewItem = item;
-        
+
         // 设置标题
         document.getElementById('preview-title').textContent = item.original_name;
-        
+
         // 设置预览内容
         this.renderPreviewContent(item);
-        
+
         // 设置文件信息
         this.renderPreviewInfo(item);
-        
+
         // 显示/隐藏文本编辑按钮
         this.toggleTextEditButtons(item);
-        
+
         // 显示模态框
         document.getElementById('preview-modal').classList.remove('hidden');
     }
@@ -778,16 +783,16 @@ class MediaLibrary {
         const editTextBtn = document.getElementById('edit-text-btn');
         const saveTextBtn = document.getElementById('save-text-btn');
         const cancelTextBtn = document.getElementById('cancel-edit-btn');
-        
+
         // 检查元素是否存在
         if (!editTextBtn || !saveTextBtn || !cancelTextBtn) {
             console.warn('文本编辑按钮元素不存在');
             return;
         }
-        
+
         // 检查是否为可编辑的文本文件
         const isEditableText = this.isEditableTextFile(item);
-        
+
         if (isEditableText) {
             editTextBtn.classList.remove('hidden');
             saveTextBtn.classList.add('hidden');
@@ -870,11 +875,11 @@ class MediaLibrary {
      */
     async previewTextFile(item) {
         const previewContent = document.getElementById('preview-content');
-        
+
         try {
             const response = await fetch(`/app/admin/media/previewText/${item.id}`);
             const result = await response.json();
-            
+
             if (result.code === 0) {
                 previewContent.innerHTML = `
                     <div class="h-full flex flex-col">
@@ -936,7 +941,7 @@ class MediaLibrary {
 
         // 清空容器
         editorContainer.innerHTML = '';
-        
+
         // 确保容器有正确的尺寸样式
         editorContainer.style.width = '100%';
         editorContainer.style.height = '100%';
@@ -968,7 +973,7 @@ class MediaLibrary {
             this.monacoEditor.onDidChangeModelContent(() => {
                 this.isContentModified = true;
             });
-            
+
             console.log('Monaco Editor初始化成功');
         } catch (error) {
             console.error('Monaco Editor初始化失败:', error);
@@ -996,26 +1001,26 @@ class MediaLibrary {
         try {
             const response = await fetch(`/app/admin/media/previewText/${item.id}`);
             const result = await response.json();
-            
+
             if (result.code === 0) {
                 // 隐藏普通预览容器，显示文本编辑器容器
                 document.getElementById('normal-preview-container').classList.add('hidden');
                 document.getElementById('text-editor-container').classList.remove('hidden');
-                
+
                 // 设置编辑器语言
                 const language = this.getLanguageByFileType(item.original_name);
-                
+
                 // 初始化Monaco Editor
                 this.initMonacoEditor(result.data.content, language);
-                
+
                 // 保存当前编辑项
                 this.currentEditingItem = item;
-                
+
                 // 显示保存和取消按钮
                 document.getElementById('save-text-btn').classList.remove('hidden');
                 document.getElementById('cancel-edit-btn').classList.remove('hidden');
                 document.getElementById('edit-text-btn').classList.add('hidden');
-                
+
             } else {
                 this.showToast(result.msg || '无法读取文件内容', 'error');
             }
@@ -1060,7 +1065,7 @@ class MediaLibrary {
             'yml': 'yaml',
             'txt': 'plaintext'
         };
-        
+
         return languageMap[ext] || 'plaintext';
     }
 
@@ -1074,10 +1079,10 @@ class MediaLibrary {
         }
 
         const content = this.monacoEditor.getValue();
-        
+
         try {
             this.showLoading(true);
-            
+
             const response = await fetch(`/app/admin/media/saveText/${this.currentEditingItem.id}`, {
                 method: 'POST',
                 headers: {
@@ -1086,22 +1091,22 @@ class MediaLibrary {
                 },
                 body: JSON.stringify({ content: content })
             });
-            
+
             const result = await response.json();
-            
+
             if (result.code === 0) {
                 this.showToast('文件保存成功', 'success');
                 this.isContentModified = false;
-                
+
                 // 保存当前编辑项引用
                 const savedItem = this.currentEditingItem;
-                
+
                 // 切换回预览模式
                 this.cancelTextEdit();
-                
+
                 // 重新加载预览内容
                 this.previewTextFile(savedItem);
-                
+
             } else {
                 this.showToast(result.msg || '保存失败', 'error');
             }
@@ -1118,11 +1123,11 @@ class MediaLibrary {
     cancelTextEdit() {
         // 销毁编辑器
         this.destroyMonacoEditor();
-        
+
         // 显示普通预览容器，隐藏文本编辑器容器
         document.getElementById('text-editor-container').classList.add('hidden');
         document.getElementById('normal-preview-container').classList.remove('hidden');
-        
+
         // 显示编辑按钮，隐藏保存和取消按钮
         document.getElementById('edit-text-btn').classList.remove('hidden');
         document.getElementById('save-text-btn').classList.add('hidden');
@@ -1184,14 +1189,85 @@ class MediaLibrary {
         `;
     }
 
+    /**
+     * 切换引用文章面板的显示状态
+     */
+    toggleReferencesPanel() {
+        const container = document.getElementById('references-container');
+        const icon = document.getElementById('references-icon');
+
+        if (container.classList.contains('hidden')) {
+            // 展开面板
+            container.classList.remove('hidden');
+            icon.style.transform = 'rotate(180deg)';
+            // 加载引用文章列表
+            this.loadReferences();
+        } else {
+            // 折叠面板
+            container.classList.add('hidden');
+            icon.style.transform = 'rotate(0deg)';
+        }
+    }
+
+    /**
+     * 加载引用文章列表
+     */
+    async loadReferences() {
+        if (!this.currentPreviewItem) return;
+
+        const content = document.getElementById('references-content');
+        content.innerHTML = '<div class="text-sm text-gray-500">加载中...</div>';
+
+        try {
+            const response = await fetch(`${this.apiBase}references/${this.currentPreviewItem.id}`);
+            const result = await response.json();
+
+            if (result.code === 0) {
+                const posts = result.data.posts;
+                if (posts && posts.length > 0) {
+                    const html = posts.map(post => {
+                        const postUrl = `/post/${post.slug}`; // 文章URL，根据实际路由调整
+                        return `
+                            <div class="flex items-center">
+                                <svg class="w-4 h-4 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"></path>
+                                </svg>
+                                <a href="${postUrl}" target="_blank" rel="noopener noreferrer" class="text-sm text-blue-600 hover:text-blue-800 hover:underline">
+                                    ${post.title}
+                                </a>
+                            </div>
+                        `;
+                    }).join('');
+                    content.innerHTML = html;
+                } else {
+                    content.innerHTML = '<div class="text-sm text-gray-500">暂无引用文章</div>';
+                }
+            } else {
+                content.innerHTML = `<div class="text-sm text-red-600">加载失败：${result.msg}</div>`;
+            }
+        } catch (error) {
+            content.innerHTML = `<div class="text-sm text-red-600">加载失败：${error.message}</div>`;
+        }
+    }
+
     hidePreviewModal() {
         document.getElementById('preview-modal').classList.add('hidden');
         this.currentPreviewItem = null;
+
+        // 重置引用文章面板
+        const container = document.getElementById('references-container');
+        const icon = document.getElementById('references-icon');
+        if (container) {
+            container.classList.add('hidden');
+        }
+        if (icon) {
+            icon.style.transform = 'rotate(0deg)';
+        }
     }
 
     downloadFile() {
         if (!this.currentPreviewItem) return;
-        
+
         const link = document.createElement('a');
         link.href = `/uploads/${this.currentPreviewItem.file_path}`;
         link.download = this.currentPreviewItem.original_name;
@@ -1202,9 +1278,9 @@ class MediaLibrary {
 
     async copyFileUrl() {
         if (!this.currentPreviewItem) return;
-        
+
         const url = `${window.location.origin}/uploads/${this.currentPreviewItem.file_path}`;
-        
+
         try {
             await navigator.clipboard.writeText(url);
             this.showToast('链接已复制到剪贴板', 'success');
@@ -1338,7 +1414,7 @@ class MediaLibrary {
     showToast(message, type = 'info') {
         const container = document.getElementById('toast-container');
         const toast = document.createElement('div');
-        
+
         const bgColor = {
             success: 'bg-green-500',
             error: 'bg-red-500',

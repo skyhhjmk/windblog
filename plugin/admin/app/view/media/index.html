@@ -97,7 +97,7 @@
                 <div class="flex-1">
                     <label class="block text-sm font-medium text-gray-700 mb-2">搜索文件</label>
                     <div class="relative">
-                        <input type="text" id="search-input" placeholder="输入文件名搜索..." 
+                        <input id="search-input" placeholder="输入文件名搜索..." type="text"
                                class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                         <svg class="absolute left-3 top-3.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
@@ -326,31 +326,52 @@
                             重新生成缩略图
                         </button>
                     </div>
+
+                    <!-- 引用文章列表 -->
+                    <div class="mt-6">
+                        <h4 class="font-semibold text-gray-900 mb-4">引用文章</h4>
+                        <div class="bg-gray-50 rounded-lg overflow-hidden">
+                            <button class="w-full px-4 py-3 text-left flex justify-between items-center focus:outline-none"
+                                    id="toggle-references-btn">
+                                <span class="text-sm font-medium text-gray-700">查看引用该媒体的文章</span>
+                                <svg class="w-5 h-5 text-gray-500 transition-transform" fill="none" id="references-icon"
+                                     stroke="currentColor" viewBox="0 0 24 24">
+                                    <path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"
+                                          stroke-width="2"></path>
+                                </svg>
+                            </button>
+                            <div class="hidden px-4 py-3 border-t border-gray-200" id="references-container">
+                                <div class="space-y-2" id="references-content">
+                                    <!-- 引用文章列表将在这里动态生成 -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-    
+
     <!-- Monaco Editor CDN -->
     <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs/loader.js"></script>
     <script>
         // 配置Monaco Editor加载器
-        require.config({ 
-            paths: { 
-                'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs' 
+        require.config({
+            paths: {
+                'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs'
             },
             waitSeconds: 30
         });
-        
+
         // 初始化Monaco Editor
         require(['vs/editor/editor.main'], function() {
             console.log('Monaco Editor加载完成');
             window.monaco = monaco;
-            
+
             // 设置全局monaco变量
             window.monacoEditorReady = true;
         });
-        
+
         // 错误处理
         require.onError = function(err) {
             console.error('Monaco Editor加载失败:', err);

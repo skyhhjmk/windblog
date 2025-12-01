@@ -330,6 +330,8 @@ Route::group('/app/admin', function () {
         // 失败媒体管理接口
         Route::get('/failed-list', [MediaController::class, 'failedList']);
         Route::post('/retry-failed/{id}', [MediaController::class, 'retryFailed']);
+        // 获取媒体引用的文章列表
+        Route::get('/references/{id}', [MediaController::class, 'getReferences']);
     });
 
     // 工具路由

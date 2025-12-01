@@ -3,6 +3,7 @@
 namespace plugin\admin\app\controller;
 
 use app\model\Media;
+use app\model\Post;
 use app\service\MediaLibraryService;
 use Exception;
 use support\Request;
@@ -562,6 +563,43 @@ class MediaController extends Base
             return json(['code' => 0, 'msg' => '重试完成', 'data' => $results]);
         } catch (Exception $e) {
             return json(['code' => 1, 'msg' => '重试失败: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * 获取媒体引用的文章列表
+     *
+     * @param Request $request
+     * @param int     $id
+     *
+     * @return Response
+     */
+    public function getReferences(Request $request, int $id): Response
+    {
+        try {
+            // 获取媒体信息
+            $media = Media::find($id);
+            if (!$media) {
+                return json(['code' => 1, 'msg' => '媒体不存在']);
+            }
+
+            // 获取媒体引用的文章ID
+            $customFields = $media->custom_fields ?? [];
+            $referenceInfo = $customFields['reference_info'] ?? [];
+            $postIds = $referenceInfo['references']['posts'] ?? [];
+
+            // 查询文章信息
+            $posts = [];
+            if (!empty($postIds)) {
+                $posts = Post::whereIn('id', $postIds)
+                    ->select('id', 'title', 'slug')
+                    ->get()
+                    ->toArray();
+            }
+
+            return json(['code' => 0, 'data' => ['posts' => $posts]]);
+        } catch (Exception $e) {
+            return json(['code' => 1, 'msg' => '获取引用文章失败: ' . $e->getMessage()]);
         }
     }
 }
