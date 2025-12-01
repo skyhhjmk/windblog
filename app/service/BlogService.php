@@ -100,6 +100,9 @@ class BlogService
         // 处理文章摘要
         self::ensurePostExcerpts($posts);
 
+        // 处理文章头图
+        self::ensurePostFeaturedImages($posts);
+
         // 构建并返回结果
         $result = self::buildResult($posts, $total_count, $page, $posts_per_page, $esSearch, $filters);
 
@@ -423,6 +426,21 @@ class BlogService
                 $post->excerpt = $excerpt;
                 $post->save();
             }
+        }
+    }
+
+    /**
+     * 确保文章有头图
+     *
+     * @param Collection $posts 文章集合
+     *
+     * @return void
+     */
+    protected static function ensurePostFeaturedImages(Collection $posts): void
+    {
+        foreach ($posts as $post) {
+            // 调用Post模型的getFeaturedImage方法获取头图
+            $post->featured_image = $post->getFeaturedImage();
         }
     }
 

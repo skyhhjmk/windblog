@@ -24,87 +24,105 @@
                 {% for post in posts %}
                     <div
                         class="bg-white rounded-2xl shadow-md sm:shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 group glass glass-card glow-on-hover{% if post.featured %} border-2 border-yellow-400{% endif %}">
-                        <div class="p-4 sm:p-6">
-                            <h2 class="text-xl sm:text-2xl font-bold text-gray-800 mb-2 group-hover:text-blue-600 transition-colors duration-200 flex items-center gap-2">
-                                {% if post.featured %}
-                                    <span
-                                        class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-gradient-to-r from-yellow-400 to-yellow-500 text-yellow-900 border border-yellow-600 shadow-sm">
-                                        <i class="fas fa-star mr-1"></i>精选
-                                    </span>
-                                {% endif %}
-                                <a href="/post/{{ post.slug }}.html"
-                                   class="tap-highlight">
-                                    {{ post.title }}
-                                </a>
-                            </h2>
-                            <!-- 优化移动端作者信息显示 -->
-                            <div
-                                class="flex items-center text-gray-500 text-xs sm:text-sm mb-3 sm:mb-4 space-x-2 sm:space-x-4 flex-wrap">
-                            <span class="flex items-center">
-                                <i class="far fa-calendar-alt mr-1"></i>
-                                {{ post.created_at|local_date('Y-m-d') }}
-                            </span>
+                        <div class="p-4 sm:p-6 flex flex-col sm:flex-row gap-4 sm:gap-6">
+                            <!-- 文章图片区域 - 小图显示，与文字左右排布 -->
+                            {% if post.featured_image %}
+                                <div class="flex-shrink-0 w-full sm:w-48 overflow-hidden bg-gray-100 rounded-lg"
+                                     style="aspect-ratio: 4 / 3;">
+                                    <img
+                                        src="{{ post.featured_image }}"
+                                        alt="{{ post.title }}"
+                                        class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                        loading="lazy"
+                                        decoding="async"
+                                        fetchpriority="{{ loop.index <= 2 ? 'high' : 'low' }}"
+                                        width="320"
+                                        height="240"
+                                    >
+                                </div>
+                            {% endif %}
+                            <div class="flex-1 min-w-0">
+                                <h2 class="text-xl sm:text-2xl font-bold text-gray-800 mb-2 group-hover:text-blue-600 transition-colors duration-200 flex items-center gap-2 flex-wrap">
+                                    {% if post.featured %}
+                                        <span
+                                            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-gradient-to-r from-yellow-400 to-yellow-500 text-yellow-900 border border-yellow-600 shadow-sm">
+                                            <i class="fas fa-star mr-1"></i>精选
+                                        </span>
+                                    {% endif %}
+                                    <a href="/post/{{ post.slug }}.html"
+                                       class="tap-highlight truncate">
+                                        {{ post.title }}
+                                    </a>
+                                </h2>
+                                <!-- 优化移动端作者信息显示 -->
+                                <div
+                                    class="flex items-center text-gray-500 text-xs sm:text-sm mb-3 sm:mb-4 space-x-2 sm:space-x-4 flex-wrap">
                                 <span class="flex items-center">
-                                <i class="far fa-user mr-1"></i>
-                                <span
-                                    class="font-medium text-blue-600 hover:text-blue-800 transition-colors cursor-pointer"
-                                    title="查看作者详情">
-                                    {% if post.authors|length > 0 %}
-                                        {{ post.authors.first().nickname ?: post.authors.first().username }}
-                                    {% else %}
-                                        未知作者
-                                    {% endif %}
+                                    <i class="far fa-calendar-alt mr-1"></i>
+                                    {{ post.created_at|local_date('Y-m-d') }}
                                 </span>
-                            </span>
-                                {% if post.authors|length > 0 and post.authors.first().avatar %}
                                     <span class="flex items-center">
-                                <img src="{{ post.authors.first().avatar }}"
-                                     alt="{{ post.authors.first().nickname ?: post.authors.first().username }}"
-                                     class="w-5 h-5 sm:w-6 sm:h-6 rounded-full mr-1 object-cover" loading="lazy"
-                                     decoding="async" fetchpriority="low">
-                            </span>
-                                {% endif %}
-                            </div>
-                            <p class="text-gray-600 mb-3 sm:mb-4 leading-relaxed">
-                                {% if post.ai_summary %}
+                                    <i class="far fa-user mr-1"></i>
                                     <span
-                                        class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gradient-to-r from-purple-100 to-blue-100 text-purple-700 border border-purple-200 mb-1">
-                                    <i class="fas fa-robot mr-1"></i>AI摘要
+                                        class="font-medium text-blue-600 hover:text-blue-800 transition-colors cursor-pointer"
+                                        title="查看作者详情">
+                                        {% if post.authors|length > 0 %}
+                                            {{ post.authors.first().nickname ?: post.authors.first().username }}
+                                        {% else %}
+                                            未知作者
+                                        {% endif %}
+                                    </span>
                                 </span>
-                                    <br>
-                                    {{ post.ai_summary }}
-                                {% else %}
-                                    {{ post.excerpt }}...
-                                {% endif %}
-                            </p>
-                            <div class="flex justify-between items-center">
-                                <a href="/post/{{ post.slug }}.html"
-                                   class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium transition-colors duration-200 tap-highlight">
-                                    阅读更多
-                                    <svg
-                                        class="w-4 h-4 ml-1 transition-transform duration-200 group-hover:translate-x-1"
-                                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                              d="M9 5l7 7-7 7"></path>
-                                    </svg>
-                                </a>
-                                <div class="flex flex-wrap gap-2">
-                                    {% if post.categories is defined and post.categories|length > 0 %}
-                                        {% for c in post.categories %}
-                                            <a href="/category/{{ c.slug }}.html"
-                                               class="px-2 py-1 text-xs rounded-full bg-blue-50 text-blue-700 border border-blue-100 hover:bg-blue-100 transition-colors">
-                                                <i class="fas fa-folder-open mr-1"></i>{{ c.name }}
-                                            </a>
-                                        {% endfor %}
+                                    {% if post.authors|length > 0 and post.authors.first().avatar %}
+                                        <span class="flex items-center">
+                                    <img src="{{ post.authors.first().avatar }}"
+                                         alt="{{ post.authors.first().nickname ?: post.authors.first().username }}"
+                                         class="w-5 h-5 sm:w-6 sm:h-6 rounded-full mr-1 object-cover" loading="lazy"
+                                         decoding="async" fetchpriority="low">
+                                </span>
                                     {% endif %}
-                                    {% if post.tags is defined and post.tags|length > 0 %}
-                                        {% for t in post.tags %}
-                                            <a href="/tag/{{ t.slug }}.html"
-                                               class="px-2 py-1 text-xs rounded-full bg-purple-50 text-purple-700 border border-purple-100 hover:bg-purple-100 transition-colors">
-                                                <i class="fas fa-hashtag mr-1"></i>{{ t.name }}
-                                            </a>
-                                        {% endfor %}
+                                </div>
+                                <p class="text-gray-600 mb-3 sm:mb-4 leading-relaxed line-clamp-3">
+                                    {% if post.ai_summary %}
+                                        <span
+                                            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gradient-to-r from-purple-100 to-blue-100 text-purple-700 border border-purple-200 mb-1">
+                                        <i class="fas fa-robot mr-1"></i>AI摘要
+                                    </span>
+                                        <br>
+                                        {{ post.ai_summary }}
+                                    {% else %}
+                                        {{ post.excerpt }}...
                                     {% endif %}
+                                </p>
+                                <div class="flex justify-between items-center flex-wrap gap-2">
+                                    <a href="/post/{{ post.slug }}.html"
+                                       class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium transition-colors duration-200 tap-highlight">
+                                        阅读更多
+                                        <svg
+                                            class="w-4 h-4 ml-1 transition-transform duration-200 group-hover:translate-x-1"
+                                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                  d="M9 5l7 7-7 7"></path>
+                                        </svg>
+                                    </a>
+                                    <div class="flex flex-wrap gap-2">
+                                        {% if post.categories is defined and post.categories|length > 0 %}
+                                            {% for c in post.categories %}
+                                                <a href="/category/{{ c.slug }}.html"
+                                                   class="px-2 py-1 text-xs rounded-full bg-blue-50 text-blue-700 border border-blue-100 hover:bg-blue-100 transition-colors">
+                                                    <i class="fas fa-folder-open mr-1"></i>{{ c.name }}
+                                                </a>
+                                            {% endfor %}
+                                        {% endif %}
+                                        {% if post.tags is defined and post.tags|length > 0 %}
+                                            {% for t in post.tags %}
+                                                <a href="/tag/{{ t.slug }}.html"
+                                                   class="px-2 py-1 text-xs rounded-full bg-purple-50 text-purple-700 border border-purple-100 hover:bg-purple-100 transition-colors">
+                                                    <i class="fas fa-hashtag mr-1"></i>{{ t.name }}
+                                                </a>
+                                            {% endfor %}
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
                         </div>

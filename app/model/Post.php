@@ -398,6 +398,39 @@ class Post extends Model
     }
 
     /**
+     * 获取文章的头图URL
+     * 优先使用手动设置的头图，否则从文章内容中提取第一张图片
+     *
+     * @return string|null 头图URL或null
+     */
+    public function getFeaturedImage(): ?string
+    {
+        // 1. 检查是否有手动设置的头图
+        $featuredImageExt = $this->getExt('featured_image');
+        if ($featuredImageExt && isset($featuredImageExt->value['url']) && !empty($featuredImageExt->value['url'])) {
+            return $featuredImageExt->value['url'];
+        }
+
+        // 2. 从文章内容中提取第一张图片
+        $content = $this->content;
+        if (empty($content)) {
+            return null;
+        }
+
+        // 匹配HTML图片标签
+        if (preg_match('/<img[^>]+src=["\']([^"\']+)["\']/i', $content, $imgMatches)) {
+            return $imgMatches[1];
+        }
+
+        // 匹配Markdown图片链接
+        if (preg_match('/!\[[^\]]*\]\(([^\)]+)\)/i', $content, $mdImgMatches)) {
+            return $mdImgMatches[1];
+        }
+
+        return null;
+    }
+
+    /**
      * 设置文章的扩展属性
      *
      * @param string $key   扩展属性键名
