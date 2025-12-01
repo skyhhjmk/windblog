@@ -61,7 +61,7 @@ ES 仅仅被用于搜索优化，这也许说得过去
 
 友链的 callback 和监控功能、邮件发送、缓存生成等能使用事件或轮询的地方全部使用了消息队列
 
-放着原本的高度继承的 MySQL 不用，硬生生顶着一堆 BUG 重构为了 PGSQL
+放着原本的高度集成的 MySQL 不用，硬生生顶着一堆 BUG 重构为了 PGSQL
 
 # Features to be Proud Of
 
@@ -117,11 +117,23 @@ ES 仅仅被用于搜索优化，这也许说得过去
 - ElasticSearch: 全文索引数据库（可选安装，不启用则不支持索引优化、同义词等功能，将回退到数据库搜索）
 - RabbitMQ: 消息队列（必须安装）
 
-***本项目仍然处于开发阶段***
+> [!WARNING]  
+> ***本项目仍然处于开发阶段，因此它不推荐被用于生产环境***
 
 一键部署：
 
 [![通过雨云一键部署](https://rainyun-apps.cn-nb1.rains3.com/materials/deploy-on-rainyun-cn.svg)](https://app.rainyun.com/apps/rca/store/7117/github_?s=rainyun_app7117)
+
+使用 docker compose 部署：
+
+首先请复制本项目的 `compose` 目录到您的服务器中，然后进入该目录。
+
+使用您喜欢的编辑器编辑目录下的 `.env` 文件来进行自定义配置（请务必修改密码），然后执行命令：
+
+```shell
+sudo bash ./init-data-dirs.sh
+sudo docker compose up -d
+```
 
 ## Linux
 

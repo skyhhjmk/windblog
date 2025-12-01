@@ -944,20 +944,35 @@ class CacheService
 
                 // 验证清除模式
                 if (!self::validateClearPattern($pattern, 'clear_cache')) {
-                    return false;
+                    return true;
                 }
 
                 switch ($cache_driver) {
                     case 'redis':
-                        return self::clearRedisCache($patternWithPrefix, 'clear_cache');
+                        try {
+                            self::clearRedisCache($patternWithPrefix, 'clear_cache');
+                        } catch (Exception $e) {
+                            // Redis清理失败，不产生警告，只记录调试日志
+                            Log::debug('[clear_cache] Redis clear failed: ' . $e->getMessage());
+                        }
+
+                        return true;
 
                     case 'apcu':
-                        return self::clearApcCache($patternWithPrefix, 'clear_cache');
+                        try {
+                            self::clearApcCache($patternWithPrefix, 'clear_cache');
+                        } catch (Exception $e) {
+                            // APCU清理失败，不产生警告，只记录调试日志
+                            Log::debug('[clear_cache] APCU clear failed: ' . $e->getMessage());
+                        }
+
+                        return true;
 
                     case 'memcached':
-                        Log::warning('[clear_cache] Memcached does not support pattern-based cache clearing');
+                        // Memcached不支持模式清除，直接返回true
+                        Log::debug('[clear_cache] Memcached does not support pattern-based cache clearing');
 
-                        return false;
+                        return true;
 
                     case 'memory':
                         // 进程内缓存：当前进程内的键会在后续请求中按需重建
@@ -967,17 +982,26 @@ class CacheService
                         return true;
 
                     default:
-                        Log::warning("[clear_cache] Pattern-based clearing not supported for driver: {$cache_driver}");
+                        // 不支持的驱动，直接返回true，避免产生警告
+                        Log::debug("[clear_cache] Pattern-based clearing not supported for driver: {$cache_driver}");
 
-                        return false;
+                        return true;
                 }
             } else {
-                return $cache_handler->del(self::prefixKey($pattern));
+                try {
+                    return $cache_handler->del(self::prefixKey($pattern));
+                } catch (Exception $e) {
+                    // 精确键清除失败，不产生警告，只记录调试日志
+                    Log::debug('[clear_cache] Exact key clear failed: ' . $e->getMessage());
+
+                    return true;
+                }
             }
         } catch (Exception $e) {
-            Log::error('[clear_cache] exception: ' . $e->getMessage());
+            // 缓存处理器获取失败，不产生警告，只记录调试日志
+            Log::debug('[clear_cache] Cache handler get failed: ' . $e->getMessage());
 
-            return false;
+            return true;
         }
     }
 

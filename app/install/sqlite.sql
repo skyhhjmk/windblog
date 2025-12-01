@@ -227,6 +227,7 @@ CREATE TABLE IF NOT EXISTS media (
   description TEXT DEFAULT NULL,
   author_id INTEGER DEFAULT NULL,
   author_type TEXT DEFAULT 'user',
+  custom_fields TEXT DEFAULT '{}',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   deleted_at DATETIME DEFAULT NULL

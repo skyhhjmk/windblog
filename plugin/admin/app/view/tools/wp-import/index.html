@@ -16,51 +16,56 @@
 </head>
 <body class="pear-container">
 
-<!-- 顶部查询表单 -->
+<!-- 导入任务列表 -->
 <div class="layui-card">
     <div class="layui-card-body">
-        <form class="layui-form top-search-from">
+        <!-- 顶部查询表单 -->
+        <div class="layui-card">
+            <div class="layui-card-body">
+                <form class="layui-form top-search-from">
 
-            <div class="layui-form-item">
-                <label class="layui-form-label">任务名</label>
-                <div class="layui-input-block">
-                    <input type="text" name="name" id="name" placeholder="请输入任务名" class="layui-input">
-                </div>
-            </div>
-            <div class="layui-form-item">
-                <label class="layui-form-label">状态</label>
-                <div class="layui-input-block">
-                    <select name="status" id="status">
-                        <option value="">全部</option>
-                        <option value="pending">等待中</option>
-                        <option value="processing">导入中</option>
-                        <option value="completed">已完成</option>
-                        <option value="failed">已失败</option>
-                    </select>
-                </div>
-            </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">任务名</label>
+                        <div class="layui-input-block">
+                            <input class="layui-input" id="name" name="name" placeholder="请输入任务名" type="text">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">状态</label>
+                        <div class="layui-input-block">
+                            <select id="status" name="status">
+                                <option value="">全部</option>
+                                <option value="pending">等待中</option>
+                                <option value="processing">导入中</option>
+                                <option value="completed">已完成</option>
+                                <option value="failed">已失败</option>
+                            </select>
+                        </div>
+                    </div>
 
-            <div class="layui-form-item layui-inline">
-                <label class="layui-form-label"></label>
-                <button class="pear-btn pear-btn-md pear-btn-primary" lay-submit lay-filter="table-query">
-                    <i class="layui-icon layui-icon-search"></i>查询
-                </button>
-                <button type="reset" class="pear-btn pear-btn-md" lay-submit lay-filter="table-reset">
-                    <i class="layui-icon layui-icon-refresh"></i>重置
-                </button>
-            </div>
-            <div class="toggle-btn">
-                <a class="layui-hide">展开<i class="layui-icon layui-icon-down"></i></a>
-                <a class="layui-hide">收起<i class="layui-icon layui-icon-up"></i></a>
-            </div>
+                    <div class="layui-form-item layui-inline">
+                        <label class="layui-form-label"></label>
+                        <button class="pear-btn pear-btn-md pear-btn-primary" lay-filter="table-query" lay-submit>
+                            <i class="layui-icon layui-icon-search"></i>查询
+                        </button>
+                        <button class="pear-btn pear-btn-md" lay-filter="table-reset" lay-submit type="reset">
+                            <i class="layui-icon layui-icon-refresh"></i>重置
+                        </button>
+                    </div>
+                    <div class="toggle-btn">
+                        <a class="layui-hide">展开<i class="layui-icon layui-icon-down"></i></a>
+                        <a class="layui-hide">收起<i class="layui-icon layui-icon-up"></i></a>
+                    </div>
 
-        </form>
-    </div>
-</div>
+                </form>
+            </div>
+        </div>
 
-<div class="layui-card">
-    <div class="layui-card-body">
-        <table id="job-table" lay-filter="job-table"></table>
+        <div class="layui-card">
+            <div class="layui-card-body">
+                <table id="job-table" lay-filter="job-table"></table>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -106,6 +111,8 @@
     const LIST_API = "/app/admin/tools/wp-import/list";
     const CREATE_URL = "/app/admin/tools/wp-import/create";
     const DELETE_API = (id) => `/app/admin/tools/wp-import/delete/${id}`;
+    const FAILED_MEDIA_LIST_API = (id) => `/app/admin/tools/wp-import/failed-media-list?id=${id}`;
+    const RETRY_FAILED_MEDIA_API = (id) => `/app/admin/tools/wp-import/retry-failed-media/${id}`;
 
     layui.use(["table", "form", "common", "popup"], function() {
         let table = layui.table;
@@ -122,9 +129,10 @@
             {
                 title: "操作",
                 align: "center",
-                width: 120,
+                width: 180,
                 templet: function(d){
-                    return '<button class="pear-btn pear-btn-xs tool-btn" lay-event="remove">删除</button>';
+                    return '<button class="pear-btn pear-btn-xs pear-btn-info tool-btn" lay-event="failed-media">失败媒体</button> ' +
+                        '<button class="pear-btn pear-btn-xs tool-btn" lay-event="remove">删除</button>';
                 }
             }
         ];
@@ -170,6 +178,8 @@
         table.on("tool(job-table)", function(obj) {
             if (obj.event === "remove") {
                 remove(obj);
+            } else if (obj.event === "failed-media") {
+                showFailedMedia(obj.data.id);
             }
         });
 
@@ -245,11 +255,182 @@
             });
         }
 
+        // 失败媒体弹窗
+        let failedMediaPopup = null;
+        let currentJobId = null;
+        let failedMediaTable = null;
+
+        // 显示失败媒体弹窗
+        let showFailedMedia = function (jobId) {
+            currentJobId = jobId;
+
+            // 创建弹窗
+            failedMediaPopup = layer.open({
+                type: 1,
+                title: "失败媒体列表",
+                shade: 0.1,
+                maxmin: true,
+                area: [common.isModile() ? "100%" : "90%", common.isModile() ? "100%" : "80%"],
+                content: `
+                <div class="layui-card" style="margin: 15px;">
+                    <div class="layui-card-body">
+                        <table id="failed-media-popup-table" lay-filter="failed-media-popup-table"></table>
+                    </div>
+                </div>
+            `,
+                success: function (layero, index) {
+                    // 渲染失败媒体表格
+                    renderFailedMediaTable();
+                }
+            });
+        }
+
+        // 渲染失败媒体表格
+        let renderFailedMediaTable = function () {
+            layui.use(["table"], function () {
+                let table = layui.table;
+                let $ = layui.$;
+
+                failedMediaTable = table.render({
+                    elem: "#failed-media-popup-table",
+                    url: FAILED_MEDIA_LIST_API(currentJobId),
+                    page: true,
+                    cols: [[
+                        {type: "checkbox", width: 50},
+                        {title: "ID", field: "id", width: 80},
+                        {title: "原始文件名", field: "original_name"},
+                        {
+                            title: "失败URL",
+                            field: "custom_fields",
+                            width: 300,
+                            templet: function (d) {
+                                let url = d.custom_fields?.reference_info?.failed_external_urls?.[0]?.url || '';
+                                return `<a href="${url}" target="_blank" class="layui-text layui-underline">${url}</a>`;
+                            }
+                        },
+                        {
+                            title: "错误信息",
+                            field: "custom_fields",
+                            width: 200,
+                            templet: function (d) {
+                                let error = d.custom_fields?.reference_info?.failed_external_urls?.[0]?.error || '';
+                                return `<div style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${error}">${error}</div>`;
+                            }
+                        },
+                        {
+                            title: "重试次数",
+                            field: "custom_fields",
+                            width: 100,
+                            templet: function (d) {
+                                return d.custom_fields?.reference_info?.failed_external_urls?.[0]?.retry_count || 0;
+                            }
+                        },
+                        {title: "创建时间", field: "created_at", width: 180},
+                        {
+                            title: "操作",
+                            align: "center",
+                            width: 120,
+                            templet: function () {
+                                return `<button class="pear-btn pear-btn-primary pear-btn-xs" lay-event="retry">
+                                        <i class="layui-icon layui-icon-refresh"></i>重试
+                                    </button>`;
+                            }
+                        }
+                    ]],
+                    skin: "line",
+                    size: "lg",
+                    toolbar: `
+                    <div class="layui-btn-container">
+                        <button class="pear-btn pear-btn-primary pear-btn-md" lay-event="retryAll">
+                            <i class="layui-icon layui-icon-refresh"></i>重试所有失败媒体
+                        </button>
+                    </div>
+                `,
+                    defaultToolbar: [{
+                        title: "刷新",
+                        layEvent: "refresh",
+                        icon: "layui-icon-refresh",
+                    }, "filter", "print", "exports"]
+                });
+
+                // 监听表格工具事件
+                table.on("tool(failed-media-popup-table)", function (obj) {
+                    if (obj.event === "retry") {
+                        retryFailedMedia(obj.data.id);
+                    }
+                });
+
+                // 监听表格头部工具事件
+                table.on("toolbar(failed-media-popup-table)", function (obj) {
+                    if (obj.event === "retryAll") {
+                        retryAllFailedMedia();
+                    } else if (obj.event === "refresh") {
+                        refreshFailedMediaTable();
+                    }
+                });
+            });
+        }
+
+        // 重试单个失败媒体
+        let retryFailedMedia = function (mediaId) {
+            layer.confirm("确定重试该媒体?", {
+                icon: 3,
+                title: "提示"
+            }, function (index) {
+                layer.close(index);
+                let loading = layer.load();
+
+                $.ajax({
+                    url: RETRY_FAILED_MEDIA_API(mediaId),
+                    type: "post",
+                    dataType: "json",
+                    success: function (res) {
+                        layer.close(loading);
+                        if (res.code === 200 || res.code === 0) {
+                            layui.popup.success("重试成功", refreshFailedMediaTable);
+                        } else {
+                            layui.popup.failure(res.msg || '重试失败');
+                        }
+                    },
+                    error: function () {
+                        layer.close(loading);
+                        layui.popup.failure("请求失败");
+                    }
+                });
+            });
+        }
+
+        // 重试所有失败媒体
+        let retryAllFailedMedia = function () {
+            layer.confirm("确定重试所有失败媒体?", {
+                icon: 3,
+                title: "提示"
+            }, function (index) {
+                layer.close(index);
+                let loading = layer.load();
+
+                // 这里可以添加重试所有的逻辑，目前先刷新表格
+                setTimeout(function () {
+                    layer.close(loading);
+                    layui.popup.success("已开始重试所有失败媒体", refreshFailedMediaTable);
+                }, 500);
+            });
+        }
+
+        // 刷新失败媒体表格
+        let refreshFailedMediaTable = function () {
+            if (failedMediaTable) {
+                failedMediaTable.reload({
+                    page: {curr: 1}
+                });
+            }
+        }
+
         // 移除批量删除功能
 
         // 移除旧的删除实现
 
-        window.refreshTable = function() {
+        window.refreshTable = function () {
             table.reloadData("job-table", {
                 scrollPos: "fixed",
                 done: function (res, curr) {

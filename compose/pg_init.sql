@@ -390,6 +390,7 @@ CREATE TABLE IF NOT EXISTS media
     description   TEXT                              DEFAULT NULL,
     author_id     INTEGER                           DEFAULT NULL,
     author_type   VARCHAR(10)                       DEFAULT 'user',
+    custom_fields JSONB DEFAULT '{}',
     created_at    TIMESTAMP WITH TIME ZONE          DEFAULT CURRENT_TIMESTAMP,
     updated_at    TIMESTAMP WITH TIME ZONE          DEFAULT CURRENT_TIMESTAMP,
     deleted_at    TIMESTAMP WITH TIME ZONE NULL     DEFAULT NULL
@@ -407,6 +408,7 @@ COMMENT ON COLUMN media.caption IS '标题';
 COMMENT ON COLUMN media.description IS '描述';
 COMMENT ON COLUMN media.author_id IS '作者ID';
 COMMENT ON COLUMN media.author_type IS '作者类型';
+COMMENT ON COLUMN media.custom_fields IS '自定义字段，用于存储引用信息等';
 COMMENT ON COLUMN media.created_at IS '创建时间';
 COMMENT ON COLUMN media.updated_at IS '更新时间';
 COMMENT ON COLUMN media.deleted_at IS '删除时间';
@@ -419,7 +421,7 @@ CREATE TABLE IF NOT EXISTS import_jobs
     type         VARCHAR(50)              NOT NULL,
     file_path    VARCHAR(512)             NOT NULL,
     status       VARCHAR(15)              NOT NULL DEFAULT 'pending',
-    options      TEXT                              DEFAULT NULL,
+    options JSONB DEFAULT NULL,
     progress     INTEGER                  NOT NULL DEFAULT 0,
     message      TEXT                              DEFAULT NULL,
     author_id    INTEGER                           DEFAULT NULL,
@@ -735,6 +737,7 @@ CREATE INDEX idx_media_author_type ON media USING btree (author_type);
 CREATE INDEX idx_media_filename ON media USING btree (filename);
 CREATE INDEX idx_media_mime_type ON media USING btree (mime_type);
 CREATE INDEX idx_media_deleted_at ON media USING btree (deleted_at);
+CREATE INDEX IF NOT EXISTS idx_media_custom_fields_gin ON media USING GIN (custom_fields);
 
 CREATE INDEX idx_import_jobs_status ON import_jobs USING btree (status);
 CREATE INDEX idx_import_jobs_author_id ON import_jobs USING btree (author_id);

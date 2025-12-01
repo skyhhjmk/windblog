@@ -189,6 +189,74 @@ class Post extends Model
                 $post->slug = Str::slug($post->title);
             }
         });
+
+        // 保存文章后，检查并更新媒体引用
+        static::saved(function (Post $post) {
+            try {
+                // 检查文章内容中的媒体引用
+                $content = $post->content;
+                if (empty($content)) {
+                    return;
+                }
+
+                // 提取内容中的媒体URL
+                $mediaUrls = [];
+
+                // 匹配HTML图片标签
+                preg_match_all('/<img[^>]+src=["\']([^"\']+)["\']/i', $content, $imgMatches);
+                if (!empty($imgMatches[1])) {
+                    $mediaUrls = array_merge($mediaUrls, $imgMatches[1]);
+                }
+
+                // 匹配Markdown图片链接
+                preg_match_all('/!\[[^\]]*\]\(([^\)]+)\)/i', $content, $mdImgMatches);
+                if (!empty($mdImgMatches[1])) {
+                    $mediaUrls = array_merge($mediaUrls, $mdImgMatches[1]);
+                }
+
+                // 匹配普通链接
+                preg_match_all('/\[[^\]]*\]\(([^\)]+)\)/i', $content, $linkMatches);
+                if (!empty($linkMatches[1])) {
+                    $mediaUrls = array_merge($mediaUrls, $linkMatches[1]);
+                }
+
+                // 去重并过滤本地媒体URL
+                $mediaUrls = array_unique($mediaUrls);
+                $externalMediaUrls = [];
+
+                foreach ($mediaUrls as $url) {
+                    // 只处理外部媒体URL，本地URL不需要记录引用
+                    if (filter_var($url, FILTER_VALIDATE_URL)) {
+                        $siteUrl = blog_config('site_url', '', true);
+                        if (!empty($siteUrl) && strpos($url, $siteUrl) === false) {
+                            $externalMediaUrls[] = $url;
+                        } elseif (empty($siteUrl)) {
+                            // 如果站点URL未配置，将所有URL视为外部URL
+                            $externalMediaUrls[] = $url;
+                        }
+                    }
+                }
+
+                // 更新媒体引用
+                if (!empty($externalMediaUrls)) {
+                    foreach ($externalMediaUrls as $externalUrl) {
+                        // 查找对应的媒体记录
+                        $media = Media::where(function ($query) use ($externalUrl) {
+                            // 尝试多种查询方式，确保在不同数据库中都能工作
+                            $query->where('custom_fields', 'LIKE', '%' . $externalUrl . '%')
+                                ->orWhereJsonContains('custom_fields->reference_info->external_urls', $externalUrl);
+                        })->first();
+                        if ($media) {
+                            // 记录文章引用
+                            $media->addExternalUrlReference($externalUrl, $post->id);
+                            $media->save();
+                        }
+                    }
+                }
+            } catch (Throwable $e) {
+                Log::warning('[Post.saved] Media reference check failed: ' . $e->getMessage());
+            }
+        });
     }
 
     /**

@@ -327,6 +327,11 @@ Route::group('/app/admin', function () {
         // 文本文件预览和编辑接口
         Route::get('/previewText/{id}', [MediaController::class, 'previewText']);
         Route::post('/saveText/{id}', [MediaController::class, 'saveText']);
+        // 失败媒体管理接口
+        Route::get('/failed-list', [MediaController::class, 'failedList']);
+        Route::post('/retry-failed/{id}', [MediaController::class, 'retryFailed']);
+        // 获取媒体引用的文章列表
+        Route::get('/references/{id}', [MediaController::class, 'getReferences']);
     });
 
     // 工具路由
@@ -342,6 +347,10 @@ Route::group('/app/admin', function () {
             Route::get('/status/{id}', [WpImportController::class, 'status'])->name('admin.tools.wp-import.status');
             Route::post('/reset/{id}', [WpImportController::class, 'reset'])->name('admin.tools.wp-import.reset');
             Route::post('/delete/{id}', [WpImportController::class, 'delete'])->name('admin.tools.wp-import.delete');
+            // 失败媒体管理接口
+            Route::get('/failed-media', [WpImportController::class, 'failedMedia'])->name('admin.tools.wp-import.failed-media');
+            Route::get('/failed-media-list', [WpImportController::class, 'failedMediaList'])->name('admin.tools.wp-import.failed-media-list');
+            Route::post('/retry-failed-media/{id}', [WpImportController::class, 'retryFailedMedia'])->name('admin.tools.wp-import.retry-failed-media');
         });
     });
 

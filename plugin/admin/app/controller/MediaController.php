@@ -3,6 +3,7 @@
 namespace plugin\admin\app\controller;
 
 use app\model\Media;
+use app\model\Post;
 use app\service\MediaLibraryService;
 use Exception;
 use support\Request;
@@ -431,6 +432,174 @@ class MediaController extends Base
             return json(['code' => 0, 'msg' => '保存成功']);
         } catch (Exception $e) {
             return json(['code' => 1, 'msg' => '保存失败: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * 获取失败媒体列表
+     *
+     * @param Request $request
+     *
+     * @return Response
+     */
+    public function failedList(Request $request): Response
+    {
+        try {
+            // 获取请求参数
+            $params = [
+                'page' => (int) $request->get('page', 1),
+                'limit' => min((int) $request->get('limit', 20), 100),
+            ];
+
+            // 查询失败的媒体记录
+            $query = Media::whereNotNull('custom_fields->reference_info->failed_external_urls');
+            $total = $query->count();
+            $medias = $query->offset(($params['page'] - 1) * $params['limit'])
+                ->limit($params['limit'])
+                ->orderBy('id', 'desc')
+                ->get();
+
+            // 格式化返回数据
+            $formattedData = [];
+            foreach ($medias as $media) {
+                $failedUrls = $media->getFailedExternalUrls();
+                foreach ($failedUrls as $failedUrl) {
+                    $formattedData[] = [
+                        'id' => $media->id,
+                        'filename' => $media->filename,
+                        'original_name' => $media->original_name,
+                        'external_url' => $failedUrl['url'],
+                        'error' => $failedUrl['error'],
+                        'retry_count' => $failedUrl['retry_count'],
+                        'created_at' => $media->created_at,
+                    ];
+                }
+            }
+
+            return json([
+                'code' => 0,
+                'msg' => 'success',
+                'data' => $formattedData,
+                'total' => $total,
+                'page' => $params['page'],
+                'limit' => $params['limit'],
+            ]);
+        } catch (Exception $e) {
+            return json(['code' => 1, 'msg' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * 重试失败的媒体下载
+     *
+     * @param Request $request
+     * @param int     $id
+     *
+     * @return Response
+     */
+    public function retryFailed(Request $request, int $id): Response
+    {
+        try {
+            if (!$id) {
+                return json(['code' => 1, 'msg' => '参数错误']);
+            }
+
+            // 获取媒体文件信息
+            $media = Media::find($id);
+            if (!$media) {
+                return json(['code' => 1, 'msg' => '文件不存在']);
+            }
+
+            // 获取失败的外部URL
+            $failedUrls = $media->getFailedExternalUrls();
+            if (empty($failedUrls)) {
+                return json(['code' => 1, 'msg' => '没有失败的外部URL需要重试']);
+            }
+
+            $results = [];
+            foreach ($failedUrls as $failedUrl) {
+                $url = $failedUrl['url'];
+                $title = $media->original_name;
+
+                // 增加重试次数
+                $media->incrementRetryCount($url);
+                $media->save();
+
+                // 尝试重新下载
+                $result = $this->mediaService->downloadRemoteFile(
+                    $url,
+                    $title,
+                    $media->author_id,
+                    $media->author_type
+                );
+
+                if ($result['code'] === 0) {
+                    // 下载成功，更新媒体信息
+                    $newMedia = $result['data'];
+                    $media->filename = $newMedia->filename;
+                    $media->file_path = $newMedia->file_path;
+                    $media->file_size = $newMedia->file_size;
+                    $media->mime_type = $newMedia->mime_type;
+                    $media->thumb_path = $newMedia->thumb_path;
+                    $media->addExternalUrlReference($url);
+                    $media->clearFailedExternalUrls();
+                    $media->save();
+
+                    $results[] = [
+                        'url' => $url,
+                        'success' => true,
+                        'message' => '下载成功',
+                        'media_id' => $media->id,
+                    ];
+                } else {
+                    $results[] = [
+                        'url' => $url,
+                        'success' => false,
+                        'message' => $result['msg'],
+                    ];
+                }
+            }
+
+            return json(['code' => 0, 'msg' => '重试完成', 'data' => $results]);
+        } catch (Exception $e) {
+            return json(['code' => 1, 'msg' => '重试失败: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * 获取媒体引用的文章列表
+     *
+     * @param Request $request
+     * @param int     $id
+     *
+     * @return Response
+     */
+    public function getReferences(Request $request, int $id): Response
+    {
+        try {
+            // 获取媒体信息
+            $media = Media::find($id);
+            if (!$media) {
+                return json(['code' => 1, 'msg' => '媒体不存在']);
+            }
+
+            // 获取媒体引用的文章ID
+            $customFields = $media->custom_fields ?? [];
+            $referenceInfo = $customFields['reference_info'] ?? [];
+            $postIds = $referenceInfo['references']['posts'] ?? [];
+
+            // 查询文章信息
+            $posts = [];
+            if (!empty($postIds)) {
+                $posts = Post::whereIn('id', $postIds)
+                    ->select('id', 'title', 'slug')
+                    ->get()
+                    ->toArray();
+            }
+
+            return json(['code' => 0, 'data' => ['posts' => $posts]]);
+        } catch (Exception $e) {
+            return json(['code' => 1, 'msg' => '获取引用文章失败: ' . $e->getMessage()]);
         }
     }
 }

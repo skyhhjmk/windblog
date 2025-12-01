@@ -26,6 +26,7 @@ use Throwable;
  * @property int         $author_id     上传用户ID
  * @property string      $author_type   上传用户类型
  * @property string      $thumb_path    缩略图路径
+ * @property array $custom_fields 自定义字段
  * @property string|null $deleted_at    软删除时间
  */
 class Media extends Model
@@ -81,6 +82,7 @@ class Media extends Model
         'author_id',
         'author_type',
         'thumb_path',
+        'custom_fields',
     ];
 
     // -----------------------------------------------------
@@ -244,5 +246,253 @@ class Media extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',
+        'custom_fields' => 'array',
     ];
+
+    /**
+     * 添加外部URL引用
+     *
+     * @param string   $externalUrl 外部URL
+     * @param int|null $postId      文章ID
+     * @param int|null $pageId      页面ID（预留）
+     *
+     * @return $this
+     */
+    public function addExternalUrlReference(string $externalUrl, ?int $postId = null, ?int $pageId = null): self
+    {
+        // 获取当前custom_fields的副本
+        $customFields = $this->custom_fields ?? [];
+
+        // 确保reference_info存在
+        if (!isset($customFields['reference_info'])) {
+            $customFields['reference_info'] = [];
+        }
+        if (!isset($customFields['reference_info']['external_urls'])) {
+            $customFields['reference_info']['external_urls'] = [];
+        }
+
+        // 初始化外部URL引用信息
+        if (!isset($customFields['reference_info']['external_urls'][$externalUrl])) {
+            $customFields['reference_info']['external_urls'][$externalUrl] = [
+                'posts' => [],
+                'pages' => [],
+                'count' => 0,
+            ];
+        }
+
+        // 添加文章引用
+        if ($postId && !in_array($postId, $customFields['reference_info']['external_urls'][$externalUrl]['posts'])) {
+            $customFields['reference_info']['external_urls'][$externalUrl]['posts'][] = $postId;
+            $customFields['reference_info']['external_urls'][$externalUrl]['count']++;
+        }
+
+        // 添加页面引用（预留）
+        if ($pageId && !in_array($pageId, $customFields['reference_info']['external_urls'][$externalUrl]['pages'])) {
+            $customFields['reference_info']['external_urls'][$externalUrl]['pages'][] = $pageId;
+            $customFields['reference_info']['external_urls'][$externalUrl]['count']++;
+        }
+
+        // 重新赋值以确保修改生效
+        $this->custom_fields = $customFields;
+
+        return $this;
+    }
+
+    /**
+     * 添加文章引用
+     *
+     * @param int|null $postId 文章ID
+     * @param int|null $pageId 页面ID（预留）
+     *
+     * @return $this
+     */
+    public function addPostReference(?int $postId = null, ?int $pageId = null): self
+    {
+        // 获取当前custom_fields的副本
+        $customFields = $this->custom_fields ?? [];
+
+        // 确保reference_info存在
+        if (!isset($customFields['reference_info'])) {
+            $customFields['reference_info'] = [];
+        }
+
+        // 初始化引用信息
+        if (!isset($customFields['reference_info']['references'])) {
+            $customFields['reference_info']['references'] = [
+                'posts' => [],
+                'pages' => [],
+                'count' => 0,
+            ];
+        }
+
+        // 添加文章引用
+        if ($postId && !in_array($postId, $customFields['reference_info']['references']['posts'])) {
+            $customFields['reference_info']['references']['posts'][] = $postId;
+            $customFields['reference_info']['references']['count']++;
+        }
+
+        // 添加页面引用（预留）
+        if ($pageId && !in_array($pageId, $customFields['reference_info']['references']['pages'])) {
+            $customFields['reference_info']['references']['pages'][] = $pageId;
+            $customFields['reference_info']['references']['count']++;
+        }
+
+        // 重新赋值以确保修改生效
+        $this->custom_fields = $customFields;
+
+        return $this;
+    }
+
+    /**
+     * 移除外部URL引用
+     *
+     * @param string   $externalUrl 外部URL
+     * @param int|null $postId      文章ID
+     * @param int|null $pageId      页面ID（预留）
+     *
+     * @return $this
+     */
+    public function removeExternalUrlReference(string $externalUrl, ?int $postId = null, ?int $pageId = null): self
+    {
+        // 获取当前custom_fields的副本
+        $customFields = $this->custom_fields ?? [];
+
+        // 确保reference_info存在
+        if (!isset($customFields['reference_info']['external_urls'][$externalUrl])) {
+            return $this;
+        }
+
+        // 移除文章引用
+        if ($postId) {
+            $index = array_search($postId, $customFields['reference_info']['external_urls'][$externalUrl]['posts']);
+            if ($index !== false) {
+                unset($customFields['reference_info']['external_urls'][$externalUrl]['posts'][$index]);
+                $customFields['reference_info']['external_urls'][$externalUrl]['count']--;
+            }
+        }
+
+        // 移除页面引用（预留）
+        if ($pageId) {
+            $index = array_search($pageId, $customFields['reference_info']['external_urls'][$externalUrl]['pages']);
+            if ($index !== false) {
+                unset($customFields['reference_info']['external_urls'][$externalUrl]['pages'][$index]);
+                $customFields['reference_info']['external_urls'][$externalUrl]['count']--;
+            }
+        }
+
+        // 如果没有引用了，移除整个外部URL引用
+        if ($customFields['reference_info']['external_urls'][$externalUrl]['count'] <= 0) {
+            unset($customFields['reference_info']['external_urls'][$externalUrl]);
+        }
+
+        // 重新赋值以确保修改生效
+        $this->custom_fields = $customFields;
+
+        return $this;
+    }
+
+    /**
+     * 获取所有外部URL引用
+     *
+     * @return array
+     */
+    public function getExternalUrlReferences(): array
+    {
+        return $this->custom_fields['reference_info']['external_urls'] ?? [];
+    }
+
+    /**
+     * 添加失败的外部URL
+     *
+     * @param string   $url   外部URL
+     * @param string   $error 错误信息
+     * @param int|null $jobId 导入任务ID
+     *
+     * @return $this
+     */
+    public function addFailedExternalUrl(string $url, string $error, ?int $jobId = null): self
+    {
+        // 获取当前custom_fields的副本
+        $customFields = $this->custom_fields ?? [];
+
+        // 确保reference_info存在
+        if (!isset($customFields['reference_info'])) {
+            $customFields['reference_info'] = [];
+        }
+        if (!isset($customFields['reference_info']['failed_external_urls'])) {
+            $customFields['reference_info']['failed_external_urls'] = [];
+        }
+
+        // 添加失败的外部URL
+        $failedUrl = [
+            'url' => $url,
+            'error' => $error,
+            'retry_count' => 0,
+        ];
+
+        // 如果提供了job_id，添加到失败URL信息中
+        if ($jobId) {
+            $failedUrl['job_id'] = $jobId;
+        }
+
+        $customFields['reference_info']['failed_external_urls'][] = $failedUrl;
+
+        // 重新赋值以确保修改生效
+        $this->custom_fields = $customFields;
+
+        return $this;
+    }
+
+    /**
+     * 获取所有失败的外部URL
+     *
+     * @return array
+     */
+    public function getFailedExternalUrls(): array
+    {
+        return $this->custom_fields['reference_info']['failed_external_urls'] ?? [];
+    }
+
+    /**
+     * 清除失败的外部URL
+     *
+     * @return $this
+     */
+    public function clearFailedExternalUrls(): self
+    {
+        // 获取当前custom_fields的副本
+        $customFields = $this->custom_fields ?? [];
+
+        unset($customFields['reference_info']['failed_external_urls']);
+
+        // 重新赋值以确保修改生效
+        $this->custom_fields = $customFields;
+
+        return $this;
+    }
+
+    /**
+     * 增加重试次数
+     *
+     * @param string $url
+     *
+     * @return $this
+     */
+    public function incrementRetryCount(string $url): self
+    {
+        // 获取当前custom_fields的副本
+        $customFields = $this->custom_fields ?? [];
+
+        if (isset($customFields['reference_info']['failed_external_urls'])) {
+            $index = array_search($url, array_column($customFields['reference_info']['failed_external_urls'], 'url'));
+            if ($index !== false) {
+                $customFields['reference_info']['failed_external_urls'][$index]['retry_count']++;
+            }
+        }
+
+        // 重新赋值以确保修改生效
+        $this->custom_fields = $customFields;
+
+        return $this;
+    }
 }

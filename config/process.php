@@ -97,6 +97,7 @@ if ($__deployment === 'importer') {
             'reloadable' => false,
             'constructor' => [],
         ],
+        // TODO: 多worker模式
     ];
     $procs['task'] = [
         'handler' => app\process\Task::class,
