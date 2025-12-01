@@ -4,6 +4,7 @@ namespace app\process;
 
 use app\model\Link;
 use app\service\MQService;
+use app\service\UrlSecurityService;
 use Exception;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Exception\AMQPTimeoutException;
@@ -281,6 +282,11 @@ class LinkMonitor
                 return ['success' => false, 'error' => '无效URL'];
             }
 
+            // 验证 URL 是否安全，防止 SSRF 攻击
+            if (!UrlSecurityService::isSafeUrl($url)) {
+                return ['success' => false, 'error' => '不安全的URL'];
+            }
+
             $ch = curl_init();
             $responseSize = 0;
             curl_setopt_array($ch, [
@@ -294,6 +300,10 @@ class LinkMonitor
                 CURLOPT_SSL_VERIFYHOST => 0,
                 CURLOPT_HEADER => false,
                 CURLOPT_NOPROGRESS => false,
+                // 安全选项
+                CURLOPT_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS, // 只允许 HTTP 和 HTTPS 协议
+                CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS, // 重定向只允许 HTTP 和 HTTPS 协议
+                CURLOPT_CONNECTTIMEOUT => 10, // 连接超时时间
                 CURLOPT_PROGRESSFUNCTION => function ($ch, $dltotal, $dlnow) use (&$responseSize) {
                     if ($dlnow > $this->maxResponseSize) {
                         return 1; // abort

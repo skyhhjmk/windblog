@@ -303,15 +303,41 @@ class LinkConnectService
     public static function testConnection(string $url): array
     {
         try {
+            // 验证 URL 格式
+            if (!filter_var($url, FILTER_VALIDATE_URL)) {
+                return ['code' => 1, 'msg' => '无效的URL格式'];
+            }
+
+            // 验证 URL 是否安全，防止 SSRF 攻击
+            if (!UrlSecurityService::isSafeUrl($url)) {
+                return ['code' => 1, 'msg' => '不安全的URL'];
+            }
+
             $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, $url);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt_array($ch, [
+                CURLOPT_URL => $url,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT => 10,
+                CURLOPT_CONNECTTIMEOUT => 5,
+                CURLOPT_FOLLOWLOCATION => false,
+                CURLOPT_MAXREDIRS => 0,
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_SSL_VERIFYHOST => 0,
+                // 安全选项
+                CURLOPT_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS, // 只允许 HTTP 和 HTTPS 协议
+                CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS, // 重定向只允许 HTTP 和 HTTPS 协议
+                CURLOPT_MAXFILESIZE => 1048576, // 最大响应大小（1MB）
+            ]);
 
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $err = curl_error($ch);
 
             curl_close($ch);
+
+            if ($err) {
+                return ['code' => 1, 'msg' => 'CURL错误：' . $err];
+            }
 
             if ($httpCode != 200) {
                 return ['code' => 1, 'msg' => "HTTP错误码：$httpCode"];

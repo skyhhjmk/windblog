@@ -6,6 +6,7 @@ use app\model\Link;
 use app\service\LinkConnectQueueService;
 use app\service\LinkConnectService;
 use app\service\MQService;
+use app\service\UrlSecurityService;
 use Exception;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
@@ -467,6 +468,13 @@ class LinkConnectWorker
                 return ['success' => false, 'error' => 'Token 不能为空'];
             }
 
+            // 验证 peerApi 是否安全
+            if (!UrlSecurityService::isSafeUrl($peerApi)) {
+                Log::error('[sendQuickConnectRequest] 不安全的 peerApi', ['peer_api' => $peerApi]);
+
+                return ['success' => false, 'error' => '不安全的请求地址'];
+            }
+
             // 从 peerApi 解析出基础 URL
             $parsedUrl = parse_url($peerApi);
             $scheme = $parsedUrl['scheme'] ?? 'http';
@@ -475,6 +483,13 @@ class LinkConnectWorker
 
             // 构建 quickConnect URL，token 在 URL 中
             $quickConnectUrl = $scheme . '://' . $host . $port . '/link/quick-connect?token=' . urlencode($token);
+
+            // 再次验证构建的 URL 是否安全
+            if (!UrlSecurityService::isSafeUrl($quickConnectUrl)) {
+                Log::error('[sendQuickConnectRequest] 不安全的 quickConnectUrl', ['url' => $quickConnectUrl]);
+
+                return ['success' => false, 'error' => '不安全的请求地址'];
+            }
 
             $sslVerify = (bool) blog_config('wind_connect_ssl_verify', true, true);
             $timeout = (int) blog_config('link_connect_timeout', 30, true);
@@ -518,6 +533,13 @@ class LinkConnectWorker
                 ],
                 CURLOPT_SSL_VERIFYPEER => $sslVerify,
                 CURLOPT_SSL_VERIFYHOST => $sslVerify ? 2 : 0,
+                // 安全选项
+                CURLOPT_FOLLOWLOCATION => false, // 禁止跟踪重定向
+                CURLOPT_MAXREDIRS => 0, // 限制重定向次数
+                CURLOPT_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS, // 只允许 HTTP 和 HTTPS 协议
+                CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS, // 重定向只允许 HTTP 和 HTTPS 协议
+                CURLOPT_CONNECTTIMEOUT => 10, // 连接超时时间
+                CURLOPT_MAXFILESIZE => 1048576, // 最大响应大小（1MB）
             ]);
 
             $response = curl_exec($ch);

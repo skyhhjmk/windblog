@@ -7,6 +7,7 @@ namespace app\process;
 use app\model\Link;
 use app\service\AISummaryService;
 use app\service\MQService;
+use app\service\UrlSecurityService;
 use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Exception\AMQPTimeoutException;
 use PhpAmqpLib\Message\AMQPMessage;
@@ -458,6 +459,11 @@ EOT;
                 return ['success' => false, 'error' => '无效URL'];
             }
 
+            // 验证 URL 是否安全，防止 SSRF 攻击
+            if (!UrlSecurityService::isSafeUrl($url)) {
+                return ['success' => false, 'error' => '不安全的URL'];
+            }
+
             $ch = curl_init();
             curl_setopt_array($ch, [
                 CURLOPT_URL => $url,
@@ -468,6 +474,11 @@ EOT;
                 CURLOPT_USERAGENT => 'WindBlog LinkAudit/1.0',
                 CURLOPT_SSL_VERIFYPEER => false,
                 CURLOPT_SSL_VERIFYHOST => 0,
+                // 安全选项
+                CURLOPT_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS, // 只允许 HTTP 和 HTTPS 协议
+                CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS, // 重定向只允许 HTTP 和 HTTPS 协议
+                CURLOPT_CONNECTTIMEOUT => 10, // 连接超时时间
+                CURLOPT_MAXFILESIZE => 8 * 1024 * 1024, // 最大响应大小（8MB）
             ]);
             $html = curl_exec($ch);
             $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
