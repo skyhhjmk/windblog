@@ -66,41 +66,41 @@ function write_process_file($runtimeProcessPath, $processName, $firm): string
     $processParam = $firm ? "plugin.$firm.$processName" : $processName;
     $configParam = $firm ? "config('plugin.$firm.process')['$processName']" : "config('process')['$processName']";
     $fileContent = <<<EOF
-        <?php
-        require_once __DIR__ . '/../../vendor/autoload.php';
+<?php
+require_once __DIR__ . '/../../vendor/autoload.php';
 
-        use Workerman\Worker;
-        use Workerman\Connection\TcpConnection;
-        use Webman\Config;
-        use support\App;
+use Workerman\Worker;
+use Workerman\Connection\TcpConnection;
+use Webman\Config;
+use support\App;
 
-        ini_set('display_errors', 'on');
-        error_reporting(E_ALL);
+ini_set('display_errors', 'on');
+error_reporting(E_ALL);
 
-        if (is_callable('opcache_reset')) {
-            opcache_reset();
-        }
+if (is_callable('opcache_reset')) {
+    opcache_reset();
+}
 
-        if (!\$appConfigFile = config_path('app.php')) {
-            throw new RuntimeException('Config file not found: app.php');
-        }
-        \$appConfig = require \$appConfigFile;
-        if (\$timezone = \$appConfig['default_timezone'] ?? '') {
-            date_default_timezone_set(\$timezone);
-        }
+if (!\$appConfigFile = config_path('app.php')) {
+    throw new RuntimeException('Config file not found: app.php');
+}
+\$appConfig = require \$appConfigFile;
+if (\$timezone = \$appConfig['default_timezone'] ?? '') {
+    date_default_timezone_set(\$timezone);
+}
 
-        App::loadAllConfig(['route']);
+App::loadAllConfig(['route']);
 
-        worker_start('$processParam', $configParam);
+worker_start('$processParam', $configParam);
 
-        if (DIRECTORY_SEPARATOR != "/") {
-            Worker::\$logFile = config('server')['log_file'] ?? Worker::\$logFile;
-            TcpConnection::\$defaultMaxPackageSize = config('server')['max_package_size'] ?? 10*1024*1024;
-        }
+if (DIRECTORY_SEPARATOR != "/") {
+    Worker::\$logFile = config('server')['log_file'] ?? Worker::\$logFile;
+    TcpConnection::\$defaultMaxPackageSize = config('server')['max_package_size'] ?? 10*1024*1024;
+}
 
-        Worker::runAll();
+Worker::runAll();
 
-        EOF;
+EOF;
     $processFile = $runtimeProcessPath . DIRECTORY_SEPARATOR . "start_$processParam.php";
     file_put_contents($processFile, $fileContent);
 
