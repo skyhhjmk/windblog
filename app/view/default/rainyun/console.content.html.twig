@@ -2336,6 +2336,103 @@
                 }
             }
 
+            // 创建新云应用
+            async function createNewApp() {
+                const appName = 'app-' + Math.random().toString(36).substring(2, 10);
+                const appTitle = '新应用-' + new Date().toLocaleString();
+
+                return new Promise((resolve, reject) => {
+                    try {
+                        const xhr = new XMLHttpRequest();
+                        xhr.open('POST', `${APIS.base()}/product/rca/appstore/`, true);
+                        const {apiKey} = getCfg();
+                        if (apiKey) xhr.setRequestHeader('x-api-key', apiKey);
+                        xhr.setRequestHeader('Content-Type', 'application/json');
+
+                        xhr.onload = function () {
+                            if (xhr.status === 200 || xhr.status === 201) {
+                                try {
+                                    const response = JSON.parse(xhr.responseText);
+                                    if (response.code === 200 && response.data) {
+                                        resolve(response.data);
+                                    } else {
+                                        reject(new Error(`创建应用失败: ${response.message || '未知错误'}`));
+                                    }
+                                } catch (e) {
+                                    reject(new Error('解析响应失败'));
+                                }
+                            } else {
+                                reject(new Error(`创建应用失败: HTTP状态码 ${xhr.status}`));
+                            }
+                        };
+
+                        xhr.onerror = function () {
+                            reject(new Error('网络请求失败'));
+                        };
+
+                        xhr.send(JSON.stringify({
+                            name: appName,
+                            title: appTitle,
+                            description: '通过Docker导入创建的应用',
+                            logo: '',
+                            website: '',
+                            readme: '',
+                            tags: ['DevTool'],
+                            cross_version_update: false,
+                            disable_update: false,
+                            project_link: ''
+                        }));
+                    } catch (e) {
+                        reject(e);
+                    }
+                });
+            }
+
+            // 发布版本
+            async function releaseVersion(appstoreId, config) {
+                return new Promise((resolve, reject) => {
+                    try {
+                        const url = `${APIS.base()}/product/rca/appstore/${appstoreId}/release`;
+                        const xhr = new XMLHttpRequest();
+                        xhr.open('POST', url, true);
+                        const {apiKey} = getCfg();
+                        if (apiKey) xhr.setRequestHeader('x-api-key', apiKey);
+                        xhr.setRequestHeader('Content-Type', 'application/json');
+
+                        xhr.onload = function () {
+                            if (xhr.status === 200 || xhr.status === 201) {
+                                try {
+                                    const response = JSON.parse(xhr.responseText);
+                                    if (response.code === 200) {
+                                        resolve(response.data);
+                                    } else {
+                                        reject(new Error(`发布版本失败: ${response.message || '未知错误'}`));
+                                    }
+                                } catch (e) {
+                                    resolve({});
+                                }
+                            } else if (xhr.status === 0) {
+                                reject(new Error('网络请求失败，可能是跨域限制导致'));
+                            } else {
+                                reject(new Error(`发布版本失败: HTTP状态码 ${xhr.status}`));
+                            }
+                        };
+
+                        xhr.onerror = function () {
+                            reject(new Error('网络请求失败'));
+                        };
+
+                        xhr.send(JSON.stringify({
+                            version: config.version || 'v1.0.0',
+                            container_templates: config.container_templates || [],
+                            options: config.options || []
+                        }));
+                    } catch (e) {
+                        reject(e);
+                    }
+                });
+            }
+
             // 保存配置到云应用
             async function saveConfigToCloud() {
                 // 从UI收集配置
@@ -2353,8 +2450,20 @@
                 msg.textContent = '正在保存配置到云应用...';
 
                 try {
-                    // 调用API保存配置
-                    const result = await APIS.saveCloudAppConfig(config);
+                    // 获取appId或创建新应用
+                    let appstoreId = localStorage.getItem('rainyun_appId');
+
+                    // 如果没有appId，创建新应用
+                    if (!appstoreId) {
+                        msg.textContent = '正在创建新云应用...';
+                        const appData = await createNewApp();
+                        appstoreId = appData.id;
+                        localStorage.setItem('rainyun_appId', appstoreId);
+                    }
+
+                    msg.textContent = '正在发布版本...';
+                    // 调用API发布版本
+                    const result = await releaseVersion(appstoreId, config);
 
                     msg.className = 'text-green-700';
                     msg.textContent = '配置保存成功';
@@ -2371,36 +2480,53 @@
 
             // 从UI收集配置
             function collectConfigFromUI() {
-                const version = $('#ry-config-version').value.trim();
+                // 安全获取版本
+                const versionEl = $('#ry-config-version');
+                const version = versionEl ? versionEl.value.trim() : '';
 
                 // 收集选项配置
                 const options = [];
                 const optionElements = $$('#ry-options-list > div');
                 optionElements.forEach(optionEl => {
-                    const option = {
-                        label: optionEl.querySelector('.ry-option-label').value.trim(),
-                        env_key: optionEl.querySelector('.ry-option-env-key').value.trim(),
-                        type: optionEl.querySelector('.ry-option-type').value,
-                        default: optionEl.querySelector('.ry-option-default').value.trim(),
-                        rule: optionEl.querySelector('.ry-option-rule').value,
-                        required: optionEl.querySelector('.ry-option-required').checked,
-                        disabled: optionEl.querySelector('.ry-option-disabled').checked,
-                        random: optionEl.querySelector('.ry-option-random').checked,
-                        value: optionEl.querySelector('.ry-option-default').value.trim(),
-                        values: null
-                    };
-                    options.push(option);
+                    // 安全获取所有元素
+                    const labelEl = optionEl.querySelector('.ry-option-label');
+                    const envKeyEl = optionEl.querySelector('.ry-option-env-key');
+                    const typeEl = optionEl.querySelector('.ry-option-type');
+                    const defaultEl = optionEl.querySelector('.ry-option-default');
+                    const ruleEl = optionEl.querySelector('.ry-option-rule');
+                    const requiredEl = optionEl.querySelector('.ry-option-required');
+                    const disabledEl = optionEl.querySelector('.ry-option-disabled');
+                    const randomEl = optionEl.querySelector('.ry-option-random');
+
+                    // 确保所有元素都存在才收集
+                    if (labelEl && envKeyEl && typeEl && defaultEl && ruleEl && requiredEl && disabledEl && randomEl) {
+                        const option = {
+                            label: labelEl.value.trim(),
+                            env_key: envKeyEl.value.trim(),
+                            type: typeEl.value,
+                            default: defaultEl.value.trim(),
+                            rule: ruleEl.value,
+                            required: requiredEl.checked,
+                            disabled: disabledEl.checked,
+                            random: randomEl.checked,
+                            value: defaultEl.value.trim(),
+                            values: null
+                        };
+                        options.push(option);
+                    }
                 });
 
                 // 收集容器配置
                 const containers = [];
                 const containerElements = $$('[id^="ry-container-"]');
                 containerElements.forEach((containerEl, index) => {
-                    // 收集命令与参数
-                    const command = containerEl.querySelector('.ry-container-command').value.trim();
-                    const args = containerEl.querySelector('.ry-container-args').value.trim();
+                    // 安全收集命令与参数
+                    const commandEl = containerEl.querySelector('.ry-container-command');
+                    const argsEl = containerEl.querySelector('.ry-container-args');
+                    const command = commandEl ? commandEl.value.trim() : '';
+                    const args = argsEl ? argsEl.value.trim() : '';
 
-                    // 收集脚本设定
+                    // 收集脚本设定（已包含安全检查）
                     const scripts = {
                         install: containerEl.querySelector('.ry-container-script-install')?.value || '',
                         install_image: containerEl.querySelector('.ry-container-script-install-image')?.value || '',
@@ -2408,72 +2534,107 @@
                         pre_stop: containerEl.querySelector('.ry-container-script-pre-stop')?.value || ''
                     };
 
-                    // 收集环境变量
+                    // 安全收集环境变量
                     const env = [];
                     const envBlocks = containerEl.querySelectorAll('[id^="ry-container-tab-env-"] .flex.gap-2');
                     envBlocks.forEach(envBlock => {
-                        const key = envBlock.querySelector('input:nth-child(1)').value.trim();
-                        const value = envBlock.querySelector('input:nth-child(2)').value.trim();
-                        if (key) {
-                            env.push({key, value});
+                        const keyInput = envBlock.querySelector('input:nth-child(1)');
+                        const valueInput = envBlock.querySelector('input:nth-child(2)');
+                        if (keyInput && valueInput) {
+                            const key = keyInput.value.trim();
+                            const value = valueInput.value.trim();
+                            if (key) {
+                                env.push({key, value});
+                            }
                         }
                     });
 
-                    // 收集配置文件
+                    // 安全收集配置文件
                     const configMaps = [];
                     const configBlocks = containerEl.querySelectorAll('[id^="ry-container-tab-configs-"] .bg-white.p-3.rounded-lg.border.border-gray-200');
                     configBlocks.forEach(configBlock => {
-                        const fileName = configBlock.querySelector('input:nth-child(1)').value.trim();
-                        const containerPath = configBlock.querySelector('input:nth-child(2)').value.trim();
-                        const content = configBlock.querySelector('textarea').value.trim();
-                        if (fileName && containerPath) {
-                            configMaps.push({file_name: fileName, container_path: containerPath, content});
+                        const fileNameEl = configBlock.querySelector('input:nth-child(1)');
+                        const containerPathEl = configBlock.querySelector('input:nth-child(2)');
+                        const contentEl = configBlock.querySelector('textarea');
+
+                        if (fileNameEl && containerPathEl && contentEl) {
+                            const fileName = fileNameEl.value.trim();
+                            const containerPath = containerPathEl.value.trim();
+                            const content = contentEl.value.trim();
+                            if (fileName && containerPath) {
+                                configMaps.push({file_name: fileName, container_path: containerPath, content});
+                            }
                         }
                     });
 
-                    // 收集持久化卷
+                    // 安全收集持久化卷
                     const volumeMounts = [];
                     const volumeBlocks = containerEl.querySelectorAll('[id^="ry-container-tab-volumes-"] .bg-white.p-3.rounded-lg.border.border-gray-200');
                     volumeBlocks.forEach(volumeBlock => {
-                        const name = volumeBlock.querySelector('input:nth-child(1)').value.trim();
-                        const mountPath = volumeBlock.querySelector('input:nth-child(2)').value.trim();
-                        if (name && mountPath) {
-                            volumeMounts.push({name, mount_path: mountPath});
+                        const nameEl = volumeBlock.querySelector('input:nth-child(1)');
+                        const mountPathEl = volumeBlock.querySelector('input:nth-child(2)');
+
+                        if (nameEl && mountPathEl) {
+                            const name = nameEl.value.trim();
+                            const mountPath = mountPathEl.value.trim();
+                            if (name && mountPath) {
+                                volumeMounts.push({name, mount_path: mountPath});
+                            }
                         }
                     });
 
-                    // 收集服务配置
+                    // 安全收集服务配置
                     const services = [];
                     const serviceBlocks = containerEl.querySelectorAll('[id^="ry-container-tab-services-"] .bg-white.p-3.rounded-lg.border.border-gray-200');
                     serviceBlocks.forEach(serviceBlock => {
-                        const name = serviceBlock.querySelector('input:nth-child(1)').value.trim();
-                        const label = serviceBlock.querySelector('input:nth-child(2)').value.trim();
-                        const type = serviceBlock.querySelector('select:nth-child(1)').value;
-                        const internalPort = serviceBlock.querySelector('input:nth-child(3)').value.trim();
-                        const externalPort = serviceBlock.querySelector('input:nth-child(4)').value.trim();
-                        const protocol = serviceBlock.querySelector('select:nth-child(2)').value;
-                        if (name && label && internalPort && protocol) {
-                            services.push({
-                                name,
-                                label,
-                                type,
-                                internal_port: internalPort,
-                                external_port: externalPort,
-                                protocol
-                            });
+                        const nameEl = serviceBlock.querySelector('input:nth-child(1)');
+                        const labelEl = serviceBlock.querySelector('input:nth-child(2)');
+                        const typeEl = serviceBlock.querySelector('select:nth-child(1)');
+                        const internalPortEl = serviceBlock.querySelector('input:nth-child(3)');
+                        const externalPortEl = serviceBlock.querySelector('input:nth-child(4)');
+                        const protocolEl = serviceBlock.querySelector('select:nth-child(2)');
+
+                        if (nameEl && labelEl && typeEl && internalPortEl && externalPortEl && protocolEl) {
+                            const name = nameEl.value.trim();
+                            const label = labelEl.value.trim();
+                            const type = typeEl.value;
+                            const internalPort = internalPortEl.value.trim();
+                            const externalPort = externalPortEl.value.trim();
+                            const protocol = protocolEl.value;
+                            if (name && label && internalPort && protocol) {
+                                services.push({
+                                    name,
+                                    label,
+                                    type,
+                                    internal_port: internalPort,
+                                    external_port: externalPort,
+                                    protocol
+                                });
+                            }
                         }
                     });
 
+                    // 安全获取容器核心配置
+                    const nameEl = containerEl.querySelector('.ry-container-name');
+                    const imageEl = containerEl.querySelector('.ry-container-image');
+                    const cpuEl = containerEl.querySelector('.ry-container-cpu');
+                    const memoryEl = containerEl.querySelector('.ry-container-memory');
+
+                    const containerName = nameEl ? nameEl.value.trim() || `container-${index}` : `container-${index}`;
+                    const image = imageEl ? imageEl.value.trim() || 'nginx:latest' : 'nginx:latest';
+                    const cpu = cpuEl ? parseInt(cpuEl.value) || 500 : 500;
+                    const memory = memoryEl ? parseInt(memoryEl.value) || 256 : 256;
+
                     const container = {
                         id: Math.floor(Math.random() * 10000),
-                        release_id: window.ryGeneratedConfig?.release_id || 13394,
-                        name: containerEl.querySelector('.ry-container-name').value.trim() || `container-${index}`,
-                        image: containerEl.querySelector('.ry-container-image').value.trim() || 'nginx:latest',
+                        release_id: window.ryGeneratedConfig?.release_id || 0,
+                        name: containerName,
+                        image: image,
                         env: env,
                         config_maps: configMaps,
                         resource_request: {
-                            min_cpu: parseInt(containerEl.querySelector('.ry-container-cpu').value) || 500,
-                            min_memory: parseInt(containerEl.querySelector('.ry-container-memory').value) || 256
+                            min_cpu: cpu,
+                            min_memory: memory
                         },
                         volume_mounts: volumeMounts,
                         command: command ? command.split(' ') : [],
@@ -2490,7 +2651,7 @@
                     version: version || 'v1.0.0',
                     container_templates: containers,
                     options: options,
-                    release_id: window.ryGeneratedConfig?.release_id || 13394
+                    release_id: window.ryGeneratedConfig?.release_id || 0
                 };
             }
 
@@ -2498,8 +2659,14 @@
             APIS.saveCloudAppConfig = async function (config) {
                 if (!config) throw new Error('缺少配置参数');
 
-                // 使用新的API URL，包含版本参数
-                const url = `${this.base()}/product/rca/appstore/7117/release?version=${encodeURIComponent(config.version || 'v1.0.0')}`;
+                // 获取用户设置的应用ID
+                const appstoreId = localStorage.getItem('rainyun_appId');
+                if (!appstoreId) {
+                    throw new Error('请先设置应用ID');
+                }
+
+                // 使用动态API URL，包含版本参数和用户设置的应用ID
+                const url = `${this.base()}/product/rca/appstore/${appstoreId}/release?version=${encodeURIComponent(config.version || 'v1.0.0')}`;
                 return new Promise((resolve, reject) => {
                     try {
                         const xhr = new XMLHttpRequest();
@@ -2542,7 +2709,13 @@
             APIS.getAppRelease = async function (version) {
                 if (!version) throw new Error('缺少版本参数');
 
-                const url = `${this.base()}/product/rca/appstore/7117/release?version=${encodeURIComponent(version)}`;
+                // 获取用户设置的应用ID
+                const appstoreId = localStorage.getItem('rainyun_appId');
+                if (!appstoreId) {
+                    throw new Error('请先设置应用ID');
+                }
+
+                const url = `${this.base()}/product/rca/appstore/${appstoreId}/release?version=${encodeURIComponent(version)}`;
                 return new Promise((resolve, reject) => {
                     try {
                         const xhr = new XMLHttpRequest();
