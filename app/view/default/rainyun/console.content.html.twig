@@ -376,8 +376,7 @@
                     </div>
 
                     <!-- 生成的配置编辑器 -->
-                    <div id="ry-config-editor" class="hidden">
-                        <div class="bg-white p-4 rounded-lg border border-gray-200">
+                    <div id="ry-config-editor" class="hidden bg-white p-4 rounded-lg border border-gray-200">
                             <h3 class="text-lg font-semibold text-gray-800 mb-3">配置编辑器</h3>
 
                             <!-- 版本信息 -->
@@ -388,7 +387,7 @@
                             </div>
 
                             <!-- 选项配置与容器配置切换 -->
-                            <div class="mb-4 border-b border-gray-200">
+                        <div class="mb-4 border-b border-gray-200 flex items-center justify-between">
                                 <ul class="flex space-x-8" id="ry-config-tabs">
                                     <li>
                                         <button type="button"
@@ -398,14 +397,15 @@
                                                            class="text-xs bg-blue-100 text-blue-800 rounded-full px-2 py-0.5">0</span>
                                         </button>
                                     </li>
-                                    <li>
-                                        <button type="button"
-                                                class="px-1 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 font-medium"
-                                                data-tab="containers">
-                                            容器配置
-                                        </button>
-                                    </li>
                                 </ul>
+
+                            <!-- 添加容器按钮 -->
+                            <div>
+                                <button type="button" id="ry-add-container"
+                                        class="px-3 py-1.5 rounded-md bg-green-600 text-white hover:bg-green-700 text-sm">
+                                    + 添加容器
+                                </button>
+                            </div>
                             </div>
 
                             <!-- 选项配置 -->
@@ -428,14 +428,6 @@
                             <!-- 容器列表 -->
                             <div id="ry-containers-list" class="space-y-4">
                                 <!-- 容器配置项将动态生成 -->
-                            </div>
-
-                            <!-- 添加容器按钮 -->
-                            <div class="mt-4">
-                                <button type="button" id="ry-add-container"
-                                        class="px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700">
-                                    + 添加容器
-                                </button>
                             </div>
 
                             <!-- 保存按钮 -->
@@ -973,6 +965,12 @@
                 backBtn?.addEventListener('click', () => {
                     showImportForm();
                 });
+
+                // 添加容器按钮处理
+                const addContainerBtn = $('#ry-add-container');
+                addContainerBtn?.addEventListener('click', () => {
+                    addContainer();
+                });
             }
 
             // 重置导入表单
@@ -1429,6 +1427,13 @@
 
                 // 初始化容器配置
                 initContainersConfig(config.container_templates || []);
+
+                // 确保容器配置和选项配置正确隐藏/显示
+                $('#ry-config-tab-options').classList.remove('hidden');
+                $('#ry-containers-list').classList.add('hidden');
+                $$('[id^="ry-container-"]').forEach(content => {
+                    content.classList.add('hidden');
+                });
             }
 
             // 初始化选项配置
@@ -1530,6 +1535,59 @@
                 return div;
             }
 
+            // 添加新容器
+            function addContainer() {
+                // 确保window.ryGeneratedConfig存在
+                if (!window.ryGeneratedConfig) {
+                    window.ryGeneratedConfig = {
+                        version: 'v1.0.0',
+                        container_templates: [],
+                        options: [],
+                        release_id: 13394
+                    };
+                }
+
+                // 创建新的容器配置
+                const newContainer = {
+                    id: Math.floor(Math.random() * 10000),
+                    release_id: window.ryGeneratedConfig.release_id || 13394,
+                    name: `container-${window.ryGeneratedConfig.container_templates.length + 1}`,
+                    image: 'nginx:latest',
+                    env: [],
+                    config_maps: [],
+                    resource_request: {
+                        min_cpu: 500,
+                        min_memory: 256
+                    },
+                    volume_mounts: [],
+                    command: [],
+                    args: [],
+                    scripts: {
+                        install: '',
+                        install_image: '',
+                        post_start: '',
+                        pre_stop: ''
+                    },
+                    services: [
+                        {
+                            name: 'http',
+                            label: '外部访问端口',
+                            type: 'external',
+                            internal_port: '80',
+                            external_port: '${HTTP_PORT}',
+                            protocol: 'tcp'
+                        }
+                    ],
+                    startup_health_check: null
+                };
+
+                // 添加到容器模板列表
+                window.ryGeneratedConfig.container_templates.push(newContainer);
+
+                // 重新初始化容器配置
+                initContainersConfig(window.ryGeneratedConfig.container_templates);
+            }
+
             // 初始化容器配置
             function initContainersConfig(containers) {
                 const containersList = $('#ry-containers-list');
@@ -1537,6 +1595,12 @@
 
                 // 清空现有容器
                 containersList.innerHTML = '';
+
+                // 移除所有容器标签，只保留选项配置标签
+                const existingTabs = configTabs.querySelectorAll('li');
+                for (let i = existingTabs.length - 1; i >= 1; i--) {
+                    configTabs.removeChild(existingTabs[i]);
+                }
 
                 // 添加容器标签到配置选项卡
                 containers.forEach((container, index) => {
@@ -1556,6 +1620,34 @@
 
                 // 初始化选项卡切换
                 initConfigTabs();
+
+                // 重新初始化所有容器的二级tab切换功能
+                containers.forEach((container, index) => {
+                    initContainerTabs(index);
+                });
+
+                // 监听容器名变化，同步更新tab和标题
+                containers.forEach((container, index) => {
+                    const containerEl = $(`#ry-container-${index}`);
+                    const nameInput = containerEl.querySelector('.ry-container-name');
+                    nameInput?.addEventListener('input', (e) => {
+                        const newName = e.target.value.trim();
+                        // 更新容器配置中的标题
+                        const containerTitle = containerEl.querySelector('h4');
+                        if (containerTitle) {
+                            containerTitle.textContent = newName || `容器 ${index + 1}`;
+                        }
+                        // 更新tab标题
+                        const tabButton = configTabs.querySelector(`[data-tab="container-${index}"]`);
+                        if (tabButton) {
+                            tabButton.textContent = newName || `容器 ${index + 1}`;
+                        }
+                        // 更新全局配置中的容器名
+                        if (window.ryGeneratedConfig && window.ryGeneratedConfig.container_templates[index]) {
+                            window.ryGeneratedConfig.container_templates[index].name = newName || `容器 ${index + 1}`;
+                        }
+                    });
+                });
             }
 
             // 生成容器配置HTML
@@ -1888,24 +1980,32 @@
 
                         // 显示对应的内容
                         const tabId = tab.getAttribute('data-tab');
+
+                        // 隐藏所有内容
                         $$('[id^="ry-config-tab-"]').forEach(content => {
                             content.classList.add('hidden');
                         });
                         $$('[id^="ry-container-"]').forEach(content => {
                             content.classList.add('hidden');
                         });
+                        $('#ry-containers-list').classList.add('hidden');
 
                         if (tabId === 'options') {
+                            // 显示选项配置，隐藏所有容器配置
                             $('#ry-config-tab-options').classList.remove('hidden');
-                            $('#ry-containers-list').classList.add('hidden');
-                        } else if (tabId === 'containers') {
-                            $('#ry-config-tab-options').classList.add('hidden');
-                            $('#ry-containers-list').classList.remove('hidden');
                         } else if (tabId.startsWith('container-')) {
+                            // 显示指定容器的配置
                             const index = tabId.replace('container-', '');
                             $('#ry-config-tab-options').classList.add('hidden');
                             $('#ry-containers-list').classList.remove('hidden');
                             $(`#ry-container-${index}`).classList.remove('hidden');
+
+                            // 确保容器的二级tab可见
+                            const containerEl = $(`#ry-container-${index}`);
+                            const containerTabs = containerEl.querySelectorAll('[id^="ry-container-tabs-"]');
+                            containerTabs.forEach(tabsEl => {
+                                tabsEl.classList.remove('hidden');
+                            });
                         }
                     });
                 });
@@ -2030,22 +2130,78 @@
                         pre_stop: containerEl.querySelector('.ry-container-script-pre-stop')?.value || ''
                     };
 
+                    // 收集环境变量
+                    const env = [];
+                    const envBlocks = containerEl.querySelectorAll('[id^="ry-container-tab-env-"] .flex.gap-2');
+                    envBlocks.forEach(envBlock => {
+                        const key = envBlock.querySelector('input:nth-child(1)').value.trim();
+                        const value = envBlock.querySelector('input:nth-child(2)').value.trim();
+                        if (key) {
+                            env.push({key, value});
+                        }
+                    });
+
+                    // 收集配置文件
+                    const configMaps = [];
+                    const configBlocks = containerEl.querySelectorAll('[id^="ry-container-tab-configs-"] .bg-white.p-3.rounded-lg.border.border-gray-200');
+                    configBlocks.forEach(configBlock => {
+                        const fileName = configBlock.querySelector('input:nth-child(1)').value.trim();
+                        const containerPath = configBlock.querySelector('input:nth-child(2)').value.trim();
+                        const content = configBlock.querySelector('textarea').value.trim();
+                        if (fileName && containerPath) {
+                            configMaps.push({file_name: fileName, container_path: containerPath, content});
+                        }
+                    });
+
+                    // 收集持久化卷
+                    const volumeMounts = [];
+                    const volumeBlocks = containerEl.querySelectorAll('[id^="ry-container-tab-volumes-"] .bg-white.p-3.rounded-lg.border.border-gray-200');
+                    volumeBlocks.forEach(volumeBlock => {
+                        const name = volumeBlock.querySelector('input:nth-child(1)').value.trim();
+                        const mountPath = volumeBlock.querySelector('input:nth-child(2)').value.trim();
+                        if (name && mountPath) {
+                            volumeMounts.push({name, mount_path: mountPath});
+                        }
+                    });
+
+                    // 收集服务配置
+                    const services = [];
+                    const serviceBlocks = containerEl.querySelectorAll('[id^="ry-container-tab-services-"] .bg-white.p-3.rounded-lg.border.border-gray-200');
+                    serviceBlocks.forEach(serviceBlock => {
+                        const name = serviceBlock.querySelector('input:nth-child(1)').value.trim();
+                        const label = serviceBlock.querySelector('input:nth-child(2)').value.trim();
+                        const type = serviceBlock.querySelector('select:nth-child(1)').value;
+                        const internalPort = serviceBlock.querySelector('input:nth-child(3)').value.trim();
+                        const externalPort = serviceBlock.querySelector('input:nth-child(4)').value.trim();
+                        const protocol = serviceBlock.querySelector('select:nth-child(2)').value;
+                        if (name && label && internalPort && protocol) {
+                            services.push({
+                                name,
+                                label,
+                                type,
+                                internal_port: internalPort,
+                                external_port: externalPort,
+                                protocol
+                            });
+                        }
+                    });
+
                     const container = {
                         id: Math.floor(Math.random() * 10000),
                         release_id: window.ryGeneratedConfig?.release_id || 13394,
                         name: containerEl.querySelector('.ry-container-name').value.trim() || `container-${index}`,
                         image: containerEl.querySelector('.ry-container-image').value.trim() || 'nginx:latest',
-                        env: [], // 环境变量将在后续实现
-                        config_maps: [], // 配置文件将在后续实现
+                        env: env,
+                        config_maps: configMaps,
                         resource_request: {
                             min_cpu: parseInt(containerEl.querySelector('.ry-container-cpu').value) || 500,
                             min_memory: parseInt(containerEl.querySelector('.ry-container-memory').value) || 256
                         },
-                        volume_mounts: [], // 持久化卷将在后续实现
+                        volume_mounts: volumeMounts,
                         command: command ? command.split(' ') : [],
                         args: args ? args.split(' ') : [],
                         scripts: scripts,
-                        services: [], // 服务配置将在后续实现
+                        services: services,
                         startup_health_check: null
                     };
 
