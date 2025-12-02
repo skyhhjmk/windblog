@@ -971,6 +971,109 @@
                 addContainerBtn?.addEventListener('click', () => {
                     addContainer();
                 });
+
+                // 选项配置添加按钮处理
+                const addOptionBtn = $('#ry-add-option');
+                addOptionBtn?.addEventListener('click', () => {
+                    const optionsList = $('#ry-options-list');
+                    if (optionsList) {
+                        const optionCount = optionsList.querySelectorAll('div').length + 1;
+                        const newOptionHtml = `
+                            <div class="bg-white p-4 rounded-lg border border-gray-200">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h5 class="text-sm font-medium text-gray-800">选项 ${optionCount}</h5>
+                                    <button type="button" class="ry-delete-option text-red-600 hover:text-red-800" data-index="${optionCount - 1}">
+                                        <i class="fas fa-trash"></i> 删除
+                                    </button>
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">标签</label>
+                                        <input type="text" class="ry-option-label w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="访问端口">
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">环境变量键</label>
+                                        <input type="text" class="ry-option-env-key w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="HTTP_PORT">
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">用户界面显示的名称</label>
+                                        <input type="text" class="ry-option-ui-name w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="访问端口">
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">类型</label>
+                                        <select class="ry-option-type w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                            <option value="number">数字</option>
+                                            <option value="string">字符串</option>
+                                            <option value="boolean">布尔值</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">默认值</label>
+                                        <input type="text" class="ry-option-default w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="80">
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">验证规则</label>
+                                        <select class="ry-option-rule w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                            <option value="paramPort">端口</option>
+                                            <option value="">无</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+                                    <div class="flex items-center">
+                                        <input type="checkbox" class="ry-option-required h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                        <label class="ml-2 block text-xs font-medium text-gray-700">是否必填</label>
+                                    </div>
+
+                                    <div class="flex items-center">
+                                        <input type="checkbox" class="ry-option-disabled h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                        <label class="ml-2 block text-xs font-medium text-gray-700">是否禁用</label>
+                                    </div>
+
+                                    <div class="flex items-center">
+                                        <input type="checkbox" class="ry-option-random h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                        <label class="ml-2 block text-xs font-medium text-gray-700">是否随机生成</label>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        optionsList.insertAdjacentHTML('beforeend', newOptionHtml);
+
+                        // 更新选项计数
+                        const optionsCountEl = $('#ry-options-count');
+                        if (optionsCountEl) {
+                            optionsCountEl.textContent = optionsList.querySelectorAll('div').length;
+                        }
+                    }
+                });
+
+                // 监听删除按钮点击事件
+                document.addEventListener('click', (e) => {
+                    const deleteBtn = e.target.closest('.ry-delete-option, .text-red-600');
+                    if (!deleteBtn) return;
+
+                    // 获取要删除的元素
+                    const itemEl = deleteBtn.closest('.bg-white.p-4.rounded-lg.border.border-gray-200, .bg-white.p-3.rounded-lg.border.border-gray-200, .flex.gap-2');
+                    if (itemEl) {
+                        itemEl.remove();
+
+                        // 更新选项计数
+                        const optionsList = $('#ry-options-list');
+                        if (optionsList) {
+                            const optionsCountEl = $('#ry-options-count');
+                            if (optionsCountEl) {
+                                optionsCountEl.textContent = optionsList.querySelectorAll('div').length;
+                            }
+                        }
+                    }
+                });
             }
 
             // 重置导入表单
@@ -1347,6 +1450,42 @@
                     release_id: releaseId || 13394
                 };
 
+                // 提取所有使用的环境变量
+                function extractEnvVars(str) {
+                    if (!str) return [];
+                    const matches = str.match(/\$\{([A-Za-z0-9_]+)\}/g);
+                    if (!matches) return [];
+                    return matches.map(match => match.replace(/\$\{([A-Za-z0-9_]+)\}/, '$1'));
+                }
+
+                // 确保所有使用的环境变量被添加到容器配置中
+                containerTemplates.forEach(container => {
+                    // 收集所有使用的环境变量
+                    const usedEnvVars = new Set();
+
+                    // 检查服务配置中使用的环境变量
+                    container.services.forEach(service => {
+                        if (service.external_port) {
+                            extractEnvVars(service.external_port).forEach(envVar => usedEnvVars.add(envVar));
+                        }
+                    });
+
+                    // 添加HTTP_PORT环境变量作为默认
+                    usedEnvVars.add('HTTP_PORT');
+
+                    // 确保所有使用的环境变量被添加到容器配置中
+                    usedEnvVars.forEach(envVar => {
+                        // 检查是否已经存在该环境变量
+                        const hasEnvVar = container.env.some(env => env.key === envVar);
+                        if (!hasEnvVar) {
+                            container.env.push({
+                                key: envVar,
+                                value: envVar === 'HTTP_PORT' ? '80' : ''
+                            });
+                        }
+                    });
+                });
+
                 // 显示预览 - 添加条件检查避免访问不存在的元素
                 const previewContainer = $('#ry-preview-container');
                 if (previewContainer) {
@@ -1624,6 +1763,145 @@
                 // 重新初始化所有容器的二级tab切换功能
                 containers.forEach((container, index) => {
                     initContainerTabs(index);
+                });
+
+                // 初始化二级tab中的添加按钮事件监听
+                containers.forEach((container, index) => {
+                    const containerEl = $(`#ry-container-${index}`);
+
+                    // 服务配置添加按钮
+                    const serviceAddBtn = containerEl.querySelector('[id^="ry-container-tab-services-"] .bg-gray-50.p-3.rounded-lg .flex.items-center.justify-between button');
+                    serviceAddBtn?.addEventListener('click', () => {
+                        const serviceList = containerEl.querySelector('[id^="ry-container-tab-services-"] .bg-gray-50.p-3.rounded-lg .space-y-3');
+                        if (serviceList) {
+                            const serviceCount = serviceList.querySelectorAll('.bg-white.p-3.rounded-lg.border.border-gray-200').length + 1;
+                            const newServiceHtml = `
+                                <div class="bg-white p-3 rounded-lg border border-gray-200">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-xs font-medium text-gray-700">服务 ${serviceCount}</span>
+                                        <button type="button" class="text-red-600 hover:text-red-800 text-xs">
+                                            <i class="fas fa-trash"></i> 删除
+                                        </button>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">名称</label>
+                                            <input type="text" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="http">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">标签</label>
+                                            <input type="text" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="外部访问端口">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">类型</label>
+                                            <select class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                                <option value="external" selected>external</option>
+                                                <option value="internal">internal</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">内部端口</label>
+                                            <input type="text" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="8787">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">外部端口</label>
+                                            <input type="text" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="\${HTTP_PORT}">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">协议</label>
+                                            <select class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                                <option value="tcp" selected>tcp</option>
+                                                <option value="udp">udp</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                            serviceList.insertAdjacentHTML('beforeend', newServiceHtml);
+                        }
+                    });
+
+                    // 持久化卷添加按钮
+                    const volumeAddBtn = containerEl.querySelector('[id^="ry-container-tab-volumes-"] .bg-gray-50.p-3.rounded-lg .flex.items-center.justify-between button');
+                    volumeAddBtn?.addEventListener('click', () => {
+                        const volumeList = containerEl.querySelector('[id^="ry-container-tab-volumes-"] .bg-gray-50.p-3.rounded-lg .space-y-3');
+                        if (volumeList) {
+                            const volumeCount = volumeList.querySelectorAll('.bg-white.p-3.rounded-lg.border.border-gray-200').length + 1;
+                            const newVolumeHtml = `
+                                <div class="bg-white p-3 rounded-lg border border-gray-200">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-xs font-medium text-gray-700">卷 ${volumeCount}</span>
+                                        <button type="button" class="text-red-600 hover:text-red-800 text-xs">
+                                            <i class="fas fa-trash"></i> 删除
+                                        </button>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">卷名称</label>
+                                            <input type="text" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="uploads">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">挂载路径</label>
+                                            <input type="text" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="/app/public/uploads">
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                            volumeList.insertAdjacentHTML('beforeend', newVolumeHtml);
+                        }
+                    });
+
+                    // 环境变量添加按钮
+                    const envAddBtn = containerEl.querySelector('[id^="ry-container-tab-env-"] .bg-gray-50.p-3.rounded-lg .flex.items-center.justify-between button');
+                    envAddBtn?.addEventListener('click', () => {
+                        const envList = containerEl.querySelector('[id^="ry-container-tab-env-"] .bg-gray-50.p-3.rounded-lg .space-y-2');
+                        if (envList) {
+                            const newEnvHtml = `
+                                <div class="flex gap-2">
+                                    <input type="text" class="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="环境变量键">
+                                    <input type="text" class="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="环境变量值">
+                                    <button type="button" class="text-red-600 hover:text-red-800 self-center">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            `;
+                            envList.insertAdjacentHTML('beforeend', newEnvHtml);
+                        }
+                    });
+
+                    // 配置文件添加按钮
+                    const configAddBtn = containerEl.querySelector('[id^="ry-container-tab-configs-"] .bg-gray-50.p-3.rounded-lg .flex.items-center.justify-between button');
+                    configAddBtn?.addEventListener('click', () => {
+                        const configList = containerEl.querySelector('[id^="ry-container-tab-configs-"] .bg-gray-50.p-3.rounded-lg .space-y-3');
+                        if (configList) {
+                            const configCount = configList.querySelectorAll('.bg-white.p-3.rounded-lg.border.border-gray-200').length + 1;
+                            const newConfigHtml = `
+                                <div class="bg-white p-3 rounded-lg border border-gray-200">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-xs font-medium text-gray-700">配置文件 ${configCount}</span>
+                                        <button type="button" class="text-red-600 hover:text-red-800 text-xs">
+                                            <i class="fas fa-trash"></i> 删除
+                                        </button>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">文件名称</label>
+                                            <input type="text" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="配置设置">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">容器路径</label>
+                                            <input type="text" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="/app/.env">
+                                        </div>
+                                        <div class="md:col-span-2">
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">文件内容</label>
+                                            <textarea class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" rows="4" placeholder="文件内容"></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                            configList.insertAdjacentHTML('beforeend', newConfigHtml);
+                        }
+                    });
                 });
 
                 // 监听容器名变化，同步更新tab和标题
