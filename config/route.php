@@ -39,7 +39,7 @@ Route::get('/user/register', function (Request $request) {
     $oauthProviders = UserOAuthBinding::getSupportedProviders();
 
     // 生成CSRF token
-    $csrf = new CSRFService()->generateToken($request, '_token');
+    $csrf = (new CSRFService())->generateToken($request, '_token');
 
     return view('user/register', [
         'oauthProviders' => $oauthProviders,
@@ -57,7 +57,7 @@ Route::get('/user/login', function (Request $request) {
     $session->set('oauth_state', $oauthState);
 
     // 生成CSRF token
-    $csrf = new CSRFService()->generateToken($request, '_token');
+    $csrf = (new CSRFService())->generateToken($request, '_token');
 
     return view('user/login', [
         'oauthProviders' => $oauthProviders,
