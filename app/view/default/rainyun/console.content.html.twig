@@ -1349,13 +1349,22 @@
                     release_id: releaseId || 13394
                 };
 
-                // 显示预览
-                $('#ry-preview-container').textContent = JSON.stringify(containerTemplates, null, 2);
-                $('#ry-preview-env').textContent = JSON.stringify(allEnvVars, null, 2);
+                // 显示预览 - 添加条件检查避免访问不存在的元素
+                const previewContainer = $('#ry-preview-container');
+                if (previewContainer) {
+                    previewContainer.textContent = JSON.stringify(containerTemplates, null, 2);
+                }
+                const previewEnv = $('#ry-preview-env');
+                if (previewEnv) {
+                    previewEnv.textContent = JSON.stringify(allEnvVars, null, 2);
+                }
 
                 // 合并所有服务配置用于预览
                 const allServices = containerTemplates.flatMap(template => template.services);
-                $('#ry-preview-services').textContent = JSON.stringify(allServices, null, 2);
+                const previewServices = $('#ry-preview-services');
+                if (previewServices) {
+                    previewServices.textContent = JSON.stringify(allServices, null, 2);
+                }
 
                 // 保存配置到全局变量，供后续保存使用
                 window.ryGeneratedConfig = config;
