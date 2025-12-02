@@ -15,6 +15,7 @@
 
 use app\model\UserOAuthBinding;
 use app\service\CSRFService;
+use support\Request;
 use Webman\Route;
 
 Route::disableDefaultRoute();
@@ -33,12 +34,12 @@ Route::any('/comment/list/{postId}', [app\controller\CommentController::class, '
 Route::get('/comment/status/{id}', [app\controller\CommentController::class, 'status']);
 
 // 用户相关路由
-Route::get('/user/register', function () {
+Route::get('/user/register', function (Request $request) {
     // 获取OAuth配置
     $oauthProviders = UserOAuthBinding::getSupportedProviders();
 
     // 生成CSRF token
-    $csrf = (new CSRFService())->generateToken(request(), '_token');
+    $csrf = new CSRFService()->generateToken($request, '_token');
 
     return view('user/register', [
         'oauthProviders' => $oauthProviders,
@@ -46,17 +47,17 @@ Route::get('/user/register', function () {
     ]);
 })->name('user.register.page');
 Route::post('/user/register', [app\controller\UserController::class, 'register'])->name('user.register');
-Route::get('/user/login', function () {
+Route::get('/user/login', function (Request $request) {
     // 获取OAuth配置
     $oauthProviders = UserOAuthBinding::getSupportedProviders();
 
     // 生成OAuth state防止CSRF攻击
-    $session = request()->session();
+    $session = $request->session();
     $oauthState = bin2hex(random_bytes(16));
     $session->set('oauth_state', $oauthState);
 
     // 生成CSRF token
-    $csrf = (new CSRFService())->generateToken(request(), '_token');
+    $csrf = new CSRFService()->generateToken($request, '_token');
 
     return view('user/login', [
         'oauthProviders' => $oauthProviders,
@@ -176,6 +177,10 @@ Route::get('/sitemap/archives.xml', [app\controller\SitemapController::class, 'a
 Route::get('/g_sitemap', [app\controller\SitemapController::class, 'graphical'])->name('sitemap.graphical');
 Route::get('/g_sitemap.html', [app\controller\SitemapController::class, 'graphical'])->name('sitemap.graphical.html');
 
-Route::fallback(function () {
+Route::fallback(function (Request $request) {
+    if ($request->expectsJson()) {
+        return json(['code' => 404, 'msg' => '404 not found']);
+    }
+
     return view('error/404')->withStatus(404);
 });

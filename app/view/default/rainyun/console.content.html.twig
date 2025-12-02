@@ -1,4 +1,16 @@
 <!-- Rainyun 控制台 -->
+<title>{{ page_title|default('Rainyun 控制台') }}</title>
+
+{# PJAX SEO 数据容器 - 隐藏但可被 JS 提取 #}
+<div id="pjax-seo-data" style="display:none;">
+    {% if seo is defined %}
+        {% include 'components/seo-meta.html.twig' with {'seo': seo} %}
+    {% endif %}
+    {% if schema is defined %}
+        {% include 'components/structured-data.html.twig' with {'schema': schema} %}
+    {% endif %}
+</div>
+
 <div id="pjax-sidebar-html" style="display:none">
     {% if sidebar is defined and sidebar.widgets is defined %}
         {% for widget in sidebar.widgets %}
@@ -13,6 +25,7 @@
     {% endif %}
 </div>
 
+<div id="pjax-container">
 <div id="ry-console" class="ry-console">
     <!-- 顶部工具栏 -->
     <div class="flex items-center justify-between px-4 py-4 border-b border-gray-200">
@@ -62,6 +75,14 @@
             ] %}
             {% include 'components/breadcrumb.html.twig' %}
         </div>
+        <div id="ry-bc-import-docker" class="ry-bc hidden" data-ry-bc="import-docker">
+            {% set breadcrumbs = [
+                {'name':'首页','url':'/'},
+                {'name':'Rainyun 控制台','url':'/rainyun'},
+                {'name':'导入Docker配置','url':'#'}
+            ] %}
+            {% include 'components/breadcrumb.html.twig' %}
+        </div>
         <div id="ry-bc-manage" class="ry-bc hidden" data-ry-bc="manage">
             {% set breadcrumbs = [
                 {'name':'首页','url':'/'},
@@ -89,6 +110,10 @@
                 <button data-tab="cloudapps"
                         class="ry-nav-btn w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 font-medium text-gray-700">
                     <i class="fas fa-cloud mr-2"></i>云应用
+                </button>
+                <button data-tab="import-docker"
+                        class="ry-nav-btn w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 font-medium text-gray-700">
+                    <i class="fas fa-upload mr-2"></i>导入Docker配置
                 </button>
             </nav>
         </aside>
@@ -270,6 +295,163 @@
                     </div>
                     <div id="ry-new-msg" class="text-sm mt-2"></div>
                 </form>
+            </div>
+
+            <!-- 导入Docker配置视图 -->
+            <div id="ry-view-import-docker" class="ry-view hidden">
+                <div class="max-w-4xl space-y-6">
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-800 mb-2">导入Docker配置</h2>
+                        <p class="text-gray-600">从Docker Run命令或Docker Compose文件导入应用配置</p>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-lg border border-gray-200">
+                        <form id="ry-import-docker-form" class="space-y-4">
+                            <!-- Docker Run命令输入 -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Docker Run命令</label>
+                                <textarea id="ry-docker-run"
+                                          placeholder="例如：docker run -d -p 80:80 --name myapp -e ENV_VAR=value myimage:tag"
+                                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                          rows="3"></textarea>
+                                <p class="text-xs text-gray-500 mt-1">输入完整的Docker
+                                    Run命令，系统将自动解析镜像、环境变量和端口映射</p>
+                            </div>
+
+                            <!-- Docker Compose文件上传/输入 -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Docker Compose文件</label>
+                                <div class="space-y-2">
+                                    <input type="file" id="ry-compose-file" accept=".yml,.yaml"
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <textarea id="ry-compose-content" placeholder="或直接输入Docker Compose内容"
+                                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                              rows="6"></textarea>
+                                </div>
+                            </div>
+
+                            <!-- .env文件上传/输入 -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">.env文件（可选）</label>
+                                <div class="space-y-2">
+                                    <input type="file" id="ry-env-file" accept=".env"
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <textarea id="ry-env-content" placeholder="或直接输入.env内容"
+                                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                              rows="4"></textarea>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    上传或输入.env文件，帮助系统更好地推断应该使用什么配置</p>
+                            </div>
+
+                            <!-- 版本信息 -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">应用版本</label>
+                                    <input type="text" id="ry-app-version" placeholder="例如：v1.0.0"
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Release ID</label>
+                                    <input type="number" id="ry-release-id" placeholder="例如：13394"
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                            </div>
+
+                            <!-- 提交按钮 -->
+                            <div class="flex items-center gap-3">
+                                <button type="submit" id="ry-import-submit"
+                                        class="px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700">
+                                    导入并生成配置
+                                </button>
+                                <button type="button" id="ry-import-reset"
+                                        class="px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50">
+                                    重置
+                                </button>
+                            </div>
+
+                            <!-- 消息显示 -->
+                            <div id="ry-import-msg" class="text-sm"></div>
+                        </form>
+                    </div>
+
+                    <!-- 生成的配置编辑器 -->
+                    <div id="ry-config-editor" class="hidden">
+                        <div class="bg-white p-4 rounded-lg border border-gray-200">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-3">配置编辑器</h3>
+
+                            <!-- 版本信息 -->
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">版本号</label>
+                                <input type="text" id="ry-config-version" placeholder="例如：v1.0.0"
+                                       class="w-64 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+
+                            <!-- 选项配置与容器配置切换 -->
+                            <div class="mb-4 border-b border-gray-200">
+                                <ul class="flex space-x-8" id="ry-config-tabs">
+                                    <li>
+                                        <button type="button"
+                                                class="px-1 py-2 border-b-2 border-blue-600 text-blue-600 font-medium"
+                                                data-tab="options">
+                                            选项配置 <span id="ry-options-count"
+                                                           class="text-xs bg-blue-100 text-blue-800 rounded-full px-2 py-0.5">0</span>
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button type="button"
+                                                class="px-1 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 font-medium"
+                                                data-tab="containers">
+                                            容器配置
+                                        </button>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <!-- 选项配置 -->
+                            <div id="ry-config-tab-options" class="space-y-4">
+                                <div class="bg-gray-50 p-4 rounded-lg">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <h4 class="text-sm font-semibold text-gray-800">选项配置</h4>
+                                        <button type="button" id="ry-add-option"
+                                                class="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                                            + 添加
+                                        </button>
+                                    </div>
+
+                                    <div id="ry-options-list" class="space-y-4">
+                                        <!-- 选项配置项将动态生成 -->
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 容器列表 -->
+                            <div id="ry-containers-list" class="space-y-4">
+                                <!-- 容器配置项将动态生成 -->
+                            </div>
+
+                            <!-- 添加容器按钮 -->
+                            <div class="mt-4">
+                                <button type="button" id="ry-add-container"
+                                        class="px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700">
+                                    + 添加容器
+                                </button>
+                            </div>
+
+                            <!-- 保存按钮 -->
+                            <div class="mt-6 flex gap-3">
+                                <button type="button" id="ry-save-config"
+                                        class="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700">
+                                    保存到云应用
+                                </button>
+                                <button type="button" id="ry-back-to-import"
+                                        class="px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50">
+                                    返回修改
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </section>
     </div>
@@ -739,6 +921,1226 @@
                 }
             });
 
+            // Docker配置导入相关功能
+            function initDockerImport() {
+                // 文件上传处理
+                const composeFileInput = $('#ry-compose-file');
+                const envFileInput = $('#ry-env-file');
+
+                composeFileInput?.addEventListener('change', (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            $('#ry-compose-content').value = event.target?.result || '';
+                        };
+                        reader.readAsText(file);
+                    }
+                });
+
+                envFileInput?.addEventListener('change', (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            $('#ry-env-content').value = event.target?.result || '';
+                        };
+                        reader.readAsText(file);
+                    }
+                });
+
+                // 表单提交处理
+                const importForm = $('#ry-import-docker-form');
+                importForm?.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    await handleImportSubmit();
+                });
+
+                // 重置按钮处理
+                const resetBtn = $('#ry-import-reset');
+                resetBtn?.addEventListener('click', () => {
+                    resetImportForm();
+                });
+
+                // 保存配置按钮处理
+                const saveConfigBtn = $('#ry-save-config');
+                saveConfigBtn?.addEventListener('click', async () => {
+                    await saveConfigToCloud();
+                });
+
+                // 返回修改按钮处理
+                const backBtn = $('#ry-back-to-import');
+                backBtn?.addEventListener('click', () => {
+                    showImportForm();
+                });
+            }
+
+            // 重置导入表单
+            function resetImportForm() {
+                $('#ry-docker-run').value = '';
+                $('#ry-compose-file').value = '';
+                $('#ry-compose-content').value = '';
+                $('#ry-env-file').value = '';
+                $('#ry-env-content').value = '';
+                $('#ry-app-version').value = '';
+                $('#ry-release-id').value = '';
+                $('#ry-import-msg').textContent = '';
+                $('#ry-import-msg').className = 'text-sm';
+                showImportForm();
+            }
+
+            // 显示导入表单
+            function showImportForm() {
+                $('#ry-config-editor').classList.add('hidden');
+                $('#ry-import-docker-form').classList.remove('hidden');
+            }
+
+            // 显示配置编辑器
+            function showConfigEditor() {
+                $('#ry-import-docker-form').classList.add('hidden');
+                $('#ry-config-editor').classList.remove('hidden');
+            }
+
+            // 解析Docker Run命令
+            function parseDockerRunCommand(cmd) {
+                if (!cmd) return null;
+
+                const result = {
+                    image: '',
+                    env: [],
+                    ports: [],
+                    name: ''
+                };
+
+                // 简单解析Docker Run命令
+                const parts = cmd.split(/\s+/);
+                let inEnv = false;
+                let currentEnv = '';
+
+                for (let i = 0; i < parts.length; i++) {
+                    const part = parts[i];
+
+                    if (part === '-e' || part === '--env') {
+                        inEnv = true;
+                        currentEnv = '';
+                    } else if (inEnv) {
+                        if (part.startsWith('-')) {
+                            // 处理前一个环境变量
+                            if (currentEnv.includes('=')) {
+                                const [key, ...valueParts] = currentEnv.split('=');
+                                result.env.push({
+                                    key: key.trim(),
+                                    value: valueParts.join('=').trim()
+                                });
+                            }
+                            inEnv = false;
+                            i--;
+                        } else {
+                            currentEnv += (currentEnv ? ' ' : '') + part;
+                        }
+                    } else if (part === '-p' || part === '--publish') {
+                        // 解析端口映射
+                        if (parts[i + 1]) {
+                            const portMap = parts[++i];
+                            if (portMap.includes(':')) {
+                                const [external, internal] = portMap.split(':');
+                                result.ports.push({
+                                    external: external.trim(),
+                                    internal: internal.trim()
+                                });
+                            }
+                        }
+                    } else if (part === '--name') {
+                        // 解析容器名称
+                        if (parts[i + 1]) {
+                            result.name = parts[++i];
+                        }
+                    } else if (!part.startsWith('-') && !result.image) {
+                        // 解析镜像名称
+                        result.image = part;
+                    }
+                }
+
+                // 处理最后一个环境变量
+                if (inEnv && currentEnv.includes('=')) {
+                    const [key, ...valueParts] = currentEnv.split('=');
+                    result.env.push({
+                        key: key.trim(),
+                        value: valueParts.join('=').trim()
+                    });
+                }
+
+                return result;
+            }
+
+            // 解析Docker Compose内容
+            function parseDockerCompose(content) {
+                if (!content) return null;
+
+                // 简单解析Docker Compose YAML
+                // 这里使用正则表达式进行更详细的解析，提取服务的关键配置
+                const result = {
+                    services: []
+                };
+
+                // 提取服务块
+                const serviceBlockRegex = /^\s*([a-zA-Z0-9_-]+):\s*\n([\s\S]*?)(?=^\s*[a-zA-Z0-9_-]+:|$)/gm;
+                let match;
+
+                while ((match = serviceBlockRegex.exec(content)) !== null) {
+                    const serviceName = match[1];
+                    const serviceBlock = match[2];
+
+                    // 跳过非服务块
+                    if (serviceName === 'version' || serviceName === 'services' || serviceName === 'networks' || serviceName === 'volumes') {
+                        continue;
+                    }
+
+                    // 解析服务配置
+                    const serviceConfig = {
+                        name: serviceName,
+                        image: '',
+                        env: [],
+                        ports: [],
+                        volumes: []
+                    };
+
+                    // 提取镜像
+                    const imageRegex = /^\s*image:\s*([^\n]+)/gm;
+                    const imageMatch = imageRegex.exec(serviceBlock);
+                    if (imageMatch) {
+                        serviceConfig.image = imageMatch[1].trim();
+                    }
+
+                    // 提取环境变量
+                    const envRegex = /^\s*environment:\s*\n([\s\S]*?)(?=^\s*[a-zA-Z0-9_-]+:|$)/gm;
+                    const envMatch = envRegex.exec(serviceBlock);
+                    if (envMatch) {
+                        const envBlock = envMatch[1];
+                        const envVarRegex = /^\s*-\s*([^=]+)=([^\n]+)/gm;
+                        let envVarMatch;
+                        while ((envVarMatch = envVarRegex.exec(envBlock)) !== null) {
+                            serviceConfig.env.push({
+                                key: envVarMatch[1].trim(),
+                                value: envVarMatch[2].trim()
+                            });
+                        }
+                    }
+
+                    // 提取端口映射
+                    const portsRegex = /^\s*ports:\s*\n([\s\S]*?)(?=^\s*[a-zA-Z0-9_-]+:|$)/gm;
+                    const portsMatch = portsRegex.exec(serviceBlock);
+                    if (portsMatch) {
+                        const portsBlock = portsMatch[1];
+                        const portRegex = /^\s*-\s*([^:\n]+):([^\n]+)/gm;
+                        let portMatch;
+                        while ((portMatch = portRegex.exec(portsBlock)) !== null) {
+                            serviceConfig.ports.push({
+                                external: portMatch[1].trim(),
+                                internal: portMatch[2].trim()
+                            });
+                        }
+                    }
+
+                    result.services.push(serviceConfig);
+                }
+
+                return result;
+            }
+
+            // 解析.env文件内容
+            function parseEnvFile(content) {
+                if (!content) return [];
+
+                const envVars = [];
+                const lines = content.split('\n');
+
+                for (const line of lines) {
+                    const trimmedLine = line.trim();
+                    if (trimmedLine && !trimmedLine.startsWith('#')) {
+                        const [key, ...valueParts] = trimmedLine.split('=');
+                        if (key) {
+                            envVars.push({
+                                key: key.trim(),
+                                value: valueParts.join('=').trim()
+                            });
+                        }
+                    }
+                }
+
+                return envVars;
+            }
+
+            // 生成配置预览
+            function generateConfigPreview(dockerRunResult, composeResult, envVars, version, releaseId) {
+                // 合并环境变量
+                const allEnvVars = [...(dockerRunResult?.env || []), ...envVars];
+
+                // 生成容器模板列表（支持多容器）
+                const containerTemplates = [];
+
+                // 从Docker Run命令生成容器模板
+                if (dockerRunResult) {
+                    const containerTemplate = {
+                        id: Math.floor(Math.random() * 10000),
+                        release_id: releaseId || 13394,
+                        name: dockerRunResult?.name || 'main',
+                        image: dockerRunResult?.image || 'nginx:latest',
+                        env: allEnvVars,
+                        config_maps: [],
+                        resource_request: {
+                            min_cpu: 500,
+                            min_memory: 256
+                        },
+                        volume_mounts: [],
+                        command: [],
+                        args: [],
+                        scripts: {
+                            install: '',
+                            install_image: '',
+                            post_start: '',
+                            pre_stop: ''
+                        },
+                        services: [],
+                        startup_health_check: null
+                    };
+
+                    // 添加服务配置
+                    if (dockerRunResult?.ports?.length) {
+                        dockerRunResult.ports.forEach((port, index) => {
+                            containerTemplate.services.push({
+                                name: `http-${index}`,
+                                label: `外部访问端口 ${index + 1}`,
+                                type: 'external',
+                                internal_port: port.internal,
+                                external_port: `\${port.external}`,
+                                protocol: 'tcp'
+                            });
+                        });
+                    } else {
+                        // 默认服务配置
+                        containerTemplate.services.push({
+                            name: 'http',
+                            label: '外部访问端口',
+                            type: 'external',
+                            internal_port: '80',
+                            external_port: '${HTTP_PORT}',
+                            protocol: 'tcp'
+                        });
+                    }
+
+                    containerTemplates.push(containerTemplate);
+                }
+
+                // 从Docker Compose生成多个容器模板
+                if (composeResult?.services?.length) {
+                    composeResult.services.forEach((service, index) => {
+                        // 合并服务环境变量和全局环境变量
+                        const serviceEnvVars = [...allEnvVars, ...(service.env || [])];
+
+                        const containerTemplate = {
+                            id: Math.floor(Math.random() * 10000),
+                            release_id: releaseId || 13394,
+                            name: service.name || `service-${index}`,
+                            image: service.image || 'nginx:latest',
+                            env: serviceEnvVars,
+                            config_maps: [],
+                            resource_request: {
+                                min_cpu: 500,
+                                min_memory: 256
+                            },
+                            volume_mounts: [],
+                            command: [],
+                            args: [],
+                            scripts: {
+                                install: '',
+                                install_image: '',
+                                post_start: '',
+                                pre_stop: ''
+                            },
+                            services: [],
+                            startup_health_check: null
+                        };
+
+                        // 添加服务配置
+                        if (service.ports?.length) {
+                            service.ports.forEach((port, portIndex) => {
+                                containerTemplate.services.push({
+                                    name: `${service.name}-http-${portIndex}`,
+                                    label: `${service.name || `服务 ${index + 1}`} 外部访问端口 ${portIndex + 1}`,
+                                    type: 'external',
+                                    internal_port: port.internal,
+                                    external_port: `\${port.external}`,
+                                    protocol: 'tcp'
+                                });
+                            });
+                        } else {
+                            // 默认服务配置
+                            containerTemplate.services.push({
+                                name: `${service.name}-http`,
+                                label: `${service.name || `服务 ${index + 1}`} 外部访问端口`,
+                                type: 'external',
+                                internal_port: '80',
+                                external_port: `\${8080 + index}`,
+                                protocol: 'tcp'
+                            });
+                        }
+
+                        containerTemplates.push(containerTemplate);
+                    });
+                }
+
+                // 如果没有生成任何容器模板，添加一个默认模板
+                if (containerTemplates.length === 0) {
+                    const containerTemplate = {
+                        id: Math.floor(Math.random() * 10000),
+                        release_id: releaseId || 13394,
+                        name: 'main',
+                        image: 'nginx:latest',
+                        env: allEnvVars,
+                        config_maps: [],
+                        resource_request: {
+                            min_cpu: 500,
+                            min_memory: 256
+                        },
+                        volume_mounts: [],
+                        command: [],
+                        args: [],
+                        scripts: {
+                            install: '',
+                            install_image: '',
+                            post_start: '',
+                            pre_stop: ''
+                        },
+                        services: [
+                            {
+                                name: 'http',
+                                label: '外部访问端口',
+                                type: 'external',
+                                internal_port: '80',
+                                external_port: '${HTTP_PORT}',
+                                protocol: 'tcp'
+                            }
+                        ],
+                        startup_health_check: null
+                    };
+
+                    containerTemplates.push(containerTemplate);
+                }
+
+                // 生成完整配置，符合新API格式
+                const config = {
+                    version: version || 'v1.0.0',
+                    container_templates: containerTemplates,
+                    options: [
+                        {
+                            label: '访问端口',
+                            rule: 'paramPort',
+                            required: true,
+                            disabled: false,
+                            random: false,
+                            type: 'number',
+                            env_key: 'HTTP_PORT',
+                            default: '80',
+                            value: '80',
+                            values: null
+                        }
+                    ],
+                    release_id: releaseId || 13394
+                };
+
+                // 显示预览
+                $('#ry-preview-container').textContent = JSON.stringify(containerTemplates, null, 2);
+                $('#ry-preview-env').textContent = JSON.stringify(allEnvVars, null, 2);
+
+                // 合并所有服务配置用于预览
+                const allServices = containerTemplates.flatMap(template => template.services);
+                $('#ry-preview-services').textContent = JSON.stringify(allServices, null, 2);
+
+                // 保存配置到全局变量，供后续保存使用
+                window.ryGeneratedConfig = config;
+
+                return config;
+            }
+
+            // 处理导入表单提交
+            async function handleImportSubmit() {
+                const dockerRunCmd = $('#ry-docker-run').value.trim();
+                const composeContent = $('#ry-compose-content').value.trim();
+                const envContent = $('#ry-env-content').value.trim();
+                const version = $('#ry-app-version').value.trim();
+                const releaseId = parseInt($('#ry-release-id').value) || 0;
+
+                const msg = $('#ry-import-msg');
+
+                // 验证输入
+                if (!dockerRunCmd && !composeContent) {
+                    msg.className = 'text-red-600';
+                    msg.textContent = '请输入Docker Run命令或Docker Compose内容';
+                    return;
+                }
+
+                // 显示加载状态
+                msg.className = 'text-blue-600';
+                msg.textContent = '正在解析配置...';
+
+                try {
+                    // 解析Docker配置
+                    const dockerRunResult = dockerRunCmd ? parseDockerRunCommand(dockerRunCmd) : null;
+                    const composeResult = composeContent ? parseDockerCompose(composeContent) : null;
+                    const envVars = parseEnvFile(envContent);
+
+                    // 生成配置预览
+                    const config = generateConfigPreview(dockerRunResult, composeResult, envVars, version, releaseId);
+
+                    // 初始化配置编辑器
+                    initConfigEditor(config);
+
+                    // 显示配置编辑器
+                    showConfigEditor();
+
+                    msg.className = 'text-green-700';
+                    msg.textContent = '配置解析成功';
+                } catch (err) {
+                    msg.className = 'text-red-600';
+                    msg.textContent = '配置解析失败：' + (err.message || err);
+                }
+            }
+
+            // 初始化配置编辑器
+            function initConfigEditor(config) {
+                // 保存配置到全局变量
+                window.ryGeneratedConfig = config;
+
+                // 设置版本号
+                $('#ry-config-version').value = config.version || '';
+
+                // 初始化选项配置
+                initOptionsConfig(config.options || []);
+
+                // 初始化容器配置
+                initContainersConfig(config.container_templates || []);
+            }
+
+            // 初始化选项配置
+            function initOptionsConfig(options) {
+                const optionsList = $('#ry-options-list');
+                const optionsCount = $('#ry-options-count');
+
+                // 清空现有选项
+                optionsList.innerHTML = '';
+
+                // 更新选项计数
+                optionsCount.textContent = options.length;
+
+                // 生成选项配置项
+                options.forEach((option, index) => {
+                    const optionHtml = generateOptionHtml(option, index);
+                    optionsList.appendChild(optionHtml);
+                });
+            }
+
+            // 生成选项配置HTML
+            function generateOptionHtml(option, index) {
+                const div = document.createElement('div');
+                div.className = 'bg-white p-4 rounded-lg border border-gray-200';
+                div.dataset.index = index;
+
+                div.innerHTML = `
+                <div class="flex items-center justify-between mb-3">
+                    <h5 class="text-sm font-medium text-gray-800">选项 ${index + 1}</h5>
+                    <button type="button" class="ry-delete-option text-red-600 hover:text-red-800" data-index="${index}">
+                        <i class="fas fa-trash"></i> 删除
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">标签</label>
+                        <input type="text" class="ry-option-label w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                               value="${option.label || ''}" placeholder="访问端口">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">环境变量键</label>
+                        <input type="text" class="ry-option-env-key w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                               value="${option.env_key || ''}" placeholder="HTTP_PORT">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">用户界面显示的名称</label>
+                        <input type="text" class="ry-option-ui-name w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                               value="${option.ui_name || option.label || ''}" placeholder="访问端口">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">类型</label>
+                        <select class="ry-option-type w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="number" ${option.type === 'number' ? 'selected' : ''}>数字</option>
+                            <option value="string" ${option.type === 'string' ? 'selected' : ''}>字符串</option>
+                            <option value="boolean" ${option.type === 'boolean' ? 'selected' : ''}>布尔值</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">默认值</label>
+                        <input type="text" class="ry-option-default w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                               value="${option.default || ''}" placeholder="80">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">验证规则</label>
+                        <select class="ry-option-rule w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="paramPort" ${option.rule === 'paramPort' ? 'selected' : ''}>端口</option>
+                            <option value="" ${!option.rule ? 'selected' : ''}>无</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+                    <div class="flex items-center">
+                        <input type="checkbox" class="ry-option-required h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                               ${option.required ? 'checked' : ''}>
+                        <label class="ml-2 block text-xs font-medium text-gray-700">是否必填</label>
+                    </div>
+
+                    <div class="flex items-center">
+                        <input type="checkbox" class="ry-option-disabled h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                               ${option.disabled ? 'checked' : ''}>
+                        <label class="ml-2 block text-xs font-medium text-gray-700">是否禁用</label>
+                    </div>
+
+                    <div class="flex items-center">
+                        <input type="checkbox" class="ry-option-random h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                               ${option.random ? 'checked' : ''}>
+                        <label class="ml-2 block text-xs font-medium text-gray-700">是否随机生成</label>
+                    </div>
+                </div>
+            `;
+
+                return div;
+            }
+
+            // 初始化容器配置
+            function initContainersConfig(containers) {
+                const containersList = $('#ry-containers-list');
+                const configTabs = $('#ry-config-tabs');
+
+                // 清空现有容器
+                containersList.innerHTML = '';
+
+                // 添加容器标签到配置选项卡
+                containers.forEach((container, index) => {
+                    // 添加容器标签到选项卡
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                    <button type="button" class="px-1 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 font-medium" data-tab="container-${index}">
+                        ${container.name || `容器 ${index + 1}`}
+                    </button>
+                `;
+                    configTabs.appendChild(li);
+
+                    // 生成容器配置HTML
+                    const containerHtml = generateContainerHtml(container, index);
+                    containersList.appendChild(containerHtml);
+                });
+
+                // 初始化选项卡切换
+                initConfigTabs();
+            }
+
+            // 生成容器配置HTML
+            function generateContainerHtml(container, index) {
+                const div = document.createElement('div');
+                div.className = 'bg-white p-4 rounded-lg border border-gray-200';
+                div.id = `ry-container-${index}`;
+
+                div.innerHTML = `
+                <div class="mb-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <h4 class="text-sm font-semibold text-gray-800">${container.name || `容器 ${index + 1}`}</h4>
+                        <button type="button" class="text-red-600 hover:text-red-800" data-index="${index}">
+                            <i class="fas fa-trash"></i> 删除
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">容器名称</label>
+                            <input type="text" class="ry-container-name w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                   value="${container.name || ''}" placeholder="main">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">镜像</label>
+                            <input type="text" class="ry-container-image w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                   value="${container.image || ''}" placeholder="nginx:latest">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">最小CPU(毫核)</label>
+                            <input type="range" class="ry-container-cpu w-full" min="500" max="32768" step="500"
+                                   value="${container.resource_request?.min_cpu || 500}">
+                            <div class="flex justify-between text-xs text-gray-500 mt-1">
+                                <span>500</span>
+                                <span><span class="ry-container-cpu-value">${container.resource_request?.min_cpu || 500}</span> 毫核</span>
+                                <span>32768</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">最小内存(MB)</label>
+                            <input type="range" class="ry-container-memory w-full" min="256" max="32768" step="256"
+                                   value="${container.resource_request?.min_memory || 256}">
+                            <div class="flex justify-between text-xs text-gray-500 mt-1">
+                                <span>256</span>
+                                <span><span class="ry-container-memory-value">${container.resource_request?.min_memory || 256}</span> MB</span>
+                                <span>32768</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 容器配置标签页 -->
+                    <div class="border-b border-gray-200 mb-3">
+                        <ul class="flex space-x-6" id="ry-container-tabs-${index}">
+                            <li>
+                                <button type="button" class="px-1 py-2 border-b-2 border-blue-600 text-blue-600 font-medium text-sm" data-tab="commands">
+                                    命令与参数
+                                </button>
+                            </li>
+                            <li>
+                                <button type="button" class="px-1 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 font-medium text-sm" data-tab="scripts">
+                                    脚本设定
+                                </button>
+                            </li>
+                            <li>
+                                <button type="button" class="px-1 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 font-medium text-sm" data-tab="configs">
+                                    配置文件 <span class="text-xs bg-blue-100 text-blue-800 rounded-full px-2 py-0.5">${container.config_maps?.length || 0}</span>
+                                </button>
+                            </li>
+                            <li>
+                                <button type="button" class="px-1 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 font-medium text-sm" data-tab="env">
+                                    环境变量 <span class="text-xs bg-blue-100 text-blue-800 rounded-full px-2 py-0.5">${container.env?.length || 0}</span>
+                                </button>
+                            </li>
+                            <li>
+                                <button type="button" class="px-1 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 font-medium text-sm" data-tab="volumes">
+                                    持久化卷 <span class="text-xs bg-blue-100 text-blue-800 rounded-full px-2 py-0.5">${container.volume_mounts?.length || 0}</span>
+                                </button>
+                            </li>
+                            <li>
+                                <button type="button" class="px-1 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 font-medium text-sm" data-tab="services">
+                                    服务配置 <span class="text-xs bg-blue-100 text-blue-800 rounded-full px-2 py-0.5">${container.services?.length || 0}</span>
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- 命令与参数 -->
+                    <div id="ry-container-tab-commands-${index}" class="space-y-3">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">运行命令 Command</label>
+                                <input type="text" class="ry-container-command w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                       value="${container.command?.join(' ') || ''}" placeholder="例如：/bin/sh，调用+号添加更多参数，例如-c，即组合成/bin/sh -c">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">命令参数 Args</label>
+                                <input type="text" class="ry-container-args w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                       value="${container.args?.join(' ') || ''}" placeholder="例如：cd /workspace && java -jar server.jar">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 脚本设定 -->
+                    <div id="ry-container-tab-scripts-${index}" class="space-y-3 hidden">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">install</label>
+                                <textarea class="ry-container-script-install w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                          rows="2" placeholder="安装脚本">${container.scripts?.install || ''}</textarea>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">install_image</label>
+                                <textarea class="ry-container-script-install-image w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                          rows="2" placeholder="安装镜像脚本">${container.scripts?.install_image || ''}</textarea>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">post_start</label>
+                                <textarea class="ry-container-script-post-start w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                          rows="2" placeholder="启动后脚本">${container.scripts?.post_start || ''}</textarea>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">pre_stop</label>
+                                <textarea class="ry-container-script-pre-stop w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                          rows="2" placeholder="停止前脚本">${container.scripts?.pre_stop || ''}</textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 配置文件 -->
+                    <div id="ry-container-tab-configs-${index}" class="space-y-3 hidden">
+                        <div class="bg-gray-50 p-3 rounded-lg">
+                            <div class="flex items-center justify-between mb-2">
+                                <h5 class="text-xs font-medium text-gray-800">配置文件</h5>
+                                <button type="button" class="px-2 py-1 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                                    + 添加
+                                </button>
+                            </div>
+
+                            <div class="space-y-3">
+                                ${container.config_maps?.map((config, configIndex) => `
+                                    <div class="bg-white p-3 rounded-lg border border-gray-200">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-xs font-medium text-gray-700">配置文件 ${configIndex + 1}</span>
+                                            <button type="button" class="text-red-600 hover:text-red-800 text-xs">
+                                                <i class="fas fa-trash"></i> 删除
+                                            </button>
+                                        </div>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">文件名称</label>
+                                                <input type="text" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                       value="${config.file_name || ''}" placeholder="配置设置">
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">容器路径</label>
+                                                <input type="text" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                       value="${config.container_path || ''}" placeholder="/app/.env">
+                                            </div>
+                                        </div>
+                                        <div class="mt-3">
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">文件内容</label>
+                                            <textarea class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                      rows="4" placeholder="文件内容">${config.content || ''}</textarea>
+                                        </div>
+                                    </div>
+                                `).join('') || '<div class="text-xs text-gray-500 text-center py-3">暂无配置文件</div>'}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 环境变量 -->
+                    <div id="ry-container-tab-env-${index}" class="space-y-3 hidden">
+                        <div class="bg-gray-50 p-3 rounded-lg">
+                            <div class="flex items-center justify-between mb-2">
+                                <h5 class="text-xs font-medium text-gray-800">环境变量</h5>
+                                <button type="button" class="px-2 py-1 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                                    + 添加
+                                </button>
+                            </div>
+
+                            <div class="space-y-2">
+                                ${container.env?.map((env, envIndex) => `
+                                    <div class="flex gap-2">
+                                        <input type="text" class="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                               value="${env.key || ''}" placeholder="环境变量键">
+                                        <input type="text" class="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                               value="${env.value || ''}" placeholder="环境变量值">
+                                        <button type="button" class="text-red-600 hover:text-red-800 self-center">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                `).join('') || '<div class="text-xs text-gray-500 text-center py-3">暂无环境变量</div>'}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 持久化卷 -->
+                    <div id="ry-container-tab-volumes-${index}" class="space-y-3 hidden">
+                        <div class="bg-gray-50 p-3 rounded-lg">
+                            <div class="flex items-center justify-between mb-2">
+                                <h5 class="text-xs font-medium text-gray-800">持久化卷</h5>
+                                <button type="button" class="px-2 py-1 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                                    + 添加
+                                </button>
+                            </div>
+
+                            <div class="space-y-3">
+                                ${container.volume_mounts?.map((volume, volumeIndex) => `
+                                    <div class="bg-white p-3 rounded-lg border border-gray-200">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-xs font-medium text-gray-700">卷 ${volumeIndex + 1}</span>
+                                            <button type="button" class="text-red-600 hover:text-red-800 text-xs">
+                                                <i class="fas fa-trash"></i> 删除
+                                            </button>
+                                        </div>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">卷名称</label>
+                                                <input type="text" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                       value="${volume.name || ''}" placeholder="uploads">
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">挂载路径</label>
+                                                <input type="text" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                       value="${volume.mount_path || ''}" placeholder="/app/public/uploads">
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).join('') || '<div class="text-xs text-gray-500 text-center py-3">暂无持久化卷</div>'}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 服务配置 -->
+                    <div id="ry-container-tab-services-${index}" class="space-y-3 hidden">
+                        <div class="bg-gray-50 p-3 rounded-lg">
+                            <div class="flex items-center justify-between mb-2">
+                                <h5 class="text-xs font-medium text-gray-800">服务配置</h5>
+                                <button type="button" class="px-2 py-1 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                                    + 添加
+                                </button>
+                            </div>
+
+                            <div class="space-y-3">
+                                ${container.services?.map((service, serviceIndex) => `
+                                    <div class="bg-white p-3 rounded-lg border border-gray-200">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-xs font-medium text-gray-700">服务 ${serviceIndex + 1}</span>
+                                            <button type="button" class="text-red-600 hover:text-red-800 text-xs">
+                                                <i class="fas fa-trash"></i> 删除
+                                            </button>
+                                        </div>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">名称</label>
+                                                <input type="text" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                       value="${service.name || ''}" placeholder="http">
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">标签</label>
+                                                <input type="text" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                       value="${service.label || ''}" placeholder="外部访问端口">
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">类型</label>
+                                                <select class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                                    <option value="external" ${service.type === 'external' ? 'selected' : ''}>external</option>
+                                                    <option value="internal" ${service.type === 'internal' ? 'selected' : ''}>internal</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">内部端口</label>
+                                                <input type="text" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                       value="${service.internal_port || ''}" placeholder="8787">
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">外部端口</label>
+                                                <input type="text" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                       value="${service.external_port || ''}" placeholder="${service.external_port || '${HTTP_PORT}'}">
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">协议</label>
+                                                <select class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                                    <option value="tcp" ${service.protocol === 'tcp' ? 'selected' : ''}>tcp</option>
+                                                    <option value="udp" ${service.protocol === 'udp' ? 'selected' : ''}>udp</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).join('') || '<div class="text-xs text-gray-500 text-center py-3">暂无服务配置</div>'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+                // 初始化容器标签页切换
+                initContainerTabs(index);
+
+                // 初始化CPU和内存滑块
+                initContainerSliders(index);
+
+                return div;
+            }
+
+            // 初始化配置选项卡
+            function initConfigTabs() {
+                const tabs = $$('#ry-config-tabs button');
+
+                tabs.forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        // 移除所有激活状态
+                        tabs.forEach(t => {
+                            t.classList.remove('border-blue-600', 'text-blue-600');
+                            t.classList.add('border-transparent', 'text-gray-500');
+                        });
+
+                        // 添加当前激活状态
+                        tab.classList.remove('border-transparent', 'text-gray-500');
+                        tab.classList.add('border-blue-600', 'text-blue-600');
+
+                        // 显示对应的内容
+                        const tabId = tab.getAttribute('data-tab');
+                        $$('[id^="ry-config-tab-"]').forEach(content => {
+                            content.classList.add('hidden');
+                        });
+                        $$('[id^="ry-container-"]').forEach(content => {
+                            content.classList.add('hidden');
+                        });
+
+                        if (tabId === 'options') {
+                            $('#ry-config-tab-options').classList.remove('hidden');
+                            $('#ry-containers-list').classList.add('hidden');
+                        } else if (tabId === 'containers') {
+                            $('#ry-config-tab-options').classList.add('hidden');
+                            $('#ry-containers-list').classList.remove('hidden');
+                        } else if (tabId.startsWith('container-')) {
+                            const index = tabId.replace('container-', '');
+                            $('#ry-config-tab-options').classList.add('hidden');
+                            $('#ry-containers-list').classList.remove('hidden');
+                            $(`#ry-container-${index}`).classList.remove('hidden');
+                        }
+                    });
+                });
+            }
+
+            // 初始化容器标签页
+            function initContainerTabs(containerIndex) {
+                const tabs = $$(`#ry-container-tabs-${containerIndex} button`);
+
+                tabs.forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        // 移除所有激活状态
+                        tabs.forEach(t => {
+                            t.classList.remove('border-blue-600', 'text-blue-600');
+                            t.classList.add('border-transparent', 'text-gray-500');
+                        });
+
+                        // 添加当前激活状态
+                        tab.classList.remove('border-transparent', 'text-gray-500');
+                        tab.classList.add('border-blue-600', 'text-blue-600');
+
+                        // 显示对应的内容
+                        const tabId = tab.getAttribute('data-tab');
+                        $$(`[id^="ry-container-tab-"]`).forEach(content => {
+                            content.classList.add('hidden');
+                        });
+
+                        $(`#ry-container-tab-${tabId}-${containerIndex}`).classList.remove('hidden');
+                    });
+                });
+            }
+
+            // 初始化容器滑块
+            function initContainerSliders(containerIndex) {
+                const cpuSlider = $(`#ry-container-${containerIndex} .ry-container-cpu`);
+                const cpuValue = $(`#ry-container-${containerIndex} .ry-container-cpu-value`);
+                const memorySlider = $(`#ry-container-${containerIndex} .ry-container-memory`);
+                const memoryValue = $(`#ry-container-${containerIndex} .ry-container-memory-value`);
+
+                if (cpuSlider && cpuValue) {
+                    cpuSlider.addEventListener('input', () => {
+                        cpuValue.textContent = cpuSlider.value;
+                    });
+                }
+
+                if (memorySlider && memoryValue) {
+                    memorySlider.addEventListener('input', () => {
+                        memoryValue.textContent = memorySlider.value;
+                    });
+                }
+            }
+
+            // 保存配置到云应用
+            async function saveConfigToCloud() {
+                // 从UI收集配置
+                const config = collectConfigFromUI();
+                const msg = $('#ry-import-msg');
+
+                if (!config) {
+                    msg.className = 'text-red-600';
+                    msg.textContent = '没有可保存的配置';
+                    return;
+                }
+
+                // 显示加载状态
+                msg.className = 'text-blue-600';
+                msg.textContent = '正在保存配置到云应用...';
+
+                try {
+                    // 调用API保存配置
+                    const result = await APIS.saveCloudAppConfig(config);
+
+                    msg.className = 'text-green-700';
+                    msg.textContent = '配置保存成功';
+
+                    // 重置表单
+                    setTimeout(() => {
+                        resetImportForm();
+                    }, 1500);
+                } catch (err) {
+                    msg.className = 'text-red-600';
+                    msg.textContent = '配置保存失败：' + (err.message || err);
+                }
+            }
+
+            // 从UI收集配置
+            function collectConfigFromUI() {
+                const version = $('#ry-config-version').value.trim();
+
+                // 收集选项配置
+                const options = [];
+                const optionElements = $$('#ry-options-list > div');
+                optionElements.forEach(optionEl => {
+                    const option = {
+                        label: optionEl.querySelector('.ry-option-label').value.trim(),
+                        env_key: optionEl.querySelector('.ry-option-env-key').value.trim(),
+                        type: optionEl.querySelector('.ry-option-type').value,
+                        default: optionEl.querySelector('.ry-option-default').value.trim(),
+                        rule: optionEl.querySelector('.ry-option-rule').value,
+                        required: optionEl.querySelector('.ry-option-required').checked,
+                        disabled: optionEl.querySelector('.ry-option-disabled').checked,
+                        random: optionEl.querySelector('.ry-option-random').checked,
+                        value: optionEl.querySelector('.ry-option-default').value.trim(),
+                        values: null
+                    };
+                    options.push(option);
+                });
+
+                // 收集容器配置
+                const containers = [];
+                const containerElements = $$('[id^="ry-container-"]');
+                containerElements.forEach((containerEl, index) => {
+                    // 收集命令与参数
+                    const command = containerEl.querySelector('.ry-container-command').value.trim();
+                    const args = containerEl.querySelector('.ry-container-args').value.trim();
+
+                    // 收集脚本设定
+                    const scripts = {
+                        install: containerEl.querySelector('.ry-container-script-install')?.value || '',
+                        install_image: containerEl.querySelector('.ry-container-script-install-image')?.value || '',
+                        post_start: containerEl.querySelector('.ry-container-script-post-start')?.value || '',
+                        pre_stop: containerEl.querySelector('.ry-container-script-pre-stop')?.value || ''
+                    };
+
+                    const container = {
+                        id: Math.floor(Math.random() * 10000),
+                        release_id: window.ryGeneratedConfig?.release_id || 13394,
+                        name: containerEl.querySelector('.ry-container-name').value.trim() || `container-${index}`,
+                        image: containerEl.querySelector('.ry-container-image').value.trim() || 'nginx:latest',
+                        env: [], // 环境变量将在后续实现
+                        config_maps: [], // 配置文件将在后续实现
+                        resource_request: {
+                            min_cpu: parseInt(containerEl.querySelector('.ry-container-cpu').value) || 500,
+                            min_memory: parseInt(containerEl.querySelector('.ry-container-memory').value) || 256
+                        },
+                        volume_mounts: [], // 持久化卷将在后续实现
+                        command: command ? command.split(' ') : [],
+                        args: args ? args.split(' ') : [],
+                        scripts: scripts,
+                        services: [], // 服务配置将在后续实现
+                        startup_health_check: null
+                    };
+
+                    containers.push(container);
+                });
+
+                return {
+                    version: version || 'v1.0.0',
+                    container_templates: containers,
+                    options: options,
+                    release_id: window.ryGeneratedConfig?.release_id || 13394
+                };
+            }
+
+            // 扩展API服务
+            APIS.saveCloudAppConfig = async function (config) {
+                if (!config) throw new Error('缺少配置参数');
+
+                // 使用新的API URL，包含版本参数
+                const url = `${this.base()}/product/rca/appstore/7117/release?version=${encodeURIComponent(config.version || 'v1.0.0')}`;
+                return new Promise((resolve, reject) => {
+                    try {
+                        const xhr = new XMLHttpRequest();
+                        xhr.open('PATCH', url, true);
+                        const {apiKey} = getCfg();
+                        if (apiKey) xhr.setRequestHeader('x-api-key', apiKey);
+                        xhr.setRequestHeader('Content-Type', 'application/json');
+
+                        xhr.onload = function () {
+                            if (xhr.status === 200 || xhr.status === 201) {
+                                try {
+                                    resolve(JSON.parse(xhr.responseText));
+                                } catch (e) {
+                                    resolve({});
+                                }
+                            } else if (xhr.status === 0) {
+                                reject(new Error('网络请求失败，可能是跨域限制导致'));
+                            } else {
+                                reject(new Error(`保存配置失败: HTTP状态码 ${xhr.status}`));
+                            }
+                        };
+
+                        xhr.onerror = function () {
+                            reject(new Error('网络请求错误'));
+                        };
+
+                        xhr.timeout = 15000;
+                        xhr.ontimeout = function () {
+                            reject(new Error('请求超时'));
+                        };
+
+                        xhr.send(JSON.stringify(config));
+                    } catch (err) {
+                        reject(err);
+                    }
+                });
+            };
+
+            // 获取应用版本配置
+            APIS.getAppRelease = async function (version) {
+                if (!version) throw new Error('缺少版本参数');
+
+                const url = `${this.base()}/product/rca/appstore/7117/release?version=${encodeURIComponent(version)}`;
+                return new Promise((resolve, reject) => {
+                    try {
+                        const xhr = new XMLHttpRequest();
+                        xhr.open('GET', url, true);
+                        const {apiKey} = getCfg();
+                        if (apiKey) xhr.setRequestHeader('x-api-key', apiKey);
+                        xhr.setRequestHeader('Content-Type', 'application/json');
+
+                        xhr.onload = function () {
+                            if (xhr.status === 200) {
+                                try {
+                                    resolve(JSON.parse(xhr.responseText));
+                                } catch (e) {
+                                    reject(new Error('解析响应失败'));
+                                }
+                            } else if (xhr.status === 0) {
+                                reject(new Error('网络请求失败，可能是跨域限制导致'));
+                            } else {
+                                reject(new Error(`获取版本配置失败: HTTP状态码 ${xhr.status}`));
+                            }
+                        };
+
+                        xhr.onerror = function () {
+                            reject(new Error('网络请求错误'));
+                        };
+
+                        xhr.timeout = 15000;
+                        xhr.ontimeout = function () {
+                            reject(new Error('请求超时'));
+                        };
+
+                        xhr.send();
+                    } catch (err) {
+                        reject(err);
+                    }
+                });
+            };
+
+            // 初始化Docker导入功能
+            initDockerImport();
+
             // 默认打开云应用（或概览）
             switchTab('cloudapps');
         }
@@ -756,3 +2158,34 @@
         });
     })();
 </script>
+
+    <script>
+        (function () {
+            function injectSidebar() {
+                var t = document.getElementById('pjax-sidebar-html');
+                var c = document.getElementById('sidebar-container');
+                if (!t || !c) return;
+
+                if (window.PJAX || window.jQuery) {
+                    try {
+                        document.dispatchEvent(new CustomEvent('pjax:sidebarReady'));
+                    } catch (_) {
+                    }
+                } else {
+                    c.innerHTML = t.innerHTML || '';
+                }
+                if (c.innerHTML !== t.innerHTML) {
+                    c.innerHTML = t.innerHTML || '';
+                    try {
+                        document.dispatchEvent(new Event('sidebar:updated'));
+                    } catch (_) {
+                    }
+                }
+            }
+
+            injectSidebar();
+            document.addEventListener('page:ready', injectSidebar);
+        })();
+    </script>
+</div>
+</div>

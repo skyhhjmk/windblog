@@ -12,6 +12,7 @@
         {% endfor %}
     {% endif %}
 </div>
+<div id="pjax-container">
 <div class="mb-8">
     <!-- 基础信息输入 -->
     <div class="mb-8 bg-gray-50 rounded-xl p-5 border border-gray-200">
@@ -548,7 +549,7 @@
             tabsWrap.className = 'w-full';
 
             const tabsNav = document.createElement('div');
-            tabsNav.className = 'sticky top-0 z-10 bg-white flex flex-wrap gap-2 mb-4 border-b border-gray-200';
+            tabsNav.className = 'sticky top-16 z-10 bg-white flex flex-wrap gap-2 mb-4 border-b border-gray-200';
 
             const tabDefs = [
                 {id: 'commands', label: '命令与参数'},
@@ -661,6 +662,9 @@
                         } else if (fieldName === 'scripts' && typeof fieldValue === 'object' && fieldValue !== null) {
                             // 脚本（单卡片、文本域编辑）
                             renderScriptsField(fieldValue, groupContainer);
+                        } else if (fieldName === 'config_maps' && Array.isArray(fieldValue)) {
+                            // 配置文件（configmap）数组
+                            renderConfigMapsField(fieldValue, groupContainer);
                         } else {
                             // 普通字段处理
                             addConfigField(fieldName, fieldValue, groupContainer);
@@ -1439,6 +1443,144 @@
             });
 
             container.appendChild(wrap);
+        }
+
+        // 渲染配置文件（configmap）字段
+        function renderConfigMapsField(configMaps, container) {
+            if (!Array.isArray(configMaps)) {
+                return;
+            }
+
+            const configMapsContainer = document.createElement('div');
+            configMapsContainer.className = 'configmaps-container space-y-4';
+
+            configMaps.forEach((configMap, index) => {
+                const configMapCard = document.createElement('div');
+                configMapCard.className = 'bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow';
+                configMapCard.dataset.configmapJson = JSON.stringify(configMap);
+
+                // 标题栏
+                const header = document.createElement('div');
+                header.className = 'flex justify-between items-start mb-3 pb-2 border-b border-gray-200';
+
+                const title = document.createElement('h3');
+                title.className = 'text-base font-medium text-gray-800';
+                title.textContent = `配置文件 ${index + 1}`;
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.type = 'button';
+                deleteBtn.className = 'text-gray-400 hover:text-red-600 transition-colors';
+                deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+                deleteBtn.addEventListener('click', function () {
+                    if (confirm('确定删除此配置文件吗？')) {
+                        configMapCard.remove();
+                    }
+                });
+
+                header.appendChild(title);
+                header.appendChild(deleteBtn);
+                configMapCard.appendChild(header);
+
+                // 表单区域
+                const form = document.createElement('div');
+                form.className = 'space-y-3';
+
+                // 创建输入字段
+                const createField = (label, value, className, type = 'text', placeholder = '') => {
+                    const field = document.createElement('div');
+                    field.className = 'space-y-1';
+
+                    const labelEl = document.createElement('label');
+                    labelEl.className = 'block text-xs font-medium text-gray-600';
+                    labelEl.textContent = label;
+
+                    const input = document.createElement('input');
+                    input.type = type;
+                    input.className = `${className} w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500`;
+                    input.value = value || '';
+                    input.placeholder = placeholder;
+
+                    field.appendChild(labelEl);
+                    field.appendChild(input);
+                    return field;
+                };
+
+                // 创建文本域字段
+                const createTextarea = (label, value, className, placeholder = '') => {
+                    const field = document.createElement('div');
+                    field.className = 'space-y-1';
+
+                    const labelEl = document.createElement('label');
+                    labelEl.className = 'block text-xs font-medium text-gray-600';
+                    labelEl.textContent = label;
+
+                    const textarea = document.createElement('textarea');
+                    textarea.className = `${className} w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500`;
+                    textarea.value = value || '';
+                    textarea.placeholder = placeholder;
+                    textarea.rows = 10;
+                    textarea.style.resize = 'vertical';
+
+                    field.appendChild(labelEl);
+                    field.appendChild(textarea);
+                    return field;
+                };
+
+                // 文件名
+                form.appendChild(createField('文件名', configMap.filename || configMap.file_name, 'configmap-filename-edit', 'text', '配置设置'));
+
+                // 容器内路径
+                form.appendChild(createField('容器内路径', configMap.container_path, 'configmap-container-path-edit', 'text', '/app/.env'));
+
+                // 配置文件内容
+                form.appendChild(createTextarea('配置文件内容', configMap.content, 'configmap-content-edit', '配置文件内容'));
+
+                configMapCard.appendChild(form);
+                configMapsContainer.appendChild(configMapCard);
+            });
+
+            // 新增配置文件按钮
+            const addBtn = document.createElement('button');
+            addBtn.type = 'button';
+            addBtn.className = 'mt-3 bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 px-4 rounded-lg transition-colors text-sm flex items-center justify-center';
+            addBtn.innerHTML = '<i class="fas fa-plus mr-1"></i> 新增配置文件';
+            addBtn.addEventListener('click', function () {
+                const newCard = document.createElement('div');
+                newCard.className = 'configmap-new-card bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow';
+
+                newCard.innerHTML = `
+                    <div class="flex justify-between items-start mb-3 pb-2 border-b border-gray-200">
+                        <h3 class="text-base font-medium text-gray-800">新配置文件</h3>
+                        <button type="button" class="text-gray-400 hover:text-red-600 transition-colors delete-configmap-btn">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="space-y-1">
+                            <label class="block text-xs font-medium text-gray-600">文件名</label>
+                            <input type="text" class="configmap-filename w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="配置设置">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-xs font-medium text-gray-600">容器内路径</label>
+                            <input type="text" class="configmap-container-path w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="/app/.env">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-xs font-medium text-gray-600">配置文件内容</label>
+                            <textarea class="configmap-content w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" rows="10" placeholder="配置文件内容"></textarea>
+                        </div>
+                    </div>
+                `;
+
+                // 添加删除按钮事件
+                newCard.querySelector('.delete-configmap-btn').addEventListener('click', function () {
+                    newCard.remove();
+                });
+
+                configMapsContainer.appendChild(newCard);
+            });
+
+            container.appendChild(configMapsContainer);
+            container.appendChild(addBtn);
         }
 
         // 添加配置字段
@@ -2684,3 +2826,4 @@
         document.addEventListener('page:ready', injectSidebar);
     })();
 </script>
+</div>

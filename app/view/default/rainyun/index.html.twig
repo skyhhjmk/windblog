@@ -17,3 +17,30 @@
         </div>
     </div>
 {% endblock %}
+
+{% block extra_css %}
+    <style>
+        /* 隐藏雨云控制台页面的侧边栏 */
+        body.rainyun-console #sidebar-container {
+            display: none !important;
+        }
+
+        /* 让主内容区域占据整个宽度 */
+        body.rainyun-console #pjax-container {
+            width: 100% !important;
+        }
+
+        /* 调整主内容区域的内边距 */
+        body.rainyun-console .blog-container {
+            padding-left: 0;
+            padding-right: 0;
+        }
+    </style>
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        // 添加类到body，用于隐藏侧边栏
+        document.body.classList.add('rainyun-console');
+    </script>
+{% endblock %}

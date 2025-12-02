@@ -129,10 +129,10 @@ class StaticGenerator
                     Log::warning('StaticGenerator 消费轮询异常: ' . $errorMsg);
 
                     // 检测通道连接断开，触发自愈
-                    if (strpos($errorMsg, 'Channel connection is closed') !== false ||
-                        strpos($errorMsg, 'Broken pipe') !== false ||
-                        strpos($errorMsg, 'connection is closed') !== false ||
-                        strpos($errorMsg, 'on null') !== false) {
+                    if (str_contains($errorMsg, 'Channel connection is closed') ||
+                        str_contains($errorMsg, 'Broken pipe') ||
+                        str_contains($errorMsg, 'connection is closed') ||
+                        str_contains($errorMsg, 'on null')) {
                         Log::warning('StaticGenerator 检测到连接断开，尝试重建连接');
                         $this->reconnectMq();
                     }
