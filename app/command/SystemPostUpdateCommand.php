@@ -57,10 +57,9 @@ class SystemPostUpdateCommand extends Command
             $output->writeln('<info>✓ 应用缓存已清理</info>');
         }
 
-        // 4) 记录版本（使用 blog_config 以保持与全局配置一致的存取格式与缓存策略）
+        // 4) 记录版本
         try {
             if (is_string($version) && $version !== '') {
-                // set=true 将 $version 写入 settings.value(JSON)，且不使用缓存
                 blog_config('system_app_version', $version, false, false, true);
             }
         } catch (\Throwable $e) {

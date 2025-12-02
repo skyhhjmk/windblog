@@ -316,6 +316,13 @@ return [
                 'type' => 1,
                 'weight' => 0,
             ],
+            [
+                'title' => '系统更新',
+                'key' => 'plugin\\admin\\app\\controller\\UpdateController',
+                'href' => '/app/admin/update/index',
+                'type' => 1,
+                'weight' => 0,
+            ],
         ],
     ],
     [

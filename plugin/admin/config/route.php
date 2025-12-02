@@ -30,6 +30,7 @@ use plugin\admin\app\controller\PostsController;
 use plugin\admin\app\controller\SidebarController;
 use plugin\admin\app\controller\StaticCacheController;
 use plugin\admin\app\controller\TagController;
+use plugin\admin\app\controller\UpdateController;
 use plugin\admin\app\controller\WpImportController;
 use support\Request;
 use support\Response;
@@ -189,6 +190,18 @@ Route::group('/app/admin', function () {
         Route::get('/config', [plugin\admin\app\controller\AdsController::class, 'config']);
         Route::get('/config/get', [plugin\admin\app\controller\AdsController::class, 'getConfig']);
         Route::post('/config/save', [plugin\admin\app\controller\AdsController::class, 'saveConfig']);
+    });
+
+    // Update 路由
+    Route::group('/update', function () {
+        Route::get('', [UpdateController::class, 'index']);
+        Route::get('/', [UpdateController::class, 'index']);
+        Route::get('/index', [UpdateController::class, 'index']);
+        Route::any('/check', [UpdateController::class, 'checkVersion']);
+        Route::post('/execute', [UpdateController::class, 'executeUpdate']);
+        Route::get('/logs', [UpdateController::class, 'viewLogs']);
+        Route::post('/migrate', [UpdateController::class, 'runMigrations']);
+        Route::post('/set-mirror', [UpdateController::class, 'setMirror']);
     });
 
     // Tag 路由
