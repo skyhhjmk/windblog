@@ -104,7 +104,7 @@ ES 仅仅被用于搜索优化，这也许说得过去
 基本依赖：
 
 - PostgreSQL（可选 MySQL/SQLite）
-- PHP >= 8.3
+- PHP >= 8.4
 - PHP PDO 扩展
 - PHP pdo_pgsql 扩展（可选其他驱动以支持其他数据库）
 

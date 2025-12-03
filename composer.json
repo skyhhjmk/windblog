@@ -25,7 +25,7 @@
   },
   "version": "1.11.0",
   "require": {
-    "php": ">=8.3",
+    "php": ">=8.4",
     "workerman/webman-framework": "^2.1",
     "monolog/monolog": "^2.10",
     "twig/twig": "^3.22",
