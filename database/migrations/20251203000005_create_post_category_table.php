@@ -1,0 +1,63 @@
+<?php
+
+use Phinx\Migration\AbstractMigration;
+
+/**
+ * 创建文章-分类关联表迁移文件
+ */
+class CreatePostCategoryTable extends AbstractMigration
+{
+    /**
+     * 执行迁移
+     *
+     * @return void
+     */
+    public function up()
+    {
+        $adapterType = $this->getAdapter()->getAdapterType();
+
+        $table = $this->table('post_category', [
+            'id' => false,
+            'primary_key' => ['post_id', 'category_id'],
+            'engine' => $adapterType === 'mysql' ? 'InnoDB' : null,
+            'collation' => $adapterType === 'mysql' ? 'utf8mb4_unicode_ci' : null,
+        ]);
+
+        $table->addColumn('post_id', 'integer', [
+            'null' => false,
+            'comment' => '文章ID',
+        ]);
+
+        $table->addColumn('category_id', 'integer', [
+            'null' => false,
+            'comment' => '分类ID',
+        ]);
+
+        $table->addColumn('created_at', 'timestamp', [
+            'null' => false,
+            'default' => 'CURRENT_TIMESTAMP',
+            'comment' => '创建时间',
+        ]);
+
+        $table->addColumn('updated_at', 'timestamp', [
+            'null' => false,
+            'default' => 'CURRENT_TIMESTAMP',
+            'comment' => '更新时间',
+        ]);
+
+        $table->addIndex(['post_id'], ['name' => 'idx_post_category_post_id']);
+        $table->addIndex(['category_id'], ['name' => 'idx_post_category_category_id']);
+
+        $table->create();
+    }
+
+    /**
+     * 回滚迁移
+     *
+     * @return void
+     */
+    public function down()
+    {
+        $this->table('post_category')->drop()->save();
+    }
+}
