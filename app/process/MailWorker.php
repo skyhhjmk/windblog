@@ -300,6 +300,7 @@ class MailWorker
             $mailer->CharSet = 'UTF-8';
             if ($fromAddress !== '') {
                 $mailer->setFrom($fromAddress, $fromName !== '' ? $fromName : '');
+                $mailer->Sender = $fromAddress; // 设置 Return-Path 头，确保邮件退回能正确处理
             }
             if ($replyTo !== '') {
                 $mailer->addReplyTo($replyTo, $fromName !== '' ? $fromName : '');
