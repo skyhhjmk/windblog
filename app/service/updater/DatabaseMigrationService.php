@@ -31,11 +31,6 @@ class DatabaseMigrationService
      */
     private function initPhinxConfig(): void
     {
-        // 确保ROOT_PATH常量已定义
-        if (!defined('ROOT_PATH')) {
-            define('ROOT_PATH', dirname(dirname(dirname(__DIR__))));
-        }
-
         // 获取默认数据库类型
         $defaultDb = env('DB_DEFAULT', 'pgsql');
 
@@ -91,8 +86,8 @@ class DatabaseMigrationService
         // 创建Phinx配置
         $this->config = new Config([
             'paths' => [
-                'migrations' => ROOT_PATH . '/migrations',
-                'seeds' => ROOT_PATH . '/seeds',
+                'migrations' => base_path() . '/database/migrations',
+                'seeds' => base_path() . '/database/seeds',
             ],
             'environments' => [
                 'default_migration_table' => 'phinxlog',

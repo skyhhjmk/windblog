@@ -30,12 +30,7 @@ class VersionService implements VersionServiceInterface
      */
     private function getCurrentVersionInfo(): array
     {
-        // 确保ROOT_PATH常量已定义
-        if (!defined('ROOT_PATH')) {
-            define('ROOT_PATH', dirname(dirname(dirname(__DIR__))));
-        }
-
-        $versionFile = ROOT_PATH . '/version.json';
+        $versionFile = base_path() . '/version.json';
 
         if (!file_exists($versionFile)) {
             throw new RuntimeException('Version file not found');

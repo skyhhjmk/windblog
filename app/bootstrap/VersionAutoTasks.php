@@ -7,6 +7,7 @@ namespace app\bootstrap;
 use app\service\EnhancedCacheService;
 use app\service\MenuImportService;
 use app\service\TwigCacheService;
+use app\service\updater\DatabaseMigrationService;
 
 use function base_path;
 use function env;
@@ -63,6 +64,11 @@ class VersionAutoTasks implements Bootstrap
             MenuImportService::reinitialize();
             TwigCacheService::clearAll();
             (new EnhancedCacheService())->clearAll();
+
+            // 执行数据库迁移
+            $migrationService = new DatabaseMigrationService();
+            $migrationService->migrate();
+
             self::writeLastVersion($current);
         } catch (Throwable $_) {
             // ignore

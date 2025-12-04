@@ -367,24 +367,31 @@ class InstallController extends Base
             }
         }
 
-        // 根据数据库类型选择对应的SQL文件
-        $sql_file = match ($type) {
-            'mysql' => base_path() . '/app/install/mysql.sql',
-            'sqlite' => base_path() . '/app/install/sqlite.sql',
-            default => base_path() . '/app/install/postgresql.sql'
-        };
-
-        if (!is_file($sql_file)) {
-            return $this->json(1, '数据库SQL文件不存在: ' . $sql_file);
-        }
-
-        $sql_query = file_get_contents($sql_file);
-        $sql_query = $this->removeComments($sql_query);
-        $sql_query = $this->splitSqlFile($sql_query, ';');
-        foreach ($sql_query as $sql) {
-            if (trim($sql)) {
-                $db->exec($sql);
+        // 使用Phinx执行数据库迁移
+        try {
+            // 确保.env文件已生成，因为phinx需要读取环境变量
+            if (!file_exists(base_path() . '/.env')) {
+                // 生成临时.env文件，以便phinx可以读取配置
+                $env_config = match ($type) {
+                    'mysql' => $this->getMysqlEnvConfig($host, $port, $database, $user, $password),
+                    'sqlite' => $this->getSqliteEnvConfig($database),
+                    default => $this->getPgsqlEnvConfig($host, $port, $database, $user, $password)
+                };
+                file_put_contents(base_path() . '/.env', $env_config);
             }
+
+            // 执行phinx迁移
+            $phinxPath = base_path() . '/vendor/bin/phinx';
+            $command = "php {$phinxPath} migrate -c " . base_path() . '/phinx.php';
+            $output = [];
+            $returnVar = 0;
+            exec($command, $output, $returnVar);
+
+            if ($returnVar !== 0) {
+                return $this->json(1, '数据库迁移失败: ' . implode(PHP_EOL, $output));
+            }
+        } catch (Throwable $e) {
+            return $this->json(1, '数据库迁移失败: ' . $e->getMessage());
         }
 
         // 生成.env配置

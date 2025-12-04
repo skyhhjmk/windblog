@@ -1,71 +1,53 @@
 <?php
 
-require_once __DIR__ . '/vendor/autoload.php';
+/**
+ * Phinx配置文件
+ */
 
-$dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
-$dotenv->load();
+use Dotenv\Dotenv;
 
-$dbConfig = require_once __DIR__ . '/config/database.php';
-$defaultConnection = $dbConfig['default'];
-$connectionConfig = $dbConfig['connections'][$defaultConnection];
-
-$phinxConfig = [];
-
-switch ($defaultConnection) {
-    case 'mysql':
-        $phinxConfig = [
-            'adapter' => 'mysql',
-            'host' => env('DB_MYSQL_HOST') ?? $connectionConfig['host'] ?? 'localhost',
-            'name' => env('DB_MYSQL_DATABASE') ?? $connectionConfig['database'] ?? 'windblog',
-            'user' => env('DB_MYSQL_USERNAME') ?? $connectionConfig['username'] ?? 'root',
-            'pass' => env('DB_MYSQL_PASSWORD') ?? $connectionConfig['password'] ?? 'root',
-            'port' => env('DB_MYSQL_PORT') ?? $connectionConfig['port'] ?? 3306,
-            'charset' => $connectionConfig['charset'] ?? 'utf8mb4',
-        ];
-        break;
-
-    case 'pgsql':
-        $phinxConfig = [
-            'adapter' => 'pgsql',
-            'host' => env('DB_PGSQL_HOST') ?? $connectionConfig['host'] ?? 'localhost',
-            'name' => env('DB_PGSQL_DATABASE') ?? $connectionConfig['database'] ?? 'windblog',
-            'user' => env('DB_PGSQL_USERNAME') ?? $connectionConfig['username'] ?? 'postgres',
-            'pass' => env('DB_PGSQL_PASSWORD') ?? $connectionConfig['password'] ?? 'postgres',
-            'port' => env('DB_PGSQL_PORT') ?? $connectionConfig['port'] ?? 5432,
-            'charset' => env('DB_PGSQL_CHARSET') ?? $connectionConfig['charset'] ?? 'utf8',
-            'schema' => $connectionConfig['schema'] ?? 'public', // PG 特有：默认 schema
-            'sslmode' => $connectionConfig['sslmode'] ?? 'prefer', // PG 特有：SSL 模式
-        ];
-        break;
-
-    case 'sqlite':
-        $phinxConfig = [
-            'adapter' => 'sqlite',
-            'name' => env('DB_SQLITE_DATABASE') ?? $connectionConfig['database'] ?? runtime_path('windblog.db'),
-            'charset' => $connectionConfig['charset'] ?? 'utf8',
-        ];
-        break;
-
-    default:
-        throw new \RuntimeException("不支持的数据库类型: {$defaultConnection}");
+// 加载环境变量
+if (file_exists(__DIR__ . '/.env')) {
+    $dotenv = Dotenv::createImmutable(__DIR__);
+    $dotenv->load();
 }
 
-if (empty($phinxConfig['name']) && $defaultConnection !== 'sqlite') {
-    throw new \RuntimeException('数据库名未配置，请检查 .env 或 config/database.php');
-}
-if (empty($phinxConfig['user']) && $defaultConnection !== 'sqlite') {
-    throw new \RuntimeException('数据库用户名未配置，请检查 .env 或 config/database.php');
-}
+// 数据库配置
+$dbDefault = $_ENV['DB_DEFAULT'] ?? 'pgsql';
+$dbConfigs = [
+    'pgsql' => [
+        'adapter' => 'pgsql',
+        'host' => $_ENV['DB_PGSQL_HOST'] ?? '127.0.0.1',
+        'name' => $_ENV['DB_PGSQL_DATABASE'] ?? 'windblog',
+        'user' => $_ENV['DB_PGSQL_USERNAME'] ?? 'postgres',
+        'pass' => $_ENV['DB_PGSQL_PASSWORD'] ?? 'postgres',
+        'port' => $_ENV['DB_PGSQL_PORT'] ?? 5432,
+        'charset' => 'utf8',
+    ],
+    'mysql' => [
+        'adapter' => 'mysql',
+        'host' => $_ENV['DB_MYSQL_HOST'] ?? '127.0.0.1',
+        'name' => $_ENV['DB_MYSQL_DATABASE'] ?? 'windblog',
+        'user' => $_ENV['DB_MYSQL_USERNAME'] ?? 'root',
+        'pass' => $_ENV['DB_MYSQL_PASSWORD'] ?? '',
+        'port' => $_ENV['DB_MYSQL_PORT'] ?? 3306,
+        'charset' => 'utf8mb4',
+    ],
+    'sqlite' => [
+        'adapter' => 'sqlite',
+        'name' => $_ENV['DB_SQLITE_DATABASE'] ?? __DIR__ . '/runtime/database.sqlite',
+    ],
+];
 
 return [
     'paths' => [
-        'migrations' => 'database/migrations', // 迁移文件目录
-        'seeds' => 'database/seeds',      // 数据填充目录
+        'migrations' => __DIR__ . '/database/migrations',
+        'seeds' => __DIR__ . '/database/seeds',
     ],
     'environments' => [
-        'default_migration_table' => 'phinxlog', // Phinx 迁移日志表（自动创建）
-        'default_environment' => 'default',  // 默认环境
-        'default' => $phinxConfig, // 注入数据库配置
+        'default_migration_table' => 'phinxlog',
+        'default_database' => $dbDefault,
+        $dbDefault => $dbConfigs[$dbDefault],
     ],
-    'version_order' => 'creation', // 按迁移文件创建顺序执行
+    'version_order' => 'creation',
 ];

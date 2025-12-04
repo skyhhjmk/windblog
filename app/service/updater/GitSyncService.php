@@ -95,13 +95,8 @@ class GitSyncService
                 ];
             }
 
-            // 确保ROOT_PATH常量已定义
-            if (!defined('ROOT_PATH')) {
-                define('ROOT_PATH', dirname(dirname(dirname(__DIR__))));
-            }
-
             // 检查是否需要更新依赖
-            if (file_exists(ROOT_PATH . '/composer.json')) {
+            if (file_exists(base_path() . '/composer.json')) {
                 $log[] = '检查依赖更新...';
                 // TODO: 考虑是否自动执行 composer install
             }
