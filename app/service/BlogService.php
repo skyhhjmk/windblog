@@ -3,6 +3,8 @@
 namespace app\service;
 
 use app\model\Post;
+use app\util\CacheFacade;
+use app\util\QueryHelper;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use League\CommonMark\Environment\Environment;
@@ -167,11 +169,11 @@ class BlogService
      */
     protected static function applySearchFilter($query, string $value): void
     {
-        $searchTermLower = mb_strtolower(addcslashes($value, '%_\\'));
-        $query->where(function ($q) use ($searchTermLower) {
-            $q->whereRaw('LOWER(title) like ?', ['%' . $searchTermLower . '%'])
-                ->orWhereRaw('LOWER(content) like ?', ['%' . $searchTermLower . '%'])
-                ->orWhereRaw('LOWER(excerpt) like ?', ['%' . $searchTermLower . '%']);
+        // Build case‑insensitive LIKE clauses using QueryHelper
+        $query->where(function ($q) use ($value) {
+            QueryHelper::likeInsensitive($q, 'title', $value);
+            QueryHelper::likeInsensitive($q, 'content', $value);
+            QueryHelper::likeInsensitive($q, 'excerpt', $value);
         });
     }
 
@@ -454,13 +456,9 @@ class BlogService
     protected static function getFromCache(string $key): array|bool
     {
         try {
-            $cached = cache($key);
-            // 确保返回的是数组格式
-            if (is_array($cached)) {
-                return $cached;
-            }
+            $cached = CacheFacade::get($key);
 
-            return false;
+            return $cached;
         } catch (Throwable $e) {
             // 缓存获取失败时静默返回false
             return false;
@@ -476,9 +474,9 @@ class BlogService
     protected static function cacheResult(string $key, mixed $data): void
     {
         try {
-            cache($key, $data, true);
+            // No TTL for unfiltered cache (called only when filters are empty)
+            CacheFacade::set($key, $data, null);
         } catch (Throwable $e) {
-            // 缓存设置失败时记录错误但不中断流程
             Log::error('[cacheResult] Error caching data: ' . $e->getMessage());
         }
     }

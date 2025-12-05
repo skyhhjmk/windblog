@@ -69,8 +69,10 @@ class CacheService
         }
 
         // 如果不是在回退模式，且驱动没有失败，则返回现有处理器
-        if (self::$handler !== null && !self::$fallbackMode &&
-            !(self::$failedDrivers[$cacheDriver] ?? false)) {
+        if (
+            self::$handler !== null && !self::$fallbackMode &&
+            !(self::$failedDrivers[$cacheDriver] ?? false)
+        ) {
             return self::$handler;
         }
 
@@ -151,7 +153,9 @@ class CacheService
                     public function get(string $key)
                     {
                         try {
-                            return $this->redis->get($key);
+                            $value = $this->redis->get($key);
+
+                            return $value === null ? false : $value;
                         } catch (Exception $e) {
                             Log::error("[cache] Redis get error: {$e->getMessage()}");
 

@@ -2,6 +2,7 @@
 
 namespace app\controller;
 
+use app\annotation\CSRFVerify;
 use app\annotation\EnableInstantFirstPaint;
 use app\helper\BreadcrumbHelper;
 use app\model\Category;
@@ -141,8 +142,10 @@ class SearchController
                             // 关系项也可能是模型对象
                             $name = is_object($item) ? mb_strtolower((string) ($item->name ?? '')) : mb_strtolower((string) ($item['name'] ?? ''));
                             $slug = is_object($item) ? mb_strtolower((string) ($item->slug ?? '')) : mb_strtolower((string) ($item['slug'] ?? ''));
-                            if (($name !== '' && mb_strpos($name, $kwLower) !== false) ||
-                                ($slug !== '' && mb_strpos($slug, $kwLower) !== false)) {
+                            if (
+                                ($name !== '' && mb_strpos($name, $kwLower) !== false) ||
+                                ($slug !== '' && mb_strpos($slug, $kwLower) !== false)
+                            ) {
                                 return true;
                             }
                         }
@@ -246,6 +249,7 @@ class SearchController
      * @throws CommonMarkException
      * @throws Throwable
      */
+    #[CSRFVerify]
     public function ajax(Request $request): Response
     {
         $keyword = $request->get('q', '');

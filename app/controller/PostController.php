@@ -11,10 +11,10 @@ use app\service\FloLinkService;
 use app\service\markdown\MarkdownService;
 use app\service\PJAXHelper;
 use app\service\SidebarService;
+use app\util\HtmlSanitizer;
 use Exception;
 use support\Log;
 use support\Request;
-use support\Response;
 
 class PostController
 {
@@ -201,7 +201,7 @@ class PostController
                 [
                     'page_title' => $post['title'] . ' - ' . blog_config('title', 'WindBlog', true),
                     'post' => $post,
-                    'post_html' => $postHtml,
+                    'post_html' => HtmlSanitizer::sanitize($postHtml),
                     'author' => $authorName,
                     'sidebar' => $sidebar,
                     'breadcrumbs' => $breadcrumbs,
@@ -344,7 +344,7 @@ class PostController
                     [
                         'page_title' => $post['title'] . ' - ' . blog_config('title', 'WindBlog', true),
                         'post' => $post,
-                        'post_html' => $postHtml,
+                        'post_html' => HtmlSanitizer::sanitize($postHtml),
                         'author' => $authorName,
                         'sidebar' => $sidebar,
                         'breadcrumbs' => $breadcrumbs,
