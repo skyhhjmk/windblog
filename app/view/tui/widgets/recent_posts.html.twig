@@ -1,0 +1,20 @@
+{% extends "widgets/base.html.twig" %}
+
+{% block widget_content %}
+    {% if recent_posts is defined and recent_posts is not empty %}
+        <div class="space-y-2 font-mono text-sm">
+            {% for post in recent_posts %}
+                <a href="/post/{{ post.slug }}.html" class="block group hover:bg-gray-800 p-2 transition-colors">
+                    <div class="text-gray-300 group-hover:text-green-400 mb-1 truncate">
+                        > {{ post.title }}
+                    </div>
+                    <div class="text-xs text-gray-500 pl-4">
+                        {{ post.created_at|date('Y-m-d') }}
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-gray-500 text-sm italic font-mono">No posts found</div>
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,26 @@
+{% extends "base.amp.html.twig" %}
+
+{% block title %}链接详情 - {{ page_title|default('WindBlog') }}{% endblock %}
+
+{% block content %}
+    <article class="main-content">
+        <h1 class="post-title" style="margin-bottom:1rem;">{{ link.name }}</h1>
+
+        {% if link.icon %}
+            <amp-img src="{{ link.icon }}" width="64" height="64" alt="{{ link.name }}"
+                     style="border-radius:8px;margin-bottom:1rem;"></amp-img>
+        {% endif %}
+
+        {% if link.description %}
+            <div class="post-excerpt" style="margin-bottom:1rem;">{{ link.description|striptags|raw }}</div>
+        {% endif %}
+
+        <a href="{{ link.url }}"
+           style="display:inline-block;padding:.5rem 1rem;background:#667eea;color:#fff;border-radius:4px;text-decoration:none;">访问站点
+            →</a>
+
+        <div style="margin-top:2rem;">
+            <a href="/link?amp=1" style="color:#667eea;text-decoration:none;">← 返回链接广场</a>
+        </div>
+    </article>
+{% endblock %}

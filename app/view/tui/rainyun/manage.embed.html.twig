@@ -1,0 +1,1804 @@
+<!-- Rainyun 管理嵌入视图（集成旧页面功能到控制台） -->
+<div class="mb-4 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+        <button type="button" id="ry-back-to-list"
+                class="px-3 py-1.5 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50">
+            ← 返回云应用列表
+        </button>
+        <button type="button" id="ry-back-to-console"
+                class="px-3 py-1.5 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50">
+            ⤺ 返回控制台
+        </button>
+    </div>
+    <div class="text-sm text-gray-500">管理应用与发布版本</div>
+</div>
+
+<div class="mb-8">
+    <!-- 基础信息输入 -->
+    <div class="mb-8 bg-gray-50 rounded-xl p-5 border border-gray-200">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">API 访问配置</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+                <label for="appId" class="block text-sm font-medium text-gray-700 mb-1">App ID</label>
+                <input type="number" id="appId"
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                       placeholder="输入应用ID">
+            </div>
+            <div>
+                <label for="apiKey" class="block text-sm font-medium text-gray-700 mb-1">API Key</label>
+                <input type="text" id="apiKey"
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                       placeholder="输入API密钥">
+            </div>
+        </div>
+        <button id="fetchAppData"
+                class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors flex items-center">
+            <i class="fas fa-download mr-2"></i> 获取应用详情
+        </button>
+    </div>
+
+    <!-- 版本选择区域 (默认隐藏，获取应用详情后显示) -->
+    <div id="versionSelection" class="mb-8 bg-gray-50 rounded-xl p-5 border border-gray-200 hidden">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">版本选择</h2>
+        <div class="mb-4">
+            <label for="appVersion" class="block text-sm font-medium text-gray-700 mb-1">选择版本</label>
+            <select id="appVersion"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                <option value="">请选择版本</option>
+            </select>
+        </div>
+        <div class="flex items-center gap-3">
+            <button id="fetchVersionDetails"
+                    class="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-6 rounded-lg transition-colors flex items-center">
+                <i class="fas fa-info-circle mr-2"></i> 获取版本详细配置
+            </button>
+        </div>
+        <!-- 新建版本 -->
+        <div class="mt-6 pt-4 border-t border-gray-200">
+            <label class="block text-sm font-medium text-gray-700 mb-2">新建版本</label>
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+                <input type="text" id="newVersion" placeholder="版本号 例如 1.1.0"
+                       class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <input type="text" id="newImage" placeholder="镜像 image 例如 ghcr.io/owner/repo:tag（非复制时必填）"
+                       class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 md:col-span-2">
+                <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                    <input type="checkbox" id="copyFromCurrent" class="rounded text-blue-600" checked>
+                    基于当前版本配置复制创建
+                </label>
+                <button id="createVersionBtn"
+                        class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-6 rounded-lg transition-colors">
+                    创建版本
+                </button>
+            </div>
+            <p class="text-xs text-gray-500 mt-2">
+                提示：如勾选复制，将以当前“版本详细配置”作为模板创建新版本；否则创建空白配置，需要填写镜像image。</p>
+        </div>
+    </div>
+
+    <!-- 版本详细配置区域 (默认隐藏，获取版本详情后显示) -->
+    <div id="versionDetails" class="mb-8 bg-white rounded-xl p-5 border border-gray-200 hidden no-animation">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-semibold text-gray-800">版本详细配置</h2>
+            <div class="flex space-x-3">
+                <button id="addConfigField"
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-1 px-4 rounded-lg transition-colors text-sm flex items-center">
+                    <i class="fas fa-plus mr-1"></i> 新增字段
+                </button>
+                <button id="saveVersionConfig"
+                        class="bg-green-600 hover:bg-green-700 text-white font-medium py-1 px-4 rounded-lg transition-colors text-sm flex items-center">
+                    <i class="fas fa-save mr-1"></i> 保存配置
+                </button>
+            </div>
+        </div>
+
+        <!-- 配置表单 -->
+        <form id="versionConfigForm" class="space-y-4">
+            <div id="configFields" class="space-y-4"></div>
+        </form>
+
+        <!-- 用于新增字段的临时模板 (默认隐藏) -->
+        <div id="configFieldTemplate" class="hidden">
+            <div class="config-field bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <div class="flex justify-between items-start mb-2">
+                    <div class="flex items-center space-x-4">
+                        <input type="text"
+                               class="field-name px-3 py-2 border border-gray-300 rounded-lg w-48 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                               placeholder="字段名">
+                        <select
+                            class="field-type px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="string">字符串</option>
+                            <option value="number">数字</option>
+                            <option value="boolean">布尔值</option>
+                            <option value="array">数组</option>
+                            <option value="object">对象</option>
+                            <option value="textarea">多行文本</option>
+                        </select>
+                    </div>
+                    <button type="button" class="remove-field text-red-500 hover:text-red-700 transition-colors">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+                <div class="field-value-container">
+                    <input type="text"
+                           class="field-value px-3 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="字段值">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加载状态 -->
+    <div id="loadingIndicator"
+         class="hidden fixed inset-0 bg-black bg-opacity-20 flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-xl shadow-xl flex flex-col items-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+            <p id="loadingMessage" class="text-gray-700">正在处理，请稍候...</p>
+        </div>
+    </div>
+
+    <!-- 应用详情表单（旧页中的“应用信息”） -->
+    <form id="appForm" class="space-y-6 hidden">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">应用信息</h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="col-span-1 md:col-span-2">
+                <label for="title" class="block text-sm font-medium text-gray-700 mb-1">应用标题</label>
+                <input type="text" id="title" name="title"
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                       required>
+            </div>
+
+            <div class="col-span-1 md:col-span-2">
+                <label for="description" class="block text-sm font-medium text-gray-700 mb-1">应用描述</label>
+                <textarea id="description" name="description" rows="3"
+                          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                          required></textarea>
+            </div>
+
+            <div>
+                <label for="name" class="block text-sm font-medium text-gray-700 mb-1">应用名称（英文标识）</label>
+                <input type="text" id="name" name="name"
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                       required>
+            </div>
+
+            <div>
+                <label for="website" class="block text-sm font-medium text-gray-700 mb-1">应用官方网站</label>
+                <input type="url" id="website" name="website"
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                       required>
+            </div>
+
+            <div>
+                <label for="project_link" class="block text-sm font-medium text-gray-700 mb-1">应用项目链接</label>
+                <input type="url" id="project_link" name="project_link"
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                       required>
+            </div>
+
+            <div>
+                <label for="cross_version_update"
+                       class="block text-sm font-medium text-gray-700 mb-1">是否支持跨版本更新</label>
+                <div class="flex items-center space-x-4">
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="cross_version_update" value="true"
+                               class="form-radio text-blue-600 focus:ring-blue-500">
+                        <span class="ml-2">是</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="cross_version_update" value="false"
+                               class="form-radio text-blue-600 focus:ring-blue-500">
+                        <span class="ml-2">否</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="col-span-1 md:col-span-2">
+                <label for="tags" class="block text-sm font-medium text-gray-700 mb-1">标签（用逗号分隔）</label>
+                <input type="text" id="tags" name="tags"
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                       placeholder="如: web,tools,development">
+                <p class="text-xs text-gray-500 mt-1">提示：多个标签请用逗号分隔</p>
+            </div>
+
+            <div class="col-span-1 md:col-span-2">
+                <label for="readme" class="block text-sm font-medium text-gray-700 mb-1">应用介绍（Markdown格式）</label>
+                <textarea id="readme" name="readme" rows="8"
+                          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                          required></textarea>
+            </div>
+
+            <div class="col-span-1 md:col-span-2">
+                <label for="logo" class="block text-sm font-medium text-gray-700 mb-1">Logo（Base64格式，可选）</label>
+                <textarea id="logo" name="logo" rows="4"
+                          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                          placeholder="输入Base64编码的图片数据（最大50KB）"></textarea>
+            </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="flex justify-end space-x-4 pt-4 border-t border-gray-200">
+            <button type="button" id="resetForm"
+                    class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                重置
+            </button>
+            <button type="submit" id="updateAppData"
+                    class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-6 rounded-lg transition-colors flex items-center">
+                <i class="fas fa-save mr-2"></i> 保存更新
+            </button>
+        </div>
+    </form>
+
+    <!-- 操作结果提示 -->
+    <div id="resultMessage" class="mt-6 p-4 rounded-lg hidden"></div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // DOM元素引用
+        const appIdInput = document.getElementById('appId');
+        const apiKeyInput = document.getElementById('apiKey');
+        const fetchAppDataBtn = document.getElementById('fetchAppData');
+        const appForm = document.getElementById('appForm');
+        const resetFormBtn = document.getElementById('resetForm');
+        const updateAppDataBtn = document.getElementById('updateAppData');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const loadingMessage = document.getElementById('loadingMessage');
+        const resultMessage = document.getElementById('resultMessage');
+        const versionSelection = document.getElementById('versionSelection');
+        const appVersionSelect = document.getElementById('appVersion');
+        const fetchVersionDetailsBtn = document.getElementById('fetchVersionDetails');
+        const versionDetails = document.getElementById('versionDetails');
+        const versionConfigForm = document.getElementById('versionConfigForm');
+        const configFields = document.getElementById('configFields');
+        const configFieldTemplate = document.getElementById('configFieldTemplate');
+        const addConfigFieldBtn = document.getElementById('addConfigField');
+        const saveVersionConfigBtn = document.getElementById('saveVersionConfig');
+        // 新建版本相关
+        const newVersionInput = document.getElementById('newVersion');
+        const copyFromCurrentCheckbox = document.getElementById('copyFromCurrent');
+        const createVersionBtn = document.getElementById('createVersionBtn');
+        const newImageInput = document.getElementById('newImage');
+
+        // 从本地存储加载保存的appId和apiKey
+        function loadSavedCredentials() {
+            const savedAppId = localStorage.getItem('rainyun_appId');
+            const savedApiKey = localStorage.getItem('rainyun_apiKey');
+
+            if (savedAppId) {
+                appIdInput.value = savedAppId;
+            }
+
+            if (savedApiKey) {
+                apiKeyInput.value = savedApiKey;
+            }
+        }
+
+        // 保存appId和apiKey到本地存储
+        function saveCredentials() {
+            const appId = appIdInput.value.trim();
+            const apiKey = apiKeyInput.value.trim();
+
+            if (appId) {
+                localStorage.setItem('rainyun_appId', appId);
+            }
+
+            if (apiKey) {
+                localStorage.setItem('rainyun_apiKey', apiKey);
+            }
+        }
+
+        // 页面加载时尝试加载已保存的凭据
+        loadSavedCredentials();
+
+        // 若本地已有 appId 与 apiKey，自动获取应用详情，减少一步操作
+        try {
+            if (appIdInput.value && apiKeyInput.value) {
+                setTimeout(() => {
+                    fetchAppDataBtn.click();
+                }, 0);
+            }
+        } catch (_) {
+        }
+
+        // 全局变量存储版本数据
+        let versionsData = [];
+        let currentVersionData = null;
+
+        // 表单字段引用
+        const titleInput = document.getElementById('title');
+        const descriptionInput = document.getElementById('description');
+        const nameInput = document.getElementById('name');
+        const websiteInput = document.getElementById('website');
+        const projectLinkInput = document.getElementById('project_link');
+        const crossVersionUpdateYes = document.querySelector('input[name="cross_version_update"][value="true"]');
+        const crossVersionUpdateNo = document.querySelector('input[name="cross_version_update"][value="false"]');
+        const tagsInput = document.getElementById('tags');
+        const readmeInput = document.getElementById('readme');
+        const logoInput = document.getElementById('logo');
+
+        // 显示加载指示器
+        function showLoading(message = '正在处理，请稍候...') {
+            loadingMessage.textContent = message;
+            loadingIndicator.classList.remove('hidden');
+        }
+
+        // 隐藏加载指示器
+        function hideLoading() {
+            loadingIndicator.classList.add('hidden');
+        }
+
+        // 显示结果消息
+        function showResult(message, isSuccess = true) {
+            resultMessage.textContent = message;
+            resultMessage.className = 'mt-6 p-4 rounded-lg ' +
+                (isSuccess ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200');
+            resultMessage.classList.remove('hidden');
+
+            // 3秒后自动隐藏消息
+            setTimeout(() => {
+                resultMessage.classList.add('hidden');
+            }, 3000);
+        }
+
+        // 获取应用详情
+        fetchAppDataBtn.addEventListener('click', function () {
+            const appId = appIdInput.value.trim();
+            const apiKey = apiKeyInput.value.trim();
+
+            if (!appId || !apiKey) {
+                showResult('请填写App ID和API Key', false);
+                return;
+            }
+
+            // 保存凭据到本地存储
+            saveCredentials();
+
+            showLoading('正在获取应用详情...');
+
+            // 创建请求对象，避免直接fetch的跨域问题
+            // 注意：API需要在URL末尾添加斜杠以避免301重定向
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', `https://api.v2.rainyun.com/product/rca/appstore/${appId}/`, true);
+
+            // 设置请求头
+            xhr.setRequestHeader('x-api-key', apiKey);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+
+            // 处理响应
+            xhr.onload = function () {
+                hideLoading();
+                if (xhr.status === 200) {
+                    try {
+                        const data = JSON.parse(xhr.responseText);
+
+                        // 检查响应数据是否包含所需字段
+                        if (data && data.data) {
+                            const appData = data.data;
+
+                            // 填充表单
+                            titleInput.value = appData.title || '';
+                            descriptionInput.value = appData.description || '';
+                            nameInput.value = appData.name || '';
+                            websiteInput.value = appData.website || '';
+                            projectLinkInput.value = appData.project_link || '';
+
+                            // 设置跨版本更新选项
+                            if (appData.cross_version_update === true) {
+                                crossVersionUpdateYes.checked = true;
+                            } else {
+                                crossVersionUpdateNo.checked = true;
+                            }
+
+                            // 设置标签（数组转字符串）
+                            tagsInput.value = appData.tags ? appData.tags.join(', ') : '';
+                            readmeInput.value = appData.readme || '';
+                            logoInput.value = appData.logo || '';
+
+                            // 显示表单
+                            // 保持"应用信息"表单隐藏，仅使用下方版本详细配置
+                            // appForm.classList.remove('hidden');
+
+                            // 处理版本数据
+                            if (appData.versions && Array.isArray(appData.versions)) {
+                                versionsData = appData.versions;
+                                populateVersionDropdown(versionsData);
+                                versionSelection.classList.remove('hidden');
+                            }
+
+                            // 通知控制台更新面包屑
+                            try {
+                                document.dispatchEvent(new CustomEvent('ry:manage:loaded', {detail: {app: appData}}));
+                            } catch (_) {
+                            }
+                            showResult('应用详情获取成功');
+                        } else {
+                            showResult('无效的响应数据', false);
+                        }
+                    } catch (e) {
+                        showResult('响应数据解析失败: ' + e.message, false);
+                        console.error('响应解析错误:', e);
+                    }
+                } else if (xhr.status === 0) {
+                    // 可能是跨域问题或网络错误
+                    showResult('网络请求失败，可能是跨域限制导致。请确认API服务是否支持跨域请求。', false);
+                } else {
+                    showResult(`获取应用详情失败: HTTP状态码 ${xhr.status}`, false);
+                }
+            };
+
+            // 处理网络错误
+            xhr.onerror = function () {
+                hideLoading();
+                showResult('网络请求错误，请检查网络连接或API服务是否可用。', false);
+                console.error('获取应用详情网络错误');
+            };
+
+            // 处理超时
+            xhr.timeout = 10000; // 10秒超时
+            xhr.ontimeout = function () {
+                hideLoading();
+                showResult('请求超时，请稍后重试。', false);
+                console.error('获取应用详情请求超时');
+            };
+
+            // 发送请求
+            xhr.send();
+        });
+
+        // 填充版本下拉框
+        function populateVersionDropdown(versions) {
+            appVersionSelect.innerHTML = '<option value="">请选择版本</option>';
+
+            versions.forEach(version => {
+                const option = document.createElement('option');
+                option.value = version.version;
+                option.textContent = version.version;
+                appVersionSelect.appendChild(option);
+            });
+        }
+
+        // 获取版本详细配置
+        fetchVersionDetailsBtn.addEventListener('click', function () {
+            const appId = appIdInput.value.trim();
+            const apiKey = apiKeyInput.value.trim();
+            const selectedVersion = appVersionSelect.value;
+
+            if (!appId || !apiKey || !selectedVersion) {
+                showResult('请先输入App ID、API Key并选择版本', false);
+                return;
+            }
+
+            // 保存凭据到本地存储
+            saveCredentials();
+
+            showLoading('正在获取版本详细配置...');
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', `https://api.v2.rainyun.com/product/rca/appstore/${appId}/release?version=${encodeURIComponent(selectedVersion)}`, true);
+
+            // 设置请求头
+            xhr.setRequestHeader('x-api-key', apiKey);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+
+            // 处理响应
+            xhr.onload = function () {
+                hideLoading();
+                if (xhr.status === 200) {
+                    try {
+                        const data = JSON.parse(xhr.responseText);
+
+                        if (data && data.data) {
+                            // 保存当前版本数据
+                            currentVersionData = data.data;
+
+                            // 检查currentVersionData是否包含另一个data字段，如果有则展开它
+                            if (currentVersionData.hasOwnProperty('data') &&
+                                typeof currentVersionData.data === 'object' &&
+                                currentVersionData.data !== null) {
+                                // 保存展开后的数据
+                                currentVersionData = currentVersionData.data;
+                            }
+
+                            // 清空现有字段
+                            configFields.innerHTML = '';
+
+                            // 动态生成配置表单
+                            generateConfigForm(currentVersionData);
+
+                            // 显示版本详情区域
+                            versionDetails.classList.remove('hidden');
+                            showResult('版本详细配置获取成功');
+                        } else {
+                            showResult('无效的版本配置数据', false);
+                        }
+                    } catch (e) {
+                        showResult('版本配置数据解析失败: ' + e.message, false);
+                        console.error('版本配置解析错误:', e);
+                    }
+                } else if (xhr.status === 0) {
+                    showResult('网络请求失败，可能是跨域限制导致', false);
+                } else {
+                    showResult(`获取版本配置失败: HTTP状态码 ${xhr.status}`, false);
+                }
+            };
+
+            // 处理网络错误
+            xhr.onerror = function () {
+                hideLoading();
+                showResult('网络请求错误，请检查网络连接', false);
+                console.error('获取版本配置网络错误');
+            };
+
+            // 处理超时
+            xhr.timeout = 10000; // 10秒超时
+            xhr.ontimeout = function () {
+                hideLoading();
+                showResult('请求超时，请稍后重试', false);
+                console.error('获取版本配置请求超时');
+            };
+
+            // 发送请求
+            xhr.send();
+        });
+
+        // 动态生成配置表单
+        function generateConfigForm(configData) {
+            // 清空现有字段
+            configFields.innerHTML = '';
+
+            // 版本号输入框
+            const versionInput = document.createElement('div');
+            versionInput.className = 'mb-4';
+            versionInput.innerHTML = `
+                <label class="block text-sm font-medium text-gray-700 mb-1">版本号</label>
+                <input type="text" id="version-number" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                       value="${configData.version || ''}" placeholder="版本号 例如 v1.8.19">
+            `;
+            configFields.appendChild(versionInput);
+
+            // 主要配置区域：选项配置和容器配置的切换
+            const mainConfigArea = document.createElement('div');
+            mainConfigArea.className = 'mb-4';
+
+            // 选项配置和容器配置的切换按钮
+            const configTabs = document.createElement('div');
+            configTabs.className = 'flex gap-2 mb-3 border-b border-gray-200';
+
+            const optionsTab = document.createElement('button');
+            optionsTab.type = 'button';
+            optionsTab.className = 'px-3 py-2 text-sm font-medium text-blue-600 border-b-2 border-blue-600';
+            optionsTab.textContent = '选项配置';
+            optionsTab.dataset.configTab = 'options';
+
+            const containersTab = document.createElement('button');
+            containersTab.type = 'button';
+            containersTab.className = 'px-3 py-2 text-sm font-medium text-gray-500 border-b-2 border-transparent hover:text-gray-700 hover:border-gray-300';
+            containersTab.textContent = '容器配置';
+            containersTab.dataset.configTab = 'containers';
+
+            configTabs.appendChild(optionsTab);
+            configTabs.appendChild(containersTab);
+            mainConfigArea.appendChild(configTabs);
+
+            // 选项配置区域
+            const optionsContainer = document.createElement('div');
+            optionsContainer.className = 'config-container options-container';
+
+            // 容器配置区域
+            const containersContainer = document.createElement('div');
+            containersContainer.className = 'config-container containers-container hidden';
+
+            // 选项配置区域内容
+            if (configData.options && Array.isArray(configData.options)) {
+                renderOptionsField(configData.options, optionsContainer);
+            }
+
+            // 容器配置区域内容 - 解析container_templates数组
+            if (configData.container_templates && Array.isArray(configData.container_templates)) {
+                configData.container_templates.forEach((container, index) => {
+                    const containerCard = document.createElement('div');
+                    containerCard.className = 'container-card border border-gray-200 rounded-lg p-4 mb-6';
+
+                    // 容器标题
+                    const containerTitle = document.createElement('div');
+                    containerTitle.className = 'flex items-center justify-between mb-4';
+                    containerTitle.innerHTML = `
+                        <h3 class="text-lg font-semibold text-gray-800">容器 ${index + 1}: ${container.name}</h3>
+                        <div class="text-sm text-gray-500">镜像: ${container.image}</div>
+                    `;
+                    containerCard.appendChild(containerTitle);
+
+                    // 容器内部的配置选项卡
+                    const containerTabs = document.createElement('div');
+                    containerTabs.className = 'flex gap-2 mb-3 border-b border-gray-200';
+
+                    const containerTabDefs = [
+                        {id: 'commands', label: '命令与参数'},
+                        {id: 'scripts', label: '脚本设定'},
+                        {id: 'configmaps', label: '配置文件'},
+                        {id: 'env', label: '环境变量'},
+                        {id: 'volumes', label: '持久化卷'},
+                        {id: 'resources', label: '资源限制'},
+                        {id: 'services', label: '服务配置'}
+                    ];
+
+                    const containerTabButtons = {};
+                    const containerTabContents = {};
+
+                    containerTabDefs.forEach((tabDef, i) => {
+                        const tabBtn = document.createElement('button');
+                        tabBtn.type = 'button';
+                        tabBtn.className = `px-3 py-2 text-sm font-medium border-b-2 ${i === 0 ? 'text-blue-600 border-blue-600' : 'text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300'}`;
+                        tabBtn.textContent = tabDef.label;
+                        tabBtn.dataset.containerTab = tabDef.id;
+                        containerTabButtons[tabDef.id] = tabBtn;
+                        containerTabs.appendChild(tabBtn);
+
+                        const tabContent = document.createElement('div');
+                        tabContent.className = `container-tab-content ${i === 0 ? '' : 'hidden'} mb-4`;
+                        tabContent.dataset.containerTabContent = tabDef.id;
+                        containerTabContents[tabDef.id] = tabContent;
+                        containerCard.appendChild(tabContent);
+                    });
+
+                    containerCard.appendChild(containerTabs);
+
+                    // 为容器选项卡添加切换事件
+                    containerTabs.addEventListener('click', (e) => {
+                        const tabBtn = e.target.closest('button[data-container-tab]');
+                        if (!tabBtn) return;
+
+                        const tabId = tabBtn.dataset.containerTab;
+
+                        // 更新按钮样式
+                        Object.values(containerTabButtons).forEach(btn => {
+                            btn.className = 'px-3 py-2 text-sm font-medium border-b-2 text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300';
+                        });
+                        tabBtn.className = 'px-3 py-2 text-sm font-medium border-b-2 text-blue-600 border-blue-600';
+
+                        // 显示对应的内容
+                        Object.values(containerTabContents).forEach(content => {
+                            content.classList.add('hidden');
+                        });
+                        containerTabContents[tabId].classList.remove('hidden');
+                    });
+
+                    // 定义要处理的容器配置分组
+                    const containerGroups = [
+                        {id: 'commands', title: '命令与参数', fields: ['command', 'args']},
+                        {id: 'scripts', title: '脚本设定', fields: ['scripts']},
+                        {id: 'configmaps', title: '配置文件（configmap）', fields: ['config_maps']},
+                        {id: 'env', title: '环境变量', fields: ['env']},
+                        {id: 'volumes', title: '持久化卷', fields: ['volume_mounts']},
+                        {id: 'resources', title: '资源限制', fields: ['resource_request']},
+                        {id: 'services', title: '服务配置', fields: ['services']}
+                    ];
+
+                    // 处理容器的每个配置分组
+                    containerGroups.forEach(group => {
+                        // 创建分组容器
+                        const groupContainer = document.createElement('div');
+                        groupContainer.className = 'config-group border border-gray-200 rounded-lg p-4 mb-6';
+
+                        // 添加分组标题
+                        const groupTitle = document.createElement('h3');
+                        groupTitle.className = 'text-lg font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-200';
+                        groupTitle.textContent = group.title;
+                        groupContainer.appendChild(groupTitle);
+
+                        // 添加分组内的字段
+                        group.fields.forEach(fieldName => {
+                            if (container.hasOwnProperty(fieldName)) {
+                                const fieldValue = container[fieldName];
+
+                                if (fieldName === 'env' && Array.isArray(fieldValue)) {
+                                    // 特殊处理env数组
+                                    renderEnvField(fieldValue, groupContainer);
+                                } else if (fieldName === 'volume_mounts' && Array.isArray(fieldValue)) {
+                                    // 特殊处理volume_mounts数组
+                                    renderVolumeMountsField(fieldValue, groupContainer);
+                                } else if (fieldName === 'services' && Array.isArray(fieldValue)) {
+                                    // 特殊处理services数组
+                                    renderServicesField(fieldValue, groupContainer);
+                                } else if (fieldName === 'resource_request' && typeof fieldValue === 'object' && fieldValue !== null) {
+                                    // 资源限制（单卡片、滑块编辑）
+                                    renderResourceRequest(fieldValue, groupContainer);
+                                } else if (fieldName === 'scripts' && typeof fieldValue === 'object' && fieldValue !== null) {
+                                    // 脚本（单卡片、文本域编辑）
+                                    renderScriptsField(fieldValue, groupContainer);
+                                } else if (fieldName === 'config_maps' && Array.isArray(fieldValue)) {
+                                    // 配置文件（configmap）数组
+                                    renderConfigMapsField(fieldValue, groupContainer);
+                                } else {
+                                    // 普通字段处理
+                                    addConfigField(fieldName, fieldValue, groupContainer);
+                                }
+                            }
+                        });
+
+                        // 只有当分组有内容时才添加到对应容器选项卡
+                        if (groupContainer.children.length > 1 && containerTabContents[group.id]) {
+                            containerTabContents[group.id].appendChild(groupContainer);
+                        }
+                    });
+
+                    containersContainer.appendChild(containerCard);
+                });
+            }
+
+            // 切换选项卡事件
+            configTabs.addEventListener('click', (e) => {
+                const tabBtn = e.target.closest('button[data-config-tab]');
+                if (!tabBtn) return;
+
+                const tabId = tabBtn.dataset.configTab;
+
+                // 更新按钮样式
+                optionsTab.className = 'px-3 py-2 text-sm font-medium text-gray-500 border-b-2 border-transparent hover:text-gray-700 hover:border-gray-300';
+                containersTab.className = 'px-3 py-2 text-sm font-medium text-gray-500 border-b-2 border-transparent hover:text-gray-700 hover:border-gray-300';
+                tabBtn.className = 'px-3 py-2 text-sm font-medium text-blue-600 border-b-2 border-blue-600';
+
+                // 显示对应的内容
+                optionsContainer.classList.add('hidden');
+                containersContainer.classList.add('hidden');
+                if (tabId === 'options') {
+                    optionsContainer.classList.remove('hidden');
+                } else if (tabId === 'containers') {
+                    containersContainer.classList.remove('hidden');
+                }
+            });
+
+            mainConfigArea.appendChild(optionsContainer);
+            mainConfigArea.appendChild(containersContainer);
+            configFields.appendChild(mainConfigArea);
+        }
+
+        // 渲染配置选项字段
+        function renderOptionsField(options, container) {
+            if (!Array.isArray(options)) {
+                return;
+            }
+
+            const optionsContainer = document.createElement('div');
+            optionsContainer.className = 'options-container space-y-4';
+
+            options.forEach((option, index) => {
+                const optionCard = document.createElement('div');
+                optionCard.className = 'bg-gray-50 p-4 rounded-lg border border-gray-200';
+                // 绑定原始选项完整数据
+                optionCard.dataset.optionJson = JSON.stringify(option);
+
+                // 选项标题
+                const optionTitle = document.createElement('div');
+                optionTitle.className = 'font-medium text-gray-800 mb-2';
+                optionTitle.textContent = `${option.label} (${option.env_key || '无环境键'})`;
+                optionCard.appendChild(optionTitle);
+
+                // 选项表单
+                const optionForm = document.createElement('div');
+                optionForm.className = 'space-y-2 text-sm';
+
+                // 基本属性（类型使用下拉）
+                const typeRow = document.createElement('div');
+                typeRow.className = 'mb-2';
+                const typeLabel = document.createElement('label');
+                typeLabel.className = 'block text-gray-700 mb-1';
+                typeLabel.textContent = '类型';
+                const typeSelect = document.createElement('select');
+                typeSelect.className = 'opt-type-original px-3 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
+                ['apps', 'select', 'text', 'password', 'number'].forEach(t => {
+                    const optEl = document.createElement('option');
+                    optEl.value = t;
+                    optEl.textContent = t;
+                    if (t === option.type) optEl.selected = true;
+                    typeSelect.appendChild(optEl);
+                });
+                typeRow.appendChild(typeLabel);
+                typeRow.appendChild(typeSelect);
+                optionForm.appendChild(typeRow);
+
+                // 必填改为可编辑复选框
+                const reqRow = document.createElement('div');
+                reqRow.className = 'mb-2';
+                const reqLabel = document.createElement('label');
+                reqLabel.className = 'inline-flex items-center gap-2 text-gray-700';
+                const reqCheckbox = document.createElement('input');
+                reqCheckbox.type = 'checkbox';
+                reqCheckbox.className = 'opt-required-original';
+                reqCheckbox.checked = !!option.required;
+                const reqText = document.createElement('span');
+                reqText.textContent = '必填';
+                reqLabel.appendChild(reqCheckbox);
+                reqLabel.appendChild(reqText);
+                reqRow.appendChild(reqLabel);
+                optionForm.appendChild(reqRow);
+
+                // 标签 label（可编辑）
+                const labelRow = document.createElement('div');
+                labelRow.className = 'mb-2';
+                const labelLab = document.createElement('label');
+                labelLab.className = 'block text-gray-700 mb-1';
+                labelLab.textContent = '标签 label';
+                const labelInput = document.createElement('input');
+                labelInput.type = 'text';
+                labelInput.className = 'opt-label-original px-3 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
+                labelInput.value = option.label || '';
+                labelRow.appendChild(labelLab);
+                labelRow.appendChild(labelInput);
+                optionForm.appendChild(labelRow);
+
+                // env_key（可编辑）
+                const envKeyRow = document.createElement('div');
+                envKeyRow.className = 'mb-2';
+                const envKeyLab = document.createElement('label');
+                envKeyLab.className = 'block text-gray-700 mb-1';
+                envKeyLab.textContent = '环境变量键 env_key';
+                const envKeyInput = document.createElement('input');
+                envKeyInput.type = 'text';
+                envKeyInput.className = 'opt-envkey-original px-3 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
+                envKeyInput.value = option.env_key || '';
+                envKeyRow.appendChild(envKeyLab);
+                envKeyRow.appendChild(envKeyInput);
+                optionForm.appendChild(envKeyRow);
+
+                // 默认值 default（可编辑）
+                const defRow = document.createElement('div');
+                defRow.className = 'mb-2';
+                const defLab = document.createElement('label');
+                defLab.className = 'block text-gray-700 mb-1';
+                defLab.textContent = '默认值 default';
+                const defInput = document.createElement('input');
+                defInput.type = 'text';
+                defInput.className = 'opt-default-original px-3 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
+                defInput.value = option.default ?? '';
+                defRow.appendChild(defLab);
+                defRow.appendChild(defInput);
+                optionForm.appendChild(defRow);
+
+                // 验证规则 rule（可编辑）
+                const ruleRow = document.createElement('div');
+                ruleRow.className = 'mb-2';
+                const ruleLab = document.createElement('label');
+                ruleLab.className = 'block text-gray-700 mb-1';
+                ruleLab.textContent = '验证规则 rule';
+                const ruleInput = document.createElement('input');
+                ruleInput.type = 'text';
+                ruleInput.className = 'opt-rule-original px-3 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
+                ruleInput.value = option.rule ?? '';
+                ruleRow.appendChild(ruleLab);
+                ruleRow.appendChild(ruleInput);
+                optionForm.appendChild(ruleRow);
+
+                // disabled / random（可编辑开关）
+                const flagsRow = document.createElement('div');
+                flagsRow.className = 'mb-2 flex items-center gap-6';
+                const disLab = document.createElement('label');
+                disLab.className = 'inline-flex items-center gap-2 text-gray-700';
+                const disCb = document.createElement('input');
+                disCb.type = 'checkbox';
+                disCb.className = 'opt-disabled-original';
+                disCb.checked = !!option.disabled;
+                const disText = document.createElement('span');
+                disText.textContent = '禁用 disabled';
+                disLab.appendChild(disCb);
+                disLab.appendChild(disText);
+
+                const rndLab = document.createElement('label');
+                rndLab.className = 'inline-flex items-center gap-2 text-gray-700';
+                const rndCb = document.createElement('input');
+                rndCb.type = 'checkbox';
+                rndCb.className = 'opt-random-original';
+                rndCb.checked = !!option.random;
+                const rndText = document.createElement('span');
+                rndText.textContent = '随机生成 random';
+                rndLab.appendChild(rndCb);
+                rndLab.appendChild(rndText);
+
+                flagsRow.appendChild(disLab);
+                flagsRow.appendChild(rndLab);
+                optionForm.appendChild(flagsRow);
+
+                // 标题动态更新：显示“标签（env_key）”
+                const updateTitle = () => {
+                    const lbl = (labelInput.value || option.label || '').trim();
+                    const evk = (envKeyInput.value || option.env_key || '').trim();
+                    optionTitle.textContent = `${lbl || '选项'} (${evk || '无环境键'})`;
+                };
+                labelInput.addEventListener('input', updateTitle);
+                envKeyInput.addEventListener('input', updateTitle);
+                // 初始化一次
+                updateTitle();
+
+                // 根据类型显示不同的输入控件
+                if ((option.type === 'apps' || option.type === 'select')) {
+                    // 多可选项编辑器 + 当前值选择
+                    const valuesWrap = document.createElement('div');
+                    valuesWrap.className = 'mb-2';
+                    const valuesLabel = document.createElement('label');
+                    valuesLabel.className = 'block text-gray-700 mb-1';
+                    valuesLabel.textContent = '可选项（label/value，可添加多个）';
+                    valuesWrap.appendChild(valuesLabel);
+
+                    const editor = document.createElement('div');
+                    editor.className = 'opt-values-editor space-y-2';
+
+                    const list = document.createElement('div');
+                    list.className = 'vals-list space-y-2';
+                    editor.appendChild(list);
+
+                    function addValRow(item = {label: '', value: ''}) {
+                        const row = document.createElement('div');
+                        row.className = 'val-row flex items-center gap-2';
+                        row.innerHTML = `
+                            <input type="text" class="val-label px-3 py-2 border border-gray-300 rounded-lg flex-1" placeholder="label" value="${item.label || ''}">
+                            <input type="text" class="val-value px-3 py-2 border border-gray-300 rounded-lg flex-1" placeholder="value" value="${item.value || ''}">
+                            <button type="button" class="val-del text-red-500 hover:text-red-700"><i class="fas fa-trash-alt"></i></button>
+                        `;
+                        row.querySelector('.val-del').addEventListener('click', () => {
+                            row.remove();
+                            rebuildSelect();
+                        });
+                        list.appendChild(row);
+                    }
+
+                    // 初始化已有 values
+                    if (Array.isArray(option.values)) {
+                        option.values.forEach(v => addValRow(v));
+                    } else {
+                        addValRow();
+                    }
+
+                    const addBtn = document.createElement('button');
+                    addBtn.type = 'button';
+                    addBtn.className = 'mt-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-1 px-3 rounded-lg text-sm';
+                    addBtn.innerHTML = '<i class="fas fa-plus mr-1"></i> 添加选项';
+                    addBtn.addEventListener('click', () => {
+                        addValRow();
+                        rebuildSelect();
+                    });
+
+                    editor.appendChild(addBtn);
+                    valuesWrap.appendChild(editor);
+                    optionForm.appendChild(valuesWrap);
+
+                    // 当前值选择框
+                    const selectContainer = document.createElement('div');
+                    selectContainer.className = 'mb-2';
+                    const selectLabel = document.createElement('label');
+                    selectLabel.className = 'block text-gray-700 mb-1';
+                    selectLabel.textContent = '值';
+                    selectContainer.appendChild(selectLabel);
+
+                    const select = document.createElement('select');
+                    select.className = 'field-value px-3 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
+                    selectContainer.appendChild(select);
+                    optionForm.appendChild(selectContainer);
+
+                    function rebuildSelect() {
+                        const rows = list.querySelectorAll('.val-row');
+                        const current = select.value;
+                        select.innerHTML = '';
+                        rows.forEach(r => {
+                            const lbl = r.querySelector('.val-label')?.value || '';
+                            const val = r.querySelector('.val-value')?.value || '';
+                            const optEl = document.createElement('option');
+                            optEl.value = val;
+                            optEl.textContent = lbl || val || '-';
+                            select.appendChild(optEl);
+                        });
+                        // 还原选中值或使用原始值
+                        if (current) {
+                            const found = Array.from(select.options).some(o => o.value === current);
+                            if (found) select.value = current;
+                        } else if (option.value) {
+                            const found2 = Array.from(select.options).some(o => o.value === String(option.value));
+                            if (found2) select.value = String(option.value);
+                        }
+                    }
+
+                    function validateDup() {
+                        const valueInputs = list.querySelectorAll('.val-value');
+                        const counts = {};
+                        valueInputs.forEach(inp => {
+                            const v = (inp.value || '').trim();
+                            if (!v) return;
+                            counts[v] = (counts[v] || 0) + 1;
+                        });
+                        valueInputs.forEach(inp => {
+                            const v = (inp.value || '').trim();
+                            if (v && counts[v] > 1) inp.classList.add('border-red-500');
+                            else inp.classList.remove('border-red-500');
+                        });
+                    }
+
+                    function rebuildAndValidate() {
+                        rebuildSelect();
+                        validateDup();
+                    }
+
+                    rebuildAndValidate();
+                    // 当编辑器行变化时，尝试更新下拉并校验
+                    list.addEventListener('input', rebuildAndValidate);
+                } else {
+                    // 文本输入类型
+                    const inputContainer = document.createElement('div');
+                    inputContainer.className = 'mb-2';
+
+                    const inputLabel = document.createElement('label');
+                    inputLabel.className = 'block text-gray-700 mb-1';
+                    inputLabel.textContent = '值';
+                    inputContainer.appendChild(inputLabel);
+
+                    const input = document.createElement('input');
+                    input.type = option.type === 'password' ? 'password' :
+                        option.type === 'number' ? 'number' : 'text';
+                    input.className = 'field-value px-3 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
+                    input.value = option.value || option.default || '';
+                    inputContainer.appendChild(input);
+                    optionForm.appendChild(inputContainer);
+                }
+
+                // 默认值显示
+                if (option.default) {
+                    addOptionAttribute(optionForm, '默认值', option.default);
+                }
+
+                // 删除按钮
+                const deleteBtn = document.createElement('button');
+                deleteBtn.type = 'button';
+                deleteBtn.className = 'text-red-500 hover:text-red-700 transition-colors text-sm';
+                deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+                deleteBtn.addEventListener('click', function () {
+                    optionCard.remove();
+                });
+
+                optionCard.appendChild(optionForm);
+                optionCard.appendChild(deleteBtn);
+                optionsContainer.appendChild(optionCard);
+            });
+
+            // 新增选项按钮
+            const addOptionBtn = document.createElement('button');
+            addOptionBtn.type = 'button';
+            addOptionBtn.className = 'mt-3 bg-blue-600 hover:bg-blue-700 text-white font-medium py-1 px-4 rounded-lg transition-colors text-sm';
+            addOptionBtn.innerHTML = '<i class="fas fa-plus mr-1"></i> 新增选项';
+            addOptionBtn.addEventListener('click', function () {
+                addOptionItem(optionsContainer);
+            });
+
+            container.appendChild(optionsContainer);
+            container.appendChild(addOptionBtn);
+        }
+
+        // 添加选项属性显示
+        function addOptionAttribute(container, label, value) {
+            const attribute = document.createElement('div');
+            attribute.className = 'flex justify-between text-gray-600';
+
+            const labelSpan = document.createElement('span');
+            labelSpan.className = 'font-medium';
+            labelSpan.textContent = label + ':';
+
+            const valueSpan = document.createElement('span');
+            valueSpan.textContent = value !== undefined && value !== null ? value : '-';
+
+            attribute.appendChild(labelSpan);
+            attribute.appendChild(valueSpan);
+            container.appendChild(attribute);
+        }
+
+        // 渲染环境变量字段
+        function renderEnvField(envVars, container) {
+            if (!Array.isArray(envVars)) {
+                return;
+            }
+
+            const envContainer = document.createElement('div');
+            envContainer.className = 'env-container space-y-2';
+
+            envVars.forEach((envVar, index) => {
+                const envRow = document.createElement('div');
+                envRow.className = 'flex flex-wrap items-center gap-2 bg-gray-50 p-3 rounded-lg';
+                // 绑定原始环境变量key
+                envRow.dataset.key = envVar.key;
+
+                const keyInput = document.createElement('input');
+                keyInput.type = 'text';
+                keyInput.className = 'env-key px-3 py-1 border border-gray-300 rounded-lg min-w-[150px]';
+                keyInput.value = envVar.key || '';
+
+                const valueInput = document.createElement('input');
+                valueInput.type = 'text';
+                valueInput.className = 'field-value px-3 py-1 border border-gray-300 rounded-lg flex-grow focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
+                valueInput.value = envVar.value || '';
+
+                // 删除按钮
+                const deleteBtn = document.createElement('button');
+                deleteBtn.type = 'button';
+                deleteBtn.className = 'text-red-500 hover:text-red-700 transition-colors text-sm';
+                deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+                deleteBtn.addEventListener('click', function () {
+                    envRow.remove();
+                });
+
+                envRow.appendChild(keyInput);
+                envRow.appendChild(valueInput);
+                envRow.appendChild(deleteBtn);
+                envContainer.appendChild(envRow);
+            });
+
+            // 新增环境变量按钮
+            const addEnvBtn = document.createElement('button');
+            addEnvBtn.type = 'button';
+            addEnvBtn.className = 'mt-3 bg-blue-600 hover:bg-blue-700 text-white font-medium py-1 px-4 rounded-lg transition-colors text-sm';
+            addEnvBtn.innerHTML = '<i class="fas fa-plus mr-1"></i> 新增环境变量';
+            addEnvBtn.addEventListener('click', function () {
+                addEnvVar(envContainer);
+            });
+
+            container.appendChild(envContainer);
+            container.appendChild(addEnvBtn);
+        }
+
+        // 渲染卷挂载字段
+        function renderVolumeMountsField(volumeMounts, container) {
+            if (!Array.isArray(volumeMounts)) {
+                return;
+            }
+
+            const volumesContainer = document.createElement('div');
+            volumesContainer.className = 'volumes-container space-y-4';
+
+            volumeMounts.forEach((volume, index) => {
+                const volumeCard = document.createElement('div');
+                volumeCard.className = 'bg-gray-50 p-4 rounded-lg border border-gray-200';
+                // 绑定原始卷挂载完整数据
+                volumeCard.dataset.volumeJson = JSON.stringify(volume);
+
+                const volumeTitle = document.createElement('div');
+                volumeTitle.className = 'font-medium text-gray-800 mb-2';
+                volumeTitle.textContent = volume.name || `卷挂载 ${index + 1}`;
+                volumeCard.appendChild(volumeTitle);
+
+                const volumeForm = document.createElement('div');
+                volumeForm.className = 'space-y-2';
+
+                // 创建可编辑的输入字段
+                const createField = (label, value, className) => {
+                    const fieldDiv = document.createElement('div');
+                    fieldDiv.className = 'space-y-1';
+
+                    const labelEl = document.createElement('label');
+                    labelEl.className = 'block text-xs font-medium text-gray-600';
+                    labelEl.textContent = label;
+
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = `${className} w-full px-3 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500`;
+                    input.value = value || '';
+
+                    fieldDiv.appendChild(labelEl);
+                    fieldDiv.appendChild(input);
+                    return fieldDiv;
+                };
+
+                // 添加可编辑字段
+                if (volume.name !== undefined) {
+                    volumeForm.appendChild(createField('卷名称', volume.name, 'vol-name-edit'));
+                }
+                if (volume.mount_path !== undefined) {
+                    volumeForm.appendChild(createField('挂载路径', volume.mount_path, 'vol-mount-path-edit'));
+                }
+                if (volume.sub_path !== undefined) {
+                    volumeForm.appendChild(createField('子路径', volume.sub_path, 'vol-sub-path-edit'));
+                }
+                if (volume.mount_content_type !== undefined) {
+                    volumeForm.appendChild(createField('类型', volume.mount_content_type, 'vol-type-edit'));
+                }
+
+                // 删除按钮
+                const deleteBtn = document.createElement('button');
+                deleteBtn.type = 'button';
+                deleteBtn.className = 'text-red-500 hover:text-red-700 transition-colors text-sm mt-2';
+                deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i> 删除卷挂载';
+                deleteBtn.addEventListener('click', function () {
+                    volumeCard.remove();
+                });
+
+                volumeCard.appendChild(volumeForm);
+                volumeCard.appendChild(deleteBtn);
+                volumesContainer.appendChild(volumeCard);
+            });
+
+            // 新增卷挂载按钮
+            const addVolumeBtn = document.createElement('button');
+            addVolumeBtn.type = 'button';
+            addVolumeBtn.className = 'mt-3 bg-blue-600 hover:bg-blue-700 text-white font-medium py-1 px-4 rounded-lg transition-colors text-sm';
+            addVolumeBtn.innerHTML = '<i class="fas fa-plus mr-1"></i> 新增卷挂载';
+            addVolumeBtn.addEventListener('click', function () {
+                addVolumeMount(volumesContainer);
+            });
+
+            container.appendChild(volumesContainer);
+            container.appendChild(addVolumeBtn);
+        }
+
+        // 渲染资源限制字段
+        function renderResourceRequest(resourceRequest, container) {
+            if (!resourceRequest || typeof resourceRequest !== 'object') {
+                return;
+            }
+
+            const resourceContainer = document.createElement('div');
+            resourceContainer.className = 'resource-container bg-gray-50 p-4 rounded-lg border border-gray-200';
+
+            const resourceTitle = document.createElement('div');
+            resourceTitle.className = 'font-medium text-gray-800 mb-3';
+            resourceTitle.textContent = '资源限制';
+            resourceContainer.appendChild(resourceTitle);
+
+            // CPU 限制
+            if (resourceRequest.min_cpu !== undefined) {
+                const cpuContainer = document.createElement('div');
+                cpuContainer.className = 'mb-3';
+
+                const cpuLabel = document.createElement('div');
+                cpuLabel.className = 'flex justify-between mb-1';
+                cpuLabel.innerHTML = `
+                    <span class="text-sm font-medium text-gray-700">CPU 最小值</span>
+                    <span class="text-sm text-gray-500">${resourceRequest.min_cpu} m</span>
+                `;
+                cpuContainer.appendChild(cpuLabel);
+
+                const cpuInput = document.createElement('input');
+                cpuInput.type = 'range';
+                cpuInput.className = 'w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer';
+                cpuInput.min = '100';
+                cpuInput.max = '4000';
+                cpuInput.step = '100';
+                cpuInput.value = resourceRequest.min_cpu;
+                cpuInput.dataset.field = 'min_cpu';
+                cpuContainer.appendChild(cpuInput);
+
+                resourceContainer.appendChild(cpuContainer);
+            }
+
+            // 内存限制
+            if (resourceRequest.min_memory !== undefined) {
+                const memoryContainer = document.createElement('div');
+                memoryContainer.className = 'mb-3';
+
+                const memoryLabel = document.createElement('div');
+                memoryLabel.className = 'flex justify-between mb-1';
+                memoryLabel.innerHTML = `
+                    <span class="text-sm font-medium text-gray-700">内存最小值</span>
+                    <span class="text-sm text-gray-500">${resourceRequest.min_memory} MiB</span>
+                `;
+                memoryContainer.appendChild(memoryLabel);
+
+                const memoryInput = document.createElement('input');
+                memoryInput.type = 'range';
+                memoryInput.className = 'w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer';
+                memoryInput.min = '128';
+                memoryInput.max = '16384';
+                memoryInput.step = '128';
+                memoryInput.value = resourceRequest.min_memory;
+                memoryInput.dataset.field = 'min_memory';
+                memoryContainer.appendChild(memoryInput);
+
+                resourceContainer.appendChild(memoryContainer);
+            }
+
+            container.appendChild(resourceContainer);
+        }
+
+        // 渲染脚本字段
+        function renderScriptsField(scripts, container) {
+            if (!scripts || typeof scripts !== 'object') {
+                return;
+            }
+
+            const scriptsContainer = document.createElement('div');
+            scriptsContainer.className = 'scripts-container bg-gray-50 p-4 rounded-lg border border-gray-200';
+
+            const scriptsTitle = document.createElement('div');
+            scriptsTitle.className = 'font-medium text-gray-800 mb-3';
+            scriptsTitle.textContent = '脚本设定';
+            scriptsContainer.appendChild(scriptsTitle);
+
+            // 遍历脚本类型
+            const scriptTypes = [
+                {key: 'install', label: '安装脚本'},
+                {key: 'install_image', label: '安装镜像脚本'},
+                {key: 'post_start', label: '启动后脚本'},
+                {key: 'pre_stop', label: '停止前脚本'}
+            ];
+
+            scriptTypes.forEach(scriptType => {
+                const scriptContainer = document.createElement('div');
+                scriptContainer.className = 'mb-4';
+
+                const scriptLabel = document.createElement('label');
+                scriptLabel.className = 'block text-sm font-medium text-gray-700 mb-1';
+                scriptLabel.textContent = scriptType.label;
+                scriptContainer.appendChild(scriptLabel);
+
+                const scriptTextarea = document.createElement('textarea');
+                scriptTextarea.className = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
+                scriptTextarea.rows = 4;
+                scriptTextarea.value = scripts[scriptType.key] || '';
+                scriptTextarea.dataset.scriptKey = scriptType.key;
+                scriptContainer.appendChild(scriptTextarea);
+
+                scriptsContainer.appendChild(scriptContainer);
+            });
+
+            container.appendChild(scriptsContainer);
+        }
+
+        // 渲染服务配置字段
+        function renderServicesField(services, container) {
+            if (!Array.isArray(services)) {
+                return;
+            }
+
+            const servicesContainer = document.createElement('div');
+            servicesContainer.className = 'services-container space-y-4';
+
+            services.forEach((service, index) => {
+                const serviceCard = document.createElement('div');
+                serviceCard.className = 'bg-gray-50 p-4 rounded-lg border border-gray-200';
+
+                const serviceTitle = document.createElement('div');
+                serviceTitle.className = 'font-medium text-gray-800 mb-3';
+                serviceTitle.textContent = service.name || `服务 ${index + 1}`;
+                serviceCard.appendChild(serviceTitle);
+
+                const serviceForm = document.createElement('div');
+                serviceForm.className = 'space-y-3';
+
+                // 创建可编辑的输入字段
+                const createField = (label, value, className) => {
+                    const fieldDiv = document.createElement('div');
+                    fieldDiv.className = 'space-y-1';
+
+                    const labelEl = document.createElement('label');
+                    labelEl.className = 'block text-xs font-medium text-gray-600';
+                    labelEl.textContent = label;
+
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = `${className} w-full px-3 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500`;
+                    input.value = value || '';
+
+                    fieldDiv.appendChild(labelEl);
+                    fieldDiv.appendChild(input);
+                    return fieldDiv;
+                };
+
+                // 创建可编辑的选择字段
+                const createSelectField = (label, value, options, className) => {
+                    const fieldDiv = document.createElement('div');
+                    fieldDiv.className = 'space-y-1';
+
+                    const labelEl = document.createElement('label');
+                    labelEl.className = 'block text-xs font-medium text-gray-600';
+                    labelEl.textContent = label;
+
+                    const select = document.createElement('select');
+                    select.className = `${className} w-full px-3 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500`;
+
+                    options.forEach(option => {
+                        const optionEl = document.createElement('option');
+                        optionEl.value = option.value;
+                        optionEl.textContent = option.label;
+                        if (option.value === value) {
+                            optionEl.selected = true;
+                        }
+                        select.appendChild(optionEl);
+                    });
+
+                    fieldDiv.appendChild(labelEl);
+                    fieldDiv.appendChild(select);
+                    return fieldDiv;
+                };
+
+                // 添加可编辑字段
+                if (service.name !== undefined) {
+                    serviceForm.appendChild(createField('服务名称', service.name, 'service-name-edit'));
+                }
+                if (service.label !== undefined) {
+                    serviceForm.appendChild(createField('标签', service.label, 'service-label-edit'));
+                }
+                if (service.service_type !== undefined) {
+                    serviceForm.appendChild(createSelectField('服务类型', service.service_type, [
+                        {value: 'external', label: '外部访问'},
+                        {value: 'internal', label: '内部访问'}
+                    ], 'service-type-edit'));
+                }
+                if (service.port !== undefined) {
+                    serviceForm.appendChild(createField('内部端口', service.port, 'service-port-edit'));
+                }
+                if (service.external_port !== undefined) {
+                    serviceForm.appendChild(createField('外部端口', service.external_port, 'service-external-port-edit'));
+                }
+                if (service.protocol !== undefined) {
+                    serviceForm.appendChild(createSelectField('协议', service.protocol, [
+                        {value: 'TCP', label: 'TCP'},
+                        {value: 'UDP', label: 'UDP'}
+                    ], 'service-protocol-edit'));
+                }
+
+                // 删除按钮
+                const deleteBtn = document.createElement('button');
+                deleteBtn.type = 'button';
+                deleteBtn.className = 'text-red-500 hover:text-red-700 transition-colors text-sm mt-2';
+                deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i> 删除服务配置';
+                deleteBtn.addEventListener('click', function () {
+                    serviceCard.remove();
+                });
+
+                serviceCard.appendChild(serviceForm);
+                serviceCard.appendChild(deleteBtn);
+                servicesContainer.appendChild(serviceCard);
+            });
+
+            // 新增服务配置按钮
+            const addServiceBtn = document.createElement('button');
+            addServiceBtn.type = 'button';
+            addServiceBtn.className = 'mt-3 bg-blue-600 hover:bg-blue-700 text-white font-medium py-1 px-4 rounded-lg transition-colors text-sm';
+            addServiceBtn.innerHTML = '<i class="fas fa-plus mr-1"></i> 新增服务配置';
+            addServiceBtn.addEventListener('click', function () {
+                addServiceConfig(servicesContainer);
+            });
+
+            container.appendChild(servicesContainer);
+            container.appendChild(addServiceBtn);
+        }
+
+        // 渲染配置文件（configmap）字段
+        function renderConfigMapsField(configMaps, container) {
+            if (!Array.isArray(configMaps)) {
+                return;
+            }
+
+            const configMapsContainer = document.createElement('div');
+            configMapsContainer.className = 'configmaps-container space-y-4';
+
+            configMaps.forEach((configMap, index) => {
+                const configMapCard = document.createElement('div');
+                configMapCard.className = 'bg-gray-50 p-4 rounded-lg border border-gray-200';
+
+                const configMapTitle = document.createElement('div');
+                configMapTitle.className = 'font-medium text-gray-800 mb-3';
+                configMapTitle.textContent = configMap.filename || `配置文件 ${index + 1}`;
+                configMapCard.appendChild(configMapTitle);
+
+                const configMapForm = document.createElement('div');
+                configMapForm.className = 'space-y-3';
+
+                // 创建可编辑的输入字段
+                const createField = (label, value, className) => {
+                    const fieldDiv = document.createElement('div');
+                    fieldDiv.className = 'space-y-1';
+
+                    const labelEl = document.createElement('label');
+                    labelEl.className = 'block text-xs font-medium text-gray-600';
+                    labelEl.textContent = label;
+
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = `${className} w-full px-3 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500`;
+                    input.value = value || '';
+
+                    fieldDiv.appendChild(labelEl);
+                    fieldDiv.appendChild(input);
+                    return fieldDiv;
+                };
+
+                // 创建可编辑的文本域字段
+                const createTextareaField = (label, value, className) => {
+                    const fieldDiv = document.createElement('div');
+                    fieldDiv.className = 'space-y-1';
+
+                    const labelEl = document.createElement('label');
+                    labelEl.className = 'block text-xs font-medium text-gray-600';
+                    labelEl.textContent = label;
+
+                    const textarea = document.createElement('textarea');
+                    textarea.className = `${className} w-full px-3 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500`;
+                    textarea.value = value || '';
+                    textarea.rows = 10;
+
+                    fieldDiv.appendChild(labelEl);
+                    fieldDiv.appendChild(textarea);
+                    return fieldDiv;
+                };
+
+                // 添加可编辑字段
+                if (configMap.filename !== undefined) {
+                    configMapForm.appendChild(createField('文件名', configMap.filename, 'configmap-filename-edit'));
+                }
+                if (configMap.container_path !== undefined) {
+                    configMapForm.appendChild(createField('容器内路径', configMap.container_path, 'configmap-container-path-edit'));
+                }
+                if (configMap.content !== undefined) {
+                    configMapForm.appendChild(createTextareaField('配置文件内容', configMap.content, 'configmap-content-edit'));
+                }
+
+                // 删除按钮
+                const deleteBtn = document.createElement('button');
+                deleteBtn.type = 'button';
+                deleteBtn.className = 'text-red-500 hover:text-red-700 transition-colors text-sm mt-2';
+                deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i> 删除配置文件';
+                deleteBtn.addEventListener('click', function () {
+                    configMapCard.remove();
+                });
+
+                configMapCard.appendChild(configMapForm);
+                configMapCard.appendChild(deleteBtn);
+                configMapsContainer.appendChild(configMapCard);
+            });
+
+            // 新增配置文件按钮
+            const addConfigMapBtn = document.createElement('button');
+            addConfigMapBtn.type = 'button';
+            addConfigMapBtn.className = 'mt-3 bg-blue-600 hover:bg-blue-700 text-white font-medium py-1 px-4 rounded-lg transition-colors text-sm';
+            addConfigMapBtn.innerHTML = '<i class="fas fa-plus mr-1"></i> 新增配置文件';
+            addConfigMapBtn.addEventListener('click', function () {
+                addConfigMap(configMapsContainer);
+            });
+
+            container.appendChild(configMapsContainer);
+            container.appendChild(addConfigMapBtn);
+        }
+
+        // 普通配置字段添加
+        function addConfigField(fieldName, fieldValue, container) {
+            const fieldContainer = document.createElement('div');
+            fieldContainer.className = 'mb-4';
+
+            const label = document.createElement('label');
+            label.className = 'block text-sm font-medium text-gray-700 mb-1';
+            label.textContent = fieldName;
+            fieldContainer.appendChild(label);
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
+            input.value = fieldValue !== undefined && fieldValue !== null ? fieldValue : '';
+            input.dataset.fieldName = fieldName;
+            fieldContainer.appendChild(input);
+
+            container.appendChild(fieldContainer);
+        }
+
+        // 添加选项项
+        function addOptionItem(container) {
+            const optionCard = document.createElement('div');
+            optionCard.className = 'bg-gray-50 p-4 rounded-lg border border-gray-200';
+
+            const optionTitle = document.createElement('div');
+            optionTitle.className = 'font-medium text-gray-800 mb-2';
+            optionTitle.textContent = '新选项 (无环境键)';
+            optionCard.appendChild(optionTitle);
+
+            const optionForm = document.createElement('div');
+            optionForm.className = 'space-y-2 text-sm';
+
+            // 基本属性
+            const typeRow = document.createElement('div');
+            typeRow.className = 'mb-2';
+            typeRow.innerHTML = `
+                <label class="block text-gray-700 mb-1">类型</label>
+                <select class="opt-type-original px-3 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="apps">apps</option>
+                    <option value="select">select</option>
+                    <option value="text">text</option>
+                    <option value="password">password</option>
+                    <option value="number">number</option>
+                </select>
+            `;
+            optionForm.appendChild(typeRow);
+
+            // 必填
+            const reqRow = document.createElement('div');
+            reqRow.className = 'mb-2';
+            reqRow.innerHTML = `
+                <label class="inline-flex items-center gap-2 text-gray-700">
+                    <input type="checkbox" class="opt-required-original">
+                    <span>必填</span>
+                </label>
+            `;
+            optionForm.appendChild(reqRow);
+
+            // 标签和环境键
+            optionForm.innerHTML += `
+                <div class="mb-2">
+                    <label class="block text-gray-700 mb-1">标签 label</label>
+                    <input type="text" class="opt-label-original px-3 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="标签">
+                </div>
+                <div class="mb-2">
+                    <label class="block text-gray-700 mb-1">环境变量键 env_key</label>
+                    <input type="text" class="opt-envkey-original px-3 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="环境变量键">
+                </div>
+            `;
+
+            // 删除按钮
+            const deleteBtn = document.createElement('button');
+            deleteBtn.type = 'button';
+            deleteBtn.className = 'text-red-500 hover:text-red-700 transition-colors text-sm';
+            deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+            deleteBtn.addEventListener('click', function () {
+                optionCard.remove();
+            });
+
+            optionCard.appendChild(optionForm);
+            optionCard.appendChild(deleteBtn);
+            container.appendChild(optionCard);
+        }
+
+        // 添加环境变量
+        function addEnvVar(container) {
+            const envRow = document.createElement('div');
+            envRow.className = 'flex flex-wrap items-center gap-2 bg-gray-50 p-3 rounded-lg';
+            envRow.innerHTML = `
+                <input type="text" class="env-key px-3 py-1 border border-gray-300 rounded-lg min-w-[150px]" placeholder="键">
+                <input type="text" class="field-value px-3 py-1 border border-gray-300 rounded-lg flex-grow focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="值">
+                <button type="button" class="text-red-500 hover:text-red-700 transition-colors text-sm"><i class="fas fa-trash-alt"></i></button>
+            `;
+
+            // 添加删除事件
+            envRow.querySelector('button').addEventListener('click', function () {
+                envRow.remove();
+            });
+
+            container.appendChild(envRow);
+        }
+
+        // 添加卷挂载
+        function addVolumeMount(container) {
+            const volumeCard = document.createElement('div');
+            volumeCard.className = 'bg-gray-50 p-4 rounded-lg border border-gray-200';
+
+            const volumeTitle = document.createElement('div');
+            volumeTitle.className = 'font-medium text-gray-800 mb-2';
+            volumeTitle.textContent = '新卷挂载';
+            volumeCard.appendChild(volumeTitle);
+
+            const volumeForm = document.createElement('div');
+            volumeForm.className = 'space-y-2';
+            volumeForm.innerHTML = `
+                <div class="space-y-1">
+                    <label class="block text-xs font-medium text-gray-600">卷名称</label>
+                    <input type="text" class="vol-name-edit w-full px-3 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="卷名称">
+                </div>
+                <div class="space-y-1">
+                    <label class="block text-xs font-medium text-gray-600">挂载路径</label>
+                    <input type="text" class="vol-mount-path-edit w-full px-3 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="挂载路径">
+                </div>
+                <div class="space-y-1">
+                    <label class="block text-xs font-medium text-gray-600">子路径</label>
+                    <input type="text" class="vol-sub-path-edit w-full px-3 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="子路径">
+                </div>
+                <div class="space-y-1">
+                    <label class="block text-xs font-medium text-gray-600">类型</label>
+                    <input type="text" class="vol-type-edit w-full px-3 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="类型">
+                </div>
+            `;
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.type = 'button';
+            deleteBtn.className = 'text-red-500 hover:text-red-700 transition-colors text-sm mt-2';
+            deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i> 删除卷挂载';
+            deleteBtn.addEventListener('click', function () {
+                volumeCard.remove();
+            });
+
+            volumeCard.appendChild(volumeForm);
+            volumeCard.appendChild(deleteBtn);
+            container.appendChild(volumeCard);
+        }
+
+        // 添加服务配置
+        function addServiceConfig(container) {
+            const serviceCard = document.createElement('div');
+            serviceCard.className = 'bg-gray-50 p-4 rounded-lg border border-gray-200';
+
+            const serviceTitle = document.createElement('div');
+            serviceTitle.className = 'font-medium text-gray-800 mb-3';
+            serviceTitle.textContent = '新服务配置';
+            serviceCard.appendChild(serviceTitle);
+
+            const serviceForm = document.createElement('div');
+            serviceForm.className = 'space-y-3';
+            serviceForm.innerHTML = `
+                <div class="space-y-1">
+                    <label class="block text-xs font-medium text-gray-600">服务名称</label>
+                    <input type="text" class="service-name-edit w-full px-3 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="服务名称">
+                </div>
+                <div class="space-y-1">
+                    <label class="block text-xs font-medium text-gray-600">标签</label>
+                    <input type="text" class="service-label-edit w-full px-3 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="外部访问端口">
+                </div>
+                <div class="space-y-1">
+                    <label class="block text-xs font-medium text-gray-600">服务类型</label>
+                    <select class="service-type-edit w-full px-3 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="external">外部访问</option>
+                        <option value="internal">内部访问</option>
+                    </select>
+                </div>
+                <div class="space-y-1">
+                    <label class="block text-xs font-medium text-gray-600">内部端口</label>
+                    <input type="text" class="service-port-edit w-full px-3 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="内部端口">
+                </div>
+                <div class="space-y-1">
+                    <label class="block text-xs font-medium text-gray-600">外部端口</label>
+                    <input type="text" class="service-external-port-edit w-full px-3 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="外部端口">
+                </div>
+                <div class="space-y-1">
+                    <label class="block text-xs font-medium text-gray-600">协议</label>
+                    <select class="service-protocol-edit w-full px-3 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="TCP">TCP</option>
+                        <option value="UDP">UDP</option>
+                    </select>
+                </div>
+            `;
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.type = 'button';
+            deleteBtn.className = 'text-red-500 hover:text-red-700 transition-colors text-sm mt-2';
+            deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i> 删除服务配置';
+            deleteBtn.addEventListener('click', function () {
+                serviceCard.remove();
+            });
+
+            serviceCard.appendChild(serviceForm);
+            serviceCard.appendChild(deleteBtn);
+            container.appendChild(serviceCard);
+        }
+
+        // 添加配置文件
+        function addConfigMap(container) {
+            const configMapCard = document.createElement('div');
+            configMapCard.className = 'bg-gray-50 p-4 rounded-lg border border-gray-200';
+
+            const configMapTitle = document.createElement('div');
+            configMapTitle.className = 'font-medium text-gray-800 mb-3';
+            configMapTitle.textContent = '新配置文件';
+            configMapCard.appendChild(configMapTitle);
+
+            const configMapForm = document.createElement('div');
+            configMapForm.className = 'space-y-3';
+            configMapForm.innerHTML = `
+                <div class="space-y-1">
+                    <label class="block text-xs font-medium text-gray-600">文件名</label>
+                    <input type="text" class="configmap-filename-edit w-full px-3 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="配置文件名">
+                </div>
+                <div class="space-y-1">
+                    <label class="block text-xs font-medium text-gray-600">容器内路径</label>
+                    <input type="text" class="configmap-container-path-edit w-full px-3 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="容器内路径">
+                </div>
+                <div class="space-y-1">
+                    <label class="block text-xs font-medium text-gray-600">配置文件内容</label>
+                    <textarea class="configmap-content-edit w-full px-3 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500" rows="10" placeholder="配置文件内容"></textarea>
+                </div>
+            `;
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.type = 'button';
+            deleteBtn.className = 'text-red-500 hover:text-red-700 transition-colors text-sm mt-2';
+            deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i> 删除配置文件';
+            deleteBtn.addEventListener('click', function () {
+                configMapCard.remove();
+            });
+
+            configMapCard.appendChild(configMapForm);
+            configMapCard.appendChild(deleteBtn);
+            container.appendChild(configMapCard);
+        }
+    });
+</script>
+});
+</script>

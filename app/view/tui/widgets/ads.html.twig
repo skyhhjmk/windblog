@@ -1,0 +1,49 @@
+{% extends "widgets/base.html.twig" %}
+{% set ad_badge = '[AD]' %}
+
+{% block widget_content %}
+    <div class="space-y-4 font-mono">
+        {% for ad in ads|default([]) %}
+            <div
+                class="border border-gray-700 p-3 relative {% if ad.type == 'google' %}ad-container-google{% endif %}"
+                style="{% if ad.type == 'google' %}min-width: 250px; min-height: 250px;{% endif %}">
+                <span
+                    class="absolute top-0 right-0 text-[10px] px-1 bg-gray-800 text-gray-500 border-l border-b border-gray-700">{{ ad_badge }}</span>
+
+                <div class="mb-2">
+                    {% if ad.type != 'google' and ad.link_url %}
+                        <a href="{{ ad.link_url }}" target="{{ ad.link_target|default('_blank') }}"
+                           rel="noopener noreferrer"
+                           class="block text-sm font-bold text-gray-300 hover:text-green-400 truncate">
+                            {{ ad.title|default('Advertisement') }}
+                        </a>
+                    {% else %}
+                        <div
+                            class="text-sm font-bold text-gray-300 truncate">{{ ad.title|default('Advertisement') }}</div>
+                    {% endif %}
+                </div>
+
+                {% if ad.type == 'image' and ad.image_url %}
+                    {% if ad.link_url %}
+                        <a href="{{ ad.link_url }}" target="{{ ad.link_target|default('_blank') }}"
+                           rel="noopener noreferrer" class="block">
+                            <img src="{{ ad.image_url }}" alt="{{ ad.title|default('Advertisement') }}"
+                                 class="w-full h-auto border border-gray-700" loading="lazy"/>
+                        </a>
+                    {% else %}
+                        <img src="{{ ad.image_url }}" alt="{{ ad.title|default('Advertisement') }}"
+                             class="w-full h-auto border border-gray-700" loading="lazy"/>
+                    {% endif %}
+                {% elseif ad.snippet_html %}
+                    {{ ad.snippet_html|raw }}
+                {% elseif ad.html %}
+                    <div class="prose max-w-none prose-invert">{{ ad.html|raw }}</div>
+                {% else %}
+                    <div class="text-xs text-gray-600">No content</div>
+                {% endif %}
+            </div>
+        {% else %}
+            <div class="text-gray-600 text-sm italic">No ads to display</div>
+        {% endfor %}
+    </div>
+{% endblock %}

@@ -1,0 +1,8 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ page_title|default('搜索') }}{% endblock %}
+
+{% block content %}
+    {# 引入搜索内容模板，确保与PJAX加载的内容一致 #}
+    {% include 'search/index.content.html.twig' %}
+{% endblock %}

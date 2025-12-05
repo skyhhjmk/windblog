@@ -1,0 +1,104 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Profile - {{ page_title|default('WindBlog') }}{% endblock %}
+
+{% block content %}
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-3xl mx-auto">
+            <div class="tui-box" data-title="USER INFO">
+                <div class="flex items-start mb-8">
+                    <div class="mr-6">
+                        {% if user.avatar %}
+                            <img src="{{ user.avatar }}" alt="{{ user.nickname }}"
+                                 class="w-24 h-24 border border-gray-600 p-1">
+                        {% else %}
+                            <div
+                                class="w-24 h-24 border border-gray-600 flex items-center justify-center text-3xl text-gray-400 font-mono">
+                                {{ user.nickname|slice(0, 1)|upper }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-green-400 font-mono">{{ user.nickname }}</h2>
+                        <p class="text-gray-500 font-mono">@{{ user.username }}</p>
+                    </div>
+                </div>
+
+                <div class="space-y-2 font-mono text-sm">
+                    <div class="grid grid-cols-3 gap-4 border-b border-gray-800 pb-2">
+                        <div class="text-gray-500">Username</div>
+                        <div class="col-span-2 text-gray-300">{{ user.username }}</div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-4 border-b border-gray-800 pb-2">
+                        <div class="text-gray-500">Nickname</div>
+                        <div class="col-span-2 text-gray-300">{{ user.nickname }}</div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-4 border-b border-gray-800 pb-2">
+                        <div class="text-gray-500">Email</div>
+                        <div class="col-span-2 text-gray-300">
+                            {{ user.email }}
+                            {% if user.email_verified_at %}
+                                <span class="ml-2 text-green-500">[Verified]</span>
+                            {% else %}
+                                <span class="ml-2 text-yellow-500">[Unverified]</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if user.mobile %}
+                        <div class="grid grid-cols-3 gap-4 border-b border-gray-800 pb-2">
+                            <div class="text-gray-500">Mobile</div>
+                            <div class="col-span-2 text-gray-300">{{ user.mobile }}</div>
+                        </div>
+                    {% endif %}
+
+                    <div class="grid grid-cols-3 gap-4 border-b border-gray-800 pb-2">
+                        <div class="text-gray-500">Level</div>
+                        <div class="col-span-2 text-gray-300">LV.{{ user.level }}</div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-4 border-b border-gray-800 pb-2">
+                        <div class="text-gray-500">Score</div>
+                        <div class="col-span-2 text-gray-300">{{ user.score }}</div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-4 border-b border-gray-800 pb-2">
+                        <div class="text-gray-500">Joined</div>
+                        <div class="col-span-2 text-gray-300">{{ user.join_time|local_date('Y-m-d H:i:s') }}</div>
+                    </div>
+
+                    {% if user.last_time %}
+                        <div class="grid grid-cols-3 gap-4 border-b border-gray-800 pb-2">
+                            <div class="text-gray-500">Last Login</div>
+                            <div class="col-span-2 text-gray-300">{{ user.last_time|local_date('Y-m-d H:i:s') }}</div>
+                        </div>
+                    {% endif %}
+
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="text-gray-500">Status</div>
+                        <div class="col-span-2">
+                            {% if user.status == 0 %}
+                                <span class="text-yellow-500">Inactive</span>
+                            {% elseif user.status == 1 %}
+                                <span class="text-green-500">Active</span>
+                            {% elseif user.status == 2 %}
+                                <span class="text-red-500">Banned</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8 flex space-x-4 font-mono text-sm">
+                    <a href="/user/center" class="text-blue-500 hover:text-blue-400 hover:underline">
+                        [User Center]
+                    </a>
+                    <a href="/" class="text-gray-500 hover:text-gray-400 hover:underline">
+                        [Home]
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

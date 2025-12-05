@@ -1,0 +1,42 @@
+{% extends "base.html.twig" %}
+
+{% block title %}503 Service Unavailable - {{ page_title|default('WindBlog') }}{% endblock %}
+
+{% block content %}
+    <div class="min-h-[60vh] flex items-center justify-center">
+        <div class="tui-box max-w-lg w-full text-center font-mono" data-title="ERROR 503">
+            <div class="mb-6">
+                <span class="text-6xl text-yellow-500 font-bold">503</span>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-300 mb-4">Service Unavailable</h2>
+            <p class="text-gray-500 mb-4">
+                The system is currently under maintenance.
+            </p>
+            <p class="text-gray-600 text-xs mb-8">Page will refresh automatically in 60s</p>
+
+            {% if maintenance_message %}
+                <div class="border border-yellow-900 bg-yellow-900/20 p-4 mb-4 text-sm">
+                    <p class="text-yellow-400">{{ maintenance_message }}</p>
+                </div>
+            {% endif %}
+
+            {% if estimated_time %}
+                <div class="border border-blue-900 bg-blue-900/20 p-4 mb-8 text-sm">
+                    <p class="text-blue-400">Estimated recovery: {{ estimated_time }}</p>
+                </div>
+            {% endif %}
+
+            <div class="flex gap-4 justify-center">
+                <button onclick="location.reload()"
+                        class="px-6 py-2 border border-green-500 text-green-500 hover:bg-green-900 hover:text-white transition-colors">
+                    [Refresh Page]
+                </button>
+            </div>
+        </div>
+    </div>
+    <script>
+        setTimeout(function () {
+            location.reload();
+        }, 60000);
+    </script>
+{% endblock %}

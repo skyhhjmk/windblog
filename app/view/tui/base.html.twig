@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>{% block title %}{{ page_title|default('WindBlog') }}{% endblock %}</title>
+    <meta name="theme-color" content="#1e1e1e">
+    <meta name="color-scheme" content="dark">
+
+    <!-- JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <!-- Tailwind (Layout Only) -->
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        gray: {
+                            50: '#1e1e1e',
+                            100: '#282c34',
+                            200: '#3e4451',
+                            300: '#5c6370',
+                            400: '#abb2bf',
+                            500: '#abb2bf',
+                            600: '#abb2bf',
+                            700: '#abb2bf',
+                            800: '#ffffff',
+                            900: '#ffffff',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <link rel="stylesheet" href="{{ asset('/assets/css/font-awesome.css') }}">
+
+    <style>
+        :root {
+            --bg: #1e1e1e;
+            --fg: #abb2bf;
+            --border: #3e4451;
+            --accent: #61afef;
+            --success: #98c379;
+            --warning: #e5c07b;
+            --error: #e06c75;
+            --selection: #3e4451;
+            --panel-bg: #282c34;
+        }
+
+        body {
+            background-color: var(--bg) !important;
+            color: var(--fg) !important;
+            font-family: 'JetBrains Mono', monospace !important;
+            line-height: 1.5;
+        }
+
+        /* TUI Overrides */
+        .bg-white, .bg-gray-50, .bg-gray-100 {
+            background-color: var(--bg) !important;
+            color: var(--fg) !important;
+        }
+
+        .glass, .glass-nav, .glass-panel, .glass-card {
+            background: var(--bg) !important;
+            backdrop-filter: none !important;
+            border: 1px solid var(--border) !important;
+            box-shadow: none !important;
+        }
+
+        header {
+            border-bottom: 1px solid var(--border);
+        }
+
+        footer {
+            border-top: 1px solid var(--border);
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+            background-color: var(--selection);
+        }
+
+        input, textarea, select {
+            background-color: var(--panel-bg) !important;
+            border: 1px solid var(--border) !important;
+            color: var(--fg) !important;
+            font-family: 'JetBrains Mono', monospace !important;
+            border-radius: 0 !important;
+        }
+
+        button, .btn {
+            border: 1px solid var(--border) !important;
+            background: var(--panel-bg) !important;
+            color: var(--fg) !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+        }
+
+        button:hover, .btn:hover {
+            background: var(--selection) !important;
+            border-color: var(--accent) !important;
+        }
+
+        /* Remove rounded corners and shadows */
+        .rounded, .rounded-lg, .rounded-xl, .rounded-2xl, .rounded-full {
+            border-radius: 0 !important;
+        }
+
+        .shadow, .shadow-md, .shadow-lg, .shadow-xl {
+            box-shadow: none !important;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border: 1px solid var(--bg);
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent);
+        }
+
+        /* Prose / Markdown */
+        .prose {
+            color: var(--fg) !important;
+        }
+
+        .prose h1, .prose h2, .prose h3 {
+            color: var(--accent) !important;
+            border-bottom: 1px dashed var(--border);
+        }
+
+        .prose code {
+            background: var(--panel-bg) !important;
+            color: var(--warning) !important;
+        }
+
+        .prose pre {
+            background: var(--panel-bg) !important;
+            border: 1px solid var(--border);
+        }
+
+        .prose blockquote {
+            border-left: 4px solid var(--accent) !important;
+            background: var(--panel-bg);
+            color: var(--fg) !important;
+        }
+
+        /* TUI Elements */
+        .tui-prompt::before {
+            content: "➜ ";
+            color: var(--success);
+        }
+
+        .tui-path {
+            color: var(--accent);
+        }
+
+        .tui-box {
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+            position: relative;
+            margin-bottom: 1.5rem;
+            background: var(--bg);
+        }
+
+        .tui-box[data-title]::before {
+            content: attr(data-title);
+            position: absolute;
+            top: -0.75rem;
+            left: 1rem;
+            background: var(--bg);
+            padding: 0 0.5rem;
+            color: var(--accent);
+            font-size: 0.875rem;
+            font-weight: bold;
+        }
+
+        #pjax-progress {
+            background: var(--accent) !important;
+            height: 2px !important;
+        }
+    </style>
+
+    {% block extra_css %}{% endblock %}
+    {{ blog_config('embed_head', '', true)|raw }}
+</head>
+<body class="min-h-screen flex flex-col">
+{{ blog_config('embed_body_start', '', true)|raw }}
+
+<!-- Header -->
+<header class="sticky top-0 z-50 bg-gray-50">
+    <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+        <a href="/" class="flex items-center gap-2 font-bold text-xl">
+            <span class="tui-prompt"></span>
+            <span class="tui-path">~/windblog</span>
+        </a>
+
+        <nav class="hidden md:flex items-center gap-6">
+            <a href="/">[Home]</a>
+            <a href="/link">[Links]</a>
+            <div class="relative group">
+                <button id="userMenuBtn">[User]</button>
+                <div
+                    class="absolute right-0 top-full mt-2 w-48 bg-gray-50 border border-gray-200 hidden group-hover:block p-2 z-50">
+                    <div id="userNotLoggedIn">
+                        <a href="/user/login" class="block py-1">Login</a>
+                        <a href="/user/register" class="block py-1">Register</a>
+                    </div>
+                    <div id="userLoggedIn" class="hidden">
+                        <div class="border-b border-gray-200 pb-1 mb-1" id="userNickname">User</div>
+                        <a href="/user/center" class="block py-1">Center</a>
+                        <a href="#" onclick="confirmLogout(); return false;" class="block py-1 text-red-500">Logout</a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Mobile Menu Button -->
+        <button class="md:hidden" id="mobileMenuBtn">[Menu]</button>
+    </div>
+
+    <!-- Mobile Menu -->
+    <div id="mobileMenu" class="hidden md:hidden border-t border-gray-200 p-4 bg-gray-50">
+        <a href="/" class="block py-2">[Home]</a>
+        <a href="/link" class="block py-2">[Links]</a>
+        <div class="border-t border-gray-200 my-2"></div>
+        <div id="mobileUserAuth">
+            <a href="/user/login" class="block py-2">Login</a>
+            <a href="/user/register" class="block py-2">Register</a>
+        </div>
+    </div>
+</header>
+
+<!-- Main Content -->
+<main class="flex-grow container mx-auto px-4 py-8 flex flex-col md:flex-row gap-8">
+    <div id="pjax-container" class="w-full md:w-3/4">
+        {% block content %}{% endblock %}
+    </div>
+    <div id="sidebar-container" class="w-full md:w-1/4 hidden md:block">
+        {% block sidebar %}
+            {% if sidebar is defined and sidebar.widgets is defined %}
+                {% for widget in sidebar.widgets %}
+                    {% if widget.enabled and widget.html is defined %}
+                        {{ widget.html|raw }}
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+        {% endblock %}
+    </div>
+</main>
+
+<!-- Footer -->
+<footer class="py-6 text-center text-sm border-t border-gray-200 mt-auto">
+    <p>&copy; {{ 'now'|date('Y') }} WindBlog. <span class="text-gray-500">Powered by Webman.</span></p>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+{% block extra_js %}{% endblock %}
+
+<!-- PJAX & Logic -->
+<script>
+    // Simple PJAX implementation for TUI
+    $(document).pjax('a[href]:not([target="_blank"]):not([data-no-pjax])', '#pjax-container', {
+        fragment: '#pjax-container',
+        timeout: 8000
+    });
+
+    $(document).on('pjax:send', function () {
+        $('#pjax-progress').css('width', '0').animate({width: '100%'}, 300);
+    });
+
+    $(document).on('pjax:complete', function () {
+        $('#pjax-progress').css('width', '100%').fadeOut(300, function () {
+            $(this).css('width', '0').show();
+        });
+        // Re-init scripts if needed
+    });
+
+    // Mobile Menu
+    $('#mobileMenuBtn').click(function () {
+        $('#mobileMenu').toggleClass('hidden');
+    });
+
+    // User Status
+    function checkUserStatus() {
+        fetch('/user/profile/api').then(r => r.json()).then(data => {
+            if (data.code === 0 && data.data) {
+                $('#userNotLoggedIn, #mobileUserAuth').hide();
+                $('#userLoggedIn').removeClass('hidden');
+                $('#userNickname').text(data.data.nickname || data.data.username);
+            } else {
+                $('#userNotLoggedIn, #mobileUserAuth').show();
+                $('#userLoggedIn').addClass('hidden');
+            }
+        }).catch(() => {
+        });
+    }
+
+    checkUserStatus();
+    $(document).on('pjax:end', checkUserStatus);
+
+    // Logout
+    var logoutCsrfToken = "{{ csrf_token('_logout_token') }}";
+
+    function confirmLogout() {
+        if (confirm('Logout?')) {
+            fetch('/user/logout', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-TOKEN': logoutCsrfToken},
+                body: '_logout_token=' + encodeURIComponent(logoutCsrfToken)
+            }).then(() => window.location.reload());
+        }
+    }
+</script>
+
+<div id="pjax-progress" style="position:fixed;top:0;left:0;height:2px;width:0;z-index:9999;background:#61afef;"></div>
+{{ blog_config('embed_body_end', '', true)|raw }}
+</body>
+</html>

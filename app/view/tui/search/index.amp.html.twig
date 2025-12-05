@@ -1,0 +1,46 @@
+{% extends "base.amp.html.twig" %}
+
+{% block title %}搜索：{{ search_keyword }} - {{ page_title|default('WindBlog') }}{% endblock %}
+
+{% block content %}
+    <article class="main-content">
+        <h1 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 1rem;">搜索：{{ search_keyword }}</h1>
+
+        {% if posts is defined and posts|length > 0 %}
+            {% for post in posts %}
+                <article class="post-card">
+                    <h2 class="post-title">
+                        <a href="/post/{{ post.slug }}.html?amp=1">{{ post.title }}</a>
+                    </h2>
+                    <div class="post-meta">
+                        {% if post.created_at %}
+                            <span>📅 {{ post.created_at|date('Y-m-d') }}</span>
+                        {% endif %}
+                    </div>
+                    {% if post.excerpt %}
+                        <div class="post-excerpt">{{ post.excerpt|striptags|raw }}</div>
+                    {% endif %}
+                    <a href="/post/{{ post.slug }}.html?amp=1" style="color:#667eea;text-decoration:none;">阅读全文
+                        →</a>
+                </article>
+            {% endfor %}
+
+            {% if amp_pagination is defined and amp_pagination.total_pages > 1 %}
+                <div style="display:flex;justify-content:center;gap:0.5rem;margin-top:1.5rem;">
+                    {% if amp_pagination.current_page > 1 %}
+                        <a href="/search/page/{{ amp_pagination.current_page - 1 }}.html?q={{ search_keyword|url_encode }}&amp=1"
+                           style="padding:.5rem 1rem;background:#667eea;color:#fff;border-radius:4px;text-decoration:none;">←
+                            上一页</a>
+                    {% endif %}
+                    {% if amp_pagination.current_page < amp_pagination.total_pages %}
+                        <a href="/search/page/{{ amp_pagination.current_page + 1 }}.html?q={{ search_keyword|url_encode }}&amp=1"
+                           style="padding:.5rem 1rem;background:#667eea;color:#fff;border-radius:4px;text-decoration:none;">下一页
+                            →</a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        {% else %}
+            <p style="color:#6b7280;">未找到相关内容</p>
+        {% endif %}
+    </article>
+{% endblock %}

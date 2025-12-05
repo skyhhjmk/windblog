@@ -111,7 +111,8 @@ class StaticCacheRedirect implements MiddlewareInterface
         }
 
         // 使用缓存键作为子目录，实现多版本缓存
-        $cacheDir = public_path() . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'static' . DIRECTORY_SEPARATOR . substr($cacheKey, 0, 8);
+        $theme = blog_config('theme', 'default');
+        $cacheDir = public_path() . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'static' . DIRECTORY_SEPARATOR . $theme . DIRECTORY_SEPARATOR . substr($cacheKey, 0, 8);
         $full = $cacheDir . DIRECTORY_SEPARATOR . $rel;
 
         if (is_file($full)) {

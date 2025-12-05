@@ -1,0 +1,23 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}OAuth登录失败 - {{ page_title|default('WindBlog') }}{% endblock %}
+
+{% block content %}
+    <div class="container mx-auto px-4 py-16">
+        <div class="max-w-md mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8 text-center">
+            <div class="mb-6">
+                <i class="fas fa-exclamation-circle text-6xl text-red-500 dark:text-red-400"></i>
+            </div>
+            <h1 class="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">OAuth登录失败</h1>
+            <p class="text-gray-600 dark:text-gray-400 mb-6">{{ message ?? 'OAuth登录过程中发生错误' }}</p>
+            <div class="space-y-3">
+                <a href="/user/login" class="block w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                    返回登录页
+                </a>
+                <a href="/" class="block w-full px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400">
+                    返回首页
+                </a>
+            </div>
+        </div>
+    </div>
+{% endblock %}

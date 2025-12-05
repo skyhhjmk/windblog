@@ -157,34 +157,42 @@ class EnhancedStaticCacheConfig
         switch ($type) {
             case 'public':
                 // 公共缓存,所有用户共享
-                return "v{$version}_public_" . md5($path);
+                $theme = blog_config('theme', 'default');
+
+                return "v{$version}_{$theme}_public_" . md5($path);
 
             case 'authenticated':
                 // 已登录用户缓存
                 $group = self::getUserCacheGroup($request);
+                $theme = blog_config('theme', 'default');
 
-                return "v{$version}_auth_{$group}_" . md5($path);
+                return "v{$version}_{$theme}_auth_{$group}_" . md5($path);
 
             case 'user_group':
                 // 用户组缓存
                 $group = self::getUserCacheGroup($request);
+                $theme = blog_config('theme', 'default');
 
-                return "v{$version}_group_{$group}_" . md5($path);
+                return "v{$version}_{$theme}_group_{$group}_" . md5($path);
 
             case 'personalized':
                 // 个性化缓存(每个用户独立)
                 $userId = $request->session()?->get('user_id') ?? 'guest';
+                $theme = blog_config('theme', 'default');
 
-                return "v{$version}_user_{$userId}_" . md5($path);
+                return "v{$version}_{$theme}_user_{$userId}_" . md5($path);
 
             case 'conditional':
                 // 条件缓存(基于设备类型、时间等)
                 $device = self::getDeviceType($request);
+                $theme = blog_config('theme', 'default');
 
-                return "v{$version}_cond_{$device}_" . md5($path);
+                return "v{$version}_{$theme}_cond_{$device}_" . md5($path);
 
             default:
-                return "v{$version}_default_" . md5($path);
+                $theme = blog_config('theme', 'default');
+
+                return "v{$version}_{$theme}_default_" . md5($path);
         }
     }
 

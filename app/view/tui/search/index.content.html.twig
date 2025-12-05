@@ -1,0 +1,197 @@
+<title>{{ page_title|default('Search') }}</title>
+
+<div id="pjax-container">
+    <!-- PJAX Sidebar Fragment -->
+    <div id="pjax-sidebar-html" style="display:none">
+        {% if sidebar is defined and sidebar.widgets is defined %}
+            {% for widget in sidebar.widgets %}
+                {% if widget.enabled and widget.html is defined %}
+                    {{ widget.html|raw }}
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    </div>
+
+    <div class="max-w-full mx-auto px-4">
+        <div class="mb-8 text-center">
+            <h1 class="text-2xl font-bold mb-2">
+                <span class="text-green-500">➜</span>
+                <span class="text-blue-500">~</span>
+                grep -r "{{ search_keyword|default('') }}" .
+            </h1>
+
+            {% if search_keyword %}
+                <div class="text-gray-500 font-mono text-sm">
+                    {% if esMeta is defined and esMeta.signals is defined %}
+                        <div>
+                            [INFO] Signals:
+                            {% if esMeta.signals.synonym %}Synonym {% endif %}
+                            {% if esMeta.signals.highlighted %}Highlight {% endif %}
+                            {% if esMeta.signals.analyzer %}Analyzer:{{ esMeta.signals.analyzer }}{% endif %}
+                        </div>
+                        {% if esMeta.signals.degraded %}
+                            <div class="text-yellow-500">[WARN] Search degraded</div>
+                        {% endif %}
+                    {% endif %}
+                    <div>Total: {{ totalCount|default(0) }} matches</div>
+                </div>
+
+                {% if suggest_titles is defined and suggest_titles|length > 0 %}
+                    <div class="mt-4 text-left border border-gray-700 p-4 bg-gray-800">
+                        <div class="text-gray-400 font-bold mb-2">Did you mean:</div>
+                        <div class="flex flex-wrap gap-2">
+                            {% for t in suggest_titles %}
+                                <a href="/search?q={{ t|url_encode }}" class="text-blue-400 hover:underline">
+                                    {{ t }}
+                                </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+            {% endif %}
+        </div>
+
+        <!-- Search Form -->
+        <div class="mb-8">
+            <form action="/search" method="get" class="flex gap-2 max-w-3xl mx-auto">
+                <span class="self-center text-green-500 font-bold">➜</span>
+                <input type="text" name="q" value="{{ search_keyword|default('') }}" placeholder="Search..."
+                       class="flex-1 bg-gray-800 border border-gray-600 p-2 text-white focus:border-blue-500 outline-none font-mono"/>
+                <button type="submit"
+                        class="bg-blue-600 text-white px-4 py-2 border border-blue-500 hover:bg-blue-700 font-mono">
+                    [Enter]
+                </button>
+            </form>
+
+            <!-- Filters -->
+            <div class="max-w-3xl mx-auto mt-4 font-mono text-sm flex flex-wrap gap-4 justify-center">
+                {% set currentType = search_type|default('all') %}
+                <div class="flex gap-2">
+                    <span class="text-gray-500">Type:</span>
+                    {% set types = {'all':'All','post':'Post','tag':'Tag','category':'Category'} %}
+                    {% for key,label in types %}
+                        <a href="/search?q={{ search_keyword|url_encode }}&type={{ key }}{% if search_sort is defined and search_sort %}&sort={{ search_sort }}{% endif %}{% if search_date is defined and search_date %}&date={{ search_date }}{% endif %}"
+                           class="{{ currentType==key ? 'text-green-500 font-bold' : 'text-gray-400 hover:text-white' }}">
+                            [{{ label }}]
+                        </a>
+                    {% endfor %}
+                </div>
+
+                <div class="flex gap-2">
+                    <span class="text-gray-500">Sort:</span>
+                    {% set sorts = {'':'Default','latest':'Latest','hot':'Hot'} %}
+                    {% for sk,sl in sorts %}
+                        <a href="/search?q={{ search_keyword|url_encode }}&type={{ currentType }}{% if sk %}&sort={{ sk }}{% endif %}{% if search_date is defined and search_date %}&date={{ search_date }}{% endif %}"
+                           class="{{ (search_sort|default('')==sk) ? 'text-purple-500 font-bold' : 'text-gray-400 hover:text-white' }}">
+                            [{{ sl }}]
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        {% if posts|length > 0 %}
+            <div class="space-y-6">
+                {% for post in posts %}
+                    <div class="tui-box" data-title="MATCH">
+                        <div class="mb-2 font-mono text-sm">
+                            <span class="text-green-500">user@windblog</span>:<span
+                                class="text-blue-500">~/search</span>$ grep "{{ search_keyword }}" {{ post.slug }}.md
+                        </div>
+
+                        <h2 class="text-xl font-bold mb-2">
+                            <a href="/post/{{ post.slug }}.html" class="hover:underline">
+                                {{ (esMeta.highlights[post.id].title[0] ?? post.title)|raw }}
+                            </a>
+                            {% if post.featured %}
+                                <span class="text-yellow-500 text-sm ml-2">[Featured]</span>
+                            {% endif %}
+                        </h2>
+
+                        <div class="text-sm text-gray-500 mb-4 font-mono">
+                            <span class="mr-4">Date: {{ post.created_at|local_date('Y-m-d') }}</span>
+                            <span>Author: {{ post.authors.first().nickname ?: post.authors.first().username ?: 'Unknown' }}</span>
+                        </div>
+
+                        <div class="mb-4 text-gray-400 font-mono">
+                            {% if post.ai_summary %}
+                                <div class="border-l-2 border-purple-500 pl-2 mb-2">
+                                    <span class="text-purple-500">[AI Summary]</span> {{ post.ai_summary }}
+                                </div>
+                            {% else %}
+                                {{ (esMeta.highlights[post.id].content[0] ?? (post.excerpt ~ '...'))|raw }}
+                            {% endif %}
+                        </div>
+
+                        <div class="flex flex-wrap gap-2 text-sm font-mono">
+                            <a href="/post/{{ post.slug }}.html" class="text-blue-500 hover:underline">[Read More]</a>
+
+                            {% if post.categories is defined and post.categories|length > 0 %}
+                                {% for c in post.categories %}
+                                    <a href="/category/{{ c.slug }}.html"
+                                       class="text-yellow-500 hover:underline">#{{ c.name }}</a>
+                                {% endfor %}
+                            {% endif %}
+
+                            {% if post.tags is defined and post.tags|length > 0 %}
+                                {% for t in post.tags %}
+                                    <a href="/tag/{{ t.slug }}.html"
+                                       class="text-gray-500 hover:underline">#{{ t.name }}</a>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="mt-8 flex justify-center font-mono">
+                {{ pagination|raw }}
+            </div>
+        {% else %}
+            <div class="tui-box text-center py-12" data-title="INFO">
+                <p class="text-gray-500">No matches found.</p>
+                <div class="mt-4">
+                    <a href="/" class="text-blue-500 hover:underline">cd ~</a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <style>
+        .hl {
+            background-color: #e5c07b;
+            color: #282c34;
+            padding: 0 2px;
+            font-weight: bold;
+        }
+    </style>
+
+    <script>
+        (function () {
+            function injectSidebar() {
+                var t = document.getElementById('pjax-sidebar-html');
+                var c = document.getElementById('sidebar-container');
+                if (!t || !c) return;
+
+                if (window.PJAX || window.jQuery) {
+                    try {
+                        document.dispatchEvent(new CustomEvent('pjax:sidebarReady'));
+                    } catch (_) {
+                    }
+                } else {
+                    c.innerHTML = t.innerHTML || '';
+                }
+                if (c.innerHTML !== t.innerHTML) {
+                    c.innerHTML = t.innerHTML || '';
+                    try {
+                        document.dispatchEvent(new Event('sidebar:updated'));
+                    } catch (_) {
+                    }
+                }
+            }
+
+            injectSidebar();
+            document.addEventListener('page:ready', injectSidebar);
+        })();
+    </script>
+</div>

@@ -1,0 +1,2816 @@
+<!-- Rainyun 控制台 -->
+<title>{{ page_title|default('Rainyun 控制台') }}</title>
+
+{# PJAX SEO 数据容器 - 隐藏但可被 JS 提取 #}
+<div id="pjax-seo-data" style="display:none;">
+    {% if seo is defined %}
+        {% include 'components/seo-meta.html.twig' with {'seo': seo} %}
+    {% endif %}
+    {% if schema is defined %}
+        {% include 'components/structured-data.html.twig' with {'schema': schema} %}
+    {% endif %}
+</div>
+
+<div id="pjax-sidebar-html" style="display:none">
+    {% if sidebar is defined and sidebar.widgets is defined %}
+        {% for widget in sidebar.widgets %}
+            {% if widget.enabled and widget.html is defined %}
+                <div class="sidebar-widget"
+                     data-widget-key="{{ widget.key ?? widget.id ?? widget.slug ?? widget.name ?? loop.index }}"
+                     data-widget-type="{{ widget.type ?? '' }}">
+                    {{ widget.html|raw }}
+                </div>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+</div>
+
+<div id="pjax-container">
+    <div id="ry-console" class="ry-console">
+        <!-- 顶部工具栏 -->
+        <div class="flex items-center justify-between px-4 py-4 border-b border-gray-200">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800">Rainyun 控制台</h1>
+                <p class="text-gray-500 text-sm">在“控制台设置”中配置 API Base 与 API Key 后使用各模块。</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <div id="ry-key-status" class="text-sm text-gray-600"></div>
+                <button type="button" id="ry-open-settings"
+                        class="px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700">控制台设置
+                </button>
+            </div>
+        </div>
+
+        <!-- 动态面包屑 -->
+        <div id="ry-breadcrumbs" class="px-4 pt-3">
+            <div id="ry-bc-overview" class="ry-bc hidden" data-ry-bc="overview">
+                {% set breadcrumbs = [
+                    {'name':'首页','url':'/'},
+                    {'name':'Rainyun 控制台','url':'/rainyun'}
+                ] %}
+                {% include 'components/breadcrumb.html.twig' %}
+            </div>
+            <div id="ry-bc-settings" class="ry-bc hidden" data-ry-bc="settings">
+                {% set breadcrumbs = [
+                    {'name':'首页','url':'/'},
+                    {'name':'Rainyun 控制台','url':'/rainyun'},
+                    {'name':'控制台设置','url':'#'}
+                ] %}
+                {% include 'components/breadcrumb.html.twig' %}
+            </div>
+            <div id="ry-bc-cloudapps" class="ry-bc hidden" data-ry-bc="cloudapps">
+                {% set breadcrumbs = [
+                    {'name':'首页','url':'/'},
+                    {'name':'Rainyun 控制台','url':'/rainyun'},
+                    {'name':'云应用','url':'#'}
+                ] %}
+                {% include 'components/breadcrumb.html.twig' %}
+            </div>
+            <div id="ry-bc-newapp" class="ry-bc hidden" data-ry-bc="newapp">
+                {% set breadcrumbs = [
+                    {'name':'首页','url':'/'},
+                    {'name':'Rainyun 控制台','url':'/rainyun'},
+                    {'name':'云应用','url':'#'},
+                    {'name':'新建应用','url':'#'}
+                ] %}
+                {% include 'components/breadcrumb.html.twig' %}
+            </div>
+            <div id="ry-bc-import-docker" class="ry-bc hidden" data-ry-bc="import-docker">
+                {% set breadcrumbs = [
+                    {'name':'首页','url':'/'},
+                    {'name':'Rainyun 控制台','url':'/rainyun'},
+                    {'name':'导入Docker配置','url':'#'}
+                ] %}
+                {% include 'components/breadcrumb.html.twig' %}
+            </div>
+            <div id="ry-bc-manage" class="ry-bc hidden" data-ry-bc="manage">
+                {% set breadcrumbs = [
+                    {'name':'首页','url':'/'},
+                    {'name':'Rainyun 控制台','url':'/rainyun'},
+                    {'name':'云应用','url':'#'},
+                    {'name':'管理','url':'#'}
+                ] %}
+                {% include 'components/breadcrumb.html.twig' %}
+            </div>
+        </div>
+
+        <!-- 主体：侧边导航 + 右侧视图 -->
+        <div class="flex">
+            <!-- 侧边导航 -->
+            <aside class="w-56 border-r border-gray-200 p-3">
+                <nav id="ry-nav" class="space-y-1">
+                    <button data-tab="overview"
+                            class="ry-nav-btn w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 font-medium text-gray-700">
+                        <i class="fas fa-chart-pie mr-2"></i>概览
+                    </button>
+                    <button data-tab="settings"
+                            class="ry-nav-btn w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 font-medium text-gray-700">
+                        <i class="fas fa-sliders-h mr-2"></i>控制台设置
+                    </button>
+                    <button data-tab="cloudapps"
+                            class="ry-nav-btn w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 font-medium text-gray-700">
+                        <i class="fas fa-cloud mr-2"></i>云应用
+                    </button>
+                    <button data-tab="import-docker"
+                            class="ry-nav-btn w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 font-medium text-gray-700">
+                        <i class="fas fa-upload mr-2"></i>导入Docker配置
+                    </button>
+                </nav>
+            </aside>
+
+            <!-- 右侧内容区 -->
+            <section class="flex-1 p-4">
+                <!-- 概览 -->
+                <div id="ry-view-overview" class="ry-view hidden">
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <h2 class="text-lg font-semibold mb-2">快速开始</h2>
+                        <ol class="list-decimal pl-5 text-gray-600 space-y-1 text-sm">
+                            <li>进入“控制台设置”，填写 API Base 与 API Key，点击保存。</li>
+                            <li>切换到“云应用”模块，浏览与管理你的 App。</li>
+                            <li>在“云应用”模块可新建应用、查看与管理版本。</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <!-- 控制台设置 -->
+                <div id="ry-view-settings" class="ry-view hidden">
+                    <div class="max-w-2xl space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">API Base</label>
+                            <input id="ry-api-base" type="text" placeholder="https://api.v2.rainyun.com"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <p class="text-xs text-gray-500 mt-1">可指向官方 API，或你的后端代理地址以避免 CORS。</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">API Key</label>
+                            <input id="ry-api-key" type="password" placeholder="请输入 API Key"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <button id="ry-save-settings"
+                                    class="px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700">
+                                保存
+                            </button>
+                            <button id="ry-test-settings"
+                                    class="px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50">
+                                测试
+                            </button>
+                            <button id="ry-clear-settings"
+                                    class="px-4 py-2 rounded-md border border-red-300 text-red-600 hover:bg-red-50">
+                                清除
+                            </button>
+                            <button id="ry-copy-key"
+                                    class="px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50">
+                                复制 Key（到剪贴板）
+                            </button>
+                        </div>
+                        <div id="ry-settings-msg" class="text-sm"></div>
+                    </div>
+                </div>
+
+                <!-- 云应用模块 -->
+                <div id="ry-view-cloudapps" class="ry-view hidden">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <input id="ry-search" type="text" placeholder="搜索名称/标题..."
+                                   class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-64">
+                            <button id="ry-refresh"
+                                    class="px-3 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50">
+                                刷新
+                            </button>
+                            <button id="ry-new-app"
+                                    class="px-3 py-2 rounded-md bg-green-600 text-white hover:bg-green-700">
+                                新建应用
+                            </button>
+                        </div>
+                    </div>
+                    <div id="ry-empty"
+                         class="hidden p-4 border border-yellow-200 bg-yellow-50 text-yellow-800 rounded-md text-sm"></div>
+                    <div id="ry-table-wrap" class="overflow-x-auto border border-gray-200 rounded-lg">
+                        <table class="min-w-full text-sm">
+                            <thead class="bg-gray-50">
+                            <tr class="text-left text-gray-600">
+                                <th class="px-3 py-2">ID</th>
+                                <th class="px-3 py-2">名称</th>
+                                <th class="px-3 py-2">标题</th>
+                                <th class="px-3 py-2">下载量</th>
+                                <th class="px-3 py-2">更新时间</th>
+                                <th class="px-3 py-2">操作</th>
+                            </tr>
+                            </thead>
+                            <tbody id="ry-tbody" class="divide-y"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 管理模块（嵌入旧页面功能） -->
+                <div id="ry-view-manage" class="ry-view hidden">
+                    {% include 'rainyun/manage.embed.html.twig' %}
+                </div>
+
+                <!-- 新建应用表单视图 -->
+                <div id="ry-view-newapp" class="ry-view hidden">
+                    <div class="mb-4 flex items-center gap-2">
+                        <button type="button" id="ry-back-to-list"
+                                class="px-3 py-1.5 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50">←
+                            返回云应用列表
+                        </button>
+                        <button type="button" id="ry-back-to-console"
+                                class="px-3 py-1.5 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50">⤺
+                            返回控制台
+                        </button>
+                    </div>
+                    <form id="ry-new-form" class="max-w-3xl space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">名称
+                                    name（英文标识，必填）</label>
+                                <input id="ry-new-name" type="text"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                       required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">标题 title（必填）</label>
+                                <input id="ry-new-title" type="text"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                       required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">官网 website（必填）</label>
+                                <input id="ry-new-website" type="url"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                       required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">项目链接
+                                    project_link（必填）</label>
+                                <input id="ry-new-project" type="url"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                       required>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">描述
+                                    description（必填）</label>
+                                <textarea id="ry-new-desc" rows="3"
+                                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                          required></textarea>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">介绍
+                                    readme（Markdown，必填）</label>
+                                <textarea id="ry-new-readme" rows="6"
+                                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"># this is markdown</textarea>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">标签
+                                    tags（逗号分隔，必填）</label>
+                                <input id="ry-new-tags" type="text" value="Website"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">跨版本更新
+                                    cross_version_update</label>
+                                <select id="ry-new-cross"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                    <option value="false" selected>否</option>
+                                    <option value="true">是</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">禁用更新
+                                    disable_update</label>
+                                <select id="ry-new-disable"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                    <option value="false" selected>否</option>
+                                    <option value="true">是</option>
+                                </select>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Logo（Base64，可留空）</label>
+                                <textarea id="ry-new-logo" rows="3"
+                                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></textarea>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <button type="submit"
+                                    class="px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700">
+                                创建
+                            </button>
+                            <button type="button" id="ry-new-cancel"
+                                    class="px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50">
+                                取消
+                            </button>
+                        </div>
+                        <div id="ry-new-msg" class="text-sm mt-2"></div>
+                    </form>
+                </div>
+
+                <!-- 导入Docker配置视图 -->
+                <div id="ry-view-import-docker" class="ry-view hidden">
+                    <div class="max-w-4xl space-y-6">
+                        <div>
+                            <h2 class="text-xl font-bold text-gray-800 mb-2">导入Docker配置</h2>
+                            <p class="text-gray-600">从Docker Run命令或Docker Compose文件导入应用配置</p>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-lg border border-gray-200">
+                            <form id="ry-import-docker-form" class="space-y-4">
+                                <!-- Docker Run命令输入 -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Docker Run命令</label>
+                                    <textarea id="ry-docker-run"
+                                              placeholder="例如：docker run -d -p 80:80 --name myapp -e ENV_VAR=value myimage:tag"
+                                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                              rows="3"></textarea>
+                                    <p class="text-xs text-gray-500 mt-1">输入完整的Docker
+                                        Run命令，系统将自动解析镜像、环境变量和端口映射</p>
+                                </div>
+
+                                <!-- Docker Compose文件上传/输入 -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Docker
+                                        Compose文件</label>
+                                    <div class="space-y-2">
+                                        <input type="file" id="ry-compose-file" accept=".yml,.yaml"
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <textarea id="ry-compose-content" placeholder="或直接输入Docker Compose内容"
+                                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                  rows="6"></textarea>
+                                    </div>
+                                </div>
+
+                                <!-- .env文件上传/输入 -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">.env文件（可选）</label>
+                                    <div class="space-y-2">
+                                        <input type="file" id="ry-env-file" accept=".env"
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <textarea id="ry-env-content" placeholder="或直接输入.env内容"
+                                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                  rows="4"></textarea>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1">
+                                        上传或输入.env文件，帮助系统更好地推断应该使用什么配置</p>
+                                </div>
+
+                                <!-- 版本信息 -->
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">应用版本</label>
+                                        <input type="text" id="ry-app-version" placeholder="例如：v1.0.0"
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Release ID</label>
+                                        <input type="number" id="ry-release-id" placeholder="例如：13394"
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                </div>
+
+                                <!-- 提交按钮 -->
+                                <div class="flex items-center gap-3">
+                                    <button type="submit" id="ry-import-submit"
+                                            class="px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700">
+                                        导入并生成配置
+                                    </button>
+                                    <button type="button" id="ry-import-reset"
+                                            class="px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50">
+                                        重置
+                                    </button>
+                                </div>
+
+                                <!-- 消息显示 -->
+                                <div id="ry-import-msg" class="text-sm"></div>
+                            </form>
+                        </div>
+
+                        <!-- 生成的配置编辑器 -->
+                        <div id="ry-config-editor" class="hidden bg-white p-4 rounded-lg border border-gray-200">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-3">配置编辑器</h3>
+
+                            <!-- 版本信息 -->
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">版本号</label>
+                                <input type="text" id="ry-config-version" placeholder="例如：v1.0.0"
+                                       class="w-64 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+
+                            <!-- 选项配置与容器配置切换 -->
+                            <div class="mb-4 border-b border-gray-200 flex items-center justify-between">
+                                <ul class="flex space-x-8" id="ry-config-tabs">
+                                    <li>
+                                        <button type="button"
+                                                class="px-1 py-2 border-b-2 border-blue-600 text-blue-600 font-medium"
+                                                data-tab="options">
+                                            选项配置 <span id="ry-options-count"
+                                                           class="text-xs bg-blue-100 text-blue-800 rounded-full px-2 py-0.5">0</span>
+                                        </button>
+                                    </li>
+                                </ul>
+
+                                <!-- 添加容器按钮 -->
+                                <div>
+                                    <button type="button" id="ry-add-container"
+                                            class="px-3 py-1.5 rounded-md bg-green-600 text-white hover:bg-green-700 text-sm">
+                                        + 添加容器
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 选项配置 -->
+                            <div id="ry-config-tab-options" class="space-y-4">
+                                <div class="bg-gray-50 p-4 rounded-lg">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <h4 class="text-sm font-semibold text-gray-800">选项配置</h4>
+                                        <button type="button" id="ry-add-option"
+                                                class="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                                            + 添加
+                                        </button>
+                                    </div>
+
+                                    <div id="ry-options-list" class="space-y-4">
+                                        <!-- 选项配置项将动态生成 -->
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 容器列表 -->
+                            <div id="ry-containers-list" class="space-y-4">
+                                <!-- 容器配置项将动态生成 -->
+                            </div>
+
+                            <!-- 保存按钮 -->
+                            <div class="mt-6 flex gap-3">
+                                <button type="button" id="ry-save-config"
+                                        class="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700">
+                                    保存到云应用
+                                </button>
+                                <button type="button" id="ry-back-to-import"
+                                        class="px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50">
+                                    返回修改
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        </div>
+        </section>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const LS_KEY_BASE = 'rainyun_api_base';
+        const LS_KEY_KEY = 'rainyun_api_key';
+
+        const $ = (sel, root = document) => root.querySelector(sel);
+        const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+
+        function getCfg() {
+            const apiBase = (localStorage.getItem(LS_KEY_BASE) || 'https://api.v2.rainyun.com').trim();
+            const apiKey = (localStorage.getItem(LS_KEY_KEY) || '').trim();
+            return {apiBase, apiKey};
+        }
+
+        function setCfg({apiBase, apiKey}) {
+            if (typeof apiBase === 'string') localStorage.setItem(LS_KEY_BASE, apiBase.trim());
+            if (typeof apiKey === 'string') localStorage.setItem(LS_KEY_KEY, apiKey.trim());
+        }
+
+        function maskKey(k) {
+            if (!k) return '未配置';
+            if (k.length <= 8) return k.replace(/.(?=.{2})/g, '*');
+            return k.slice(0, 4) + '****' + k.slice(-4);
+        }
+
+        function updateKeyStatus() {
+            const st = $('#ry-key-status');
+            if (!st) return;
+            const {apiBase, apiKey} = getCfg();
+            const ok = !!apiKey;
+            st.innerHTML = `Base: <span class="font-mono">${apiBase}</span> · Key: <span class="font-mono">${maskKey(apiKey)}</span>`;
+            st.className = 'text-sm ' + (ok ? 'text-green-700' : 'text-red-600');
+        }
+
+        function updateBreadcrumb(tab) {
+            $$('.ry-bc').forEach(b => b.classList.add('hidden'));
+            const bc = $('#ry-bc-' + tab);
+            if (bc) bc.classList.remove('hidden');
+        }
+
+        function switchTab(tab) {
+            $$('.ry-view').forEach(v => v.classList.add('hidden'));
+            const view = $('#ry-view-' + tab);
+            if (view) view.classList.remove('hidden');
+            // 高亮nav
+            $$('#ry-nav .ry-nav-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-50', 'text-blue-700');
+                if (btn.getAttribute('data-tab') === tab) btn.classList.add('bg-blue-50', 'text-blue-700');
+            });
+            updateBreadcrumb(tab);
+            // 进入云应用时自动加载
+            if (tab === 'cloudapps') loadAppsList();
+        }
+
+        const APIS = {
+            base() {
+                return (getCfg().apiBase || '').replace(/\/$/, '');
+            },
+            headers() {
+                const {apiKey} = getCfg();
+                const h = {'Content-Type': 'application/json'};
+                if (apiKey) h['x-api-key'] = apiKey;
+                return h;
+            },
+            // 列出 App（使用雨云提供的列表接口）
+            async listApps({page = 1, page_size = 20/*, q=''*/} = {}) {
+                const options = {
+                    columnFilters: {id: '', tags: ''},
+                    sort: [{field: 'downloads', type: 'desc'}],
+                    page: page,
+                    perPage: page_size,
+                    page_size: page_size
+                };
+                const url = `${this.base()}/product/rca/appstore/?options=${encodeURIComponent(JSON.stringify(options))}&private=true`;
+                return new Promise((resolve, reject) => {
+                    try {
+                        const xhr = new XMLHttpRequest();
+                        xhr.open('GET', url, true);
+                        const {apiKey} = getCfg();
+                        if (apiKey) xhr.setRequestHeader('x-api-key', apiKey);
+                        xhr.onload = function () {
+                            if (xhr.status === 200) {
+                                try {
+                                    resolve(JSON.parse(xhr.responseText));
+                                } catch (e) {
+                                    reject(e);
+                                }
+                            } else if (xhr.status === 0) {
+                                reject(new Error('网络请求失败，可能是跨域限制导致'));
+                            } else {
+                                reject(new Error(`获取应用列表失败: HTTP状态码 ${xhr.status}`));
+                            }
+                        };
+                        xhr.onerror = function () {
+                            reject(new Error('网络请求错误'));
+                        };
+                        xhr.timeout = 10000;
+                        xhr.ontimeout = function () {
+                            reject(new Error('请求超时'));
+                        };
+                        xhr.send();
+                    } catch (err) {
+                        reject(err);
+                    }
+                });
+            },
+            // 获取单个应用详情
+            async getAppDetail(appId) {
+                const url = `${this.base()}/product/rca/appstore/${encodeURIComponent(appId)}/`;
+                const res = await fetch(url, {headers: this.headers()});
+                if (!res.ok) throw new Error(`获取应用详情失败: ${res.status}`);
+                return res.json();
+            },
+            // 新建应用（基于已发现的 API 风格推测，如不符请提供正确创建接口）
+            async createApp({
+                                name,
+                                title,
+                                description = '',
+                                website = '',
+                                project_link = '',
+                                tags = [],
+                                readme = '',
+                                logo = '',
+                                cross_version_update = false,
+                                disable_update = false
+                            } = {}) {
+                if (!name || !title) throw new Error('缺少必要参数 name/title');
+                const url = `${this.base()}/product/rca/appstore/`;
+                return new Promise((resolve, reject) => {
+                    try {
+                        const xhr = new XMLHttpRequest();
+                        xhr.open('POST', url, true);
+                        const {apiKey} = getCfg();
+                        if (apiKey) xhr.setRequestHeader('x-api-key', apiKey);
+                        xhr.setRequestHeader('Content-Type', 'application/json');
+                        const body = {name, title};
+                        if (description) body.description = description;
+                        if (website) body.website = website;
+                        if (project_link) body.project_link = project_link;
+                        if (Array.isArray(tags) && tags.length) body.tags = tags;
+                        if (readme) body.readme = readme;
+                        if (logo !== undefined) body.logo = logo; // 允许空字符串
+                        body.cross_version_update = !!cross_version_update;
+                        body.disable_update = !!disable_update;
+                        xhr.onload = function () {
+                            if (xhr.status === 200 || xhr.status === 201) {
+                                try {
+                                    resolve(JSON.parse(xhr.responseText));
+                                } catch (e) {
+                                    resolve({});
+                                }
+                            } else if (xhr.status === 0) {
+                                reject(new Error('网络请求失败，可能是跨域限制导致'));
+                            } else if (xhr.status === 404 || xhr.status === 405) {
+                                reject(new Error(`创建接口不可用（${xhr.status}），请提供“创建应用”API规范`));
+                            } else {
+                                reject(new Error(`创建应用失败: HTTP状态码 ${xhr.status}`));
+                            }
+                        };
+                        xhr.onerror = function () {
+                            reject(new Error('网络请求错误'));
+                        };
+                        xhr.timeout = 15000;
+                        xhr.ontimeout = function () {
+                            reject(new Error('请求超时'));
+                        };
+                        xhr.send(JSON.stringify(body));
+                    } catch (err) {
+                        reject(err);
+                    }
+                });
+            }
+        };
+
+        function rowHtml(item) {
+            const id = item.id ?? item.app_id ?? '';
+            const name = item.name ?? '';
+            const title = item.title ?? '';
+            const downloads = (item.downloads != null) ? item.downloads : '-';
+            // 处理时间戳（Rainyun返回 create_date 为秒级时间戳）
+            const ts = item.update_time ?? item.updated_at ?? (item.create_date ? (Number(item.create_date) * 1000) : null);
+            const updated = ts ? new Date(ts).toLocaleString() : '-';
+            return `
+      <tr>
+        <td class="px-3 py-2 font-mono">${id}</td>
+        <td class="px-3 py-2">${name}</td>
+        <td class="px-3 py-2">${title}</td>
+        <td class="px-3 py-2">${downloads}</td>
+        <td class="px-3 py-2 text-gray-500">${updated}</td>
+        <td class="px-3 py-2">
+          <button class="ry-view-btn text-blue-600 hover:underline" data-id="${id}">查看</button>
+        </td>
+      </tr>`;
+        }
+
+        async function loadAppsList() {
+            const {apiKey} = getCfg();
+            const empty = $('#ry-empty');
+            const tbody = $('#ry-tbody');
+            if (!tbody || !empty) return;
+
+            if (!apiKey) {
+                empty.classList.remove('hidden');
+                empty.textContent = '未配置 API Key，请先前往“控制台设置”保存。';
+                tbody.innerHTML = '';
+                return;
+            }
+
+            empty.classList.add('hidden');
+            tbody.innerHTML = '<tr><td class="px-3 py-4 text-gray-500" colspan="6">加载中...</td></tr>';
+
+            try {
+                const q = ($('#ry-search')?.value || '').trim();
+                // 这里调用需要你提供的列表 API
+                const resp = await APIS.listApps({page: 1, page_size: 20});
+
+                // 期待的数据格式：{ code:200, data:{ TotalRecords, Records: [...] } }
+                const list = (resp && resp.data && (resp.data.Records || resp.data.list || resp.data)) || [];
+                if (!Array.isArray(list) || list.length === 0) {
+                    tbody.innerHTML = '<tr><td class="px-3 py-4 text-gray-500" colspan="6">暂无数据</td></tr>';
+                } else {
+                    tbody.innerHTML = list.map(rowHtml).join('');
+                }
+            } catch (e) {
+                console.warn(e);
+                tbody.innerHTML = '';
+                empty.classList.remove('hidden');
+                empty.innerHTML = `
+        <div class="font-medium mb-1">无法加载应用列表：${e.message || e}</div>
+        <div class="text-xs leading-6 text-gray-600">请检查网络、API Base 或 API Key 配置后重试。</div>`;
+            }
+        }
+
+        async function onClickView(e) {
+            const btn = e.target.closest('.ry-view-btn');
+            if (!btn) return;
+            const id = btn.getAttribute('data-id');
+            if (!id) return;
+            try {
+                btn.disabled = true;
+                btn.textContent = '进入管理...';
+                // 将 AppID 和 API Key 写入本地存储，供管理视图自动加载
+                const {apiKey} = getCfg();
+                try {
+                    localStorage.setItem('rainyun_appId', id);
+                    if (apiKey) localStorage.setItem('rainyun_apiKey', apiKey);
+                } catch (_) {
+                }
+                // 切换到管理视图并触发加载
+                switchTab('manage');
+                try {
+                    setTimeout(() => {
+                        if (typeof window.RY_manage_reload === 'function') window.RY_manage_reload();
+                    }, 0);
+                } catch (_) {
+                }
+            } catch (err) {
+                alert('跳转失败：' + (err.message || err));
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '查看';
+            }
+        }
+
+        function init() {
+            // 导航
+            $('#ry-nav')?.addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-tab]');
+                if (!btn) return;
+                switchTab(btn.getAttribute('data-tab'));
+            });
+            $('#ry-open-settings')?.addEventListener('click', () => switchTab('settings'));
+
+            // 设置表单
+            const baseInput = $('#ry-api-base');
+            const keyInput = $('#ry-api-key');
+            const saveBtn = $('#ry-save-settings');
+            const clearBtn = $('#ry-clear-settings');
+            const testBtn = $('#ry-test-settings');
+            const copyBtn = $('#ry-copy-key');
+            const msg = $('#ry-settings-msg');
+
+            // 还原配置
+            const {apiBase, apiKey} = getCfg();
+            if (baseInput) baseInput.value = apiBase;
+            if (keyInput) keyInput.value = apiKey;
+            updateKeyStatus();
+
+            saveBtn?.addEventListener('click', () => {
+                setCfg({apiBase: baseInput.value, apiKey: keyInput.value});
+                updateKeyStatus();
+                if (msg) {
+                    msg.className = 'text-green-700';
+                    msg.textContent = '已保存';
+                }
+            });
+
+            clearBtn?.addEventListener('click', () => {
+                setCfg({apiBase: '', apiKey: ''});
+                if (baseInput) baseInput.value = 'https://api.v2.rainyun.com';
+                if (keyInput) keyInput.value = '';
+                updateKeyStatus();
+                if (msg) {
+                    msg.className = 'text-gray-600';
+                    msg.textContent = '已清除本地存储';
+                }
+            });
+
+            copyBtn?.addEventListener('click', async () => {
+                try {
+                    await navigator.clipboard.writeText(keyInput?.value || getCfg().apiKey || '');
+                    if (msg) {
+                        msg.className = 'text-green-700';
+                        msg.textContent = '已复制到剪贴板';
+                    }
+                } catch {
+                    if (msg) {
+                        msg.className = 'text-red-600';
+                        msg.textContent = '复制失败';
+                    }
+                }
+            });
+
+            testBtn?.addEventListener('click', async () => {
+                const {apiBase, apiKey} = getCfg();
+                if (!apiKey) {
+                    msg.className = 'text-red-600';
+                    msg.textContent = '请先保存 API Key';
+                    return;
+                }
+                // 尝试以一个最小可行请求测试（如需自定义请提供可用的健康检查API）
+                try {
+                    const ping = `${apiBase.replace(/\/$/, '')}/product/rca/appstore/1/`;
+                    const r = await fetch(ping, {headers: {'x-api-key': apiKey}});
+                    if (r.status === 200 || r.status === 404) {
+                        msg.className = 'text-green-700';
+                        msg.textContent = '看起来可用（返回状态 ' + r.status + '）';
+                    } else {
+                        msg.className = 'text-yellow-700';
+                        msg.textContent = '远端响应状态 ' + r.status + '，可能需要配置代理或提供健康检查API';
+                    }
+                } catch (err) {
+                    msg.className = 'text-red-600';
+                    msg.textContent = '请求失败：' + (err.message || err);
+                }
+            });
+
+            // 云应用行为
+            $('#ry-refresh')?.addEventListener('click', loadAppsList);
+            $('#ry-search')?.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    loadAppsList();
+                }
+            });
+            $('#ry-tbody')?.addEventListener('click', onClickView);
+
+            // 新建应用（切换到表单视图）
+            $('#ry-new-app')?.addEventListener('click', () => {
+                resetNewForm();
+                switchTab('newapp');
+            });
+
+            // 新建应用：返回按钮
+            $('#ry-back-to-list')?.addEventListener('click', () => switchTab('cloudapps'));
+            $('#ry-back-to-console')?.addEventListener('click', () => switchTab('overview'));
+            $('#ry-new-cancel')?.addEventListener('click', () => switchTab('cloudapps'));
+
+            function resetNewForm() {
+                $('#ry-new-name').value = '';
+                $('#ry-new-title').value = '';
+                $('#ry-new-website').value = '';
+                $('#ry-new-project').value = '';
+                $('#ry-new-desc').value = '';
+                $('#ry-new-readme').value = '# this is markdown';
+                $('#ry-new-tags').value = 'Website';
+                $('#ry-new-cross').value = 'false';
+                $('#ry-new-disable').value = 'false';
+                $('#ry-new-logo').value = '';
+                const msg = $('#ry-new-msg');
+                if (msg) {
+                    msg.textContent = '';
+                    msg.className = 'text-sm';
+                }
+            }
+
+            // 新建应用：表单提交
+            $('#ry-new-form')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const name = $('#ry-new-name')?.value?.trim();
+                const title = $('#ry-new-title')?.value?.trim();
+                const website = $('#ry-new-website')?.value?.trim();
+                const project_link = $('#ry-new-project')?.value?.trim();
+                const description = $('#ry-new-desc')?.value?.trim();
+                const readme = $('#ry-new-readme')?.value?.trim();
+                const tagsCSV = $('#ry-new-tags')?.value?.trim();
+                const cross_version_update = ($('#ry-new-cross')?.value || 'false') === 'true';
+                const disable_update = ($('#ry-new-disable')?.value || 'false') === 'true';
+                const logo = $('#ry-new-logo')?.value ?? '';
+                const msg = $('#ry-new-msg');
+
+                function setMsg(t, ok) {
+                    if (!msg) return;
+                    msg.className = 'text-sm ' + (ok ? 'text-green-700' : 'text-red-600');
+                    msg.textContent = t;
+                }
+
+                if (!name || !title || !website || !project_link || !description || !readme || !tagsCSV) {
+                    setMsg('请完整填写必填项', false);
+                    return;
+                }
+                const tags = tagsCSV.split(',').map(s => s.trim()).filter(Boolean);
+                if (!tags.length) {
+                    setMsg('请至少填写一个标签', false);
+                    return;
+                }
+                try {
+                    const res = await APIS.createApp({
+                        name,
+                        title,
+                        description,
+                        website,
+                        readme,
+                        tags,
+                        cross_version_update,
+                        disable_update,
+                        project_link,
+                        logo
+                    });
+                    setMsg('创建成功', true);
+                    const id = res?.data?.id;
+                    if (id) {
+                        try {
+                            localStorage.setItem('rainyun_appId', String(id));
+                        } catch (_) {
+                        }
+                        switchTab('manage');
+                        try {
+                            setTimeout(() => {
+                                if (typeof window.RY_manage_reload === 'function') window.RY_manage_reload();
+                            }, 0);
+                        } catch (_) {
+                        }
+                    } else {
+                        // 回到列表刷新
+                        switchTab('cloudapps');
+                        loadAppsList();
+                    }
+                } catch (err) {
+                    setMsg('创建失败：' + (err.message || err), false);
+                }
+            });
+
+            // 监听管理视图加载以刷新面包屑尾项
+            document.addEventListener('ry:manage:loaded', (ev) => {
+                try {
+                    const app = ev.detail && ev.detail.app || {};
+                    const nav = document.querySelector('#ry-bc-manage');
+                    const span = nav && nav.querySelector('nav ol li:last-child span');
+                    if (span) span.textContent = '管理：' + (app.name || app.title || ('#' + (app.id || localStorage.getItem('rainyun_appId') || '')));
+                } catch (_) {
+                }
+            });
+
+            // Docker配置导入相关功能
+            function initDockerImport() {
+                // 文件上传处理
+                const composeFileInput = $('#ry-compose-file');
+                const envFileInput = $('#ry-env-file');
+
+                composeFileInput?.addEventListener('change', (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            $('#ry-compose-content').value = event.target?.result || '';
+                        };
+                        reader.readAsText(file);
+                    }
+                });
+
+                envFileInput?.addEventListener('change', (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            $('#ry-env-content').value = event.target?.result || '';
+                        };
+                        reader.readAsText(file);
+                    }
+                });
+
+                // 表单提交处理
+                const importForm = $('#ry-import-docker-form');
+                importForm?.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    await handleImportSubmit();
+                });
+
+                // 重置按钮处理
+                const resetBtn = $('#ry-import-reset');
+                resetBtn?.addEventListener('click', () => {
+                    resetImportForm();
+                });
+
+                // 保存配置按钮处理
+                const saveConfigBtn = $('#ry-save-config');
+                saveConfigBtn?.addEventListener('click', async () => {
+                    await saveConfigToCloud();
+                });
+
+                // 返回修改按钮处理
+                const backBtn = $('#ry-back-to-import');
+                backBtn?.addEventListener('click', () => {
+                    showImportForm();
+                });
+
+                // 添加容器按钮处理
+                const addContainerBtn = $('#ry-add-container');
+                addContainerBtn?.addEventListener('click', () => {
+                    addContainer();
+                });
+
+                // 选项配置添加按钮处理
+                const addOptionBtn = $('#ry-add-option');
+                addOptionBtn?.addEventListener('click', () => {
+                    const optionsList = $('#ry-options-list');
+                    if (optionsList) {
+                        const optionCount = optionsList.querySelectorAll('div').length + 1;
+                        const newOptionHtml = `
+                            <div class="bg-white p-4 rounded-lg border border-gray-200">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h5 class="text-sm font-medium text-gray-800">选项 ${optionCount}</h5>
+                                    <button type="button" class="ry-delete-option text-red-600 hover:text-red-800" data-index="${optionCount - 1}">
+                                        <i class="fas fa-trash"></i> 删除
+                                    </button>
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">标签</label>
+                                        <input type="text" class="ry-option-label w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="访问端口">
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">环境变量键</label>
+                                        <input type="text" class="ry-option-env-key w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="HTTP_PORT">
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">用户界面显示的名称</label>
+                                        <input type="text" class="ry-option-ui-name w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="访问端口">
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">类型</label>
+                                        <select class="ry-option-type w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                            <option value="number">数字</option>
+                                            <option value="string">字符串</option>
+                                            <option value="boolean">布尔值</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">默认值</label>
+                                        <input type="text" class="ry-option-default w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="80">
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">验证规则</label>
+                                        <select class="ry-option-rule w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                            <option value="paramPort">端口</option>
+                                            <option value="">无</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+                                    <div class="flex items-center">
+                                        <input type="checkbox" class="ry-option-required h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                        <label class="ml-2 block text-xs font-medium text-gray-700">是否必填</label>
+                                    </div>
+
+                                    <div class="flex items-center">
+                                        <input type="checkbox" class="ry-option-disabled h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                        <label class="ml-2 block text-xs font-medium text-gray-700">是否禁用</label>
+                                    </div>
+
+                                    <div class="flex items-center">
+                                        <input type="checkbox" class="ry-option-random h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                        <label class="ml-2 block text-xs font-medium text-gray-700">是否随机生成</label>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        optionsList.insertAdjacentHTML('beforeend', newOptionHtml);
+
+                        // 更新选项计数
+                        const optionsCountEl = $('#ry-options-count');
+                        if (optionsCountEl) {
+                            optionsCountEl.textContent = optionsList.querySelectorAll('div').length;
+                        }
+                    }
+                });
+
+                // 监听删除按钮点击事件
+                document.addEventListener('click', (e) => {
+                    const deleteBtn = e.target.closest('.ry-delete-option, .text-red-600');
+                    if (!deleteBtn) return;
+
+                    // 获取要删除的元素
+                    const itemEl = deleteBtn.closest('.bg-white.p-4.rounded-lg.border.border-gray-200, .bg-white.p-3.rounded-lg.border.border-gray-200, .flex.gap-2');
+                    if (itemEl) {
+                        itemEl.remove();
+
+                        // 更新选项计数
+                        const optionsList = $('#ry-options-list');
+                        if (optionsList) {
+                            const optionsCountEl = $('#ry-options-count');
+                            if (optionsCountEl) {
+                                optionsCountEl.textContent = optionsList.querySelectorAll('div').length;
+                            }
+                        }
+                    }
+                });
+            }
+
+            // 重置导入表单
+            function resetImportForm() {
+                $('#ry-docker-run').value = '';
+                $('#ry-compose-file').value = '';
+                $('#ry-compose-content').value = '';
+                $('#ry-env-file').value = '';
+                $('#ry-env-content').value = '';
+                $('#ry-app-version').value = '';
+                $('#ry-release-id').value = '';
+                $('#ry-import-msg').textContent = '';
+                $('#ry-import-msg').className = 'text-sm';
+                showImportForm();
+            }
+
+            // 显示导入表单
+            function showImportForm() {
+                $('#ry-config-editor').classList.add('hidden');
+                $('#ry-import-docker-form').classList.remove('hidden');
+            }
+
+            // 显示配置编辑器
+            function showConfigEditor() {
+                $('#ry-import-docker-form').classList.add('hidden');
+                $('#ry-config-editor').classList.remove('hidden');
+            }
+
+            // 解析Docker Run命令
+            function parseDockerRunCommand(cmd) {
+                if (!cmd) return null;
+
+                const result = {
+                    image: '',
+                    env: [],
+                    ports: [],
+                    name: ''
+                };
+
+                // 简单解析Docker Run命令
+                const parts = cmd.split(/\s+/);
+                let inEnv = false;
+                let currentEnv = '';
+
+                for (let i = 0; i < parts.length; i++) {
+                    const part = parts[i];
+
+                    if (part === '-e' || part === '--env') {
+                        inEnv = true;
+                        currentEnv = '';
+                    } else if (inEnv) {
+                        if (part.startsWith('-')) {
+                            // 处理前一个环境变量
+                            if (currentEnv.includes('=')) {
+                                const [key, ...valueParts] = currentEnv.split('=');
+                                result.env.push({
+                                    key: key.trim(),
+                                    value: valueParts.join('=').trim()
+                                });
+                            }
+                            inEnv = false;
+                            i--;
+                        } else {
+                            currentEnv += (currentEnv ? ' ' : '') + part;
+                        }
+                    } else if (part === '-p' || part === '--publish') {
+                        // 解析端口映射
+                        if (parts[i + 1]) {
+                            const portMap = parts[++i];
+                            if (portMap.includes(':')) {
+                                const [external, internal] = portMap.split(':');
+                                result.ports.push({
+                                    external: external.trim(),
+                                    internal: internal.trim()
+                                });
+                            }
+                        }
+                    } else if (part === '--name') {
+                        // 解析容器名称
+                        if (parts[i + 1]) {
+                            result.name = parts[++i];
+                        }
+                    } else if (!part.startsWith('-') && !result.image) {
+                        // 解析镜像名称
+                        result.image = part;
+                    }
+                }
+
+                // 处理最后一个环境变量
+                if (inEnv && currentEnv.includes('=')) {
+                    const [key, ...valueParts] = currentEnv.split('=');
+                    result.env.push({
+                        key: key.trim(),
+                        value: valueParts.join('=').trim()
+                    });
+                }
+
+                return result;
+            }
+
+            // 解析Docker Compose内容
+            function parseDockerCompose(content) {
+                if (!content) return null;
+
+                // 简单解析Docker Compose YAML
+                // 这里使用正则表达式进行更详细的解析，提取服务的关键配置
+                const result = {
+                    services: []
+                };
+
+                // 提取服务块
+                const serviceBlockRegex = /^\s*([a-zA-Z0-9_-]+):\s*\n([\s\S]*?)(?=^\s*[a-zA-Z0-9_-]+:|$)/gm;
+                let match;
+
+                while ((match = serviceBlockRegex.exec(content)) !== null) {
+                    const serviceName = match[1];
+                    const serviceBlock = match[2];
+
+                    // 跳过非服务块
+                    if (serviceName === 'version' || serviceName === 'services' || serviceName === 'networks' || serviceName === 'volumes') {
+                        continue;
+                    }
+
+                    // 解析服务配置
+                    const serviceConfig = {
+                        name: serviceName,
+                        image: '',
+                        env: [],
+                        ports: [],
+                        volumes: []
+                    };
+
+                    // 提取镜像
+                    const imageRegex = /^\s*image:\s*([^\n]+)/gm;
+                    const imageMatch = imageRegex.exec(serviceBlock);
+                    if (imageMatch) {
+                        serviceConfig.image = imageMatch[1].trim();
+                    }
+
+                    // 提取环境变量
+                    const envRegex = /^\s*environment:\s*\n([\s\S]*?)(?=^\s*[a-zA-Z0-9_-]+:|$)/gm;
+                    const envMatch = envRegex.exec(serviceBlock);
+                    if (envMatch) {
+                        const envBlock = envMatch[1];
+                        const envVarRegex = /^\s*-\s*([^=]+)=([^\n]+)/gm;
+                        let envVarMatch;
+                        while ((envVarMatch = envVarRegex.exec(envBlock)) !== null) {
+                            serviceConfig.env.push({
+                                key: envVarMatch[1].trim(),
+                                value: envVarMatch[2].trim()
+                            });
+                        }
+                    }
+
+                    // 提取端口映射
+                    const portsRegex = /^\s*ports:\s*\n([\s\S]*?)(?=^\s*[a-zA-Z0-9_-]+:|$)/gm;
+                    const portsMatch = portsRegex.exec(serviceBlock);
+                    if (portsMatch) {
+                        const portsBlock = portsMatch[1];
+                        const portRegex = /^\s*-\s*([^:\n]+):([^\n]+)/gm;
+                        let portMatch;
+                        while ((portMatch = portRegex.exec(portsBlock)) !== null) {
+                            serviceConfig.ports.push({
+                                external: portMatch[1].trim(),
+                                internal: portMatch[2].trim()
+                            });
+                        }
+                    }
+
+                    result.services.push(serviceConfig);
+                }
+
+                return result;
+            }
+
+            // 解析.env文件内容
+            function parseEnvFile(content) {
+                if (!content) return [];
+
+                const envVars = [];
+                const lines = content.split('\n');
+
+                for (const line of lines) {
+                    const trimmedLine = line.trim();
+                    if (trimmedLine && !trimmedLine.startsWith('#')) {
+                        const [key, ...valueParts] = trimmedLine.split('=');
+                        if (key) {
+                            envVars.push({
+                                key: key.trim(),
+                                value: valueParts.join('=').trim()
+                            });
+                        }
+                    }
+                }
+
+                return envVars;
+            }
+
+            // 生成配置预览
+            function generateConfigPreview(dockerRunResult, composeResult, envVars, version, releaseId) {
+                // 合并环境变量
+                const allEnvVars = [...(dockerRunResult?.env || []), ...envVars];
+
+                // 生成容器模板列表（支持多容器）
+                const containerTemplates = [];
+
+                // 从Docker Run命令生成容器模板
+                if (dockerRunResult) {
+                    const containerTemplate = {
+                        id: Math.floor(Math.random() * 10000),
+                        release_id: releaseId || 13394,
+                        name: dockerRunResult?.name || 'main',
+                        image: dockerRunResult?.image || 'nginx:latest',
+                        env: allEnvVars,
+                        config_maps: [],
+                        resource_request: {
+                            min_cpu: 500,
+                            min_memory: 256
+                        },
+                        volume_mounts: [],
+                        command: [],
+                        args: [],
+                        scripts: {
+                            install: '',
+                            install_image: '',
+                            post_start: '',
+                            pre_stop: ''
+                        },
+                        services: [],
+                        startup_health_check: null
+                    };
+
+                    // 添加服务配置
+                    if (dockerRunResult?.ports?.length) {
+                        dockerRunResult.ports.forEach((port, index) => {
+                            containerTemplate.services.push({
+                                name: `http-${index}`,
+                                label: `外部访问端口 ${index + 1}`,
+                                type: 'external',
+                                internal_port: port.internal,
+                                external_port: `\${port.external}`,
+                                protocol: 'tcp'
+                            });
+                        });
+                    } else {
+                        // 默认服务配置
+                        containerTemplate.services.push({
+                            name: 'http',
+                            label: '外部访问端口',
+                            type: 'external',
+                            internal_port: '80',
+                            external_port: '${HTTP_PORT}',
+                            protocol: 'tcp'
+                        });
+                    }
+
+                    containerTemplates.push(containerTemplate);
+                }
+
+                // 从Docker Compose生成多个容器模板
+                if (composeResult?.services?.length) {
+                    composeResult.services.forEach((service, index) => {
+                        // 合并服务环境变量和全局环境变量
+                        const serviceEnvVars = [...allEnvVars, ...(service.env || [])];
+
+                        const containerTemplate = {
+                            id: Math.floor(Math.random() * 10000),
+                            release_id: releaseId || 13394,
+                            name: service.name || `service-${index}`,
+                            image: service.image || 'nginx:latest',
+                            env: serviceEnvVars,
+                            config_maps: [],
+                            resource_request: {
+                                min_cpu: 500,
+                                min_memory: 256
+                            },
+                            volume_mounts: [],
+                            command: [],
+                            args: [],
+                            scripts: {
+                                install: '',
+                                install_image: '',
+                                post_start: '',
+                                pre_stop: ''
+                            },
+                            services: [],
+                            startup_health_check: null
+                        };
+
+                        // 添加服务配置
+                        if (service.ports?.length) {
+                            service.ports.forEach((port, portIndex) => {
+                                containerTemplate.services.push({
+                                    name: `${service.name}-http-${portIndex}`,
+                                    label: `${service.name || `服务 ${index + 1}`} 外部访问端口 ${portIndex + 1}`,
+                                    type: 'external',
+                                    internal_port: port.internal,
+                                    external_port: `\${port.external}`,
+                                    protocol: 'tcp'
+                                });
+                            });
+                        } else {
+                            // 默认服务配置
+                            containerTemplate.services.push({
+                                name: `${service.name}-http`,
+                                label: `${service.name || `服务 ${index + 1}`} 外部访问端口`,
+                                type: 'external',
+                                internal_port: '80',
+                                external_port: `\${8080 + index}`,
+                                protocol: 'tcp'
+                            });
+                        }
+
+                        containerTemplates.push(containerTemplate);
+                    });
+                }
+
+                // 如果没有生成任何容器模板，添加一个默认模板
+                if (containerTemplates.length === 0) {
+                    const containerTemplate = {
+                        id: Math.floor(Math.random() * 10000),
+                        release_id: releaseId || 13394,
+                        name: 'main',
+                        image: 'nginx:latest',
+                        env: allEnvVars,
+                        config_maps: [],
+                        resource_request: {
+                            min_cpu: 500,
+                            min_memory: 256
+                        },
+                        volume_mounts: [],
+                        command: [],
+                        args: [],
+                        scripts: {
+                            install: '',
+                            install_image: '',
+                            post_start: '',
+                            pre_stop: ''
+                        },
+                        services: [
+                            {
+                                name: 'http',
+                                label: '外部访问端口',
+                                type: 'external',
+                                internal_port: '80',
+                                external_port: '${HTTP_PORT}',
+                                protocol: 'tcp'
+                            }
+                        ],
+                        startup_health_check: null
+                    };
+
+                    containerTemplates.push(containerTemplate);
+                }
+
+                // 生成完整配置，符合新API格式
+                const config = {
+                    version: version || 'v1.0.0',
+                    container_templates: containerTemplates,
+                    options: [
+                        {
+                            label: '访问端口',
+                            rule: 'paramPort',
+                            required: true,
+                            disabled: false,
+                            random: false,
+                            type: 'number',
+                            env_key: 'HTTP_PORT',
+                            default: '80',
+                            value: '80',
+                            values: null
+                        }
+                    ],
+                    release_id: releaseId || 13394
+                };
+
+                // 提取所有使用的环境变量
+                function extractEnvVars(str) {
+                    if (!str) return [];
+                    const matches = str.match(/\$\{([A-Za-z0-9_]+)\}/g);
+                    if (!matches) return [];
+                    return matches.map(match => match.replace(/\$\{([A-Za-z0-9_]+)\}/, '$1'));
+                }
+
+                // 确保所有使用的环境变量被添加到容器配置中
+                containerTemplates.forEach(container => {
+                    // 收集所有使用的环境变量
+                    const usedEnvVars = new Set();
+
+                    // 检查服务配置中使用的环境变量
+                    container.services.forEach(service => {
+                        if (service.external_port) {
+                            extractEnvVars(service.external_port).forEach(envVar => usedEnvVars.add(envVar));
+                        }
+                    });
+
+                    // 添加HTTP_PORT环境变量作为默认
+                    usedEnvVars.add('HTTP_PORT');
+
+                    // 确保所有使用的环境变量被添加到容器配置中
+                    usedEnvVars.forEach(envVar => {
+                        // 检查是否已经存在该环境变量
+                        const hasEnvVar = container.env.some(env => env.key === envVar);
+                        if (!hasEnvVar) {
+                            container.env.push({
+                                key: envVar,
+                                value: envVar === 'HTTP_PORT' ? '80' : ''
+                            });
+                        }
+                    });
+                });
+
+                // 显示预览 - 添加条件检查避免访问不存在的元素
+                const previewContainer = $('#ry-preview-container');
+                if (previewContainer) {
+                    previewContainer.textContent = JSON.stringify(containerTemplates, null, 2);
+                }
+                const previewEnv = $('#ry-preview-env');
+                if (previewEnv) {
+                    previewEnv.textContent = JSON.stringify(allEnvVars, null, 2);
+                }
+
+                // 合并所有服务配置用于预览
+                const allServices = containerTemplates.flatMap(template => template.services);
+                const previewServices = $('#ry-preview-services');
+                if (previewServices) {
+                    previewServices.textContent = JSON.stringify(allServices, null, 2);
+                }
+
+                // 保存配置到全局变量，供后续保存使用
+                window.ryGeneratedConfig = config;
+
+                return config;
+            }
+
+            // 处理导入表单提交
+            async function handleImportSubmit() {
+                const dockerRunCmd = $('#ry-docker-run').value.trim();
+                const composeContent = $('#ry-compose-content').value.trim();
+                const envContent = $('#ry-env-content').value.trim();
+                const version = $('#ry-app-version').value.trim();
+                const releaseId = parseInt($('#ry-release-id').value) || 0;
+
+                const msg = $('#ry-import-msg');
+
+                // 验证输入
+                if (!dockerRunCmd && !composeContent) {
+                    msg.className = 'text-red-600';
+                    msg.textContent = '请输入Docker Run命令或Docker Compose内容';
+                    return;
+                }
+
+                // 显示加载状态
+                msg.className = 'text-blue-600';
+                msg.textContent = '正在解析配置...';
+
+                try {
+                    // 解析Docker配置
+                    const dockerRunResult = dockerRunCmd ? parseDockerRunCommand(dockerRunCmd) : null;
+                    const composeResult = composeContent ? parseDockerCompose(composeContent) : null;
+                    const envVars = parseEnvFile(envContent);
+
+                    // 生成配置预览
+                    const config = generateConfigPreview(dockerRunResult, composeResult, envVars, version, releaseId);
+
+                    // 初始化配置编辑器
+                    initConfigEditor(config);
+
+                    // 显示配置编辑器
+                    showConfigEditor();
+
+                    msg.className = 'text-green-700';
+                    msg.textContent = '配置解析成功';
+                } catch (err) {
+                    msg.className = 'text-red-600';
+                    msg.textContent = '配置解析失败：' + (err.message || err);
+                }
+            }
+
+            // 初始化配置编辑器
+            function initConfigEditor(config) {
+                // 保存配置到全局变量
+                window.ryGeneratedConfig = config;
+
+                // 设置版本号
+                $('#ry-config-version').value = config.version || '';
+
+                // 初始化选项配置
+                initOptionsConfig(config.options || []);
+
+                // 初始化容器配置
+                initContainersConfig(config.container_templates || []);
+
+                // 确保容器配置和选项配置正确隐藏/显示
+                $('#ry-config-tab-options').classList.remove('hidden');
+                $('#ry-containers-list').classList.add('hidden');
+                $$('[id^="ry-container-"]').forEach(content => {
+                    content.classList.add('hidden');
+                });
+            }
+
+            // 初始化选项配置
+            function initOptionsConfig(options) {
+                const optionsList = $('#ry-options-list');
+                const optionsCount = $('#ry-options-count');
+
+                // 清空现有选项
+                optionsList.innerHTML = '';
+
+                // 更新选项计数
+                optionsCount.textContent = options.length;
+
+                // 生成选项配置项
+                options.forEach((option, index) => {
+                    const optionHtml = generateOptionHtml(option, index);
+                    optionsList.appendChild(optionHtml);
+                });
+            }
+
+            // 生成选项配置HTML
+            function generateOptionHtml(option, index) {
+                const div = document.createElement('div');
+                div.className = 'bg-white p-4 rounded-lg border border-gray-200';
+                div.dataset.index = index;
+
+                div.innerHTML = `
+                <div class="flex items-center justify-between mb-3">
+                    <h5 class="text-sm font-medium text-gray-800">选项 ${index + 1}</h5>
+                    <button type="button" class="ry-delete-option text-red-600 hover:text-red-800" data-index="${index}">
+                        <i class="fas fa-trash"></i> 删除
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">标签</label>
+                        <input type="text" class="ry-option-label w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                               value="${option.label || ''}" placeholder="访问端口">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">环境变量键</label>
+                        <input type="text" class="ry-option-env-key w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                               value="${option.env_key || ''}" placeholder="HTTP_PORT">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">用户界面显示的名称</label>
+                        <input type="text" class="ry-option-ui-name w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                               value="${option.ui_name || option.label || ''}" placeholder="访问端口">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">类型</label>
+                        <select class="ry-option-type w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="number" ${option.type === 'number' ? 'selected' : ''}>数字</option>
+                            <option value="string" ${option.type === 'string' ? 'selected' : ''}>字符串</option>
+                            <option value="boolean" ${option.type === 'boolean' ? 'selected' : ''}>布尔值</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">默认值</label>
+                        <input type="text" class="ry-option-default w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                               value="${option.default || ''}" placeholder="80">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">验证规则</label>
+                        <select class="ry-option-rule w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="paramPort" ${option.rule === 'paramPort' ? 'selected' : ''}>端口</option>
+                            <option value="" ${!option.rule ? 'selected' : ''}>无</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+                    <div class="flex items-center">
+                        <input type="checkbox" class="ry-option-required h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                               ${option.required ? 'checked' : ''}>
+                        <label class="ml-2 block text-xs font-medium text-gray-700">是否必填</label>
+                    </div>
+
+                    <div class="flex items-center">
+                        <input type="checkbox" class="ry-option-disabled h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                               ${option.disabled ? 'checked' : ''}>
+                        <label class="ml-2 block text-xs font-medium text-gray-700">是否禁用</label>
+                    </div>
+
+                    <div class="flex items-center">
+                        <input type="checkbox" class="ry-option-random h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                               ${option.random ? 'checked' : ''}>
+                        <label class="ml-2 block text-xs font-medium text-gray-700">是否随机生成</label>
+                    </div>
+                </div>
+            `;
+
+                return div;
+            }
+
+            // 添加新容器
+            function addContainer() {
+                // 确保window.ryGeneratedConfig存在
+                if (!window.ryGeneratedConfig) {
+                    window.ryGeneratedConfig = {
+                        version: 'v1.0.0',
+                        container_templates: [],
+                        options: [],
+                        release_id: 13394
+                    };
+                }
+
+                // 创建新的容器配置
+                const newContainer = {
+                    id: Math.floor(Math.random() * 10000),
+                    release_id: window.ryGeneratedConfig.release_id || 13394,
+                    name: `container-${window.ryGeneratedConfig.container_templates.length + 1}`,
+                    image: 'nginx:latest',
+                    env: [],
+                    config_maps: [],
+                    resource_request: {
+                        min_cpu: 500,
+                        min_memory: 256
+                    },
+                    volume_mounts: [],
+                    command: [],
+                    args: [],
+                    scripts: {
+                        install: '',
+                        install_image: '',
+                        post_start: '',
+                        pre_stop: ''
+                    },
+                    services: [
+                        {
+                            name: 'http',
+                            label: '外部访问端口',
+                            type: 'external',
+                            internal_port: '80',
+                            external_port: '${HTTP_PORT}',
+                            protocol: 'tcp'
+                        }
+                    ],
+                    startup_health_check: null
+                };
+
+                // 添加到容器模板列表
+                window.ryGeneratedConfig.container_templates.push(newContainer);
+
+                // 重新初始化容器配置
+                initContainersConfig(window.ryGeneratedConfig.container_templates);
+            }
+
+            // 初始化容器配置
+            function initContainersConfig(containers) {
+                const containersList = $('#ry-containers-list');
+                const configTabs = $('#ry-config-tabs');
+
+                // 清空现有容器
+                containersList.innerHTML = '';
+
+                // 移除所有容器标签，只保留选项配置标签
+                const existingTabs = configTabs.querySelectorAll('li');
+                for (let i = existingTabs.length - 1; i >= 1; i--) {
+                    configTabs.removeChild(existingTabs[i]);
+                }
+
+                // 添加容器标签到配置选项卡
+                containers.forEach((container, index) => {
+                    // 添加容器标签到选项卡
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                    <button type="button" class="px-1 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 font-medium" data-tab="container-${index}">
+                        ${container.name || `容器 ${index + 1}`}
+                    </button>
+                `;
+                    configTabs.appendChild(li);
+
+                    // 生成容器配置HTML
+                    const containerHtml = generateContainerHtml(container, index);
+                    containersList.appendChild(containerHtml);
+                });
+
+                // 初始化选项卡切换
+                initConfigTabs();
+
+                // 重新初始化所有容器的二级tab切换功能
+                containers.forEach((container, index) => {
+                    initContainerTabs(index);
+                });
+
+                // 初始化二级tab中的添加按钮事件监听
+                containers.forEach((container, index) => {
+                    const containerEl = $(`#ry-container-${index}`);
+
+                    // 服务配置添加按钮
+                    const serviceAddBtn = containerEl.querySelector('[id^="ry-container-tab-services-"] .bg-gray-50.p-3.rounded-lg .flex.items-center.justify-between button');
+                    serviceAddBtn?.addEventListener('click', () => {
+                        const serviceList = containerEl.querySelector('[id^="ry-container-tab-services-"] .bg-gray-50.p-3.rounded-lg .space-y-3');
+                        if (serviceList) {
+                            const serviceCount = serviceList.querySelectorAll('.bg-white.p-3.rounded-lg.border.border-gray-200').length + 1;
+                            const newServiceHtml = `
+                                <div class="bg-white p-3 rounded-lg border border-gray-200">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-xs font-medium text-gray-700">服务 ${serviceCount}</span>
+                                        <button type="button" class="text-red-600 hover:text-red-800 text-xs">
+                                            <i class="fas fa-trash"></i> 删除
+                                        </button>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">名称</label>
+                                            <input type="text" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="http">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">标签</label>
+                                            <input type="text" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="外部访问端口">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">类型</label>
+                                            <select class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                                <option value="external" selected>external</option>
+                                                <option value="internal">internal</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">内部端口</label>
+                                            <input type="text" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="8787">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">外部端口</label>
+                                            <input type="text" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="\${HTTP_PORT}">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">协议</label>
+                                            <select class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                                <option value="tcp" selected>tcp</option>
+                                                <option value="udp">udp</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                            serviceList.insertAdjacentHTML('beforeend', newServiceHtml);
+                        }
+                    });
+
+                    // 持久化卷添加按钮
+                    const volumeAddBtn = containerEl.querySelector('[id^="ry-container-tab-volumes-"] .bg-gray-50.p-3.rounded-lg .flex.items-center.justify-between button');
+                    volumeAddBtn?.addEventListener('click', () => {
+                        const volumeList = containerEl.querySelector('[id^="ry-container-tab-volumes-"] .bg-gray-50.p-3.rounded-lg .space-y-3');
+                        if (volumeList) {
+                            const volumeCount = volumeList.querySelectorAll('.bg-white.p-3.rounded-lg.border.border-gray-200').length + 1;
+                            const newVolumeHtml = `
+                                <div class="bg-white p-3 rounded-lg border border-gray-200">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-xs font-medium text-gray-700">卷 ${volumeCount}</span>
+                                        <button type="button" class="text-red-600 hover:text-red-800 text-xs">
+                                            <i class="fas fa-trash"></i> 删除
+                                        </button>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">卷名称</label>
+                                            <input type="text" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="uploads">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">挂载路径</label>
+                                            <input type="text" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="/app/public/uploads">
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                            volumeList.insertAdjacentHTML('beforeend', newVolumeHtml);
+                        }
+                    });
+
+                    // 环境变量添加按钮
+                    const envAddBtn = containerEl.querySelector('[id^="ry-container-tab-env-"] .bg-gray-50.p-3.rounded-lg .flex.items-center.justify-between button');
+                    envAddBtn?.addEventListener('click', () => {
+                        const envList = containerEl.querySelector('[id^="ry-container-tab-env-"] .bg-gray-50.p-3.rounded-lg .space-y-2');
+                        if (envList) {
+                            const newEnvHtml = `
+                                <div class="flex gap-2">
+                                    <input type="text" class="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="环境变量键">
+                                    <input type="text" class="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="环境变量值">
+                                    <button type="button" class="text-red-600 hover:text-red-800 self-center">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            `;
+                            envList.insertAdjacentHTML('beforeend', newEnvHtml);
+                        }
+                    });
+
+                    // 配置文件添加按钮
+                    const configAddBtn = containerEl.querySelector('[id^="ry-container-tab-configs-"] .bg-gray-50.p-3.rounded-lg .flex.items-center.justify-between button');
+                    configAddBtn?.addEventListener('click', () => {
+                        const configList = containerEl.querySelector('[id^="ry-container-tab-configs-"] .bg-gray-50.p-3.rounded-lg .space-y-3');
+                        if (configList) {
+                            const configCount = configList.querySelectorAll('.bg-white.p-3.rounded-lg.border.border-gray-200').length + 1;
+                            const newConfigHtml = `
+                                <div class="bg-white p-3 rounded-lg border border-gray-200">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-xs font-medium text-gray-700">配置文件 ${configCount}</span>
+                                        <button type="button" class="text-red-600 hover:text-red-800 text-xs">
+                                            <i class="fas fa-trash"></i> 删除
+                                        </button>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">文件名称</label>
+                                            <input type="text" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="配置设置">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">容器路径</label>
+                                            <input type="text" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="/app/.env">
+                                        </div>
+                                        <div class="md:col-span-2">
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">文件内容</label>
+                                            <textarea class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" rows="4" placeholder="文件内容"></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                            configList.insertAdjacentHTML('beforeend', newConfigHtml);
+                        }
+                    });
+                });
+
+                // 监听容器名变化，同步更新tab和标题
+                containers.forEach((container, index) => {
+                    const containerEl = $(`#ry-container-${index}`);
+                    const nameInput = containerEl.querySelector('.ry-container-name');
+                    nameInput?.addEventListener('input', (e) => {
+                        const newName = e.target.value.trim();
+                        // 更新容器配置中的标题
+                        const containerTitle = containerEl.querySelector('h4');
+                        if (containerTitle) {
+                            containerTitle.textContent = newName || `容器 ${index + 1}`;
+                        }
+                        // 更新tab标题
+                        const tabButton = configTabs.querySelector(`[data-tab="container-${index}"]`);
+                        if (tabButton) {
+                            tabButton.textContent = newName || `容器 ${index + 1}`;
+                        }
+                        // 更新全局配置中的容器名
+                        if (window.ryGeneratedConfig && window.ryGeneratedConfig.container_templates[index]) {
+                            window.ryGeneratedConfig.container_templates[index].name = newName || `容器 ${index + 1}`;
+                        }
+                    });
+                });
+            }
+
+            // 生成容器配置HTML
+            function generateContainerHtml(container, index) {
+                const div = document.createElement('div');
+                div.className = 'bg-white p-4 rounded-lg border border-gray-200';
+                div.id = `ry-container-${index}`;
+
+                div.innerHTML = `
+                <div class="mb-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <h4 class="text-sm font-semibold text-gray-800">${container.name || `容器 ${index + 1}`}</h4>
+                        <button type="button" class="text-red-600 hover:text-red-800" data-index="${index}">
+                            <i class="fas fa-trash"></i> 删除
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">容器名称</label>
+                            <input type="text" class="ry-container-name w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                   value="${container.name || ''}" placeholder="main">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">镜像</label>
+                            <input type="text" class="ry-container-image w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                   value="${container.image || ''}" placeholder="nginx:latest">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">最小CPU(毫核)</label>
+                            <input type="range" class="ry-container-cpu w-full" min="500" max="32768" step="500"
+                                   value="${container.resource_request?.min_cpu || 500}">
+                            <div class="flex justify-between text-xs text-gray-500 mt-1">
+                                <span>500</span>
+                                <span><span class="ry-container-cpu-value">${container.resource_request?.min_cpu || 500}</span> 毫核</span>
+                                <span>32768</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">最小内存(MB)</label>
+                            <input type="range" class="ry-container-memory w-full" min="256" max="32768" step="256"
+                                   value="${container.resource_request?.min_memory || 256}">
+                            <div class="flex justify-between text-xs text-gray-500 mt-1">
+                                <span>256</span>
+                                <span><span class="ry-container-memory-value">${container.resource_request?.min_memory || 256}</span> MB</span>
+                                <span>32768</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 容器配置标签页 -->
+                    <div class="border-b border-gray-200 mb-3">
+                        <ul class="flex space-x-6" id="ry-container-tabs-${index}">
+                            <li>
+                                <button type="button" class="px-1 py-2 border-b-2 border-blue-600 text-blue-600 font-medium text-sm" data-tab="commands">
+                                    命令与参数
+                                </button>
+                            </li>
+                            <li>
+                                <button type="button" class="px-1 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 font-medium text-sm" data-tab="scripts">
+                                    脚本设定
+                                </button>
+                            </li>
+                            <li>
+                                <button type="button" class="px-1 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 font-medium text-sm" data-tab="configs">
+                                    配置文件 <span class="text-xs bg-blue-100 text-blue-800 rounded-full px-2 py-0.5">${container.config_maps?.length || 0}</span>
+                                </button>
+                            </li>
+                            <li>
+                                <button type="button" class="px-1 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 font-medium text-sm" data-tab="env">
+                                    环境变量 <span class="text-xs bg-blue-100 text-blue-800 rounded-full px-2 py-0.5">${container.env?.length || 0}</span>
+                                </button>
+                            </li>
+                            <li>
+                                <button type="button" class="px-1 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 font-medium text-sm" data-tab="volumes">
+                                    持久化卷 <span class="text-xs bg-blue-100 text-blue-800 rounded-full px-2 py-0.5">${container.volume_mounts?.length || 0}</span>
+                                </button>
+                            </li>
+                            <li>
+                                <button type="button" class="px-1 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 font-medium text-sm" data-tab="services">
+                                    服务配置 <span class="text-xs bg-blue-100 text-blue-800 rounded-full px-2 py-0.5">${container.services?.length || 0}</span>
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- 命令与参数 -->
+                    <div id="ry-container-tab-commands-${index}" class="space-y-3">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">运行命令 Command</label>
+                                <input type="text" class="ry-container-command w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                       value="${container.command?.join(' ') || ''}" placeholder="例如：/bin/sh，调用+号添加更多参数，例如-c，即组合成/bin/sh -c">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">命令参数 Args</label>
+                                <input type="text" class="ry-container-args w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                       value="${container.args?.join(' ') || ''}" placeholder="例如：cd /workspace && java -jar server.jar">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 脚本设定 -->
+                    <div id="ry-container-tab-scripts-${index}" class="space-y-3 hidden">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">install</label>
+                                <textarea class="ry-container-script-install w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                          rows="2" placeholder="安装脚本">${container.scripts?.install || ''}</textarea>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">install_image</label>
+                                <textarea class="ry-container-script-install-image w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                          rows="2" placeholder="安装镜像脚本">${container.scripts?.install_image || ''}</textarea>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">post_start</label>
+                                <textarea class="ry-container-script-post-start w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                          rows="2" placeholder="启动后脚本">${container.scripts?.post_start || ''}</textarea>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">pre_stop</label>
+                                <textarea class="ry-container-script-pre-stop w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                          rows="2" placeholder="停止前脚本">${container.scripts?.pre_stop || ''}</textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 配置文件 -->
+                    <div id="ry-container-tab-configs-${index}" class="space-y-3 hidden">
+                        <div class="bg-gray-50 p-3 rounded-lg">
+                            <div class="flex items-center justify-between mb-2">
+                                <h5 class="text-xs font-medium text-gray-800">配置文件</h5>
+                                <button type="button" class="px-2 py-1 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                                    + 添加
+                                </button>
+                            </div>
+
+                            <div class="space-y-3">
+                                ${container.config_maps?.map((config, configIndex) => `
+                                    <div class="bg-white p-3 rounded-lg border border-gray-200">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-xs font-medium text-gray-700">配置文件 ${configIndex + 1}</span>
+                                            <button type="button" class="text-red-600 hover:text-red-800 text-xs">
+                                                <i class="fas fa-trash"></i> 删除
+                                            </button>
+                                        </div>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">文件名称</label>
+                                                <input type="text" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                       value="${config.file_name || ''}" placeholder="配置设置">
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">容器路径</label>
+                                                <input type="text" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                       value="${config.container_path || ''}" placeholder="/app/.env">
+                                            </div>
+                                        </div>
+                                        <div class="mt-3">
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">文件内容</label>
+                                            <textarea class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                      rows="4" placeholder="文件内容">${config.content || ''}</textarea>
+                                        </div>
+                                    </div>
+                                `).join('') || '<div class="text-xs text-gray-500 text-center py-3">暂无配置文件</div>'}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 环境变量 -->
+                    <div id="ry-container-tab-env-${index}" class="space-y-3 hidden">
+                        <div class="bg-gray-50 p-3 rounded-lg">
+                            <div class="flex items-center justify-between mb-2">
+                                <h5 class="text-xs font-medium text-gray-800">环境变量</h5>
+                                <button type="button" class="px-2 py-1 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                                    + 添加
+                                </button>
+                            </div>
+
+                            <div class="space-y-2">
+                                ${container.env?.map((env, envIndex) => `
+                                    <div class="flex gap-2">
+                                        <input type="text" class="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                               value="${env.key || ''}" placeholder="环境变量键">
+                                        <input type="text" class="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                               value="${env.value || ''}" placeholder="环境变量值">
+                                        <button type="button" class="text-red-600 hover:text-red-800 self-center">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                `).join('') || '<div class="text-xs text-gray-500 text-center py-3">暂无环境变量</div>'}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 持久化卷 -->
+                    <div id="ry-container-tab-volumes-${index}" class="space-y-3 hidden">
+                        <div class="bg-gray-50 p-3 rounded-lg">
+                            <div class="flex items-center justify-between mb-2">
+                                <h5 class="text-xs font-medium text-gray-800">持久化卷</h5>
+                                <button type="button" class="px-2 py-1 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                                    + 添加
+                                </button>
+                            </div>
+
+                            <div class="space-y-3">
+                                ${container.volume_mounts?.map((volume, volumeIndex) => `
+                                    <div class="bg-white p-3 rounded-lg border border-gray-200">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-xs font-medium text-gray-700">卷 ${volumeIndex + 1}</span>
+                                            <button type="button" class="text-red-600 hover:text-red-800 text-xs">
+                                                <i class="fas fa-trash"></i> 删除
+                                            </button>
+                                        </div>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">卷名称</label>
+                                                <input type="text" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                       value="${volume.name || ''}" placeholder="uploads">
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">挂载路径</label>
+                                                <input type="text" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                       value="${volume.mount_path || ''}" placeholder="/app/public/uploads">
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).join('') || '<div class="text-xs text-gray-500 text-center py-3">暂无持久化卷</div>'}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 服务配置 -->
+                    <div id="ry-container-tab-services-${index}" class="space-y-3 hidden">
+                        <div class="bg-gray-50 p-3 rounded-lg">
+                            <div class="flex items-center justify-between mb-2">
+                                <h5 class="text-xs font-medium text-gray-800">服务配置</h5>
+                                <button type="button" class="px-2 py-1 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                                    + 添加
+                                </button>
+                            </div>
+
+                            <div class="space-y-3">
+                                ${container.services?.map((service, serviceIndex) => `
+                                    <div class="bg-white p-3 rounded-lg border border-gray-200">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-xs font-medium text-gray-700">服务 ${serviceIndex + 1}</span>
+                                            <button type="button" class="text-red-600 hover:text-red-800 text-xs">
+                                                <i class="fas fa-trash"></i> 删除
+                                            </button>
+                                        </div>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">名称</label>
+                                                <input type="text" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                       value="${service.name || ''}" placeholder="http">
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">标签</label>
+                                                <input type="text" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                       value="${service.label || ''}" placeholder="外部访问端口">
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">类型</label>
+                                                <select class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                                    <option value="external" ${service.type === 'external' ? 'selected' : ''}>external</option>
+                                                    <option value="internal" ${service.type === 'internal' ? 'selected' : ''}>internal</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">内部端口</label>
+                                                <input type="text" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                       value="${service.internal_port || ''}" placeholder="8787">
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">外部端口</label>
+                                                <input type="text" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                       value="${service.external_port || ''}" placeholder="${service.external_port || '${HTTP_PORT}'}">
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">协议</label>
+                                                <select class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                                    <option value="tcp" ${service.protocol === 'tcp' ? 'selected' : ''}>tcp</option>
+                                                    <option value="udp" ${service.protocol === 'udp' ? 'selected' : ''}>udp</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).join('') || '<div class="text-xs text-gray-500 text-center py-3">暂无服务配置</div>'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+                // 初始化容器标签页切换
+                initContainerTabs(index);
+
+                // 初始化CPU和内存滑块
+                initContainerSliders(index);
+
+                return div;
+            }
+
+            // 初始化配置选项卡
+            function initConfigTabs() {
+                const tabs = $$('#ry-config-tabs button');
+
+                tabs.forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        // 移除所有激活状态
+                        tabs.forEach(t => {
+                            t.classList.remove('border-blue-600', 'text-blue-600');
+                            t.classList.add('border-transparent', 'text-gray-500');
+                        });
+
+                        // 添加当前激活状态
+                        tab.classList.remove('border-transparent', 'text-gray-500');
+                        tab.classList.add('border-blue-600', 'text-blue-600');
+
+                        // 显示对应的内容
+                        const tabId = tab.getAttribute('data-tab');
+
+                        // 隐藏所有内容
+                        $$('[id^="ry-config-tab-"]').forEach(content => {
+                            content.classList.add('hidden');
+                        });
+                        $$('[id^="ry-container-"]').forEach(content => {
+                            content.classList.add('hidden');
+                        });
+                        $('#ry-containers-list').classList.add('hidden');
+
+                        if (tabId === 'options') {
+                            // 显示选项配置，隐藏所有容器配置
+                            $('#ry-config-tab-options').classList.remove('hidden');
+                        } else if (tabId.startsWith('container-')) {
+                            // 显示指定容器的配置
+                            const index = tabId.replace('container-', '');
+                            $('#ry-config-tab-options').classList.add('hidden');
+                            $('#ry-containers-list').classList.remove('hidden');
+                            $(`#ry-container-${index}`).classList.remove('hidden');
+
+                            // 确保容器的二级tab可见
+                            const containerEl = $(`#ry-container-${index}`);
+                            const containerTabs = containerEl.querySelectorAll('[id^="ry-container-tabs-"]');
+                            containerTabs.forEach(tabsEl => {
+                                tabsEl.classList.remove('hidden');
+                            });
+                        }
+                    });
+                });
+            }
+
+            // 初始化容器标签页
+            function initContainerTabs(containerIndex) {
+                const tabs = $$(`#ry-container-tabs-${containerIndex} button`);
+
+                tabs.forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        // 移除所有激活状态
+                        tabs.forEach(t => {
+                            t.classList.remove('border-blue-600', 'text-blue-600');
+                            t.classList.add('border-transparent', 'text-gray-500');
+                        });
+
+                        // 添加当前激活状态
+                        tab.classList.remove('border-transparent', 'text-gray-500');
+                        tab.classList.add('border-blue-600', 'text-blue-600');
+
+                        // 显示对应的内容
+                        const tabId = tab.getAttribute('data-tab');
+                        $$(`[id^="ry-container-tab-"]`).forEach(content => {
+                            content.classList.add('hidden');
+                        });
+
+                        $(`#ry-container-tab-${tabId}-${containerIndex}`).classList.remove('hidden');
+                    });
+                });
+            }
+
+            // 初始化容器滑块
+            function initContainerSliders(containerIndex) {
+                const cpuSlider = $(`#ry-container-${containerIndex} .ry-container-cpu`);
+                const cpuValue = $(`#ry-container-${containerIndex} .ry-container-cpu-value`);
+                const memorySlider = $(`#ry-container-${containerIndex} .ry-container-memory`);
+                const memoryValue = $(`#ry-container-${containerIndex} .ry-container-memory-value`);
+
+                if (cpuSlider && cpuValue) {
+                    cpuSlider.addEventListener('input', () => {
+                        cpuValue.textContent = cpuSlider.value;
+                    });
+                }
+
+                if (memorySlider && memoryValue) {
+                    memorySlider.addEventListener('input', () => {
+                        memoryValue.textContent = memorySlider.value;
+                    });
+                }
+            }
+
+            // 创建新云应用
+            async function createNewApp() {
+                const appName = 'app-' + Math.random().toString(36).substring(2, 10);
+                const appTitle = '新应用-' + new Date().toLocaleString();
+
+                return new Promise((resolve, reject) => {
+                    try {
+                        const xhr = new XMLHttpRequest();
+                        xhr.open('POST', `${APIS.base()}/product/rca/appstore/`, true);
+                        const {apiKey} = getCfg();
+                        if (apiKey) xhr.setRequestHeader('x-api-key', apiKey);
+                        xhr.setRequestHeader('Content-Type', 'application/json');
+
+                        xhr.onload = function () {
+                            if (xhr.status === 200 || xhr.status === 201) {
+                                try {
+                                    const response = JSON.parse(xhr.responseText);
+                                    if (response.code === 200 && response.data) {
+                                        resolve(response.data);
+                                    } else {
+                                        reject(new Error(`创建应用失败: ${response.message || '未知错误'}`));
+                                    }
+                                } catch (e) {
+                                    reject(new Error('解析响应失败'));
+                                }
+                            } else {
+                                reject(new Error(`创建应用失败: HTTP状态码 ${xhr.status}`));
+                            }
+                        };
+
+                        xhr.onerror = function () {
+                            reject(new Error('网络请求失败'));
+                        };
+
+                        xhr.send(JSON.stringify({
+                            name: appName,
+                            title: appTitle,
+                            description: '通过Docker导入创建的应用',
+                            logo: '',
+                            website: '',
+                            readme: '',
+                            tags: ['DevTool'],
+                            cross_version_update: false,
+                            disable_update: false,
+                            project_link: ''
+                        }));
+                    } catch (e) {
+                        reject(e);
+                    }
+                });
+            }
+
+            // 发布版本
+            async function releaseVersion(appstoreId, config) {
+                return new Promise((resolve, reject) => {
+                    try {
+                        const url = `${APIS.base()}/product/rca/appstore/${appstoreId}/release`;
+                        const xhr = new XMLHttpRequest();
+                        xhr.open('POST', url, true);
+                        const {apiKey} = getCfg();
+                        if (apiKey) xhr.setRequestHeader('x-api-key', apiKey);
+                        xhr.setRequestHeader('Content-Type', 'application/json');
+
+                        xhr.onload = function () {
+                            if (xhr.status === 200 || xhr.status === 201) {
+                                try {
+                                    const response = JSON.parse(xhr.responseText);
+                                    if (response.code === 200) {
+                                        resolve(response.data);
+                                    } else {
+                                        reject(new Error(`发布版本失败: ${response.message || '未知错误'}`));
+                                    }
+                                } catch (e) {
+                                    resolve({});
+                                }
+                            } else if (xhr.status === 0) {
+                                reject(new Error('网络请求失败，可能是跨域限制导致'));
+                            } else {
+                                reject(new Error(`发布版本失败: HTTP状态码 ${xhr.status}`));
+                            }
+                        };
+
+                        xhr.onerror = function () {
+                            reject(new Error('网络请求失败'));
+                        };
+
+                        xhr.send(JSON.stringify({
+                            version: config.version || 'v1.0.0',
+                            container_templates: config.container_templates || [],
+                            options: config.options || []
+                        }));
+                    } catch (e) {
+                        reject(e);
+                    }
+                });
+            }
+
+            // 保存配置到云应用
+            async function saveConfigToCloud() {
+                // 从UI收集配置
+                const config = collectConfigFromUI();
+                const msg = $('#ry-import-msg');
+
+                if (!config) {
+                    msg.className = 'text-red-600';
+                    msg.textContent = '没有可保存的配置';
+                    return;
+                }
+
+                // 显示加载状态
+                msg.className = 'text-blue-600';
+                msg.textContent = '正在保存配置到云应用...';
+
+                try {
+                    // 获取appId或创建新应用
+                    let appstoreId = localStorage.getItem('rainyun_appId');
+
+                    // 如果没有appId，创建新应用
+                    if (!appstoreId) {
+                        msg.textContent = '正在创建新云应用...';
+                        const appData = await createNewApp();
+                        appstoreId = appData.id;
+                        localStorage.setItem('rainyun_appId', appstoreId);
+                    }
+
+                    msg.textContent = '正在发布版本...';
+                    // 调用API发布版本
+                    const result = await releaseVersion(appstoreId, config);
+
+                    msg.className = 'text-green-700';
+                    msg.textContent = '配置保存成功';
+
+                    // 重置表单
+                    setTimeout(() => {
+                        resetImportForm();
+                    }, 1500);
+                } catch (err) {
+                    msg.className = 'text-red-600';
+                    msg.textContent = '配置保存失败：' + (err.message || err);
+                }
+            }
+
+            // 从UI收集配置
+            function collectConfigFromUI() {
+                // 安全获取版本
+                const versionEl = $('#ry-config-version');
+                const version = versionEl ? versionEl.value.trim() : '';
+
+                // 收集选项配置
+                const options = [];
+                const optionElements = $$('#ry-options-list > div');
+                optionElements.forEach(optionEl => {
+                    // 安全获取所有元素
+                    const labelEl = optionEl.querySelector('.ry-option-label');
+                    const envKeyEl = optionEl.querySelector('.ry-option-env-key');
+                    const typeEl = optionEl.querySelector('.ry-option-type');
+                    const defaultEl = optionEl.querySelector('.ry-option-default');
+                    const ruleEl = optionEl.querySelector('.ry-option-rule');
+                    const requiredEl = optionEl.querySelector('.ry-option-required');
+                    const disabledEl = optionEl.querySelector('.ry-option-disabled');
+                    const randomEl = optionEl.querySelector('.ry-option-random');
+
+                    // 确保所有元素都存在才收集
+                    if (labelEl && envKeyEl && typeEl && defaultEl && ruleEl && requiredEl && disabledEl && randomEl) {
+                        const option = {
+                            label: labelEl.value.trim(),
+                            env_key: envKeyEl.value.trim(),
+                            type: typeEl.value,
+                            default: defaultEl.value.trim(),
+                            rule: ruleEl.value,
+                            required: requiredEl.checked,
+                            disabled: disabledEl.checked,
+                            random: randomEl.checked,
+                            value: defaultEl.value.trim(),
+                            values: null
+                        };
+                        options.push(option);
+                    }
+                });
+
+                // 收集容器配置
+                const containers = [];
+                const containerElements = $$('[id^="ry-container-"]');
+                containerElements.forEach((containerEl, index) => {
+                    // 安全收集命令与参数
+                    const commandEl = containerEl.querySelector('.ry-container-command');
+                    const argsEl = containerEl.querySelector('.ry-container-args');
+                    const command = commandEl ? commandEl.value.trim() : '';
+                    const args = argsEl ? argsEl.value.trim() : '';
+
+                    // 收集脚本设定（已包含安全检查）
+                    const scripts = {
+                        install: containerEl.querySelector('.ry-container-script-install')?.value || '',
+                        install_image: containerEl.querySelector('.ry-container-script-install-image')?.value || '',
+                        post_start: containerEl.querySelector('.ry-container-script-post-start')?.value || '',
+                        pre_stop: containerEl.querySelector('.ry-container-script-pre-stop')?.value || ''
+                    };
+
+                    // 安全收集环境变量
+                    const env = [];
+                    const envBlocks = containerEl.querySelectorAll('[id^="ry-container-tab-env-"] .flex.gap-2');
+                    envBlocks.forEach(envBlock => {
+                        const keyInput = envBlock.querySelector('input:nth-child(1)');
+                        const valueInput = envBlock.querySelector('input:nth-child(2)');
+                        if (keyInput && valueInput) {
+                            const key = keyInput.value.trim();
+                            const value = valueInput.value.trim();
+                            if (key) {
+                                env.push({key, value});
+                            }
+                        }
+                    });
+
+                    // 安全收集配置文件
+                    const configMaps = [];
+                    const configBlocks = containerEl.querySelectorAll('[id^="ry-container-tab-configs-"] .bg-white.p-3.rounded-lg.border.border-gray-200');
+                    configBlocks.forEach(configBlock => {
+                        const fileNameEl = configBlock.querySelector('input:nth-child(1)');
+                        const containerPathEl = configBlock.querySelector('input:nth-child(2)');
+                        const contentEl = configBlock.querySelector('textarea');
+
+                        if (fileNameEl && containerPathEl && contentEl) {
+                            const fileName = fileNameEl.value.trim();
+                            const containerPath = containerPathEl.value.trim();
+                            const content = contentEl.value.trim();
+                            if (fileName && containerPath) {
+                                configMaps.push({file_name: fileName, container_path: containerPath, content});
+                            }
+                        }
+                    });
+
+                    // 安全收集持久化卷
+                    const volumeMounts = [];
+                    const volumeBlocks = containerEl.querySelectorAll('[id^="ry-container-tab-volumes-"] .bg-white.p-3.rounded-lg.border.border-gray-200');
+                    volumeBlocks.forEach(volumeBlock => {
+                        const nameEl = volumeBlock.querySelector('input:nth-child(1)');
+                        const mountPathEl = volumeBlock.querySelector('input:nth-child(2)');
+
+                        if (nameEl && mountPathEl) {
+                            const name = nameEl.value.trim();
+                            const mountPath = mountPathEl.value.trim();
+                            if (name && mountPath) {
+                                volumeMounts.push({name, mount_path: mountPath});
+                            }
+                        }
+                    });
+
+                    // 安全收集服务配置
+                    const services = [];
+                    const serviceBlocks = containerEl.querySelectorAll('[id^="ry-container-tab-services-"] .bg-white.p-3.rounded-lg.border.border-gray-200');
+                    serviceBlocks.forEach(serviceBlock => {
+                        const nameEl = serviceBlock.querySelector('input:nth-child(1)');
+                        const labelEl = serviceBlock.querySelector('input:nth-child(2)');
+                        const typeEl = serviceBlock.querySelector('select:nth-child(1)');
+                        const internalPortEl = serviceBlock.querySelector('input:nth-child(3)');
+                        const externalPortEl = serviceBlock.querySelector('input:nth-child(4)');
+                        const protocolEl = serviceBlock.querySelector('select:nth-child(2)');
+
+                        if (nameEl && labelEl && typeEl && internalPortEl && externalPortEl && protocolEl) {
+                            const name = nameEl.value.trim();
+                            const label = labelEl.value.trim();
+                            const type = typeEl.value;
+                            const internalPort = internalPortEl.value.trim();
+                            const externalPort = externalPortEl.value.trim();
+                            const protocol = protocolEl.value;
+                            if (name && label && internalPort && protocol) {
+                                services.push({
+                                    name,
+                                    label,
+                                    type,
+                                    internal_port: internalPort,
+                                    external_port: externalPort,
+                                    protocol
+                                });
+                            }
+                        }
+                    });
+
+                    // 安全获取容器核心配置
+                    const nameEl = containerEl.querySelector('.ry-container-name');
+                    const imageEl = containerEl.querySelector('.ry-container-image');
+                    const cpuEl = containerEl.querySelector('.ry-container-cpu');
+                    const memoryEl = containerEl.querySelector('.ry-container-memory');
+
+                    const containerName = nameEl ? nameEl.value.trim() || `container-${index}` : `container-${index}`;
+                    const image = imageEl ? imageEl.value.trim() || 'nginx:latest' : 'nginx:latest';
+                    const cpu = cpuEl ? parseInt(cpuEl.value) || 500 : 500;
+                    const memory = memoryEl ? parseInt(memoryEl.value) || 256 : 256;
+
+                    const container = {
+                        id: Math.floor(Math.random() * 10000),
+                        release_id: window.ryGeneratedConfig?.release_id || 0,
+                        name: containerName,
+                        image: image,
+                        env: env,
+                        config_maps: configMaps,
+                        resource_request: {
+                            min_cpu: cpu,
+                            min_memory: memory
+                        },
+                        volume_mounts: volumeMounts,
+                        command: command ? command.split(' ') : [],
+                        args: args ? args.split(' ') : [],
+                        scripts: scripts,
+                        services: services,
+                        startup_health_check: null
+                    };
+
+                    containers.push(container);
+                });
+
+                return {
+                    version: version || 'v1.0.0',
+                    container_templates: containers,
+                    options: options,
+                    release_id: window.ryGeneratedConfig?.release_id || 0
+                };
+            }
+
+            // 扩展API服务
+            APIS.saveCloudAppConfig = async function (config) {
+                if (!config) throw new Error('缺少配置参数');
+
+                // 获取用户设置的应用ID
+                const appstoreId = localStorage.getItem('rainyun_appId');
+                if (!appstoreId) {
+                    throw new Error('请先设置应用ID');
+                }
+
+                // 使用动态API URL，包含版本参数和用户设置的应用ID
+                const url = `${this.base()}/product/rca/appstore/${appstoreId}/release?version=${encodeURIComponent(config.version || 'v1.0.0')}`;
+                return new Promise((resolve, reject) => {
+                    try {
+                        const xhr = new XMLHttpRequest();
+                        xhr.open('PATCH', url, true);
+                        const {apiKey} = getCfg();
+                        if (apiKey) xhr.setRequestHeader('x-api-key', apiKey);
+                        xhr.setRequestHeader('Content-Type', 'application/json');
+
+                        xhr.onload = function () {
+                            if (xhr.status === 200 || xhr.status === 201) {
+                                try {
+                                    resolve(JSON.parse(xhr.responseText));
+                                } catch (e) {
+                                    resolve({});
+                                }
+                            } else if (xhr.status === 0) {
+                                reject(new Error('网络请求失败，可能是跨域限制导致'));
+                            } else {
+                                reject(new Error(`保存配置失败: HTTP状态码 ${xhr.status}`));
+                            }
+                        };
+
+                        xhr.onerror = function () {
+                            reject(new Error('网络请求错误'));
+                        };
+
+                        xhr.timeout = 15000;
+                        xhr.ontimeout = function () {
+                            reject(new Error('请求超时'));
+                        };
+
+                        xhr.send(JSON.stringify(config));
+                    } catch (err) {
+                        reject(err);
+                    }
+                });
+            };
+
+            // 获取应用版本配置
+            APIS.getAppRelease = async function (version) {
+                if (!version) throw new Error('缺少版本参数');
+
+                // 获取用户设置的应用ID
+                const appstoreId = localStorage.getItem('rainyun_appId');
+                if (!appstoreId) {
+                    throw new Error('请先设置应用ID');
+                }
+
+                const url = `${this.base()}/product/rca/appstore/${appstoreId}/release?version=${encodeURIComponent(version)}`;
+                return new Promise((resolve, reject) => {
+                    try {
+                        const xhr = new XMLHttpRequest();
+                        xhr.open('GET', url, true);
+                        const {apiKey} = getCfg();
+                        if (apiKey) xhr.setRequestHeader('x-api-key', apiKey);
+                        xhr.setRequestHeader('Content-Type', 'application/json');
+
+                        xhr.onload = function () {
+                            if (xhr.status === 200) {
+                                try {
+                                    resolve(JSON.parse(xhr.responseText));
+                                } catch (e) {
+                                    reject(new Error('解析响应失败'));
+                                }
+                            } else if (xhr.status === 0) {
+                                reject(new Error('网络请求失败，可能是跨域限制导致'));
+                            } else {
+                                reject(new Error(`获取版本配置失败: HTTP状态码 ${xhr.status}`));
+                            }
+                        };
+
+                        xhr.onerror = function () {
+                            reject(new Error('网络请求错误'));
+                        };
+
+                        xhr.timeout = 15000;
+                        xhr.ontimeout = function () {
+                            reject(new Error('请求超时'));
+                        };
+
+                        xhr.send();
+                    } catch (err) {
+                        reject(err);
+                    }
+                });
+            };
+
+            // 初始化Docker导入功能
+            initDockerImport();
+
+            // 默认打开云应用（或概览）
+            switchTab('cloudapps');
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+        document.addEventListener('page:ready', () => {
+            try {
+                updateKeyStatus();
+            } catch (_) {
+            }
+        });
+    })();
+</script>
+
+<script>
+    (function () {
+        function injectSidebar() {
+            var t = document.getElementById('pjax-sidebar-html');
+            var c = document.getElementById('sidebar-container');
+            if (!t || !c) return;
+
+            if (window.PJAX || window.jQuery) {
+                try {
+                    document.dispatchEvent(new CustomEvent('pjax:sidebarReady'));
+                } catch (_) {
+                }
+            } else {
+                c.innerHTML = t.innerHTML || '';
+            }
+            if (c.innerHTML !== t.innerHTML) {
+                c.innerHTML = t.innerHTML || '';
+                try {
+                    document.dispatchEvent(new Event('sidebar:updated'));
+                } catch (_) {
+                }
+            }
+        }
+
+        injectSidebar();
+        document.addEventListener('page:ready', injectSidebar);
+    })();
+</script>
+</div>
+</div>

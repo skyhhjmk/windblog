@@ -1,0 +1,117 @@
+<title>{{ page_title|default('Tag') }}</title>
+
+<div id="pjax-container">
+    <!-- PJAX Sidebar Fragment -->
+    <div id="pjax-sidebar-html" style="display:none">
+        {% if sidebar is defined and sidebar.widgets is defined %}
+            {% for widget in sidebar.widgets %}
+                {% if widget.enabled and widget.html is defined %}
+                    {{ widget.html|raw }}
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    </div>
+
+    <div class="max-w-full mx-auto px-4">
+        <div class="mb-8 text-center">
+            <h1 class="text-2xl font-bold mb-2">
+                <span class="text-green-500">➜</span>
+                <span class="text-blue-500">~</span>
+                Tag: {{ tag_name|default(tag_slug) }}
+            </h1>
+            <div class="text-gray-500 font-mono">
+                Total: {{ totalCount|default(0) }} posts
+            </div>
+        </div>
+
+        {% if posts|length > 0 %}
+            <div class="space-y-6">
+                {% for post in posts %}
+                    <div class="tui-box" data-title="POST">
+                        <div class="mb-2 font-mono text-sm">
+                            <span class="text-green-500">user@windblog</span>:<span
+                                class="text-blue-500">~/tags/{{ tag_slug }}</span>$ cat {{ post.slug }}.md
+                        </div>
+
+                        <h2 class="text-xl font-bold mb-2">
+                            <a href="/post/{{ post.slug }}.html" class="hover:underline">{{ post.title }}</a>
+                            {% if post.featured %}
+                                <span class="text-yellow-500 text-sm ml-2">[Featured]</span>
+                            {% endif %}
+                        </h2>
+
+                        <div class="text-sm text-gray-500 mb-4 font-mono">
+                            <span class="mr-4">Date: {{ post.created_at|local_date('Y-m-d') }}</span>
+                            <span>Author: {{ post.authors.first().nickname ?: post.authors.first().username ?: 'Unknown' }}</span>
+                        </div>
+
+                        <div class="mb-4 text-gray-400">
+                            {% if post.ai_summary %}
+                                <div class="border-l-2 border-purple-500 pl-2 mb-2">
+                                    <span class="text-purple-500">[AI Summary]</span> {{ post.ai_summary }}
+                                </div>
+                            {% else %}
+                                {{ post.excerpt }}...
+                            {% endif %}
+                        </div>
+
+                        <div class="flex flex-wrap gap-2 text-sm font-mono">
+                            <a href="/post/{{ post.slug }}.html" class="text-blue-500 hover:underline">[Read More]</a>
+
+                            {% if post.categories is defined and post.categories|length > 0 %}
+                                {% for c in post.categories %}
+                                    <a href="/category/{{ c.slug }}.html"
+                                       class="text-yellow-500 hover:underline">#{{ c.name }}</a>
+                                {% endfor %}
+                            {% endif %}
+
+                            {% if post.tags is defined and post.tags|length > 0 %}
+                                {% for t in post.tags %}
+                                    <a href="/tag/{{ t.slug }}.html"
+                                       class="text-gray-500 hover:underline">#{{ t.name }}</a>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="mt-8 flex justify-center font-mono">
+                {{ pagination|raw }}
+            </div>
+        {% else %}
+            <div class="tui-box text-center py-12" data-title="INFO">
+                <p class="text-gray-500">No posts found with this tag.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <script>
+        (function () {
+            function injectSidebar() {
+                var t = document.getElementById('pjax-sidebar-html');
+                var c = document.getElementById('sidebar-container');
+                if (!t || !c) return;
+
+                if (window.PJAX || window.jQuery) {
+                    try {
+                        document.dispatchEvent(new CustomEvent('pjax:sidebarReady'));
+                    } catch (_) {
+                    }
+                } else {
+                    c.innerHTML = t.innerHTML || '';
+                }
+                if (c.innerHTML !== t.innerHTML) {
+                    c.innerHTML = t.innerHTML || '';
+                    try {
+                        document.dispatchEvent(new Event('sidebar:updated'));
+                    } catch (_) {
+                    }
+                }
+            }
+
+            injectSidebar();
+            document.addEventListener('page:ready', injectSidebar);
+        })();
+    </script>
+</div>

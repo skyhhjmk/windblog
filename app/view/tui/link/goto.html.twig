@@ -1,0 +1,7 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ page_title|default('外链跳转确认') }}{% endblock %}
+
+{% block content %}
+    {% include 'link/goto.content.html.twig' %}
+{% endblock %}

@@ -1,0 +1,13 @@
+{# Base Widget Template #}
+{% set is_sticky = sticky|default(false) or (params.sticky|default(false)) %}
+{% set sticky_offset = params.sticky_offset|default(16) %}
+<div class="tui-box widget-container"
+     data-widget-type="{{ type }}"
+     data-widget-id="{{ id }}"
+     data-title="{{ title|default('WIDGET') }}"
+     {% if is_sticky %}data-sticky="1"{% endif %}
+     style="{% if is_sticky %}position: sticky; top: calc(var(--sidebar-sticky-top, 72px) + {{ sticky_offset }}px);{% endif %}">
+    <div class="widget-content font-mono text-sm">
+        {% block widget_content %}{% endblock %}
+    </div>
+</div>

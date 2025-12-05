@@ -11,6 +11,7 @@ use function config;
 use function is_array;
 use function request;
 
+use support\Log;
 use Throwable;
 use Twig\Environment;
 use Twig\Error\LoaderError;
@@ -76,10 +77,12 @@ class TwigTemplateService implements View
         $theme = 'default';
         try {
             $t = blog_config('theme', 'default', true);
+            Log::debug("using theme: $theme");
             if (is_string($t) && $t !== '') {
                 $theme = $t;
             }
         } catch (Throwable $e) {
+            Log::error("theme: $theme not found:" . $e->getMessage());
             // ignore and fallback to default
         }
         // 构建主题与回退路径

@@ -1,0 +1,36 @@
+{% extends "widgets/base.html.twig" %}
+
+{% block widget_content %}
+    {% if tags is defined and tags is not empty %}
+        {% set visible = params.visible|default(30) %}
+        {% set primary_tags = tags|slice(0, visible) %}
+        {% set extra_tags = tags|slice(visible) %}
+
+        <div class="flex flex-wrap gap-2 font-mono text-xs">
+            {% for tag in primary_tags %}
+                <a href="/tag/{{ tag.slug }}.html"
+                   class="px-2 py-1 border border-gray-700 text-gray-400 hover:border-green-500 hover:text-green-500 transition-colors">
+                    #{{ tag.name }}<span class="text-gray-600 ml-1">({{ tag.posts_count|default(0) }})</span>
+                </a>
+            {% endfor %}
+        </div>
+
+        {% if extra_tags is not empty %}
+            <details class="mt-3 group">
+                <summary class="cursor-pointer text-xs text-blue-500 hover:text-blue-400 select-none font-mono">
+                    [Show More]
+                </summary>
+                <div class="mt-2 flex flex-wrap gap-2 font-mono text-xs">
+                    {% for tag in extra_tags %}
+                        <a href="/tag/{{ tag.slug }}.html"
+                           class="px-2 py-1 border border-gray-700 text-gray-400 hover:border-green-500 hover:text-green-500 transition-colors">
+                            #{{ tag.name }}<span class="text-gray-600 ml-1">({{ tag.posts_count|default(0) }})</span>
+                        </a>
+                    {% endfor %}
+                </div>
+            </details>
+        {% endif %}
+    {% else %}
+        <div class="text-gray-500 text-sm italic font-mono">No tags found</div>
+    {% endif %}
+{% endblock %}

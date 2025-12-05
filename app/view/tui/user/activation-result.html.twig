@@ -1,0 +1,53 @@
+{% extends "base.html.twig" %}
+
+{% block title %}Activation - {{ page_title|default('WindBlog') }}{% endblock %}
+
+{% block content %}
+    <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-md w-full tui-box" data-title="ACTIVATION">
+            <div class="text-center font-mono">
+                {% if success %}
+                    <div class="mb-6">
+                        <span class="text-6xl text-green-500">✔</span>
+                    </div>
+                    <h2 class="text-2xl font-bold text-green-500 mb-4">
+                        Activation Successful
+                    </h2>
+                    <p class="text-gray-500 mb-8">
+                        {{ message }}
+                    </p>
+                    <div class="space-y-4">
+                        <a href="/user/login"
+                           class="block w-full py-2 border border-blue-500 text-blue-500 hover:bg-blue-900 hover:text-white transition-colors">
+                            [Login Now]
+                        </a>
+                        <a href="/"
+                           class="block w-full py-2 border border-gray-600 text-gray-500 hover:bg-gray-800 hover:text-white transition-colors">
+                            [Return Home]
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="mb-6">
+                        <span class="text-6xl text-red-500">✘</span>
+                    </div>
+                    <h2 class="text-2xl font-bold text-red-500 mb-4">
+                        Activation Failed
+                    </h2>
+                    <p class="text-gray-500 mb-8">
+                        {{ message }}
+                    </p>
+                    <div class="space-y-4">
+                        <a href="/user/register"
+                           class="block w-full py-2 border border-blue-500 text-blue-500 hover:bg-blue-900 hover:text-white transition-colors">
+                            [Register Again]
+                        </a>
+                        <a href="/user/login"
+                           class="block w-full py-2 border border-gray-600 text-gray-500 hover:bg-gray-800 hover:text-white transition-colors">
+                            [Resend Activation Email]
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,139 @@
+{% extends "base.html.twig" %}
+
+{% block title %}Sitemap - {{ page_title|default('WindBlog') }}{% endblock %}
+
+{% block content %}
+    <main class="container mx-auto px-4 py-8 font-mono">
+        <div class="text-center mb-12">
+            <h1 class="text-2xl font-bold text-green-500 mb-2">
+                <span class="mr-2">➜</span> Sitemap
+            </h1>
+            <p class="text-gray-500 text-sm">Index of all content</p>
+        </div>
+
+        <div class="space-y-8 max-w-4xl mx-auto">
+
+            <!-- Home -->
+            <div class="tui-box" data-title="HOME">
+                <a href="{{ home.url }}" class="block text-blue-500 hover:text-blue-400 hover:underline">
+                    > {{ home.title }}
+                </a>
+            </div>
+
+            <!-- Categories -->
+            {% if categories|length > 0 %}
+                <div class="tui-box" data-title="CATEGORIES ({{ categories|length }})">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                        {% for category in categories %}
+                            <a href="{{ category.url }}"
+                               class="block p-2 border border-gray-700 hover:border-green-500 hover:text-green-500 transition-colors">
+                                <div class="font-bold">/ {{ category.name }}</div>
+                                {% if category.description %}
+                                    <div class="text-xs text-gray-500 truncate mt-1">{{ category.description }}</div>
+                                {% endif %}
+                            </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Tags -->
+            {% if tags|length > 0 %}
+                <div class="tui-box" data-title="TAGS ({{ tags|length }})">
+                    <div class="flex flex-wrap gap-2 text-xs">
+                        {% for tag in tags %}
+                            <a href="{{ tag.url }}"
+                               class="px-2 py-1 border border-gray-700 text-gray-400 hover:border-purple-500 hover:text-purple-500 transition-colors">
+                                #{{ tag.name }} <span class="text-gray-600">({{ tag.count }})</span>
+                            </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Posts -->
+            {% if posts|length > 0 %}
+                <div class="tui-box" data-title="POSTS ({{ posts|length }})">
+                    <div class="space-y-1 text-sm">
+                        {% for post in posts %}
+                            <a href="{{ post.url }}"
+                               class="flex justify-between items-center p-2 hover:bg-gray-800 transition-colors post-item {% if loop.index > 20 %}hidden{% endif %}"
+                               data-index="{{ loop.index }}">
+                    <span class="text-gray-300 hover:text-blue-400 truncate mr-4">
+                        > {{ post.title }}
+                    </span>
+                                {% if post.date %}
+                                    <span class="text-xs text-gray-600 whitespace-nowrap">
+                        {{ post.date }}
+                    </span>
+                                {% endif %}
+                            </a>
+                        {% endfor %}
+                    </div>
+                    {% if posts|length > 20 %}
+                        <div class="mt-4 text-center border-t border-gray-700 pt-2">
+                            <button id="toggleAllPosts" class="text-blue-500 hover:text-blue-400 text-sm">
+                                [Show All]
+                            </button>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endif %}
+
+            <!-- Archives -->
+            {% if archives|length > 0 %}
+                <div class="tui-box" data-title="ARCHIVES">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                        {% for archive in archives %}
+                            <a href="{{ archive.url }}"
+                               class="block p-2 border border-gray-700 text-center hover:border-yellow-500 hover:text-yellow-500 transition-colors">
+                                {{ archive.month }}
+                            </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- XML -->
+            <div class="tui-box" data-title="XML">
+                <div class="space-y-2 text-sm">
+                    <a href="/sitemap.xml" class="block text-gray-400 hover:text-white" target="_blank">
+                        [XML Sitemap]
+                    </a>
+                    <a href="/index_sitemap.xml" class="block text-gray-400 hover:text-white" target="_blank">
+                        [Sitemap Index]
+                    </a>
+                </div>
+            </div>
+
+        </div>
+    </main>
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        const toggleBtn = document.getElementById('toggleAllPosts');
+        if (toggleBtn) {
+            let isExpanded = false;
+            toggleBtn.addEventListener('click', function () {
+                const postItems = document.querySelectorAll('.post-item');
+
+                if (isExpanded) {
+                    postItems.forEach((item, index) => {
+                        if (parseInt(item.dataset.index) > 20) {
+                            item.classList.add('hidden');
+                        }
+                    });
+                    toggleBtn.textContent = '[Show All]';
+                    isExpanded = false;
+                } else {
+                    postItems.forEach(item => {
+                        item.classList.remove('hidden');
+                    });
+                    toggleBtn.textContent = '[Collapse]';
+                    isExpanded = true;
+                }
+            });
+        }
+    </script>
+{% endblock %}

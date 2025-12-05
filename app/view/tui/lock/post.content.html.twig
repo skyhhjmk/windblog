@@ -1,0 +1,87 @@
+<title>{{ page_title|default('WindBlog') }}</title>
+<div id="pjax-container">
+    <div class="max-w-full mx-auto">
+        <article class="tui-box" data-title="LOCKED POST">
+            <!-- Header -->
+            <div class="mb-6 border-b border-gray-700 pb-4 font-mono">
+                <h1 class="text-2xl font-bold text-gray-200 mb-2">{{ post.title }}</h1>
+                <div class="flex flex-wrap items-center text-gray-500 text-sm gap-4">
+                    <span>
+                        Date: {{ post.created_at|date('Y-m-d') }}
+                    </span>
+                    <span>
+                        Author: {{ author }}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Content -->
+            <div class="font-mono">
+                <div id="post-container" data-post-id="{{ post.id }}" data-post-slug="{{ post.slug }}">
+                    <div class="text-center py-8">
+                        <div class="text-4xl text-yellow-500 mb-4">🔒</div>
+                        <h2 class="text-xl font-bold text-gray-300 mb-4">
+                            {{ note|default('Password Required') }}
+                        </h2>
+
+                        <form action="" method="get" class="max-w-sm mx-auto">
+                            <div class="mb-4">
+                                <label for="password"
+                                       class="block text-sm text-gray-500 mb-1 text-left">Password</label>
+                                <input type="password" name="password" id="password" autocomplete="off"
+                                       class="w-full bg-gray-800 border border-gray-600 p-2 text-white focus:border-blue-500 outline-none"
+                                       placeholder="Enter password to unlock">
+                            </div>
+                            <button type="submit"
+                                    class="w-full py-2 border border-blue-500 text-blue-500 hover:bg-blue-900 hover:text-white transition-colors">
+                                [Unlock]
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="mt-8 pt-4 border-t border-gray-700 font-mono text-sm">
+                <div class="flex justify-between items-center">
+                    <a href="/" class="text-blue-500 hover:text-blue-400 hover:underline">
+                        [Return Home]
+                    </a>
+                    <div class="text-gray-500">
+                        Last Updated: {{ post.updated_at|date('Y-m-d') }}
+                    </div>
+                </div>
+            </div>
+        </article>
+    </div>
+
+    <script data-pjax-eval="true">
+        window.__isLockedPost = true;
+        if (typeof window.__postRendered !== 'undefined') window.__postRendered = false;
+        if (typeof window.__postContentCache !== 'undefined') window.__postContentCache = {};
+        if (typeof window.__postLoadingState !== 'undefined') window.__postLoadingState = {};
+
+        if (typeof renderPost !== 'undefined') {
+            const originalRenderPost = renderPost;
+            renderPost = function () {
+                if (window.__isLockedPost) return;
+                return originalRenderPost.apply(this, arguments);
+            };
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            if (!document.getElementById('post-container')) return;
+            window.__postRendered = false;
+        });
+
+        document.addEventListener('page:ready', function () {
+            if (!document.getElementById('post-container')) return;
+            window.__postRendered = false;
+            window.__isLockedPost = true;
+        });
+
+        setTimeout(function () {
+            window.__isLockedPost = true;
+        }, 0);
+    </script>
+</div>

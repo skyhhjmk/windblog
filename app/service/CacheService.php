@@ -619,7 +619,11 @@ class CacheService
                 if ($cache_driver === 'redis') {
                     $redis = Redis::connection('cache');
                     // 尝试设置计算锁，若失败说明已有计算者
-                    $acquired = (bool) $redis->set($lockKey, '1', ['nx', 'px' => $lockTtlMs]);
+                    // 使用 Lua 脚本以避免 set 方法签名的兼容性问题
+                    // $acquired = (bool) $redis->set($lockKey, '1', ['nx', 'px' => $lockTtlMs]);
+                    $script = "return redis.call('set', KEYS[1], '1', 'NX', 'PX', ARGV[1])";
+                    $result = $redis->eval($script, 1, $lockKey, $lockTtlMs);
+                    $acquired = ($result === true || $result === 'OK' || (is_object($result) && (string) $result === 'OK'));
                     if (!$acquired) {
                         for ($i = 0; $i < $maxRetries; $i++) {
                             usleep(max(0, $busyWaitMs) * 1000);
@@ -807,7 +811,7 @@ class CacheService
 
             return null;
         } catch (Error $e) {
-            Log::error('[cache] error: ' . $e->getMessage());
+            Log::error('[cache] error: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
 
             return null;
         }

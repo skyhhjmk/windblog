@@ -1,0 +1,45 @@
+{# Breadcrumb Component - Supports SEO Structured Data #}
+{% if breadcrumbs is defined and breadcrumbs|length > 0 %}
+    <nav aria-label="Breadcrumb" class="mb-6 font-mono text-sm">
+        <ol class="flex flex-wrap items-center space-x-2 text-gray-500">
+            {% for item in breadcrumbs %}
+                <li class="flex items-center">
+                    {% if not loop.last %}
+                        <a href="{{ item.url }}"
+                           class="hover:text-green-400 transition-colors duration-200 flex items-center"
+                           aria-label="{{ item.name }}">
+                            {% if loop.first %}
+                                <span class="mr-1">~</span>
+                            {% endif %}
+                            <span>{{ item.name }}</span>
+                        </a>
+                        <span class="mx-2 text-gray-600">/</span>
+                    {% else %}
+                        <span class="text-blue-400 font-bold" aria-current="page">
+                            {{ item.name }}
+                        </span>
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ol>
+    </nav>
+
+    {# JSON-LD Structured Data for SEO #}
+    <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+        {% for item in breadcrumbs %}
+            {% set fullUrl = (item.url starts with 'http') ? item.url : (app.request.schemeAndHttpHost ~ item.url) %}
+    {
+      "@type": "ListItem",
+      "position": {{ loop.index }},
+      "name": "{{ item.name|escape('js') }}",
+      "item": "{{ fullUrl }}"
+    }{% if not loop.last %},{% endif %}
+        {% endfor %}
+        ]
+      }
+    </script>
+{% endif %}

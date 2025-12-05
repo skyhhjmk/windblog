@@ -1,0 +1,19 @@
+{% extends "widgets/base.html.twig" %}
+
+{% block widget_content %}
+    {% if archive is defined and archive is not empty %}
+        <div class="space-y-1 font-mono text-sm">
+            {% for item in archive %}
+                <a href="/archive/{{ item.year_month }}"
+                   class="flex justify-between items-center text-gray-400 hover:text-green-400 hover:bg-gray-800 px-2 py-1 transition-colors">
+                    <span>{{ item.year_month }}</span>
+                    <span class="text-xs text-blue-500">
+                        [{{ item.count }}]
+                    </span>
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-gray-500 text-sm italic font-mono">No archives found</div>
+    {% endif %}
+{% endblock %}

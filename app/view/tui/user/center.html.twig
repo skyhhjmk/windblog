@@ -1,0 +1,298 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}User Center - {{ page_title|default('WindBlog') }}{% endblock %}
+
+{% block content %}
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-6xl mx-auto">
+            <div class="mb-8 font-mono">
+                <h1 class="text-2xl font-bold mb-2">
+                    <span class="text-green-500">user@windblog</span>:<span class="text-blue-500">~</span>$ whoami
+                </h1>
+                <div class="text-gray-400">
+                    User Center: {{ user.nickname }} (UID: {{ user.id }})
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <!-- Sidebar Menu -->
+                <div class="md:col-span-1">
+                    <div class="tui-box" data-title="MENU">
+                        <nav class="flex flex-col space-y-2 font-mono text-sm">
+                            <button onclick="switchTab('profile')" id="tab-profile"
+                                    class="tab-button text-left px-2 py-1 hover:bg-gray-800 hover:text-green-400 focus:outline-none active text-green-400">
+                                [1] Profile
+                            </button>
+                            <button onclick="switchTab('oauth')" id="tab-oauth"
+                                    class="tab-button text-left px-2 py-1 hover:bg-gray-800 hover:text-green-400 focus:outline-none text-gray-500">
+                                [2] Bindings
+                            </button>
+                            <button onclick="switchTab('security')" id="tab-security"
+                                    class="tab-button text-left px-2 py-1 hover:bg-gray-800 hover:text-green-400 focus:outline-none text-gray-500">
+                                [3] Security
+                            </button>
+                            <button onclick="switchTab('preferences')" id="tab-preferences"
+                                    class="tab-button text-left px-2 py-1 hover:bg-gray-800 hover:text-green-400 focus:outline-none text-gray-500">
+                                [4] Preferences
+                            </button>
+                        </nav>
+                    </div>
+                </div>
+
+                <!-- Content Area -->
+                <div class="md:col-span-3">
+                    <!-- Profile Tab -->
+                    <div id="content-profile" class="tab-content">
+                        <div class="tui-box" data-title="PROFILE">
+                            <div class="flex items-start mb-8">
+                                <div class="mr-6">
+                                    <img src="{{ user.getAvatarUrl(200, 'identicon') }}" alt="{{ user.nickname }}"
+                                         class="w-24 h-24 border border-gray-600 p-1">
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-bold text-green-400">{{ user.nickname }}</h3>
+                                    <p class="text-gray-500 font-mono">@{{ user.username }}</p>
+                                    <div class="mt-2 text-sm text-gray-400 font-mono">
+                                        <div>Email: {{ user.email }}</div>
+                                        <div>Level: LV.{{ user.level }} | Score: {{ user.score }}</div>
+                                        <div>Joined: {{ user.join_time|local_date('Y-m-d') }}</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 font-mono text-sm">
+                                <div>
+                                    <label class="block text-gray-500 mb-1">Nickname</label>
+                                    <input type="text" id="user-nickname" value="{{ user.nickname }}"
+                                           class="w-full bg-gray-800 border border-gray-600 p-2 text-white focus:border-blue-500 outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-500 mb-1">Email</label>
+                                    <div class="flex">
+                                        <input type="email" id="user-email" value="{{ user.email }}"
+                                               class="flex-1 bg-gray-800 border border-gray-600 p-2 text-white focus:border-blue-500 outline-none">
+                                        {% if not user.email_verified_at %}
+                                            <button
+                                                class="ml-2 px-2 border border-yellow-600 text-yellow-500 hover:bg-yellow-900 text-xs">
+                                                Verify
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-gray-500 mb-1">Mobile</label>
+                                    <input type="tel" id="user-mobile" value="{{ user.mobile }}"
+                                           class="w-full bg-gray-800 border border-gray-600 p-2 text-white focus:border-blue-500 outline-none">
+                                </div>
+                            </div>
+
+                            <div class="flex justify-end space-x-4 mt-8 font-mono text-sm">
+                                <button id="btn-reset" class="text-gray-500 hover:text-white">[Reset]</button>
+                                <button id="btn-save" class="text-green-500 hover:text-green-400">[Save Changes]
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- OAuth Tab -->
+                    <div id="content-oauth" class="tab-content hidden">
+                        <div class="tui-box" data-title="BINDINGS">
+                            <div class="space-y-4 font-mono text-sm">
+                                {% for providerKey, providerInfo in supportedProviders %}
+                                    {% if providerInfo.enabled %}
+                                        {% set isBound = false %}
+                                        {% set binding = null %}
+                                        {% for b in bindings %}
+                                            {% if b.provider == providerKey %}
+                                                {% set isBound = true %}
+                                                {% set binding = b %}
+                                            {% endif %}
+                                        {% endfor %}
+
+                                        <div
+                                            class="flex items-center justify-between border-b border-gray-700 pb-4 last:border-0">
+                                            <div class="flex items-center space-x-4">
+                                                <span class="text-gray-400 w-20">{{ providerInfo.name }}</span>
+                                                {% if isBound %}
+                                                    <span
+                                                        class="text-green-500">Bound: {{ binding.provider_username ?? 'Unknown' }}</span>
+                                                {% else %}
+                                                    <span class="text-gray-600">Not Bound</span>
+                                                {% endif %}
+                                            </div>
+                                            <div>
+                                                {% if isBound %}
+                                                    <button onclick="unbindOAuth('{{ providerKey }}')"
+                                                            class="text-red-500 hover:text-red-400">[Unbind]
+                                                    </button>
+                                                {% else %}
+                                                    <a href="/oauth/{{ providerKey }}/redirect" data-no-pjax
+                                                       class="text-blue-500 hover:text-blue-400">[Bind]</a>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Security Tab -->
+                    <div id="content-security" class="tab-content hidden">
+                        <div class="tui-box" data-title="SECURITY">
+                            <div class="max-w-md font-mono text-sm space-y-4">
+                                <h3 class="text-gray-400 mb-4 border-b border-gray-700 pb-2">Change Password</h3>
+                                <div>
+                                    <label class="block text-gray-500 mb-1">Current Password</label>
+                                    <input type="password"
+                                           class="w-full bg-gray-800 border border-gray-600 p-2 text-white outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-500 mb-1">New Password</label>
+                                    <input type="password"
+                                           class="w-full bg-gray-800 border border-gray-600 p-2 text-white outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-500 mb-1">Confirm New Password</label>
+                                    <input type="password"
+                                           class="w-full bg-gray-800 border border-gray-600 p-2 text-white outline-none">
+                                </div>
+                                <div class="pt-4">
+                                    <button class="text-blue-500 hover:text-blue-400">[Update Password]</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Preferences Tab -->
+                    <div id="content-preferences" class="tab-content hidden">
+                        <div class="tui-box" data-title="PREFERENCES">
+                            <div class="font-mono text-sm space-y-6">
+                                <div>
+                                    <h3 class="text-gray-400 mb-4 border-b border-gray-700 pb-2">Notifications</h3>
+                                    <div class="space-y-2">
+                                        <label class="flex items-center space-x-2">
+                                            <input type="checkbox" checked class="bg-gray-800 border-gray-600">
+                                            <span>Comment Notifications</span>
+                                        </label>
+                                        <label class="flex items-center space-x-2">
+                                            <input type="checkbox" checked class="bg-gray-800 border-gray-600">
+                                            <span>System Notifications</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h3 class="text-gray-400 mb-4 border-b border-gray-700 pb-2">Interface</h3>
+                                    <div>
+                                        <label class="block text-gray-500 mb-1">Language</label>
+                                        <select
+                                            class="bg-gray-800 border border-gray-600 p-2 text-white outline-none w-full max-w-xs">
+                                            <option value="zh-CN">简体中文</option>
+                                            <option value="en-US">English</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="pt-4 text-right">
+                                    <button class="text-green-500 hover:text-green-400">[Save Preferences]</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+            document.querySelectorAll('.tab-button').forEach(b => {
+                b.classList.remove('text-green-400');
+                b.classList.add('text-gray-500');
+            });
+            document.getElementById('content-' + tabName).classList.remove('hidden');
+            var btn = document.getElementById('tab-' + tabName);
+            btn.classList.remove('text-gray-500');
+            btn.classList.add('text-green-400');
+        }
+
+        (function () {
+            if (window.__userCenterInitialized) return;
+            window.__userCenterInitialized = true;
+
+            var btnSave = document.getElementById('btn-save');
+            var btnReset = document.getElementById('btn-reset');
+            var csrfToken = '{{ csrf_token }}';
+            var originalData = {
+                nickname: document.getElementById('user-nickname')?.value || '',
+                email: document.getElementById('user-email')?.value || '',
+                mobile: document.getElementById('user-mobile')?.value || ''
+            };
+
+            if (btnSave) {
+                btnSave.addEventListener('click', function () {
+                    var nickname = document.getElementById('user-nickname').value.trim();
+                    var email = document.getElementById('user-email').value.trim();
+                    var mobile = document.getElementById('user-mobile').value.trim();
+
+                    if (!nickname || !email) {
+                        alert('Nickname and Email are required');
+                        return;
+                    }
+
+                    btnSave.disabled = true;
+                    btnSave.innerText = 'Saving...';
+
+                    var formData = new FormData();
+                    formData.append('nickname', nickname);
+                    formData.append('email', email);
+                    formData.append('mobile', mobile);
+                    formData.append('_token', csrfToken);
+
+                    fetch('/user/profile/update', {method: 'POST', body: formData})
+                        .then(r => r.json())
+                        .then(data => {
+                            btnSave.disabled = false;
+                            btnSave.innerText = '[Save Changes]';
+                            if (data.code === 0) {
+                                alert('Saved successfully');
+                                originalData.nickname = data.data.nickname;
+                                originalData.email = data.data.email;
+                                originalData.mobile = data.data.mobile;
+                            } else {
+                                alert(data.msg || 'Save failed');
+                            }
+                        })
+                        .catch(e => {
+                            btnSave.disabled = false;
+                            btnSave.innerText = '[Save Changes]';
+                            alert('Network error');
+                        });
+                });
+            }
+
+            if (btnReset) {
+                btnReset.addEventListener('click', function () {
+                    document.getElementById('user-nickname').value = originalData.nickname;
+                    document.getElementById('user-email').value = originalData.email;
+                    document.getElementById('user-mobile').value = originalData.mobile;
+                });
+            }
+        })();
+
+        function unbindOAuth(provider) {
+            if (!confirm('Unbind ' + provider + '?')) return;
+            fetch('/oauth/' + provider + '/unbind', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'}
+            }).then(r => r.json()).then(data => {
+                if (data.code === 0) {
+                    alert('Unbound successfully');
+                    location.reload();
+                } else {
+                    alert('Failed: ' + data.msg);
+                }
+            });
+        }
+    </script>
+{% endblock %}

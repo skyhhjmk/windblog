@@ -1,0 +1,94 @@
+{# SEO Meta 标签组件 #}
+{# 使用方法: {% include 'components/seo-meta.html.twig' with seo_data %} #}
+
+{# 基础 Meta 标签 #}
+{% if seo.description %}
+    <meta name="description" content="{{ seo.description }}">
+{% endif %}
+
+{% if seo.keywords %}
+    <meta name="keywords" content="{{ seo.keywords }}">
+{% endif %}
+
+{% if seo.author %}
+    <meta name="author" content="{{ seo.author }}">
+{% endif %}
+
+{# 文章特定 Meta 标签 #}
+{% if seo.publish_date %}
+    <meta name="article:published_time" content="{{ seo.publish_date }}">
+{% endif %}
+
+{% if seo.modified_date %}
+    <meta name="article:modified_time" content="{{ seo.modified_date }}">
+{% endif %}
+
+{# Open Graph 标签 (Facebook, LinkedIn 等) #}
+<meta property="og:type" content="{{ seo.og_type|default('website') }}">
+<meta property="og:title" content="{{ seo.title|default(page_title) }}">
+<meta property="og:url" content="{{ seo.url|default(app.request.uri) }}">
+<meta property="og:site_name" content="{{ seo.site_name|default(blog_config('title', 'WindBlog', true)) }}">
+
+{% if seo.description %}
+    <meta property="og:description" content="{{ seo.description }}">
+{% endif %}
+
+{% if seo.image %}
+    <meta property="og:image" content="{{ seo.image }}">
+    <meta property="og:image:alt" content="{{ seo.image_alt|default(seo.title) }}">
+    {% if seo.image_width %}
+        <meta property="og:image:width" content="{{ seo.image_width }}">
+    {% endif %}
+    {% if seo.image_height %}
+        <meta property="og:image:height" content="{{ seo.image_height }}">
+    {% endif %}
+{% endif %}
+
+{% if seo.og_type == 'article' %}
+    {% if seo.publish_date %}
+        <meta property="article:published_time" content="{{ seo.publish_date }}">
+    {% endif %}
+    {% if seo.modified_date %}
+        <meta property="article:modified_time" content="{{ seo.modified_date }}">
+    {% endif %}
+    {% if seo.author %}
+        <meta property="article:author" content="{{ seo.author }}">
+    {% endif %}
+    {% if seo.section %}
+        <meta property="article:section" content="{{ seo.section }}">
+    {% endif %}
+    {% if seo.tags %}
+        {% for tag in seo.tags %}
+            <meta property="article:tag" content="{{ tag }}">
+        {% endfor %}
+    {% endif %}
+{% endif %}
+
+{# Twitter Card 标签 #}
+<meta name="twitter:card" content="{{ seo.twitter_card|default('summary_large_image') }}">
+<meta name="twitter:title" content="{{ seo.title|default(page_title) }}">
+
+{% if seo.description %}
+    <meta name="twitter:description" content="{{ seo.description }}">
+{% endif %}
+
+{% if seo.image %}
+    <meta name="twitter:image" content="{{ seo.image }}">
+    <meta name="twitter:image:alt" content="{{ seo.image_alt|default(seo.title) }}">
+{% endif %}
+
+{% if seo.twitter_site %}
+    <meta name="twitter:site" content="{{ seo.twitter_site }}">
+{% endif %}
+
+{% if seo.twitter_creator %}
+    <meta name="twitter:creator" content="{{ seo.twitter_creator }}">
+{% endif %}
+
+{# Canonical URL #}
+{% if seo.canonical %}
+    <link rel="canonical" href="{{ seo.canonical }}">
+{% endif %}
+
+{# 语言和地区 #}
+<meta property="og:locale" content="{{ seo.locale|default('zh_CN') }}">

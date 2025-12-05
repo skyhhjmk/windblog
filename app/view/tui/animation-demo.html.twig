@@ -1,0 +1,275 @@
+{% extends 'default/base.html.twig' %}
+
+{% block title %}动画效果演示 - WindBlog{% endblock %}
+
+{% block content %}
+    <div class="pt-4 pb-16">
+        <div class="max-w-4xl mx-auto px-4">
+            <!-- 页面标题 -->
+            <div class="text-center mb-12">
+                <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-800 mb-3 sm:mb-4 fade-in-on-scroll">
+                    <i class="fa fa-magic text-blue-600 mr-3"></i>动画效果演示
+                </h1>
+                <p class="text-gray-600 text-base sm:text-lg md:text-xl fade-in-on-scroll">
+                    探索WindBlog的高级动画效果和交互体验
+                </p>
+            </div>
+
+            <!-- 介绍卡片 -->
+            <div class="bg-white rounded-2xl shadow-md p-6 mb-12 fade-in-on-scroll">
+                <p class="text-gray-600">
+                    此页面展示了为WindBlog添加的各种高级动画效果。向下滚动页面以查看不同的动画类型和交互效果。
+                    所有动画都经过优化，在不同设备上都能提供流畅的体验。
+                </p>
+            </div>
+
+            <!-- 1. 滚动触发动画 -->
+            <section class="mb-16 fade-in-on-scroll">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 pb-2 border-b border-gray-200">
+                    <i class="fa fa-angle-double-down text-blue-600 mr-2"></i>滚动触发动画
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-xl shadow-md p-6 fade-in-on-scroll" data-animation-delay="0">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-3">淡入 + 上移</h3>
+                        <p class="text-gray-600">当元素进入视口时，从下方滑入并淡入显示。</p>
+                        <div class="mt-4 w-full h-24 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <span class="text-blue-600 font-medium">滚动触发元素</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-md p-6 fade-in-on-scroll" data-animation-delay="0.2">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-3">交错动画</h3>
+                        <p class="text-gray-600">同一区域的元素会以不同的延迟显示，创建流畅的序列效果。</p>
+                        <div class="mt-4 grid grid-cols-3 gap-2">
+                            <div class="h-16 bg-green-100 rounded-lg flex items-center justify-center fade-in-on-scroll"
+                                 data-animation-delay="0.3">
+                                <span class="text-green-600">1</span>
+                            </div>
+                            <div class="h-16 bg-green-100 rounded-lg flex items-center justify-center fade-in-on-scroll"
+                                 data-animation-delay="0.4">
+                                <span class="text-green-600">2</span>
+                            </div>
+                            <div class="h-16 bg-green-100 rounded-lg flex items-center justify-center fade-in-on-scroll"
+                                 data-animation-delay="0.5">
+                                <span class="text-green-600">3</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. 悬停动画 -->
+            <section class="mb-16 fade-in-on-scroll">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 pb-2 border-b border-gray-200">
+                    <i class="fa fa-hand-pointer-o text-blue-600 mr-2"></i>悬停动画效果
+                </h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="bg-white rounded-xl shadow-md p-6 hover-lift accelerated fade-in-on-scroll"
+                         data-animation-delay="0.1">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-3">卡片提升效果</h3>
+                        <p class="text-gray-600">悬停时卡片轻微上浮并增加阴影深度。</p>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-md p-6 hover-scale accelerated fade-in-on-scroll"
+                         data-animation-delay="0.2">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-3">缩放效果</h3>
+                        <p class="text-gray-600">悬停时元素轻微放大，增强用户注意力。</p>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-md p-6 hover-rotate accelerated fade-in-on-scroll"
+                         data-animation-delay="0.3">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-3">旋转效果</h3>
+                        <p class="text-gray-600">悬停时元素轻微旋转，增添趣味性。</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. 按钮交互动画 -->
+            <section class="mb-16 fade-in-on-scroll">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 pb-2 border-b border-gray-200">
+                    <i class="fa fa-mouse-pointer text-blue-600 mr-2"></i>按钮交互动画
+                </h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-xl shadow-md p-6 fade-in-on-scroll" data-animation-delay="0.1">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-3">涟漪效果</h3>
+                        <p class="text-gray-600 mb-4">点击时产生波纹扩散效果，提供视觉反馈。</p>
+                        <button
+                            class="ripple-btn bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors duration-300">
+                            点击测试涟漪效果
+                        </button>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-md p-6 fade-in-on-scroll" data-animation-delay="0.2">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-3">触摸反馈</h3>
+                        <p class="text-gray-600 mb-4">点击时轻微变形，为用户提供即时反馈。</p>
+                        <button
+                            class="touch-feedback bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 transition-colors duration-300">
+                            触摸反馈按钮
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. 状态变化动画 -->
+            <section class="mb-16 fade-in-on-scroll">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 pb-2 border-b border-gray-200">
+                    <i class="fa fa-refresh text-blue-600 mr-2"></i>元素状态变化动画
+                </h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="bg-white rounded-xl shadow-md p-6 text-center fade-in-on-scroll"
+                         data-animation-delay="0.1">
+                        <div
+                            class="animate-pulse w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i class="fa fa-heart text-2xl"></i>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-800">脉冲动画</h3>
+                        <p class="text-gray-600 text-sm mt-1">呼吸般的缩放效果</p>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-md p-6 text-center fade-in-on-scroll"
+                         data-animation-delay="0.2">
+                        <div
+                            class="animate-breathe w-16 h-16 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i class="fa fa-microphone text-2xl"></i>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-800">呼吸动画</h3>
+                        <p class="text-gray-600 text-sm mt-1">渐进式的透明度变化</p>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-md p-6 text-center fade-in-on-scroll"
+                         data-animation-delay="0.3">
+                        <div
+                            class="animate-shake w-16 h-16 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i class="fa fa-exclamation-triangle text-2xl"></i>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-800">抖动动画</h3>
+                        <p class="text-gray-600 text-sm mt-1">左右摇晃提醒注意</p>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-md p-6 text-center fade-in-on-scroll"
+                         data-animation-delay="0.4">
+                        <div
+                            class="animate-flash w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i class="fa fa-bell text-2xl"></i>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-800">闪烁动画</h3>
+                        <p class="text-gray-600 text-sm mt-1">快速闪烁吸引注意</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 5. 加载动画 -->
+            <section class="mb-16 fade-in-on-scroll">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 pb-2 border-b border-gray-200">
+                    <i class="fa fa-spinner text-blue-600 mr-2"></i>加载与过渡动画
+                </h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-xl shadow-md p-6 fade-in-on-scroll" data-animation-delay="0.1">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-3">旋转加载</h3>
+                        <p class="text-gray-600 mb-4">用于指示内容正在加载的旋转动画。</p>
+                        <div class="flex justify-center">
+                            <div
+                                class="animate-spin-fast w-12 h-12 border-4 border-gray-200 border-t-blue-600 rounded-full"></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-md p-6 fade-in-on-scroll" data-animation-delay="0.2">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-3">跳跃加载</h3>
+                        <p class="text-gray-600 mb-4">用于页面切换或数据加载的跳跃指示器。</p>
+                        <div class="flex justify-center gap-2">
+                            <div class="animate-bounce-1 w-4 h-4 bg-blue-600 rounded-full"></div>
+                            <div class="animate-bounce-2 w-4 h-4 bg-blue-600 rounded-full"></div>
+                            <div class="animate-bounce-3 w-4 h-4 bg-blue-600 rounded-full"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 6. 文本动画 -->
+            <section class="mb-16 fade-in-on-scroll">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 pb-2 border-b border-gray-200">
+                    <i class="fa fa-font text-blue-600 mr-2"></i>文本与背景动画
+                </h2>
+                <div class="bg-white rounded-xl shadow-md p-6 fade-in-on-scroll" data-animation-delay="0.1">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3">打字机效果</h3>
+                    <p class="text-gray-600 mb-4">模拟打字机逐字显示文本的效果。</p>
+                    <div
+                        class="typewriter text-xl font-medium text-blue-600 border-r-4 border-blue-600 whitespace-nowrap overflow-hidden"
+                        style="width: 0;">
+                        欢迎来到WindBlog的动画演示页面
+                    </div>
+                </div>
+
+                <div
+                    class="mt-6 bg-gradient-animation h-24 rounded-xl flex items-center justify-center fade-in-on-scroll"
+                    data-animation-delay="0.2">
+                    <h3 class="text-xl font-bold text-white">渐变背景动画</h3>
+                </div>
+            </section>
+
+            <!-- 7. 测试按钮 -->
+            <section class="mb-16 fade-in-on-scroll">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 pb-2 border-b border-gray-200">
+                    <i class="fa fa-play-circle text-blue-600 mr-2"></i>互动测试区
+                </h2>
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <p class="text-gray-600 mb-6">点击下方按钮测试不同的动画效果和通知功能：</p>
+                    <div class="flex flex-wrap gap-3">
+                        <button id="test-notification-success"
+                                class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-300 hover-lift accelerated">
+                            成功通知
+                        </button>
+                        <button id="test-notification-info"
+                                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300 hover-lift accelerated">
+                            信息通知
+                        </button>
+                        <button id="test-notification-warning"
+                                class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors duration-300 hover-lift accelerated">
+                            警告通知
+                        </button>
+                        <button id="test-notification-error"
+                                class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-300 hover-lift accelerated">
+                            错误通知
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- 页面特定脚本 -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // 检查是否启用减少动画偏好
+            const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            // 设置打字机效果（如果用户没有开启减少动画偏好）
+            if (!reduceMotion) {
+                const typewriter = document.querySelector('.typewriter');
+                if (typewriter) {
+                    typewriter.style.width = typewriter.textContent.length + 'ch';
+                    typewriter.classList.add('typing');
+                }
+            }
+
+            // 测试通知按钮事件
+            if (window.AnimationUtils) {
+                document.getElementById('test-notification-success').addEventListener('click', function () {
+                    AnimationUtils.showNotification('这是一条成功通知！', 'success', 3000);
+                });
+
+                document.getElementById('test-notification-info').addEventListener('click', function () {
+                    AnimationUtils.showNotification('这是一条信息通知！', 'info', 3000);
+                });
+
+                document.getElementById('test-notification-warning').addEventListener('click', function () {
+                    AnimationUtils.showNotification('这是一条警告通知！', 'warning', 3000);
+                });
+
+                document.getElementById('test-notification-error').addEventListener('click', function () {
+                    AnimationUtils.showNotification('这是一条错误通知！', 'error', 3000);
+                });
+            }
+        });
+    </script>
+{% endblock %}

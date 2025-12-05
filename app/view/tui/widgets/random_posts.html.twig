@@ -1,0 +1,17 @@
+{% extends "widgets/base.html.twig" %}
+
+{% block widget_content %}
+    {% if random_posts is defined and random_posts is not empty %}
+        <div class="space-y-2 font-mono text-sm">
+            {% for post in random_posts %}
+                <a href="/post/{{ post.slug }}.html" class="block group hover:bg-gray-800 p-2 transition-colors">
+                    <div class="text-gray-300 group-hover:text-purple-400 truncate">
+                        ? {{ post.title }}
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-gray-500 text-sm italic font-mono">No posts found</div>
+    {% endif %}
+{% endblock %}

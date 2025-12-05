@@ -1,0 +1,172 @@
+<title>{{ page_title|default('Links') }}</title>
+
+<div id="pjax-container">
+    <!-- PJAX Sidebar Fragment -->
+    <div id="pjax-sidebar-html" style="display:none">
+        {% if sidebar is defined and sidebar.widgets is defined %}
+            {% for widget in sidebar.widgets %}
+                {% if widget.enabled and widget.html is defined %}
+                    {{ widget.html|raw }}
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    </div>
+
+    <div class="max-w-full mx-auto px-0">
+        <div class="mb-8 text-center px-2">
+            <h1 class="text-2xl font-bold mb-2">
+                <span class="text-green-500">➜</span>
+                <span class="text-blue-500">~</span>
+                Links
+            </h1>
+            <p class="text-gray-500 font-mono text-sm">A collection of quality resources.</p>
+
+            <div class="mt-4 flex flex-col sm:flex-row items-center justify-center gap-4 font-mono text-sm">
+                <a href="/link/request" class="text-blue-500 hover:underline">[Request Link]</a>
+                <div class="flex items-center gap-2">
+                    <label for="linkSortSelect" class="text-gray-500">Sort:</label>
+                    <select id="linkSortSelect" class="bg-gray-800 border border-gray-600 text-white p-1 outline-none">
+                        <option value="default">Default</option>
+                        <option value="protocol">Protocol</option>
+                        <option value="score">Score</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        {% if links|length > 0 %}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 link-grid">
+                {% for link in links %}
+                    <div class="tui-box h-full flex flex-col"
+                         data-title="LINK"
+                         data-protocol="{{ link.custom_fields.protocol ?? link.custom_fields.protocol_level ?? '' }}"
+                         data-score="{{ (link.custom_fields.auto_audit.score ?? 0) }}">
+
+                        <div class="flex items-start mb-4">
+                            <div class="mr-4 flex-shrink-0">
+                                {% if link.icon %}
+                                    <img src="{{ link.icon }}" alt="{{ link.name }}"
+                                         class="w-10 h-10 border border-gray-600">
+                                {% else %}
+                                    <div
+                                        class="w-10 h-10 border border-gray-600 flex items-center justify-center text-gray-500">
+                                        <i class="fas fa-link"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="flex-1 min-w-0 overflow-hidden">
+                                <h2 class="font-bold truncate text-blue-400 hover:underline">
+                                    <a href="{% if link.redirect_type == 'info' %}/link/info/{{ link.id }}{% else %}/link/goto/{{ link.id }}{% endif %}"
+                                       {% if link.redirect_type == 'direct' %}target="{{ link.target }}"{% endif %}>
+                                        {{ link.name }}
+                                    </a>
+                                </h2>
+                                <div class="text-xs text-gray-500 font-mono mt-1">
+                                    {{ link.created_at|date('Y-m-d') }}
+                                    {% set _protocol = link.custom_fields.protocol ?? link.custom_fields.protocol_level ?? '' %}
+                                    {% if _protocol %}
+                                        <span class="ml-2 text-purple-400">[{{ _protocol }}]</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <p class="text-gray-400 text-sm font-mono mb-4 flex-grow line-clamp-3">
+                            {{ link.description ?: 'No description available.' }}
+                        </p>
+
+                        <div
+                            class="flex justify-between items-center text-xs font-mono border-t border-gray-700 pt-2 mt-auto">
+                            <a href="{% if link.redirect_type == 'info' %}/link/info/{{ link.id }}{% else %}/link/goto/{{ link.id }}{% endif %}"
+                               {% if link.redirect_type == 'direct' %}target="{{ link.target }}"{% endif %}
+                               class="text-green-500 hover:underline">
+                                [Visit]
+                            </a>
+                            <span class="text-gray-600">
+                                {% if link.redirect_type == 'direct' %}Direct{% elseif link.redirect_type == 'goto' %}Jump{% else %}Info{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="mt-12 flex justify-center font-mono">
+                {{ pagination|raw }}
+            </div>
+        {% else %}
+            <div class="tui-box text-center py-12" data-title="INFO">
+                <p class="text-gray-500">No links found.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <script>
+        function initLinkList() {
+            const sortSelect = document.getElementById('linkSortSelect');
+            if (sortSelect) {
+                // Remove existing listeners if any (simple way is to clone and replace, but here we just add)
+                // In a real app, be careful with duplicate listeners.
+                sortSelect.onchange = function () {
+                    const mode = this.value;
+                    const grid = document.querySelector('.link-grid');
+                    if (!grid) return;
+                    const items = Array.from(grid.children);
+                    const protocolRank = {'CAT5': 5, 'CAT4': 4, 'CAT3': 3, 'CAT2': 2, 'CAT1': 1};
+
+                    const getProtocolWeight = (el) => {
+                        const p = (el.getAttribute('data-protocol') || '').toUpperCase();
+                        const key = p.startsWith('CAT') ? p.slice(0, 4) : p;
+                        return protocolRank[key] || 0;
+                    };
+                    const getScore = (el) => parseInt(el.getAttribute('data-score') || '0', 10) || 0;
+
+                    let sorted = items.slice();
+                    if (mode === 'protocol') {
+                        sorted.sort((a, b) => getProtocolWeight(b) - getProtocolWeight(a));
+                    } else if (mode === 'score') {
+                        sorted.sort((a, b) => getScore(b) - getScore(a));
+                    } else {
+                        // Default order (DOM order initially? or we need index)
+                        // For simplicity, just keep current if default, or reload page.
+                        // Ideally we store initial index.
+                    }
+                    sorted.forEach(el => grid.appendChild(el));
+                };
+
+                // Trigger initial sort if needed
+                setTimeout(() => {
+                    if (sortSelect.value === 'protocol') sortSelect.dispatchEvent(new Event('change'));
+                }, 100);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', initLinkList);
+        document.addEventListener('page:ready', initLinkList);
+
+        (function () {
+            function injectSidebar() {
+                var t = document.getElementById('pjax-sidebar-html');
+                var c = document.getElementById('sidebar-container');
+                if (!t || !c) return;
+                if (window.PJAX || window.jQuery) {
+                    try {
+                        document.dispatchEvent(new CustomEvent('pjax:sidebarReady'));
+                    } catch (_) {
+                    }
+                } else {
+                    c.innerHTML = t.innerHTML || '';
+                }
+                if (c.innerHTML !== t.innerHTML) {
+                    c.innerHTML = t.innerHTML || '';
+                    try {
+                        document.dispatchEvent(new Event('sidebar:updated'));
+                    } catch (_) {
+                    }
+                }
+            }
+
+            injectSidebar();
+            document.addEventListener('page:ready', injectSidebar);
+        })();
+    </script>
+</div>

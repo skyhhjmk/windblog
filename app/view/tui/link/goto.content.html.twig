@@ -1,0 +1,104 @@
+<title>{{ page_title|default('外链跳转确认') }}</title>
+<div id="pjax-container" class="max-w-2xl mx-auto">
+    <div class="bg-white rounded-xl shadow-lg overflow-hidden no-animation">
+        <div class="p-8 text-center">
+            <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-yellow-100 mb-6">
+                <i class="fas fa-exclamation-triangle text-yellow-600 text-2xl"></i>
+            </div>
+
+            <h1 class="text-2xl font-bold text-gray-800 mb-4">即将离开本网站</h1>
+
+            <p class="text-gray-600 mb-2">
+                您即将访问以下外部网站:
+            </p>
+
+            <div class="bg-gray-50 rounded-lg p-4 mb-6 text-left">
+                <div class="flex items-center mb-2">
+                    <i class="fas fa-link text-gray-500 mr-2"></i>
+                    <span class="font-semibold text-gray-700">{{ link.name }}</span>
+                </div>
+
+                {% if link.show_url %}
+                    <div class="text-sm text-gray-600 break-all">
+                        <i class="fas fa-globe text-gray-500 mr-2"></i>
+                        {{ link.url }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <p class="text-gray-600 text-sm mb-8">
+                该链接由第三方提供，访问时请谨慎判断信息真实性。
+            </p>
+
+            <div class="flex flex-col sm:flex-row justify-center gap-4">
+                <a href="{{ link.url }}"
+                   target="{{ link.target }}"
+                   class="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                    <i class="fas fa-external-link-alt mr-2"></i>
+                    继续访问
+                </a>
+
+                <button id="backButton"
+                        class="px-6 py-3 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
+                    <i class="fas fa-arrow-left mr-2"></i>
+                    返回上页
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-6 text-center text-sm text-gray-500">
+        <p>安全提示：请确认链接地址无误后再访问</p>
+    </div>
+</div>
+
+<script>
+    // 初始化重定向确认页面功能
+    function initGotoPage() {
+        // 为返回按钮添加事件监听（避免内联onclick属性）
+        const backButton = document.getElementById('backButton');
+        if (backButton) {
+            // 移除可能存在的旧事件绑定
+            backButton.removeEventListener('click', handleBackButtonClick);
+            backButton.addEventListener('click', handleBackButtonClick);
+        }
+
+        // 为继续访问链接添加事件监听（可选择性添加额外逻辑）
+        const continueLinks = document.querySelectorAll('a[href="{{ link.url|e('js') }}"]');
+        continueLinks.forEach(link => {
+            // 可选：添加点击跟踪或其他逻辑
+            link.addEventListener('click', function (e) {
+                // 可选：添加点击跟踪代码
+                console.log('用户选择继续访问外部链接:', this.href);
+            });
+        });
+
+        // 添加页面淡入动画效果
+        document.querySelectorAll('.bg-white.rounded-xl').forEach(el => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(20px)';
+            el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+
+            setTimeout(() => {
+                el.style.opacity = '1';
+                el.style.transform = 'translateY(0)';
+            }, 100);
+        });
+    }
+
+    // 返回按钮点击处理
+    function handleBackButtonClick() {
+        // 尝试使用PJAX的返回功能，如果可用
+        if (window.PJAX && window.PJAX.back) {
+            window.PJAX.back();
+        } else {
+            // 降级到标准浏览器历史返回
+            history.back();
+        }
+    }
+
+    // 在DOM加载完成时初始化
+    document.addEventListener('DOMContentLoaded', initGotoPage);
+    // 支持PJAX页面切换后重新初始化
+    document.addEventListener('page:ready', initGotoPage);
+</script>

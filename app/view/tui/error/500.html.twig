@@ -1,0 +1,43 @@
+{% extends "base.html.twig" %}
+
+{% block title %}500 Internal Server Error - {{ page_title|default('WindBlog') }}{% endblock %}
+
+{% block content %}
+    <div class="min-h-[60vh] flex items-center justify-center">
+        <div class="tui-box max-w-2xl w-full text-center font-mono" data-title="ERROR 500">
+            <div class="mb-6">
+                <span class="text-6xl text-red-600 font-bold">500</span>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-300 mb-4">Internal Server Error</h2>
+            <p class="text-gray-500 mb-8">
+                The server encountered an internal error and was unable to complete your request.
+            </p>
+
+            {% if app_debug and error_message %}
+                <div class="text-left border border-red-900 bg-red-900/20 p-4 mb-8 text-sm overflow-x-auto">
+                    <p class="font-bold text-red-400 mb-2">Debug Info:</p>
+                    <p class="text-red-300 font-mono text-xs break-all">{{ error_message }}</p>
+                    {% if error_trace %}
+                        <details class="mt-2">
+                            <summary class="cursor-pointer text-red-400 font-bold hover:text-red-300">[View Stack
+                                Trace]
+                            </summary>
+                            <pre class="mt-2 text-xs text-gray-400 whitespace-pre-wrap">{{ error_trace }}</pre>
+                        </details>
+                    {% endif %}
+                </div>
+            {% endif %}
+
+            <div class="flex gap-4 justify-center">
+                <a href="/"
+                   class="px-6 py-2 border border-green-500 text-green-500 hover:bg-green-900 hover:text-white transition-colors">
+                    [Return Home]
+                </a>
+                <button onclick="location.reload()"
+                        class="px-6 py-2 border border-gray-600 text-gray-500 hover:bg-gray-800 hover:text-white transition-colors">
+                    [Reload]
+                </button>
+            </div>
+        </div>
+    </div>
+{% endblock %}
