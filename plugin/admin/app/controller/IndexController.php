@@ -40,7 +40,8 @@ class IndexController
     public function index(Request $request): Response
     {
         clearstatcache();
-        if (!is_install_lock_exists() && container_info()['in_container']) {
+        // 如果没有安装锁文件，并且在容器内，则显示安装页面（前端自动跳过环境检查和数据库初始化）
+        if ((!is_install_lock_exists() && container_info()['in_container']) || !is_install_lock_exists() && !container_info()['in_container']) {
             return raw_view('index/install');
         }
         $admin = admin();
