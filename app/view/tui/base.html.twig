@@ -278,47 +278,43 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 {% block extra_js %}{% endblock %}
 
-<!-- PJAX & Logic -->
+<!-- 页面逻辑 -->
 <script>
-    // Simple PJAX implementation for TUI
-    $(document).pjax('a[href]:not([target="_blank"]):not([data-no-pjax])', '#pjax-container', {
-        fragment: '#pjax-container',
-        timeout: 8000
+    // Mobile Menu - 使用纯JavaScript
+    document.addEventListener('DOMContentLoaded', function () {
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const mobileMenu = document.getElementById('mobileMenu');
+
+        if (mobileMenuBtn && mobileMenu) {
+            mobileMenuBtn.addEventListener('click', function () {
+                mobileMenu.classList.toggle('hidden');
+            });
+        }
+
+        // User Status
+        function checkUserStatus() {
+            fetch('/user/profile/api').then(r => r.json()).then(data => {
+                const userNotLoggedIn = document.getElementById('userNotLoggedIn');
+                const mobileUserAuth = document.getElementById('mobileUserAuth');
+                const userLoggedIn = document.getElementById('userLoggedIn');
+                const userNickname = document.getElementById('userNickname');
+
+                if (data.code === 0 && data.data) {
+                    if (userNotLoggedIn) userNotLoggedIn.style.display = 'none';
+                    if (mobileUserAuth) mobileUserAuth.style.display = 'none';
+                    if (userLoggedIn) userLoggedIn.classList.remove('hidden');
+                    if (userNickname) userNickname.textContent = data.data.nickname || data.data.username;
+                } else {
+                    if (userNotLoggedIn) userNotLoggedIn.style.display = 'block';
+                    if (mobileUserAuth) mobileUserAuth.style.display = 'block';
+                    if (userLoggedIn) userLoggedIn.classList.add('hidden');
+                }
+            }).catch(() => {
+            });
+        }
+
+        checkUserStatus();
     });
-
-    $(document).on('pjax:send', function () {
-        $('#pjax-progress').css('width', '0').animate({width: '100%'}, 300);
-    });
-
-    $(document).on('pjax:complete', function () {
-        $('#pjax-progress').css('width', '100%').fadeOut(300, function () {
-            $(this).css('width', '0').show();
-        });
-        // Re-init scripts if needed
-    });
-
-    // Mobile Menu
-    $('#mobileMenuBtn').click(function () {
-        $('#mobileMenu').toggleClass('hidden');
-    });
-
-    // User Status
-    function checkUserStatus() {
-        fetch('/user/profile/api').then(r => r.json()).then(data => {
-            if (data.code === 0 && data.data) {
-                $('#userNotLoggedIn, #mobileUserAuth').hide();
-                $('#userLoggedIn').removeClass('hidden');
-                $('#userNickname').text(data.data.nickname || data.data.username);
-            } else {
-                $('#userNotLoggedIn, #mobileUserAuth').show();
-                $('#userLoggedIn').addClass('hidden');
-            }
-        }).catch(() => {
-        });
-    }
-
-    checkUserStatus();
-    $(document).on('pjax:end', checkUserStatus);
 
     // Logout
     var logoutCsrfToken = "{{ csrf_token('_logout_token') }}";
@@ -335,6 +331,10 @@
 </script>
 
 <div id="pjax-progress" style="position:fixed;top:0;left:0;height:2px;width:0;z-index:9999;background:#61afef;"></div>
+
+<!-- 引入设置面板组件 -->
+{% include 'components/settings-panel.html.twig' %}
+
 {{ blog_config('embed_body_end', '', true)|raw }}
 </body>
 </html>

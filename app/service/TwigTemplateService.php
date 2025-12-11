@@ -40,6 +40,60 @@ class TwigTemplateService implements View
     }
 
     /**
+     * 获取可用的主题列表
+     *
+     * @param string $viewPath 视图路径
+     * @return array 可用主题列表
+     */
+    private static function getAvailableThemes(string $viewPath): array
+    {
+        $availableThemes = ['default']; // default 主题总是可用
+        $viewPathBase = rtrim($viewPath, '/') . '/';
+
+        if (is_dir($viewPathBase)) {
+            $directories = scandir($viewPathBase);
+            if ($directories !== false) {
+                foreach ($directories as $directory) {
+                    // 跳过 . 和 .. 以及非目录项
+                    if ($directory !== '.' && $directory !== '..' && is_dir($viewPathBase . $directory)) {
+                        $availableThemes[] = $directory;
+                    }
+                }
+            }
+        }
+
+        return array_unique($availableThemes);
+    }
+
+    /**
+     * 验证并获取安全的主题名
+     *
+     * @param string $requestedTheme  请求的主题名
+     * @param array  $availableThemes 可用主题列表
+     * @param string $defaultTheme    默认主题名
+     *
+     * @return string 验证后的安全主题名
+     */
+    private static function validateTheme(string $requestedTheme, array $availableThemes, string $defaultTheme = 'default'): string
+    {
+        // 安全检查：确保主题名只包含字母、数字、连字符和下划线
+        if (!preg_match('/^[a-zA-Z0-9_-]+$/', $requestedTheme)) {
+            Log::warning("Invalid theme name format: $requestedTheme, falling back to default");
+
+            return $defaultTheme;
+        }
+
+        // 检查主题是否存在
+        if (in_array($requestedTheme, $availableThemes, true)) {
+            return $requestedTheme;
+        }
+
+        Log::warning("Theme not found: $requestedTheme, available themes: " . implode(', ', $availableThemes) . ', falling back to default');
+
+        return $defaultTheme;
+    }
+
+    /**
      * Render.
      *
      * @param string      $template Template namespace, such as: app/index, plugin/foo/index.
@@ -57,8 +111,8 @@ class TwigTemplateService implements View
     {
         static $views = [];
         $request = request();
-        $plugin = $plugin === null ? ($request->plugin ?? '') : $plugin;
-        $app = $app === null ? ($request->app ?? '') : $app;
+        $plugin ??= ($request->plugin ?? '');
+        $app ??= ($request->app ?? '');
         $configPrefix = $plugin ? "plugin.$plugin." : '';
         $viewSuffix = config("{$configPrefix}view.options.view_suffix", 'html');
         $baseViewPath = $plugin ? base_path() . "/plugin/$plugin/app" : app_path();
@@ -73,18 +127,33 @@ class TwigTemplateService implements View
         } else {
             $viewPath = $app === '' ? "$baseViewPath/view/" : "$baseViewPath/$app/view/";
         }
+
+        // 获取可用主题列表
+        $availableThemes = self::getAvailableThemes($viewPath);
+        Log::debug('Available themes: ' . implode(', ', $availableThemes));
+
         // 解析主题，失败或空值均回退 default
         $theme = 'default';
+        // 用户侧选择的主题
+        $user_theme = $request->cookie('theme');
         try {
-            $t = blog_config('theme', 'default', true);
-            Log::debug("using theme: $theme");
-            if (is_string($t) && $t !== '') {
-                $theme = $t;
+            if (!empty($user_theme)) {
+                // 验证用户输入的主题
+                $theme = self::validateTheme($user_theme, $availableThemes, 'default');
+            } else {
+                $t = blog_config('theme', 'default', true);
+                if (is_string($t) && $t !== '') {
+                    // 验证配置中的主题
+                    $theme = self::validateTheme($t, $availableThemes, 'default');
+                }
             }
+
+            Log::debug("using theme: $theme");
         } catch (Throwable $e) {
-            Log::error("theme: $theme not found:" . $e->getMessage());
-            // ignore and fallback to default
+            Log::error('theme resolution failed: ' . $e->getMessage() . ', falling back to default');
+            $theme = 'default';
         }
+
         // 构建主题与回退路径
         $viewPathBase = rtrim($viewPath, '/') . '/';
         $viewPathTheme = $viewPathBase . $theme . '/';
@@ -99,9 +168,10 @@ class TwigTemplateService implements View
             }));
 
             // 添加 blog_config 函数到 Twig
-            $views[$viewsKey]->addFunction(new TwigFunction('blog_config', function ($key, $default = null, $init = true) {
+            $views[$viewsKey]->addFunction(new TwigFunction('blog_config', function ($key, $default = null) {
                 try {
-                    return blog_config($key, $default, $init);
+                    // 只读，安全原因不允许写入
+                    return blog_config($key, $default, false, true, false);
                 } catch (Throwable $e) {
                     return $default;
                 }

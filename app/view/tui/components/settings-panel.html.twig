@@ -1,0 +1,414 @@
+<!-- 设置面板组件 - TUI主题专用 -->
+<div id="settingsContainer" style="z-index: 99999;">
+    <!-- 悬浮设置按钮 - 符合TUI主题风格 -->
+    <button id="settingsBtn"
+            style="
+                position: fixed !important;
+                right: 16px !important;
+                bottom: 16px !important;
+                width: 40px !important;
+                height: 40px !important;
+                background: var(--bg) !important;
+                color: var(--accent) !important;
+                border: 1px solid var(--border) !important;
+                z-index: 100000 !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                cursor: pointer !important;
+                font-family: 'JetBrains Mono', monospace !important;
+                transition: all 0.2s ease !important;
+                opacity: 1 !important;
+                pointer-events: auto !important;
+            "
+            title="设置">
+        <i class="fas fa-cog text-lg"></i>
+    </button>
+
+    <!-- 设置面板 - 符合TUI主题风格 -->
+    <div id="settingsPanel"
+         style="
+             position: fixed !important;
+             right: 16px !important;
+             bottom: 64px !important;
+             width: 280px !important;
+             background: var(--bg) !important;
+             color: var(--fg) !important;
+             border: 1px solid var(--border) !important;
+             z-index: 100000 !important;
+             opacity: 0 !important;
+             transform: translateY(8px) !important;
+             pointer-events: none !important;
+             transition: opacity 0.2s ease, transform 0.2s ease !important;
+             font-family: 'JetBrains Mono', monospace !important;
+         ">
+
+        <!-- 面板标题 - TUI风格 -->
+        <div style="
+            background: var(--panel-bg) !important;
+            color: var(--accent) !important;
+            padding: 8px 12px !important;
+            border-bottom: 1px solid var(--border) !important;
+            font-weight: bold !important;
+            text-transform: uppercase !important;
+            font-size: 12px !important;
+            letter-spacing: 1px !important;
+        ">
+            设置
+        </div>
+
+        <!-- 面板内容 -->
+        <div style="padding: 12px !important;">
+            <!-- 主题设置 -->
+            <div style="margin-bottom: 16px !important;">
+                <div style="
+                    color: var(--success) !important;
+                    font-size: 11px !important;
+                    margin-bottom: 8px !important;
+                    text-transform: uppercase !important;
+                    letter-spacing: 0.5px !important;
+                ">主题
+                </div>
+                <div style="display: flex !important; gap: 8px !important;">
+                    <button data-theme="default"
+                            class="theme-option"
+                            style="
+                                flex: 1 !important;
+                                background: var(--bg) !important;
+                                color: var(--fg) !important;
+                                border: 1px solid var(--border) !important;
+                                padding: 6px 8px !important;
+                                cursor: pointer !important;
+                                font-size: 11px !important;
+                                transition: all 0.2s ease !important;
+                                font-family: 'JetBrains Mono', monospace !important;
+                            ">
+                        <i class="fas fa-palette mr-1"></i>
+                        默认
+                    </button>
+                    <button data-theme="tui"
+                            class="theme-option"
+                            style="
+                                flex: 1 !important;
+                                background: var(--bg) !important;
+                                color: var(--fg) !important;
+                                border: 1px solid var(--border) !important;
+                                padding: 6px 8px !important;
+                                cursor: pointer !important;
+                                font-size: 11px !important;
+                                transition: all 0.2s ease !important;
+                                font-family: 'JetBrains Mono', monospace !important;
+                            ">
+                        <i class="fas fa-terminal mr-1"></i>
+                        TUI
+                    </button>
+                </div>
+            </div>
+
+            <!-- 字体连字设置 -->
+            <div>
+                <div style="
+                    color: var(--success) !important;
+                    font-size: 11px !important;
+                    margin-bottom: 8px !important;
+                    text-transform: uppercase !important;
+                    letter-spacing: 0.5px !important;
+                ">字体连字
+                </div>
+                <div style="display: flex !important; gap: 8px !important;">
+                    <button id="ligaturesOn"
+                            class="ligature-option"
+                            style="
+                                flex: 1 !important;
+                                background: var(--bg) !important;
+                                color: var(--fg) !important;
+                                border: 1px solid var(--border) !important;
+                                padding: 6px 8px !important;
+                                cursor: pointer !important;
+                                font-size: 11px !important;
+                                transition: all 0.2s ease !important;
+                                font-family: 'JetBrains Mono', monospace !important;
+                            ">
+                        <i class="fas fa-check-circle mr-1"></i>
+                        开启
+                    </button>
+                    <button id="ligaturesOff"
+                            class="ligature-option"
+                            style="
+                                flex: 1 !important;
+                                background: var(--bg) !important;
+                                color: var(--fg) !important;
+                                border: 1px solid var(--border) !important;
+                                padding: 6px 8px !important;
+                                cursor: pointer !important;
+                                font-size: 11px !important;
+                                transition: all 0.2s ease !important;
+                                font-family: 'JetBrains Mono', monospace !important;
+                            ">
+                        <i class="fas fa-times-circle mr-1"></i>
+                        关闭
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 确保DOM加载完成后执行
+    document.addEventListener('DOMContentLoaded', function () {
+        'use strict';
+
+        console.log('[TUI Settings] Initializing settings panel...');
+
+        // 获取DOM元素
+        const settingsContainer = document.getElementById('settingsContainer');
+        const settingsBtn = document.getElementById('settingsBtn');
+        const settingsPanel = document.getElementById('settingsPanel');
+        const themeOptions = document.querySelectorAll('.theme-option');
+        const ligatureOptions = document.querySelectorAll('.ligature-option');
+
+        // 检查元素是否存在
+        if (!settingsContainer) {
+            console.error('[TUI Settings] settingsContainer not found');
+            return;
+        }
+
+        if (!settingsBtn) {
+            console.error('[TUI Settings] settingsBtn not found');
+            return;
+        }
+
+        if (!settingsPanel) {
+            console.error('[TUI Settings] settingsPanel not found');
+            return;
+        }
+
+        console.log('[TUI Settings] All elements found, initializing functionality...');
+
+        // 存储键名
+        const STORAGE_KEY_THEME = 'theme';
+        const STORAGE_KEY_LIGATURES = 'font-ligatures';
+
+        // 状态管理
+        let isPanelOpen = false;
+
+        // 切换面板显示/隐藏
+        function togglePanel() {
+            isPanelOpen = !isPanelOpen;
+
+            if (isPanelOpen) {
+                // 打开面板
+                settingsPanel.style.opacity = '1';
+                settingsPanel.style.transform = 'translateY(0)';
+                settingsPanel.style.pointerEvents = 'auto';
+                console.log('[TUI Settings] Panel opened');
+            } else {
+                // 关闭面板
+                settingsPanel.style.opacity = '0';
+                settingsPanel.style.transform = 'translateY(8px)';
+                settingsPanel.style.pointerEvents = 'none';
+                console.log('[TUI Settings] Panel closed');
+            }
+        }
+
+        // 点击外部关闭面板
+        function closePanelOnOutsideClick(e) {
+            if (isPanelOpen && !settingsContainer.contains(e.target)) {
+                isPanelOpen = false;
+                settingsPanel.style.opacity = '0';
+                settingsPanel.style.transform = 'translateY(8px)';
+                settingsPanel.style.pointerEvents = 'none';
+                console.log('[TUI Settings] Panel closed by outside click');
+            }
+        }
+
+        // 绑定按钮点击事件
+        settingsBtn.addEventListener('click', togglePanel);
+        console.log('[TUI Settings] Click event bound to settings button');
+
+        // 绑定外部点击事件
+        document.addEventListener('click', closePanelOnOutsideClick);
+
+        // 主题设置功能
+        function initThemeSettings() {
+            // 从cookie获取当前主题
+            const cookieTheme = getCookie('theme');
+            const activeTheme = cookieTheme || 'default';
+
+            console.log('[TUI Settings] Initial theme:', activeTheme);
+
+            // 更新按钮状态
+            themeOptions.forEach(option => {
+                const theme = option.getAttribute('data-theme');
+                if (theme === activeTheme) {
+                    // 激活状态样式
+                    option.style.background = 'var(--selection)';
+                    option.style.borderColor = 'var(--accent)';
+                    option.style.color = 'var(--accent)';
+                } else {
+                    // 非激活状态样式
+                    option.style.background = 'var(--bg)';
+                    option.style.borderColor = 'var(--border)';
+                    option.style.color = 'var(--fg)';
+                }
+            });
+
+            // 绑定主题切换事件
+            themeOptions.forEach(option => {
+                option.addEventListener('click', function () {
+                    const selectedTheme = this.getAttribute('data-theme');
+                    console.log('[TUI Settings] Theme changed to:', selectedTheme);
+
+                    // 保存主题到cookie，过期时间30天
+                    setCookie('theme', selectedTheme, 30);
+
+                    // 更新所有按钮状态
+                    themeOptions.forEach(opt => {
+                        const theme = opt.getAttribute('data-theme');
+                        if (theme === selectedTheme) {
+                            opt.style.background = 'var(--selection)';
+                            opt.style.borderColor = 'var(--accent)';
+                            opt.style.color = 'var(--accent)';
+                        } else {
+                            opt.style.background = 'var(--bg)';
+                            opt.style.borderColor = 'var(--border)';
+                            opt.style.color = 'var(--fg)';
+                        }
+                    });
+
+                    // 刷新页面使主题生效
+                    window.location.reload();
+                });
+            });
+        }
+
+        // 字体连字设置功能
+        function initLigatureSettings() {
+            // 获取当前设置
+            const savedLigatures = localStorage.getItem(STORAGE_KEY_LIGATURES);
+            const isEnabled = savedLigatures !== 'off';
+
+            console.log('[TUI Settings] Initial ligatures:', isEnabled ? 'enabled' : 'disabled');
+
+            // 更新按钮状态
+            updateLigatureButtons(isEnabled);
+
+            // 应用初始设置
+            if (!isEnabled) {
+                document.documentElement.classList.add('font-ligatures-off');
+            }
+
+            // 绑定字体连字切换事件
+            ligatureOptions.forEach(option => {
+                option.addEventListener('click', function (e) {
+                    // 修复点击事件，使用closest确保正确获取按钮元素
+                    const button = e.target.closest('.ligature-option');
+                    const isEnabled = button.id === 'ligaturesOn';
+                    console.log('[TUI Settings] Ligatures changed to:', isEnabled ? 'enabled' : 'disabled');
+
+                    // 保存设置
+                    localStorage.setItem(STORAGE_KEY_LIGATURES, isEnabled ? 'on' : 'off');
+
+                    // 更新按钮状态
+                    updateLigatureButtons(isEnabled);
+
+                    // 应用设置
+                    if (isEnabled) {
+                        document.documentElement.classList.remove('font-ligatures-off');
+                    } else {
+                        document.documentElement.classList.add('font-ligatures-off');
+                    }
+                });
+            });
+        }
+
+        // 更新字体连字按钮状态
+        function updateLigatureButtons(isEnabled) {
+            const onBtn = document.getElementById('ligaturesOn');
+            const offBtn = document.getElementById('ligaturesOff');
+
+            if (onBtn && offBtn) {
+                if (isEnabled) {
+                    // 开启按钮激活
+                    onBtn.style.background = 'var(--selection)';
+                    onBtn.style.borderColor = 'var(--accent)';
+                    onBtn.style.color = 'var(--accent)';
+
+                    // 关闭按钮非激活
+                    offBtn.style.background = 'var(--bg)';
+                    offBtn.style.borderColor = 'var(--border)';
+                    offBtn.style.color = 'var(--fg)';
+                } else {
+                    // 开启按钮非激活
+                    onBtn.style.background = 'var(--bg)';
+                    onBtn.style.borderColor = 'var(--border)';
+                    onBtn.style.color = 'var(--fg)';
+
+                    // 关闭按钮激活
+                    offBtn.style.background = 'var(--selection)';
+                    offBtn.style.borderColor = 'var(--accent)';
+                    offBtn.style.color = 'var(--accent)';
+                }
+            }
+        }
+
+        // Cookie操作函数
+        function setCookie(name, value, days) {
+            let expires = '';
+            if (days) {
+                const date = new Date();
+                date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+                expires = '; expires=' + date.toUTCString();
+            }
+            document.cookie = name + '=' + (value || '') + expires + '; path=/';
+        }
+
+        function getCookie(name) {
+            const nameEQ = name + '=';
+            const ca = document.cookie.split(';');
+            for (let i = 0; i < ca.length; i++) {
+                let c = ca[i];
+                while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+                if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+            }
+            return null;
+        }
+
+        // 初始化所有设置
+        initThemeSettings();
+        initLigatureSettings();
+
+        console.log('[TUI Settings] Settings panel initialized successfully!');
+    });
+
+    // 字体连字样式定义
+    const style = document.createElement('style');
+    style.textContent = `
+        .font-ligatures-off {
+            font-feature-settings: "liga" 0, "clig" 0 !important;
+            -webkit-font-feature-settings: "liga" 0, "clig" 0 !important;
+            -moz-font-feature-settings: "liga" 0, "clig" 0 !important;
+        }
+
+        /* 按钮悬停效果 */
+        #settingsBtn:hover {
+            background: var(--selection) !important;
+            border-color: var(--accent) !important;
+            color: var(--accent) !important;
+        }
+
+        /* 面板按钮悬停效果 */
+        .theme-option:hover,
+        .ligature-option:hover {
+            background: var(--selection) !important;
+            border-color: var(--accent) !important;
+            color: var(--accent) !important;
+        }
+    `;
+
+    // 添加样式到文档
+    document.head.appendChild(style);
+
+    console.log('[TUI Settings] Custom styles added');
+</script>

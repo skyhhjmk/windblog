@@ -319,6 +319,12 @@ class InstallController extends Base
             'media',
             'import_jobs',
             'comments',
+            'flo_links',
+            'user_oauth_bindings',
+            'ai_polling_group_providers',
+            'ai_polling_groups',
+            'ai_providers',
+            'phinxlog',
         ];
 
         $tables_exist = [];
@@ -345,6 +351,7 @@ class InstallController extends Base
                 'posts',
                 'categories',
                 'tags',
+                'user_oauth_bindings',
                 'wa_users',
                 'links',
                 'pages',
@@ -353,6 +360,11 @@ class InstallController extends Base
                 'wa_admins',
                 'wa_rules',
                 'wa_roles',
+                'flo_links',
+                'ai_polling_group_providers',
+                'ai_polling_groups',
+                'ai_providers',
+                'phinxlog',
             ];
 
             foreach ($dropOrder as $table) {
@@ -369,9 +381,25 @@ class InstallController extends Base
 
         // 使用Phinx执行数据库迁移
         try {
-            // 确保.env文件已生成，因为phinx需要读取环境变量
-            if (!file_exists(base_path() . '/.env')) {
-                // 生成临时.env文件，以便phinx可以读取配置
+            // 验证 PHP 可执行文件
+            $phpBinary = PHP_BINARY;
+            if (!file_exists($phpBinary)) {
+                return $this->json(1, '无法找到 PHP 可执行文件: ' . $phpBinary);
+            }
+
+            // 验证 Phinx 可执行文件
+            $phinxPath = base_path() . '/vendor/bin/phinx';
+            if (!is_file($phinxPath)) {
+                return $this->json(1, '环境损坏，Phinx 未找到，请执行 composer install 尝试修复');
+            }
+            // Windows 下使用 .bat 文件
+            if (stripos(PHP_OS, 'WIN') === 0 && file_exists($phinxPath . '.bat')) {
+                $phinxPath .= '.bat';
+            }
+
+            // 确保 .env 文件存在并解析环境变量
+            $envFile = base_path() . '/.env';
+            if (!file_exists($envFile)) {
                 $env_config = match ($type) {
                     'mysql' => $this->getMysqlEnvConfig($host, $port, $database, $user, $password),
                     'sqlite' => $this->getSqliteEnvConfig($database),
@@ -382,7 +410,7 @@ class InstallController extends Base
 
             // 执行phinx迁移
             $phinxPath = base_path() . '/vendor/bin/phinx';
-            $command = "php {$phinxPath} migrate -c " . base_path() . '/phinx.php';
+            $command = "{$phinxPath} migrate -c " . base_path() . '/phinx.php';
             $output = [];
             $returnVar = 0;
             exec($command, $output, $returnVar);
@@ -400,18 +428,6 @@ class InstallController extends Base
             'sqlite' => $this->getSqliteEnvConfig($database),
             default => $this->getPgsqlEnvConfig($host, $port, $database, $user, $password)
         };
-
-        if (!container_info()['in_container']) {
-            file_put_contents(base_path() . '/.env', $env_config);
-
-            // 导入菜单
-            $menus = include base_path() . '/plugin/admin/config/menu.php';
-            // 重新获取数据库连接，因为迁移可能已经改变了数据库状态
-            $db = $this->getPdo($host, $user, $password, $port, $database, $type);
-            // 安装过程中没有数据库配置，无法使用api\Menu::import()方法
-            $this->importMenu($menus, $db, $type);
-            // 容器内由 step2 完成菜单导入
-        }
 
         // 尝试reload
         if (function_exists('posix_kill')) {
@@ -532,11 +548,8 @@ class InstallController extends Base
 
             $request->session()->flush();
 
-            if (container_info()['in_container']) {
-                // 容器内导入菜单
-                $menu_tree = include base_path() . '/plugin/admin/config/menu.php';
-                Menu::import($menu_tree);
-            }
+            $menu_tree = include base_path() . '/plugin/admin/config/menu.php';
+            Menu::import($menu_tree);
 
             // 创建 install.lock 文件标记安装完成
             $lockFile = base_path() . '/runtime/install.lock';

@@ -1441,24 +1441,8 @@
     })();
 </script>
 
-<!-- 悬浮安装按钮 -->
-<style>
-    #pwaInstallBtn {
-        position: fixed;
-        right: 16px;
-        bottom: 16px;
-        z-index: 50;
-        display: none;
-        align-items: center;
-        gap: 8px;
-        background: linear-gradient(135deg, #51ACF0 0%, #515CF0 100%);
-        color: #fff;
-        padding: 10px 14px;
-        border-radius: 9999px;
-        cursor: pointer
-    }
-</style>
-<div id="pwaInstallBtn"><i class="fas fa-download"></i><span>安装应用</span></div>
+<!-- 引入设置面板组件 -->
+{% include 'components/settings-panel.html.twig' %}
 
 <!-- HDR 激活徽标（仅在支持 HDR 的设备/浏览器显示） -->
 <div id="hdrBadge" class="hdr-badge glass-panel" role="status" aria-live="polite" aria-label="HDR已启用"

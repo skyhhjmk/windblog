@@ -647,10 +647,7 @@ if (!function_exists('container_info')) {
     {
         // 检查IN_CONTAINER环境变量（默认值为true）
         $inContainerEnv = getenv('IN_CONTAINER');
-        if ($inContainerEnv === false) {
-            // 环境变量未设置，默认为 false
-            $inContainerEnv = false;
-        } else {
+        if ($inContainerEnv !== false) {
             // 转换字符串为布尔值（支持true/false/1/0/yes/no，不区分大小写）
             $lowerEnv = strtolower(trim($inContainerEnv));
             $inContainerEnv = in_array($lowerEnv, ['true', '1', 'yes'], true);

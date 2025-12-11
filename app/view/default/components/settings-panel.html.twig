@@ -1,0 +1,273 @@
+<!-- 设置面板组件 -->
+<div id="settingsContainer">
+    <!-- 悬浮设置按钮 -->
+    <button id="settingsBtn"
+            class="fixed right-4 bottom-4 z-50 w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-110"
+            title="设置">
+        <i class="fas fa-cog text-lg"></i>
+    </button>
+
+    <!-- 设置面板 -->
+    <div id="settingsPanel"
+         class="fixed right-4 bottom-20 z-50 w-72 bg-white dark:bg-gray-800 rounded-xl shadow-xl overflow-hidden transform transition-all duration-300 ease-out"
+         style="opacity: 0; transform: translateY(4px) scale(0.95); pointer-events: none;">
+
+        <!-- 面板标题 -->
+        <div class="px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white">
+            <h3 class="text-sm font-semibold">设置</h3>
+        </div>
+
+        <!-- 面板内容 -->
+        <div class="p-4 space-y-4">
+            <!-- 主题设置 -->
+            <div>
+                <h4 class="text-xs text-gray-500 dark:text-gray-400 mb-2">主题</h4>
+                <div class="flex items-center space-x-2">
+                    <button data-theme="default"
+                            class="theme-option flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors duration-200">
+                        <i class="fas fa-palette mr-1"></i>
+                        默认
+                    </button>
+                    <button data-theme="tui"
+                            class="theme-option flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors duration-200">
+                        <i class="fas fa-terminal mr-1"></i>
+                        TUI
+                    </button>
+                </div>
+            </div>
+
+            <!-- 字体连字设置 -->
+            <div>
+                <h4 class="text-xs text-gray-500 dark:text-gray-400 mb-2">字体连字</h4>
+                <div class="flex items-center space-x-2">
+                    <button id="ligaturesOn"
+                            class="ligature-option flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors duration-200">
+                        <i class="fas fa-check-circle mr-1"></i>
+                        开启
+                    </button>
+                    <button id="ligaturesOff"
+                            class="ligature-option flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors duration-200">
+                        <i class="fas fa-times-circle mr-1"></i>
+                        关闭
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 设置面板逻辑
+    document.addEventListener('DOMContentLoaded', function () {
+        // 检查是否存在settingsContainer元素，确保DOM已加载
+        const settingsContainer = document.getElementById('settingsContainer');
+        if (!settingsContainer) {
+            console.error('Settings container not found');
+            return;
+        }
+
+        const settingsBtn = document.getElementById('settingsBtn');
+        const settingsPanel = document.getElementById('settingsPanel');
+        const themeOptions = document.querySelectorAll('.theme-option');
+        const ligatureOptions = document.querySelectorAll('.ligature-option');
+        const storageKeyTheme = 'theme';
+        const storageKeyLigatures = 'font-ligatures';
+
+        // 检查关键元素是否存在
+        if (!settingsBtn) {
+            console.error('Settings button not found');
+            return;
+        }
+
+        if (!settingsPanel) {
+            console.error('Settings panel not found');
+            return;
+        }
+
+        if (themeOptions.length === 0) {
+            console.error('Theme options not found');
+            return;
+        }
+
+        if (ligatureOptions.length === 0) {
+            console.error('Ligature options not found');
+            return;
+        }
+
+        // 初始化
+        function init() {
+            // 绑定事件
+            settingsBtn.addEventListener('click', toggleSettingsPanel);
+            themeOptions.forEach(option => {
+                option.addEventListener('click', setTheme);
+            });
+            ligatureOptions.forEach(option => {
+                option.addEventListener('click', setLigatures);
+            });
+
+            // 点击外部关闭面板
+            document.addEventListener('click', closePanelOnOutsideClick);
+
+            // 初始化设置状态
+            initTheme();
+            initLigatures();
+        }
+
+        // 切换设置面板显示/隐藏
+        function toggleSettingsPanel() {
+            // 检查面板是否打开
+            const isOpen = settingsPanel.style.opacity === '1';
+
+            if (isOpen) {
+                hideSettingsPanel();
+            } else {
+                showSettingsPanel();
+            }
+        }
+
+        // 显示设置面板
+        function showSettingsPanel() {
+            settingsPanel.style.opacity = '1';
+            settingsPanel.style.transform = 'translateY(0px) scale(1)';
+            settingsPanel.style.pointerEvents = 'auto';
+        }
+
+        // 隐藏设置面板
+        function hideSettingsPanel() {
+            settingsPanel.style.opacity = '0';
+            settingsPanel.style.transform = 'translateY(4px) scale(0.95)';
+            settingsPanel.style.pointerEvents = 'none';
+        }
+
+        // 点击外部关闭面板
+        function closePanelOnOutsideClick(e) {
+            if (!settingsContainer.contains(e.target)) {
+                // 只有当面板打开时才关闭
+                if (settingsPanel.style.opacity === '1') {
+                    hideSettingsPanel();
+                }
+            }
+        }
+
+        // 初始化主题
+        function initTheme() {
+            // 从cookie获取当前主题
+            const cookieTheme = getCookie('theme');
+            const activeTheme = cookieTheme || 'default';
+
+            // 更新按钮状态
+            themeOptions.forEach(option => {
+                const theme = option.getAttribute('data-theme');
+                if (theme === activeTheme) {
+                    option.classList.add('bg-blue-50', 'border-blue-300', 'dark:bg-blue-900', 'dark:border-blue-700');
+                } else {
+                    option.classList.remove('bg-blue-50', 'border-blue-300', 'dark:bg-blue-900', 'dark:border-blue-700');
+                }
+            });
+        }
+
+        // 设置主题
+        function setTheme(e) {
+            const theme = e.target.closest('.theme-option').getAttribute('data-theme');
+
+            // 保存到cookie，过期时间30天
+            setCookie('theme', theme, 30);
+
+            // 更新按钮状态
+            themeOptions.forEach(option => {
+                option.classList.remove('bg-blue-50', 'border-blue-300', 'dark:bg-blue-900', 'dark:border-blue-700');
+            });
+            e.target.closest('.theme-option').classList.add('bg-blue-50', 'border-blue-300', 'dark:bg-blue-900', 'dark:border-blue-700');
+
+            // 刷新页面使主题生效
+            window.location.reload();
+        }
+
+        // 初始化字体连字设置
+        function initLigatures() {
+            const savedLigatures = localStorage.getItem(storageKeyLigatures);
+            const isEnabled = savedLigatures !== 'off';
+
+            // 更新按钮状态
+            updateLigatureButtons(isEnabled);
+
+            // 应用字体连字设置
+            if (!isEnabled) {
+                document.documentElement.classList.add('font-ligatures-off');
+            } else {
+                document.documentElement.classList.remove('font-ligatures-off');
+            }
+        }
+
+        // 设置字体连字
+        function setLigatures(e) {
+            const isEnabled = e.target.closest('.ligature-option').id === 'ligaturesOn';
+
+            // 保存到localStorage
+            localStorage.setItem(storageKeyLigatures, isEnabled ? 'on' : 'off');
+
+            // 更新按钮状态
+            updateLigatureButtons(isEnabled);
+
+            // 应用字体连字设置
+            if (isEnabled) {
+                document.documentElement.classList.remove('font-ligatures-off');
+            } else {
+                document.documentElement.classList.add('font-ligatures-off');
+            }
+        }
+
+        // 更新字体连字按钮状态
+        function updateLigatureButtons(isEnabled) {
+            const onBtn = document.getElementById('ligaturesOn');
+            const offBtn = document.getElementById('ligaturesOff');
+
+            if (isEnabled) {
+                onBtn.classList.add('bg-blue-50', 'border-blue-300', 'dark:bg-blue-900', 'dark:border-blue-700');
+                offBtn.classList.remove('bg-blue-50', 'border-blue-300', 'dark:bg-blue-900', 'dark:border-blue-700');
+            } else {
+                offBtn.classList.add('bg-blue-50', 'border-blue-300', 'dark:bg-blue-900', 'dark:border-blue-700');
+                onBtn.classList.remove('bg-blue-50', 'border-blue-300', 'dark:bg-blue-900', 'dark:border-blue-700');
+            }
+        }
+
+        // Cookie操作函数
+        function setCookie(name, value, days) {
+            let expires = '';
+            if (days) {
+                const date = new Date();
+                date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+                expires = '; expires=' + date.toUTCString();
+            }
+            document.cookie = name + '=' + (value || '') + expires + '; path=/';
+        }
+
+        function getCookie(name) {
+            const nameEQ = name + '=';
+            const ca = document.cookie.split(';');
+            for (let i = 0; i < ca.length; i++) {
+                let c = ca[i];
+                while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+                if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+            }
+            return null;
+        }
+
+        // 初始化
+        init();
+    });
+</script>
+
+<style>
+    /* 字体连字样式 */
+    .font-ligatures-off {
+        font-feature-settings: "liga" 0, "clig" 0;
+        -webkit-font-feature-settings: "liga" 0, "clig" 0;
+        -moz-font-feature-settings: "liga" 0, "clig" 0;
+    }
+
+    /* 主题切换动画 */
+    html {
+        transition: background-color 0.3s ease, color 0.3s ease;
+    }
+</style>
