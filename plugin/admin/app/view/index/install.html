@@ -289,6 +289,10 @@
                         // 直接跳转到步骤3（管理员创建）
                         goToStep(3);
                     } else {
+                        if (data.install_tmp_lock_exists === true) {
+                            // 说明创建了数据表但是没创建管理员
+                            goToStep(3);
+                        }
                         // 否则从步骤1开始
                         checkDependencies();
                     }
@@ -581,7 +585,9 @@
             .then(data => {
                 hideLoading();
                 if (data.code === 0) {
-                    goToStep(3);
+                    document.getElementById('step2-next').disabled = true;
+                    // goToStep(3);
+                    showError('db-error', '安装已经成功，但是您的系统环境不支持热重载，请重启 WindBlog 后刷新本页面继续安装');
                 } else {
                     showError('db-error', data.msg);
                 }

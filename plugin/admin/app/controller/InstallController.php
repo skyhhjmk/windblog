@@ -33,6 +33,7 @@ class InstallController extends Base
         $res = [
             'installed' => is_installed(),
             'install_lock_exists' => is_install_lock_exists(),
+            'install_tmp_lock_exists' => is_install_tmp_lock_exists(),
             'in_container' => container_info()['in_container'],
             'in_docker' => container_info()['in_docker'],
             'in_k8s' => container_info()['in_k8s'],
@@ -305,7 +306,6 @@ class InstallController extends Base
             'wa_rules',
             'wa_options',
             'wa_users',
-            'wa_uploads',
             'posts',
             'post_ext',
             'categories',
@@ -347,7 +347,6 @@ class InstallController extends Base
                 'import_jobs',
                 'media',
                 'wa_admin_roles',
-                'wa_uploads',
                 'posts',
                 'categories',
                 'tags',
@@ -422,15 +421,10 @@ class InstallController extends Base
             return $this->json(1, '数据库迁移失败: ' . $e->getMessage());
         }
 
-        // 生成.env配置
-        $env_config = match ($type) {
-            'mysql' => $this->getMysqlEnvConfig($host, $port, $database, $user, $password),
-            'sqlite' => $this->getSqliteEnvConfig($database),
-            default => $this->getPgsqlEnvConfig($host, $port, $database, $user, $password)
-        };
+        file_put_contents(runtime_path('install_tmp.lock'), '');
 
         // 尝试reload
-        if (function_exists('posix_kill')) {
+        if (function_exists('posix_kill') && function_exists('posix_getppid')) {
             set_error_handler(function () {
             });
             posix_kill(posix_getppid(), SIGUSR1);
@@ -495,7 +489,32 @@ class InstallController extends Base
             $existingTables = array_map(static function ($row) {
                 return current($row);
             }, $existsStmt->fetchAll());
-            $requiredTables = ['wa_admins', 'wa_admin_roles', 'wa_rules', 'wa_users'];
+            $requiredTables = $tables_to_install = [
+                'wa_admins',
+                'wa_admin_roles',
+                'wa_roles',
+                'wa_rules',
+                'wa_options',
+                'wa_users',
+                'posts',
+                'post_ext',
+                'categories',
+                'tags',
+                'post_author',
+                'post_category',
+                'post_tag',
+                'links',
+                'pages',
+                'settings',
+                'media',
+                'import_jobs',
+                'comments',
+                'flo_links',
+                'user_oauth_bindings',
+                'ai_polling_group_providers',
+                'ai_polling_groups',
+                'ai_providers',
+            ];
             $missing = array_diff($requiredTables, $existingTables);
             if (!empty($missing)) {
                 return $this->json(1, '请先完成第一步（SQL未导入成功或安装未完成），缺少表：' . implode(',', $missing));

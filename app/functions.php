@@ -699,7 +699,19 @@ if (!function_exists('is_install_lock_exists')) {
      */
     function is_install_lock_exists(): bool
     {
-        return file_exists(base_path() . '/runtime/install.lock');
+        return file_exists(runtime_path('install.lock'));
+    }
+}
+
+if (!function_exists('is_install_tmp_lock_exists')) {
+    /**
+     * 检查安装锁文件是否存在
+     *
+     * @return bool
+     */
+    function is_install_tmp_lock_exists(): bool
+    {
+        return file_exists(runtime_path('install_tmp.lock'));
     }
 }
 
