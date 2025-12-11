@@ -158,7 +158,7 @@ $__processes = [
             ], glob(base_path() . '/plugin/*/app'), glob(base_path() . '/plugin/*/config'), glob(base_path() . '/plugin/*/api')),
             // Files with these suffixes will be monitored
             'monitorExtensions' => [
-                'php', 'html', 'htm', 'env', 'js', 'css', 'json', 'xml', 'yaml', 'yml', 'twig', 'html.twig', 'tpl',
+                'php', 'html', 'htm', 'js', 'css', 'json', 'xml', 'yaml', 'yml', 'twig', 'html.twig', 'tpl',
             ],
             'options' => [
                 'enable_file_monitor' => !in_array('-d', $argv) && DIRECTORY_SEPARATOR === '/',
