@@ -457,60 +457,7 @@
         </section>
     </div>
 </div>
-
-<script>
-    (function () {
-        const LS_KEY_BASE = 'rainyun_api_base';
-        const LS_KEY_KEY = 'rainyun_api_key';
-
-        const $ = (sel, root = document) => root.querySelector(sel);
-        const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
-
-        function getCfg() {
-            const apiBase = (localStorage.getItem(LS_KEY_BASE) || 'https://api.v2.rainyun.com').trim();
-            const apiKey = (localStorage.getItem(LS_KEY_KEY) || '').trim();
-            return {apiBase, apiKey};
-        }
-
-        function setCfg({apiBase, apiKey}) {
-            if (typeof apiBase === 'string') localStorage.setItem(LS_KEY_BASE, apiBase.trim());
-            if (typeof apiKey === 'string') localStorage.setItem(LS_KEY_KEY, apiKey.trim());
-        }
-
-        function maskKey(k) {
-            if (!k) return '未配置';
-            if (k.length <= 8) return k.replace(/.(?=.{2})/g, '*');
-            return k.slice(0, 4) + '****' + k.slice(-4);
-        }
-
-        function updateKeyStatus() {
-            const st = $('#ry-key-status');
-            if (!st) return;
-            const {apiBase, apiKey} = getCfg();
-            const ok = !!apiKey;
-            st.innerHTML = `Base: <span class="font-mono">${apiBase}</span> · Key: <span class="font-mono">${maskKey(apiKey)}</span>`;
-            st.className = 'text-sm ' + (ok ? 'text-green-700' : 'text-red-600');
-        }
-
-        function updateBreadcrumb(tab) {
-            $$('.ry-bc').forEach(b => b.classList.add('hidden'));
-            const bc = $('#ry-bc-' + tab);
-            if (bc) bc.classList.remove('hidden');
-        }
-
-        function switchTab(tab) {
-            $$('.ry-view').forEach(v => v.classList.add('hidden'));
-            const view = $('#ry-view-' + tab);
-            if (view) view.classList.remove('hidden');
-            // 高亮nav
-            $$('#ry-nav .ry-nav-btn').forEach(btn => {
-                btn.classList.remove('bg-blue-50', 'text-blue-700');
-                if (btn.getAttribute('data-tab') === tab) btn.classList.add('bg-blue-50', 'text-blue-700');
-            });
-            updateBreadcrumb(tab);
-            // 进入云应用时自动加载
-            if (tab === 'cloudapps') loadAppsList();
-        }
+<script src="/assets/tui/js/rainyun-console.js"></script>
 
         const APIS = {
             base() {
@@ -2763,54 +2710,5 @@
                 });
             };
 
-            // 初始化Docker导入功能
-            initDockerImport();
-
-            // 默认打开云应用（或概览）
-            switchTab('cloudapps');
-        }
-
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', init);
-        } else {
-            init();
-        }
-        document.addEventListener('page:ready', () => {
-            try {
-                updateKeyStatus();
-            } catch (_) {
-            }
-        });
-    })();
-</script>
-
-<script>
-    (function () {
-        function injectSidebar() {
-            var t = document.getElementById('pjax-sidebar-html');
-            var c = document.getElementById('sidebar-container');
-            if (!t || !c) return;
-
-            if (window.PJAX || window.jQuery) {
-                try {
-                    document.dispatchEvent(new CustomEvent('pjax:sidebarReady'));
-                } catch (_) {
-                }
-            } else {
-                c.innerHTML = t.innerHTML || '';
-            }
-            if (c.innerHTML !== t.innerHTML) {
-                c.innerHTML = t.innerHTML || '';
-                try {
-                    document.dispatchEvent(new Event('sidebar:updated'));
-                } catch (_) {
-                }
-            }
-        }
-
-        injectSidebar();
-        document.addEventListener('page:ready', injectSidebar);
-    })();
-</script>
 </div>
 </div>

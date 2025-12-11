@@ -65,7 +65,7 @@ class CacheService
         // 统一初始化前缀（设置默认前缀以支持模式匹配的缓存清除）
         // 只有当前缀为空时才设置，避免重复赋值
         if (self::$prefix === '') {
-            self::$prefix = self::getEnv('CACHE_PREFIX', 'blog_');
+            self::$prefix = self::getEnv('CACHE_PREFIX', '');
         }
 
         // 如果不是在回退模式，且驱动没有失败，则返回现有处理器

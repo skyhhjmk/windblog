@@ -24,68 +24,68 @@
 
                 <!-- 友链申请规则卡片 -->
                 <div id="link-rules"
-                     class="bg-blue-50 border border-blue-200 rounded-lg p-4 sm:p-6 mb-6 sm:mb-8 transition-all duration-300">
+                     class="tui-box border border-gray-600 rounded-lg p-4 sm:p-6 mb-6 sm:mb-8 transition-all duration-300">
                     <div class="flex items-start">
-                        <i class="fas fa-info-circle text-blue-500 text-xl mr-3 mt-1"></i>
+                        <span class="tui-prompt text-blue-400 text-xl mr-3 mt-1">[INFO]</span>
                         <div>
-                            <h2 class="text-lg font-semibold text-blue-800 mb-3">友链申请规则</h2>
-                            <ul class="text-gray-700 space-y-2">
+                            <h2 class="text-lg font-semibold text-blue-400 mb-3">[LINK RULES] 友链申请规则</h2>
+                            <ul class="text-gray-300 space-y-2">
                                 <li class="flex items-start">
-                                    <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
+                                    <span class="text-green-400 mt-1 mr-2">[OK]</span>
                                     <div>
                                         <span>网站内容合法、健康，不包含任何违法不良信息</span>
-                                        <div class="text-xs text-gray-500 mt-1">网站应遵守相关法律法规，不传播违法信息
+                                        <div class="text-xs text-gray-400 mt-1">网站应遵守相关法律法规，不传播违法信息
                                         </div>
                                     </div>
                                 </li>
                                 <li class="flex items-start">
-                                    <i class="fas fa fa-shield text-green-500 mt-1 mr-2"></i>
+                                    <span class="text-green-400 mt-1 mr-2">[SEC]</span>
                                     <div>
                                         <span>网站有至少三篇原创内容</span>
-                                        <div class="text-xs text-gray-500 mt-1">
+                                        <div class="text-xs text-gray-400 mt-1">
                                             原创内容指由网站主体创作的非转载、非采集内容。
                                         </div>
                                     </div>
                                 </li>
                                 <li class="flex items-start">
-                                    <i class="fas fa-link text-purple-500 mt-1 mr-2"></i>
+                                    <span class="text-purple-400 mt-1 mr-2">[LINK]</span>
                                     <div>
                                         <span>已将本站添加至贵站友情链接中</span>
-                                        <div class="text-xs text-gray-500 mt-1">支持风屿互联协议至少 CAT3
+                                        <div class="text-xs text-gray-400 mt-1">支持风屿互联协议至少 CAT3
                                             运行级别可忽略此要求。
                                         </div>
                                     </div>
                                 </li>
                                 <li class="flex items-start">
-                                    <i class="fas fa-ban text-red-500 mt-1 mr-2"></i>
+                                    <span class="text-red-400 mt-1 mr-2">[BAN]</span>
                                     <div>
                                         <span>不接受广告站、采集站、AI 站、违法网站的申请</span>
-                                        <div class="text-xs text-gray-500 mt-1">
+                                        <div class="text-xs text-gray-400 mt-1">
                                             为保证友链质量，仅接受原创内容占比高且合法的网站。
                                         </div>
                                     </div>
                                 </li>
                                 <li class="flex items-start">
-                                    <i class="fas fa-sync-alt text-blue-500 mt-1 mr-2"></i>
+                                    <span class="text-blue-400 mt-1 mr-2">[SYNC]</span>
                                     <div>
                                         <span>申请提交后，会有爬虫前往贵站</span>
-                                        <div class="text-xs text-gray-500 mt-1">
+                                        <div class="text-xs text-gray-400 mt-1">
                                             用于定期检查友链站点可用性，支持风屿互联协议会优先走协议。
                                         </div>
                                     </div>
                                 </li>
                                 <li class="flex items-start">
-                                    <i class="fas fa-clock text-yellow-500 mt-1 mr-2"></i>
+                                    <span class="text-yellow-400 mt-1 mr-2">[TIME]</span>
                                     <div>
                                         <span>申请通过后，会不定期有爬虫光顾贵站</span>
-                                        <div class="text-xs text-gray-500 mt-1">
+                                        <div class="text-xs text-gray-400 mt-1">
                                             本功能为可选功能-采集内容用于获取友链站点内容摘要等供展示使用。
                                         </div>
                                     </div>
                                 </li>
                             </ul>
-                            <div class="mt-4 text-xs text-gray-500">
-                                <p>补充说明：</p>
+                            <div class="mt-4 text-xs text-gray-400">
+                                <p>[NOTE] 补充说明：</p>
                                 <ul class="list-disc pl-5 space-y-1 mt-1">
                                     <li>原创内容：指由网站主体创作的非转载、非采集内容。</li>
                                     <li>风屿互联协议：基于 HTTP/WS/MQTT 的信息交换协议，CAT 后的数字即代表运行级别，运行级别的区别在于功能不同，例如
@@ -159,33 +159,34 @@
                 </div>
 
                 <!-- CAT3* 快速互联 -->
-                <div class="border border-green-200 rounded-lg p-3 sm:p-4 mb-6 sm:mb-8 bg-green-50">
+                <div class="tui-box border border-green-600 rounded-lg p-3 sm:p-4 mb-6 sm:mb-8">
                     <div class="flex items-start">
-                        <i class="fas fa-plug text-green-500 text-lg sm:text-xl mr-2 sm:mr-3 mt-1 flex-shrink-0"></i>
+                        <span class="text-green-400 text-lg sm:text-xl mr-2 sm:mr-3 mt-1 flex-shrink-0">[PLUG]</span>
                         <div class="flex-1 min-w-0">
-                            <h3 class="text-base sm:text-lg font-semibold text-green-800 mb-2">
-                                快速互联（CAT3*以上支持）</h3>
-                            <p class="text-gray-600 text-xs sm:text-sm mb-3">
+                            <h3 class="text-base sm:text-lg font-semibold text-green-400 mb-2">
+                                [QUICK CONNECT] 快速互联（CAT3*以上支持）</h3>
+                            <p class="text-gray-300 text-xs sm:text-sm mb-3">
                                 如果您的站点支持风屿互联协议，请填写其接收 API（peer_api），系统将自动在您的站点创建友链记录。
                             </p>
                             <div class="flex flex-col sm:flex-row gap-2 sm:gap-3">
                                 <input type="url"
                                        id="peer_api"
-                                       class="flex-1 min-w-0 px-3 sm:px-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-200"
+                                       class="flex-1 min-w-0 px-3 sm:px-4 py-2 text-sm border border-gray-600 rounded focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-200"
                                        placeholder="https://peer.example.com/..."
                                        pattern="https?://.+">
                                 <button id="quickConnectBtn"
-                                        class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 relative overflow-hidden whitespace-nowrap flex-shrink-0">
-                                    <span id="quickConnectBtnText">一键互联</span>
+                                        class="px-4 py-2 bg-green-700 hover:bg-green-600 text-white text-sm font-medium border border-green-600 rounded transition-colors duration-200 relative overflow-hidden whitespace-nowrap flex-shrink-0">
+                                    <span id="quickConnectBtnText">[CONNECT]</span>
                                     <span id="quickConnectBtnLoader"
-                                          class="hidden absolute inset-0 flex items-center justify-center bg-green-700">
-                                    <i class="fas fa-spinner fa-spin mr-2"></i>处理中...
+                                          class="hidden absolute inset-0 flex items-center justify-center bg-green-600">
+                                    <span class="text-green-300 mr-2">[...]</span>处理中...
                                 </span>
                                 </button>
                             </div>
-                            <p class="text-xs text-gray-500 mt-2">
-                                提示：将复用你在下方表单中已填写的基本信息一并发送给本站。</p>
-                            <div id="quickConnectResult" class="hidden mt-3 p-3 rounded text-sm"></div>
+                            <p class="text-xs text-gray-400 mt-2">
+                                [TIP] 提示：将复用你在下方表单中已填写的基本信息一并发送给本站。</p>
+                            <div id="quickConnectResult"
+                                 class="hidden mt-3 p-3 border border-gray-600 rounded text-sm"></div>
                         </div>
                     </div>
                 </div>
@@ -193,79 +194,83 @@
                 <form id="linkRequestForm" class="space-y-6">
                     <input type="hidden" name="_link_request_token" value="{{ csrf }}">
                     <div>
-                        <label for="name" class="block text-sm font-medium text-gray-700 mb-1">网站名称 <span
-                                class="text-red-500">*</span></label>
+                        <label for="name" class="block text-sm font-medium text-gray-300 mb-1">[NAME] 网站名称 <span
+                                class="text-red-400">*</span></label>
                         <input type="text"
                                id="name"
                                name="name"
                                required
-                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                               class="w-full px-4 py-2 bg-gray-800 border border-gray-600 text-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                                placeholder="请输入网站名称">
                     </div>
 
                     <div>
-                        <label for="url" class="block text-sm font-medium text-gray-700 mb-1">网站地址 <span
-                                class="text-red-500">*</span></label>
+                        <label for="url" class="block text-sm font-medium text-gray-300 mb-1">[URL] 网站地址 <span
+                                class="text-red-400">*</span></label>
                         <input type="url"
                                id="url"
                                name="url"
                                required
-                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                               class="w-full px-4 py-2 bg-gray-800 border border-gray-600 text-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                                placeholder="https://example.com">
                     </div>
 
                     <div>
                         <label for="icon"
-                               class="block text-sm font-medium text-gray-700 mb-1">网站图标地址（不填则尝试自动获取）</label>
+                               class="block text-sm font-medium text-gray-300 mb-1">[ICON]
+                            网站图标地址（不填则尝试自动获取）</label>
                         <input type="url"
                                id="icon"
                                name="icon"
-                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                               class="w-full px-4 py-2 bg-gray-800 border border-gray-600 text-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                                placeholder="https://example.com/favicon.ico">
                     </div>
 
                     <div>
-                        <label for="description" class="block text-sm font-medium text-gray-700 mb-1">网站描述<span
-                                class="text-red-500">*</span></label>
+                        <label for="description" class="block text-sm font-medium text-gray-300 mb-1">[DESC]
+                            网站描述<span
+                                class="text-red-400">*</span></label>
                         <textarea id="description"
                                   name="description"
                                   rows="3"
                                   required
-                                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                                  class="w-full px-4 py-2 bg-gray-800 border border-gray-600 text-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                                   placeholder="请简单描述您的网站内容"></textarea>
                     </div>
 
                     <div>
-                        <label for="email" class="block text-sm font-medium text-gray-700 mb-1">邮箱</label>
+                        <label for="email" class="block text-sm font-medium text-gray-300 mb-1">[MAIL] 邮箱</label>
                         <input type="text"
                                id="email"
                                name="email"
-                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                               class="w-full px-4 py-2 bg-gray-800 border border-gray-600 text-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                                placeholder="邮箱联系方式（可选，用于审核结果通知）">
                     </div>
 
                     <div>
-                        <label for="full_description" class="block text-sm font-medium text-gray-700 mb-1">网站详细介绍（支持
+                        <label for="full_description" class="block text-sm font-medium text-gray-300 mb-1">[INFO]
+                            网站详细介绍（支持
                             Markdown 语法）</label>
                         <textarea id="full_description"
                                   name="full_description"
                                   rows="3"
-                                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                                  class="w-full px-4 py-2 bg-gray-800 border border-gray-600 text-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                                   placeholder="当使用 info 方式跳转时，内容会被渲染在页面上"></textarea>
                     </div>
 
                     <div>
-                        <label for="contact" class="block text-sm font-medium text-gray-700 mb-1">联系方式</label>
+                        <label for="contact" class="block text-sm font-medium text-gray-300 mb-1">[CONTACT]
+                            联系方式</label>
                         <input type="text"
                                id="contact"
                                name="contact"
-                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                               class="w-full px-4 py-2 bg-gray-800 border border-gray-600 text-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                                placeholder="微信/QQ等联系方式（可选）">
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">友链放置位置 <span
-                                class="text-red-500">*</span></label>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">[POSITION] 友链放置位置 <span
+                                class="text-red-400">*</span></label>
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-2">
                             <label class="link-position-option">
                                 <input type="radio"
@@ -275,9 +280,9 @@
                                        checked
                                        required>
                                 <div
-                                    class="cursor-pointer px-4 py-3 border-2 border-gray-300 rounded-lg text-center transition-all duration-200 peer-checked:border-blue-500 peer-checked:bg-blue-50 peer-checked:text-blue-700 hover:border-blue-400 hover:bg-blue-25">
-                                    <i class="fas fa-home mb-1"></i>
-                                    <div class="font-medium">首页</div>
+                                    class="cursor-pointer px-4 py-3 border-2 border-gray-600 rounded-lg text-center transition-all duration-200 peer-checked:border-blue-500 peer-checked:bg-gray-800 peer-checked:text-blue-400 hover:border-blue-400 hover:bg-gray-700">
+                                    <span class="text-lg text-blue-400 mb-1">[HOME]</span>
+                                    <div class="font-medium text-gray-300">首页</div>
                                 </div>
                             </label>
                             <label class="link-position-option">
@@ -286,9 +291,9 @@
                                        value="link_page"
                                        class="peer hidden">
                                 <div
-                                    class="cursor-pointer px-4 py-3 border-2 border-gray-300 rounded-lg text-center transition-all duration-200 peer-checked:border-blue-500 peer-checked:bg-blue-50 peer-checked:text-blue-700 hover:border-blue-400 hover:bg-blue-25">
-                                    <i class="fas fa-link mb-1"></i>
-                                    <div class="font-medium">友链页</div>
+                                    class="cursor-pointer px-4 py-3 border-2 border-gray-600 rounded-lg text-center transition-all duration-200 peer-checked:border-blue-500 peer-checked:bg-gray-800 peer-checked:text-blue-400 hover:border-blue-400 hover:bg-gray-700">
+                                    <span class="text-lg text-blue-400 mb-1">[LINK]</span>
+                                    <div class="font-medium text-gray-300">友链页</div>
                                 </div>
                             </label>
                             <label class="link-position-option">
@@ -297,24 +302,25 @@
                                        value="other_page"
                                        class="peer hidden">
                                 <div
-                                    class="cursor-pointer px-4 py-3 border-2 border-gray-300 rounded-lg text-center transition-all duration-200 peer-checked:border-blue-500 peer-checked:bg-blue-50 peer-checked:text-blue-700 hover:border-blue-400 hover:bg-blue-25">
-                                    <i class="fas fa-file-alt mb-1"></i>
-                                    <div class="font-medium">其他页面</div>
+                                    class="cursor-pointer px-4 py-3 border-2 border-gray-600 rounded-lg text-center transition-all duration-200 peer-checked:border-blue-500 peer-checked:bg-gray-800 peer-checked:text-blue-400 hover:border-blue-400 hover:bg-gray-700">
+                                    <span class="text-lg text-blue-400 mb-1">[PAGE]</span>
+                                    <div class="font-medium text-gray-300">其他页面</div>
                                 </div>
                             </label>
                         </div>
-                        <p class="text-xs text-gray-500 mb-3">您将本站的友链放置于您站点的哪个页面？</p>
+                        <p class="text-xs text-gray-400 mb-3">[TIP] 您将本站的友链放置于您站点的哪个页面？</p>
                         <div id="page_link_container" class="hidden">
                             <input type="url"
                                    id="page_link"
                                    name="page_link"
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                                   class="w-full px-4 py-2 bg-gray-800 border border-gray-600 text-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                                    placeholder="为便于自动审核,请填写此内容">
                         </div>
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">跳转方式 <span class="text-red-500">*</span></label>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">[REDIRECT] 跳转方式 <span
+                                class="text-red-400">*</span></label>
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-2">
                             <label class="redirect-type-option">
                                 <input type="radio"
@@ -323,10 +329,10 @@
                                        class="peer hidden"
                                        required>
                                 <div
-                                    class="cursor-pointer px-4 py-3 border-2 border-gray-300 rounded-lg text-center transition-all duration-200 peer-checked:border-blue-500 peer-checked:bg-blue-50 peer-checked:text-blue-700 hover:border-blue-400 hover:bg-blue-25">
-                                    <i class="fas fa-bolt mb-1"></i>
-                                    <div class="font-medium">直接跳转</div>
-                                    <div class="text-xs text-gray-500 mt-1">(需人工审核)</div>
+                                    class="cursor-pointer px-4 py-3 border-2 border-gray-600 rounded-lg text-center transition-all duration-200 peer-checked:border-blue-500 peer-checked:bg-gray-800 peer-checked:text-blue-400 hover:border-blue-400 hover:bg-gray-700">
+                                    <span class="text-lg text-yellow-400 mb-1">[BOLT]</span>
+                                    <div class="font-medium text-gray-300">直接跳转</div>
+                                    <div class="text-xs text-gray-400 mt-1">(需人工审核)</div>
                                 </div>
                             </label>
                             <label class="redirect-type-option">
@@ -336,10 +342,10 @@
                                        class="peer hidden"
                                        checked>
                                 <div
-                                    class="cursor-pointer px-4 py-3 border-2 border-gray-300 rounded-lg text-center transition-all duration-200 peer-checked:border-blue-500 peer-checked:bg-blue-50 peer-checked:text-blue-700 hover:border-blue-400 hover:bg-blue-25">
-                                    <i class="fas fa-arrow-right mb-1"></i>
-                                    <div class="font-medium">goto页面</div>
-                                    <div class="text-xs text-gray-500 mt-1">&nbsp;</div>
+                                    class="cursor-pointer px-4 py-3 border-2 border-gray-600 rounded-lg text-center transition-all duration-200 peer-checked:border-blue-500 peer-checked:bg-gray-800 peer-checked:text-blue-400 hover:border-blue-400 hover:bg-gray-700">
+                                    <span class="text-lg text-blue-400 mb-1">[GO]</span>
+                                    <div class="font-medium text-gray-300">goto页面</div>
+                                    <div class="text-xs text-gray-400 mt-1">&nbsp;</div>
                                 </div>
                             </label>
                             <label class="redirect-type-option">
@@ -348,16 +354,16 @@
                                        value="info"
                                        class="peer hidden">
                                 <div
-                                    class="cursor-pointer px-4 py-3 border-2 border-gray-300 rounded-lg text-center transition-all duration-200 peer-checked:border-blue-500 peer-checked:bg-blue-50 peer-checked:text-blue-700 hover:border-blue-400 hover:bg-blue-25">
-                                    <i class="fas fa-info-circle mb-1"></i>
-                                    <div class="font-medium">info页面</div>
-                                    <div class="text-xs text-gray-500 mt-1">(显示详细信息)</div>
+                                    class="cursor-pointer px-4 py-3 border-2 border-gray-600 rounded-lg text-center transition-all duration-200 peer-checked:border-blue-500 peer-checked:bg-gray-800 peer-checked:text-blue-400 hover:border-blue-400 hover:bg-gray-700">
+                                    <span class="text-lg text-green-400 mb-1">[INFO]</span>
+                                    <div class="font-medium text-gray-300">info页面</div>
+                                    <div class="text-xs text-gray-400 mt-1">(显示详细信息)</div>
                                 </div>
                             </label>
                         </div>
                         <div id="redirect_type_hint"
-                             class="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg p-3">
-                            <i class="fas fa-arrow-right text-blue-500 mr-1"></i>
+                             class="text-xs text-gray-400 bg-gray-800 border border-gray-600 rounded-lg p-3">
+                            <span class="text-blue-400 mr-1">[GO]</span>
                             使用goto中间页询问用户是否跳转
                         </div>
                     </div>
@@ -371,20 +377,20 @@
                                placeholder="Please input your fullname">
                     </div>
 
-                    <div class="border border-gray-200 rounded-lg p-4">
-                        <h3 class="text-lg font-medium text-gray-800 mb-3">其他可选功能</h3>
+                    <div class="tui-box border border-gray-600 rounded-lg p-4">
+                        <h3 class="text-lg font-medium text-gray-300 mb-3">[OPTIONS] 其他可选功能</h3>
                         <div class="space-y-4">
                             <div class="flex items-start">
                                 <div class="flex items-center h-5">
                                     <input id="supports_wind_connect"
                                            name="supports_wind_connect"
                                            type="checkbox"
-                                           class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
+                                           class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-600 rounded bg-gray-800">
                                 </div>
                                 <div class="ml-3 text-sm">
                                     <label for="supports_wind_connect"
-                                           class="font-medium text-gray-700">支持风屿互联协议</label>
-                                    <p class="text-gray-500 mt-1">
+                                           class="font-medium text-gray-300">[WIND] 支持风屿互联协议</label>
+                                    <p class="text-gray-400 mt-1">
                                         您的网站是否支持风屿互联协议，支持后可实现更高效的通信</p>
                                 </div>
                             </div>
@@ -394,12 +400,12 @@
                                     <input id="allows_crawling"
                                            name="allows_crawling"
                                            type="checkbox"
-                                           class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
+                                           class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-600 rounded bg-gray-800">
                                 </div>
                                 <div class="ml-3 text-sm">
                                     <label for="allows_crawling"
-                                           class="font-medium text-gray-700">允许资源爬虫访问</label>
-                                    <p class="text-gray-500 mt-1">
+                                           class="font-medium text-gray-300">[CRAWL] 允许资源爬虫访问</label>
+                                    <p class="text-gray-400 mt-1">
                                         是否允许我们的爬虫定期访问您的网站以获取内容摘要用于展示</p>
                                 </div>
                             </div>
@@ -409,11 +415,11 @@
                                     <input id="hide_url"
                                            name="hide_url"
                                            type="checkbox"
-                                           class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
+                                           class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-600 rounded bg-gray-800">
                                 </div>
                                 <div class="ml-3 text-sm">
-                                    <label for="hide_url" class="font-medium text-gray-700">隐藏链接</label>
-                                    <p class="text-gray-500 mt-1">选中后将在前端友链页面中隐藏您的网站链接，使用 goto/301
+                                    <label for="hide_url" class="font-medium text-gray-300">[HIDE] 隐藏链接</label>
+                                    <p class="text-gray-400 mt-1">选中后将在前端友链页面中隐藏您的网站链接，使用 goto/301
                                         重定向方式跳转</p>
                                 </div>
                             </div>
@@ -425,19 +431,20 @@
                         <input id="agreement"
                                type="checkbox"
                                required
-                               class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
-                        <label for="agreement" class="ml-2 text-sm text-gray-700">
-                            我已阅读并同意 <a href="#link-rules" class="text-blue-600 hover:underline">友链申请规则</a>
+                               class="w-4 h-4 text-blue-600 bg-gray-800 border-gray-600 rounded focus:ring-blue-500">
+                        <label for="agreement" class="ml-2 text-sm text-gray-300">
+                            [AGREE] 我已阅读并同意 <a href="#link-rules"
+                                                      class="text-blue-400 hover:underline">友链申请规则</a>
                         </label>
                     </div>
 
                     <div>
                         <button type="submit"
-                                class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 relative overflow-hidden">
-                            <span id="submitBtnText">提交申请</span>
+                                class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900 relative overflow-hidden">
+                            <span id="submitBtnText">[SEND] 提交申请</span>
                             <span id="submitBtnLoader"
                                   class="hidden absolute inset-0 flex items-center justify-center bg-blue-700">
-                            <i class="fas fa-spinner fa-spin mr-2"></i>提交中...
+                            <span class="text-blue-300 mr-2">[LOAD]</span>提交中...
                         </span>
                         </button>
                     </div>
@@ -708,15 +715,15 @@
 
                 function showQuickResult(el, ok, text, autoHide = false) {
                     if (!el) return;
-                    el.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700', 'bg-blue-100', 'text-blue-700');
+                    el.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700', 'bg-blue-100', 'text-blue-700', 'bg-red-900', 'text-red-200', 'bg-green-900', 'text-green-200', 'bg-blue-900', 'text-blue-200');
 
-                    // 根据状态设置颜色
+                    // 根据状态设置颜色（深色模式适配）
                     if (text.includes('处理中')) {
-                        el.classList.add('bg-blue-100', 'text-blue-700');
-                        el.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>' + text;
+                        el.classList.add('bg-blue-900', 'text-blue-200');
+                        el.innerHTML = '<span class="text-blue-400 mr-2">[LOAD]</span>' + text;
                     } else {
-                        el.classList.add(ok ? 'bg-green-100' : 'bg-red-100', ok ? 'text-green-700' : 'text-red-700');
-                        el.innerHTML = (ok ? '<i class="fas fa-check-circle mr-2"></i>' : '<i class="fas fa-exclamation-circle mr-2"></i>') + text;
+                        el.classList.add(ok ? 'bg-green-900' : 'bg-red-900', ok ? 'text-green-200' : 'text-red-200');
+                        el.innerHTML = (ok ? '<span class="text-green-400 mr-2">[OK]</span>' : '<span class="text-red-400 mr-2">[ERR]</span>') + text;
                     }
 
                     // 添加淡入动画
@@ -785,9 +792,9 @@
 
             // 提示文本映射
             const hintMap = {
-                'direct': '<i class="fas fa-bolt text-yellow-500 mr-1"></i>不询问用户直接跳转',
-                'goto': '<i class="fas fa-arrow-right text-blue-500 mr-1"></i>使用goto中间页询问用户是否跳转',
-                'info': '<i class="fas fa-info-circle text-green-500 mr-1"></i>显示友链的详细信息，用户选择是否跳转'
+                'direct': '<span class="text-yellow-400 mr-1">[BOLT]</span>不询问用户直接跳转',
+                'goto': '<span class="text-blue-400 mr-1">[GO]</span>使用goto中间页询问用户是否跳转',
+                'info': '<span class="text-green-400 mr-1">[INFO]</span>显示友链的详细信息，用户选择是否跳转'
             };
 
             // 监听单选按钮变化
@@ -825,12 +832,12 @@
                         resultMessage.classList.remove('hidden');
 
                         if (data.code === 0) {
-                            resultMessage.classList.add('bg-green-100', 'text-green-700');
-                            resultMessage.innerHTML = '<i class="fas fa-check-circle mr-2"></i>' + (data.msg || '申请成功');
+                            resultMessage.classList.add('bg-green-900', 'text-green-200');
+                            resultMessage.innerHTML = '<span class="text-green-400 mr-2">[OK]</span>' + (data.msg || '申请成功');
                             form.reset();
                         } else {
-                            resultMessage.classList.add('bg-red-100', 'text-red-700');
-                            resultMessage.innerHTML = '<i class="fas fa-exclamation-circle mr-2"></i>' + (data.msg || '申请失败');
+                            resultMessage.classList.add('bg-red-900', 'text-red-200');
+                            resultMessage.innerHTML = '<span class="text-red-400 mr-2">[ERR]</span>' + (data.msg || '申请失败');
                         }
 
                         setTimeout(() => {
@@ -840,8 +847,8 @@
                     .catch(() => {
                         const resultMessage = document.getElementById('resultMessage');
                         resultMessage.classList.remove('hidden');
-                        resultMessage.classList.add('bg-red-100', 'text-red-700');
-                        resultMessage.innerHTML = '<i class="fas fa-exclamation-circle mr-2"></i>提交失败，请稍后重试';
+                        resultMessage.classList.add('bg-red-900', 'text-red-200');
+                        resultMessage.innerHTML = '<span class="text-red-400 mr-2">[ERR]</span>提交失败，请稍后重试';
                         setTimeout(() => {
                             resultMessage.classList.add('hidden');
                         }, 3000);

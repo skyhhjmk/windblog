@@ -580,6 +580,8 @@ class InstallController extends Base
                 'installed_at' => utc_now_string('Y-m-d H:i:s'),
             ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
 
+            unlink(runtime_path('install_tmp.lock'));
+
             return $this->json(0);
         } catch (Throwable $e) {
             return $this->json(1, $e->getMessage());

@@ -150,7 +150,7 @@ class TimezoneExtension extends AbstractExtension
         }
 
         // 2. 从配置读取
-        $configTimezone = blog_config('user_timezone', null, false);
+        $configTimezone = blog_config('user_timezone', 'Asia/Shanghai', true);
         if ($configTimezone && is_string($configTimezone)) {
             return $configTimezone;
         }

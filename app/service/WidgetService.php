@@ -276,8 +276,24 @@ class WidgetService
                 return '<div class="text-gray-500 text-sm italic">未知的小工具类型</div>';
             }
 
+            // 记录渲染开始时间
+            $renderStartTime = microtime(true);
+
             // 使用Twig渲染模板
-            return view($templatePath, $widget)->rawBody();
+            $html = view($templatePath, $widget)->rawBody();
+
+            // 计算渲染耗时
+            $renderTime = round((microtime(true) - $renderStartTime) * 1000, 2);
+
+            // 记录小工具渲染时间日志
+            Log::debug("[WidgetService] 小工具Twig渲染耗时: {$renderTime}ms, 类型: {$widgetType}, 模板: {$templatePath}");
+
+            // 如果渲染时间超过200ms，记录警告日志
+            if ($renderTime > 200) {
+                Log::warning("[WidgetService] 小工具渲染耗时过长: {$renderTime}ms, 类型: {$widgetType}, 模板: {$templatePath}");
+            }
+
+            return $html;
 
         } catch (Throwable $e) {
             Log::error("[WidgetService] Twig模板渲染失败: {$e->getMessage()}");

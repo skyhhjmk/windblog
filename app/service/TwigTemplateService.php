@@ -186,8 +186,27 @@ class TwigTemplateService implements View
             $vars = array_merge((array) $request->_view_vars, $vars);
         }
 
+        // 记录渲染开始时间
+        $renderStartTime = microtime(true);
+
         // 使用多路径缓存键进行渲染
         $html = $views[$viewsKey]->render("$template.$viewSuffix", $vars);
+
+        // 计算渲染耗时
+        $renderTime = round((microtime(true) - $renderStartTime) * 1000, 2);
+
+        // 获取调试模式状态
+        $debug = (bool) config('app.debug', false);
+
+        // 记录渲染时间日志（仅在调试模式下或渲染时间超过100ms时记录）
+        if ($debug || $renderTime > 100) {
+            Log::debug("[TwigTemplateService] 模板渲染耗时: {$renderTime}ms, 模板: {$template}.{$viewSuffix}, 主题: {$theme}");
+        }
+
+        // 如果渲染时间超过500ms，记录警告日志
+        if ($renderTime > 500) {
+            Log::warning("[TwigTemplateService] 模板渲染耗时过长: {$renderTime}ms, 模板: {$template}.{$viewSuffix}, 主题: {$theme}");
+        }
 
         return $html;
     }
