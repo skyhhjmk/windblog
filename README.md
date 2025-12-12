@@ -13,10 +13,12 @@
 - [Features](#features)
 - [Install & use](#install--use)
 - [Commands](#commands)
+- [Environment Variables](#environment-variables)
 
 # NOTE
 
-> Ads: 雨云 5 折优惠码 `github` ，绑定微信即可领取，aff 连接：[https://www.rainyun.com/github_](https://www.rainyun.com/github_)
+> Ads: 雨云 5 折优惠码 `github` ，绑定微信即可领取，aff
+> 连接：[https://www.rainyun.com/github_](https://www.rainyun.com/github_)
 
 > Ads: 毫秒镜像，好用的 Docker 镜像站，aff 链接（免费 200MiB 流量）：[https://1ms.run/?aff=2853](https://1ms.run/?aff=2853)
 
@@ -43,7 +45,8 @@
 
 ***本项目不适用于作为深度学习的训练数据集使用，因为这样做会使模型质量下降***
 
-***浮动链接功能不建议启用，因为其中包含 AFF 替换，详见 [FloLinkService.php](app/service/FloLinkService.php) 中的 `rewriteAffiliateLink` 方法，如需使用请自行修改相关 AFF***
+***浮动链接功能不建议启用，因为其中包含 AFF 替换，详见 [FloLinkService.php](app/service/FloLinkService.php)
+中的 `rewriteAffiliateLink` 方法，如需使用请自行修改相关 AFF***
 
 # Main Tech Stack
 
@@ -85,17 +88,21 @@ ES 仅仅被用于搜索优化，这也许说得过去
 
 [TwigTemplateService.php](app/service/TwigTemplateService.php) 实现了 `Webman\View` 接口，添加了主题模板功能，会根据数据库中配置的主题信息选择进入哪个子目录
 
-[CSRFService.php](app/service/CSRFService.php) 提供了 CSRF 令牌相关的功能，支持众多特性，包括一次性令牌，限时令牌，绑定到某个参数的令牌等，并且只要在控制器上添加注解即可启用 CSRF 验证
+[CSRFService.php](app/service/CSRFService.php) 提供了 CSRF 令牌相关的功能，支持众多特性，包括一次性令牌，限时令牌，绑定到某个参数的令牌等，并且只要在控制器上添加注解即可启用
+CSRF 验证
 
-[CacheService.php](app/service/CacheService.php) 封装了 Redis 的功能，提供了缓存功能，支持多种缓存驱动，有 GPT-5 编写的貌似不能用的防止缓存穿透的设计，并且附带有缓存回退等高级功能
+[CacheService.php](app/service/CacheService.php) 封装了 Redis 的功能，提供了缓存功能，支持多种缓存驱动，有 GPT-5
+编写的貌似不能用的防止缓存穿透的设计，并且附带有缓存回退等高级功能
 
-[WordpressImporter.php](app/service/WordpressImporter.php) 和 [ImportProcess.php](app/process/ImportProcess.php) 实现了从 WordPress 导入的功能
+[WordpressImporter.php](app/service/WordpressImporter.php) 和 [ImportProcess.php](app/process/ImportProcess.php) 实现了从
+WordPress 导入的功能
 
 [StaticGenerator.php](app/process/StaticGenerator.php) 实现了全站静态缓存生成的功能
 
 [LinkMonitor.php](app/process/LinkMonitor.php) 实现了友链监控的功能
 
-[MailWorker.php](app/process/MailWorker.php) 和 [MailService.php](app/service/MailService.php) 实现了多发信平台轮询使用的功能，并且提供发信失败自动隔离的功能
+[MailWorker.php](app/process/MailWorker.php) 和 [MailService.php](app/service/MailService.php)
+实现了多发信平台轮询使用的功能，并且提供发信失败自动隔离的功能
 
 [DebugToolkit.php](app/middleware/DebugToolkit.php) 提供一个简易工具箱用于监测页面渲染时间、请求数据等，还提供一个简易请求发送工具
 
@@ -108,7 +115,8 @@ ES 仅仅被用于搜索优化，这也许说得过去
 - PHP PDO 扩展
 - PHP pdo_pgsql 扩展（可选其他驱动以支持其他数据库）
 
-**由于追求较为极致的性能，首页并不存在安装检测的相关代码，首次启动需访问 `/app/admin` 进行安装，安装完成后请重启应用以实现扩展进程的资源初始化**
+**由于追求较为极致的性能，首页并不存在安装检测的相关代码，首次启动需访问 `/app/admin` 进行安装，安装完成后请重启应用以实现扩展进程的资源初始化
+**
 
 若要完整使用博客功能，请安装：
 
@@ -250,3 +258,12 @@ php ./console check:requirements
 # Windows
 php ./console cache:clear
 ```
+
+# Environment Variables
+
+| Name                     | Function   | Default     |
+|--------------------------|------------|-------------|
+| DEPLOYMENT_TYPE          | 部署类型       | datacenter  |
+| DB_DEFAULT               | 数据库类型      | pgsql       |
+| APP_DEBUG                | 调试模式       | false       |
+| WEB_SERVER_PROCESS_COUNT | Web 服务器进程数 | CPU 核心数 * 4 |

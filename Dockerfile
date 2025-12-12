@@ -3,7 +3,7 @@
 ############################
 # Stage 1: vendor builder  #
 ############################
-FROM php:8.4.13-cli AS vendor
+FROM php:8.4.15-cli AS vendor
 
 ARG MIRROR=tsinghua
 ARG APP_ENV=prod
@@ -43,7 +43,7 @@ RUN composer install --no-dev --prefer-dist --no-progress --no-interaction --opt
 ############################
 # Stage 2: runtime image   #
 ############################
-FROM php:8.4.13-cli AS runtime
+FROM php:8.4.15-cli AS runtime
 
 ARG MIRROR=tsinghua
 ARG APP_ENV=prod
