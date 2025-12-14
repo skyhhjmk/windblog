@@ -44,6 +44,7 @@ class TwigTemplateService implements View
      * 获取可用的主题列表
      *
      * @param string $viewPath 视图路径
+     *
      * @return array 可用主题列表
      */
     private static function getAvailableThemes(string $viewPath): array
@@ -282,6 +283,9 @@ class TwigTemplateService implements View
             }
         }
 
+        // 获取调试模式状态
+        $debug = (bool) config('app.debug', false);
+
         if (!$fromCache) {
             // 记录渲染开始时间
             $renderStartTime = microtime(true);
@@ -316,9 +320,6 @@ class TwigTemplateService implements View
                 CacheService::cache($cacheKey, $html, true, $cacheTtl);
             }
         }
-
-        // 获取调试模式状态
-        $debug = (bool) config('app.debug', false);
 
         // 记录渲染时间日志（仅在调试模式下或渲染时间超过100ms时记录）
         if ($debug || !$fromCache) {
