@@ -109,13 +109,28 @@ class ImportProcess
             if (class_exists(Timer::class)) {
                 $this->timerId = Timer::add(1, function () {
                     try {
-                        if ($this->mqChannel && $this->mqChannel->is_consuming()) {
+                        if ($this->mqChannel === null) {
+                            Log::warning('ImportProcess: channel is null, reconnecting...');
+                            $this->reconnectMq();
+
+                            return;
+                        }
+                        if ($this->mqChannel->is_consuming()) {
                             $this->mqChannel->wait(null, false, 1.0);
                         }
                     } catch (AMQPTimeoutException $e) {
                         // 正常超时
                     } catch (Throwable $e) {
-                        Log::warning('ImportProcess 消费轮询异常: ' . $e->getMessage());
+                        $errorMsg = $e->getMessage();
+                        Log::warning('ImportProcess 消费轮询异常: ' . $errorMsg);
+                        // 检测通道连接断开，触发自愈
+                        if (str_contains($errorMsg, 'Channel connection is closed') ||
+                            str_contains($errorMsg, 'Broken pipe') ||
+                            str_contains($errorMsg, 'connection is closed') ||
+                            str_contains($errorMsg, 'on null')) {
+                            Log::warning('ImportProcess 检测到连接断开，尝试重建连接');
+                            $this->reconnectMq();
+                        }
                     }
                 });
             }
@@ -186,11 +201,11 @@ class ImportProcess
         try {
             Log::info('开始数据库轮询检查待处理导入任务');
 
-            // 查找所有pending状态的任务，且排除最近1小时内已执行过的任务
+            // 查找所有pending状态的任务
             $pendingJobs = ImportJob::where('status', 'pending')
                 ->where(function ($query) {
-                    // 排除最近1小时内已执行过的任务
-                    $query->where('updated_at', '<', date('Y-m-d H:i:s', strtotime('-1 hour')))
+                    // 排除最近5分钟内已执行过的任务（防止重复处理）
+                    $query->where('updated_at', '<', date('Y-m-d H:i:s', strtotime('-5 minutes')))
                         ->orWhereNull('updated_at');
                 })
                 ->orderBy('created_at', 'asc')
@@ -203,6 +218,11 @@ class ImportProcess
             }
 
             Log::info('数据库轮询：发现 ' . $pendingJobs->count() . ' 个待处理任务');
+
+            // 记录详细的任务信息用于调试
+            foreach ($pendingJobs as $job) {
+                Log::debug("待处理任务详情: ID={$job->id}, 文件={$job->name}, 创建时间={$job->created_at}, 更新时间={$job->updated_at}");
+            }
 
             // 计算可处理的任务数量
             $availableSlots = $this->maxConcurrentJobs - count($this->currentJobs);
@@ -440,5 +460,47 @@ class ImportProcess
         $memoryUsage = memory_get_usage(true) / 1024 / 1024;
         $memoryPeak = memory_get_peak_usage(true) / 1024 / 1024;
         Log::info("WP 导入进程已停止 - 最终内存使用: {$memoryUsage}MB, 峰值内存: {$memoryPeak}MB");
+    }
+
+    /**
+     * 重建MQ连接和队列绑定
+     */
+    protected function reconnectMq(): void
+    {
+        try {
+            // 关闭现有的通道
+            if ($this->mqChannel !== null) {
+                try {
+                    $this->mqChannel->close();
+                } catch (Throwable $e) {
+                    // 忽略关闭通道时的异常
+                }
+                $this->mqChannel = null;
+            }
+
+            // 等待短暂时间后重建
+            usleep(500000); // 0.5秒
+
+            // 重新初始化MQ连接和队列
+            $this->mqChannel = MQService::getChannel();
+            MQService::declareDlx($this->mqChannel, $this->dlxExchange, $this->dlxQueue);
+            MQService::setupQueueWithDlx($this->mqChannel, $this->exchange, $this->routingKey, $this->queueName, $this->dlxExchange, $this->dlxQueue);
+
+            // 重新订阅队列
+            $this->mqChannel->basic_consume(
+                $this->queueName,
+                '',
+                false,
+                false,
+                false,
+                false,
+                [$this, 'handleMessage']
+            );
+
+            Log::info('ImportProcess MQ连接重建成功');
+        } catch (Throwable $e) {
+            Log::error('ImportProcess MQ连接重建失败: ' . $e->getMessage());
+            $this->mqChannel = null;
+        }
     }
 }

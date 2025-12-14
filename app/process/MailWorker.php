@@ -130,11 +130,12 @@ class MailWorker
                 $errorMsg = $e->getMessage();
                 Log::warning('MailWorker wait error: ' . $errorMsg);
 
-                // 检测通道连接断开，触发自愈
+                // 检测任何MQ相关错误，包括wait_channel()调用失败
                 if (strpos($errorMsg, 'Channel connection is closed') !== false ||
                     strpos($errorMsg, 'Broken pipe') !== false ||
-                    strpos($errorMsg, 'connection is closed') !== false) {
-                    Log::warning('MailWorker 检测到连接断开，尝试重建连接');
+                    strpos($errorMsg, 'connection is closed') !== false ||
+                    strpos($errorMsg, 'wait_channel') !== false) {
+                    Log::warning('MailWorker 检测到连接问题，尝试重建连接');
                     $this->mqChannel = null;
                     $this->getMqChannel();
                 }

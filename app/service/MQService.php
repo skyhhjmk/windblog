@@ -253,6 +253,9 @@ class MQService
         try {
             // 轻量健康检查：打开临时通道并关闭
             $conn = self::getConnection();
+            if ($conn === null) {
+                throw new RuntimeException('MQ连接为null');
+            }
             $tmp = $conn->channel();
             $tmp->close();
 
@@ -268,6 +271,11 @@ class MQService
             try {
                 // 重新建立连接与主通道
                 $conn = self::getConnection();
+                if ($conn === null) {
+                    Log::error('MQ 重连失败：无法建立新连接');
+
+                    return false;
+                }
                 self::$channel = $conn->channel();
                 self::$channel->basic_qos(0, 1, false);
 

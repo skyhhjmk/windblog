@@ -168,6 +168,19 @@ class LinkPushWorker
 
             // 重新获取通道
             $channel = MQService::getChannel();
+
+            // 重新声明队列和绑定
+            $exchange = (string) blog_config('rabbitmq_link_push_exchange', 'link_push_exchange', true);
+            $routingKey = (string) blog_config('rabbitmq_link_push_routing_key', 'link_push', true);
+            $this->cachedQueueName = (string) blog_config('rabbitmq_link_push_queue', 'link_push_queue', true);
+
+            // 设置专属DLX
+            $dlxExchange = (string) blog_config('rabbitmq_link_push_dlx_exchange', 'link_push_dlx_exchange', true);
+            $dlxQueue = (string) blog_config('rabbitmq_link_push_dlx_queue', 'link_push_dlx_queue', true);
+
+            MQService::declareDlx($channel, $dlxExchange, $dlxQueue);
+            MQService::setupQueueWithDlx($channel, $exchange, $routingKey, $this->cachedQueueName, $dlxExchange, $dlxQueue);
+
             $this->mqChannel = $channel;
 
             Log::info('LinkPushWorker MQ连接重建成功');
