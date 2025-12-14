@@ -7,79 +7,240 @@
     <link href="/app/admin/component/pear/css/pear.css" rel="stylesheet"/>
     <link href="/app/admin/admin/css/reset.css" rel="stylesheet"/>
     <style>
-        .update-panel {
+        /* 全局样式优化 */
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        /* 容器样式优化 */
+        .pear-container {
+            padding: 20px;
+        }
+
+        .layui-card {
             margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+
+        .layui-card-header {
+            padding: 16px 20px;
+            font-size: 16px;
+            font-weight: 600;
+            background-color: #fafafa;
+            border-bottom: 1px solid #ebebeb;
+        }
+
+        .layui-card-body {
+            padding: 24px;
+        }
+
+        /* 版本信息样式优化 */
+        .update-panel {
+            margin-bottom: 24px;
         }
 
         .version-info {
-            background: #f6f8fa;
-            padding: 15px;
-            border-radius: 6px;
-            margin-bottom: 20px;
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            border-left: 4px solid #1890ff;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
 
         .version-item {
-            margin-bottom: 10px;
+            margin-bottom: 12px;
+            padding: 6px 0;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        .version-item:last-child {
+            margin-bottom: 0;
         }
 
         .version-label {
-            font-weight: bold;
-            margin-right: 10px;
+            font-weight: 600;
+            margin-right: 12px;
+            color: #666;
         }
 
+        /* 按钮组样式优化 */
         .update-btn {
-            margin-top: 10px;
+            margin-top: 16px;
+            margin-bottom: 24px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
         }
 
+        /* 日志容器样式优化 */
         .log-container {
-            background: #f6f8fa;
-            padding: 15px;
-            border-radius: 6px;
-            max-height: 300px;
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            max-height: 400px;
             overflow-y: auto;
-            font-family: monospace;
-            font-size: 12px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 13px;
+            line-height: 1.7;
+            border: 1px solid #ebebeb;
         }
 
+        /* 状态样式 */
         .status-success {
             color: #52c41a;
+            font-weight: 500;
         }
 
         .status-error {
             color: #f5222d;
+            font-weight: 500;
         }
 
         .status-warning {
             color: #faad14;
+            font-weight: 500;
         }
 
+        /* 通道选择器样式优化 */
         .channel-selector {
             display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
+            gap: 12px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
         }
 
         .channel-item {
-            padding: 10px 20px;
-            border: 1px solid #e8e8e8;
-            border-radius: 4px;
+            padding: 12px 24px;
+            border: 1px solid #d9d9d9;
+            border-radius: 6px;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            background-color: #fff;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .channel-item:hover {
+            border-color: #1890ff;
+            color: #1890ff;
+            box-shadow: 0 2px 8px rgba(24, 144, 255, 0.15);
         }
 
         .channel-item.active {
             background: #1890ff;
             color: white;
             border-color: #1890ff;
+            box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3);
         }
 
-        /* 修复选择框样式 */
+        /* 表单样式优化 */
+        .layui-form-item {
+            margin-bottom: 24px;
+        }
+
+        .layui-form-label {
+            font-weight: 500;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .layui-input, .layui-textarea {
+            border-radius: 6px;
+            border: 1px solid #d9d9d9;
+            transition: all 0.3s ease;
+        }
+
+        .layui-input:focus, .layui-textarea:focus {
+            border-color: #1890ff;
+            box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+        }
+
+        /* 选择框样式优化 */
         #version-select {
             height: 38px;
             line-height: 38px;
-            border: 1px solid #e6e6e6;
+            border: 1px solid #d9d9d9;
+            border-radius: 6px;
+            padding: 0 12px;
+            transition: all 0.3s ease;
+        }
+
+        #version-select:focus {
+            border-color: #1890ff;
+            box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+        }
+
+        /* 按钮样式优化 */
+        .layui-btn {
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            padding: 0 16px;
+            height: 36px;
+            line-height: 36px;
+        }
+
+        .layui-btn:hover {
+            opacity: 0.9;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .layui-btn-sm {
             border-radius: 4px;
-            padding: 0 10px;
+            padding: 0 12px;
+            height: 30px;
+            line-height: 30px;
+        }
+
+        /* 加载层样式优化 */
+        #loading {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            z-index: 10000;
+        }
+
+        #loading p {
+            margin-top: 16px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        /* 滚动条样式优化 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
         }
     </style>
 </head>
@@ -174,77 +335,106 @@
         // 当前选择的通道
         var currentChannel = 'release';
         var loadingIndex = null;
+        var isUpdating = false;
 
         // 初始化
         function init() {
+            // 页面加载时显示加载动画
+            loadingIndex = layer.load(2, {time: 10000});
             // 只调用一次checkUpdate()即可获取所有必要信息
             checkUpdate();
         }
 
         // 检查更新
         function checkUpdate() {
-            loadingIndex = layer.load(2, {time: 10000});
+            if (loadingIndex === null) {
+                loadingIndex = layer.load(2, {time: 10000});
+            }
+
+            // 显示检查中状态
+            $('#update-status').html('<span>检查更新中...</span>');
+
             $.get('/app/admin/update/check', {channel: currentChannel}, function (res) {
                 layer.close(loadingIndex);
-                if (res.code === 0) {
-                    $('#current-version').text(res.data.current_version || '--');
-                    $('#latest-version').text(res.data.latest_version || '--');
+                loadingIndex = null;
 
-                    // 更新默认镜像源
-                    if (res.data.default_mirror) {
-                        $('#mirror-input').val(res.data.default_mirror);
-                    }
+                // 平滑显示版本信息
+                $('#current-version').fadeOut(200, function () {
+                    $(this).text(res.data.current_version || '--').fadeIn(200);
+                });
 
-                    if (res.data.has_new_version) {
-                        $('#update-status').html('<span class="status-success">有新版本可用</span>');
-                        // 加载可用版本列表
-                        loadAvailableVersions(res.data.available_versions || []);
-                        layer.msg('发现新版本: ' + res.data.latest_version, {icon: 6});
-                    } else {
-                        $('#update-status').html('<span class="status-warning">当前已是最新版本</span>');
-                        // 即使没有新版本也显示可用版本
-                        loadAvailableVersions(res.data.available_versions || []);
-                        layer.msg('当前已是最新版本', {icon: 5});
-                    }
+                $('#latest-version').fadeOut(200, function () {
+                    $(this).text(res.data.latest_version || '--').fadeIn(200);
+                });
 
-                    // 检查是否有错误信息
-                    if (res.data.error) {
-                        layer.msg('版本检查警告: ' + res.data.error, {icon: 7});
-                    }
+                // 更新默认镜像源
+                if (res.data.default_mirror) {
+                    $('#mirror-input').val(res.data.default_mirror);
+                }
+
+                if (res.data.has_new_version) {
+                    $('#update-status').hide().html('<span class="status-success">有新版本可用</span>').fadeIn(300);
+                    // 加载可用版本列表
+                    loadAvailableVersions(res.data.available_versions || []);
+                    layer.msg('发现新版本: ' + res.data.latest_version, {icon: 6, time: 2000});
                 } else {
-                    $('#update-status').html('<span class="status-error">检查失败</span>');
-                    layer.msg(res.msg || '检查更新失败', {icon: 5});
+                    $('#update-status').hide().html('<span class="status-warning">当前已是最新版本</span>').fadeIn(300);
+                    // 即使没有新版本也显示可用版本
+                    loadAvailableVersions(res.data.available_versions || []);
+                    layer.msg('当前已是最新版本', {icon: 5, time: 1500});
+                }
+
+                // 检查是否有错误信息
+                if (res.data.error) {
+                    layer.msg('版本检查警告: ' + res.data.error, {icon: 7, time: 2500});
                 }
             }, 'json').fail(function (xhr, status, error) {
                 layer.close(loadingIndex);
-                $('#update-status').html('<span class="status-error">网络错误</span>');
-                layer.msg('网络错误，检查更新失败: ' + error, {icon: 5});
+                loadingIndex = null;
+                $('#update-status').hide().html('<span class="status-error">网络错误</span>').fadeIn(300);
+                layer.msg('网络错误，检查更新失败: ' + error, {icon: 5, time: 2000});
             });
         }
 
         // 加载可用版本列表
         function loadAvailableVersions(versions) {
             var select = $('#version-select');
-            select.empty();
-            select.append('<option value="">更新到最新版本</option>');
 
-            if (versions && versions.length > 0) {
-                versions.forEach(function (version) {
-                    select.append('<option value="' + version + '">' + version + '</option>');
-                });
-            }
-            form.render('select');
+            // 平滑更新选择框
+            select.fadeOut(200, function () {
+                select.empty();
+                select.append('<option value="">更新到最新版本</option>');
+
+                if (versions && versions.length > 0) {
+                    versions.forEach(function (version) {
+                        // 检查版本是否是对象，如果是则提取版本号
+                        var versionValue = typeof version === 'object' && version !== null ? version.version || JSON.stringify(version) : version;
+                        select.append('<option value="' + versionValue + '">' + versionValue + '</option>');
+                    });
+                }
+
+                form.render('select');
+                select.fadeIn(200);
+            });
         }
 
         // 执行更新
         function executeUpdate() {
+            // 防止重复点击
+            if (isUpdating) {
+                layer.msg('更新正在进行中，请稍候...', {icon: 7});
+                return;
+            }
+
             var version = $('#version-select').val();
             var mirror = $('#mirror-input').val().trim();
 
             layer.confirm('确定要执行更新吗？更新过程中请勿关闭页面或刷新！', {
                 btn: ['确定更新', '取消'],
-                icon: 3
+                icon: 3,
+                title: '执行更新确认'
             }, function () {
+                isUpdating = true;
                 loadingIndex = layer.load(2, {time: 300000}); // 5分钟超时
 
                 $.post('/app/admin/update/execute', {
@@ -253,20 +443,25 @@
                     mirror: mirror
                 }, function (res) {
                     layer.close(loadingIndex);
+                    isUpdating = false;
+
                     if (res.code === 0) {
-                        layer.msg('更新成功！', {icon: 6});
+                        layer.msg('更新成功！', {icon: 6, time: 2000});
                         // 刷新版本信息
-                        loadCurrentVersion();
+                        setTimeout(function () {
+                            checkUpdate();
+                        }, 500);
                         // 显示更新日志
                         showLogs(res.data.log || []);
                     } else {
-                        layer.msg('更新失败：' + (res.msg || '未知错误'), {icon: 5});
+                        layer.msg('更新失败：' + (res.msg || '未知错误'), {icon: 5, time: 3000});
                         // 显示错误日志
                         showLogs(res.data.log || []);
                     }
                 }, 'json').fail(function () {
                     layer.close(loadingIndex);
-                    layer.msg('网络错误，更新失败', {icon: 5});
+                    isUpdating = false;
+                    layer.msg('网络错误，更新失败', {icon: 5, time: 2000});
                 });
             });
         }
@@ -275,24 +470,26 @@
         function runMigration() {
             layer.confirm('确定要执行数据库迁移吗？', {
                 btn: ['确定执行', '取消'],
-                icon: 3
+                icon: 3,
+                title: '执行数据库迁移确认'
             }, function () {
                 loadingIndex = layer.load(2, {time: 60000}); // 1分钟超时
 
                 $.post('/app/admin/update/migrate', {}, function (res) {
                     layer.close(loadingIndex);
+
                     if (res.code === 0) {
-                        layer.msg('数据库迁移成功！', {icon: 6});
+                        layer.msg('数据库迁移成功！', {icon: 6, time: 2000});
                         // 显示迁移日志
                         showLogs(res.data.migrations || []);
                     } else {
-                        layer.msg('数据库迁移失败：' + (res.msg || '未知错误'), {icon: 5});
+                        layer.msg('数据库迁移失败：' + (res.msg || '未知错误'), {icon: 5, time: 3000});
                         // 显示错误日志
                         showLogs(res.data.migrations || []);
                     }
                 }, 'json').fail(function () {
                     layer.close(loadingIndex);
-                    layer.msg('网络错误，迁移失败', {icon: 5});
+                    layer.msg('网络错误，迁移失败', {icon: 5, time: 2000});
                 });
             });
         }
@@ -301,38 +498,55 @@
         function saveMirror() {
             var mirror = $('#mirror-input').val().trim();
             if (!mirror) {
-                layer.msg('请输入镜像源地址', {icon: 5});
+                layer.msg('请输入镜像源地址', {icon: 5, time: 1500});
                 return;
             }
 
+            // 添加加载状态
+            var saveBtn = $('#save-mirror');
+            saveBtn.text('保存中...').attr('disabled', true);
+
             $.post('/app/admin/update/set-mirror', {mirror: mirror}, function (res) {
+                saveBtn.text('保存').attr('disabled', false);
+
                 if (res.code === 0) {
-                    layer.msg('镜像源保存成功', {icon: 6});
+                    layer.msg('镜像源保存成功', {icon: 6, time: 1500});
                 } else {
-                    layer.msg('保存失败：' + (res.msg || '未知错误'), {icon: 5});
+                    layer.msg('保存失败：' + (res.msg || '未知错误'), {icon: 5, time: 2000});
                 }
-            }, 'json');
+            }, 'json').fail(function () {
+                saveBtn.text('保存').attr('disabled', false);
+                layer.msg('网络错误，保存失败', {icon: 5, time: 2000});
+            });
         }
 
         // 测试镜像源连接
         function testMirror() {
             var mirror = $('#mirror-input').val().trim();
             if (!mirror) {
-                layer.msg('请输入镜像源地址', {icon: 5});
+                layer.msg('请输入镜像源地址', {icon: 5, time: 1500});
                 return;
             }
 
+            // 添加加载状态
+            var testBtn = $('#test-mirror');
+            testBtn.text('测试中...').attr('disabled', true);
+
             loadingIndex = layer.load(2, {time: 10000});
+
             $.get('/app/admin/update/check', {channel: currentChannel, mirror: mirror}, function (res) {
                 layer.close(loadingIndex);
+                testBtn.text('测试连接').attr('disabled', false);
+
                 if (res.code === 0) {
-                    layer.msg('镜像源连接成功', {icon: 6});
+                    layer.msg('镜像源连接成功', {icon: 6, time: 1500});
                 } else {
-                    layer.msg('连接失败：' + (res.msg || '未知错误'), {icon: 5});
+                    layer.msg('连接失败：' + (res.msg || '未知错误'), {icon: 5, time: 2000});
                 }
             }, 'json').fail(function () {
                 layer.close(loadingIndex);
-                layer.msg('网络错误，测试失败', {icon: 5});
+                testBtn.text('测试连接').attr('disabled', false);
+                layer.msg('网络错误，测试失败', {icon: 5, time: 2000});
             });
         }
 
@@ -343,7 +557,8 @@
 
             logsContainer.empty();
             if (logs && logs.length > 0) {
-                logs.forEach(function (log) {
+                // 平滑添加日志条目
+                logs.forEach(function (log, index) {
                     var logClass = '';
                     if (log.includes('ERROR') || log.includes('错误')) {
                         logClass = 'status-error';
@@ -352,13 +567,23 @@
                     } else if (log.includes('WARNING') || log.includes('警告')) {
                         logClass = 'status-warning';
                     }
-                    logsContainer.append('<div class="' + logClass + '">' + log + '</div>');
+
+                    var logDiv = $('<div class="' + logClass + '" style="display:none;">' + log + '</div>');
+                    logsContainer.append(logDiv);
+
+                    // 延迟显示，营造流畅感
+                    setTimeout(function () {
+                        logDiv.fadeIn(100);
+                    }, index * 30);
                 });
             } else {
                 logsContainer.append('<div>暂无日志记录</div>');
             }
 
-            logsPanel.show();
+            // 平滑显示日志面板
+            if (logsPanel.is(':hidden')) {
+                logsPanel.slideDown(300);
+            }
         }
 
         // 事件监听

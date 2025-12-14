@@ -175,7 +175,16 @@ class VersionService implements VersionServiceInterface
             $availableVersions = $this->getAvailableVersions($channel, $mirror);
 
             $currentVersion = $this->currentVersion['version'];
-            $hasNewVersion = VersionComparator::isLessThan($currentVersion, $latestVersion['version']);
+            $currentCommit = $this->currentVersion['commit'] ?? '';
+
+            // DEV通道：只要commit号不同就认为有新版本
+            if ($channel === ChannelEnum::DEV->value) {
+                $latestCommit = $latestVersion['commit'] ?? '';
+                $hasNewVersion = $currentCommit !== $latestCommit;
+            } else {
+                // 其他通道使用版本号比较
+                $hasNewVersion = VersionComparator::isLessThan($currentVersion, $latestVersion['version']);
+            }
 
             $result = [
                 'has_new_version' => $hasNewVersion,
@@ -522,6 +531,71 @@ class VersionService implements VersionServiceInterface
         Log::debug('[VersionService] getLatestGithubVersion 接收到的仓库信息', $repoInfo);
         Log::debug('[VersionService] 仓库名长度: ' . strlen($repoInfo['repo']));
         Log::debug('[VersionService] 仓库名十六进制: ' . bin2hex($repoInfo['repo']));
+        Log::debug('[VersionService] 通道: ' . $channel);
+
+        // DEV通道获取主分支的最新提交信息
+        if ($channel === ChannelEnum::DEV->value) {
+            try {
+                // 首先获取仓库信息，以确定默认分支
+                $repoUrl = "https://api.github.com/repos/{$repoInfo['owner']}/{$repoInfo['repo']}";
+                Log::debug('[VersionService] DEV通道获取仓库信息 URL: ' . $repoUrl);
+
+                $repoResponse = HttpClient::get($repoUrl, [], [
+                    'Accept' => 'application/vnd.github.v3+json',
+                    'User-Agent' => 'WindBlog/1.0',
+                ]);
+
+                if (!$repoResponse || $repoResponse->getStatusCode() !== 200) {
+                    Log::warning('[VersionService] DEV通道获取仓库信息失败，状态码: ' . ($repoResponse ? $repoResponse->getStatusCode() : '无响应'));
+                    // 如果获取仓库信息失败，尝试使用常见的分支名
+                    $defaultBranch = 'main';
+                } else {
+                    $repoData = json_decode((string) $repoResponse->getBody(), true);
+                    $defaultBranch = $repoData['default_branch'] ?? 'main';
+                    Log::debug('[VersionService] 仓库默认分支: ' . $defaultBranch);
+                }
+
+                // 使用默认分支获取最新提交
+                $commitUrl = "https://api.github.com/repos/{$repoInfo['owner']}/{$repoInfo['repo']}/commits/{$defaultBranch}";
+                Log::debug('[VersionService] DEV通道构建的API URL: ' . $commitUrl);
+
+                $response = HttpClient::get($commitUrl, [], [
+                    'Accept' => 'application/vnd.github.v3+json',
+                    'User-Agent' => 'WindBlog/1.0',
+                ]);
+
+                Log::debug('[VersionService] DEV通道GitHub API 响应状态: ' . ($response ? $response->getStatusCode() : 'false'));
+
+                if (!$response || $response->getStatusCode() !== 200) {
+                    Log::warning('[VersionService] DEV通道GitHub API 请求失败，状态码: ' . ($response ? $response->getStatusCode() : '无响应'));
+                    throw new RuntimeException('GitHub API 请求失败');
+                }
+
+                $responseBody = (string) $response->getBody();
+                Log::debug('[VersionService] DEV通道GitHub API 响应内容长度: ' . strlen($responseBody));
+
+                $commitInfo = json_decode($responseBody, true);
+                if (!$commitInfo) {
+                    Log::warning('[VersionService] DEV通道GitHub API 响应解析失败，响应内容: ' . substr($responseBody, 0, 200) . '...');
+                    throw new RuntimeException('GitHub API 响应解析失败');
+                }
+
+                $commitSha = substr($commitInfo['sha'], 0, 7); // 使用短提交号作为版本号
+
+                return [
+                    'version' => $commitSha,
+                    'release_url' => $commitInfo['html_url'],
+                    'published_at' => $commitInfo['commit']['committer']['date'],
+                    'commit' => $commitInfo['sha'],
+                    'message' => $commitInfo['commit']['message'],
+                ];
+            } catch (Throwable $e) {
+                Log::error('[VersionService] DEV通道获取最新提交失败: ' . $e->getMessage());
+                throw $e;
+            }
+        }
+
+        // 非DEV通道获取最新的release
         $url = "https://api.github.com/repos/{$repoInfo['owner']}/{$repoInfo['repo']}/releases";
         Log::debug('[VersionService] 构建的API URL: ' . $url);
 
@@ -532,9 +606,6 @@ class VersionService implements VersionServiceInterface
                 $params['filter'] = 'latest';
                 break;
             case ChannelEnum::PRE_RELEASE->value:
-                $params['per_page'] = 10;
-                break;
-            case ChannelEnum::DEV->value:
                 $params['per_page'] = 10;
                 break;
         }
@@ -741,13 +812,7 @@ class VersionService implements VersionServiceInterface
         foreach ($filteredReleases as $release) {
             $version = ltrim($release['tag_name'], 'v');
             if ($version) {
-                $versions[] = [
-                    'version' => $version,
-                    'published_at' => $release['published_at'],
-                    'prerelease' => $release['prerelease'],
-                    'draft' => $release['draft'],
-                    'url' => $release['html_url'],
-                ];
+                $versions[] = $version;
             }
         }
 
@@ -811,16 +876,8 @@ class VersionService implements VersionServiceInterface
 
         foreach ($commits as $index => $commit) {
             $commitSha = substr($commit['sha'], 0, 7);
-            $devVersion = "{$baseVersion}-dev." . ($index + 1);
-
-            $versions[] = [
-                'version' => $devVersion,
-                'commit' => $commitSha,
-                'message' => $commit['commit']['message'],
-                'author' => $commit['commit']['author']['name'],
-                'date' => $commit['commit']['author']['date'],
-                'url' => $commit['html_url'],
-            ];
+            $devVersion = "{$baseVersion}-dev.{$commitSha}";
+            $versions[] = $devVersion;
         }
 
         return $versions;
