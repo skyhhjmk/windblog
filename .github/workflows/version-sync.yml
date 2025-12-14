@@ -6,8 +6,14 @@ on:
       - 'v*.*.*'
 
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  # GitHub Container Registry
+  GHCR_REGISTRY: ghcr.io
+  # Docker Hub
+  DOCKERHUB_REGISTRY: docker.io
+  # github.repository as <account>/<repo>
+  GHCR_IMAGE_NAME: ${{ github.repository }}
+  # Docker Hub image name (use Docker Hub username)
+  DOCKERHUB_IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/windblog
 
 permissions:
   contents: write
@@ -148,8 +154,8 @@ jobs:
 
       - name: Login to registries
         run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-          echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.GHCR_REGISTRY }} -u ${{ github.actor }} --password-stdin
+          echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login ${{ env.DOCKERHUB_REGISTRY }} -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
 
       - name: Build and push multi-platform image
         id: build-and-push
@@ -159,10 +165,10 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            hhjmk/windblog:v${{ steps.ver.outputs.version }}
-            hhjmk/windblog:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${{ steps.ver.outputs.version }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.DOCKERHUB_REGISTRY }}/${{ env.DOCKERHUB_IMAGE_NAME }}:v${{ steps.ver.outputs.version }}
+            ${{ env.DOCKERHUB_REGISTRY }}/${{ env.DOCKERHUB_IMAGE_NAME }}:latest
+            ${{ env.GHCR_REGISTRY }}/${{ env.GHCR_IMAGE_NAME }}:v${{ steps.ver.outputs.version }}
+            ${{ env.GHCR_REGISTRY }}/${{ env.GHCR_IMAGE_NAME }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
@@ -180,10 +186,10 @@ jobs:
         if: github.event_name != 'pull_request'
         env:
           TAGS: |
-            hhjmk/windblog:v${{ steps.ver.outputs.version }}
-            hhjmk/windblog:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${{ steps.ver.outputs.version }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.DOCKERHUB_REGISTRY }}/${{ env.DOCKERHUB_IMAGE_NAME }}:v${{ steps.ver.outputs.version }}
+            ${{ env.DOCKERHUB_REGISTRY }}/${{ env.DOCKERHUB_IMAGE_NAME }}:latest
+            ${{ env.GHCR_REGISTRY }}/${{ env.GHCR_IMAGE_NAME }}:v${{ steps.ver.outputs.version }}
+            ${{ env.GHCR_REGISTRY }}/${{ env.GHCR_IMAGE_NAME }}:latest
           DIGEST: ${{ steps.build-and-push.outputs.digest }}
         run: |
           echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
