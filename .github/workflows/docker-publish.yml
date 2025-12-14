@@ -100,3 +100,14 @@ jobs:
         # This step uses the identity token to provision an ephemeral certificate
         # against the sigstore community Fulcio instance.
         run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
+      
+      # Update Docker image description with README.md content
+      - name: Update Docker image description
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: peter-evans/dockerhub-description@v3
+        with:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ env.IMAGE_NAME }}
+          readme-filepath: ./README.md
+          registry: ${{ env.REGISTRY }}
