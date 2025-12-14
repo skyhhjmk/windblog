@@ -187,8 +187,8 @@
             $.get('/app/admin/update/check', {channel: currentChannel}, function (res) {
                 layer.close(loadingIndex);
                 if (res.code === 0) {
-                    $('#current-version').text(res.data.current_version);
-                    $('#latest-version').text(res.data.latest_version);
+                    $('#current-version').text(res.data.current_version || '--');
+                    $('#latest-version').text(res.data.latest_version || '--');
 
                     // 更新默认镜像源
                     if (res.data.default_mirror) {
@@ -198,18 +198,27 @@
                     if (res.data.has_new_version) {
                         $('#update-status').html('<span class="status-success">有新版本可用</span>');
                         // 加载可用版本列表
-                        loadAvailableVersions(res.data.available_versions);
+                        loadAvailableVersions(res.data.available_versions || []);
                         layer.msg('发现新版本: ' + res.data.latest_version, {icon: 6});
                     } else {
                         $('#update-status').html('<span class="status-warning">当前已是最新版本</span>');
+                        // 即使没有新版本也显示可用版本
+                        loadAvailableVersions(res.data.available_versions || []);
                         layer.msg('当前已是最新版本', {icon: 5});
                     }
+
+                    // 检查是否有错误信息
+                    if (res.data.error) {
+                        layer.msg('版本检查警告: ' + res.data.error, {icon: 7});
+                    }
                 } else {
+                    $('#update-status').html('<span class="status-error">检查失败</span>');
                     layer.msg(res.msg || '检查更新失败', {icon: 5});
                 }
-            }, 'json').fail(function () {
+            }, 'json').fail(function (xhr, status, error) {
                 layer.close(loadingIndex);
-                layer.msg('网络错误，检查更新失败', {icon: 5});
+                $('#update-status').html('<span class="status-error">网络错误</span>');
+                layer.msg('网络错误，检查更新失败: ' + error, {icon: 5});
             });
         }
 

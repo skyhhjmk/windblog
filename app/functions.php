@@ -751,3 +751,31 @@ if (!function_exists('json_error')) {
         return new Response($code, ['Content-Type' => 'application/json'], json_encode($data, $options));
     }
 }
+
+if (!function_exists('get_windblog_version')) {
+    /**
+     * 获取WindBlog版本信息
+     *
+     * @return array|false
+     */
+    function get_windblog_version()
+    {
+        $versionFile = base_path() . '/version.json';
+
+        if (!file_exists($versionFile)) {
+            return false;
+        }
+
+        $content = file_get_contents($versionFile);
+        if ($content === false) {
+            return false;
+        }
+
+        $versionInfo = json_decode($content, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return false;
+        }
+
+        return $versionInfo;
+    }
+}

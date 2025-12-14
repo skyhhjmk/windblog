@@ -301,28 +301,32 @@
 								<tbody>
 								<tr>
 									<td>Workerman版本</td>
-									<td><?=$workerman_version?></td>
+									<td><?= $workerman_version?></td>
 								</tr>
 								<tr>
 									<td>Webman版本</td>
-									<td><?=$webman_version?></td>
+									<td><?= $webman_version?></td>
 								</tr>
 								<tr>
 									<td>WebmanAdmin版本</td>
-									<td><?=$admin_version?></td>
+									<td><?= $admin_version?></td>
 								</tr>
 								<tr>
 									<td>PHP版本</td>
-									<td><?=$php_version?></td>
+									<td><?= $php_version?></td>
 								</tr>
 								<tr>
 									<td>数据库版本</td>
-									<td><?=$mysql_version?></td>
+									<td><?= $mysql_version?></td>
 								</tr>
 								<tr>
 									<td>操作系统</td>
-									<td><?=$os?></td>
+									<td><?= $os?></td>
 								</tr>
+                                <tr>
+                                    <td>WindBlog版本</td>
+                                    <td><?= $windblog_version?></td>
+                                </tr>
 								</tbody>
 							</table>
 						</div>
@@ -343,21 +347,21 @@
 
 				count.up("value1", {
 					time: 4000,
-					num: <?=$today_user_count?>,
+					num: <?= $today_user_count?>,
 					bit: 0,
 					regulator: 50
 				})
 
 				count.up("value2", {
 					time: 4000,
-					num: <?=$day7_user_count?>,
+					num: <?= $day7_user_count?>,
 					bit: 0,
 					regulator: 50
 				})
 
 				count.up("value3", {
 					time: 4000,
-					num: <?=$day30_user_count?>,
+					num: <?= $day30_user_count?>,
 					bit: 0,
 					regulator: 50
 				})
@@ -365,27 +369,27 @@
 				count.up("value4", {
 					time: 4000,
 					bit: 0,
-					num: <?=$user_count?>,
+					num: <?= $user_count?>,
 					regulator: 50
 				})
 
 				count.up("value5", {
 					time: 4000,
-					num: <?=$post_count?>,
+					num: <?= $post_count?>,
 					bit: 0,
 					regulator: 50
 				})
 
 				count.up("value6", {
 					time: 4000,
-					num: <?=$draft_count?>,
+					num: <?= $draft_count?>,
 					bit: 0,
 					regulator: 50
 				})
 
 				count.up("value7", {
 					time: 4000,
-					num: <?=$media_count?>,
+					num: <?= $media_count?>,
 					bit: 0,
 					regulator: 50
 				})
@@ -393,7 +397,7 @@
 				count.up("value8", {
 					time: 4000,
 					bit: 0,
-					num: <?=$user_count?>,
+					num: <?= $user_count?>,
 					regulator: 50
 				})
 
@@ -435,7 +439,7 @@
 								opacity: .15
 							}
 						},
-						data: <?=json_encode(array_keys($day7_detail))?>
+						data: <?= json_encode(array_keys($day7_detail))?>
 					}, ],
 					yAxis: [{
 						type: 'value',
@@ -504,7 +508,7 @@
 							//}
 						},
 						smooth: true,
-						data: <?=json_encode(array_values($day7_detail))?>
+						data: <?= json_encode(array_values($day7_detail))?>
 					},]
 
 				};

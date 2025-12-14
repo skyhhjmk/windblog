@@ -114,6 +114,8 @@ class IndexController
                 ->where('created_at', '<=', $date->endOfDay())->count();
         }
 
+        $windblog_version = get_windblog_version()['version'] . ' (' . get_windblog_version()['commit'] . ' + ' . get_windblog_version()['build_time'] . ' + ' . get_windblog_version()['build_number'] . ')';
+
         return raw_view('index/dashboard', [
             'today_user_count' => $today_user_count,
             'day7_user_count' => $day7_user_count,
@@ -129,6 +131,7 @@ class IndexController
             'mysql_version' => $version_info,
             'os' => PHP_OS,
             'day7_detail' => array_reverse($day7_detail),
+            'windblog_version' => $windblog_version,
         ]);
     }
 

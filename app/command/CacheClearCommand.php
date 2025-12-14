@@ -2,7 +2,7 @@
 
 namespace app\command;
 
-use app\service\EnhancedCacheService;
+use app\service\CacheService;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -41,11 +41,9 @@ class CacheClearCommand extends Command
         $pattern = $input->getOption('pattern');
         $all = $input->getOption('all');
 
-        $cacheService = new EnhancedCacheService();
-
         if ($all) {
             // 清除所有缓存
-            $result = $cacheService->clearAll();
+            $result = CacheService::clearCacheAllDrivers();
             if ($result) {
                 $output->writeln('<info>所有缓存已清除</info>');
             } else {
@@ -55,7 +53,7 @@ class CacheClearCommand extends Command
             }
         } elseif ($pattern) {
             // 按模式清除缓存
-            $result = $cacheService->deleteByPattern($pattern);
+            $result = CacheService::clearCache($pattern);
             if ($result) {
                 $output->writeln("<info>匹配模式 {$pattern} 的缓存已清除</info>");
             } else {
@@ -65,7 +63,8 @@ class CacheClearCommand extends Command
             }
         } elseif ($group) {
             // 清除指定分组缓存
-            $result = $cacheService->clearGroup($group);
+            $pattern = "{$group}_*";
+            $result = CacheService::clearCache($pattern);
             if ($result) {
                 $output->writeln("<info>缓存分组 {$group} 已清除</info>");
             } else {

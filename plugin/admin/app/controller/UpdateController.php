@@ -144,10 +144,24 @@ class UpdateController extends Base
             return $this->fail('镜像源不能为空');
         }
 
-        // TODO: 实现设置镜像源的逻辑，保存到配置中
-        // blog_config('update_mirror', $mirror, false, false, true);
+        try {
+            // 验证镜像源是否有效
+            $validationResult = $this->versionService->validateMirror($mirror);
 
-        return $this->success('镜像源设置成功', ['mirror' => $mirror]);
+            if (!$validationResult['valid']) {
+                return $this->fail('镜像源验证失败: ' . $validationResult['message']);
+            }
+
+            // 保存镜像源到配置中
+            blog_config('update_mirror', $mirror, false, false, true);
+
+            return $this->success('镜像源设置成功', [
+                'mirror' => $mirror,
+                'validation' => $validationResult,
+            ]);
+        } catch (\Throwable $e) {
+            return $this->fail('镜像源设置失败: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -200,10 +214,17 @@ class UpdateController extends Base
             return $this->fail('镜像源不能为空');
         }
 
-        // TODO: 实现镜像源验证逻辑
-        // 检查镜像源是否可访问
-        // 检查镜像源是否包含正确的版本文件结构
+        try {
+            // 验证镜像源
+            $validationResult = $this->versionService->validateMirror($mirror);
 
-        return $this->success('镜像源验证通过');
+            if ($validationResult['valid']) {
+                return $this->success('镜像源验证通过', $validationResult);
+            } else {
+                return $this->fail('镜像源验证失败: ' . $validationResult['message'], $validationResult);
+            }
+        } catch (\Throwable $e) {
+            return $this->fail('镜像源验证过程中发生错误: ' . $e->getMessage());
+        }
     }
 }

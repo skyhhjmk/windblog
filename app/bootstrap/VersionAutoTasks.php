@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace app\bootstrap;
 
-use app\service\EnhancedCacheService;
+use app\service\CacheService;
 use app\service\MenuImportService;
 use app\service\TwigCacheService;
 use app\service\updater\DatabaseMigrationService;
@@ -63,7 +63,8 @@ class VersionAutoTasks implements Bootstrap
             // 任务：菜单导入、Twig 缓存清理、应用缓存清理
             MenuImportService::reinitialize();
             TwigCacheService::clearAll();
-            (new EnhancedCacheService())->clearAll();
+            // 清除所有应用缓存
+            CacheService::clearCacheAllDrivers();
 
             // 执行数据库迁移
             $migrationService = new DatabaseMigrationService();
@@ -94,21 +95,10 @@ class VersionAutoTasks implements Bootstrap
 
     private static function readLastVersion(): ?string
     {
-        // 优先通过统一的 blog_config 获取
-        try {
-            $v = blog_config('system_app_version', '', false, false);
-            if (is_string($v) && $v !== '') {
-                return $v;
-            }
-            // 兼容旧键名（早期实现使用 'system.app_version'）
-            $vOld = blog_config('system.app_version', '', false, false);
-            if (is_string($vOld) && $vOld !== '') {
-                return $vOld;
-            }
-        } catch (Throwable $_) {
-            // ignore
+        $v = blog_config('system_app_version', '', false, false);
+        if (is_string($v) && $v !== '') {
+            return $v;
         }
-        // 回退到本地文件
         $path = runtime_path('last_version.txt');
         if (is_file($path)) {
             $v = trim((string) file_get_contents($path));
@@ -121,12 +111,7 @@ class VersionAutoTasks implements Bootstrap
 
     private static function writeLastVersion(string $version): void
     {
-        // 统一通过 blog_config 写入（JSON 存储 + 缓存刷新）
-        try {
-            blog_config('system_app_version', $version, false, false, true);
-        } catch (Throwable $_) {
-            // ignore
-        }
+        blog_config('system_app_version', $version, false, false, true);
         // 文件
         $path = runtime_path('last_version.txt');
         @file_put_contents($path, $version);
