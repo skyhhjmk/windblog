@@ -1515,54 +1515,104 @@ class WordpressImporter
 
         // 1. 首先将字符串转换为二进制数据以便处理
         $binary = (string) $string;
+        $length = strlen($binary);
+        $result = '';
+        $i = 0;
 
         // 2. 移除 UTF-8 BOM（0xEF 0xBB 0xBF）
-        if (str_starts_with(bin2hex($binary), 'efbbbf')) {
-            $binary = substr($binary, 3);
+        if ($length >= 3 && $binary[0] === "\xEF" && $binary[1] === "\xBB" && $binary[2] === "\xBF") {
+            $i = 3;
         }
 
-        // 3. 处理单独的 0xEF 字节（可能是不完整的 BOM 或其他无效序列）
-        // 使用更严格的模式，确保只移除单独的 0xEF 字节
-        $binary = preg_replace('/(?:\xef(?![\xbb\xbf]))/', '', $binary);
+        // 3. 逐字节检查 UTF-8 序列的有效性
+        while ($i < $length) {
+            $byte = ord($binary[$i]);
 
-        // 4. 处理其他可能导致问题的单个字节
-        // 移除任何不在有效 UTF-8 范围或单独出现的控制字符
-        $binary = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $binary);
-
-        // 5. 尝试检测编码并转换到 UTF-8
-        $encoding = mb_detect_encoding(
-            $binary,
-            ['UTF-8', 'ASCII', 'GBK', 'GB2312', 'BIG5', 'Windows-1252', 'ISO-8859-1'],
-            true
-        );
-
-        if ($encoding && $encoding !== 'UTF-8') {
-            // 只有当检测到非 UTF-8 编码时才进行转换
-            $string = mb_convert_encoding($binary, 'UTF-8', $encoding);
-        } else {
-            $string = $binary;
-        }
-
-        // 6. 确保字符串是有效的 UTF-8，如果无效则使用 iconv 进行清理
-        if (!mb_check_encoding($string, 'UTF-8')) {
-            // 使用 iconv 忽略无效字符
-            $string = iconv('UTF-8', 'UTF-8//IGNORE', $string);
-
-            // 如果 iconv 失败，尝试另一种方法
-            if (!mb_check_encoding($string, 'UTF-8')) {
-                $string = utf8_encode(utf8_decode($string));
+            if ($byte < 0x80) {
+                // 单字节字符（ASCII）
+                $result .= $binary[$i];
+                $i++;
+            } elseif ($byte >= 0xC0 && $byte < 0xE0) {
+                // 双字节 UTF-8 序列
+                if ($i + 1 < $length) {
+                    $secondByte = ord($binary[$i + 1]);
+                    if ($secondByte >= 0x80 && $secondByte < 0xC0) {
+                        // 有效的双字节序列
+                        $result .= $binary[$i] . $binary[$i + 1];
+                        $i += 2;
+                    } else {
+                        // 无效的第二字节，跳过
+                        $i++;
+                    }
+                } else {
+                    // 序列不完整，跳过
+                    $i++;
+                }
+            } elseif ($byte >= 0xE0 && $byte < 0xF0) {
+                // 三字节 UTF-8 序列（处理常见的 0xE2 0x80 不完整序列）
+                if ($i + 2 < $length) {
+                    $secondByte = ord($binary[$i + 1]);
+                    $thirdByte = ord($binary[$i + 2]);
+                    if ($secondByte >= 0x80 && $secondByte < 0xC0 && $thirdByte >= 0x80 && $thirdByte < 0xC0) {
+                        // 有效的三字节序列
+                        $result .= $binary[$i] . $binary[$i + 1] . $binary[$i + 2];
+                        $i += 3;
+                    } else {
+                        // 无效的第二或第三字节，跳过
+                        $i++;
+                    }
+                } else {
+                    // 序列不完整，跳过
+                    $i++;
+                }
+            } elseif ($byte >= 0xF0 && $byte < 0xF8) {
+                // 四字节 UTF-8 序列
+                if ($i + 3 < $length) {
+                    $secondByte = ord($binary[$i + 1]);
+                    $thirdByte = ord($binary[$i + 2]);
+                    $fourthByte = ord($binary[$i + 3]);
+                    if ($secondByte >= 0x80 && $secondByte < 0xC0 && $thirdByte >= 0x80 && $thirdByte < 0xC0 && $fourthByte >= 0x80 && $fourthByte < 0xC0) {
+                        // 有效的四字节序列
+                        $result .= $binary[$i] . $binary[$i + 1] . $binary[$i + 2] . $binary[$i + 3];
+                        $i += 4;
+                    } else {
+                        // 无效的字节，跳过
+                        $i++;
+                    }
+                } else {
+                    // 序列不完整，跳过
+                    $i++;
+                }
+            } else {
+                // 无效的 UTF-8 起始字节，跳过
+                $i++;
             }
         }
 
-        // 7. 清理所有控制字符（保留换行、回车、制表符）
-        $string = preg_replace('/[^\P{C}\n\r\t]/u', '', $string);
+        // 4. 处理其他可能导致问题的单个字节
+        // 移除任何不在有效 UTF-8 范围或单独出现的控制字符
+        $result = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $result);
 
-        // 8. 最后再次确保是有效的 UTF-8
-        if (!mb_check_encoding($string, 'UTF-8')) {
-            $string = '';
+        // 5. 确保字符串是有效的 UTF-8，如果无效则使用 iconv 进行清理
+        if (!mb_check_encoding($result, 'UTF-8')) {
+            // 使用 iconv 忽略无效字符
+            $result = iconv('UTF-8', 'UTF-8//IGNORE', $result);
+
+            // 如果 iconv 失败，尝试另一种方法
+            if (!mb_check_encoding($result, 'UTF-8')) {
+                $result = utf8_encode(utf8_decode($result));
+            }
         }
 
-        return $string;
+        // 6. 清理所有控制字符（保留换行、回车、制表符）
+        $result = preg_replace('/[^\P{C}\n\r\t]/u', '', $result);
+
+        // 7. 最后再次确保是有效的 UTF-8
+        if (!mb_check_encoding($result, 'UTF-8')) {
+            $result = '';
+        }
+
+        return $result;
     }
 
     /**
