@@ -5,7 +5,7 @@
  * - CDN resources (cross-origin from allowlist): Cache First (opaque allowed)
  * - Versioned caches with cleanup on activate
  */
-const SW_VERSION = 'v2.2.3';
+const SW_VERSION = 'v2.3.0';
 const CACHE_PAGES = `pages-${SW_VERSION}`;
 const CACHE_STATIC = `static-${SW_VERSION}`;
 const CACHE_CDN = `cdn-${SW_VERSION}`;
