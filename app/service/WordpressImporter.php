@@ -474,14 +474,14 @@ class WordpressImporter
 
                         $postType = $xpath->evaluate('string(wp:post_type)', $node);
 
-                        if (in_array($postType, ['post', 'page'], true)) {
+                        // 只导入文章类型，跳过页面类型
+                        if ($postType === 'post') {
                             $this->processPost($xpath, $node, $postType);
-
-                            if ($postType === 'post') {
-                                $postCount++;
-                            } else {
-                                $pageCount++;
-                            }
+                            $postCount++;
+                        } elseif ($postType === 'page') {
+                            // 跳过页面类型导入
+                            $title = $xpath->evaluate('string(title)', $node);
+                            Log::info('跳过页面类型导入: ' . $title);
                         }
                     } catch (Exception $e) {
                         Log::error('处理文章/页面项目时出错: ' . $e->getMessage(), ['exception' => $e]);
@@ -520,6 +520,16 @@ class WordpressImporter
 
         // 提取文章数据
         $data = $this->extractPostDataFromXml($xpath, $node);
+
+        // 过滤特殊页面，跳过包含特定关键词的文章
+        $specialPageKeywords = ['动态', '标签'];
+        foreach ($specialPageKeywords as $keyword) {
+            if (str_contains($data['title'], $keyword)) {
+                Log::info('跳过特殊页面导入: ' . $data['title']);
+
+                return;
+            }
+        }
 
         // 标准化内容并获取 content type
         [$contentType, $data['content'], $data['excerpt']] = $this->normalizeContent(
@@ -1503,23 +1513,54 @@ class WordpressImporter
             return $string;
         }
 
-        // 移除 BOM
-        $string = str_replace("\xEF\xBB\xBF", '', $string);
+        // 1. 首先将字符串转换为二进制数据以便处理
+        $binary = (string) $string;
 
-        // 尝试检测编码并转换到 UTF-8
+        // 2. 移除 UTF-8 BOM（0xEF 0xBB 0xBF）
+        if (str_starts_with(bin2hex($binary), 'efbbbf')) {
+            $binary = substr($binary, 3);
+        }
+
+        // 3. 处理单独的 0xEF 字节（可能是不完整的 BOM 或其他无效序列）
+        // 使用更严格的模式，确保只移除单独的 0xEF 字节
+        $binary = preg_replace('/(?:\xef(?![\xbb\xbf]))/', '', $binary);
+
+        // 4. 处理其他可能导致问题的单个字节
+        // 移除任何不在有效 UTF-8 范围或单独出现的控制字符
+        $binary = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $binary);
+
+        // 5. 尝试检测编码并转换到 UTF-8
         $encoding = mb_detect_encoding(
-            $string,
+            $binary,
             ['UTF-8', 'ASCII', 'GBK', 'GB2312', 'BIG5', 'Windows-1252', 'ISO-8859-1'],
             true
         );
 
         if ($encoding && $encoding !== 'UTF-8') {
             // 只有当检测到非 UTF-8 编码时才进行转换
-            $string = mb_convert_encoding($string, 'UTF-8', $encoding);
+            $string = mb_convert_encoding($binary, 'UTF-8', $encoding);
+        } else {
+            $string = $binary;
         }
 
-        // 清理所有控制字符（保留换行、回车、制表符）
+        // 6. 确保字符串是有效的 UTF-8，如果无效则使用 iconv 进行清理
+        if (!mb_check_encoding($string, 'UTF-8')) {
+            // 使用 iconv 忽略无效字符
+            $string = iconv('UTF-8', 'UTF-8//IGNORE', $string);
+
+            // 如果 iconv 失败，尝试另一种方法
+            if (!mb_check_encoding($string, 'UTF-8')) {
+                $string = utf8_encode(utf8_decode($string));
+            }
+        }
+
+        // 7. 清理所有控制字符（保留换行、回车、制表符）
         $string = preg_replace('/[^\P{C}\n\r\t]/u', '', $string);
+
+        // 8. 最后再次确保是有效的 UTF-8
+        if (!mb_check_encoding($string, 'UTF-8')) {
+            $string = '';
+        }
 
         return $string;
     }
