@@ -2085,84 +2085,57 @@ class WordpressImporter
     }
 
     /**
-     * 获取基础附件URL，移除尺寸参数
+     * 获取 WordPress 附件的原图 URL（仅当检测到尺寸参数时）
      *
-     * @param string $url 原始URL
+     * @param string $url 原始 URL
      *
-     * @return string|null 基础URL，或null如果无法提取
+     * @return string|null 若是 WP 尺寸图则返回原图 URL，否则返回 null
      */
     protected function getBaseAttachmentUrl(string $url): ?string
     {
-        // 匹配WordPress带尺寸参数的图片URL模式
-        // 支持完整URL和相对路径两种格式
-        // 完整URL：https://www.biliwind.com/wp-content/uploads/2025/05/image-1746177998-1024x526.png
-        // 相对路径：/wp-content/uploads/2025/05/image-1746177998-1024x526.png
-        // 带查询参数的URL：https://example.com/image-1024x526.png?w=800
-        // 带哈希值的URL：https://example.com/image-1024x526.png#top
+        // WordPress 标准尺寸后缀：-1024x768 紧贴在扩展名前
+        // 使用正向预查，确保只匹配扩展名前的位置
+        $sizePattern = '/-(\d+)x(\d+)(?=\.\w+(?:[?#]|$))/i';
 
-        // 支持多种尺寸参数格式
-        $sizePatterns = [
-            // 标准格式：-1024x526.png
-            '/-\d+x\d+(\.\w+)(?:[?#].*)?$/i',
-            // 可选尺寸参数：-1024x526-300x200.png
-            '/-\d+x\d+(-\d+x\d+)*\.(\w+)(?:[?#].*)?$/i',
-            // 其他可能的尺寸格式：_1024x526.png
-            '/_\d+x\d+(\.\w+)(?:[?#].*)?$/i',
-        ];
-
-        // 首先尝试在完整URL上应用替换模式
-        foreach ($sizePatterns as $pattern) {
-            if (preg_match($pattern, $url, $matches)) {
-                $baseUrl = preg_replace($pattern, '$1', $url);
-
-                return $baseUrl;
-            }
+        // 快速判断：如果整个 URL 中都不存在尺寸标记，直接返回 null
+        if (!preg_match($sizePattern, $url)) {
+            return null;
         }
 
-        // 如果完整URL匹配失败，检查是否是带域名的URL
-        $parsedUrl = parse_url($url);
-        if (isset($parsedUrl['scheme']) && isset($parsedUrl['host']) && isset($parsedUrl['path'])) {
-            // 提取路径部分
-            $path = $parsedUrl['path'];
-            $query = isset($parsedUrl['query']) ? '?' . $parsedUrl['query'] : '';
-            $fragment = isset($parsedUrl['fragment']) ? '#' . $parsedUrl['fragment'] : '';
-
-            // 尝试在路径部分应用替换模式
-            foreach ($sizePatterns as $pattern) {
-                if (preg_match($pattern, $path, $matches)) {
-                    $basePath = preg_replace($pattern, '$1', $path);
-                    // 构建完整的基础URL，保留查询参数和哈希值
-                    $baseUrl = $parsedUrl['scheme'] . '://' . $parsedUrl['host'] . $basePath . $query . $fragment;
-                    Log::debug("使用路径部分替换构建完整基础URL: $url => $baseUrl");
-
-                    return $baseUrl;
-                }
-            }
-        }
-
-        // 处理相对路径或其他情况
+        // 解析 URL（兼容完整 URL / 相对路径）
         $path = parse_url($url, PHP_URL_PATH);
+        if ($path === null) {
+            return null;
+        }
+
+        // 再次确认：尺寸参数必须出现在 path 中
+        if (!preg_match($sizePattern, $path)) {
+            return null;
+        }
+
+        // 移除尺寸参数
+        $basePath = preg_replace($sizePattern, '', $path);
+
+        // 还原 query / fragment
         $query = parse_url($url, PHP_URL_QUERY);
         $fragment = parse_url($url, PHP_URL_FRAGMENT);
 
         $queryStr = $query ? '?' . $query : '';
         $fragmentStr = $fragment ? '#' . $fragment : '';
 
-        if ($path === null) {
-            $path = $url;
+        // 如果是完整 URL，重建完整结构
+        $scheme = parse_url($url, PHP_URL_SCHEME);
+        $host = parse_url($url, PHP_URL_HOST);
+        $port = parse_url($url, PHP_URL_PORT);
+
+        if ($scheme && $host) {
+            $portStr = $port ? ':' . $port : '';
+
+            return "{$scheme}://{$host}{$portStr}{$basePath}{$queryStr}{$fragmentStr}";
         }
 
-        foreach ($sizePatterns as $pattern) {
-            if (preg_match($pattern, $path, $matches)) {
-                $basePath = preg_replace($pattern, '$1', $path);
-                $baseUrl = $basePath . $queryStr . $fragmentStr;
-                Log::debug("使用简单替换提取路径部分基础URL: $path => $baseUrl");
-
-                return $baseUrl;
-            }
-        }
-
-        return null;
+        // 相对路径
+        return $basePath . $queryStr . $fragmentStr;
     }
 
     /**
