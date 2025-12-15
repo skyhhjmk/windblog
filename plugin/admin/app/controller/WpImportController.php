@@ -373,9 +373,12 @@ class WpImportController extends Base
             // 格式化数据，确保结构与前端期望一致
             $formattedList = [];
             foreach ($list as $index => $media) {
+                // 使用当前时间作为created_at的默认值，如果媒体记录中没有的话
+                $createdAt = $media['created_at'] ?? time();
+
                 $formattedList[] = [
                     'id' => $jobId . '_' . $index,
-                    'filename' => 'failed-' . $media['created_at'],
+                    'filename' => 'failed-' . $createdAt,
                     'original_name' => $media['title'],
                     'file_path' => '',
                     'thumb_path' => null,
@@ -386,8 +389,8 @@ class WpImportController extends Base
                     'description' => null,
                     'author_id' => $job->author_id,
                     'author_type' => 'admin',
-                    'created_at' => date('Y-m-d\TH:i:s.000000Z', $media['created_at']),
-                    'updated_at' => date('Y-m-d\TH:i:s.000000Z', $media['created_at']),
+                    'created_at' => date('Y-m-d\TH:i:s.000000Z', $createdAt),
+                    'updated_at' => date('Y-m-d\TH:i:s.000000Z', $createdAt),
                     'deleted_at' => null,
                     'custom_fields' => [
                         'reference_info' => [

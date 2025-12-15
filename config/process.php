@@ -142,8 +142,25 @@ $__processes = [
             'publicPath' => public_path(),
         ],
     ],
-    // File update detection and automatic reload
-    'monitor' => [
+    // 定时任务处理进程
+    'task'  => [
+        'handler'  => app\process\Task::class,
+    ],
+
+];
+// 仅在 CACHE_DRIVER=redis 时注册性能采集进程
+if (strtolower(trim((string) $__cacheDriver)) === 'redis') {
+    $__processes['performance'] = [
+        'handler' => Performance::class,
+        'count' => 1,
+        'reloadable' => true,
+        'constructor' => [60, 500],
+    ];
+}
+
+if (getenv('ENABLE_MONITOR')) {
+    // 仅启用监控时注册
+    $__processes['monitor'] = [
         'handler' => app\process\Monitor::class,
         'reloadable' => false,
         'constructor' => [
@@ -165,20 +182,6 @@ $__processes = [
                 'enable_memory_monitor' => DIRECTORY_SEPARATOR === '/',
             ],
         ],
-    ],
-    // 定时任务处理进程
-    'task'  => [
-        'handler'  => app\process\Task::class,
-    ],
-
-];
-// 仅在 CACHE_DRIVER=redis 时注册性能采集进程
-if (strtolower(trim((string) $__cacheDriver)) === 'redis') {
-    $__processes['performance'] = [
-        'handler' => Performance::class,
-        'count' => 1,
-        'reloadable' => true,
-        'constructor' => [60, 500],
     ];
 }
 

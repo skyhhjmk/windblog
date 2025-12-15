@@ -369,10 +369,14 @@ class StaticGenerator
         $finalDir = dirname($final);
         $stageDir = dirname($stage);
         if (!is_dir($finalDir)) {
-            @mkdir($finalDir, 0o775, true);
+            if (!mkdir($finalDir, 0o775, true)) {
+                throw new RuntimeException("无法创建目录: {$finalDir}");
+            }
         }
         if (!is_dir($stageDir)) {
-            @mkdir($stageDir, 0o775, true);
+            if (!mkdir($stageDir, 0o775, true)) {
+                throw new RuntimeException("无法创建目录: {$stageDir}");
+            }
         }
 
         // 1) 将页面写入临时目录文件
