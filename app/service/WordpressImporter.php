@@ -1514,13 +1514,9 @@ class WordpressImporter
         );
 
         if ($encoding && $encoding !== 'UTF-8') {
+            // 只有当检测到非 UTF-8 编码时才进行转换
             $string = mb_convert_encoding($string, 'UTF-8', $encoding);
-        } else {
-            $string = mb_convert_encoding($string, 'UTF-8', 'ISO-8859-1');
         }
-
-        // 强制修正非法 UTF-8 字节
-        $string = mb_convert_encoding($string, 'UTF-8', 'UTF-8');
 
         // 清理所有控制字符（保留换行、回车、制表符）
         $string = preg_replace('/[^\P{C}\n\r\t]/u', '', $string);
