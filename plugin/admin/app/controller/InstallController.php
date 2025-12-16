@@ -396,23 +396,32 @@ class InstallController extends Base
                 $phinxPath .= '.bat';
             }
 
-            // 确保 .env 文件存在并解析环境变量
+            // 确保 .env 文件存在或创建临时配置
             $envFile = base_path() . '/.env';
+            $useEnvFile = false;
+
             if (!file_exists($envFile)) {
-                $env_config = match ($type) {
-                    'mysql' => $this->getMysqlEnvConfig($host, $port, $database, $user, $password),
-                    'sqlite' => $this->getSqliteEnvConfig($database),
-                    default => $this->getPgsqlEnvConfig($host, $port, $database, $user, $password)
-                };
-                file_put_contents(base_path() . '/.env', $env_config);
+                // 创建临时配置文件，传递数据库配置
+                $tempConfigFile = base_path() . '/phinx.temp.php';
+                $configContent = $this->generatePhinxConfig($type, $host, $port, $database, $user, $password);
+                file_put_contents($tempConfigFile, $configContent);
+                $configPath = $tempConfigFile;
+            } else {
+                // 使用默认配置文件
+                $configPath = base_path() . '/phinx.php';
+                $useEnvFile = true;
             }
 
             // 执行phinx迁移
-            $phinxPath = base_path() . '/vendor/bin/phinx';
-            $command = "{$phinxPath} migrate -c " . base_path() . '/phinx.php';
+            $command = "{$phinxPath} migrate -c {$configPath}";
             $output = [];
             $returnVar = 0;
             exec($command, $output, $returnVar);
+
+            // 清理临时配置文件
+            if (!$useEnvFile && isset($tempConfigFile) && file_exists($tempConfigFile)) {
+                unlink($tempConfigFile);
+            }
 
             if ($returnVar !== 0) {
                 return $this->json(1, '数据库迁移失败: ' . implode(PHP_EOL, $output));
@@ -432,6 +441,70 @@ class InstallController extends Base
         }
 
         return $this->json(0);
+    }
+
+    /**
+     * 生成 Phinx 配置文件
+     *
+     * @param $type
+     * @param $host
+     * @param $port
+     * @param $database
+     * @param $user
+     * @param $password
+     *
+     * @return string
+     */
+    private function generatePhinxConfig($type, $host, $port, $database, $user, $password)
+    {
+        $config = match ($type) {
+            'mysql' => [
+                'adapter' => 'mysql',
+                'host' => $host,
+                'name' => $database,
+                'user' => $user,
+                'pass' => $password,
+                'port' => $port,
+                'charset' => 'utf8mb4',
+            ],
+            'sqlite' => [
+                'adapter' => 'sqlite',
+                'name' => $database,
+            ],
+            default => [
+                'adapter' => 'pgsql',
+                'host' => $host,
+                'name' => $database,
+                'user' => $user,
+                'pass' => $password,
+                'port' => $port,
+                'charset' => 'utf8',
+            ]
+        };
+
+        return <<<PHP
+<?php
+return [
+    'paths' => [
+        'migrations' => __DIR__ . '/database/migrations',
+        'seeds' => __DIR__ . '/database/seeds',
+    ],
+    'environments' => [
+        'default_migration_table' => 'phinxlog',
+        'default_database' => '{$type}',
+        '{$type}' => [
+            'adapter' => '{$config['adapter']}',
+            'host' => '{$config['host']}',
+            'name' => '{$config['name']}',
+            'user' => '{$config['user']}',
+            'pass' => '{$config['pass']}',
+            'port' => {$config['port']},
+            'charset' => '{$config['charset']}',
+        ],
+    ],
+    'version_order' => 'creation',
+];
+PHP;
     }
 
     /**
