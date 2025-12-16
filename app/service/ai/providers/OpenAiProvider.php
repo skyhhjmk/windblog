@@ -16,11 +16,6 @@ class OpenAiProvider extends BaseAiProvider
 {
     protected ?Client $client = null;
 
-    public function getId(): string
-    {
-        return 'openai';
-    }
-
     public function getName(): string
     {
         return 'OpenAI';
@@ -143,13 +138,19 @@ class OpenAiProvider extends BaseAiProvider
             ['key' => 'timeout', 'label' => '超时（秒）', 'type' => 'number', 'required' => false, 'default' => 30],
             ['key' => 'verify_ssl', 'label' => '验证SSL证书', 'type' => 'checkbox', 'required' => false, 'default' => true],
             ['key' => 'ca_bundle', 'label' => 'CA证书路径', 'type' => 'text', 'required' => false, 'placeholder' => '可选，用于自定义SSL证书'],
-            ['key' => 'multimodal_support', 'label' => '多模态支持', 'type' => 'multiselect', 'required' => false, 'options' => [
-                ['value' => 'text', 'label' => '文本'],
-                ['value' => 'image', 'label' => '图片'],
-                ['value' => 'audio', 'label' => '音频'],
-                ['value' => 'video', 'label' => '视频'],
-                ['value' => 'file', 'label' => '文件'],
-            ]],
+            [
+                'key' => 'multimodal_support',
+                'label' => '多模态支持',
+                'type' => 'multiselect',
+                'required' => false,
+                'options' => [
+                    ['value' => 'text', 'label' => '文本'],
+                    ['value' => 'image', 'label' => '图片'],
+                    ['value' => 'audio', 'label' => '音频'],
+                    ['value' => 'video', 'label' => '视频'],
+                    ['value' => 'file', 'label' => '文件'],
+                ],
+            ],
             ['key' => 'deep_thinking', 'label' => '深度思考支持', 'type' => 'checkbox', 'required' => false, 'default' => false],
             ['key' => 'weight', 'label' => '权重', 'type' => 'number', 'required' => false, 'default' => 1, 'min' => 0],
             ['key' => 'enabled', 'label' => '启用', 'type' => 'checkbox', 'required' => false, 'default' => true],

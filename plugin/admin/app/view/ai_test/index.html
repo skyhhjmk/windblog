@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-cn">
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
@@ -7,6 +8,7 @@
     <link rel="stylesheet" href="/app/admin/component/layui/css/layui.css?v=2.8.12"/>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
+
 <body class="bg-gray-50">
 <div class="max-w-7xl mx-auto p-6">
     <div class="bg-white rounded-lg shadow-md">
@@ -23,6 +25,8 @@
                         class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                     <option value="">加载中...</option>
                 </select>
+                <div class="text-sm p-3 bg-gray-100 rounded-lg border border-gray-200 hidden" id="provider-info">
+                </div>
             </div>
 
             <!-- 任务类型 -->
@@ -155,10 +159,40 @@
                     });
                     if (res.data.current) {
                         select.val(res.data.current);
+                        select.trigger('change');
                     }
-                }
+                    }
             });
         }
+
+        // 提供者选择变更联动
+        $('#provider-select').on('change', function () {
+            var val = $(this).val();
+            var infoDiv = $('#provider-info');
+            infoDiv.addClass('hidden').html('');
+
+            if (!val) return;
+
+            var provider = providers.find(function (p) {
+                return p.id === val;
+            });
+            if (provider && provider.type === 'group' && provider.provider_status) {
+                var html = '<div class="font-medium mb-2 text-gray-700">轮询组详情 (策略: ' + provider.strategy + ')</div>';
+                html += '<div class="space-y-1">';
+                provider.provider_status.forEach(function (p) {
+                    var statusClass = p.is_blacklisted ? 'text-red-500 font-bold' : (p.enabled ? 'text-green-600' : 'text-gray-400');
+                    var statusText = p.status_text || (p.enabled ? '正常' : '禁用');
+                    if (p.is_blacklisted) statusText = '熔断中 (' + statusText + ')';
+
+                    html += '<div class="flex justify-between items-center text-xs">';
+                    html += '<span>' + p.name + ' <span class="text-gray-400">(' + p.id + ')</span></span>';
+                    html += '<span class="' + statusClass + '">权重:' + p.weight + ' | ' + statusText + '</span>';
+                    html += '</div>';
+                });
+                html += '</div>';
+                infoDiv.html(html).removeClass('hidden');
+            }
+        });
 
         // 加载模板列表
         function loadTemplates() {
@@ -420,6 +454,7 @@
                                     }
                                 }
                                 if (result.finish_reason) meta.push('完成原因: ' + result.finish_reason);
+                                if (result.provider) meta.push('执行提供方: ' + (result.provider_name ? result.provider_name + ' (' + result.provider + ')' : result.provider));
 
                                 $('#result-meta').html(meta.map(function (m) {
                                     return '<div>' + m + '</div>';
@@ -536,4 +571,5 @@
     });
 </script>
 </body>
+
 </html>

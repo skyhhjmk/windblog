@@ -115,10 +115,12 @@ class AiSummaryWorker
                     Log::warning('AI wait: ' . $errorMsg);
 
                     // 检测通道连接断开，触发自愈
-                    if (strpos($errorMsg, 'Channel connection is closed') !== false ||
+                    if (
+                        strpos($errorMsg, 'Channel connection is closed') !== false ||
                         strpos($errorMsg, 'Broken pipe') !== false ||
                         strpos($errorMsg, 'connection is closed') !== false ||
-                        strpos($errorMsg, 'on null') !== false) {
+                        strpos($errorMsg, 'on null') !== false
+                    ) {
                         Log::warning('AI summary 检测到连接断开，尝试重建连接');
                         $this->reconnectMq();
                     }
@@ -183,8 +185,6 @@ class AiSummaryWorker
         ]);
 
         $content = (string) $post->content;
-        $prov = $this->chooseProvider($providerId);
-
         // 获取摘要提示词
         $defaultPrompt = <<<'EOF'
             请为以下文章生成一个简洁的摘要，重点阐述文章的主要内容和核心观点。
@@ -200,21 +200,49 @@ class AiSummaryWorker
             EOF;
         $prompt = (string) blog_config('ai_summary_prompt', $defaultPrompt, true);
 
-        // 使用统一的 call 方法调用摘要任务
-        $result = $prov->call('summarize', ['content' => $content, 'prompt' => $prompt], $options);
+        $maxRetries = 3;
+        $retryCount = 0;
+        $success = false;
+        $prov = null;
+        $result = [];
+        $lastError = '';
 
-        if (!($result['ok'] ?? false)) {
-            $errorMsg = (string) ($result['error'] ?? 'unknown');
+        while ($retryCount < $maxRetries) {
+            $retryCount++;
+            try {
+                $prov = $this->chooseProvider($providerId);
+                // 使用统一的 call 方法调用摘要任务
+                $result = $prov->call('summarize', ['content' => $content, 'prompt' => $prompt], $options);
+
+                if ($result['ok'] ?? false) {
+                    $success = true;
+                    break;
+                }
+
+                $lastError = (string) ($result['error'] ?? 'unknown');
+                Log::warning("AI summarize attempt {$retryCount} failed for post {$postId}: {$lastError}");
+                \app\service\AiProviderService::addProviderToBlacklist($prov->getId(), 300);
+
+            } catch (Throwable $e) {
+                $lastError = $e->getMessage();
+                Log::warning("AI summarize attempt {$retryCount} exception for post {$postId}: {$lastError}");
+                if ($prov) {
+                    \app\service\AiProviderService::addProviderToBlacklist($prov->getId(), 300);
+                }
+            }
+        }
+
+        if (!$success) {
             $this->setAiMeta($postId, [
                 'enabled' => (bool) ($meta['enabled'] ?? true),
                 'status' => 'failed',
-                'error' => $errorMsg,
+                'error' => $lastError,
                 'failed_at' => date('Y-m-d H:i:s'),
-                'provider' => $prov->getId(),
+                'provider' => $prov ? $prov->getId() : 'none',
             ]);
             // 失败后直接ACK，不重试
             $message->ack();
-            Log::error("AI summarize failed for post {$postId}: {$errorMsg}");
+            Log::error("AI summarize failed for post {$postId} after {$maxRetries} attempts: {$lastError}");
 
             return;
         }
@@ -270,32 +298,59 @@ class AiSummaryWorker
         // 标记任务开始处理
         AISummaryService::setTaskStatus($taskId, 'processing', null, null);
 
-        try {
-            $prov = $this->chooseProvider($providerId);
-            $result = $prov->call($task, $params, $options);
+        $maxRetries = 3;
+        $retryCount = 0;
+        $lastError = '';
+        $success = false;
 
-            if (!($result['ok'] ?? false)) {
-                $errorMsg = (string) ($result['error'] ?? 'unknown');
-                Log::error("AI generic task failed: {$taskId}, error: {$errorMsg}");
-                AISummaryService::setTaskStatus($taskId, 'failed', null, $errorMsg);
-                throw new RuntimeException('AI task failed: ' . $errorMsg);
+        while ($retryCount < $maxRetries) {
+            $retryCount++;
+            try {
+                $prov = $this->chooseProvider($providerId);
+                $result = $prov->call($task, $params, $options);
+
+                if ($result['ok'] ?? false) {
+                    // 保存结果
+                    Log::debug("AI generic task completed: {$taskId}");
+                    AISummaryService::setTaskStatus($taskId, 'completed', [
+                        'result' => $result['result'] ?? '',
+                        'reasoning' => $result['reasoning'] ?? null,
+                        'usage' => $result['usage'] ?? null,
+                        'model' => $result['model'] ?? null,
+                        'finish_reason' => $result['finish_reason'] ?? null,
+                        'provider' => $prov->getId(),
+                        'provider_name' => $prov->getName(),
+                    ], null);
+
+                    $message->ack();
+                    $success = true;
+                    break;
+                }
+
+                $lastError = (string) ($result['error'] ?? 'unknown');
+                Log::warning("AI generic task attempt {$retryCount} failed: {$taskId}, error: {$lastError}");
+                \app\service\AiProviderService::addProviderToBlacklist($prov->getId(), 300);
+
+            } catch (Throwable $e) {
+                $lastError = $e->getMessage();
+                Log::warning("AI generic task attempt {$retryCount} exception: {$taskId}, exception: {$lastError}");
+                if (isset($prov)) {
+                    \app\service\AiProviderService::addProviderToBlacklist($prov->getId(), 300);
+                }
             }
+        }
 
-            // 保存结果
-            Log::debug("AI generic task completed: {$taskId}");
-            AISummaryService::setTaskStatus($taskId, 'completed', [
-                'result' => $result['result'] ?? '',
-                'reasoning' => $result['reasoning'] ?? null,
-                'usage' => $result['usage'] ?? null,
-                'model' => $result['model'] ?? null,
-                'finish_reason' => $result['finish_reason'] ?? null,
-            ], null);
-
-            $message->ack();
-        } catch (Throwable $e) {
-            Log::error("AI generic task exception: {$taskId}, exception: {$e->getMessage()}");
-            AISummaryService::setTaskStatus($taskId, 'failed', null, $e->getMessage());
-            throw $e;
+        if (!$success) {
+            Log::error("AI generic task failed after {$maxRetries} attempts: {$taskId}, error: {$lastError}");
+            AISummaryService::setTaskStatus($taskId, 'failed', null, $lastError);
+            // 这里不抛出异常，为了避免进入 handleFailedMessage 重复处理ACK，
+            // 此时已确认失败并ACK了（如果 loop里 break了则没ACK?
+            // Wait, previous code acked on success. If failed, I should ACK or throw to NACK?
+            // The method calls handleFailedMessage in original code catch block.
+            // If I return here without throw, the caller handleMessage won't know?
+            // Original code threw RuntimeException to outside handleMessage catch block.
+            // So I should throw here.
+            throw new RuntimeException('AI task failed: ' . $lastError);
         }
     }
 
@@ -334,13 +389,14 @@ class AiSummaryWorker
 
     protected function chooseProvider(?string $specified = null): AiProviderInterface
     {
-        // 如果指定了providerId，尝试从数据库加载
+        // 如果指定了providerId(可能是 provider:xxx 或 group:xxx 或 xxx)，尝试解析
         if (!empty($specified)) {
-            $provider = AISummaryService::createProviderFromDb($specified);
+            // 使用 AiProviderService 解析，支持群组和单个提供者
+            $provider = \app\service\AiProviderService::resolveProvider($specified);
             if ($provider) {
                 return $provider;
             }
-            Log::warning("AiSummaryWorker: Specified provider not found: {$specified}, falling back to current provider");
+            Log::warning("AiSummaryWorker: Specified provider/group not found or unavailable: {$specified}, falling back to current provider");
         }
 
         // 使用当前配置的提供者（支持轮询组和单个提供者）

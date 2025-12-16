@@ -38,7 +38,7 @@ class AiTestController
     }
 
     /**
-     * 获取可用的AI提供者列表
+     * 获取可用的AI提供者列表（包含轮询组）
      * GET /app/admin/ai-test/providers
      */
     public function getProviders(Request $request): Response
@@ -46,8 +46,9 @@ class AiTestController
         Log::debug('AiTestController::getProviders - Fetching AI providers list');
         try {
             $availableProviders = [];
+
+            // 1. 获取所有单个提供者
             $providers = AISummaryService::getAllProviders(true); // 获取所有启用的提供者
-            Log::debug('AiTestController::getProviders - Found providers: ' . count($providers));
 
             foreach ($providers as $providerData) {
                 // 支持数组和对象两种格式
@@ -66,18 +67,38 @@ class AiTestController
                         'id' => $id,
                         'name' => $name,
                         'type' => $type,
+                        'is_group' => false,
                         'supported_tasks' => $providerInstance->getSupportedTasks(),
                     ];
                 }
             }
 
+            // 2. 获取所有轮询组
+            $groups = \app\service\AiProviderService::getAllPollingGroupsWithStatus();
+            foreach ($groups as $group) {
+                $availableProviders[] = [
+                    'id' => 'group:' . $group['id'],
+                    'name' => $group['name'] . ' (Group)',
+                    'type' => 'group',
+                    'is_group' => true,
+                    'strategy' => $group['strategy'],
+                    'provider_status' => $group['providers'], // 包含组内提供者状态
+                    'supported_tasks' => ['chat', 'generate', 'summarize', 'translate'], // 假设组支持所有通用任务，具体取决于组内提供者，简化处理
+                ];
+            }
+
             $currentSelection = (string) blog_config('ai_current_selection', '', true);
             $currentProviderId = '';
+
+            // 解析当前选择
             if (str_starts_with($currentSelection, 'provider:')) {
                 $currentProviderId = substr($currentSelection, 9);
+            } elseif (str_starts_with($currentSelection, 'group:')) {
+                $currentProviderId = $currentSelection; // 保持 group:x 格式以便前端匹配
             }
+
             Log::debug('AiTestController::getProviders - Current provider ID: ' . $currentProviderId);
-            Log::debug('AiTestController::getProviders - Available providers count: ' . count($availableProviders));
+            Log::debug('AiTestController::getProviders - Available items count: ' . count($availableProviders));
 
             return json([
                 'code' => 0,
@@ -196,12 +217,14 @@ class AiTestController
                 return json(['code' => 1, 'msg' => 'prompt is required']);
             }
 
-            // 验证提供者是否存在
-            $provider = AISummaryService::createProviderFromDb($providerId);
+            // 验证提供者/群组是否存在
+            // 使用 AiProviderService::resolveProvider 支持群组校验
+            // 这里只需只要能解析出有效的 Provider 实例即可，具体的选择逻辑在 Worker 中再次执行
+            $provider = \app\service\AiProviderService::resolveProvider($providerId);
             if (!$provider) {
-                Log::error('AiTestController::test - Failed to create provider instance: ' . $providerId);
+                Log::error('AiTestController::test - Failed to resolve provider/group: ' . $providerId);
 
-                return json(['code' => 1, 'msg' => 'Unknown provider or provider is disabled']);
+                return json(['code' => 1, 'msg' => 'Provider/Group not found or unavailable']);
             }
 
             // 构建参数

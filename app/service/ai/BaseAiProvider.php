@@ -20,6 +20,14 @@ abstract class BaseAiProvider implements AiProviderInterface
     }
 
     /**
+     * 获取提供者唯一ID
+     */
+    public function getId(): string
+    {
+        return (string) ($this->getConfig('id') ?? $this->getType());
+    }
+
+    /**
      * 获取提供者描述（子类可覆盖）
      */
     public function getDescription(): string
