@@ -100,9 +100,28 @@ class MailController
             blog_config('mail_providers', json_encode($out, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), false, true, true);
             blog_config('mail_strategy', $strategy, false, true, true);
 
+            // 清除所有邮件提供方的熔断状态
+            $this->clearMailProviderFailState();
+
             return json(['code' => 0, 'msg' => '保存成功']);
         } catch (Throwable $e) {
             return json(['code' => 1, 'msg' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * 清除所有邮件提供方的熔断状态
+     */
+    protected function clearMailProviderFailState(): void
+    {
+        $failFile = base_path() . DIRECTORY_SEPARATOR . '.email_failed_count';
+        try {
+            if (is_file($failFile)) {
+                // 清空熔断状态文件
+                file_put_contents($failFile, json_encode([], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            }
+        } catch (Throwable $e) {
+            // 忽略清除失败
         }
     }
 

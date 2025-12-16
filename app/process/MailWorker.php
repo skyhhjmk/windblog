@@ -397,19 +397,38 @@ class MailWorker
      */
     protected function chooseProvider(array $exclude = []): ?string
     {
-        // 过滤可用
-        $candidates = [];
+        // 获取所有启用的提供方
+        $enabledProviders = [];
         foreach ($this->providers as $id => $p) {
-            // 尝试恢复已过期的惩罚状态（每次选择前检查一次）
-            $this->tryRecover($id);
-
             if (!empty($exclude) && in_array($id, $exclude, true)) {
                 continue;
             }
             if (!($p['enabled'] ?? true)) {
                 continue;
             }
+            $enabledProviders[$id] = $p;
+        }
+
+        // 如果只有一个启用的提供方，直接返回它（不进行熔断检查）
+        if (count($enabledProviders) === 1) {
+            return array_key_first($enabledProviders);
+        }
+
+        // 过滤可用的提供方
+        $candidates = [];
+        $bannedProviders = [];
+
+        foreach ($enabledProviders as $id => $p) {
+            // 尝试恢复已过期的惩罚状态（每次选择前检查一次）
+            $this->tryRecover($id);
+
             if (!$this->canUseProvider($id)) {
+                // 记录被熔断的提供方及其恢复时间
+                $state = $this->readFailState();
+                $s = $state[$id] ?? null;
+                if ($s && !empty($s['ban_until'])) {
+                    $bannedProviders[$id] = (int) $s['ban_until'];
+                }
                 continue;
             }
             $weight = max(0, (int) ($p['weight'] ?? 1));
@@ -417,6 +436,33 @@ class MailWorker
                 $candidates[$id] = $weight;
             }
         }
+
+        // 如果所有提供方都被熔断，恢复熔断时间最早的提供方
+        if (!$candidates && !empty($bannedProviders)) {
+            // 找出最早恢复的提供方
+            asort($bannedProviders);
+            $earliestRecoveryId = array_key_first($bannedProviders);
+
+            // 强制恢复该提供方
+            $state = $this->readFailState();
+            if (isset($state[$earliestRecoveryId])) {
+                $s = $state[$earliestRecoveryId];
+                // 恢复权重
+                if ($s['weight_backup'] !== null && isset($this->providers[$earliestRecoveryId])) {
+                    $this->providers[$earliestRecoveryId]['weight'] = (int) $s['weight_backup'];
+                }
+                // 清除熔断状态
+                $state[$earliestRecoveryId] = ['fail_count' => 0, 'last_fail_ts' => 0, 'ban_until' => 0, 'weight_backup' => null];
+                $this->writeFailState($state);
+
+                // 将其加入候选列表
+                $weight = max(0, (int) ($this->providers[$earliestRecoveryId]['weight'] ?? 1));
+                if ($weight > 0) {
+                    $candidates[$earliestRecoveryId] = $weight;
+                }
+            }
+        }
+
         if (!$candidates) {
             return null;
         }
