@@ -87,10 +87,12 @@ class InstantFirstPaint implements MiddlewareInterface
         // 允许通过 Header/Query 显式绕过（防递归/调试）
         // Query 参数会被 CDN 转发，更可靠
         // 添加对静态化生成请求的检测，自动绕过骨架屏逻辑
-        if ($request->header('X-INSTANT-BYPASS') === '1' ||
+        if (
+            $request->header('X-INSTANT-BYPASS') === '1' ||
             $request->get('no_instant') == '1' ||
             $request->get('_instant_bypass') === '1' ||
-            $request->header('User-Agent') === 'StaticGenerator/1.0') {
+            $request->header('User-Agent') === 'StaticGenerator/1.0'
+        ) {
             // 绕过骨架页，返回完整页面
             // 完整页面应该被 CDN 缓存，添加缓存头
             $response = $handler($request);
@@ -325,7 +327,12 @@ class InstantFirstPaint implements MiddlewareInterface
             // 获取注解实例并检查是否启用
             $annotation = $annotations[0]->newInstance();
 
-            return $annotation->enabled;
+            // 暂时禁用骨架屏功能，修复 (索引):57 [Violation] Avoid using document.write()
+            // 以及 Parser was blocked due to document.write(<script>) 错误
+            // 现代浏览器会拦截 document.write 注入的跨域脚本(如 tailwind cdn)，导致页面报错且无法加载
+            return false;
+
+            // return $annotation->enabled;
         } catch (Throwable $e) {
             // 出现异常时，返回 false
             return false;
