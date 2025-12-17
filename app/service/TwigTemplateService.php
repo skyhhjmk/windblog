@@ -127,29 +127,31 @@ class TwigTemplateService implements View
      */
     private static function compressHtml(string $html): string
     {
-        // 移除HTML注释（除了条件注释）
-        $html = preg_replace('/<!--(?!\[if).*?-->/s', '', $html);
+        // 保存需要保护的标签内容（pre, textarea, script, style）
+        $protected = [];
+        $html = preg_replace_callback('/<(pre|textarea|script|style)[^>]*>.*?<\/\1>/is', function ($matches) use (&$protected) {
+            $placeholder = '<!--PROTECTED_' . count($protected) . '-->';
+            $protected[$placeholder] = $matches[0];
 
-        // 移除多余的空白字符，但保留pre、textarea、script标签内的内容
-        $html = preg_replace_callback('/<(pre|textarea|script)[^>]*>.*?<\/\1>/is', function ($matches) {
-            return $matches[0]; // 保持原样
+            return $placeholder;
         }, $html);
 
-        // 移除标签间的空白字符
-        $html = preg_replace('/>\s+</', '><', $html);
+        // 移除HTML注释（除了条件注释和我们自己的占位符）
+        $html = preg_replace('/<!--(?!\[if|PROTECTED_).*?-->/s', '', $html);
+
+        // 移除标签间的空白字符（但保留单个空格）
+        $html = preg_replace('/>\s+</', '> <', $html);
 
         // 移除行首尾的空白字符
         $html = preg_replace('/^\s+|\s+$/m', '', $html);
 
-        // 压缩CSS中的空白字符
-        $html = preg_replace_callback('/<style[^>]*>.*?<\/style>/is', function ($matches) {
-            return preg_replace('/\s+/', ' ', $matches[0]);
-        }, $html);
+        // 压缩多余的空白字符为单个空格
+        $html = preg_replace('/\s+/', ' ', $html);
 
-        // 压缩JavaScript中的空白字符（简单处理）
-        $html = preg_replace_callback('/<script[^>]*>.*?<\/script>/is', function ($matches) {
-            return preg_replace('/\s+/', ' ', $matches[0]);
-        }, $html);
+        // 恢复受保护的内容
+        foreach ($protected as $placeholder => $content) {
+            $html = str_replace($placeholder, $content, $html);
+        }
 
         return trim($html);
     }
@@ -271,6 +273,8 @@ class TwigTemplateService implements View
         $html = '';
         $fromCache = false;
 
+        // 禁用Twig模板缓存功能（不再从Redis读取缓存）
+        /*
         if ($cacheEnabled) {
             // 生成缓存键
             $cacheKey = self::generateTemplateCacheKey($template, $vars, $theme, $app, $plugin);
@@ -282,6 +286,7 @@ class TwigTemplateService implements View
                 $fromCache = true;
             }
         }
+        */
 
         // 获取调试模式状态
         $debug = (bool) config('app.debug', false);
@@ -296,7 +301,8 @@ class TwigTemplateService implements View
             // 计算渲染耗时
             $renderTime = round((microtime(true) - $renderStartTime) * 1000, 2);
 
-            // 保存到缓存（如果启用缓存）
+            // 保存到缓存（如果启用缓存）- 已禁用Redis缓存写入功能
+            /*
             if ($cacheEnabled) {
                 // 检查是否启用HTML压缩
                 $compressHtml = (bool) config("{$configPrefix}view.compress_html", true);
@@ -319,6 +325,7 @@ class TwigTemplateService implements View
                 $cacheTtl = (int) config("{$configPrefix}view.cache_ttl", 3600); // 默认1小时
                 CacheService::cache($cacheKey, $html, true, $cacheTtl);
             }
+            */
         }
 
         // 记录渲染时间日志（仅在调试模式下或渲染时间超过100ms时记录）
@@ -350,6 +357,8 @@ class TwigTemplateService implements View
      */
     public static function clearTemplateCache(?string $pattern = null): bool
     {
+        // 禁用Twig模板缓存清除功能（不再清除Redis缓存）
+        /*
         try {
             $cachePattern = $pattern ?? 'twig_template:*';
             Log::info("[TwigTemplateService] Clearing template cache: {$cachePattern}");
@@ -360,5 +369,9 @@ class TwigTemplateService implements View
 
             return false;
         }
+        */
+
+        // 直接返回true表示操作成功
+        return true;
     }
 }

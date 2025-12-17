@@ -29,6 +29,7 @@ services:
       - ENABLE_LOGSTASH=${ENABLE_LOGSTASH}
       - IN_CONTAINER=true # 注意：容器内必须设置此环境变量
       - DEPLOYMENT_TYPE=${DEPLOYMENT_TYPE}
+      - ASSET_AUTO_MINIFY=${ASSET_AUTO_MINIFY}
     depends_on:
       postgres:
         condition: service_healthy

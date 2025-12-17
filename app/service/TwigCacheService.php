@@ -38,7 +38,8 @@ class TwigCacheService
             $ok = false;
         }
 
-        // 2) 清理 Twig 片段缓存（Redis 前缀）
+        // 2) 清理 Twig 片段缓存（Redis 前缀）- 已禁用
+        /*
         try {
             $prefix = (string) env('TWIG_CACHE_PREFIX', 'twig:fragment:');
             $adapter = new RedisCacheAdapter([
@@ -50,6 +51,7 @@ class TwigCacheService
         } catch (Throwable $_) {
             $ok = false;
         }
+        */
 
         return $ok;
     }

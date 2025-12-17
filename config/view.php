@@ -54,7 +54,8 @@ return [
         // 添加缓存扩展
         $twig->addExtension(new CacheExtension());
 
-        // 为缓存扩展注入默认的 PSR-16 适配器（Redis）
+        // 为缓存扩展注入默认的 PSR-16 适配器（Redis）- 已禁用
+        /*
         $twig->addRuntimeLoader(new FactoryRuntimeLoader([
             CacheRuntime::class => function () {
                 // 使用独立的 cache 连接库（config/redis.php 中的 database=1）
@@ -65,6 +66,7 @@ return [
                 ]);
             },
         ]));
+        */
 
         // 添加字符串扩展
         $twig->addExtension(new StringExtension());
