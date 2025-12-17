@@ -340,20 +340,75 @@ class ElasticService
 
     /**
      * ES 搜索文章，返回命中 ID 顺序与总数
+     *
+     * @param string      $keyword 搜索关键词
+     * @param int         $page    页码
+     * @param int         $perPage 每页数量
+     * @param string|null $date    时间范围参数 (如 '7d', '30d', '365d')
+     *
+     * @return array 搜索结果
      */
-    public static function searchPosts(string $keyword, int $page, int $perPage): array
+    public static function searchPosts(string $keyword, int $page, int $perPage, ?string $date = null): array
     {
         $cfg = self::getConfig();
         if (!$cfg['enabled']) {
             return ['ids' => [], 'total' => 0, 'used' => false];
         }
         // 短TTL缓存（热点关键词）
-        $ckey = 'es_search:' . md5($keyword) . ':' . $page . ':' . $perPage;
+        $ckey = 'es_search:' . md5($keyword) . ':' . $page . ':' . $perPage . ($date ? ':' . $date : '');
         $cached = CacheService::cache($ckey);
         if ($cached !== false && is_array($cached)) {
             return $cached;
         }
         $from = max(0, ($page - 1) * $perPage);
+
+        // 构建基础查询
+        $queryPayload = [
+            'bool' => [
+                'must' => [
+                    [
+                        'multi_match' => [
+                            'query' => $keyword,
+                            'fields' => ['title^5', 'excerpt^3', 'content^1', 'categories_names^2', 'tags_names^2'],
+                            'type' => 'best_fields',
+                            'operator' => 'and',
+                            'analyzer' => (string) BlogService::getConfig('es.analyzer', 'standard'),
+                            'fuzziness' => 'AUTO',
+                        ],
+                    ],
+                ],
+                'should' => [
+                    // 标题短语匹配，较高权重（保留），去除对不存在的 title.keyword 精确匹配以避免400
+                    // 标题短语匹配，较高权重
+                    [
+                        'match_phrase' => [
+                            'title' => [
+                                'query' => $keyword,
+                                'boost' => 12,
+                            ],
+                        ],
+                    ],
+                    // 标题前缀短语匹配，辅助提升
+                    [
+                        'match_phrase_prefix' => [
+                            'title' => [
+                                'query' => $keyword,
+                                'boost' => 8,
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        // 添加时间范围过滤器
+        if (!empty($date)) {
+            $dateFilter = self::buildDateFilter($date);
+            if ($dateFilter) {
+                $queryPayload['bool']['filter'] = $dateFilter;
+            }
+        }
+
         $payload = [
             'from' => $from,
             'size' => $perPage,
@@ -364,43 +419,7 @@ class ElasticService
             '_source' => ['id', 'title', 'content'],
             // 可选：不返回 stored_fields
             'stored_fields' => [],
-            'query' => [
-                'bool' => [
-                    'must' => [
-                        [
-                            'multi_match' => [
-                                'query' => $keyword,
-                                'fields' => ['title^5', 'excerpt^3', 'content^1', 'categories_names^2', 'tags_names^2'],
-                                'type' => 'best_fields',
-                                'operator' => 'and',
-                                'analyzer' => (string) BlogService::getConfig('es.analyzer', 'standard'),
-                                'fuzziness' => 'AUTO',
-                            ],
-                        ],
-                    ],
-                    'should' => [
-                        // 标题短语匹配，较高权重（保留），去除对不存在的 title.keyword 精确匹配以避免400
-                        // 标题短语匹配，较高权重
-                        [
-                            'match_phrase' => [
-                                'title' => [
-                                    'query' => $keyword,
-                                    'boost' => 12,
-                                ],
-                            ],
-                        ],
-                        // 标题前缀短语匹配，辅助提升
-                        [
-                            'match_phrase_prefix' => [
-                                'title' => [
-                                    'query' => $keyword,
-                                    'boost' => 8,
-                                ],
-                            ],
-                        ],
-                    ],
-                ],
-            ],
+            'query' => $queryPayload,
             'highlight' => [
                 'pre_tags' => ['<em class="hl">'],
                 'post_tags' => ['</em>'],
@@ -456,6 +475,38 @@ class ElasticService
         CacheService::cache($ckey, $result, true, 45);
 
         return $result;
+    }
+
+    /**
+     * 构建时间范围过滤器
+     *
+     * @param string $date 时间范围参数 (如 '7d', '30d', '365d')
+     *
+     * @return array|null 时间范围过滤器数组
+     */
+    protected static function buildDateFilter(string $date): ?array
+    {
+        // 根据日期参数构建时间范围过滤器
+        $dateRanges = [
+            '7d' => 'now-7d/d',
+            '30d' => 'now-30d/d',
+            '365d' => 'now-365d/d',
+        ];
+
+        if (isset($dateRanges[$date])) {
+            return [
+                [
+                    'range' => [
+                        'created_at' => [
+                            'gte' => $dateRanges[$date],
+                            'lt' => 'now/d',
+                        ],
+                    ],
+                ],
+            ];
+        }
+
+        return null;
     }
 
     /**

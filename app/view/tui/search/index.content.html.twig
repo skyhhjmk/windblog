@@ -87,6 +87,18 @@
                         </a>
                     {% endfor %}
                 </div>
+
+                <!-- Date Range Filter -->
+                <div class="flex gap-2">
+                    <span class="text-gray-500">Date:</span>
+                    {% set dates = {'':'All','7d':'7 Days','30d':'30 Days','365d':'365 Days'} %}
+                    {% for dk,dl in dates %}
+                        <a href="/search?q={{ search_keyword|url_encode }}&type={{ currentType }}{% if search_sort is defined and search_sort %}&sort={{ search_sort }}{% endif %}{% if dk %}&date={{ dk }}{% endif %}"
+                           class="{{ (search_date|default('')==dk) ? 'text-green-500 font-bold' : 'text-gray-400 hover:text-white' }}">
+                            [{{ dl }}]
+                        </a>
+                    {% endfor %}
+                </div>
             </div>
         </div>
 

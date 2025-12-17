@@ -2353,7 +2353,7 @@
 
         if (!searchInput || !searchResults || !searchForm) return;
 
-        // AJAX 内联筛选当前类型
+        // AJAX 内联筛选当前类型和时间范围
         let inlineType = (function () {
             try {
                 const allowed = ['all', 'post', 'tag', 'category'];
@@ -2362,6 +2362,16 @@
                 return allowed.includes(t) ? t : 'all';
             } catch (e) {
                 return 'all';
+            }
+        })();
+
+        // 获取当前时间范围参数
+        let inlineDate = (function () {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                return params.get('date') || '';
+            } catch (e) {
+                return '';
             }
         })();
 
@@ -2393,7 +2403,12 @@
                     }
                 }
                 currentController = new AbortController();
-                fetch('/search/ajax?q=' + encodeURIComponent(keyword) + '&type=' + encodeURIComponent(inlineType), {signal: currentController.signal})
+                // 构造包含时间范围参数的URL
+                let url = '/search/ajax?q=' + encodeURIComponent(keyword) + '&type=' + encodeURIComponent(inlineType);
+                if (inlineDate) {
+                    url += '&date=' + encodeURIComponent(inlineDate);
+                }
+                fetch(url, {signal: currentController.signal})
                     .then(response => response.json())
                     .then(data => {
                         document.getElementById('searchLoading').classList.add('hidden');
@@ -2624,7 +2639,12 @@
                     const keyword = (searchInput.value || '').trim();
                     if (keyword.length < 3) return;
                     document.getElementById('searchLoading').classList.remove('hidden');
-                    fetch('/search/ajax?q=' + encodeURIComponent(keyword) + '&type=' + encodeURIComponent(inlineType))
+                    // 构造包含时间范围参数的URL
+                    let url = '/search/ajax?q=' + encodeURIComponent(keyword) + '&type=' + encodeURIComponent(inlineType);
+                    if (inlineDate) {
+                        url += '&date=' + encodeURIComponent(inlineDate);
+                    }
+                    fetch(url)
                         .then(resp => resp.json())
                         .then(data => {
                             document.getElementById('searchLoading').classList.add('hidden');
@@ -2708,7 +2728,7 @@
             e.preventDefault();
         });
 
-        // 在 PJAX 完成后重置搜索导航标记，并同步内联筛选类型
+        // 在 PJAX 完成后重置搜索导航标记，并同步内联筛选类型和时间范围
         document.addEventListener('page:ready', function () {
             searchNavigating = false;
             try {
@@ -2716,6 +2736,8 @@
                 const params = new URLSearchParams(window.location.search);
                 const t = (params.get('type') || 'all').toLowerCase();
                 if (allowed.includes(t)) inlineType = t;
+                // 同步时间范围参数
+                inlineDate = params.get('date') || '';
             } catch (e) {
             }
         });

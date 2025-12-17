@@ -48,22 +48,35 @@ class SearchController
         $sort = (string) $request->get('sort', '');
         $date = (string) $request->get('date', '');
 
+        // 验证搜索类型
+        if (!in_array($type, ['all', 'post', 'tag', 'category'], true)) {
+            $type = 'all';
+        }
+
+        // 如果搜索类型不是文章，则直接搜索标签或分类
+        if ($type === 'tag') {
+            return $this->searchTags($request, $keyword, $page);
+        } elseif ($type === 'category') {
+            return $this->searchCategories($request, $keyword, $page);
+        }
+
         // 构建筛选条件
         $filters = [];
         if (!empty($keyword)) {
             $filters['search'] = $keyword;
         }
-        if (in_array($type, ['post', 'tag', 'category'], true)) {
-            $filters['type'] = $type;
-        } else {
-            $type = 'all';
-        }
 
-        // 调用博客服务获取文章数据
-        // 传入排序到服务层；date 暂作为前端参数保留（服务层如需可后续支持）
+        // 添加排序和时间范围筛选条件
         if (!empty($sort)) {
             $filters['sort'] = $sort;
         }
+
+        // 处理时间范围参数
+        if (!empty($date)) {
+            $filters['date'] = $date;
+        }
+
+        // 调用博客服务获取文章数据
         $result = BlogService::getBlogPosts($page, $filters);
 
         // ES启用且指定类型时：在ES命中集合基础上按标签/分类名称进行二次过滤
@@ -241,6 +254,258 @@ class SearchController
     }
 
     /**
+     * 搜索标签
+     *
+     * @param Request $request 请求对象
+     * @param string  $keyword 搜索关键词
+     * @param int     $page    页码
+     *
+     * @return Response
+     * @throws Throwable
+     */
+    protected function searchTags(Request $request, string $keyword, int $page = 1): Response
+    {
+        $tags = [];
+        $totalCount = 0;
+        $esMeta = [];
+
+        // 尝试使用 ES 搜索标签
+        $esEnabled = (bool) BlogService::getConfig('es.enabled', false);
+        if ($esEnabled && !empty($keyword)) {
+            try {
+                $tags = ElasticService::searchTags($keyword, 100);
+                $totalCount = count($tags);
+                $esMeta = ['signals' => []];
+            } catch (Throwable $e) {
+                // ES 搜索失败，回退到数据库搜索
+                $esEnabled = false;
+            }
+        }
+
+        // 数据库搜索标签
+        if (!$esEnabled && !empty($keyword)) {
+            try {
+                $kwLower = mb_strtolower($keyword);
+                $tagsQuery = Tag::where(function ($q) use ($kwLower) {
+                    $q->whereRaw('LOWER(name) like ?', ['%' . $kwLower . '%'])
+                        ->orWhereRaw('LOWER(slug) like ?', ['%' . $kwLower . '%']);
+                });
+
+                $totalCount = $tagsQuery->count();
+                $tags = $tagsQuery->forPage($page, 100)->get(['id', 'name', 'slug'])->toArray();
+            } catch (Throwable $e) {
+                // 数据库搜索也失败
+                $tags = [];
+                $totalCount = 0;
+            }
+        }
+
+        // AMP 渲染
+        if ($this->isAmpRequest($request)) {
+            $siteUrl = $request->host();
+            $canonicalUrl = 'https://' . $siteUrl . '/search?q=' . rawurlencode($keyword) . '&type=tag';
+            $postsPerPage = 100;
+            $totalPages = max(1, (int) ceil($totalCount / max(1, $postsPerPage)));
+
+            return view('search/index.amp', [
+                'page_title' => "搜索标签: {$keyword}",
+                'posts' => collect($tags)->map(function ($tag) {
+                    return [
+                        'id' => $tag['id'],
+                        'title' => $tag['name'],
+                        'slug' => $tag['slug'],
+                        'url' => '/tag/' . $tag['slug'] . '.html',
+                    ];
+                }),
+                'amp_pagination' => [
+                    'current_page' => $page,
+                    'total_pages' => $totalPages,
+                ],
+                'search_keyword' => $keyword,
+                'search_type' => 'tag',
+                'search_sort' => '',
+                'search_date' => '',
+                'canonical_url' => $canonicalUrl,
+                'request' => $request,
+            ]);
+        }
+
+        // 获取博客标题
+        $blog_title = BlogService::getBlogTitle();
+
+        // 获取侧边栏内容
+        $sidebar = SidebarService::getSidebarContent($request, 'search');
+        $suggestTitles = !empty($keyword) ? ElasticService::suggestTitles($keyword, 5) : [];
+
+        // 生成分页HTML
+        $pagination_html = PaginationService::generatePagination(
+            $page,
+            $totalCount,
+            100,
+            'search.page',
+            [
+                'q' => $keyword,
+                'type' => 'tag',
+            ]
+        );
+
+        // 生成面包屑导航
+        $breadcrumbs = BreadcrumbHelper::forSearch($keyword);
+
+        // 动态选择模板
+        $viewName = PJAXHelper::isPJAX($request) ? 'search/index.content' : 'search/index';
+
+        return view($viewName, [
+            'page_title' => "搜索标签: {$keyword} - {$blog_title}",
+            'posts' => collect($tags)->map(function ($tag) {
+                return [
+                    'id' => $tag['id'],
+                    'title' => $tag['name'],
+                    'slug' => $tag['slug'],
+                    'url' => '/tag/' . $tag['slug'] . '.html',
+                ];
+            }),
+            'pagination' => $pagination_html,
+            'sidebar' => $sidebar,
+            'search_keyword' => $keyword,
+            'search_type' => 'tag',
+            'search_sort' => '',
+            'search_date' => '',
+            'esMeta' => $esMeta,
+            'suggest_titles' => $suggestTitles,
+            'totalCount' => $totalCount,
+            'breadcrumbs' => $breadcrumbs,
+        ]);
+    }
+
+    /**
+     * 搜索分类
+     *
+     * @param Request $request 请求对象
+     * @param string  $keyword 搜索关键词
+     * @param int     $page    页码
+     *
+     * @return Response
+     * @throws Throwable
+     */
+    protected function searchCategories(Request $request, string $keyword, int $page = 1): Response
+    {
+        $categories = [];
+        $totalCount = 0;
+        $esMeta = [];
+
+        // 尝试使用 ES 搜索分类
+        $esEnabled = (bool) BlogService::getConfig('es.enabled', false);
+        if ($esEnabled && !empty($keyword)) {
+            try {
+                $categories = ElasticService::searchCategories($keyword, 100);
+                $totalCount = count($categories);
+                $esMeta = ['signals' => []];
+            } catch (Throwable $e) {
+                // ES 搜索失败，回退到数据库搜索
+                $esEnabled = false;
+            }
+        }
+
+        // 数据库搜索分类
+        if (!$esEnabled && !empty($keyword)) {
+            try {
+                $kwLower = mb_strtolower($keyword);
+                $categoriesQuery = Category::where(function ($q) use ($kwLower) {
+                    $q->whereRaw('LOWER(name) like ?', ['%' . $kwLower . '%'])
+                        ->orWhereRaw('LOWER(slug) like ?', ['%' . $kwLower . '%']);
+                });
+
+                $totalCount = $categoriesQuery->count();
+                $categories = $categoriesQuery->forPage($page, 100)->get(['id', 'name', 'slug'])->toArray();
+            } catch (Throwable $e) {
+                // 数据库搜索也失败
+                $categories = [];
+                $totalCount = 0;
+            }
+        }
+
+        // AMP 渲染
+        if ($this->isAmpRequest($request)) {
+            $siteUrl = $request->host();
+            $canonicalUrl = 'https://' . $siteUrl . '/search?q=' . rawurlencode($keyword) . '&type=category';
+            $postsPerPage = 100;
+            $totalPages = max(1, (int) ceil($totalCount / max(1, $postsPerPage)));
+
+            return view('search/index.amp', [
+                'page_title' => "搜索分类: {$keyword}",
+                'posts' => collect($categories)->map(function ($category) {
+                    return [
+                        'id' => $category['id'],
+                        'title' => $category['name'],
+                        'slug' => $category['slug'],
+                        'url' => '/category/' . $category['slug'] . '.html',
+                    ];
+                }),
+                'amp_pagination' => [
+                    'current_page' => $page,
+                    'total_pages' => $totalPages,
+                ],
+                'search_keyword' => $keyword,
+                'search_type' => 'category',
+                'search_sort' => '',
+                'search_date' => '',
+                'canonical_url' => $canonicalUrl,
+                'request' => $request,
+            ]);
+        }
+
+        // 非 AMP 渲染
+
+        // 获取博客标题
+        $blog_title = BlogService::getBlogTitle();
+
+        // 获取侧边栏内容
+        $sidebar = SidebarService::getSidebarContent($request, 'search');
+        $suggestTitles = !empty($keyword) ? ElasticService::suggestTitles($keyword, 5) : [];
+
+        // 生成分页HTML
+        $pagination_html = PaginationService::generatePagination(
+            $page,
+            $totalCount,
+            100,
+            'search.page',
+            [
+                'q' => $keyword,
+                'type' => 'category',
+            ]
+        );
+
+        // 生成面包屑导航
+        $breadcrumbs = BreadcrumbHelper::forSearch($keyword);
+
+        // 动态选择模板
+        $viewName = PJAXHelper::isPJAX($request) ? 'search/index.content' : 'search/index';
+
+        return view($viewName, [
+            'page_title' => "搜索分类: {$keyword} - {$blog_title}",
+            'posts' => collect($categories)->map(function ($category) {
+                return [
+                    'id' => $category['id'],
+                    'title' => $category['name'],
+                    'slug' => $category['slug'],
+                    'url' => '/category/' . $category['slug'] . '.html',
+                ];
+            }),
+            'pagination' => $pagination_html,
+            'sidebar' => $sidebar,
+            'search_keyword' => $keyword,
+            'search_type' => 'category',
+            'search_sort' => '',
+            'search_date' => '',
+            'esMeta' => $esMeta,
+            'suggest_titles' => $suggestTitles,
+            'totalCount' => $totalCount,
+            'breadcrumbs' => $breadcrumbs,
+        ]);
+    }
+
+    /**
      * AJAX搜索接口
      *
      * @param Request $request 请求对象
@@ -254,6 +519,8 @@ class SearchController
     {
         $keyword = $request->get('q', '');
         $type = strtolower((string) $request->get('type', 'all'));
+        $date = (string) $request->get('date', '');
+
         if (!in_array($type, ['all', 'post', 'tag', 'category'], true)) {
             $type = 'all';
         }
@@ -263,57 +530,20 @@ class SearchController
                 ->withHeader('Content-Type', 'application/json');
         }
 
-        // 构建筛选条件
-        $filters = ['search' => $keyword];
-        if ($type !== 'all') {
-            $filters['type'] = $type;
-        }
-
         try {
-            // 获取第一页文章搜索结果
-            $result = BlogService::getBlogPosts(1, ['search' => $keyword]);
-            $postsArray = $result['posts']->toArray();
-            $hlMap = $result['esMeta']['highlights'] ?? [];
-            $signals = $result['esMeta']['signals'] ?? [];
+            $mixedItems = [];
+            $signals = [];
 
-            // 构造文章类条目（不返回长摘要详情，仅附带类型与分类/标签）
-            $postItems = array_map(function ($post) use ($hlMap) {
-                $pid = (int) $post['id'];
-                $titleHl = $hlMap[$pid]['title'][0] ?? null;
-                // 分类与标签（如存在）
-                $categories = [];
-                if (!empty($post['categories']) && is_array($post['categories'])) {
-                    foreach ($post['categories'] as $c) {
-                        $categories[] = ['name' => $c['name'] ?? '', 'slug' => $c['slug'] ?? ''];
-                    }
-                }
-                $tags = [];
-                if (!empty($post['tags']) && is_array($post['tags'])) {
-                    foreach ($post['tags'] as $t) {
-                        $tags[] = ['name' => $t['name'] ?? '', 'slug' => $t['slug'] ?? ''];
-                    }
-                }
-
-                return [
-                    'type' => 'post',
-                    'id' => $post['id'],
-                    'title' => $post['title'],
-                    'highlight_title' => $titleHl,
-                    'url' => '/post/' . $post['slug'] . '.html',
-                    'categories' => $categories,
-                    'tags' => $tags,
-                ];
-            }, $postsArray);
-
-            // 标签与分类匹配：ES启用时调用 ElasticService 专用方法，未启用时回退DB模糊匹配
-            $mixedItems = $postItems;
-            $esEnabled = (bool) BlogService::getConfig('es.enabled', false);
-            if ($esEnabled) {
-                // 仅在 ES 服务降级时才对标签进行数据库回退；空结果不视为失败
-                if ($type === 'all' || $type === 'tag') {
+            // 根据搜索类型进行不同的处理
+            if ($type === 'tag') {
+                // 搜索标签
+                $esEnabled = (bool) BlogService::getConfig('es.enabled', false);
+                if ($esEnabled) {
                     $tags = ElasticService::searchTags($keyword, 10);
-                    $degraded = !empty($signals['degraded']);
-                    if ($degraded && empty($tags)) {
+                    $degraded = false;
+                    if (empty($tags)) {
+                        $degraded = true;
+                        // ES未找到结果，回退到数据库搜索
                         try {
                             $kwLower = mb_strtolower($keyword);
                             $tagModel = Tag::where(function ($q) use ($kwLower) {
@@ -326,6 +556,7 @@ class SearchController
                         } catch (Throwable $e) {
                         }
                     }
+
                     foreach ($tags as $t) {
                         $mixedItems[] = [
                             'type' => 'tag',
@@ -334,36 +565,12 @@ class SearchController
                             'url' => '/tag/' . (string) ($t['slug'] ?? '') . '.html',
                         ];
                     }
-                }
-                // 仅在 ES 服务降级时才对分类进行数据库回退；空结果不视为失败
-                if ($type === 'all' || $type === 'category') {
-                    $cats = ElasticService::searchCategories($keyword, 10);
-                    $degraded = !empty($signals['degraded']);
-                    if ($degraded && empty($cats)) {
-                        try {
-                            $kwLower = mb_strtolower($keyword);
-                            $catModel = Category::where(function ($q) use ($kwLower) {
-                                $q->whereRaw('LOWER(name) like ?', ['%' . $kwLower . '%'])
-                                    ->orWhereRaw('LOWER(slug) like ?', ['%' . $kwLower . '%']);
-                            })->limit(10)->get(['id', 'name', 'slug']);
-                            foreach ($catModel as $c) {
-                                $cats[] = ['id' => (int) $c->id, 'name' => (string) $c->name, 'slug' => (string) $c->slug];
-                            }
-                        } catch (Throwable $e) {
-                        }
+
+                    if ($degraded) {
+                        $signals['degraded'] = true;
                     }
-                    foreach ($cats as $c) {
-                        $mixedItems[] = [
-                            'type' => 'category',
-                            'id' => (int) ($c['id'] ?? 0),
-                            'title' => (string) ($c['name'] ?? ''),
-                            'url' => '/category/' . (string) ($c['slug'] ?? '') . '.html',
-                        ];
-                    }
-                }
-            } else {
-                // ES未启用：沿用DB模糊匹配
-                if ($type === 'all' || $type === 'tag') {
+                } else {
+                    // ES未启用：使用数据库模糊匹配
                     try {
                         $kwLower = mb_strtolower($keyword);
                         $tagModel = Tag::where(function ($q) use ($kwLower) {
@@ -381,7 +588,42 @@ class SearchController
                     } catch (Throwable $e) {
                     }
                 }
-                if ($type === 'all' || $type === 'category') {
+            } elseif ($type === 'category') {
+                // 搜索分类
+                $esEnabled = (bool) BlogService::getConfig('es.enabled', false);
+                if ($esEnabled) {
+                    $cats = ElasticService::searchCategories($keyword, 10);
+                    $degraded = false;
+                    if (empty($cats)) {
+                        $degraded = true;
+                        // ES未找到结果，回退到数据库搜索
+                        try {
+                            $kwLower = mb_strtolower($keyword);
+                            $catModel = Category::where(function ($q) use ($kwLower) {
+                                $q->whereRaw('LOWER(name) like ?', ['%' . $kwLower . '%'])
+                                    ->orWhereRaw('LOWER(slug) like ?', ['%' . $kwLower . '%']);
+                            })->limit(10)->get(['id', 'name', 'slug']);
+                            foreach ($catModel as $c) {
+                                $cats[] = ['id' => (int) $c->id, 'name' => (string) $c->name, 'slug' => (string) $c->slug];
+                            }
+                        } catch (Throwable $e) {
+                        }
+                    }
+
+                    foreach ($cats as $c) {
+                        $mixedItems[] = [
+                            'type' => 'category',
+                            'id' => (int) ($c['id'] ?? 0),
+                            'title' => (string) ($c['name'] ?? ''),
+                            'url' => '/category/' . (string) ($c['slug'] ?? '') . '.html',
+                        ];
+                    }
+
+                    if ($degraded) {
+                        $signals['degraded'] = true;
+                    }
+                } else {
+                    // ES未启用：使用数据库模糊匹配
                     try {
                         $kwLower = mb_strtolower($keyword);
                         $catModel = Category::where(function ($q) use ($kwLower) {
@@ -399,10 +641,148 @@ class SearchController
                     } catch (Throwable $e) {
                     }
                 }
+            } else {
+                // 搜索文章和其他类型
+                $filters = ['search' => $keyword];
+
+                // 添加时间范围筛选条件
+                if (!empty($date)) {
+                    $filters['date'] = $date;
+                }
+
+                $result = BlogService::getBlogPosts(1, $filters);
+                $postsArray = $result['posts']->toArray();
+                $hlMap = $result['esMeta']['highlights'] ?? [];
+                $signals = $result['esMeta']['signals'] ?? [];
+
+                // 构造文章类条目（不返回长摘要详情，仅附带类型与分类/标签）
+                $postItems = array_map(function ($post) use ($hlMap) {
+                    $pid = (int) $post['id'];
+                    $titleHl = $hlMap[$pid]['title'][0] ?? null;
+                    // 分类与标签（如存在）
+                    $categories = [];
+                    if (!empty($post['categories']) && is_array($post['categories'])) {
+                        foreach ($post['categories'] as $c) {
+                            $categories[] = ['name' => $c['name'] ?? '', 'slug' => $c['slug'] ?? ''];
+                        }
+                    }
+                    $tags = [];
+                    if (!empty($post['tags']) && is_array($post['tags'])) {
+                        foreach ($post['tags'] as $t) {
+                            $tags[] = ['name' => $t['name'] ?? '', 'slug' => $t['slug'] ?? ''];
+                        }
+                    }
+
+                    return [
+                        'type' => 'post',
+                        'id' => $post['id'],
+                        'title' => $post['title'],
+                        'highlight_title' => $titleHl,
+                        'url' => '/post/' . $post['slug'] . '.html',
+                        'categories' => $categories,
+                        'tags' => $tags,
+                    ];
+                }, $postsArray);
+
+                // 标签与分类匹配：ES启用时调用 ElasticService 专用方法，未启用时回退DB模糊匹配
+                $mixedItems = $postItems;
+                $esEnabled = (bool) BlogService::getConfig('es.enabled', false);
+                if ($esEnabled) {
+                    // 仅在 ES 服务降级时才对标签进行数据库回退；空结果不视为失败
+                    if ($type === 'all' || $type === 'tag') {
+                        $tags = ElasticService::searchTags($keyword, 10);
+                        $degraded = !empty($signals['degraded']);
+                        if ($degraded && empty($tags)) {
+                            try {
+                                $kwLower = mb_strtolower($keyword);
+                                $tagModel = Tag::where(function ($q) use ($kwLower) {
+                                    $q->whereRaw('LOWER(name) like ?', ['%' . $kwLower . '%'])
+                                        ->orWhereRaw('LOWER(slug) like ?', ['%' . $kwLower . '%']);
+                                })->limit(10)->get(['id', 'name', 'slug']);
+                                foreach ($tagModel as $t) {
+                                    $tags[] = ['id' => (int) $t->id, 'name' => (string) $t->name, 'slug' => (string) $t->slug];
+                                }
+                            } catch (Throwable $e) {
+                            }
+                        }
+                        foreach ($tags as $t) {
+                            $mixedItems[] = [
+                                'type' => 'tag',
+                                'id' => (int) ($t['id'] ?? 0),
+                                'title' => (string) ($t['name'] ?? ''),
+                                'url' => '/tag/' . (string) ($t['slug'] ?? '') . '.html',
+                            ];
+                        }
+                    }
+                    // 仅在 ES 服务降级时才对分类进行数据库回退；空结果不视为失败
+                    if ($type === 'all' || $type === 'category') {
+                        $cats = ElasticService::searchCategories($keyword, 10);
+                        $degraded = !empty($signals['degraded']);
+                        if ($degraded && empty($cats)) {
+                            try {
+                                $kwLower = mb_strtolower($keyword);
+                                $catModel = Category::where(function ($q) use ($kwLower) {
+                                    $q->whereRaw('LOWER(name) like ?', ['%' . $kwLower . '%'])
+                                        ->orWhereRaw('LOWER(slug) like ?', ['%' . $kwLower . '%']);
+                                })->limit(10)->get(['id', 'name', 'slug']);
+                                foreach ($catModel as $c) {
+                                    $cats[] = ['id' => (int) $c->id, 'name' => (string) $c->name, 'slug' => (string) $c->slug];
+                                }
+                            } catch (Throwable $e) {
+                            }
+                        }
+                        foreach ($cats as $c) {
+                            $mixedItems[] = [
+                                'type' => 'category',
+                                'id' => (int) ($c['id'] ?? 0),
+                                'title' => (string) ($c['name'] ?? ''),
+                                'url' => '/category/' . (string) ($c['slug'] ?? '') . '.html',
+                            ];
+                        }
+                    }
+                } else {
+                    // ES未启用：沿用DB模糊匹配
+                    if ($type === 'all' || $type === 'tag') {
+                        try {
+                            $kwLower = mb_strtolower($keyword);
+                            $tagModel = Tag::where(function ($q) use ($kwLower) {
+                                $q->whereRaw('LOWER(name) like ?', ['%' . $kwLower . '%'])
+                                    ->orWhereRaw('LOWER(slug) like ?', ['%' . $kwLower . '%']);
+                            })->limit(10)->get(['id', 'name', 'slug']);
+                            foreach ($tagModel as $t) {
+                                $mixedItems[] = [
+                                    'type' => 'tag',
+                                    'id' => (int) $t->id,
+                                    'title' => (string) $t->name,
+                                    'url' => '/tag/' . (string) $t->slug . '.html',
+                                ];
+                            }
+                        } catch (Throwable $e) {
+                        }
+                    }
+                    if ($type === 'all' || $type === 'category') {
+                        try {
+                            $kwLower = mb_strtolower($keyword);
+                            $catModel = Category::where(function ($q) use ($kwLower) {
+                                $q->whereRaw('LOWER(name) like ?', ['%' . $kwLower . '%'])
+                                    ->orWhereRaw('LOWER(slug) like ?', ['%' . $kwLower . '%']);
+                            })->limit(10)->get(['id', 'name', 'slug']);
+                            foreach ($catModel as $c) {
+                                $mixedItems[] = [
+                                    'type' => 'category',
+                                    'id' => (int) $c->id,
+                                    'title' => (string) $c->name,
+                                    'url' => '/category/' . (string) $c->slug . '.html',
+                                ];
+                            }
+                        } catch (Throwable $e) {
+                        }
+                    }
+                }
             }
 
             // 若指定了单一类型，则按类型过滤
-            if ($type !== 'all') {
+            if ($type !== 'all' && !in_array($type, ['post', 'tag', 'category'])) {
                 $mixedItems = array_values(array_filter($mixedItems, function ($it) use ($type) {
                     return $it['type'] === $type;
                 }));

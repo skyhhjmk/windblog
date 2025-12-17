@@ -159,6 +159,7 @@ class BlogService
                 'category' => self::applyCategoryFilter($query, $value),
                 'tag' => self::applyTagFilter($query, $value),
                 'author' => self::applyAuthorFilter($query, $value),
+                'date' => self::applyDateFilter($query, $value),
                 default => null,
             };
         }
@@ -208,6 +209,24 @@ class BlogService
     }
 
     /**
+     * 应用时间范围筛选
+     */
+    protected static function applyDateFilter($query, string $value): void
+    {
+        // 根据日期参数应用时间范围筛选
+        $dateRanges = [
+            '7d' => 7,
+            '30d' => 30,
+            '365d' => 365,
+        ];
+
+        if (isset($dateRanges[$value])) {
+            $days = $dateRanges[$value];
+            $query->where('created_at', '>=', now()->subDays($days));
+        }
+    }
+
+    /**
      * 尝试使用 ElasticSearch
      */
     protected static function tryElasticSearch(array $filters, int $page, int $perPage): ?array
@@ -220,7 +239,10 @@ class BlogService
             return null;
         }
 
-        return ElasticService::searchPosts((string) $filters['search'], $page, $perPage);
+        // 提取时间范围参数
+        $date = $filters['date'] ?? null;
+
+        return ElasticService::searchPosts((string) $filters['search'], $page, $perPage, $date);
     }
 
     /**

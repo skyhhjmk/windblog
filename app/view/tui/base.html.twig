@@ -200,6 +200,38 @@
             background: var(--accent) !important;
             height: 2px !important;
         }
+
+        /* Search Form Styles */
+        header form {
+            margin: 0;
+        }
+
+        header input[type="text"] {
+            background-color: var(--panel-bg) !important;
+            border: 1px solid var(--border) !important;
+            color: var(--fg) !important;
+            font-family: 'JetBrains Mono', monospace !important;
+            border-radius: 0 !important;
+            outline: none !important;
+        }
+
+        header input[type="text"]:focus {
+            border-color: var(--accent) !important;
+        }
+
+        header button[type="submit"] {
+            border: 1px solid var(--border) !important;
+            background: var(--panel-bg) !important;
+            color: var(--fg) !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            font-family: 'JetBrains Mono', monospace !important;
+        }
+
+        header button[type="submit"]:hover {
+            background: var(--selection) !important;
+            border-color: var(--accent) !important;
+        }
     </style>
 
     {% block extra_css %}{% endblock %}
@@ -219,10 +251,15 @@
         <nav class="hidden md:flex items-center gap-6">
             <a href="/">[Home]</a>
             <a href="/link">[Links]</a>
-            <div class="relative group">
+            <form action="/search" method="get" class="flex items-center gap-2">
+                <input type="text" name="q" placeholder="Search..." class="px-3 py-1 text-sm w-48">
+                <button type="submit" class="px-3 py-1 text-sm">[Search]</button>
+            </form>
+            <div class="relative" id="userMenuContainer">
                 <button id="userMenuBtn">[User]</button>
                 <div
-                    class="absolute right-0 top-full mt-2 w-48 bg-gray-50 border border-gray-200 hidden group-hover:block p-2 z-50">
+                    class="absolute right-0 top-full mt-2 w-48 bg-gray-50 border border-gray-200 hidden p-2 z-50"
+                    id="userDropdown">
                     <div id="userNotLoggedIn">
                         <a href="/user/login" class="block py-1">Login</a>
                         <a href="/user/register" class="block py-1">Register</a>
@@ -314,6 +351,39 @@
         }
 
         checkUserStatus();
+
+        // User Menu Dropdown
+        const userMenuBtn = document.getElementById('userMenuBtn');
+        const userDropdown = document.getElementById('userDropdown');
+        const userMenuContainer = document.getElementById('userMenuContainer');
+
+        if (userMenuBtn && userDropdown) {
+            let menuTimeout;
+
+            function showMenu() {
+                clearTimeout(menuTimeout);
+                userDropdown.classList.remove('hidden');
+            }
+
+            function hideMenu() {
+                menuTimeout = setTimeout(() => {
+                    userDropdown.classList.add('hidden');
+                }, 200);
+            }
+
+            userMenuBtn.addEventListener('mouseenter', showMenu);
+            userMenuBtn.addEventListener('mouseleave', hideMenu);
+
+            userDropdown.addEventListener('mouseenter', showMenu);
+            userDropdown.addEventListener('mouseleave', hideMenu);
+
+            // Click outside to close
+            document.addEventListener('click', function (e) {
+                if (!userMenuContainer.contains(e.target)) {
+                    userDropdown.classList.add('hidden');
+                }
+            });
+        }
     });
 
     // Logout
