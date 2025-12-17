@@ -126,6 +126,7 @@ class PJAXHelper
             'X-PJAX-Cache' => 'MISS',
             'X-PJAX-URL' => $request->url(),
             'X-PJAX-CONTAINER' => '#pjax-container', // 统一与前端容器选择器一致
+            'X-PJAX-Response' => '1', // 新增：给PJAX响应加Content标记，用于debug/防御式判断
             'Vary' => 'X-PJAX,X-Requested-With',
         ];
 

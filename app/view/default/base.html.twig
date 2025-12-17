@@ -1468,7 +1468,7 @@
             };
 
             // 动态加载响应中的外部资源（script[src] 与 link[rel=stylesheet]），避免PJAX丢失新依赖
-            function loadExternalAssets(responseHtml, docObj, $respObj) {
+            function loadExternalAssets(responseHtml, docObj) {
                 try {
                     const scripts = [];
                     const links = [];
@@ -1476,14 +1476,6 @@
                     if (docObj) {
                         docObj.querySelectorAll('script[src]').forEach(s => scripts.push(s.getAttribute('src')));
                         docObj.querySelectorAll('link[rel="stylesheet"][href]').forEach(l => links.push(l.getAttribute('href')));
-                    }
-                    if ($respObj && $respObj.length) {
-                        $respObj.find('script[src]').each(function () {
-                            scripts.push(this.getAttribute('src'));
-                        });
-                        $respObj.find('link[rel="stylesheet"][href]').each(function () {
-                            links.push(this.getAttribute('href'));
-                        });
                     }
 
                     const uniq = (arr) => Array.from(new Set(arr.filter(Boolean)));
@@ -1859,22 +1851,20 @@
                             pjaxConfig.progressBar.style.width = '70%';
                         }
 
-                        // 解析HTML获取内容（更鲁棒）
-                        const $resp = $(response);
                         let newContent = '';
                         let doc = null; // 在外层定义 doc 变量
+                        let byId = null;
                         try {
                             const parser = new DOMParser();
                             doc = parser.parseFromString(response, 'text/html');
-                            const byId = doc.getElementById('pjax-container');
+                            byId = doc.getElementById('pjax-container');
                             if (byId) {
+                                // 防止future script混入：移除容器中的所有script标签，避免第三方内容误伤
+                                byId.querySelectorAll('script').forEach(s => s.remove());
                                 newContent = byId.innerHTML || '';
                             }
                         } catch (e) {
                             console.warn('PJAX: 解析 HTML 失败', e);
-                        }
-                        if (!newContent) {
-                            newContent = $resp.find('#pjax-container').html();
                         }
 
                         if (newContent) {
@@ -1992,7 +1982,7 @@
 
                             // 加载外部资源（脚本与样式），确保新页面依赖就绪
                             try {
-                                loadExternalAssets(response, doc, $resp);
+                                loadExternalAssets(response, doc);
                             } catch (e) {
                             }
 
@@ -2020,8 +2010,9 @@
 
                             // 注入侧栏（若存在）
                             try {
-                                const sidebarHtml = $resp.find('#pjax-sidebar-html').html();
-                                if (sidebarHtml != null) {
+                                const sidebarHtmlEl = doc.getElementById('pjax-sidebar-html');
+                                if (sidebarHtmlEl) {
+                                    const sidebarHtml = sidebarHtmlEl.innerHTML;
                                     const sidebar = document.getElementById('sidebar-container');
                                     if (sidebar) {
                                         applySidebarDiff(sidebar, sidebarHtml);
@@ -2041,8 +2032,9 @@
                             }
 
                             // 更新页面标题
-                            const newTitle = $resp.filter('title').text();
-                            if (newTitle) {
+                            const newTitleEl = doc.querySelector('title');
+                            if (newTitleEl && newTitleEl.textContent) {
+                                const newTitle = newTitleEl.textContent;
                                 document.title = newTitle;
                                 const topbar = document.getElementById('topbarTitle');
                                 if (topbar) {

@@ -115,9 +115,9 @@ class PostController
                 }
             }
 
-            // 注入内嵌广告（非 AMP）
+            // 注入内嵌广告（非 AMP，非 PJAX）
             try {
-                if (!$isAmp) {
+                if (!$isAmp && !$isPjax) {
                     $postHtml = AdService::injectInlineAds((string) $postHtml, ['slug' => $post->slug]);
                 }
             } catch (\Throwable $e) {
@@ -261,9 +261,9 @@ class PostController
                     }
                 }
 
-                // 注入内嵌广告（非 AMP）
+                // 注入内嵌广告（非 AMP，非 PJAX）
                 try {
-                    if (!$isAmp) {
+                    if (!$isAmp && !$isPjax) {
                         $postHtml = AdService::injectInlineAds((string) $postHtml, ['slug' => $post->slug]);
                     }
                 } catch (\Throwable $e) {
