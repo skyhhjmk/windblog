@@ -11,7 +11,6 @@ use app\service\ElasticService;
 use app\service\ElasticSyncService;
 use Elastic\Elasticsearch\Exception\ClientResponseException;
 use support\Log;
-use support\Redis;
 use support\Request;
 use support\Response;
 use Throwable;
@@ -201,10 +200,10 @@ class ElasticController extends Base
         } elseif ($limit > 500) {
             $limit = 500;
         }
-        $total = (int) (Redis::lLen('es:sync:logs') ?: 0);
+        $total = ElasticSyncService::getSyncLogCount();
         $start = $offset;
         $end = $offset + $limit - 1;
-        $logs = Redis::lRange('es:sync:logs', $start, $end) ?: [];
+        $logs = ElasticSyncService::getSyncLogs($start, $end);
 
         return json([
             'success' => true,
@@ -218,7 +217,7 @@ class ElasticController extends Base
     // 清空同步日志
     public function clearLogs(Request $request): Response
     {
-        Redis::del('es:sync:logs');
+        ElasticSyncService::clearSyncLogs();
 
         return json(['success' => true]);
     }

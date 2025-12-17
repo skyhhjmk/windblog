@@ -12,6 +12,16 @@ use Throwable;
 class ElasticSyncService
 {
     /**
+     * 存储同步日志的静态数组
+     */
+    protected static array $syncLogs = [];
+
+    /**
+     * 同步日志最大条目数
+     */
+    protected const MAX_LOG_ENTRIES = 1000;
+
+    /**
      * 创建索引，支持选择分析器（standard 或 ik_max_word）
      */
     public static function createIndex(string $analyzer = 'standard'): bool
@@ -88,7 +98,7 @@ class ElasticSyncService
             $resp = ['ok' => false, 'status' => 0, 'error' => $e->getMessage()];
         }
         $msg = sprintf('[ES] createIndex analyzer=%s status=%s', $analyzer, $resp['status'] ?? 'n/a');
-        redis()->lPush('es:sync:logs', utc_now_string('Y-m-d H:i:s') . ' ' . $msg);
+        self::addSyncLog($msg);
         if (!$resp['ok']) {
             Log::warning('[ElasticSyncService] createIndex failed status=' . $resp['status'] . ' error=' . ($resp['error'] ?? ''));
 
@@ -205,7 +215,7 @@ class ElasticSyncService
             $resp = ['ok' => false, 'status' => 0, 'error' => $e->getMessage()];
         }
         $msg = sprintf('[ES] indexPost id=%d status=%s', (int) $post->id, $resp['status'] ?? 'n/a');
-        redis()->lPush('es:sync:logs', utc_now_string('Y-m-d H:i:s') . ' ' . $msg . (isset($resp['body']) ? ' body=' . json_encode($resp['body']) : ''));
+        self::addSyncLog($msg . (isset($resp['body']) ? ' body=' . json_encode($resp['body']) : ''));
         if (!$resp['ok']) {
             Log::warning('[ElasticSyncService] indexPost failed id=' . $post->id . ' status=' . $resp['status'] . ' error=' . ($resp['error'] ?? '') . (isset($resp['body']) ? ' body=' . json_encode($resp['body']) : ''));
 
@@ -237,7 +247,7 @@ class ElasticSyncService
                 'body' => $body,
             ];
             $response = $client->index($params);
-            redis()->lPush('es:sync:logs', utc_now_string('Y-m-d H:i:s') . ' [ES] indexTag id=' . (int) $tag->id . ' name=' . (string) $tag->name . ' status=200');
+            self::addSyncLog('[ES] indexTag id=' . (int) $tag->id . ' name=' . (string) $tag->name . ' status=200');
 
             return true;
         } catch (Throwable $e) {
@@ -269,7 +279,7 @@ class ElasticSyncService
                 'body' => $body,
             ];
             $response = $client->index($params);
-            redis()->lPush('es:sync:logs', date('Y-m-d H:i:s') . ' [ES] indexCategory id=' . (int) $category->id . ' name=' . (string) $category->name . ' status=200');
+            self::addSyncLog('[ES] indexCategory id=' . (int) $category->id . ' name=' . (string) $category->name . ' status=200');
 
             return true;
         } catch (Throwable $e) {
@@ -297,7 +307,7 @@ class ElasticSyncService
             $resp = ['ok' => false, 'status' => 0, 'error' => $e->getMessage()];
         }
         $msg = sprintf('[ES] deletePost id=%d status=%s', $id, $resp['status'] ?? 'n/a');
-        redis()->lPush('es:sync:logs', utc_now_string('Y-m-d H:i:s') . ' ' . $msg);
+        self::addSyncLog($msg);
         if (!$resp['ok']) {
             Log::warning('[ElasticSyncService] deletePost failed id=' . $id . ' status=' . $resp['status'] . ' error=' . ($resp['error'] ?? ''));
 
@@ -368,5 +378,58 @@ class ElasticSyncService
         }
 
         return '未知作者';
+    }
+
+    /**
+     * 添加同步日志到静态数组
+     */
+    protected static function addSyncLog(string $message): void
+    {
+        $timestamp = utc_now_string('Y-m-d H:i:s');
+        $logEntry = $timestamp . ' ' . $message;
+
+        // 添加到数组开头
+        array_unshift(self::$syncLogs, $logEntry);
+
+        // 限制数组大小
+        if (count(self::$syncLogs) > self::MAX_LOG_ENTRIES) {
+            array_pop(self::$syncLogs);
+        }
+    }
+
+    /**
+     * 获取同步日志数量
+     */
+    public static function getSyncLogCount(): int
+    {
+        return count(self::$syncLogs);
+    }
+
+    /**
+     * 获取指定范围的同步日志
+     *
+     * @param int $start 起始位置（从0开始）
+     * @param int $end   结束位置（包含）
+     *
+     * @return array 日志条目数组
+     */
+    public static function getSyncLogs(int $start = 0, int $end = 49): array
+    {
+        // 确保范围有效
+        $start = max(0, $start);
+        $end = max($start, $end);
+
+        // 从数组中提取指定范围的日志
+        $logs = array_slice(self::$syncLogs, $start, $end - $start + 1);
+
+        return $logs ?: [];
+    }
+
+    /**
+     * 清空同步日志
+     */
+    public static function clearSyncLogs(): void
+    {
+        self::$syncLogs = [];
     }
 }
