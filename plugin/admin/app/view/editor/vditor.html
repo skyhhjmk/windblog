@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html style="overflow: hidden; height: 100%;">
+
 <head>
     <meta charset="utf-8">
     <title>数据分析</title>
@@ -10,11 +11,14 @@
     <link href="/app/admin/demos/css/console2.css" rel="stylesheet"/>
     <link href="/app/admin/component/layui/css/layui.css" rel="stylesheet"/>
 </head>
+
 <body class="pear-container" style="overflow: hidden; height: 100%; margin: 0; padding: 0;">
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="/assets/css/font-awesome.css" rel="stylesheet">
 <script src="/assets/js/highlight.min.js"></script>
 <link rel="stylesheet" href="/assets/css/github-dark.min.css">
+<link href="/assets/css/s-block.css" rel="stylesheet">
+<script src="/assets/js/s-block-render.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vditor/3.11.1/index.min.css"
       integrity="sha512-Tj6qPPqMhdET85Eu0Hy663goieFRcOde8i0J3DT8L+wb0sSDfgzPwoAYW63yijDXFzrzxOSvPuXfjHqL07hVcg=="
       crossorigin="anonymous" referrerpolicy="no-referrer"/>
@@ -42,15 +46,18 @@
             <h1 class="text-lg font-bold text-gray-800" id="page-title">文章编辑</h1>
             <!-- 顶部操作按钮 -->
             <div class="flex items-center gap-2">
-                <button class="px-3 py-1.5 bg-purple-500 text-white text-sm rounded hover:bg-purple-600 transition-colors"
+                <button
+                        class="px-3 py-1.5 bg-purple-500 text-white text-sm rounded hover:bg-purple-600 transition-colors"
                         id="media-selector-btn">
                     <i class="fas fa-image mr-1"></i>插入媒体
                 </button>
-                <button class="px-3 py-1.5 bg-gray-600 text-white text-sm rounded hover:bg-gray-700 transition-colors"
+                <button
+                        class="px-3 py-1.5 bg-gray-600 text-white text-sm rounded hover:bg-gray-700 transition-colors"
                         id="save-draft-btn">
                     <i class="fas fa-save mr-1"></i>保存草稿
                 </button>
-                <button class="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
+                <button
+                        class="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
                         id="publish-btn">
                     <i class="fas fa-paper-plane mr-1"></i>发布
                 </button>
@@ -76,7 +83,8 @@
         </main>
 
         <!-- 右侧边栏 -->
-        <aside style="width: 320px; flex-shrink: 0; background: white; border-left: 1px solid #e5e7eb; overflow-y: auto;">
+        <aside
+                style="width: 320px; flex-shrink: 0; background: white; border-left: 1px solid #e5e7eb; overflow-y: auto;">
             <div style="padding: 12px; display: flex; flex-direction: column; gap: 12px;">
                 <!-- 统计信息卡片 -->
                 <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded p-3 border border-blue-100">
@@ -112,8 +120,10 @@
                     </div>
                     <div class="p-3 space-y-3">
                         <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1.5" for="post-status">状态</label>
-                            <select class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            <label class="block text-xs font-medium text-gray-600 mb-1.5"
+                                   for="post-status">状态</label>
+                            <select
+                                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     id="post-status">
                                 <option value="draft">草稿</option>
                                 <option value="published">已发布</option>
@@ -123,7 +133,8 @@
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1.5"
                                    for="post-visibility">可见性</label>
-                            <select class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            <select
+                                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     id="post-visibility">
                                 <option value="public">🌐 公开</option>
                                 <option value="private">🔒 私密</option>
@@ -133,9 +144,9 @@
                         <div class="hidden" id="password-field">
                             <label class="block text-xs font-medium text-gray-600 mb-1.5"
                                    for="post-password">密码</label>
-                            <input class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" id="post-password"
-                                   placeholder="留空不修改"
-                                   type="text">
+                            <input
+                                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    id="post-password" placeholder="留空不修改" type="text">
                         </div>
                     </div>
                 </div>
@@ -146,21 +157,25 @@
                         <i class="fas fa-sliders-h mr-2 text-gray-500"></i>文章选项
                     </h3>
                     <label class="flex items-center justify-between cursor-pointer group">
-                        <span class="text-sm text-gray-700 group-hover:text-gray-900 flex items-center">
-                            <i class="fas fa-comments mr-2 text-gray-400"></i>允许评论
-                        </span>
+                            <span class="text-sm text-gray-700 group-hover:text-gray-900 flex items-center">
+                                <i class="fas fa-comments mr-2 text-gray-400"></i>允许评论
+                            </span>
                         <div class="relative">
                             <input checked class="sr-only peer" id="allow-comments" type="checkbox">
-                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-400 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            <div
+                                    class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-400 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600">
+                            </div>
                         </div>
                     </label>
                     <label class="flex items-center justify-between cursor-pointer group">
-                        <span class="text-sm text-gray-700 group-hover:text-gray-900 flex items-center">
-                            <i class="fas fa-star mr-2 text-gray-400"></i>精选文章
-                        </span>
+                            <span class="text-sm text-gray-700 group-hover:text-gray-900 flex items-center">
+                                <i class="fas fa-star mr-2 text-gray-400"></i>精选文章
+                            </span>
                         <div class="relative">
                             <input class="sr-only peer" id="post-featured" type="checkbox">
-                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-yellow-400 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-500"></div>
+                            <div
+                                    class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-yellow-400 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-500">
+                            </div>
                         </div>
                     </label>
                 </div>
@@ -174,7 +189,9 @@
                             </h3>
                             <label class="relative cursor-pointer">
                                 <input type="checkbox" id="ai-enabled" class="sr-only peer">
-                                <div class="w-9 h-5 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-amber-400 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+                                <div
+                                        class="w-9 h-5 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-amber-400 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500">
+                                </div>
                             </label>
                         </div>
                     </div>
@@ -190,13 +207,15 @@
 
                         <!-- 持久化开关 -->
                         <label class="flex items-center justify-between cursor-pointer group">
-                            <span class="text-sm text-gray-700 group-hover:text-gray-900 flex items-center">
-                                <i class="fas fa-lock mr-2 text-gray-400"></i>持久化摘要
-                                <span class="ml-2 text-xs text-gray-500">(不自动更新)</span>
-                            </span>
+                                <span class="text-sm text-gray-700 group-hover:text-gray-900 flex items-center">
+                                    <i class="fas fa-lock mr-2 text-gray-400"></i>持久化摘要
+                                    <span class="ml-2 text-xs text-gray-500">(不自动更新)</span>
+                                </span>
                             <div class="relative">
                                 <input class="sr-only peer" id="ai-persisted" type="checkbox">
-                                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-amber-400 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+                                <div
+                                        class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-amber-400 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500">
+                                </div>
                             </div>
                         </label>
 
@@ -204,18 +223,20 @@
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1.5"
                                    for="ai-summary">摘要内容</label>
-                            <textarea class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-400" id="ai-summary"
-                                      placeholder="可手动编辑或由AI生成"
-                                      rows="5"></textarea>
+                            <textarea
+                                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-400"
+                                    id="ai-summary" placeholder="可手动编辑或由AI生成" rows="5"></textarea>
                         </div>
 
                         <!-- 操作按钮 -->
                         <div class="flex gap-2">
-                            <button class="flex-1 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm rounded-md transition-colors flex items-center justify-center"
+                            <button
+                                    class="flex-1 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm rounded-md transition-colors flex items-center justify-center"
                                     id="ai-generate" type="button">
                                 <i class="fas fa-magic mr-1"></i>生成摘要
                             </button>
-                            <button class="flex-1 px-3 py-2 bg-green-500 hover:bg-green-600 text-white text-sm rounded-md transition-colors flex items-center justify-center"
+                            <button
+                                    class="flex-1 px-3 py-2 bg-green-500 hover:bg-green-600 text-white text-sm rounded-md transition-colors flex items-center justify-center"
                                     id="ai-save" type="button">
                                 <i class="fas fa-save mr-1"></i>保存摘要
                             </button>
@@ -232,15 +253,15 @@
                     </div>
                     <div class="p-3 space-y-2">
                         <div class="relative">
-                            <input class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer" id="categories-select"
-                                   placeholder="点击选择分类"
-                                   readonly type="text">
+                            <input
+                                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer"
+                                    id="categories-select" placeholder="点击选择分类" readonly type="text">
                             <div class="absolute z-50 hidden w-full left-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-64 overflow-hidden"
                                  id="categories-dropdown">
                                 <div class="p-2 border-b border-gray-200 bg-gray-50">
-                                    <input class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" id="categories-search"
-                                           placeholder="搜索分类..."
-                                           type="text">
+                                    <input
+                                            class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            id="categories-search" placeholder="搜索分类..." type="text">
                                 </div>
                                 <div class="p-2 overflow-y-auto max-h-52" id="categories-list"></div>
                             </div>
@@ -258,9 +279,9 @@
                     </div>
                     <div class="p-3 space-y-2">
                         <div class="relative">
-                            <input class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" id="tags-input"
-                                   placeholder="输入标签名称并按回车..."
-                                   type="text">
+                            <input
+                                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    id="tags-input" placeholder="输入标签名称并按回车..." type="text">
                             <div class="absolute z-50 hidden w-full left-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto"
                                  id="tags-suggestions"></div>
                         </div>
@@ -300,34 +321,32 @@
                     </div>
                     <div class="p-3 space-y-3">
                         <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1.5" for="seo-title">SEO标题</label>
-                            <input class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                                   id="seo-title"
-                                   maxlength="60"
-                                   placeholder="留空使用文章标题"
-                                   type="text">
+                            <label class="block text-xs font-medium text-gray-600 mb-1.5"
+                                   for="seo-title">SEO标题</label>
+                            <input
+                                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                                    id="seo-title" maxlength="60" placeholder="留空使用文章标题" type="text">
                             <div class="text-xs text-gray-500 mt-1">
                                 <span id="seo-title-count">0</span>/60 字符 (建议50-60字符)
                             </div>
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1.5" for="seo-description">SEO描述</label>
+                            <label class="block text-xs font-medium text-gray-600 mb-1.5"
+                                   for="seo-description">SEO描述</label>
                             <textarea
                                     class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                                      id="seo-description"
-                                      maxlength="160"
-                                      placeholder="留空使用AI摘要或文章摘要"
-                                      rows="3"></textarea>
+                                    id="seo-description" maxlength="160" placeholder="留空使用AI摘要或文章摘要"
+                                    rows="3"></textarea>
                             <div class="text-xs text-gray-500 mt-1">
                                 <span id="seo-description-count">0</span>/160 字符 (建议150-160字符)
                             </div>
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1.5" for="seo-keywords">SEO关键词</label>
-                            <input class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                                   id="seo-keywords"
-                                   placeholder="用英文逗号分隔，留空使用文章标签"
-                                   type="text">
+                            <label class="block text-xs font-medium text-gray-600 mb-1.5"
+                                   for="seo-keywords">SEO关键词</label>
+                            <input
+                                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                                    id="seo-keywords" placeholder="用英文逗号分隔，留空使用文章标签" type="text">
                             <div class="text-xs text-gray-500 mt-1">
                                 建议3-5个关键词
                             </div>
@@ -337,7 +356,8 @@
 
                 <!-- 快捷操作 -->
                 <div class="space-y-2">
-                    <button class="w-full px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm rounded transition-colors flex items-center justify-center border border-gray-300"
+                    <button
+                            class="w-full px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm rounded transition-colors flex items-center justify-center border border-gray-300"
                             id="clear-btn">
                         <i class="fas fa-trash-alt mr-2"></i>清除缓存
                     </button>
@@ -426,7 +446,88 @@
                 },
                 preview: {
                     markdown: {
-                        sanitize: true,
+                        sanitize: false, // 暂时关闭净化，防止干扰
+                    },
+                    transform(html) {
+                        // Debug: 查看 Vditor 传进来的 HTML 到底是什么样子的
+                        // console.log('Vditor Transform Input:', html);
+
+                        // 定义渲染函数（内联，防止缓存问题）
+                        const parseSBlocks = function (html) {
+                            // 匹配 <p>::type ...</p> ... <p>::end</p>
+                            // 注意：Vditor 的 HTML 可能包含 class="p" 或者其他属性，或者换行
+                            const regex = /<p[^>]*>\s*::([a-z0-9\-]+)([\s\S]*?)<\/p>([\s\S]*?)<p[^>]*>\s*::end\s*<\/p>/gi;
+
+                            return html.replace(regex, function (match, type, params, content) {
+                                // console.log("Catch S-Block:", type, params);
+
+                                let className = 's-block s-' + type;
+                                let attrs = `class="${className}"`;
+                                let tagName = 'div';
+                                let innerContent = content;
+
+                                params = params ? params.trim() : '';
+
+                                // --- 1. Handle Grid Columns ---
+                                if (type === 'grid' && params) {
+                                    let colsMatch = params.match(/(\d+)/);
+                                    if (colsMatch) {
+                                        attrs += ` style="--cols: ${colsMatch[1]}"`;
+                                    }
+                                }
+
+                                // --- 2. Handle Button ::btn [Text](url) ---
+                                if (type === 'btn') {
+                                    // 尝试匹配 HTML 链接 <a href="...">
+                                    let htmlLinkMatch = params.match(/<a\s+(?:[^>]*?\s+)?href=(["'])(.*?)\1[^>]*>(.*?)<\/a>/i);
+
+                                    if (htmlLinkMatch) {
+                                        tagName = 'a';
+                                        let btnUrl = htmlLinkMatch[2];
+                                        let btnText = htmlLinkMatch[3];
+                                        attrs += ` href="${btnUrl}"`;
+
+                                        // 如果这一行里没有内容，就用链接文字
+                                        let strippedContent = content.replace(/<[^>]+>/g, '').trim();
+                                        if (!strippedContent) {
+                                            innerContent = btnText;
+                                        }
+                                    }
+                                    // 尝试匹配 Markdown 链接 [Text](url)
+                                    else {
+                                        let mdLinkMatch = params.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+                                        if (mdLinkMatch) {
+                                            tagName = 'a';
+                                            let btnText = mdLinkMatch[1];
+                                            let btnUrl = mdLinkMatch[2];
+                                            attrs += ` href="${btnUrl}"`;
+
+                                            let strippedContent = content.replace(/<[^>]+>/g, '').trim();
+                                            if (!strippedContent) {
+                                                innerContent = btnText;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // --- 3. Handle Generic Attributes ---
+                                if (params) {
+                                    let titleMatch = params.match(/title=["'](.*?)["']/);
+                                    if (titleMatch) {
+                                        attrs += ` data-title="${titleMatch[1]}"`;
+                                    }
+                                }
+
+                                return `<${tagName} ${attrs}>${innerContent}</${tagName}>`;
+                            });
+                        };
+
+                        try {
+                            return parseSBlocks(html);
+                        } catch (e) {
+                            console.error('S-Block Transform Error:', e);
+                            return html;
+                        }
                     },
                     hljs: {
                         enable: true,
@@ -1964,4 +2065,5 @@
     });
 </script>
 </body>
+
 </html>

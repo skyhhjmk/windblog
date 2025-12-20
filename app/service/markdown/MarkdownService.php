@@ -3,6 +3,7 @@
 namespace app\service\markdown;
 
 use app\service\markdown\Contracts\MarkdownSyntaxInterface;
+use app\service\markdown\Extension\SBlock\SBlockExtension;
 use League\CommonMark\Environment\Environment;
 use League\CommonMark\Exception\CommonMarkException;
 use League\CommonMark\Extension\Autolink\AutolinkExtension;
@@ -96,6 +97,7 @@ class MarkdownService
         $this->environment->addExtension(new HeadingPermalinkExtension());
         $this->environment->addExtension(new DefaultAttributesExtension());
         $this->environment->addExtension(new DescriptionListExtension());
+        $this->environment->addExtension(new SBlockExtension());
 
         // 通过配置自动注册自定义扩展（可选）
         $this->registerConfiguredSyntaxExtensions();

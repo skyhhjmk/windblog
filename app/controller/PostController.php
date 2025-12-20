@@ -345,7 +345,7 @@ class PostController
                     [
                         'page_title' => $post['title'] . ' - ' . blog_config('title', 'WindBlog', true),
                         'post' => $post,
-                        'post_html' => HtmlSanitizer::sanitize($postHtml),
+                        'post_html' => $postHtml,
                         'author' => $authorName,
                         'sidebar' => $sidebar,
                         'breadcrumbs' => $breadcrumbs,
