@@ -28,6 +28,8 @@ use Webman\View;
  */
 class TwigTemplateService implements View
 {
+    private static array $availableThemes = [];
+
     /**
      * Assign.
      *
@@ -49,22 +51,25 @@ class TwigTemplateService implements View
      */
     private static function getAvailableThemes(string $viewPath): array
     {
-        $availableThemes = ['default']; // default 主题总是可用
-        $viewPathBase = rtrim($viewPath, '/') . '/';
+        if (empty(self::$availableThemes)) {
+            // 仅第一次访问时初始化
+            self::$availableThemes = ['default']; // default 主题总是可用
+            $viewPathBase = rtrim($viewPath, '/') . '/';
 
-        if (is_dir($viewPathBase)) {
-            $directories = scandir($viewPathBase);
-            if ($directories !== false) {
-                foreach ($directories as $directory) {
-                    // 跳过 . 和 .. 以及非目录项
-                    if ($directory !== '.' && $directory !== '..' && is_dir($viewPathBase . $directory)) {
-                        $availableThemes[] = $directory;
+            if (is_dir($viewPathBase)) {
+                $directories = scandir($viewPathBase);
+                if ($directories !== false) {
+                    foreach ($directories as $directory) {
+                        // 跳过 . 和 .. 以及非目录项
+                        if ($directory !== '.' && $directory !== '..' && is_dir($viewPathBase . $directory)) {
+                            self::$availableThemes[] = $directory;
+                        }
                     }
                 }
             }
         }
 
-        return array_unique($availableThemes);
+        return array_unique(self::$availableThemes);
     }
 
     /**
