@@ -31,59 +31,40 @@ use XMLReader;
 class WordpressImporter
 {
     /**
-     * 导入任务实例
-     *
-     * @var ImportJob
+     * @var ImportJob 导入任务实例
      */
     protected ImportJob $importJob;
 
     /**
-     * 导入选项
-     *
-     * @var array
+     * @var array 导入选项
      */
     protected mixed $options;
 
     /**
-     * 默认作者ID
-     *
-     * @var int
+     * @var int|null 默认作者 ID
      */
     protected mixed $defaultAuthorId;
 
     /**
-     * 媒体库服务实例
-     *
-     * @var MediaLibraryService
+     * @var MediaLibraryService 媒体库服务实例
      */
     protected MediaLibraryService $mediaLibraryService;
 
     /**
-     * 附件映射关系 [原始URL => 媒体信息]
-     *
-     * @var array
+     * @var array 附件映射 [原始 URL => 媒体信息]
      */
     protected array $attachmentMap = [];
 
     /**
-     * WordPress文章ID到新文章ID的映射关系
-     *
-     * @var array
+     * @var array WordPress 文章 ID 到新文章 ID 的映射
      */
     protected array $postIdMap = [];
 
     /**
-     * WordPress评论ID到新评论ID的映射关系
-     *
-     * @var array
+     * @var array WordPress 评论 ID 到新评论 ID 的映射
      */
     protected array $commentIdMap = [];
 
-    /**
-     * 构造函数
-     *
-     * @param ImportJob $importJob
-     */
     public function __construct(ImportJob $importJob)
     {
         $this->importJob = $importJob;
@@ -96,8 +77,6 @@ class WordpressImporter
 
     /**
      * 执行导入任务
-     *
-     * @return bool
      */
     public function execute(): bool
     {
@@ -181,13 +160,9 @@ class WordpressImporter
     }
 
     /**
-     * 读取XML文件并处理编码问题
-     *
-     * @param string $xmlFile
-     *
-     * @return string 文件内容
+     * 读取 XML 文件并处理编码问题
      */
-    protected function readXmlFileWithEncoding($xmlFile)
+    protected function readXmlFileWithEncoding($xmlFile): string
     {
         // 首先尝试直接读取文件
         $content = file_get_contents($xmlFile);
@@ -210,13 +185,9 @@ class WordpressImporter
     }
 
     /**
-     * 修复XML中的命名空间问题
-     *
-     * @param string $xmlFile
-     *
-     * @return string 修复后的文件路径
+     * 修复 XML 中的命名空间问题
      */
-    protected function fixXmlNamespaces($xmlFile)
+    protected function fixXmlNamespaces($xmlFile): string
     {
         try {
             Log::info('读取XML文件内容');
@@ -277,13 +248,9 @@ class WordpressImporter
     }
 
     /**
-     * 计算XML中项目总数
-     *
-     * @param string $xmlFile
-     *
-     * @return int
+     * 计算 XML 中项目总数
      */
-    protected function countItems($xmlFile)
+    protected function countItems($xmlFile): int
     {
         Log::info('计算XML项目数: ' . $xmlFile);
         $reader = new XMLReader();
@@ -307,12 +274,7 @@ class WordpressImporter
     }
 
     /**
-     * 第一阶段：处理所有附件，建立完整的附件映射关系
-     *
-     * @param string $xmlFile    XML文件路径
-     * @param int    $totalItems 总项目数
-     *
-     * @return void
+     * 第一阶段：处理所有附件，建立完整的附件映射
      */
     protected function processAllAttachments(string $xmlFile, int $totalItems): void
     {
@@ -480,7 +442,13 @@ class WordpressImporter
         // 检查原始文件名是否已经包含尺寸参数
         // WordPress缩略图格式：filename-{width}x{height}.ext
         // 例如：image-1706301607-1024x526.png, photo-150x150.jpg
-        $sizePattern = '/-(\d+)x(\d+)$/i';
+        // 注意：需要区分时间戳（通常是10位数字）和尺寸参数（通常是2-4位数字x2-4位数字）
+        // 时间戳格式：1746177998（10位）
+        // 尺寸格式：1024x526, 150x150, 300x200 等（宽高各2-4位）
+
+        // 改进的正则：只匹配末尾的尺寸参数，尺寸数字限制在2-4位，避免误匹配时间戳
+        // 支持多个连续的尺寸后缀（如 -1024x526-150x150）
+        $sizePattern = '/(-\\d{2,4}x\\d{2,4})+$/i';
 
         $baseFilename = $filename;
         $hasSizeInOriginal = false;
@@ -489,8 +457,11 @@ class WordpressImporter
             // 原始URL包含尺寸参数，提取基础文件名
             $baseFilename = preg_replace($sizePattern, '', $filename);
             $hasSizeInOriginal = true;
-            $originalWidth = $matches[1];
-            $originalHeight = $matches[2];
+
+            // 提取最后一个尺寸参数用于日志
+            preg_match('/(\\d{2,4})x(\\d{2,4})$/', $filename, $sizeMatches);
+            $originalWidth = $sizeMatches[1] ?? '';
+            $originalHeight = $sizeMatches[2] ?? '';
 
             Log::debug('检测到原始URL包含尺寸参数: ' . $originalWidth . 'x' . $originalHeight . ', 基础文件名: ' . $baseFilename);
 
@@ -528,7 +499,7 @@ class WordpressImporter
 
         // 保存一个特殊的通配符映射，用于后续匹配
         // 格式：{baseUrlPrefix}{baseFilename}-*x*.{extension}
-        $wildcardPattern = $baseUrlPrefix . $baseFilename . '-(\d+)x(\d+)\.' . $extension;
+        $wildcardPattern = $baseUrlPrefix . $baseFilename . '-(\d+)x(\d+).' . $extension;
 
         // 将通配符模式保存到映射表中，使用特殊标记
         $wildcardKey = '__PATTERN__' . $wildcardPattern;
@@ -545,7 +516,7 @@ class WordpressImporter
         }
 
         // 同时保存路径版本的通配符模式
-        $pathWildcardPattern = $baseDir . '/' . $baseFilename . '-(\d+)x(\d+)\.' . $extension;
+        $pathWildcardPattern = $baseDir . '/' . $baseFilename . '-(\d+)x(\d+).' . $extension;
         $pathWildcardKey = '__PATTERN__' . $pathWildcardPattern;
         if (!isset($this->attachmentMap[$pathWildcardKey])) {
             $this->attachmentMap[$pathWildcardKey] = array_merge($result, [
@@ -562,7 +533,7 @@ class WordpressImporter
         // 如果原始URL不包含尺寸参数，也生成通配符模式
         // 这样可以匹配该文件的所有尺寸变体
         if (!$hasSizeInOriginal) {
-            $wildcardPatternAlt = $baseUrlPrefix . $filename . '-(\d+)x(\d+)\.' . $extension;
+            $wildcardPatternAlt = $baseUrlPrefix . $filename . '-(\d+)x(\d+).' . $extension;
             $wildcardKeyAlt = '__PATTERN__' . $wildcardPatternAlt;
             if (!isset($this->attachmentMap[$wildcardKeyAlt])) {
                 $this->attachmentMap[$wildcardKeyAlt] = array_merge($result, [
@@ -577,7 +548,7 @@ class WordpressImporter
             }
 
             // 路径版本
-            $pathWildcardPatternAlt = $baseDir . '/' . $filename . '-(\d+)x(\d+)\.' . $extension;
+            $pathWildcardPatternAlt = $baseDir . '/' . $filename . '-(\d+)x(\d+).' . $extension;
             $pathWildcardKeyAlt = '__PATTERN__' . $pathWildcardPatternAlt;
             if (!isset($this->attachmentMap[$pathWildcardKeyAlt])) {
                 $this->attachmentMap[$pathWildcardKeyAlt] = array_merge($result, [
@@ -1759,18 +1730,28 @@ class WordpressImporter
 
         // 第四步：使用模式映射进行通配符替换
         foreach ($patternMappings as $patternInfo) {
-            if (empty($patternInfo['pattern']) || empty($patternInfo['id']) || empty($patternInfo['file_path'])) {
+            if (empty($patternInfo['id']) || empty($patternInfo['file_path'])) {
                 continue;
             }
 
-            $pattern = $patternInfo['pattern'];
             $newUrl = '/uploads/' . $patternInfo['file_path'];
             $mediaId = $patternInfo['id'];
 
-            // 构建正则表达式来匹配所有符合模式的URL
-            $regex = '/' . preg_quote($pattern, '/') . '/i';
-            // 将模式中的 (\d+)x(\d+) 替换为实际的正则表达式
-            $regex = str_replace('\(\\\d\+\)x\(\\\d\+\)', '(\d+)x(\d+)', $regex);
+            // 优先使用存储的组件构建正则表达式，避免 preg_quote 带来的双重转义问题
+            if (!empty($patternInfo['base_url_prefix']) && !empty($patternInfo['base_filename']) && !empty($patternInfo['extension'])) {
+                // 构建正则表达式：{prefix}{filename}-\d{2,4}x\d{2,4}(-\d{2,4}x\d{2,4})*\.{extension}
+                // 注意：尺寸数字限制在2-4位，避免误匹配时间戳（通常是10位数字）
+                // WordPress缩略图尺寸通常在10-9999之间，如：150x150, 1024x526, 300x200
+                $regex = '/' . preg_quote($patternInfo['base_url_prefix'] . $patternInfo['base_filename'], '/')
+                    . '(-\\d{2,4}x\\d{2,4})+' . preg_quote('.' . $patternInfo['extension'], '/') . '/i';
+            } elseif (!empty($patternInfo['pattern'])) {
+                // 回退到基于 pattern 字段构建 regex
+                $regex = '/' . preg_quote($patternInfo['pattern'], '/') . '/i';
+                // 尝试修复 pattern 中的 (\d+)x(\d+) 部分
+                $regex = str_replace(['\(\\d\+\)x\(\\d\+\)', '\(\\\d\+\)x\(\\\d\+\)'], '(\d+)x(\d+)', $regex);
+            } else {
+                continue;
+            }
 
             // 查找所有匹配的URL
             if (preg_match_all($regex, $content, $matches, PREG_SET_ORDER)) {
@@ -1847,8 +1828,8 @@ class WordpressImporter
                 $urls = array_merge($urls, $matches[2]);
             }
 
-            // 匹配直接的图片URL（以常见图片扩展名结尾）
-            preg_match_all('/https?:\/\/[^\s\)]+\.(?:jpe?g|png|gif|bmp|webp|svg|ico|tiff?|JPG|PNG|GIF|WEBP)(?:-\d+x\d+)?(?:\?[^\s\)]*)?/i', $content, $matches);
+            // 匹配直接的图片URL（以常见图片扩展名结尾，支持WordPress缩略图后缀）
+            preg_match_all('/https?:\/\/[^\s\)]+?(?:-\d+x\d+)*\.(?:jpe?g|png|gif|bmp|webp|svg|ico|tiff?|JPG|PNG|GIF|WEBP)(?:\?[^\s\)]*)?/i', $content, $matches);
             if (!empty($matches[0])) {
                 $urls = array_merge($urls, $matches[0]);
             }
@@ -1927,9 +1908,19 @@ class WordpressImporter
 
         // 检查模式匹配
         foreach ($this->attachmentMap as $key => $value) {
-            if (strpos($key, '__PATTERN__') === 0 && !empty($value['pattern'])) {
-                $pattern = '/' . str_replace('\(\\\d\+\)x\(\\\d\+\)', '(\d+)x(\d+)', preg_quote($value['pattern'], '/')) . '/i';
-                if (preg_match($pattern, $url)) {
+            if (strpos($key, '__PATTERN__') === 0 && !empty($value['id'])) {
+                if (!empty($value['base_url_prefix']) && !empty($value['base_filename']) && !empty($value['extension'])) {
+                    // 构建正则表达式：{prefix}{filename}-\d+x\d+(-\d+x\d+)*\.{extension}
+                    $regex = '/' . preg_quote($value['base_url_prefix'] . $value['base_filename'], '/')
+                        . '(-\d+x\d+)+' . preg_quote('.' . $value['extension'], '/') . '/i';
+                } elseif (!empty($value['pattern'])) {
+                    $regex = '/' . preg_quote($value['pattern'], '/') . '/i';
+                    $regex = str_replace(['\(\\d\+\)x\(\\d\+\)', '\(\\\d\+\)x\(\\\d\+\)'], '(\d+)x(\d+)', $regex);
+                } else {
+                    continue;
+                }
+
+                if (preg_match($regex, $url)) {
                     return true;
                 }
             }
@@ -1963,21 +1954,18 @@ class WordpressImporter
                 $content = preg_replace($pattern, '${1}' . $newUrl . '${2}', $content);
             }
         } else {
-            // Markdown替换
-            $patterns = [
-                '/!\[([^\]]*)\]\(' . preg_quote($originalUrl, '/') . '(?:\s+"[^"]*")?\)/i',
-                '/\[([^\]]*)\]\(' . preg_quote($originalUrl, '/') . '(?:\s+"[^"]*")?\)/i',
-            ];
+            // Markdown 替换
+            $quotedUrl = preg_quote($originalUrl, '/');
 
-            foreach ($patterns as $pattern) {
-                if (strpos($pattern, '!\[') !== false) {
-                    $content = preg_replace($pattern, '![$1](' . $newUrl . ')', $content);
-                } else {
-                    $content = preg_replace($pattern, '[$1](' . $newUrl . ')', $content);
-                }
-            }
+            // 图片链接替换
+            $imagePattern = '/!\\[([^\\]]*)\\]\\(' . $quotedUrl . '(?:\\s+\"[^\"]*\")?\\)/i';
+            $content = preg_replace($imagePattern, '![$1](' . $newUrl . ')', $content);
 
-            // 直接URL替换（大小写不敏感）
+            // 普通链接替换
+            $linkPattern = '/\\[([^\\]]*)\\]\\(' . $quotedUrl . '(?:\\s+\\"[^\\"]*\\")?\\)/i';
+            $content = preg_replace($linkPattern, '[$1](' . $newUrl . ')', $content);
+
+            // 直接 URL 替换
             $content = str_ireplace($originalUrl, $newUrl, $content);
         }
 
@@ -2405,36 +2393,72 @@ class WordpressImporter
      */
     protected function getBaseAttachmentUrl(string $url): string
     {
-        // 匹配WordPress带尺寸参数的图片URL模式
-        $sizePatterns = [
-            // 标准格式：-1024x526.png
-            '/-(\d+)x(\d+)(\.\w+)(?:[?#].*)?$/i',
-            // 可选尺寸参数：-1024x526-300x200.png
-            '/-\d+x\d+(-\d+x\d+)*\.(\w+)(?:[?#].*)?$/i',
-            // 其他可能的尺寸格式：_1024x526.png
-            '/_(\d+)x(\d+)(\.\w+)(?:[?#].*)?$/i',
-        ];
-
         // 解析URL
         $parsedUrl = parse_url($url);
         $path = $parsedUrl['path'] ?? $url;
         $query = isset($parsedUrl['query']) ? '?' . $parsedUrl['query'] : '';
         $fragment = isset($parsedUrl['fragment']) ? '#' . $parsedUrl['fragment'] : '';
 
-        // 尝试匹配并移除尺寸参数
-        foreach ($sizePatterns as $pattern) {
-            if (preg_match($pattern, $path, $matches)) {
-                // 找到尺寸参数，移除它
-                $basePath = preg_replace($pattern, '$3', $path);
+        // 获取文件名和扩展名
+        $pathInfo = pathinfo($path);
+        $dirname = $pathInfo['dirname'] ?? '';
+        $filename = $pathInfo['filename'] ?? '';
+        $extension = $pathInfo['extension'] ?? '';
+
+        if (empty($filename) || empty($extension)) {
+            Log::debug("URL不包含有效的文件名或扩展名，返回原URL: $url");
+
+            return $url;
+        }
+
+        // WordPress缩略图尺寸参数的正则模式
+        // 匹配末尾的 -数字x数字 格式，支持多个连续的尺寸参数（如 -1024x526-150x150）
+        // 注意：必须确保匹配的是真正的尺寸参数，而不是文件名中的时间戳
+        // WordPress尺寸参数特点：宽度和高度通常在50-4000之间，且宽高比例合理
+
+        // 首先尝试移除所有末尾的尺寸参数（支持多个连续的尺寸后缀）
+        $sizePattern = '/(-\d{2,4}x\d{2,4})+$/i';
+
+        if (preg_match($sizePattern, $filename, $matches)) {
+            // 找到尺寸参数，移除它们
+            $baseFilename = preg_replace($sizePattern, '', $filename);
+
+            // 确保移除后的文件名不为空
+            if (!empty($baseFilename)) {
+                $basePath = $dirname . '/' . $baseFilename . '.' . $extension;
 
                 // 重新构建完整URL
                 if (isset($parsedUrl['scheme']) && isset($parsedUrl['host'])) {
-                    $baseUrl = $parsedUrl['scheme'] . '://' . $parsedUrl['host'] . $basePath . $query . $fragment;
+                    $baseUrl = $parsedUrl['scheme'] . '://' . $parsedUrl['host'] . $basePath;
                 } else {
-                    $baseUrl = $basePath . $query . $fragment;
+                    $baseUrl = $basePath;
                 }
 
-                Log::debug("提取基础URL (移除尺寸参数): $url => $baseUrl");
+                Log::debug("提取基础URL (移除尺寸参数): $url => $baseUrl (移除了: {$matches[0]})");
+
+                return $baseUrl;
+            }
+        }
+
+        // 处理包含时间戳和尺寸参数的特殊情况，例如：image-1746177998-1024x526.png
+        // 这种情况下，只移除尺寸参数，保留时间戳
+        $timestampSizePattern = '/(-\d{2,4}x\d{2,4})+$/i';
+        if (preg_match($timestampSizePattern, $filename, $matches)) {
+            // 找到尺寸参数，移除它们
+            $baseFilename = preg_replace($timestampSizePattern, '', $filename);
+
+            // 确保移除后的文件名不为空
+            if (!empty($baseFilename)) {
+                $basePath = $dirname . '/' . $baseFilename . '.' . $extension;
+
+                // 重新构建完整URL
+                if (isset($parsedUrl['scheme']) && isset($parsedUrl['host'])) {
+                    $baseUrl = $parsedUrl['scheme'] . '://' . $parsedUrl['host'] . $basePath;
+                } else {
+                    $baseUrl = $basePath;
+                }
+
+                Log::debug("提取基础URL (移除尺寸参数): $url => $baseUrl (移除了: {$matches[0]})");
 
                 return $baseUrl;
             }
