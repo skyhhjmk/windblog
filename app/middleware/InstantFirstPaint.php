@@ -206,6 +206,7 @@ class InstantFirstPaint implements MiddlewareInterface
      * 极简骨架页：最小 HTML + 内联样式 + 自动拉取完整页面
      *
      * @param Request $request
+     *
      * @return string
      */
     protected function skeletonHtml(Request $request): string
@@ -286,6 +287,7 @@ class InstantFirstPaint implements MiddlewareInterface
      * 检查控制器方法是否标记了 EnableInstantFirstPaint 注解
      *
      * @param Request $request
+     *
      * @return bool
      */
     protected function hasInstantFirstPaintAnnotation(Request $request): bool
@@ -327,12 +329,7 @@ class InstantFirstPaint implements MiddlewareInterface
             // 获取注解实例并检查是否启用
             $annotation = $annotations[0]->newInstance();
 
-            // 暂时禁用骨架屏功能，修复 (索引):57 [Violation] Avoid using document.write()
-            // 以及 Parser was blocked due to document.write(<script>) 错误
-            // 现代浏览器会拦截 document.write 注入的跨域脚本(如 tailwind cdn)，导致页面报错且无法加载
-            return false;
-
-            // return $annotation->enabled;
+            return $annotation->enabled;
         } catch (Throwable $e) {
             // 出现异常时，返回 false
             return false;
