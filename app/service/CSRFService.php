@@ -96,7 +96,7 @@ class CSRFService
     {
         $expire = $options['expire'] ?? $this->tokenExpire;
         $path = $options['cookie_path'] ?? '/';
-        $domain = $options['cookie_domain'] ?? null;
+        $domain = $options['cookie_domain'] ?? '';
         $secure = $options['cookie_secure'] ?? (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
         $httponly = $options['cookie_httponly'] ?? true;
         $samesite = $options['cookie_samesite'] ?? 'Lax';
