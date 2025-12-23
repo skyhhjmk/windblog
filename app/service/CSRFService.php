@@ -54,6 +54,7 @@ class CSRFService
             'expire' => $this->tokenExpire,
             'one_time' => $this->useOneTimeToken,
             'bind_value' => $this->bindToValue ? $this->getBindValue($request) : null,
+            'set_cookie' => true, // 默认设置Cookie
         ], $options);
 
         // 生成安全的随机token
@@ -73,11 +74,68 @@ class CSRFService
 
         $request->session()->set($tokenName, $tokenData);
 
+        // 如果需要设置Cookie
+        if ($options['set_cookie']) {
+            $this->setTokenCookie($request, $tokenName, $token, $options);
+        }
+
         return $token;
     }
 
     /**
+     * 设置CSRF token到Cookie
+     *
+     * @param Request $request   请求对象
+     * @param string  $tokenName token名称
+     * @param string  $token     token值
+     * @param array   $options   选项
+     *
+     * @return void
+     */
+    public function setTokenCookie(Request $request, string $tokenName, string $token, array $options = []): void
+    {
+        $expire = $options['expire'] ?? $this->tokenExpire;
+        $path = $options['cookie_path'] ?? '/';
+        $domain = $options['cookie_domain'] ?? null;
+        $secure = $options['cookie_secure'] ?? (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+        $httponly = $options['cookie_httponly'] ?? true;
+        $samesite = $options['cookie_samesite'] ?? 'Lax';
+
+        // 计算过期时间戳
+        $expireTime = time() + $expire;
+
+        // 设置Cookie
+        setcookie(
+            $tokenName,
+            $token,
+            [
+                'expires' => $expireTime,
+                'path' => $path,
+                'domain' => $domain,
+                'secure' => $secure,
+                'httponly' => $httponly,
+                'samesite' => $samesite,
+            ]
+        );
+
+        // 同时设置XSRF-TOKEN（常用命名）
+        setcookie(
+            'XSRF-TOKEN',
+            $token,
+            [
+                'expires' => $expireTime,
+                'path' => $path,
+                'domain' => $domain,
+                'secure' => $secure,
+                'httponly' => false, // XSRF-TOKEN通常需要JavaScript可读
+                'samesite' => $samesite,
+            ]
+        );
+    }
+
+    /**
      * 验证CSRF token
+     * 纯Cookie验证方案
      *
      * @param Request     $request   请求对象
      * @param string|null $tokenName token名称
@@ -111,25 +169,21 @@ class CSRFService
             }
         }
 
-        // 从请求中获取token
-        $requestToken = $this->getTokenFromRequest($request, $tokenName);
-        if (!$requestToken) {
-            return false;
+        // 纯Cookie验证
+        $cookieToken = $this->getTokenFromCookie($request, $tokenName);
+
+        if ($cookieToken && hash_equals($tokenData['value'], $cookieToken)) {
+            // 如果是一次性token，验证后删除
+            if ($tokenData['one_time'] ?? false) {
+                $request->session()->delete($tokenName);
+                // 手动保存session以确保一次性token立即失效
+                $request->session()->save();
+            }
+
+            return true;
         }
 
-        // 验证token值
-        if (!hash_equals($tokenData['value'], $requestToken)) {
-            return false;
-        }
-
-        // 如果是一次性token，验证后删除
-        if ($tokenData['one_time'] ?? false) {
-            $request->session()->delete($tokenName);
-            // 手动保存session以确保一次性token立即失效
-            $request->session()->save();
-        }
-
-        return true;
+        return false;
     }
 
     /**
@@ -148,8 +202,14 @@ class CSRFService
             return $token;
         }
 
-        // 从请求头获取
+        // 从请求头获取（支持反向代理场景）
         $token = $request->header('X-CSRF-TOKEN');
+        if ($token) {
+            return $token;
+        }
+
+        // 从X-XSRF-TOKEN头获取（适用于反向代理场景）
+        $token = $request->header('X-XSRF-TOKEN');
         if ($token) {
             return $token;
         }
@@ -166,9 +226,48 @@ class CSRFService
             return $token;
         }
 
+        // 从XSRF-TOKEN cookie获取（适用于反向代理场景）
+        $token = $request->cookie('XSRF-TOKEN');
+        if ($token) {
+            return $token;
+        }
+
         return null;
     }
 
+    /**
+     * 从Cookie中获取CSRF token
+     *
+     * @param Request $request   请求对象
+     * @param string  $tokenName token名称
+     *
+     * @return string|null
+     */
+    public function getTokenFromCookie(Request $request, string $tokenName): ?string
+    {
+        // 直接从token名称的cookie获取
+        $token = $request->cookie($tokenName);
+        if ($token) {
+            return $token;
+        }
+
+        // 从XSRF-TOKEN cookie获取（常用命名）
+        $token = $request->cookie('XSRF-TOKEN');
+        if ($token) {
+            return $token;
+        }
+
+        return null;
+    }
+
+    /**
+     * 从表单中获取CSRF token
+     *
+     * @param Request $request   请求对象
+     * @param string  $tokenName token名称
+     *
+     * @return string|null
+     */
     /**
      * 获取绑定值
      *

@@ -15,6 +15,7 @@ class CsrfExtension extends AbstractExtension
         return [
             new TwigFunction('csrf_token', [$this, 'getCsrfToken']),
             new TwigFunction('one_time_csrf_token', [$this, 'getOneTimeCsrfToken']),
+            new TwigFunction('csrf_token_cookie', [$this, 'setCsrfTokenCookie']),
         ];
     }
 
@@ -34,5 +35,19 @@ class CsrfExtension extends AbstractExtension
     public function getOneTimeCsrfToken(): string
     {
         return CSRFHelper::oneTimeToken(request());
+    }
+
+    /**
+     * 设置CSRF令牌Cookie
+     * 适用于静态缓存场景
+     *
+     * @param string $tokenName token名称
+     *
+     * @return void
+     * @throws Exception
+     */
+    public function setCsrfTokenCookie(string $tokenName = '_token'): void
+    {
+        CSRFHelper::setTokenCookie(request(), $tokenName);
     }
 }

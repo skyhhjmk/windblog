@@ -37,11 +37,10 @@ class CSRFMiddleware implements MiddlewareInterface
     public function process(Request $request, callable $handler): Response
     {
         // 首先检查是否为跨域请求
-        // 存在问题而临时禁用
-        /*if ($this->isCrossOriginRequest($request)) {
-            // 禁用Access Token功能
-            return response('跨域请求不被支持', 403);
-        }*/
+        if ($this->isCrossOriginRequest($request)) {
+            // 跨域请求允许通过，由浏览器处理预检请求
+            return $handler($request);
+        }
 
         // 如果没有控制器或方法，直接跳过
         if (!$request->controller || !$request->action) {
@@ -249,47 +248,52 @@ class CSRFMiddleware implements MiddlewareInterface
      *
      * @return bool
      */
-    /*    private function isCrossOriginRequest(Request $request): bool
-        {
-            $origin = $request->header('Origin');
-            if (!$origin) {
-                return false;
-            }
+    private function isCrossOriginRequest(Request $request): bool
+    {
+        $origin = $request->header('Origin');
+        if (!$origin) {
+            return false;
+        }
 
-            $originParts = parse_url($origin);
-            if (!$originParts || !isset($originParts['host'])) {
-                return false;
-            }
+        $originParts = parse_url($origin);
+        if (!$originParts || !isset($originParts['host'])) {
+            return false;
+        }
 
-            // 真实协议
-            $scheme = $request->header('X-Forwarded-Proto')
-                ?? (($request->header('X-Forwarded-Ssl') === 'on') ? 'https' : null)
-                ?? ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http');
+        // 真实协议
+        $scheme = $request->header('x-forwarded-proto')
+            ?? (($request->header('x-forwarded-ssl') === 'on') ? 'https' : null)
+            ?? ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http');
 
-            // 真实 Host
-            $host = $request->header('X-Forwarded-Host')
-                ?? $request->header('Host');
+        // 真实Host
+        $host = $request->header('x-forwarded-host')
+            ?? $request->header('host');
 
-            // X-Forwarded-Host 可能是逗号分隔的
-            if ($host && str_contains($host, ',')) {
-                $host = trim(explode(',', $host)[0]);
-            }
+        // X-Forwarded-Host 可能是逗号分隔的
+        if ($host && str_contains($host, ',')) {
+            $host = trim(explode(',', $host)[0]);
+        }
 
-            // 真实端口
-            $port = $request->header('X-Forwarded-Port');
+        // 真实端口
+        $port = $request->header('x-forwarded-port');
 
-            if (!$port) {
-                $port = ($scheme === 'https') ? 443 : 80;
-            }
+        // X-Forwarded-Port 可能是逗号分隔的
+        if ($port && str_contains($port, ',')) {
+            $port = trim(explode(',', $port)[0]);
+        }
 
-            // Origin 信息
-            $originScheme = $originParts['scheme'] ?? 'http';
-            $originHost = $originParts['host'];
-            $originPort = $originParts['port']
-                ?? (($originScheme === 'https') ? 443 : 80);
+        if (!$port) {
+            $port = ($scheme === 'https') ? 443 : 80;
+        }
 
-            return $originScheme !== $scheme
-                || $originHost !== $host
-                || (int) $originPort !== (int) $port;
-        }*/
+        // Origin 信息
+        $originScheme = $originParts['scheme'] ?? 'http';
+        $originHost = $originParts['host'];
+        $originPort = $originParts['port']
+            ?? (($originScheme === 'https') ? 443 : 80);
+
+        return $originScheme !== $scheme
+            || $originHost !== $host
+            || (int) $originPort !== (int) $port;
+    }
 }
