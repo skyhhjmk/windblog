@@ -3,7 +3,7 @@
 namespace app\middleware;
 
 use app\service\CSRFService;
-use support\Request;
+use Webman\Http\Request;
 use Webman\Http\Response as HttpResponse;
 use Webman\MiddlewareInterface;
 
