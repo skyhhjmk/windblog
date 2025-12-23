@@ -104,33 +104,14 @@ class CSRFService
         // 计算过期时间戳
         $expireTime = time() + $expire;
 
-        // 设置Cookie
-        setcookie(
-            $tokenName,
-            $token,
-            [
-                'expires' => $expireTime,
-                'path' => $path,
-                'domain' => $domain,
-                'secure' => $secure,
-                'httponly' => $httponly,
-                'samesite' => $samesite,
-            ]
-        );
+        // 获取响应对象
+        $response = response();
 
-        // 同时设置XSRF-TOKEN（常用命名）
-        setcookie(
-            'XSRF-TOKEN',
-            $token,
-            [
-                'expires' => $expireTime,
-                'path' => $path,
-                'domain' => $domain,
-                'secure' => $secure,
-                'httponly' => false, // XSRF-TOKEN通常需要JavaScript可读
-                'samesite' => $samesite,
-            ]
-        );
+        // 设置_token cookie（HttpOnly）
+        $response->cookie($tokenName, $token, $expire, $path, $domain, $secure, $httponly);
+
+        // 同时设置XSRF-TOKEN（非HttpOnly，JavaScript可读）
+        $response->cookie('XSRF-TOKEN', $token, $expire, $path, $domain, $secure, false);
     }
 
     /**

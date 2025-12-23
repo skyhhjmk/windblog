@@ -387,7 +387,56 @@
     });
 
     // Logout
-    var logoutCsrfToken = "{{ csrf_token('_logout_token') }}";
+    var logoutCsrfToken = "";
+
+    // 从Cookie中获取CSRF token并填充到所有需要的地方
+    (function () {
+        function getCsrfToken() {
+            var cookies = document.cookie.split(';');
+            for (var i = 0; i < cookies.length; i++) {
+                var cookie = cookies[i].trim();
+                if (cookie.indexOf("_token=") === 0) {
+                    return cookie.substring("_token=".length);
+                }
+                if (cookie.indexOf("XSRF-TOKEN=") === 0) {
+                    return cookie.substring("XSRF-TOKEN=".length);
+                }
+            }
+            return null;
+        }
+
+        // 等待DOM加载完成
+        document.addEventListener("DOMContentLoaded", function () {
+            var token = getCsrfToken();
+            if (token) {
+                // 更新logoutCsrfToken
+                logoutCsrfToken = token;
+
+                // 填充所有CSRF占位符
+                var csrfInputs = document.querySelectorAll('input[data-csrf-placeholder="true"]');
+                csrfInputs.forEach(function (input) {
+                    input.value = token;
+                });
+
+                // 更新所有JavaScript变量中的CSRF token
+                var scripts = document.querySelectorAll('script');
+                scripts.forEach(function (script) {
+                    if (script.textContent) {
+                        // 替换var csrfToken = '';
+                        script.textContent = script.textContent.replace(
+                            /var csrfToken = '';/g,
+                            'var csrfToken = \'' + token + '\';'
+                        );
+                        // 替换'X-CSRF-TOKEN': '',
+                        script.textContent = script.textContent.replace(
+                            /'X-CSRF-TOKEN': ''/g,
+                            '\'X-CSRF-TOKEN\': \'' + token + '\''
+                        );
+                    }
+                });
+            }
+        });
+    })();
 
     function confirmLogout() {
         if (confirm('Logout?')) {

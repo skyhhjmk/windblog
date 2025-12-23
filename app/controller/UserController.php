@@ -7,6 +7,7 @@ use app\helper\BreadcrumbHelper;
 use app\model\User;
 use app\model\UserOAuthBinding;
 use app\service\CaptchaService;
+use app\service\CSRFHelper;
 use app\service\CSRFService;
 use app\service\MailService;
 use app\service\OAuthService;
@@ -555,7 +556,13 @@ class UserController
     {
         $csrf = (new CSRFService())->generateToken($request, '_token');
 
-        return view('user/forgot-password', ['csrf_token' => $csrf]);
+        // 设置CSRF token cookie
+        CSRFHelper::setTokenCookie($request, '_token');
+
+        $response = response();
+        $response->withBody(view('user/forgot-password', ['csrf_token' => $csrf]));
+
+        return $response;
     }
 
     /**
@@ -605,7 +612,13 @@ class UserController
         }
         $csrf = (new CSRFService())->generateToken($request, '_token');
 
-        return view('user/reset-password', ['token' => $token, 'csrf_token' => $csrf]);
+        // 设置CSRF token cookie
+        CSRFHelper::setTokenCookie($request, '_token');
+
+        $response = response();
+        $response->withBody(view('user/reset-password', ['token' => $token, 'csrf_token' => $csrf]));
+
+        return $response;
     }
 
     /**

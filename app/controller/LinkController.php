@@ -21,6 +21,7 @@ use app\helper\BreadcrumbHelper;
 use app\model\Link;
 use app\service\CatLevelService;
 use app\service\CSRFHelper;
+use app\service\CSRFService;
 use app\service\LinkConnectQueueService;
 use app\service\LinkConnectService;
 use app\service\PaginationService;
@@ -494,6 +495,12 @@ class LinkController
         // 获取 CAT 等级信息
         $catLevelInfo = CatLevelService::getLevelInfo();
 
+        // 生成CSRF token
+        $csrf = (new CSRFService())->generateToken($request, '_token');
+
+        // 设置CSRF token cookie
+        CSRFHelper::setTokenCookie($request, '_token');
+
         return PJAXHelper::createResponse($request, $viewName, [
             'page_title' => blog_config('title', 'WindBlog', true) . ' - 申请友链',
             'site_info_json_config' => $this->getSiteInfoConfig(),
@@ -501,6 +508,7 @@ class LinkController
             'sidebar' => $sidebar,
             'breadcrumbs' => $breadcrumbs,
             'cat_level_info' => $catLevelInfo,
+            'csrf_token' => $csrf,
         ], null, 120, 'page');
     }
 

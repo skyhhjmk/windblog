@@ -14,6 +14,7 @@
  */
 
 use app\model\UserOAuthBinding;
+use app\service\CSRFHelper;
 use app\service\CSRFService;
 use support\Request;
 use Webman\Route;
@@ -59,11 +60,17 @@ Route::get('/user/login', function (Request $request) {
     // 生成CSRF token
     $csrf = (new CSRFService())->generateToken($request, '_token');
 
-    return view('user/login', [
+    // 设置CSRF token cookie
+    CSRFHelper::setTokenCookie($request, '_token');
+
+    $response = response();
+    $response->withBody(view('user/login', [
         'oauthProviders' => $oauthProviders,
         'oauthState' => $oauthState,
         'csrf_token' => $csrf,
-    ]);
+    ]));
+
+    return $response;
 })->name('user.login.page');
 Route::post('/user/login', [app\controller\UserController::class, 'login'])->name('user.login');
 Route::post('/user/logout', [app\controller\UserController::class, 'logout'])->name('user.logout');

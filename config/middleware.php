@@ -29,6 +29,8 @@ if (getenv('DB_DEFAULT')) {
         app\middleware\InstantFirstPaint::class,
         // 命中静态缓存则直接返回（骨架页二次请求时命中缓存）
         app\middleware\StaticCacheRedirect::class,
+        // CSRF Token设置中间件（在CSRF验证中间件之前）
+        app\middleware\CSRFTokenMiddleware::class,
         // 常规中间件
         app\middleware\CSRFMiddleware::class,
     ];

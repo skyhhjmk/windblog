@@ -222,7 +222,7 @@
 
             var btnSave = document.getElementById('btn-save');
             var btnReset = document.getElementById('btn-reset');
-            var csrfToken = '{{ csrf_token }}';
+            var csrfToken = '';
             var originalData = {
                 nickname: document.getElementById('user-nickname')?.value || '',
                 email: document.getElementById('user-email')?.value || '',

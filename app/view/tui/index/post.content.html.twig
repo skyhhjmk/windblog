@@ -90,7 +90,7 @@
                 <div class="border-t border-gray-700 pt-6">
                     <h3 class="font-bold mb-4">> Add Comment_</h3>
                     <form id="comment-form" class="space-y-4 font-mono">
-                        <input type="hidden" name="_token" value="{{ csrf_token|default('') }}">
+                        <input type="hidden" name="_token" value="" data-csrf-placeholder="true">
                         <input type="hidden" id="post-id" name="post_id" value="{{ post.id }}">
                         <input type="hidden" id="parent-id" name="parent_id" value="0">
 

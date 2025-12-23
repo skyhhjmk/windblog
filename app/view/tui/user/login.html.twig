@@ -18,7 +18,7 @@
             </div>
 
             <form class="space-y-6 font-mono" id="loginForm">
-                <input type="hidden" name="_token" value="{{ csrf_token|default('') }}">
+                <input type="hidden" name="_token" value="" data-csrf-placeholder="true">
                 <div class="space-y-4">
                     <div>
                         <label for="username" class="block text-sm text-gray-500 mb-1">
@@ -186,7 +186,7 @@
                     credentials: 'same-origin',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
-                        'X-CSRF-TOKEN': '{{ csrf_token|default('') }}',
+                        'X-CSRF-TOKEN': '',
                     },
                     body: new URLSearchParams(formData)
                 });

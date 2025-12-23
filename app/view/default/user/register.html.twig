@@ -17,7 +17,7 @@
                 </p>
             </div>
             <form class="mt-8 space-y-6" id="registerForm">
-                <input type="hidden" name="_token" value="{{ csrf_token|default('') }}">
+                <input type="hidden" name="_token" value="" data-csrf-placeholder="true">
                 <div class="rounded-md shadow-sm space-y-4">
                     <div>
                         <label for="username" class="block text-sm font-medium text-gray-700 dark:text-gray-300">

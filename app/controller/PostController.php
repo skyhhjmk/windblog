@@ -6,6 +6,7 @@ use app\annotation\EnableInstantFirstPaint;
 use app\helper\BreadcrumbHelper;
 use app\model\Post;
 use app\service\AdService;
+use app\service\CSRFHelper;
 use app\service\CSRFService;
 use app\service\FloLinkService;
 use app\service\markdown\MarkdownService;
@@ -215,6 +216,11 @@ class PostController
                 120,
                 'page'
             );
+
+            // 设置CSRF token cookie
+            CSRFHelper::setTokenCookie($request, '_token');
+
+            return $resp;
         } elseif ($post->visibility === 'password') {
             $accessble = false;
             $current_password = $request->get('password');
@@ -357,6 +363,11 @@ class PostController
                     120,
                     'page'
                 );
+
+                // 设置CSRF token cookie
+                CSRFHelper::setTokenCookie($request, '_token');
+
+                return $resp;
             } else {
                 $viewName = PJAXHelper::getViewName('lock/post', $isPjax);
                 $resp = view($viewName, [

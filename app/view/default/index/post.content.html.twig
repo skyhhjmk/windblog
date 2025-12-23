@@ -345,7 +345,7 @@
                 <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
                     <h3 class="text-lg font-medium text-gray-800 dark:text-gray-100 mb-4">发表评论</h3>
                     <form id="comment-form" class="space-y-4">
-                        <input type="hidden" name="_token" value="{{ csrf_token|default('') }}">
+                        <input type="hidden" name="_token" value="" data-csrf-placeholder="true">
                         <input type="hidden" id="post-id" name="post_id" value="{{ post.id }}">
                         <input type="hidden" id="parent-id" name="parent_id" value="0">
                         <input type="hidden" id="quoted-text" name="quoted_text" value="">
