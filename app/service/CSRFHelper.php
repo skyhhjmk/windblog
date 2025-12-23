@@ -13,25 +13,22 @@ use support\Request;
 class CSRFHelper
 {
     /**
-     * 生成CSRF token并返回HTML隐藏字段
+     * 生成CSRF token并设置Cookie
+     * 适用于静态缓存场景
      *
      * @param Request $request   请求对象
      * @param string  $tokenName token名称
      * @param array   $options   生成选项
      *
-     * @return string HTML隐藏字段
+     * @return void
      * @throws Exception
      */
-    public static function generateField(Request $request, string $tokenName = '_token', array $options = []): string
+    public static function setTokenCookie(Request $request, string $tokenName = '_token', array $options = []): void
     {
-        $csrfService = new CSRFService();
-        $token = $csrfService->generateToken($request, $tokenName, $options);
+        $options['set_cookie'] = true; // 确保设置Cookie
 
-        return sprintf(
-            '<input type="hidden" name="%s" value="%s">',
-            htmlspecialchars($tokenName),
-            htmlspecialchars($token)
-        );
+        $csrfService = new CSRFService();
+        $csrfService->generateToken($request, $tokenName, $options);
     }
 
     /**

@@ -342,6 +342,9 @@ class StaticGenerator
             return;
         }
 
+        // 处理CSRF token占位符，替换为空值，由前端JavaScript动态填充
+        $body = $this->processCsrfTokens($body);
+
         // 按策略决定是否做 JS/CSS 压缩替换（若库缺失则自动跳过）
         $body = $this->maybeMinifyHtml($urlPath, $body);
 
@@ -403,6 +406,84 @@ class StaticGenerator
         EnhancedStaticCacheConfig::recordCacheGenerated();
 
         Log::info("静态页面生成(v{$version}, {$strategyType}): {$final}");
+    }
+
+    /**
+     * 处理HTML中的CSRF token，替换为占位符
+     *
+     * @param string $html HTML内容
+     *
+     * @return string 处理后的HTML
+     */
+    protected function processCsrfTokens(string $html): string
+    {
+        // 替换隐藏的CSRF token输入框
+        $html = preg_replace_callback(
+            '#<input[^>]+type=["\']hidden["\'][^>]+name=["\']_token["\'][^>]+value=["\'][^"\']+["\'][^>]*>#i',
+            function ($matches) {
+                // 保留原始input标签的其他属性，但将value替换为占位符
+                $inputTag = $matches[0];
+                $processedTag = preg_replace(
+                    '/value=["\'][^"\']*["\']/i',
+                    'value="" data-csrf-placeholder="true"',
+                    $inputTag
+                );
+
+                return $processedTag;
+            },
+            $html
+        );
+
+        // 添加CSRF token处理脚本
+        $script = '<script>
+(function() {
+    // 等待DOM加载完成
+    document.addEventListener("DOMContentLoaded", function() {
+        // 查找所有CSRF占位符
+        var csrfInputs = document.querySelectorAll(\'input[data-csrf-placeholder="true"]\');
+        
+        if (csrfInputs.length > 0) {
+            // 从Cookie中获取CSRF token
+            function getCsrfToken() {
+                // 尝试从多个可能的Cookie名称获取
+                var cookies = document.cookie.split(\';\');
+                for (var i = 0; i < cookies.length; i++) {
+                    var cookie = cookies[i].trim();
+                    // 检查_token或XSRF-TOKEN
+                    if (cookie.indexOf("_token=") === 0) {
+                        return cookie.substring("_token=".length);
+                    }
+                    if (cookie.indexOf("XSRF-TOKEN=") === 0) {
+                        return cookie.substring("XSRF-TOKEN=".length);
+                    }
+                }
+                return null;
+            }
+            
+            var token = getCsrfToken();
+            if (token) {
+                // 填充所有占位符
+                csrfInputs.forEach(function(input) {
+                    input.value = token;
+                });
+            } else {
+                // Cookie中没有token，记录警告但不进行API请求
+                console.warn("CSRF token not found in cookies");
+            }
+        }
+    });
+})();
+</script>';
+
+        // 在</body>标签前插入脚本
+        if (strpos($html, '</body>') !== false) {
+            $html = str_replace('</body>', $script . '</body>', $html);
+        } else {
+            // 如果没有</body>标签，直接在末尾添加
+            $html .= $script;
+        }
+
+        return $html;
     }
 
     /**
