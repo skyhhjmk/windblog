@@ -18,3 +18,4 @@
 /.claude/
 /.php-cs-fixer.cache
 /.trae/
+*.bak
