@@ -732,4 +732,36 @@ class EditorController
 
         return $slug;
     }
+
+    /**
+     * 生成slug的API接口
+     *
+     * @param Request $request
+     *
+     * @return Response
+     */
+    public function generateSlugApi(Request $request): Response
+    {
+        try {
+            $title = $request->post('title', '');
+            if (empty($title)) {
+                return json(['code' => 1, 'msg' => '标题不能为空']);
+            }
+
+            $slugService = new SlugTranslateService();
+            $slug = $slugService->translate($title) ?? $this->generateSlug($title);
+
+            // 确保slug唯一
+            $originalSlug = $slug;
+            $suffix = 1;
+            while (Post::where('slug', $slug)->exists()) {
+                $slug = $originalSlug . '-' . $suffix;
+                $suffix++;
+            }
+
+            return json(['code' => 0, 'msg' => '生成成功', 'data' => ['slug' => $slug]]);
+        } catch (Exception $e) {
+            return json(['code' => 1, 'msg' => '生成失败：' . $e->getMessage()]);
+        }
+    }
 }

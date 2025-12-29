@@ -920,19 +920,30 @@
                 // 根据当前标题生成新的slug
                 const title = postTitle.value.trim();
                 if (title) {
-                    // 简单的slug生成逻辑，实际项目中可以考虑调用API生成
-                    let newSlug = title.toLowerCase()
-                        .replace(/[^\w\u4e00-\u9fa5-]+/g, '-')
-                        .replace(/-+/g, '-')
-                        .replace(/^-+|-+$/g, '');
+                    // 调用后端API生成slug
+                    const loadingIndex = layer.msg('生成中...', {icon: 16, shade: 0.3, time: 0});
 
-                    // 如果生成的slug为空，使用默认值
-                    if (!newSlug) {
-                        newSlug = 'post-' + Date.now();
-                    }
-
-                    postSlugInput.value = newSlug;
-                    layer.msg('slug已重新生成', {icon: 1});
+                    fetch('/app/admin/editor/generate-slug', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({title: title})
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            layer.close(loadingIndex);
+                            if (data.code === 0) {
+                                postSlugInput.value = data.data.slug;
+                                layer.msg('slug已重新生成', {icon: 1});
+                            } else {
+                                layer.msg('生成失败: ' + data.msg, {icon: 5});
+                            }
+                        })
+                        .catch(error => {
+                            layer.close(loadingIndex);
+                            layer.msg('生成失败，请检查网络连接', {icon: 5});
+                        });
                 } else {
                     layer.msg('请先输入文章标题', {icon: 5});
                 }

@@ -256,6 +256,7 @@ Route::group('/app/admin', function () {
         Route::post('/save', [EditorController::class, 'save']);
         Route::post('/upload-image', [EditorController::class, 'uploadImage']);
         Route::get('/authors', [EditorController::class, 'getAuthors']);
+        Route::post('/generate-slug', [EditorController::class, 'generateSlugApi']);
     });
 
     // AI 设置 路由组
