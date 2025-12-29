@@ -46,29 +46,77 @@ function isCdn(url) {
     return CDN_HOSTS.some(h => url.hostname === h || url.hostname.endsWith(`.${h}`));
 }
 
-// Cache First for static/cdn
-async function cacheFirst(req, cacheName) {
+// Cache First with background update and user notification
+async function cacheFirst(req, cacheName, event) {
     const cache = await caches.open(cacheName);
     const cached = await cache.match(req, {ignoreVary: true});
+    const url = new URL(req.url);
+    const isHomepage = url.pathname === '/' || url.pathname === '/index.html';
+
     if (cached) {
-        // Try to revalidate in background (best-effort)
-        try {
-            const fresh = await fetch(req, {mode: req.mode, credentials: req.credentials});
-            if (fresh && (fresh.ok || fresh.type === 'opaque')) {
-                cache.put(req, fresh.clone());
-            }
-        } catch (_) {
+        // Return cached response immediately
+
+        // Revalidate in background
+        if (event) {
+            event.waitUntil((async () => {
+                try {
+                    const fresh = await fetch(req, {mode: req.mode, credentials: req.credentials});
+                    if (fresh && fresh.ok) {
+                        // Check if response is different from cached
+                        const cachedContent = await cached.text();
+                        const freshContent = await fresh.clone().text();
+
+                        // Only update cache if content has changed
+                        if (cachedContent !== freshContent) {
+                            // Add cache timestamp
+                            const headers = new Headers(fresh.headers);
+                            headers.set('sw-cached-at', Date.now().toString());
+
+                            const newRes = new Response(fresh.body, {
+                                status: fresh.status,
+                                statusText: fresh.statusText,
+                                headers: headers
+                            });
+
+                            await cache.put(req, newRes.clone());
+
+                            // Notify client about update
+                            await notifyClient(event, {
+                                type: 'NEW_CONTENT_AVAILABLE',
+                                message: '页面内容已更新，下次刷新时将显示最新内容',
+                                url: req.url
+                            });
+                        }
+                    }
+                } catch (_) {
+                    // Ignore network errors during revalidation
+                }
+            })());
         }
+
         return cached;
     }
+
+    // No cache, fetch from network
     try {
         const res = await fetch(req, {mode: req.mode, credentials: req.credentials});
         if (res && (res.ok || res.type === 'opaque')) {
-            cache.put(req, res.clone());
+            // Add cache timestamp for future revalidation
+            const headers = new Headers(res.headers);
+            headers.set('sw-cached-at', Date.now().toString());
+
+            const newRes = new Response(res.body, {
+                status: res.status,
+                statusText: res.statusText,
+                headers: headers
+            });
+
+            await cache.put(req, newRes.clone());
+            return newRes;
         }
         return res;
     } catch (err) {
-        return cached || new Response('', {status: 408, statusText: 'Offline'});
+        return new Response('', {status: 408, statusText: 'Offline'});
     }
 }
 
@@ -231,6 +279,8 @@ async function networkFirst(req, event, useTimeout = true) {
     let networkFailed = false;
     const cache = await caches.open(CACHE_PAGES);
     const networkStartTime = Date.now();
+    const url = new URL(req.url);
+    const isHomepage = url.pathname === '/' || url.pathname === '/index.html';
 
     const networkPromise = (async () => {
         try {
@@ -250,7 +300,14 @@ async function networkFirst(req, event, useTimeout = true) {
 
                 // 只缓存真实页面，不缓存骨架页
                 if (!isSkeleton) {
-                    cache.put(req, res.clone());
+                    // 对于首页，总是更新缓存
+                    if (isHomepage) {
+                        // 清除旧缓存，确保只保留最新版本
+                        await cache.delete(req, {ignoreVary: true});
+                        cache.put(req, res.clone());
+                    } else {
+                        cache.put(req, res.clone());
+                    }
                     // 如果是 HTML，后台解析并预缓存 /assets 下的 .css/.js
                     try {
                         const ct = res.headers.get('content-type') || '';
@@ -319,7 +376,20 @@ async function networkFirst(req, event, useTimeout = true) {
                 try {
                     const result = await networkPromise;
                     if (result.success && result.response && result.response.ok) {
-                        await cache.put(req, result.response.clone());
+                        // 对于首页，总是更新缓存并添加时间戳
+                        if (isHomepage) {
+                            await cache.delete(req, {ignoreVary: true});
+                            const headers = new Headers(result.response.headers);
+                            headers.set('sw-cached-at', Date.now().toString());
+                            const newRes = new Response(result.response.body, {
+                                status: result.response.status,
+                                statusText: result.response.statusText,
+                                headers: headers
+                            });
+                            await cache.put(req, newRes.clone());
+                        } else {
+                            await cache.put(req, result.response.clone());
+                        }
                     }
                 } catch (_) {
                 }
@@ -410,10 +480,45 @@ self.addEventListener('install', event => {
         // 预缓存首页及关键静态资源，确保离线可用
         const pagesCache = await caches.open(CACHE_PAGES);
         const staticCache = await caches.open(CACHE_STATIC);
+
+        // 缓存首页
         try {
-            await pagesCache.addAll(['/', '/index.html']);
+            const homepageUrl = new URL('/', self.location.origin);
+            const homepageReq = new Request(homepageUrl.toString(), {credentials: 'same-origin'});
+            const homepageResp = await fetch(homepageReq);
+            if (homepageResp && homepageResp.ok) {
+                // 添加缓存时间戳
+                const headers = new Headers(homepageResp.headers);
+                headers.set('sw-cached-at', Date.now().toString());
+                const newRes = new Response(homepageResp.body, {
+                    status: homepageResp.status,
+                    statusText: homepageResp.statusText,
+                    headers: headers
+                });
+                await pagesCache.put(homepageReq, newRes);
+            }
         } catch (_) {
         }
+
+        // 尝试缓存index.html
+        try {
+            const idxUrl = new URL('/index.html', self.location.origin);
+            const idxReq = new Request(idxUrl.toString(), {credentials: 'same-origin'});
+            const idxResp = await fetch(idxReq);
+            if (idxResp && idxResp.ok) {
+                // 添加缓存时间戳
+                const headers = new Headers(idxResp.headers);
+                headers.set('sw-cached-at', Date.now().toString());
+                const newRes = new Response(idxResp.body, {
+                    status: idxResp.status,
+                    statusText: idxResp.statusText,
+                    headers: headers
+                });
+                await pagesCache.put(idxReq, newRes);
+            }
+        } catch (_) {
+        }
+
         // 从首页提取 /assets 下的 .css/.js 并预缓存
         try {
             const resp = await fetch('/');
@@ -629,41 +734,21 @@ self.addEventListener('fetch', (event) => {
     const isHtml = accept.includes('text/html');
 
     if (req.mode === 'navigate' || (isHtml && isSameOrigin(url))) {
-        // 页面请求：优先使用 navigation preload（更快），否则回退到 networkFirst（含慢网回退）
-        event.respondWith((async () => {
-            try {
-                if (event.preloadResponse) {
-                    const pre = await event.preloadResponse;
-                    if (pre) {
-                        // 写入页面缓存，便于后续离线可用
-                        try {
-                            const cache = await caches.open(CACHE_PAGES);
-                            cache.put(req, pre.clone());
-                        } catch (_) {
-                        }
-                        await notifyClient(event, {type: 'SW_DEBUG', stage: 'navigate_preload_used', url: req.url});
-                        return pre;
-                    }
-                }
-            } catch (_) {
-            }
-            event.waitUntil(notifyClient(event, {type: 'SW_DEBUG', stage: 'navigate_intercept', url: req.url}));
-
-            return networkFirst(req, event, true);
-        })());
+        // Cache First for all HTML requests
+        event.respondWith(cacheFirst(req, CACHE_PAGES, event));
         return;
     }
 
     // Same-origin static: Cache First
     if (isSameOrigin(url) && isStaticPath(url)) {
-        event.respondWith(cacheFirst(req, CACHE_STATIC));
+        event.respondWith(cacheFirst(req, CACHE_STATIC, event));
         return;
     }
 
     // CDN/static cross-origin allowlist: Cache First
     // 保持原始请求（含 CORS 与 SRI 校验），避免破坏 integrity
     if (isCdn(url)) {
-        event.respondWith(cacheFirst(req, CACHE_CDN));
+        event.respondWith(cacheFirst(req, CACHE_CDN, event));
         return;
     }
 

@@ -179,6 +179,13 @@
           message = data.message || '网络较慢，已为您展示缓存副本。';
       }
       showToast({ title, message, tone });
+    } else if (data.type === 'NEW_CONTENT_AVAILABLE') {
+        // 新内容可用通知
+        showToast({
+            title: '内容已更新',
+            message: data.message || '页面内容已更新，下次刷新时将显示最新内容',
+            tone: 'info'
+        });
     } else if (data.type === 'SW_DEBUG') {
       // 调试输出，可按需移除
       console.debug('[SW_DEBUG]', data);
