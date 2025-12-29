@@ -124,12 +124,33 @@ class EditorController
         }
 
         try {
+            // 获取前端传递的slug
+            $requestedSlug = $request->post('slug', '');
+
+            // 生成或处理slug
             if ($post_id > 0) {
                 // 更新已有文章
                 $post = Post::find($post_id);
                 if (!$post) {
                     return json(['code' => 1, 'msg' => '文章不存在']);
                 }
+
+                // 如果前端提供了slug且与原slug不同，则更新slug
+                if (!empty($requestedSlug) && $requestedSlug !== $post->slug) {
+                    $slug = $requestedSlug;
+                    // 确保slug唯一
+                    $originalSlug = $slug;
+                    $suffix = 1;
+                    while (Post::where('slug', $slug)->where('id', '!=', $post_id)->exists()) {
+                        $slug = $originalSlug . '-' . $suffix;
+                        $suffix++;
+                    }
+                    $data['slug'] = $slug;
+                } else {
+                    // 否则保留原slug
+                    $data['slug'] = $post->slug;
+                }
+
                 $originalContent = (string) $post->content;
                 $post->update($data);
                 $contentChanged = $originalContent !== $content;
@@ -137,7 +158,26 @@ class EditorController
                 // 删除现有的作者关联
                 Db::table('post_author')->where('post_id', $post_id)->delete();
             } else {
-                // 创建新文章，并设置 author_id
+                // 创建新文章
+                if (!empty($requestedSlug)) {
+                    // 如果前端提供了slug，使用该slug
+                    $slug = $requestedSlug;
+                } else {
+                    // 否则自动生成slug
+                    $slugService = new SlugTranslateService();
+                    $slug = $slugService->translate($title) ?? $this->generateSlug($title);
+                }
+
+                // 确保slug唯一
+                $originalSlug = $slug;
+                $suffix = 1;
+                while (Post::where('slug', $slug)->exists()) {
+                    $slug = $originalSlug . '-' . $suffix;
+                    $suffix++;
+                }
+
+                // 将slug添加到data数组
+                $data['slug'] = $slug;
                 $data['created_at'] = utc_now_string('Y-m-d H:i:s');
                 $data['author_id'] = $adminId;
                 $post = Post::create($data);

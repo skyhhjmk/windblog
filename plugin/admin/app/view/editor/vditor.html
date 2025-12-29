@@ -299,6 +299,33 @@
                         </h3>
                     </div>
                     <div class="p-3 space-y-3">
+                        <!-- Slug设置 -->
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1.5"
+                                   for="post-slug">文章Slug</label>
+                            <div class="flex items-center gap-2">
+                                <div class="flex-1 relative">
+                                    <input class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                                           id="post-slug"
+                                           placeholder="新文章保存时自动生成"
+                                           readonly
+                                           type="text">
+                                </div>
+                                <button class="px-3 py-2 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-colors"
+                                        id="edit-slug-btn"
+                                        type="button">
+                                    修改
+                                </button>
+                                <button class="px-3 py-2 text-sm bg-amber-500 hover:bg-amber-600 text-white rounded-md transition-colors"
+                                        id="regenerate-slug-btn"
+                                        type="button">
+                                    重新生成
+                                </button>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">
+                                URL中的文章别名，建议使用英文和连字符
+                            </div>
+                        </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1.5" for="seo-title">SEO标题</label>
                             <input class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -353,6 +380,7 @@
         let vditor = null;
         let isVditorReady = false;
         let isContentLoaded = false; // 标记内容是否已加载
+        let isSlugEditable = false; // 标记slug是否可编辑
 
         // 获取文章ID的逻辑
         // 从URL路径中提取ID，兼容多种URL格式
@@ -718,6 +746,12 @@
                                     featuredCheckbox.checked = data.data.featured === true || data.data.featured === 1;
                                 }
 
+                                // 设置slug
+                                const postSlugInput = document.getElementById('post-slug');
+                                if (postSlugInput && data.data.slug) {
+                                    postSlugInput.value = data.data.slug;
+                                }
+
                                 if (pageTitleElem && typeof pageTitleElem.textContent !== 'undefined') {
                                     // 设置页面标题
                                     pageTitleElem.textContent = `编辑文章: ${data.data.title || '未命名'}`;
@@ -853,6 +887,58 @@
             seoDescriptionInput.addEventListener('input', updateSeoDescriptionCount);
         }
 
+        // Slug相关事件处理
+        const postSlugInput = document.getElementById('post-slug');
+        const editSlugBtn = document.getElementById('edit-slug-btn');
+        const regenerateSlugBtn = document.getElementById('regenerate-slug-btn');
+
+        // 编辑slug按钮点击事件
+        if (editSlugBtn && postSlugInput) {
+            editSlugBtn.addEventListener('click', function () {
+                if (isSlugEditable) {
+                    // 保存修改，将slug设为只读
+                    postSlugInput.readOnly = true;
+                    editSlugBtn.textContent = '修改';
+                    editSlugBtn.classList.remove('bg-green-500', 'hover:bg-green-600');
+                    editSlugBtn.classList.add('bg-blue-500', 'hover:bg-blue-600');
+                    isSlugEditable = false;
+                } else {
+                    // 进入编辑模式，将slug设为可编辑
+                    postSlugInput.readOnly = false;
+                    editSlugBtn.textContent = '保存';
+                    editSlugBtn.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+                    editSlugBtn.classList.add('bg-green-500', 'hover:bg-green-600');
+                    isSlugEditable = true;
+                    postSlugInput.focus();
+                }
+            });
+        }
+
+        // 重新生成slug按钮点击事件
+        if (regenerateSlugBtn && postSlugInput) {
+            regenerateSlugBtn.addEventListener('click', function () {
+                // 根据当前标题生成新的slug
+                const title = postTitle.value.trim();
+                if (title) {
+                    // 简单的slug生成逻辑，实际项目中可以考虑调用API生成
+                    let newSlug = title.toLowerCase()
+                        .replace(/[^\w\u4e00-\u9fa5-]+/g, '-')
+                        .replace(/-+/g, '-')
+                        .replace(/^-+|-+$/g, '');
+
+                    // 如果生成的slug为空，使用默认值
+                    if (!newSlug) {
+                        newSlug = 'post-' + Date.now();
+                    }
+
+                    postSlugInput.value = newSlug;
+                    layer.msg('slug已重新生成', {icon: 1});
+                } else {
+                    layer.msg('请先输入文章标题', {icon: 5});
+                }
+            });
+        }
+
         // 保存草稿按钮事件
         document.getElementById('save-draft-btn').addEventListener('click', function () {
             savePost('draft');
@@ -896,6 +982,7 @@
                 const seoTitleInput = document.getElementById('seo-title');
                 const seoDescriptionInput = document.getElementById('seo-description');
                 const seoKeywordsInput = document.getElementById('seo-keywords');
+                const postSlugInput = document.getElementById('post-slug');
 
                 // 准备保存数据
                 const saveData = {
@@ -912,7 +999,9 @@
                     // SEO字段
                     seo_title: seoTitleInput ? seoTitleInput.value.trim() : '',
                     seo_description: seoDescriptionInput ? seoDescriptionInput.value.trim() : '',
-                    seo_keywords: seoKeywordsInput ? seoKeywordsInput.value.trim() : ''
+                    seo_keywords: seoKeywordsInput ? seoKeywordsInput.value.trim() : '',
+                    // Slug字段
+                    slug: postSlugInput ? postSlugInput.value.trim() : ''
                     // AI摘要相关字段通过单独的"保存摘要"按钮处理
                 };
 
