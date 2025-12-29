@@ -203,6 +203,11 @@ class MediaLibrary {
             this.toggleReferencesPanel();
         });
 
+        // 刷新统计按钮
+        safeAddEventListener('refresh-references-btn', 'click', () => {
+            this.refreshReferences();
+        });
+
         // 模态框外点击关闭
         previewModal.addEventListener('click', (e) => {
             if (e.target === previewModal) {
@@ -1247,6 +1252,42 @@ class MediaLibrary {
             }
         } catch (error) {
             content.innerHTML = `<div class="text-sm text-red-600">加载失败：${error.message}</div>`;
+        }
+    }
+
+    /**
+     * 刷新引用统计
+     */
+    async refreshReferences() {
+        if (!this.currentPreviewItem) return;
+
+        const button = document.getElementById('refresh-references-btn');
+        const originalText = button.textContent;
+        button.textContent = '刷新中...';
+        button.disabled = true;
+
+        try {
+            const response = await fetch(`${this.apiBase}refreshReferences/${this.currentPreviewItem.id}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                }
+            });
+            const result = await response.json();
+
+            if (result.code === 0) {
+                this.showToast(result.msg || '刷新成功', 'success');
+                // 更新引用文章列表
+                this.loadReferences();
+            } else {
+                this.showToast(result.msg || '刷新失败', 'error');
+            }
+        } catch (error) {
+            this.showToast('刷新失败：' + error.message, 'error');
+        } finally {
+            button.textContent = originalText;
+            button.disabled = false;
         }
     }
 

@@ -602,4 +602,82 @@ class MediaController extends Base
             return json(['code' => 1, 'msg' => '获取引用文章失败: ' . $e->getMessage()]);
         }
     }
+
+    /**
+     * 刷新媒体引用的文章统计
+     *
+     * @param Request $request
+     * @param int     $id
+     *
+     * @return Response
+     */
+    public function refreshReferences(Request $request, int $id): Response
+    {
+        try {
+            // 获取媒体信息
+            $media = Media::find($id);
+            if (!$media) {
+                return json(['code' => 1, 'msg' => '媒体不存在']);
+            }
+
+            // 获取媒体文件名
+            $filename = $media->filename;
+            if (empty($filename)) {
+                return json(['code' => 1, 'msg' => '媒体文件名不存在']);
+            }
+
+            // 重置引用统计
+            $customFields = $media->custom_fields ?? [];
+            $referenceInfo = $customFields['reference_info'] ?? [];
+            $referenceInfo['references'] = [
+                'posts' => [],
+                'pages' => [],
+                'count' => 0,
+            ];
+            $customFields['reference_info'] = $referenceInfo;
+            $media->custom_fields = $customFields;
+            $media->save();
+
+            // 扫描所有文章
+            $posts = Post::select('id', 'title', 'content')->get();
+            $referencedPostIds = [];
+
+            foreach ($posts as $post) {
+                $content = $post->content;
+                if (empty($content)) {
+                    continue;
+                }
+
+                // 检查文章内容中是否包含该媒体文件
+                if (strpos($content, $filename) !== false) {
+                    $referencedPostIds[] = $post->id;
+                }
+            }
+
+            // 更新媒体引用
+            if (!empty($referencedPostIds)) {
+                foreach ($referencedPostIds as $postId) {
+                    $media->addPostReference($postId);
+                }
+                $media->save();
+            }
+
+            // 返回更新后的引用文章列表
+            $customFields = $media->custom_fields ?? [];
+            $referenceInfo = $customFields['reference_info'] ?? [];
+            $postIds = $referenceInfo['references']['posts'] ?? [];
+
+            $posts = [];
+            if (!empty($postIds)) {
+                $posts = Post::whereIn('id', $postIds)
+                    ->select('id', 'title', 'slug')
+                    ->get()
+                    ->toArray();
+            }
+
+            return json(['code' => 0, 'msg' => '刷新成功', 'data' => ['posts' => $posts]]);
+        } catch (Exception $e) {
+            return json(['code' => 1, 'msg' => '刷新失败: ' . $e->getMessage()]);
+        }
+    }
 }

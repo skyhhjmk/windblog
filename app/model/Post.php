@@ -220,24 +220,34 @@ class Post extends Model
                     $mediaUrls = array_merge($mediaUrls, $linkMatches[1]);
                 }
 
-                // 去重并过滤本地媒体URL
+                // 去重
                 $mediaUrls = array_unique($mediaUrls);
                 $externalMediaUrls = [];
+                $localMediaUrls = [];
 
                 foreach ($mediaUrls as $url) {
-                    // 只处理外部媒体URL，本地URL不需要记录引用
                     if (filter_var($url, FILTER_VALIDATE_URL)) {
+                        // 处理外部URL
                         $siteUrl = blog_config('site_url', '', true);
                         if (!empty($siteUrl) && strpos($url, $siteUrl) === false) {
                             $externalMediaUrls[] = $url;
                         } elseif (empty($siteUrl)) {
                             // 如果站点URL未配置，将所有URL视为外部URL
                             $externalMediaUrls[] = $url;
+                        } else {
+                            // 本地URL，提取文件路径部分
+                            $localPath = parse_url($url, PHP_URL_PATH);
+                            if ($localPath) {
+                                $localMediaUrls[] = $localPath;
+                            }
                         }
+                    } else {
+                        // 可能是相对路径，直接作为本地URL处理
+                        $localMediaUrls[] = $url;
                     }
                 }
 
-                // 更新媒体引用
+                // 更新外部媒体引用
                 if (!empty($externalMediaUrls)) {
                     foreach ($externalMediaUrls as $externalUrl) {
                         // 查找对应的媒体记录
@@ -249,6 +259,25 @@ class Post extends Model
                         if ($media) {
                             // 记录文章引用
                             $media->addExternalUrlReference($externalUrl, $post->id);
+                            $media->save();
+                        }
+                    }
+                }
+
+                // 更新本地媒体引用
+                if (!empty($localMediaUrls)) {
+                    foreach ($localMediaUrls as $localUrl) {
+                        // 提取文件名（用于匹配）
+                        $filename = basename($localUrl);
+                        if (empty($filename)) {
+                            continue;
+                        }
+
+                        // 查找对应的媒体记录
+                        $media = Media::where('filename', $filename)->first();
+                        if ($media) {
+                            // 记录文章引用
+                            $media->addPostReference($post->id);
                             $media->save();
                         }
                     }
