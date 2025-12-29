@@ -6,6 +6,7 @@ use app\annotation\CSRFVerify;
 use app\model\Comment;
 use app\model\Post;
 use app\model\User;
+use app\service\CacheService;
 use app\service\CaptchaService;
 use Exception;
 use support\Log;
@@ -248,6 +249,17 @@ class CommentController
                     } catch (\Throwable $e) {
                         Log::warning('Enqueue moderation failed: ' . $e->getMessage());
                     }
+                }
+
+                // 清理相关缓存
+                try {
+                    Log::info("[CommentController] Comment submitted for post {$postId}, clearing caches...");
+                    // 清理文章相关缓存
+                    CacheService::clearPostCache($postId);
+                    // 清理评论相关缓存
+                    CacheService::clearCache("comment_*:{$postId}");
+                } catch (Exception $e) {
+                    Log::warning('[CommentController] Failed to clear cache: ' . $e->getMessage());
                 }
 
                 // 如果需要审核，返回提示信息

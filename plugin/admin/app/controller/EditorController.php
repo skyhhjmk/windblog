@@ -353,14 +353,12 @@ class EditorController
                 }
             }
 
-            // 如果文章状态为已发布，清除相关缓存
-            if ($status === 'published') {
-                try {
-                    Log::info("[EditorController] Post {$post_id} published, clearing caches...");
-                    CacheService::clearPublishCache($post_id);
-                } catch (Exception $e) {
-                    Log::warning('[EditorController] Failed to clear cache: ' . $e->getMessage());
-                }
+            // 无论文章状态如何，只要更新就清除相关缓存
+            try {
+                Log::info("[EditorController] Post {$post_id} updated, clearing caches...");
+                CacheService::clearPublishCache($post_id);
+            } catch (Exception $e) {
+                Log::warning('[EditorController] Failed to clear cache: ' . $e->getMessage());
             }
 
             // 返回成功响应
