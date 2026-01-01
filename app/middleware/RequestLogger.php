@@ -27,11 +27,12 @@ use Webman\MiddlewareInterface;
 class RequestLogger implements MiddlewareInterface
 {
     /**
-     * @param Request $request
-     * @param callable $next
+     * @param Request  $request
+     * @param callable $handler
+     *
      * @return Response
      */
-    public function process(Request $request, callable $next): Response
+    public function process(Request $request, callable $handler): Response
     {
         static $initialized_db;
 
@@ -39,7 +40,7 @@ class RequestLogger implements MiddlewareInterface
 
         // 跳过配置的模块
         if (!empty($conf['dontReport']['app']) && is_array($conf['dontReport']['app']) && in_array($request->app, $conf['dontReport']['app'], true)) {
-            return $next($request);
+            return $handler($request);
         }
 
         // 跳过配置的path
@@ -47,21 +48,21 @@ class RequestLogger implements MiddlewareInterface
             $requestPath = $request->path();
             foreach ($conf['dontReport']['path'] as $_path) {
                 if (strpos($requestPath, $_path) === 0) {
-                    return $next($request);
+                    return $handler($request);
                 }
             }
         }
 
         // 跳过配置的控制器日志记录
         if (!empty($conf['dontReport']['controller']) && is_array($conf['dontReport']['controller']) && in_array($request->controller, $conf['dontReport']['controller'], true)) {
-            return $next($request);
+            return $handler($request);
         }
 
         // 跳过配置的方法
         if (!empty($conf['dontReport']['action']) && is_array($conf['dontReport']['action'])) {
             foreach ($conf['dontReport']['action'] as $_action) {
                 if ($_action[0] === $request->controller && $_action[1] === $request->action) {
-                    return $next($request);
+                    return $handler($request);
                 }
             }
         }
@@ -108,7 +109,7 @@ class RequestLogger implements MiddlewareInterface
         ]);
 
         // 得到响应
-        $response = $next($request);
+        $response = $handler($request);
         $time_diff = round((microtime(true) - $start_time) * 1000, 2);
 
         // 记录业务处理结束
