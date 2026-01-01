@@ -76,7 +76,7 @@ class StaticCacheRedirect implements MiddlewareInterface
 
         // 对于 authenticated 和更高级别的策略，检查登录状态
         if (in_array($strategyType, ['authenticated', 'user_group', 'personalized'])) {
-            $adminSession = $request->session()?->get('admin');
+            $adminSession = $request->session()->get('admin');
             $adminToken = $request->cookie('admin_token');
 
             // 管理员始终走动态渲染
@@ -87,7 +87,7 @@ class StaticCacheRedirect implements MiddlewareInterface
 
         // 公共缓存：管理员也绕过（但仍统计）
         if ($strategyType === 'public') {
-            $adminSession = $request->session()?->get('admin');
+            $adminSession = $request->session()->get('admin');
             $adminToken = $request->cookie('admin_token');
             if ($adminSession || $adminToken) {
                 // 管理员访问视为缓存未命中（因为需要动态内容）
@@ -161,7 +161,7 @@ class StaticCacheRedirect implements MiddlewareInterface
                 'X-Cache-Strategy' => $strategyType,
             ];
 
-            if ($useGzip) {
+            if ($useGzip && function_exists('gzencode')) {
                 $body = gzencode($body, 6);
                 $headers['Content-Encoding'] = 'gzip';
                 $headers['Vary'] = 'Accept-Encoding';
