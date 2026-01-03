@@ -15,6 +15,7 @@
 
 namespace app\middleware;
 
+use app\service\CacheControl;
 use support\Log;
 use Webman\Http\Request;
 use Webman\Http\Response;
@@ -25,33 +26,7 @@ use Webman\MiddlewareInterface;
  */
 class StaticFile implements MiddlewareInterface
 {
-    /**
-     * 不同文件类型的缓存策略(秒)
-     * @var array
-     */
-    protected array $cacheStrategies = [
-        // 图片类型 - 30天
-        'jpg'  => 2592000,
-        'jpeg' => 2592000,
-        'png'  => 2592000,
-        'gif'  => 2592000,
-        'webp' => 2592000,
-        'ico'  => 2592000,
-        'svg'  => 2592000,
-
-        // 字体文件 - 30天
-        'woff' => 2592000,
-        'woff2' => 2592000,
-        'ttf' => 2592000,
-        'eot' => 2592000,
-
-        // CSS和JS - 7天
-        'css'  => 604800,
-        'js'   => 604800,
-
-        // 其他静态资源 - 1天
-        'default' => 86400,
-    ];
+    // 缓存策略已移至 CacheControl 服务统一管理
 
     public function process(Request $request, callable $handler): Response
     {
@@ -96,23 +71,15 @@ class StaticFile implements MiddlewareInterface
 
         $path = $request->path();
         $fileExt = $this->getFileExtension($path);
-        $maxAge = $this->getMaxAgeByExtension($fileExt);
 
         // 获取文件信息用于生成ETag和Last-Modified
         $filePath = public_path() . '/' . ltrim($path, '/');
         $fileInfo = $this->getFileInfo($filePath);
 
-        // 设置缓存控制头
-        $cacheControl = [];
-        $cacheControl[] = 'public';
-        $cacheControl[] = "max-age={$maxAge}";
-
-        // 如果是带哈希的静态资源文件，添加immutable
-        if ($this->isImmutableFile($path, $fileExt)) {
-            $cacheControl[] = 'immutable';
-        }
-
-        $response->header('Cache-Control', implode(', ', $cacheControl));
+        // 设置缓存控制头 - 使用统一的缓存策略服务
+        $isImmutable = $this->isImmutableFile($path, $fileExt);
+        $cacheControlValue = CacheControl::getStaticAssetCacheControl($fileExt, $isImmutable);
+        $response->header('Cache-Control', $cacheControlValue);
 
         // 设置ETag
         if (!empty($fileInfo['etag'])) {
@@ -154,16 +121,6 @@ class StaticFile implements MiddlewareInterface
     }
 
     /**
-     * 根据文件扩展名获取缓存时间
-     * @param string $ext
-     * @return int
-     */
-    protected function getMaxAgeByExtension(string $ext): int
-    {
-        return $this->cacheStrategies[$ext] ?? $this->cacheStrategies['default'];
-    }
-
-    /**
      * 判断是否为不可变文件(通常是带哈希的静态资源)
      * @param string $path
      * @param string $ext
@@ -201,7 +158,7 @@ class StaticFile implements MiddlewareInterface
             // ETag基于文件修改时间和大小生成
             'etag' => sprintf('W/"%s-%s"', $size, $mtime),
             // Last-Modified使用GMT格式
-            'last_modified' => gmdate('D, d M Y H:i:s', $mtime) . ' GMT',
+            'last_modified' => CacheControl::generateLastModified($mtime),
         ];
     }
 }

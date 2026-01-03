@@ -2,6 +2,7 @@
 
 namespace app\middleware;
 
+use app\service\CacheControl;
 use app\service\EnhancedStaticCacheConfig;
 
 use function public_path;
@@ -119,18 +120,19 @@ class StaticCacheRedirect implements MiddlewareInterface
             // 命中静态文件
             Log::debug('[StaticCache] HIT: ' . $path . ' -> ' . $full);
             $generatedAt = @filemtime($full) ?: time();
-            $etag = md5($cacheKey . $generatedAt);
+            $etag = CacheControl::generateETag($cacheKey . $generatedAt);
 
             // 检查 ETag
             $clientEtag = $request->header('If-None-Match');
             if ($clientEtag === $etag) {
                 EnhancedStaticCacheConfig::recordCacheHit();
 
-                return new Response(304, [
+                $cacheHeaders = CacheControl::getStaticCacheHeaders($strategy['ttl'] ?? 3600);
+
+                return new Response(304, array_merge($cacheHeaders, [
                     'ETag' => $etag,
-                    'Cache-Control' => 'public, max-age=' . ($strategy['ttl'] ?? 3600),
                     'X-Static-Cache' => 'hit',
-                ]);
+                ]));
             }
 
             // 检查 Last-Modified
@@ -138,11 +140,12 @@ class StaticCacheRedirect implements MiddlewareInterface
             if ($clientModified && strtotime($clientModified) >= $generatedAt) {
                 EnhancedStaticCacheConfig::recordCacheHit();
 
-                return new Response(304, [
-                    'Last-Modified' => gmdate('D, d M Y H:i:s', $generatedAt) . ' GMT',
-                    'Cache-Control' => 'public, max-age=' . ($strategy['ttl'] ?? 3600),
+                $cacheHeaders = CacheControl::getStaticCacheHeaders($strategy['ttl'] ?? 3600);
+
+                return new Response(304, array_merge($cacheHeaders, [
+                    'Last-Modified' => CacheControl::generateLastModified($generatedAt),
                     'X-Static-Cache' => 'hit',
-                ]);
+                ]));
             }
 
             // 读取缓存内容
@@ -152,14 +155,14 @@ class StaticCacheRedirect implements MiddlewareInterface
             $acceptEncoding = $request->header('Accept-Encoding') ?? '';
             $useGzip = str_contains($acceptEncoding, 'gzip') && function_exists('gzencode');
 
-            $headers = [
+            $cacheHeaders = CacheControl::getStaticCacheHeaders($strategy['ttl'] ?? 3600);
+            $headers = array_merge($cacheHeaders, [
                 'Content-Type' => 'text/html; charset=utf-8',
-                'Cache-Control' => 'public, max-age=' . ($strategy['ttl'] ?? 3600),
                 'ETag' => $etag,
-                'Last-Modified' => gmdate('D, d M Y H:i:s', $generatedAt) . ' GMT',
+                'Last-Modified' => CacheControl::generateLastModified($generatedAt),
                 'X-Static-Cache' => 'hit',
                 'X-Cache-Strategy' => $strategyType,
-            ];
+            ]);
 
             if ($useGzip && function_exists('gzencode')) {
                 $body = gzencode($body, 6);

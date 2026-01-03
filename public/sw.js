@@ -33,10 +33,10 @@ function isStaticPath(url) {
 function isApiPath(url) {
     // API 路径：/captcha/config, /comment/list/*, /user/profile/api 等
     const apiPaths = [
-        '/captcha/config',
-        '/captcha/image',
-        '/comment/list/',
-        '/comment/status/',
+        // '/captcha/config',
+        // '/captcha/image',
+        // '/comment/list/',
+        // '/comment/status/',
         '/user/profile/api'
     ];
     return apiPaths.some(p => url.pathname.startsWith(p));

@@ -217,6 +217,9 @@ class StaticGenerator
         [$code, $body] = $this->httpFetch($path);
         $this->writeHtml($path, $code, $body, $force);
 
+        // 生成对应的骨架页
+        $this->generateSkeletonPage($path, $force);
+
         if ($jobId) {
             // warmup任务由Controller初始化，这里只递增
             $data = cache($progressKey);
@@ -267,6 +270,7 @@ class StaticGenerator
                     $path = "/page/$p";
                     [$code, $body] = $this->httpFetch($path);
                     $this->writeHtml($path, $code, $body, $force);
+                    $this->generateSkeletonPage($path, $force);
                     $done++;
                     if ($jobId) {
                         $this->progressTick($jobId, $done, $path, $skipProgress);
@@ -275,6 +279,7 @@ class StaticGenerator
                 $path = '/';
                 [$code, $body] = $this->httpFetch($path);
                 $this->writeHtml($path, $code, $body, $force);
+                $this->generateSkeletonPage($path, $force);
                 $done++;
                 if ($jobId) {
                     $this->progressTick($jobId, $done, $path, $skipProgress);
@@ -285,6 +290,7 @@ class StaticGenerator
                     $path = "/link/page/$p";
                     [$code, $body] = $this->httpFetch($path);
                     $this->writeHtml($path, $code, $body, $force);
+                    $this->generateSkeletonPage($path, $force);
                     $done++;
                     if ($jobId) {
                         $this->progressTick($jobId, $done, $path, $skipProgress);
@@ -293,6 +299,7 @@ class StaticGenerator
                 $path = '/link';
                 [$code, $body] = $this->httpFetch($path);
                 $this->writeHtml($path, $code, $body, $force);
+                $this->generateSkeletonPage($path, $force);
                 $done++;
                 if ($jobId) {
                     $this->progressTick($jobId, $done, $path, $skipProgress);
@@ -305,6 +312,7 @@ class StaticGenerator
                     $path = "/post/$keyword";
                     [$code, $body] = $this->httpFetch($path);
                     $this->writeHtml($path, $code, $body, $force);
+                    $this->generateSkeletonPage($path, $force);
                     $done++;
                     if ($jobId) {
                         $this->progressTick($jobId, $done, $path, $skipProgress);
@@ -319,6 +327,7 @@ class StaticGenerator
                 $path = '/search';
                 [$code, $body] = $this->httpFetch($path);
                 $this->writeHtml($path, $code, $body, $force);
+                $this->generateSkeletonPage($path, $force);
                 $done++;
                 if ($jobId) {
                     $this->progressTick($jobId, $done, $path, true);
@@ -441,7 +450,7 @@ class StaticGenerator
     document.addEventListener("DOMContentLoaded", function() {
         // 查找所有CSRF占位符
         var csrfInputs = document.querySelectorAll(\'input[data-csrf-placeholder="true"]\');
-        
+
         if (csrfInputs.length > 0) {
             // 从Cookie中获取CSRF token
             function getCsrfToken() {
@@ -459,7 +468,7 @@ class StaticGenerator
                 }
                 return null;
             }
-            
+
             var token = getCsrfToken();
             if (token) {
                 // 填充所有占位符
@@ -875,6 +884,92 @@ class StaticGenerator
         }
 
         return @rmdir($dir);
+    }
+
+    /**
+     * 生成骨架页
+     *
+     * @param string $urlPath URL路径
+     * @param bool   $force   是否强制重新生成
+     */
+    protected function generateSkeletonPage(string $urlPath, bool $force = false): void
+    {
+        try {
+            $controller = new \app\controller\SkeletonController();
+            $timestamp = time();
+
+            $html = $controller->generateSkeletonHtml($urlPath, $timestamp);
+            $targetPath = $this->mapSkeletonPath($urlPath);
+            $versionDir = $this->getSkeletonVersionDir($timestamp);
+
+            $baseDir = public_path() . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'skeleton';
+            $final = $baseDir . DIRECTORY_SEPARATOR . $versionDir . DIRECTORY_SEPARATOR . $targetPath;
+            $stage = public_path() . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'skeleton_tmp' . DIRECTORY_SEPARATOR . $versionDir . DIRECTORY_SEPARATOR . $targetPath;
+
+            $finalDir = dirname($final);
+            $stageDir = dirname($stage);
+            if (!is_dir($finalDir)) {
+                if (!mkdir($finalDir, 0o775, true)) {
+                    throw new RuntimeException("无法创建目录: {$finalDir}");
+                }
+            }
+            if (!is_dir($stageDir)) {
+                if (!mkdir($stageDir, 0o775, true)) {
+                    throw new RuntimeException("无法创建目录: {$stageDir}");
+                }
+            }
+
+            if (file_exists($stage)) {
+                @unlink($stage);
+            }
+            file_put_contents($stage, $html);
+
+            if (!$force && file_exists($final)) {
+                @unlink($stage);
+
+                return;
+            }
+
+            if (file_exists($final)) {
+                @unlink($final);
+            }
+            @rename($stage, $final);
+
+            Log::info("骨架页生成成功: {$final}");
+        } catch (Throwable $e) {
+            Log::error('骨架页生成失败: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * URL 转骨架页文件路径
+     *
+     * @param string $url
+     *
+     * @return string
+     */
+    protected function mapSkeletonPath(string $url): string
+    {
+        $path = ltrim($url, '/');
+        if ($path === '' || $path === '/') {
+            return 'index.html';
+        }
+        $path = preg_replace('#\.html$#', '', $path);
+        $path = str_replace('/', '_', $path);
+
+        return $path . '.html';
+    }
+
+    /**
+     * 获取骨架页版本目录
+     *
+     * @param int $timestamp
+     *
+     * @return string
+     */
+    protected function getSkeletonVersionDir(int $timestamp): string
+    {
+        return substr(md5($timestamp), 0, 8);
     }
 
     public function onWorkerStop(): void
