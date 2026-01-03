@@ -21,6 +21,9 @@ use Webman\Route;
 
 Route::disableDefaultRoute();
 
+// 骨架页路由 - 最高优先级,必须在其他路由之前
+Route::any('/skeleton', [app\controller\SkeletonController::class, 'index'])->name('skeleton.index');
+
 //Route::any('/push/{id}', function ($id) {
 //    return view('push/id-test', ['id' => $id]);
 //});
