@@ -41,6 +41,13 @@ class EdgePushWorker
         Log::info('[EdgePushWorker] Push timer started, interval: ' . $this->pushInterval . 's');
     }
 
+    private function initialPush(): void
+    {
+        Log::info('[EdgePushWorker] Performing initial push...');
+
+        $this->performPush();
+    }
+
     private function performPush(): void
     {
         try {
@@ -132,13 +139,6 @@ class EdgePushWorker
 
             Log::info('[EdgePushWorker] Updated last_sync time for node ' . $nodeId);
         }
-    }
-
-    private function initialPush(): void
-    {
-        Log::info('[EdgePushWorker] Performing initial push...');
-
-        $this->performPush();
     }
 
     public function onWorkerStop()

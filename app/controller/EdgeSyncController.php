@@ -22,19 +22,6 @@ class EdgeSyncController
         $this->edgeApiKey = env('EDGE_API_KEY', '');
     }
 
-    public function sync(Request $request): Response
-    {
-        if (!$this->verifyApiKey($request)) {
-            return json(['success' => false, 'message' => 'Unauthorized'], 401);
-        }
-
-        $lastSync = (int) $request->input('last_sync', 0);
-        $syncService = new EdgeSyncService();
-        $result = $syncService->syncFromDatacenter();
-
-        return json($result);
-    }
-
     private function verifyApiKey(Request $request): bool
     {
         $apiKey = $request->header('X-Edge-Certificate') ?: $request->input('api_key');
@@ -48,6 +35,19 @@ class EdgeSyncController
         } else {
             return hash_equals($this->datacenterApiKey, $apiKey);
         }
+    }
+
+    public function sync(Request $request): Response
+    {
+        if (!$this->verifyApiKey($request)) {
+            return json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $lastSync = (int) $request->input('last_sync', 0);
+        $syncService = new EdgeSyncService();
+        $result = $syncService->syncFromDatacenter();
+
+        return json($result);
     }
 
     public function push(Request $request): Response

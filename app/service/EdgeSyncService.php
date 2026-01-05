@@ -7,14 +7,17 @@ use support\Log;
 
 class EdgeSyncService
 {
-    private const QUEUE_KEY = 'edge:sync:queue';
-    private const HISTORY_KEY = 'edge:sync:history';
-    private const LAST_SYNC_KEY = 'edge:sync:last';
-    private const MAX_HISTORY = 100;
-
     private string $datacenterUrl;
 
     private int $syncInterval;
+
+    private const QUEUE_KEY = 'edge:sync:queue';
+
+    private const HISTORY_KEY = 'edge:sync:history';
+
+    private const LAST_SYNC_KEY = 'edge:sync:last';
+
+    private const MAX_HISTORY = 100;
 
     public function __construct()
     {
@@ -161,44 +164,6 @@ class EdgeSyncService
         Log::debug('[EdgeSync] Synced config ' . $key . ' to cache');
     }
 
-    private function addToHistory(array $entry): void
-    {
-        $history = Cache::get(self::HISTORY_KEY, []);
-        array_unshift($history, $entry);
-
-        if (count($history) > self::MAX_HISTORY) {
-            array_pop($history);
-        }
-
-        Cache::set(self::HISTORY_KEY, $history, 86400);
-    }
-
-    public function addToQueue(string $type, int $id, array $data): void
-    {
-        $queue = Cache::get(self::QUEUE_KEY, []);
-        $queue[] = [
-            'type' => $type,
-            'id' => $id,
-            'data' => $data,
-            'timestamp' => time(),
-        ];
-        Cache::set(self::QUEUE_KEY, $queue, 86400);
-        Log::debug('[EdgeSync] Added to queue: ' . $type . ':' . $id);
-    }
-
-    public function processQueue(): array
-    {
-        $queue = Cache::get(self::QUEUE_KEY, []);
-
-        if (empty($queue)) {
-            return ['success' => true, 'message' => 'Queue is empty', 'processed_count' => 0];
-        }
-
-        Cache::set(self::QUEUE_KEY, [], 86400);
-
-        return $this->pushToDatacenter($queue);
-    }
-
     public function pushToDatacenter(array $items): array
     {
         if (empty($this->datacenterUrl)) {
@@ -251,11 +216,49 @@ class EdgeSyncService
         }
     }
 
+    public function addToQueue(string $type, int $id, array $data): void
+    {
+        $queue = Cache::get(self::QUEUE_KEY, []);
+        $queue[] = [
+            'type' => $type,
+            'id' => $id,
+            'data' => $data,
+            'timestamp' => time(),
+        ];
+        Cache::set(self::QUEUE_KEY, $queue, 86400);
+        Log::debug('[EdgeSync] Added to queue: ' . $type . ':' . $id);
+    }
+
+    public function processQueue(): array
+    {
+        $queue = Cache::get(self::QUEUE_KEY, []);
+
+        if (empty($queue)) {
+            return ['success' => true, 'message' => 'Queue is empty', 'processed_count' => 0];
+        }
+
+        Cache::set(self::QUEUE_KEY, [], 86400);
+
+        return $this->pushToDatacenter($queue);
+    }
+
     public function getSyncHistory(int $limit = 10): array
     {
         $history = Cache::get(self::HISTORY_KEY, []);
 
         return array_slice($history, 0, $limit);
+    }
+
+    private function addToHistory(array $entry): void
+    {
+        $history = Cache::get(self::HISTORY_KEY, []);
+        array_unshift($history, $entry);
+
+        if (count($history) > self::MAX_HISTORY) {
+            array_pop($history);
+        }
+
+        Cache::set(self::HISTORY_KEY, $history, 86400);
     }
 
     public function getQueueSize(): int

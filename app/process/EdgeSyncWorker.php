@@ -45,6 +45,13 @@ class EdgeSyncWorker
         Log::info('[EdgeSyncWorker] Sync timer started, interval: ' . $this->syncInterval . 's');
     }
 
+    private function initialSync(): void
+    {
+        Log::info('[EdgeSyncWorker] Performing initial sync...');
+
+        $this->performSync();
+    }
+
     private function performSync(): void
     {
         if (!EdgeNodeService::isDatacenterAvailable()) {
@@ -89,13 +96,6 @@ class EdgeSyncWorker
                 Log::error('[EdgeSyncWorker] Queue processing failed: ' . ($result['message'] ?? 'Unknown error'));
             }
         }
-    }
-
-    private function initialSync(): void
-    {
-        Log::info('[EdgeSyncWorker] Performing initial sync...');
-
-        $this->performSync();
     }
 
     public function onWorkerStop()

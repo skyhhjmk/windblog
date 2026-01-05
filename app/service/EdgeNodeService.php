@@ -29,94 +29,9 @@ class EdgeNodeService
         $this->checkInterval = config('app.edge_sync_interval', 300);
     }
 
-    public static function getCache(string $key, mixed $default = null): mixed
-    {
-        if (!self::isEdgeMode()) {
-            return CacheService::cache($key, null, false);
-        }
-
-        $edgeKey = 'edge:' . $key;
-        $value = CacheService::cache($edgeKey, null, false);
-
-        if ($value !== $default) {
-            Log::debug('[EdgeNode] Cache hit: ' . $key);
-        }
-
-        return $value;
-    }
-
     public static function isEdgeMode(): bool
     {
         return config('app.is_edge_mode', false);
-    }
-
-    public static function setCache(string $key, mixed $value, int $ttl = 3600): bool
-    {
-        if (!self::isEdgeMode()) {
-            return CacheService::cache($key, $value, true, $ttl);
-        }
-
-        $edgeKey = 'edge:' . $key;
-        $edgeTtl = $ttl * 2;
-        $result = CacheService::cache($edgeKey, $value, true, $edgeTtl);
-
-        if ($result) {
-            Log::debug('[EdgeNode] Cache set: ' . $key . ' TTL: ' . $edgeTtl);
-        }
-
-        return $result;
-    }
-
-    public static function deleteCache(string $key): bool
-    {
-        if (!self::isEdgeMode()) {
-            return CacheService::delete($key);
-        }
-
-        $edgeKey = 'edge:' . $key;
-
-        return CacheService::delete($edgeKey);
-    }
-
-    public static function updateSyncStatus(array $updates): void
-    {
-        foreach ($updates as $key => $value) {
-            if (array_key_exists($key, self::$syncStatus)) {
-                self::$syncStatus[$key] = $value;
-            }
-        }
-    }
-
-    public static function markSyncStart(): void
-    {
-        self::$syncStatus['syncing'] = true;
-    }
-
-    public static function markSyncComplete(int $syncedCount = 0): void
-    {
-        self::$syncStatus['syncing'] = false;
-        self::$syncStatus['last_sync'] = time();
-        self::$syncStatus['sync_count'] += $syncedCount;
-        self::$syncStatus['error_count'] = 0;
-        self::$syncStatus['last_error'] = '';
-    }
-
-    public static function markSyncError(string $error): void
-    {
-        self::$syncStatus['syncing'] = false;
-        self::$syncStatus['error_count']++;
-        self::$syncStatus['last_error'] = $error;
-    }
-
-    public static function getNodeInfo(): array
-    {
-        return [
-            'mode' => self::isEdgeMode() ? 'edge' : 'datacenter',
-            'datacenter_available' => self::isDatacenterAvailable(),
-            'degraded_mode' => self::isDegradedMode(),
-            'degraded_duration' => self::getDegradedDuration(),
-            'sync_status' => self::getSyncStatus(),
-        ];
     }
 
     public static function isDatacenterAvailable(): bool
@@ -205,9 +120,94 @@ class EdgeNodeService
         return time() - self::$degradedSince;
     }
 
+    public static function getCache(string $key, mixed $default = null): mixed
+    {
+        if (!self::isEdgeMode()) {
+            return CacheService::cache($key, null, false);
+        }
+
+        $edgeKey = 'edge:' . $key;
+        $value = CacheService::cache($edgeKey, null, false);
+
+        if ($value !== $default) {
+            Log::debug('[EdgeNode] Cache hit: ' . $key);
+        }
+
+        return $value;
+    }
+
+    public static function setCache(string $key, mixed $value, int $ttl = 3600): bool
+    {
+        if (!self::isEdgeMode()) {
+            return CacheService::cache($key, $value, true, $ttl);
+        }
+
+        $edgeKey = 'edge:' . $key;
+        $edgeTtl = $ttl * 2;
+        $result = CacheService::cache($edgeKey, $value, true, $edgeTtl);
+
+        if ($result) {
+            Log::debug('[EdgeNode] Cache set: ' . $key . ' TTL: ' . $edgeTtl);
+        }
+
+        return $result;
+    }
+
+    public static function deleteCache(string $key): bool
+    {
+        if (!self::isEdgeMode()) {
+            return CacheService::delete($key);
+        }
+
+        $edgeKey = 'edge:' . $key;
+
+        return CacheService::delete($edgeKey);
+    }
+
     public static function getSyncStatus(): array
     {
         return self::$syncStatus;
+    }
+
+    public static function updateSyncStatus(array $updates): void
+    {
+        foreach ($updates as $key => $value) {
+            if (array_key_exists($key, self::$syncStatus)) {
+                self::$syncStatus[$key] = $value;
+            }
+        }
+    }
+
+    public static function markSyncStart(): void
+    {
+        self::$syncStatus['syncing'] = true;
+    }
+
+    public static function markSyncComplete(int $syncedCount = 0): void
+    {
+        self::$syncStatus['syncing'] = false;
+        self::$syncStatus['last_sync'] = time();
+        self::$syncStatus['sync_count'] += $syncedCount;
+        self::$syncStatus['error_count'] = 0;
+        self::$syncStatus['last_error'] = '';
+    }
+
+    public static function markSyncError(string $error): void
+    {
+        self::$syncStatus['syncing'] = false;
+        self::$syncStatus['error_count']++;
+        self::$syncStatus['last_error'] = $error;
+    }
+
+    public static function getNodeInfo(): array
+    {
+        return [
+            'mode' => self::isEdgeMode() ? 'edge' : 'datacenter',
+            'datacenter_available' => self::isDatacenterAvailable(),
+            'degraded_mode' => self::isDegradedMode(),
+            'degraded_duration' => self::getDegradedDuration(),
+            'sync_status' => self::getSyncStatus(),
+        ];
     }
 
     public static function reset(): void
