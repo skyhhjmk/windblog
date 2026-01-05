@@ -187,6 +187,14 @@ Route::get('/sitemap/archives.xml', [app\controller\SitemapController::class, 'a
 Route::get('/g_sitemap', [app\controller\SitemapController::class, 'graphical'])->name('sitemap.graphical');
 Route::get('/g_sitemap.html', [app\controller\SitemapController::class, 'graphical'])->name('sitemap.graphical.html');
 
+// 边缘节点同步路由
+Route::group('/edge', function () {
+    Route::post('/sync', [app\controller\EdgeSyncController::class, 'sync']);
+    Route::post('/push', [app\controller\EdgeSyncController::class, 'push']);
+    Route::get('/health', [app\controller\EdgeSyncController::class, 'health']);
+    Route::get('/status', [app\controller\EdgeSyncController::class, 'getSyncStatus']);
+});
+
 Route::fallback(function (Request $request) {
     if ($request->expectsJson()) {
         return json(['code' => 404, 'msg' => '404 not found']);

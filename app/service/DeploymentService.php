@@ -1,0 +1,200 @@
+<?php
+
+namespace app\service;
+
+use support\Log;
+
+class DeploymentService
+{
+    private string $templateDir;
+
+    private string $outputDir;
+
+    public function __construct()
+    {
+        $this->templateDir = base_path('template');
+        $this->outputDir = runtime_path('deployments');
+        if (!is_dir($this->outputDir)) {
+            mkdir($this->outputDir, 0o755, true);
+        }
+    }
+
+    public function generateManualPackage(string $nodeId, array $nodeInfo): string
+    {
+        $deployment = $this->generateDeployment($nodeId, $nodeInfo);
+        if (!$deployment['success']) {
+            throw new \RuntimeException('Failed to generate deployment: ' . $deployment['message']);
+        }
+
+        $zipPath = $this->outputDir . DIRECTORY_SEPARATOR . $nodeId . '_deployment.zip';
+        $zip = new \ZipArchive();
+        if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+            throw new \RuntimeException('Failed to create zip archive');
+        }
+
+        $files = [
+            $deployment['docker_compose_path'],
+            $deployment['env_path'],
+            $deployment['script_path'],
+        ];
+
+        foreach ($files as $file) {
+            $zip->addFile($file, basename($file));
+        }
+
+        $zip->close();
+
+        return $zipPath;
+    }
+
+    public function generateDeployment(string $nodeId, array $nodeInfo): array
+    {
+        try {
+            $dockerComposeContent = $this->generateDockerCompose($nodeInfo);
+            $envContent = $this->generateEnv($nodeInfo);
+            $scriptContent = $this->generateScript($nodeInfo);
+
+            $deploymentDir = $this->outputDir . DIRECTORY_SEPARATOR . $nodeId;
+            if (!is_dir($deploymentDir)) {
+                mkdir($deploymentDir, 0o755, true);
+            }
+
+            $dockerComposePath = $deploymentDir . DIRECTORY_SEPARATOR . 'docker-compose.yml';
+            $envPath = $deploymentDir . DIRECTORY_SEPARATOR . '.env';
+            $scriptPath = $deploymentDir . DIRECTORY_SEPARATOR . 'deploy.sh';
+
+            file_put_contents($dockerComposePath, $dockerComposeContent);
+            file_put_contents($envPath, $envContent);
+            file_put_contents($scriptPath, $scriptContent);
+            chmod($scriptPath, 0o755);
+
+            return [
+                'success' => true,
+                'docker_compose' => $dockerComposeContent,
+                'env' => $envContent,
+                'script' => $scriptContent,
+                'docker_compose_path' => $dockerComposePath,
+                'env_path' => $envPath,
+                'script_path' => $scriptPath,
+                'deployment_dir' => $deploymentDir,
+            ];
+        } catch (\Throwable $e) {
+            Log::error('[DeploymentService] Failed to generate deployment: ' . $e->getMessage());
+
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    private function generateDockerCompose(array $nodeInfo): string
+    {
+        $content = 'version: \'3.8\'
+
+services:
+  windblog:
+    image: windblog/webman:latest
+    container_name: windblog_edge
+    ports:
+      - "8787:8787"
+    volumes:
+      - ./config:/app/config
+      - ./runtime:/app/runtime
+      - ./logs:/app/logs
+    environment:
+      - APP_ENV=production
+      - DEPLOYMENT_TYPE=edge
+      - DB_DEFAULT=pgsql
+      - DB_PGSQL_HOST=postgres
+      - DB_PGSQL_PORT=5432
+      - DB_PGSQL_DATABASE=windblog_edge
+      - DB_PGSQL_USERNAME=postgres
+      - DB_PGSQL_PASSWORD=postgres
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+      - REDIS_DATABASE=0
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:14-alpine
+    container_name: windblog_postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=windblog_edge
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: windblog_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:';
+
+        return $content;
+    }
+
+    private function generateEnv(array $nodeInfo): string
+    {
+        $content = "# WindBlog Edge Node Configuration\n# Generated at " . date('Y-m-d H:i:s') . "\n\n# Basic Settings\nAPP_DEBUG=false\nAPP_ENV=production\nDEPLOYMENT_TYPE=edge\n\n# Database Settings\nDB_DEFAULT=pgsql\nDB_PGSQL_HOST=localhost\nDB_PGSQL_PORT=5432\nDB_PGSQL_DATABASE=windblog_edge\nDB_PGSQL_USERNAME=postgres\nDB_PGSQL_PASSWORD=postgres\n\n# Redis Settings\nCACHE_DRIVER=redis\nREDIS_HOST=localhost\nREDIS_PORT=6379\nREDIS_PASSWORD=\nREDIS_DATABASE=0\n\n# Edge Node Settings\nEDGE_DATACENTER_URL=" . $nodeInfo['url'] . "\nEDGE_SYNC_INTERVAL=300\nEDGE_DEGRADE_ENABLED=true\nEDGE_API_KEY=" . $nodeInfo['api_key'] . "\n\n# Node Information\nNODE_NAME=" . $nodeInfo['name'] . "\nNODE_ID=" . $nodeInfo['id'] . "\nNODE_BANDWIDTH=" . $nodeInfo['bandwidth'] . "\nNODE_CPU=" . $nodeInfo['cpu'] . "\nNODE_MEMORY=" . $nodeInfo['memory'] . "\n";
+
+        return $content;
+    }
+
+    private function generateScript(array $nodeInfo): string
+    {
+        $content = '#!/bin/bash
+
+echo "=== WindBlog Edge Node Deployment Script ==="
+echo "Generated at ' . date('Y-m-d H:i:s') . '"
+
+echo "1. Checking Docker installation..."
+if ! command -v docker &> /dev/null; then
+    echo "ERROR: Docker is not installed. Please install Docker first."
+    exit 1
+fi
+
+if ! command -v docker-compose &> /dev/null; then
+    echo "ERROR: Docker Compose is not installed. Please install Docker Compose first."
+    exit 1
+fi
+
+echo "✓ Docker and Docker Compose are installed."
+
+echo "\n2. Creating directories..."
+mkdir -p config logs runtime
+echo "✓ Directories created."
+
+echo "\n3. Starting services..."
+docker-compose up -d
+echo "✓ Services started."
+
+echo "\n4. Waiting for services to initialize..."
+sleep 10
+echo "✓ Services initialized."
+
+echo "\n5. Checking service status..."
+docker-compose ps
+
+echo "\n=== Deployment completed! ==="
+echo "Edge Node URL: http://localhost:8787"
+echo "Node ID: ' . $nodeInfo['id'] . '"
+echo "Node Name: ' . $nodeInfo['name'] . '"
+echo "\nTo stop services: docker-compose down"
+echo "To view logs: docker-compose logs -f"';
+
+        return $content;
+    }
+}

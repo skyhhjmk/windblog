@@ -15,13 +15,20 @@
 
 use support\Request;
 
+$__deployment = strtolower(trim((string) env('DEPLOYMENT_TYPE', 'datacenter')));
+
 return [
     'debug' => getenv('APP_DEBUG'),
     'error_reporting' => E_ALL,
-    'default_timezone' => 'UTC',  // 修复：使用 UTC 时区，与数据库保持一致
+    'default_timezone' => 'UTC',
     'request_class' => Request::class,
     'public_path' => base_path() . DIRECTORY_SEPARATOR . 'public',
     'runtime_path' => base_path(false) . DIRECTORY_SEPARATOR . 'runtime',
     'controller_suffix' => 'Controller',
     'controller_reuse' => false,
+    'deployment_type' => $__deployment,
+    'is_edge_mode' => $__deployment === 'edge',
+    'datacenter_url' => getenv('EDGE_DATACENTER_URL') ?: '',
+    'edge_sync_interval' => (int) (getenv('EDGE_SYNC_INTERVAL') ?: 300),
+    'edge_degrade_enabled' => filter_var(getenv('EDGE_DEGRADE_ENABLED') ?: 'true', FILTER_VALIDATE_BOOLEAN),
 ];

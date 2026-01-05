@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>边缘节点管理</title>
+    <meta content="webkit" name="renderer">
+    <meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible">
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1" name="viewport">
+    <link href="/app/admin/component/pear/css/pear.css" rel="stylesheet"/>
+    <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+    <script src="/app/admin/component/pear/pear.js"></script>
+</head>
+<body class="pear-container">
+<div class="layui-fluid">
+    <div class="layui-card">
+        <div class="layui-card-header">
+            <button class="layui-btn layui-btn-sm" id="addEdgeNode">
+                <i class="layui-icon layui-icon-add-1"></i> 新增边缘节点
+            </button>
+            <button class="layui-btn layui-btn-sm layui-btn-normal" id="refreshTable">
+                <i class="layui-icon layui-icon-refresh"></i> 刷新
+            </button>
+        </div>
+        <div class="layui-card-body">
+            <table id="edgeNodeTable" lay-filter="edgeNodeTable"></table>
+        </div>
+    </div>
+</div>
+
+<!-- 工具栏模板 -->
+<style>
+    /* 调整表格单元格内边距 */
+    .layui-table-cell {
+        height: auto;
+        line-height: 26px;
+        padding: 12px 15px;
+        white-space: normal;
+        word-break: break-all;
+    }
+
+    .edge-node-actions {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
+        width: 100%;
+        min-height: 38px;
+    }
+
+    /* 调整按钮样式，确保一致高度 */
+    .edge-node-actions .layui-btn {
+        margin: 2px 0;
+        white-space: nowrap;
+        height: 26px;
+        line-height: 26px;
+        padding: 0 10px;
+        font-size: 12px;
+    }
+
+    .edge-node-dropdown {
+        position: relative;
+        display: none;
+    }
+
+    .edge-node-dropdown .layui-btn-group {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        margin-top: 5px;
+        display: none;
+        z-index: 9999;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        background: white;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .edge-node-dropdown:hover .layui-btn-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .edge-node-dropdown .layui-btn-group .layui-btn {
+        border-radius: 0;
+        margin: 0;
+        text-align: left;
+        border: none;
+        border-bottom: 1px solid #eee;
+        width: 100%;
+        min-width: 120px;
+    }
+
+    .edge-node-dropdown .layui-btn-group .layui-btn:last-child {
+        border-bottom: none;
+    }
+
+    /* 响应式布局 */
+    @media (max-width: 1400px) {
+        .edge-node-actions {
+            gap: 4px;
+        }
+
+        .edge-node-actions .layui-btn {
+            padding: 0 8px;
+            font-size: 11px;
+        }
+    }
+
+    @media (max-width: 1200px) {
+        .edge-node-actions .layui-btn {
+            display: none;
+        }
+
+        .edge-node-dropdown {
+            display: inline-block;
+        }
+
+        .edge-node-dropdown .layui-btn {
+            display: inline-block;
+        }
+    }
+
+    @media (min-width: 1201px) {
+        .edge-node-dropdown {
+            display: none;
+        }
+    }
+</style>
+
+<script id="edgeNodeBarTpl" type="text/html">
+    <div class="edge-node-actions">
+        <a class="layui-btn layui-btn-xs" lay-event="edit"><i class="layui-icon layui-icon-edit"></i>编辑</a>
+        <a class="layui-btn layui-btn-xs layui-btn-normal" lay-event="sync"><i
+                class="layui-icon layui-icon-refresh"></i>同步</a>
+        <a class="layui-btn layui-btn-xs layui-btn-warm" lay-event="status"><i class="layui-icon layui-icon-chart"></i>状态</a>
+
+        <a class="layui-btn layui-btn-xs layui-btn-success" lay-event="deployment"><i
+                class="layui-icon layui-icon-download"></i>生成部署包</a>
+        <a class="layui-btn layui-btn-xs layui-btn-danger" lay-event="delete"><i
+                class="layui-icon layui-icon-delete"></i>删除</a>
+
+        <!-- 下拉菜单 -->
+        <div class="edge-node-dropdown">
+            <a class="layui-btn layui-btn-xs layui-btn-sm layui-icon layui-icon-down layui-btn-primary dropdown-toggle"></a>
+            <div class="layui-btn-group">
+                <a class="layui-btn layui-btn-xs" lay-event="edit"><i class="layui-icon layui-icon-edit"></i>编辑</a>
+                <a class="layui-btn layui-btn-xs layui-btn-normal" lay-event="sync"><i
+                        class="layui-icon layui-icon-refresh"></i>同步</a>
+                <a class="layui-btn layui-btn-xs layui-btn-warm" lay-event="status"><i
+                        class="layui-icon layui-icon-chart"></i>状态</a>
+
+                <a class="layui-btn layui-btn-xs layui-btn-success" lay-event="deployment"><i
+                        class="layui-icon layui-icon-download"></i>生成部署包</a>
+                <a class="layui-btn layui-btn-xs layui-btn-danger" lay-event="delete"><i
+                        class="layui-icon layui-icon-delete"></i>删除</a>
+            </div>
+        </div>
+    </div>
+</script>
+
+<!-- 状态模板 -->
+<script id="nodeStatusTpl" type="text/html">
+    {{# if(d.status === 'active'){ }}
+    <span class="layui-badge layui-bg-green">启用</span>
+    {{# } else { }}
+    <span class="layui-badge layui-bg-gray">禁用</span>
+    {{# } }}
+</script>
+
+<!-- 最后同步时间模板 -->
+<script id="lastSyncTpl" type="text/html">
+    {{# if(d.last_sync > 0){ }}
+    {{ layui.util.toDateString(d.last_sync * 1000, 'yyyy-MM-dd HH:mm:ss') }}
+    {{# } else { }}
+    <span class="layui-text-gray">未同步</span>
+    {{# } }}
+</script>
+
+<script>
+    layui.use(['table', 'layer', 'form', 'util'], function () {
+        var table = layui.table;
+        var layer = layui.layer;
+        var form = layui.form;
+        var util = layui.util;
+        var $ = layui.$;
+
+        // 渲染表格
+        table.render({
+            elem: '#edgeNodeTable',
+            url: '/app/admin/edge-node/list',
+            page: false,
+            cols: [[
+                {field: 'name', title: '节点名称', width: 150},
+                {field: 'url', title: '节点地址', minWidth: 200},
+                {field: 'status', title: '状态', width: 100, templet: '#nodeStatusTpl', align: 'center'},
+                {field: 'last_sync', title: '最后同步', width: 180, templet: '#lastSyncTpl', align: 'center'},
+                {
+                    field: 'created_at', title: '创建时间', width: 180, templet: function (d) {
+                        return util.toDateString(d.created_at * 1000, 'yyyy-MM-dd HH:mm:ss');
+                    }, align: 'center'
+                },
+                {fixed: 'right', title: '操作', width: 350, minWidth: 200, align: 'center', toolbar: '#edgeNodeBarTpl'}
+            ]],
+            response: {
+                statusCode: 0
+            },
+            parseData: function (res) {
+                return {
+                    code: res.code,
+                    msg: res.msg,
+                    count: res.data ? res.data.list.length : 0,
+                    data: res.data ? res.data.list : []
+                };
+            }
+        });
+
+        // 刷新表格
+        $('#refreshTable').on('click', function () {
+            table.reload('edgeNodeTable');
+        });
+
+        // 新增节点
+        $('#addEdgeNode').on('click', function () {
+            showEditDialog(null);
+        });
+
+        // 监听工具条
+        table.on('tool(edgeNodeTable)', function (obj) {
+            var data = obj.data;
+
+            if (obj.event === 'edit') {
+                showEditDialog(data);
+            } else if (obj.event === 'delete') {
+                layer.confirm('确定要删除该边缘节点吗？', function (index) {
+                    deleteNode(data.id, index);
+                });
+            } else if (obj.event === 'sync') {
+                syncNode(data.id);
+            } else if (obj.event === 'status') {
+                checkNodeStatus(data.id);
+
+            } else if (obj.event === 'deployment') {
+                generateDeployment(data.id);
+            }
+        });
+
+        // 生成1024位随机API密钥
+        function generateRandomApiKey() {
+            // 生成128字节（1024位）的随机数据
+            var array = new Uint8Array(128);
+            if (window.crypto && window.crypto.getRandomValues) {
+                window.crypto.getRandomValues(array);
+            } else {
+                // 兼容旧浏览器
+                for (var i = 0; i < array.length; i++) {
+                    array[i] = Math.floor(Math.random() * 256);
+                }
+            }
+
+            // 转换为base64并移除特殊字符
+            var apiKey = btoa(String.fromCharCode.apply(null, array))
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_')
+                .replace(/=/g, '');
+
+            return apiKey;
+        }
+
+        // 显示编辑对话框
+        function showEditDialog(data) {
+            var isEdit = data !== null;
+            var title = isEdit ? '编辑边缘节点' : '新增边缘节点';
+            var name = isEdit ? data.name : '';
+            var url = isEdit ? data.url : '';
+            var api_key = isEdit ? data.api_key : '';
+            var bandwidth = isEdit && data.bandwidth ? data.bandwidth : '';
+            var cpu = isEdit && data.cpu ? data.cpu : '';
+            var memory = isEdit && data.memory ? data.memory : '';
+            var cost_per_gb = isEdit && data.cost_per_gb ? data.cost_per_gb : '';
+            var cost_per_traffic = isEdit && data.cost_per_traffic ? data.cost_per_traffic : '';
+            var available_storage = isEdit && data.available_storage ? data.available_storage : '';
+            var stability_index = isEdit && data.stability_index ? data.stability_index : '';
+            var monthly_cost = isEdit && data.monthly_cost ? data.monthly_cost : '';
+            var status = isEdit ? data.status : 'active';
+
+            var content = `<div class="layui-form" lay-filter="edgeNodeForm" style="padding: 20px;">
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">节点名称</label>
+                        <div class="layui-input-block">
+                            <input type="text" name="name" lay-verify="required" placeholder="请输入节点名称"
+                                   class="layui-input" value="${name}">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">节点地址</label>
+                        <div class="layui-input-block">
+                            <input type="text" name="url" lay-verify="required|url" placeholder="请输入节点地址"
+                                   class="layui-input" value="${url}">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">API密钥</label>
+                        <div class="layui-input-block">
+                            <div class="layui-input-inline" style="width: calc(100% - 80px);">
+                                <input type="text" name="api_key" lay-verify="required" placeholder="请输入API密钥"
+                                       class="layui-input" value="${api_key}">
+                            </div>
+                            <div class="layui-input-inline" style="width: 70px;">
+                                <button type="button" class="layui-btn layui-btn-normal" id="generateApiKey">生成</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">带宽 (Mbps)</label>
+                        <div class="layui-input-block">
+                            <input type="number" name="bandwidth" placeholder="请输入节点带宽（Mbps）"
+                                   class="layui-input" value="${bandwidth}">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">CPU (核)</label>
+                        <div class="layui-input-block">
+                            <input type="number" name="cpu" placeholder="请输入CPU核数"
+                                   class="layui-input" value="${cpu}">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">内存 (GB)</label>
+                        <div class="layui-input-block">
+                            <input type="number" name="memory" placeholder="请输入内存容量（GB）"
+                                   class="layui-input" value="${memory}">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">每GB存储成本 (元)</label>
+                        <div class="layui-input-block">
+                            <input type="number" name="cost_per_gb" placeholder="请输入每GB存储成本"
+                                   class="layui-input" value="${cost_per_gb}">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">每GB流量成本 (元)</label>
+                        <div class="layui-input-block">
+                            <input type="number" name="cost_per_traffic" placeholder="请输入每GB流量成本"
+                                   class="layui-input" value="${cost_per_traffic || ''}">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">可用存储空间 (GB)</label>
+                        <div class="layui-input-block">
+                            <input type="number" name="available_storage" placeholder="请输入可用存储空间"
+                                   class="layui-input" value="${available_storage || ''}">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">稳定指数 (0-100)</label>
+                        <div class="layui-input-block">
+                            <input type="number" name="stability_index" placeholder="请输入稳定指数（0-100）" min="0" max="100"
+                                   class="layui-input" value="${stability_index || ''}">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">月租成本 (元)</label>
+                        <div class="layui-input-block">
+                            <input type="number" name="monthly_cost" placeholder="请输入月租成本"
+                                   class="layui-input" value="${monthly_cost}">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">状态</label>
+                        <div class="layui-input-block">
+                            <input type="radio" name="status" value="active" title="启用" ${status === 'active' ? 'checked' : ''}>
+                            <input type="radio" name="status" value="inactive" title="禁用" ${status === 'inactive' ? 'checked' : ''}>
+                        </div>
+                    </div>
+                </div>`;
+
+            layer.open({
+                type: 1,
+                title: title,
+                area: ['600px', '500px'],
+                content: content,
+                btn: ['确定', '取消'],
+                success: function (layero, index) {
+                    form.render();
+
+                    // 绑定API密钥生成按钮事件
+                    layero.find('#generateApiKey').on('click', function () {
+                        var apiKey = generateRandomApiKey();
+                        layero.find('input[name="api_key"]').val(apiKey);
+                    });
+                },
+                yes: function (index, layero) {
+                    var $form = layero.find('.layui-form');
+                    var name = $form.find('input[name="name"]').val().trim();
+                    var url = $form.find('input[name="url"]').val().trim();
+                    var api_key = $form.find('input[name="api_key"]').val().trim();
+                    var bandwidth = parseFloat($form.find('input[name="bandwidth"]').val()) || 0;
+                    var cpu = parseInt($form.find('input[name="cpu"]').val()) || 0;
+                    var memory = parseFloat($form.find('input[name="memory"]').val()) || 0;
+                    var cost_per_gb = parseFloat($form.find('input[name="cost_per_gb"]').val()) || 0;
+                    var cost_per_traffic = parseFloat($form.find('input[name="cost_per_traffic"]').val()) || 0;
+                    var available_storage = parseFloat($form.find('input[name="available_storage"]').val()) || 0;
+                    var stability_index = parseInt($form.find('input[name="stability_index"]').val()) || 0;
+                    var monthly_cost = parseFloat($form.find('input[name="monthly_cost"]').val()) || 0;
+                    var status = $form.find('input[name="status"]:checked').val() || (isEdit ? 'active' : 'active');
+
+                    if (!name || !url || !api_key) {
+                        layer.msg('请填写所有必填字段', {icon: 2});
+                        return;
+                    }
+
+                    var formData = {
+                        name: name,
+                        url: url,
+                        api_key: api_key,
+                        bandwidth: bandwidth,
+                        cpu: cpu,
+                        memory: memory,
+                        cost_per_gb: cost_per_gb,
+                        cost_per_traffic: cost_per_traffic,
+                        available_storage: available_storage,
+                        stability_index: stability_index,
+                        monthly_cost: monthly_cost,
+                        status: status
+                    };
+
+                    if (isEdit) {
+                        formData.id = data.id;
+                        $.post('/app/admin/edge-node/update', formData, function (res) {
+                            if (res.code === 0) {
+                                layer.msg('更新成功', {icon: 1});
+                                layer.close(index);
+                                table.reload('edgeNodeTable');
+                            } else {
+                                layer.msg(res.msg || '更新失败', {icon: 2});
+                            }
+                        });
+                    } else {
+                        $.post('/app/admin/edge-node/store', formData, function (res) {
+                            if (res.code === 0) {
+                                layer.msg('创建成功', {icon: 1});
+                                layer.close(index);
+                                table.reload('edgeNodeTable');
+                            } else {
+                                layer.msg(res.msg || '创建失败', {icon: 2});
+                            }
+                        });
+                    }
+                }
+            });
+        }
+
+        // 删除节点
+        function deleteNode(id, index) {
+            $.post('/app/admin/edge-node/delete', {id: id}, function (res) {
+                if (res.code === 0) {
+                    layer.msg('删除成功', {icon: 1});
+                    layer.close(index);
+                    table.reload('edgeNodeTable');
+                } else {
+                    layer.msg(res.msg || '删除失败', {icon: 2});
+                }
+            });
+        }
+
+        // 同步节点
+        function syncNode(id) {
+            layer.load(1);
+            $.post('/app/admin/edge-node/sync', {id: id}, function (res) {
+                layer.closeAll('loading');
+                if (res.code === 0) {
+                    layer.msg('同步成功', {icon: 1});
+                    table.reload('edgeNodeTable');
+                } else {
+                    layer.msg(res.msg || '同步失败', {icon: 2});
+                }
+            });
+        }
+
+        // 检查节点状态
+        function checkNodeStatus(id) {
+            layer.load(1);
+            $.get('/app/admin/edge-node/status', {id: id}, function (res) {
+                layer.closeAll('loading');
+                if (res.code === 0) {
+                    var status = res.data.status;
+                    var msg = '节点状态: ' + (status === 'online' ? '在线' : '离线');
+                    if (res.data.sync_info) {
+                        msg += '\n队列大小: ' + (res.data.sync_info.queue_size || 0);
+                        msg += '\n历史记录: ' + (res.data.sync_info.history ? res.data.sync_info.history.length : 0) + ' 条';
+                    }
+                    layer.alert(msg, {icon: status === 'online' ? 1 : 2});
+                } else {
+                    layer.msg(res.msg || '获取状态失败', {icon: 2});
+                }
+            });
+        }
+
+        // 生成部署包
+        function generateDeployment(id) {
+            layer.load(1);
+            $.post('/app/admin/edge-node/generate-deployment', {id: id}, function (res) {
+                if (res.code === 0) {
+                    // 生成成功后立即下载
+                    window.location.href = '/app/admin/edge-node/download-deployment?id=' + id;
+                    layer.closeAll('loading');
+                    layer.msg('部署包生成成功，正在下载...', {icon: 1});
+                } else {
+                    layer.closeAll('loading');
+                    layer.msg(res.msg || '部署包生成失败', {icon: 2});
+                }
+            });
+        }
+    });
+</script>
+</body>
+</html>

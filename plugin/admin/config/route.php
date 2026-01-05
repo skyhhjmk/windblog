@@ -18,6 +18,7 @@ use plugin\admin\app\controller\AiSummaryController;
 use plugin\admin\app\controller\CategoryController;
 use plugin\admin\app\controller\CommentController;
 use plugin\admin\app\controller\DictController;
+use plugin\admin\app\controller\EdgeNodeController;
 use plugin\admin\app\controller\EditorController;
 use plugin\admin\app\controller\ElasticController;
 use plugin\admin\app\controller\FloLinkController;
@@ -489,6 +490,22 @@ Route::group('/app/admin', function () {
         Route::post('/save', [plugin\admin\app\controller\OAuthController::class, 'save']);
         Route::post('/delete', [plugin\admin\app\controller\OAuthController::class, 'delete']);
         Route::post('/toggle', [plugin\admin\app\controller\OAuthController::class, 'toggle']);
+    });
+
+    // 边缘节点管理路由
+    Route::group('/edge-node', function () {
+        Route::get('', [EdgeNodeController::class, 'index']);
+        Route::get('/', [EdgeNodeController::class, 'index']);
+        Route::get('/index', [EdgeNodeController::class, 'index']);
+        Route::get('/list', [EdgeNodeController::class, 'list']);
+        Route::post('/store', [EdgeNodeController::class, 'store']);
+        Route::post('/update', [EdgeNodeController::class, 'update']);
+        Route::post('/delete', [EdgeNodeController::class, 'destroy']);
+        Route::post('/sync', [EdgeNodeController::class, 'sync']);
+        Route::get('/status', [EdgeNodeController::class, 'getStatus']);
+
+        Route::post('/generate-deployment', [EdgeNodeController::class, 'generateDeployment']);
+        Route::get('/download-deployment', [EdgeNodeController::class, 'downloadDeployment']);
     });
 });
 

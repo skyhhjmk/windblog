@@ -1,9 +1,9 @@
 <?php
 
+$__deployment = strtolower(trim((string) env('DEPLOYMENT_TYPE', 'datacenter')));
+
 return [
-    // 默认数据库
-    'default' => getenv('DB_DEFAULT') ?: 'pgsql',
-    // 各种数据库配置
+    'default' => $__deployment === 'edge' ? 'edge' : (getenv('DB_DEFAULT') ?: 'pgsql'),
     'connections' => [
         'pgsql' => [
             'driver' => 'pgsql',
@@ -45,6 +45,23 @@ return [
             'database' => getenv('DB_SQLITE_DATABASE') ?: runtime_path('windblog.db'),
             'prefix' => '',
             'foreign_key_constraints' => getenv('DB_SQLITE_FOREIGN_KEYS') ?: true,
+        ],
+        'edge' => [
+            'driver' => 'pgsql',
+            'host' => getenv('DB_EDGE_HOST') ?: 'localhost',
+            'port' => getenv('DB_EDGE_PORT') ?: '5432',
+            'database' => getenv('DB_EDGE_DATABASE') ?: 'windblog_edge',
+            'username' => getenv('DB_EDGE_USERNAME') ?: 'postgres',
+            'password' => getenv('DB_EDGE_PASSWORD') ?: 'postgres',
+            'charset' => 'utf8',
+            'prefix' => '',
+            'schema' => 'public',
+            'sslmode' => 'prefer',
+            'options' => [
+                PDO::ATTR_PERSISTENT => false,
+                PDO::ATTR_EMULATE_PREPARES => false,
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            ],
         ],
     ],
 ];

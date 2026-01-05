@@ -22,7 +22,34 @@ global $argv;
 $__cacheDriver = env('CACHE_DRIVER');
 $__deployment = strtolower(trim((string) env('DEPLOYMENT_TYPE', 'datacenter')));
 
-// 部署模式拆分（均强制附带 task 进程）
+if ($__deployment === 'edge') {
+    $procs = [
+        'webman' => [
+            'handler' => Http::class,
+            'listen' => 'http://0.0.0.0:18787',
+            'count' => env('WEB_SERVER_PROCESS_COUNT', cpu_count() * 4),
+            'user' => '',
+            'group' => '',
+            'reusePort' => true,
+            'eventLoop' => '',
+            'context' => [],
+            'constructor' => [
+                'requestClass' => Request::class,
+                'logger' => Log::channel('default'),
+                'appPath' => app_path(),
+                'publicPath' => public_path(),
+            ],
+        ],
+        'edge_sync_worker' => [
+            'handler' => app\process\EdgeSyncWorker::class,
+            'reloadable' => false,
+            'constructor' => [],
+        ],
+    ];
+
+    return $procs;
+}
+
 if ($__deployment === 'mailserver') {
     $procs = [
         'mail_worker' => [
@@ -127,7 +154,7 @@ if ($__deployment === 'perf') {
 $__processes = [
     'webman' => [
         'handler' => Http::class,
-        'listen' => 'http://0.0.0.0:8787',
+        'listen' => 'http://0.0.0.0:18787',
         'count' => env('WEB_SERVER_PROCESS_COUNT', cpu_count() * 4),
 //        'count' => 1,
         'user' => '',
@@ -252,6 +279,13 @@ if (getenv('DB_DEFAULT')) {
     // 友链推送处理进程（存在 .env 时注册）
     $__processes['link_push_worker'] = [
         'handler' => app\process\LinkPushWorker::class,
+        'reloadable' => false,
+        'constructor' => [],
+    ];
+
+    // 边缘节点主动推送进程（存在 .env 时注册）
+    $__processes['edge_push_worker'] = [
+        'handler' => app\process\EdgePushWorker::class,
         'reloadable' => false,
         'constructor' => [],
     ];

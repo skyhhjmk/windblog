@@ -85,11 +85,14 @@
     }
 
     // 共享状态变量
-    let lastOnlineState = navigator.onLine; // 跟踪上一次的在线状态
-    let isInitializing = true; // 标记是否处于初始化期
-    let hasInitialized = false; // 标记是否已完成初始化
-    let swDetectedOffline = false; // SW 检测到的离线状态
-    let lastSwNoticeTime = 0; // 上次 SW 通知的时间
+    let lastOnlineState = navigator.onLine;
+    let isInitializing = true;
+    let hasInitialized = false;
+    let swDetectedOffline = false;
+    let lastSwNoticeTime = 0;
+    let isEdgeMode = false;
+    let edgeDegradedMode = false;
+    let edgeDegradedDuration = 0;
 
     // 页面加载后 500ms 内忽略网络状态变化事件，避免虚假提示
     setTimeout(() => {
@@ -109,28 +112,67 @@
             online,
             lastOnlineState,
             stateChanged,
-            swDetectedOffline
+            swDetectedOffline,
+            isEdgeMode,
+            edgeDegradedMode
         });
 
         setIndicatorVisible(!online);
 
-        // 只有在以下情况才显示提示：
-        // 1. 已完成初始化（避免页面加载时的虚假事件）
-        // 2. 有事件对象（说明是由 online/offline 事件触发）
-        // 3. 状态真正发生了变化
         if (hasInitialized && evt && stateChanged) {
             console.debug('[NetworkStatus] Browser detected network state change');
             if (online) {
-                swDetectedOffline = false; // 同步 SW 状态
+                swDetectedOffline = false;
                 showToast({title: '已恢复网络', message: '已切回在线模式。', tone: 'info'});
             } else {
-                swDetectedOffline = true; // 同步 SW 状态
+                swDetectedOffline = true;
                 showToast({title: '离线模式', message: '当前离线，页面将使用缓存内容（如有）。', tone: 'warn'});
             }
         }
 
-        // 总是更新状态记录
         lastOnlineState = online;
+    }
+
+    function checkEdgeMode() {
+        try {
+            const edgeModeHeader = document.querySelector('meta[name="x-edge-mode"]')?.content;
+            const datacenterStatusHeader = document.querySelector('meta[name="x-datacenter-status"]')?.content;
+            const serviceDegradedHeader = document.querySelector('meta[name="x-service-degraded"]')?.content;
+            const degradedDurationHeader = document.querySelector('meta[name="x-degraded-duration"]')?.content;
+
+            isEdgeMode = edgeModeHeader === 'true';
+            edgeDegradedMode = serviceDegradedHeader === 'true';
+            edgeDegradedDuration = parseInt(degradedDurationHeader) || 0;
+
+            if (isEdgeMode) {
+                console.debug('[EdgeMode] Edge mode detected');
+                if (edgeDegradedMode) {
+                    showEdgeDegradedNotice();
+                } else {
+                    hideEdgeDegradedNotice();
+                }
+            }
+        } catch (e) {
+            console.debug('[EdgeMode] Failed to check edge mode:', e);
+        }
+    }
+
+    function showEdgeDegradedNotice() {
+        const duration = Math.floor(edgeDegradedDuration / 60);
+        const durationText = duration > 0 ? `已持续 ${duration} 分钟` : '刚刚开始';
+        showToast({
+            title: '服务降级',
+            message: `当前使用边缘节点缓存提供服务，${durationText}。部分功能可能受限。`,
+            tone: 'warn'
+        });
+    }
+
+    function hideEdgeDegradedNotice() {
+        showToast({
+            title: '服务已恢复',
+            message: '已连接到数据中心，服务恢复正常。',
+            tone: 'info'
+        });
     }
 
   function handleSWMessage(event) {
@@ -202,8 +244,12 @@
     window.addEventListener('online', updateOnlineStatus);
     window.addEventListener('offline', updateOnlineStatus);
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', updateOnlineStatus);
+        document.addEventListener('DOMContentLoaded', () => {
+            updateOnlineStatus();
+            checkEdgeMode();
+        });
     } else {
         updateOnlineStatus();
+        checkEdgeMode();
   }
 })();

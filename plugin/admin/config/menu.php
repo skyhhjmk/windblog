@@ -242,6 +242,13 @@ return [
                 'type' => 1,
                 'weight' => 460,
             ],
+            [
+                'title' => '边缘节点',
+                'key' => 'plugin\\admin\\app\\controller\\EdgeNodeController',
+                'href' => '/app/admin/edge-node/index',
+                'type' => 1,
+                'weight' => 450,
+            ],
         ],
     ],
     [

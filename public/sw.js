@@ -116,7 +116,8 @@ async function cacheFirst(req, cacheName, event) {
         }
         return res;
     } catch (err) {
-        return new Response('', {status: 408, statusText: 'Offline'});
+        // 网络请求失败且无缓存，返回离线页面
+        return createOfflinePage();
     }
 }
 
@@ -565,6 +566,11 @@ self.addEventListener('fetch', (event) => {
     if (req.method !== 'GET') return;
 
     const url = new URL(req.url);
+
+    // 排除后台路径，不使用Service Worker处理
+    if (url.pathname.startsWith('/app/admin') || url.pathname.startsWith('/admin')) {
+        return;
+    }
 
     try {
         const xpjax = (req.headers.get('x-pjax') || '').toLowerCase();

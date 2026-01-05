@@ -390,7 +390,7 @@ class RequestLogger implements MiddlewareInterface
             });
             $capsule->setEventDispatcher($dispatcher);
         } catch (\Throwable $e) {
-            echo $e;
+            Log::error('[RequestLogger] Database hook error: ' . $e->getMessage());
         }
     }
 
