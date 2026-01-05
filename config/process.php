@@ -154,7 +154,7 @@ if ($__deployment === 'perf') {
 $__processes = [
     'webman' => [
         'handler' => Http::class,
-        'listen' => 'http://0.0.0.0:18787',
+        'listen' => 'http://0.0.0.0:' . env('WEB_SERVER_PORT', 8787),
         'count' => env('WEB_SERVER_PROCESS_COUNT', cpu_count() * 4),
 //        'count' => 1,
         'user' => '',
