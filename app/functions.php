@@ -80,6 +80,16 @@ function blog_config(string $key, mixed $default = null, bool $init = false, boo
  */
 function blog_config_write(string $cache_key, string $fullCacheKey, mixed $value, bool $use_cache): mixed
 {
+    // 边缘模式下不访问数据库，直接写入缓存
+    $dbDefault = getenv('DB_DEFAULT');
+    if ($dbDefault === 'edge') {
+        if ($use_cache && $value !== null) {
+            cache($fullCacheKey, $value, true);
+        }
+
+        return $value;
+    }
+
     try {
         // 使用 updateOrCreate 确保原子性操作
         $setting = app\model\Setting::updateOrCreate(
@@ -152,6 +162,12 @@ function blog_config_read(string $cache_key, string $fullCacheKey, mixed $defaul
  */
 function blog_config_get_from_db(string $cache_key): mixed
 {
+    // 边缘模式下不访问数据库
+    $dbDefault = getenv('DB_DEFAULT');
+    if ($dbDefault === 'edge') {
+        return null;
+    }
+
     $setting = app\model\Setting::where('key', $cache_key)->first();
     if (!$setting) {
         return null;
@@ -210,6 +226,16 @@ function blog_config_handle_init(string $cache_key, string $fullCacheKey, mixed 
     }
 
     $default = blog_config_normalize_default($default);
+
+    // 边缘模式下不访问数据库，直接写入缓存返回默认值
+    $dbDefault = getenv('DB_DEFAULT');
+    if ($dbDefault === 'edge') {
+        if ($use_cache && $default !== null) {
+            cache($fullCacheKey, $default, true);
+        }
+
+        return $default;
+    }
 
     try {
         // 使用 updateOrCreate 确保原子性,避免并发冲突
