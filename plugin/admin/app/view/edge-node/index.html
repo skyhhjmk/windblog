@@ -274,6 +274,7 @@
             var title = isEdit ? '编辑边缘节点' : '新增边缘节点';
             var name = isEdit ? data.name : '';
             var url = isEdit ? data.url : '';
+            var datacenter_url = isEdit ? data.datacenter_url : '';
             var api_key = isEdit ? data.api_key : '';
             var bandwidth = isEdit && data.bandwidth ? data.bandwidth : '';
             var cpu = isEdit && data.cpu ? data.cpu : '';
@@ -296,8 +297,15 @@
                     <div class="layui-form-item">
                         <label class="layui-form-label">节点地址</label>
                         <div class="layui-input-block">
-                            <input type="text" name="url" lay-verify="required|url" placeholder="请输入节点地址"
+                            <input type="text" name="url" lay-verify="required|url" placeholder="请输入本边缘节点的访问地址"
                                    class="layui-input" value="${url}">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">中心节点地址</label>
+                        <div class="layui-input-block">
+                            <input type="text" name="datacenter_url" lay-verify="required|url" placeholder="请输入中心节点的访问地址"
+                                   class="layui-input" value="${datacenter_url}">
                         </div>
                     </div>
                     <div class="layui-form-item">
@@ -396,6 +404,7 @@
                     var $form = layero.find('.layui-form');
                     var name = $form.find('input[name="name"]').val().trim();
                     var url = $form.find('input[name="url"]').val().trim();
+                    var datacenter_url = $form.find('input[name="datacenter_url"]').val().trim();
                     var api_key = $form.find('input[name="api_key"]').val().trim();
                     var bandwidth = parseFloat($form.find('input[name="bandwidth"]').val()) || 0;
                     var cpu = parseInt($form.find('input[name="cpu"]').val()) || 0;
@@ -407,7 +416,7 @@
                     var monthly_cost = parseFloat($form.find('input[name="monthly_cost"]').val()) || 0;
                     var status = $form.find('input[name="status"]:checked').val() || (isEdit ? 'active' : 'active');
 
-                    if (!name || !url || !api_key) {
+                    if (!name || !url || !datacenter_url || !api_key) {
                         layer.msg('请填写所有必填字段', {icon: 2});
                         return;
                     }
@@ -415,6 +424,7 @@
                     var formData = {
                         name: name,
                         url: url,
+                        datacenter_url: datacenter_url,
                         api_key: api_key,
                         bandwidth: bandwidth,
                         cpu: cpu,

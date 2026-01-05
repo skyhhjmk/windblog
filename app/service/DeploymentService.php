@@ -102,7 +102,7 @@ volumes:
 
     private function generateEnv(array $nodeInfo): string
     {
-        $content = "# WindBlog Edge Node Configuration\n# Generated at " . date('Y-m-d H:i:s') . "\n\n# Basic Settings\nAPP_DEBUG=false\nAPP_ENV=production\nDEPLOYMENT_TYPE=edge\nIN_CONTAINER=true\n\n# Database Settings\nDB_DEFAULT=edge\n\n# Redis Settings\nCACHE_DRIVER=redis\nREDIS_HOST=localhost\nREDIS_PORT=6379\nREDIS_PASSWORD=\nREDIS_DATABASE=0\n\n# Edge Node Settings\nEDGE_DATACENTER_URL=" . $nodeInfo['url'] . "\nEDGE_SYNC_INTERVAL=300\nEDGE_DEGRADE_ENABLED=true\nEDGE_API_KEY=" . $nodeInfo['api_key'] . "\n\n# Node Information\nNODE_NAME=" . $nodeInfo['name'] . "\nNODE_ID=" . $nodeInfo['id'] . "\nNODE_BANDWIDTH=" . $nodeInfo['bandwidth'] . "\nNODE_CPU=" . $nodeInfo['cpu'] . "\nNODE_MEMORY=" . $nodeInfo['memory'] . "\n";
+        $content = "# WindBlog Edge Node Configuration\n# Generated at " . date('Y-m-d H:i:s') . "\n\n# Basic Settings\nAPP_DEBUG=false\nAPP_ENV=production\nDEPLOYMENT_TYPE=edge\nIN_CONTAINER=true\n\n# Database Settings\nDB_DEFAULT=edge\n\n# Redis Settings\nCACHE_DRIVER=redis\nREDIS_HOST=localhost\nREDIS_PORT=6379\nREDIS_PASSWORD=\nREDIS_DATABASE=0\n\n# Edge Node Settings\nEDGE_DATACENTER_URL=" . ($nodeInfo['datacenter_url'] ?? '') . "\nEDGE_SYNC_INTERVAL=300\nEDGE_DEGRADE_ENABLED=true\nEDGE_API_KEY=" . $nodeInfo['api_key'] . "\n\n# Node Information\nNODE_NAME=" . $nodeInfo['name'] . "\nNODE_ID=" . $nodeInfo['id'] . "\nNODE_URL=" . $nodeInfo['url'] . "\nNODE_BANDWIDTH=" . $nodeInfo['bandwidth'] . "\nNODE_CPU=" . $nodeInfo['cpu'] . "\nNODE_MEMORY=" . $nodeInfo['memory'] . "\n";
 
         return $content;
     }

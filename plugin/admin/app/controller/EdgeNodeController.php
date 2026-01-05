@@ -42,6 +42,7 @@ class EdgeNodeController
 
         $name = $request->input('name');
         $url = $request->input('url');
+        $datacenterUrl = $request->input('datacenter_url');
         $apiKey = $request->input('api_key');
         $bandwidth = (float) $request->input('bandwidth', 0);
         $cpu = (int) $request->input('cpu', 0);
@@ -53,7 +54,7 @@ class EdgeNodeController
         $monthlyCost = (float) $request->input('monthly_cost', 0);
         $status = $request->input('status', 'active');
 
-        if (empty($name) || empty($url) || empty($apiKey)) {
+        if (empty($name) || empty($url) || empty($datacenterUrl) || empty($apiKey)) {
             return json(['code' => 400, 'msg' => 'Missing required fields', 'data' => []], 400);
         }
 
@@ -64,6 +65,7 @@ class EdgeNodeController
             'id' => $nodeId,
             'name' => $name,
             'url' => $url,
+            'datacenter_url' => $datacenterUrl,
             'api_key' => $apiKey,
             'bandwidth' => $bandwidth,
             'cpu' => $cpu,
@@ -183,6 +185,7 @@ class EdgeNodeController
 
         $nodes[$nodeId]['name'] = $request->input('name', $nodes[$nodeId]['name']);
         $nodes[$nodeId]['url'] = $request->input('url', $nodes[$nodeId]['url']);
+        $nodes[$nodeId]['datacenter_url'] = $request->input('datacenter_url', $nodes[$nodeId]['datacenter_url'] ?? '');
         $nodes[$nodeId]['api_key'] = $request->input('api_key', $nodes[$nodeId]['api_key']);
         $nodes[$nodeId]['bandwidth'] = (float) $request->input('bandwidth', $nodes[$nodeId]['bandwidth'] ?? 0);
         $nodes[$nodeId]['cpu'] = (int) $request->input('cpu', $nodes[$nodeId]['cpu'] ?? 0);
