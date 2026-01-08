@@ -80,9 +80,8 @@ function blog_config(string $key, mixed $default = null, bool $init = false, boo
  */
 function blog_config_write(string $cache_key, string $fullCacheKey, mixed $value, bool $use_cache): mixed
 {
-    // 边缘模式下不访问数据库，直接写入缓存
-    $dbDefault = getenv('DB_DEFAULT');
-    if ($dbDefault === 'edge') {
+    // 边缘模式下不访问数据库，直接写入缓存，基于部署类型判断
+    if (\app\service\EdgeNodeService::isEdgeMode()) {
         if ($use_cache && $value !== null) {
             cache($fullCacheKey, $value, true);
         }
@@ -139,7 +138,15 @@ function blog_config_read(string $cache_key, string $fullCacheKey, mixed $defaul
         Log::debug("[blog_config] cache miss: {$fullCacheKey}");
     }
 
-    // 2. 从数据库读取
+    // 2. 检查是否为边缘模式，边缘模式下跳过数据库读取
+    if (\app\service\EdgeNodeService::isEdgeMode()) {
+        // 3. 边缘模式下直接处理初始化，不访问数据库
+        Log::debug("[blog_config] edge mode, skip db read: {$cache_key}");
+
+        return blog_config_handle_init($cache_key, $fullCacheKey, $default, $init, $use_cache);
+    }
+
+    // 3. 从数据库读取
     $dbValue = blog_config_get_from_db($cache_key);
     if ($dbValue !== null) {
         // 缓存数据库结果
@@ -151,7 +158,7 @@ function blog_config_read(string $cache_key, string $fullCacheKey, mixed $defaul
         return $dbValue;
     }
 
-    // 3. 数据库无记录，处理初始化
+    // 4. 数据库无记录，处理初始化
     Log::debug("[blog_config] db miss: {$cache_key}, init=" . ($init ? 'true' : 'false') . ', default=' . var_export($default, true));
 
     return blog_config_handle_init($cache_key, $fullCacheKey, $default, $init, $use_cache);
@@ -162,53 +169,59 @@ function blog_config_read(string $cache_key, string $fullCacheKey, mixed $defaul
  */
 function blog_config_get_from_db(string $cache_key): mixed
 {
-    // 边缘模式下不访问数据库
-    $dbDefault = getenv('DB_DEFAULT');
-    if ($dbDefault === 'edge') {
+    // 边缘模式下不访问数据库，基于部署类型判断
+    if (\app\service\EdgeNodeService::isEdgeMode()) {
         return null;
     }
 
-    $setting = app\model\Setting::where('key', $cache_key)->first();
-    if (!$setting) {
+    try {
+        $setting = app\model\Setting::where('key', $cache_key)->first();
+        if (!$setting) {
+            return null;
+        }
+        $val = blog_config_convert_from_storage($setting->value);
+
+        // 全局：存储为 json:null 或空字符串，都视为未配置
+        if ($val === null) {
+            return null;
+        }
+        if (is_string($val) && trim($val) === '') {
+            return null;
+        }
+
+        // RabbitMQ 端口必须为有效端口号（1-65535）
+        if ($cache_key === 'rabbitmq_port') {
+            if (!is_numeric($val)) {
+                return null;
+            }
+            $port = (int) $val;
+            if ($port <= 0 || $port > 65535) {
+                return null;
+            }
+
+            return $port;
+        }
+
+        // 其他端口配置项的通用验证
+        if (strpos($cache_key, '_port') !== false && $cache_key !== 'rabbitmq_port') {
+            if (!is_numeric($val)) {
+                return null;
+            }
+            $port = (int) $val;
+            if ($port <= 0 || $port > 65535) {
+                return null;
+            }
+
+            return $port;
+        }
+
+        return $val;
+    } catch (InvalidArgumentException $e) {
+        // 捕获数据库连接异常，确保在边缘模式下不会崩溃
+        Log::warning("[blog_config] 数据库连接失败，边缘模式下忽略: {$e->getMessage()}");
+
         return null;
     }
-    $val = blog_config_convert_from_storage($setting->value);
-
-    // 全局：存储为 json:null 或空字符串，都视为未配置
-    if ($val === null) {
-        return null;
-    }
-    if (is_string($val) && trim($val) === '') {
-        return null;
-    }
-
-    // RabbitMQ 端口必须为有效端口号（1-65535）
-    if ($cache_key === 'rabbitmq_port') {
-        if (!is_numeric($val)) {
-            return null;
-        }
-        $port = (int) $val;
-        if ($port <= 0 || $port > 65535) {
-            return null;
-        }
-
-        return $port;
-    }
-
-    // 其他端口配置项的通用验证
-    if (strpos($cache_key, '_port') !== false && $cache_key !== 'rabbitmq_port') {
-        if (!is_numeric($val)) {
-            return null;
-        }
-        $port = (int) $val;
-        if ($port <= 0 || $port > 65535) {
-            return null;
-        }
-
-        return $port;
-    }
-
-    return $val;
 }
 
 /**
@@ -227,9 +240,8 @@ function blog_config_handle_init(string $cache_key, string $fullCacheKey, mixed 
 
     $default = blog_config_normalize_default($default);
 
-    // 边缘模式下不访问数据库，直接写入缓存返回默认值
-    $dbDefault = getenv('DB_DEFAULT');
-    if ($dbDefault === 'edge') {
+    // 边缘模式下不访问数据库，直接写入缓存返回默认值，基于部署类型判断
+    if (\app\service\EdgeNodeService::isEdgeMode()) {
         if ($use_cache && $default !== null) {
             cache($fullCacheKey, $default, true);
         }
