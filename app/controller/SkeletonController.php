@@ -15,6 +15,11 @@ use Webman\Http\Response;
 class SkeletonController
 {
     /**
+     * 不需要登录的方法
+     */
+    protected array $noNeedLogin = ['index'];
+
+    /**
      * 返回骨架页
      *
      * @param Request $request
