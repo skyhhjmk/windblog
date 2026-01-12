@@ -48,37 +48,21 @@ function isCdn(url) {
 
 // Cache First with background update and user notification
 async function cacheFirst(req, cacheName, event) {
-    const cache = await caches.open(cacheName);
-    const cached = await cache.match(req, {ignoreVary: true});
-    const url = new URL(req.url);
-    const isHomepage = url.pathname === '/' || url.pathname === '/index.html';
+    try {
+        const cache = await caches.open(cacheName);
+        const cached = await cache.match(req, {ignoreVary: true});
 
-    if (cached) {
-        // Return cached response immediately
+        if (cached) {
+            // Return cached response immediately
 
-        // Revalidate in background
-        if (event) {
-            event.waitUntil((async () => {
-                try {
-                    const fresh = await fetch(req, {mode: req.mode, credentials: req.credentials});
-                    if (fresh && fresh.ok) {
-                        // Check if response is different from cached
-                        const cachedContent = await cached.text();
-                        const freshContent = await fresh.clone().text();
-
-                        // Only update cache if content has changed
-                        if (cachedContent !== freshContent) {
-                            // Add cache timestamp
-                            const headers = new Headers(fresh.headers);
-                            headers.set('sw-cached-at', Date.now().toString());
-
-                            const newRes = new Response(fresh.body, {
-                                status: fresh.status,
-                                statusText: fresh.statusText,
-                                headers: headers
-                            });
-
-                            await cache.put(req, newRes.clone());
+            // Revalidate in background
+            if (event) {
+                event.waitUntil((async () => {
+                    try {
+                        const fresh = await fetch(req, {mode: req.mode, credentials: req.credentials});
+                        if (fresh && fresh.ok && fresh.status >= 200 && fresh.status < 600) {
+                            // Update cache with fresh response
+                            await cache.put(req, fresh.clone());
 
                             // Notify client about update
                             await notifyClient(event, {
@@ -87,37 +71,26 @@ async function cacheFirst(req, cacheName, event) {
                                 url: req.url
                             });
                         }
+                    } catch (_) {
+                        // Ignore network errors during revalidation
                     }
-                } catch (_) {
-                    // Ignore network errors during revalidation
-                }
-            })());
+                })());
+            }
+
+            return cached;
         }
 
-        return cached;
-    }
-
-    // No cache, fetch from network
-    try {
+        // No cache, fetch from network
         const res = await fetch(req, {mode: req.mode, credentials: req.credentials});
-        if (res && (res.ok || res.type === 'opaque')) {
-            // Add cache timestamp for future revalidation
-            const headers = new Headers(res.headers);
-            headers.set('sw-cached-at', Date.now().toString());
-
-            const newRes = new Response(res.body, {
-                status: res.status,
-                statusText: res.statusText,
-                headers: headers
-            });
-
-            await cache.put(req, newRes.clone());
-            return newRes;
+        if (res && res.status >= 200 && res.status < 600) {
+            // Cache successful response
+            await cache.put(req, res.clone());
         }
+
         return res;
     } catch (err) {
-        // 网络请求失败且无缓存，返回离线页面
-        return createOfflinePage();
+        // Service Worker 处理失败，让浏览器直接处理请求
+        return fetch(req);
     }
 }
 
@@ -740,8 +713,8 @@ self.addEventListener('fetch', (event) => {
     const isHtml = accept.includes('text/html');
 
     if (req.mode === 'navigate' || (isHtml && isSameOrigin(url))) {
-        // Cache First for all HTML requests
-        event.respondWith(cacheFirst(req, CACHE_PAGES, event));
+        // Network First for all HTML requests
+        event.respondWith(networkFirst(req, event));
         return;
     }
 

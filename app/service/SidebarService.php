@@ -236,13 +236,13 @@ class SidebarService
             unset($sidebarConfig['html']);
             unset($sidebarConfig['page_key']);
 
-            // 获取现有配置
-            $setting = Setting::where('key', self::SETTING_KEY)->first();
+            // 获取现有配置 (使用 edge 兼容的 blog_config)
+            $settingValue = blog_config(self::SETTING_KEY);
 
             // 初始化或获取所有配置
             $allConfigs = [];
-            if ($setting && !empty($setting->value)) {
-                $allConfigs = json_decode($setting->value, true);
+            if (!empty($settingValue)) {
+                $allConfigs = is_array($settingValue) ? $settingValue : json_decode($settingValue, true);
                 if (!is_array($allConfigs)) {
                     Log::warning('[SidebarService] Invalid existing config format, initializing new array');
                     $allConfigs = [];
@@ -297,12 +297,12 @@ class SidebarService
     public static function getSidebarPages(): array
     {
         try {
-            // 获取所有已配置的页面
-            $setting = Setting::where('key', self::SETTING_KEY)->first();
+            // 获取所有已配置的页面 (使用 edge 兼容的 blog_config)
+            $settingValue = blog_config(self::SETTING_KEY);
 
             $pages = [];
-            if ($setting && !empty($setting->value)) {
-                $allConfigs = json_decode($setting->value, true);
+            if (!empty($settingValue)) {
+                $allConfigs = is_array($settingValue) ? $settingValue : json_decode($settingValue, true);
                 if (is_array($allConfigs)) {
                     foreach (array_keys($allConfigs) as $pageKey) {
                         $pages[] = [
