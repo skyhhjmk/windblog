@@ -169,7 +169,7 @@ class SidebarService
 
         foreach ($sidebarConfig['widgets'] as $key => &$widget) {
             // 路由级可见性控制：visible_on / exclude_on
-            $isEnabled = (isset($widget['enabled']) ? (bool)$widget['enabled'] : true);
+            $isEnabled = (isset($widget['enabled']) ? (bool) $widget['enabled'] : true);
             if ($isEnabled) {
                 // 仅在指定页面显示
                 if (!empty($widget['visible_on'])) {
@@ -191,7 +191,7 @@ class SidebarService
                 try {
                     // 规范化键值：确保每个小工具具有稳定的 id/key，便于前端 data-widget-key 使用
                     if (empty($widget['id'])) {
-                        $widget['id'] = $widget['type'] ?? (is_string($key) ? $key : ('widget_' . (string)$key));
+                        $widget['id'] = $widget['type'] ?? (is_string($key) ? $key : ('widget_' . (string) $key));
                     }
                     if (empty($widget['key'])) {
                         $widget['key'] = $widget['id'];
@@ -386,3 +386,5 @@ class SidebarService
 
             return [];
         }
+    }
+}
