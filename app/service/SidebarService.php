@@ -192,8 +192,8 @@ class SidebarService
                     if (empty($widget['key'])) {
                         $widget['key'] = $widget['id'];
                     }
-                    // 调用小工具服务渲染HTML（Twig模板）
-                    $widget['html'] = WidgetService::renderToHtml($widget);
+                    // 调用小工具服务渲染HTML（Twig模板）并使用缓存
+                    $widget['html'] = WidgetService::renderWidgetToHtmlWithCache($widget);
                 } catch (Throwable $e) {
                     Log::error('[SidebarService] Failed to render widget: ' . $e->getMessage());
                     $widget['html'] = '';
