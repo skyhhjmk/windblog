@@ -2,7 +2,10 @@
 
 namespace app\service;
 
+use RuntimeException;
 use support\Log;
+use Throwable;
+use ZipArchive;
 
 class DeploymentService
 {
@@ -50,7 +53,7 @@ class DeploymentService
                 'script_path' => $scriptPath,
                 'deployment_dir' => $deploymentDir,
             ];
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('[DeploymentService] Failed to generate deployment: ' . $e->getMessage());
 
             return ['success' => false, 'message' => $e->getMessage()];
@@ -74,7 +77,6 @@ services:
     environment:
       - APP_ENV=production
       - DEPLOYMENT_TYPE=edge
-      - DB_DEFAULT=edge
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=
@@ -102,7 +104,7 @@ volumes:
 
     private function generateEnv(array $nodeInfo): string
     {
-        $content = "# WindBlog Edge Node Configuration\n# Generated at " . date('Y-m-d H:i:s') . "\n\n# Basic Settings\nAPP_DEBUG=false\nAPP_ENV=production\nDEPLOYMENT_TYPE=edge\nIN_CONTAINER=true\n\n# Database Settings\nDB_DEFAULT=edge\n\n# Redis Settings\nCACHE_DRIVER=redis\nREDIS_HOST=localhost\nREDIS_PORT=6379\nREDIS_PASSWORD=\nREDIS_DATABASE=0\n\n# Edge Node Settings\nEDGE_DATACENTER_URL=" . ($nodeInfo['datacenter_url'] ?? '') . "\nEDGE_SYNC_INTERVAL=300\nEDGE_DEGRADE_ENABLED=true\nEDGE_API_KEY=" . $nodeInfo['api_key'] . "\n\n# Node Information\nNODE_NAME=" . $nodeInfo['name'] . "\nNODE_ID=" . $nodeInfo['id'] . "\nNODE_URL=" . $nodeInfo['url'] . "\nNODE_BANDWIDTH=" . $nodeInfo['bandwidth'] . "\nNODE_CPU=" . $nodeInfo['cpu'] . "\nNODE_MEMORY=" . $nodeInfo['memory'] . "\n";
+        $content = "# WindBlog Edge Node Configuration\n# Generated at " . date('Y-m-d H:i:s') . "\n\n# Basic Settings\nAPP_DEBUG=false\nAPP_ENV=production\nDEPLOYMENT_TYPE=edge\nIN_CONTAINER=true\n\n# Redis Settings\nCACHE_DRIVER=redis\nREDIS_HOST=localhost\nREDIS_PORT=6379\nREDIS_PASSWORD=\nREDIS_DATABASE=0\n\n# Edge Node Settings\nEDGE_DATACENTER_URL=" . ($nodeInfo['datacenter_url'] ?? '') . "\nEDGE_SYNC_INTERVAL=300\nEDGE_DEGRADE_ENABLED=true\nEDGE_API_KEY=" . $nodeInfo['api_key'] . "\n\n# Node Information\nNODE_NAME=" . $nodeInfo['name'] . "\nNODE_ID=" . $nodeInfo['id'] . "\nNODE_URL=" . $nodeInfo['url'] . "\nNODE_BANDWIDTH=" . $nodeInfo['bandwidth'] . "\nNODE_CPU=" . $nodeInfo['cpu'] . "\nNODE_MEMORY=" . $nodeInfo['memory'] . "\n";
 
         return $content;
     }
@@ -258,13 +260,13 @@ echo "=================================="';
     {
         $deployment = $this->generateDeployment($nodeId, $nodeInfo);
         if (!$deployment['success']) {
-            throw new \RuntimeException('Failed to generate deployment: ' . $deployment['message']);
+            throw new RuntimeException('Failed to generate deployment: ' . $deployment['message']);
         }
 
         $zipPath = $this->outputDir . DIRECTORY_SEPARATOR . $nodeId . '_deployment.zip';
-        $zip = new \ZipArchive();
-        if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
-            throw new \RuntimeException('Failed to create zip archive');
+        $zip = new ZipArchive();
+        if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+            throw new RuntimeException('Failed to create zip archive');
         }
 
         $files = [

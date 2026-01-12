@@ -76,6 +76,10 @@ class BlogService
      */
     public static function getBlogPosts(int $page = 1, array $filters = []): array
     {
+        if (EdgeNodeService::isEdgeMode()) {
+            return self::getBlogPostsFromEdgeCache($page, $filters);
+        }
+
         $posts_per_page = self::getPostsPerPage();
         $cache_key = self::generateCacheKey($page, $posts_per_page, $filters);
 
@@ -114,6 +118,82 @@ class BlogService
         }
 
         return $result;
+    }
+
+    /**
+     * 从边缘缓存获取文章列表
+     */
+    protected static function getBlogPostsFromEdgeCache(int $page, array $filters): array
+    {
+        $perPage = self::getPostsPerPage();
+        // Currently edge mode only supports basic latest posts list for simplify
+        $postIds = EdgeNodeService::getCache('post_list:latest', []);
+
+        $totalCount = count($postIds);
+        $start = ($page - 1) * $perPage;
+        $pagedIds = array_slice($postIds, $start, $perPage);
+
+        $posts = new Collection();
+        foreach ($pagedIds as $id) {
+            $postData = EdgeNodeService::getCache('post:' . $id);
+            if ($postData) {
+                $posts->push(self::prepareEdgePost($postData));
+            }
+        }
+
+        return self::buildResult($posts, $totalCount, $page, $perPage, null, $filters);
+    }
+
+    /**
+     * 获取单篇文章（边缘感知）
+     */
+    public static function getPostBySlug(string $slug): ?object
+    {
+        if (EdgeNodeService::isEdgeMode()) {
+            $id = EdgeNodeService::getCache('post_slug:' . $slug);
+            if (!$id) {
+                return null;
+            }
+            $data = EdgeNodeService::getCache('post:' . $id);
+
+            return $data ? self::prepareEdgePost($data) : null;
+        }
+
+        return Post::where('slug', $slug)->published()->where(function ($q) {
+            $q->whereNull('published_at')->orWhere('published_at', '<=', utc_now());
+        })->first();
+    }
+
+    /**
+     * 准备边缘模式的文章对象
+     */
+    protected static function prepareEdgePost(array $data): object
+    {
+        $post = (object) $data;
+
+        // Convert dates to Carbon
+        if (isset($post->created_at)) {
+            $post->created_at = \support\utils\Carbon::parse($post->created_at);
+        }
+        if (isset($post->updated_at)) {
+            $post->updated_at = \support\utils\Carbon::parse($post->updated_at);
+        }
+        if (isset($post->published_at)) {
+            $post->published_at = \support\utils\Carbon::parse($post->published_at);
+        }
+
+        // Convert relations to Collections
+        if (isset($post->authors)) {
+            $post->authors = collect($post->authors);
+        }
+        if (isset($post->categories)) {
+            $post->categories = collect($post->categories);
+        }
+        if (isset($post->tags)) {
+            $post->tags = collect($post->tags);
+        }
+
+        return $post;
     }
 
     /**
@@ -222,7 +302,7 @@ class BlogService
 
         if (isset($dateRanges[$value])) {
             $days = $dateRanges[$value];
-            $query->where('created_at', '>=', now()->subDays($days));
+            $query->where('created_at', '>=', date('Y-m-d H:i:s', strtotime("-{$days} days")));
         }
     }
 
@@ -441,14 +521,24 @@ class BlogService
         $converter = new MarkdownConverter($environment);
 
         foreach ($posts as $post) {
-            if (empty($post->excerpt)) {
-                // 使用CommonMarkConverter将内容转换为HTML，再删除HTML标签生成摘要
-                $html = $converter->convert($post->content);
-                $excerpt = mb_substr(strip_tags((string) $html), 0, 200, 'UTF-8');
+            // Check if it's an object or an array (edge mode uses objects)
+            $excerpt = is_object($post) ? ($post->excerpt ?? null) : ($post->excerpt ?? null);
+            $content = is_object($post) ? ($post->content ?? null) : ($post->content ?? null);
 
-                // 自动生成文章摘要并保存
-                $post->excerpt = $excerpt;
-                $post->save();
+            if (empty($excerpt) && !empty($content)) {
+                // 使用CommonMarkConverter将内容转换为HTML，再删除HTML标签生成摘要
+                $html = $converter->convert((string) $content);
+                $generatedExcerpt = mb_substr(strip_tags((string) $html), 0, 200, 'UTF-8');
+
+                // 自动生成文章摘要
+                if (is_object($post)) {
+                    $post->excerpt = $generatedExcerpt;
+                    if ($post instanceof Post) {
+                        $post->save();
+                    }
+                } else {
+                    $post['excerpt'] = $generatedExcerpt;
+                }
             }
         }
     }
@@ -463,8 +553,20 @@ class BlogService
     protected static function ensurePostFeaturedImages(Collection $posts): void
     {
         foreach ($posts as $post) {
-            // 调用Post模型的getFeaturedImage方法获取头图
-            $post->featured_image = $post->getFeaturedImage();
+            if ($post instanceof Post) {
+                $post->featured_image = $post->getFeaturedImage();
+            } else {
+                // For edge mode objects
+                if (!isset($post->featured_image)) {
+                    // Try to extract from content
+                    $content = $post->content ?? '';
+                    if (preg_match('/<img[^>]+src=["\']([^"\']+)["\']/i', $content, $imgMatches)) {
+                        $post->featured_image = $imgMatches[1];
+                    } elseif (preg_match('/!\[[^\]]*\]\(([^\)]+)\)/i', $content, $mdImgMatches)) {
+                        $post->featured_image = $mdImgMatches[1];
+                    }
+                }
+            }
         }
     }
 

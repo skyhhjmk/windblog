@@ -116,6 +116,127 @@ class EdgeSyncService
         ]);
     }
 
+    public function getSyncDataSince(int $timestamp): array
+    {
+        $items = [];
+        $date = date('Y-m-d H:i:s', $timestamp);
+
+        // 1. Sync Posts
+        try {
+            $posts = \app\model\Post::where('updated_at', '>', $date)
+                ->with(['authors', 'categories', 'tags'])
+                ->get();
+            foreach ($posts as $post) {
+                $items[] = [
+                    'type' => 'post',
+                    'id' => $post->id,
+                    'data' => $post->toArray(),
+                ];
+            }
+        } catch (\Throwable $e) {
+            Log::error('[EdgeSync] Failed to fetch posts for sync: ' . $e->getMessage());
+        }
+
+        // 2. Sync Categories
+        try {
+            $categories = \app\model\Category::where('updated_at', '>', $date)->get();
+            foreach ($categories as $category) {
+                $items[] = [
+                    'type' => 'category',
+                    'id' => $category->id,
+                    'data' => $category->toArray(),
+                ];
+            }
+        } catch (\Throwable $e) {
+            Log::error('[EdgeSync] Failed to fetch categories for sync: ' . $e->getMessage());
+        }
+
+        // 3. Sync Tags
+        try {
+            $tags = \app\model\Tag::where('updated_at', '>', $date)->get();
+            foreach ($tags as $tag) {
+                $items[] = [
+                    'type' => 'tag',
+                    'id' => $tag->id,
+                    'data' => $tag->toArray(),
+                ];
+            }
+        } catch (\Throwable $e) {
+            Log::error('[EdgeSync] Failed to fetch tags for sync: ' . $e->getMessage());
+        }
+
+        // 4. Sync Settings (All settings if any updated)
+        try {
+            $hasUpdatedSettings = \app\model\Setting::where('updated_at', '>', $date)->exists();
+            if ($hasUpdatedSettings || $timestamp === 0) {
+                $settings = \app\model\Setting::all();
+                foreach ($settings as $setting) {
+                    $items[] = [
+                        'type' => 'config',
+                        'id' => $setting->key,
+                        'data' => $setting->value,
+                    ];
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::error('[EdgeSync] Failed to fetch settings for sync: ' . $e->getMessage());
+        }
+
+        // 5. Sync Post Lists (for homepage and archives)
+        if ($timestamp === 0 || count($items) > 0) {
+            try {
+                // Latest posts
+                $latestPostIds = \app\model\Post::where('status', 'published')
+                    ->orderByDesc('featured')
+                    ->orderByDesc('id')
+                    ->limit(500)
+                    ->pluck('id')
+                    ->toArray();
+
+                $items[] = [
+                    'type' => 'post_list',
+                    'id' => 'latest',
+                    'data' => $latestPostIds,
+                ];
+
+                // Most used categories
+                $categories = \app\model\Category::withCount([
+                    'posts' => function ($q) {
+                        $q->where('status', 'published');
+                    },
+                ])->orderByDesc('posts_count')->limit(50)->get();
+
+                $items[] = [
+                    'type' => 'category_list',
+                    'id' => 'popular',
+                    'data' => $categories->toArray(),
+                ];
+
+                // Most used tags
+                $tags = \app\model\Tag::withCount([
+                    'posts' => function ($q) {
+                        $q->where('status', 'published');
+                    },
+                ])->orderByDesc('posts_count')->limit(100)->get();
+
+                $items[] = [
+                    'type' => 'tag_list',
+                    'id' => 'popular',
+                    'data' => $tags->toArray(),
+                ];
+            } catch (\Throwable $e) {
+                Log::error('[EdgeSync] Failed to fetch lists for sync: ' . $e->getMessage());
+            }
+        }
+
+        return [
+            'success' => true,
+            'items' => $items,
+            'timestamp' => time(),
+            'count' => count($items),
+        ];
+    }
+
     private function syncItem(array $item): void
     {
         $type = $item['type'] ?? '';
@@ -124,16 +245,25 @@ class EdgeSyncService
 
         switch ($type) {
             case 'post':
-                $this->syncPost($id, $data);
+                $this->syncPost((int) $id, $data);
                 break;
             case 'category':
-                $this->syncCategory($id, $data);
+                $this->syncCategory((int) $id, $data);
                 break;
             case 'tag':
-                $this->syncTag($id, $data);
+                $this->syncTag((int) $id, $data);
                 break;
             case 'config':
-                $this->syncConfig($id, $data);
+                $this->syncConfig((string) $id, $data);
+                break;
+            case 'post_list':
+                $this->syncPostList((string) $id, $data);
+                break;
+            case 'category_list':
+                $this->syncCategoryList((string) $id, $data);
+                break;
+            case 'tag_list':
+                $this->syncTagList((string) $id, $data);
                 break;
             default:
                 Log::warning('[EdgeSync] Unknown item type: ' . $type);
@@ -142,26 +272,55 @@ class EdgeSyncService
 
     private function syncPost(int $id, array $data): void
     {
-        EdgeNodeService::setCache('post:' . $id, $data, 7200);
+        EdgeNodeService::setCache('post:' . $id, $data, 86400);
+        // Also cache by slug for quick lookup
+        if (isset($data['slug'])) {
+            EdgeNodeService::setCache('post_slug:' . $data['slug'], $id, 86400);
+        }
         Log::debug('[EdgeSync] Synced post ' . $id . ' to cache');
     }
 
     private function syncCategory(int $id, array $data): void
     {
-        EdgeNodeService::setCache('category:' . $id, $data, 14400);
+        EdgeNodeService::setCache('category:' . $id, $data, 86400);
+        if (isset($data['slug'])) {
+            EdgeNodeService::setCache('category_slug:' . $data['slug'], $id, 86400);
+        }
         Log::debug('[EdgeSync] Synced category ' . $id . ' to cache');
     }
 
     private function syncTag(int $id, array $data): void
     {
-        EdgeNodeService::setCache('tag:' . $id, $data, 14400);
+        EdgeNodeService::setCache('tag:' . $id, $data, 86400);
+        if (isset($data['slug'])) {
+            EdgeNodeService::setCache('tag_slug:' . $data['slug'], $id, 86400);
+        }
         Log::debug('[EdgeSync] Synced tag ' . $id . ' to cache');
     }
 
-    private function syncConfig(string $key, array $data): void
+    private function syncConfig(string $key, mixed $data): void
     {
+        // Settings are stored as raw values, not arrays necessarily
         EdgeNodeService::setCache('config:' . $key, $data, 86400);
         Log::debug('[EdgeSync] Synced config ' . $key . ' to cache');
+    }
+
+    private function syncPostList(string $listId, array $data): void
+    {
+        EdgeNodeService::setCache('post_list:' . $listId, $data, 86400);
+        Log::debug('[EdgeSync] Synced post list ' . $listId . ' to cache');
+    }
+
+    private function syncCategoryList(string $listId, array $data): void
+    {
+        EdgeNodeService::setCache('category_list:' . $listId, $data, 86400);
+        Log::debug('[EdgeSync] Synced category list ' . $listId . ' to cache');
+    }
+
+    private function syncTagList(string $listId, array $data): void
+    {
+        EdgeNodeService::setCache('tag_list:' . $listId, $data, 86400);
+        Log::debug('[EdgeSync] Synced tag list ' . $listId . ' to cache');
     }
 
     public function pushToDatacenter(array $items): array

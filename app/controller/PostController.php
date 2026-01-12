@@ -34,14 +34,8 @@ class PostController
             $keyword = substr($keyword, 0, -5);
         }
 
-        // 统一使用 slug 模式，提高性能并降低错误率
-        $post = Post::where('slug', $keyword)
-            ->where('status', 'published')
-            ->where(function ($q) {
-                $q->whereNull('published_at')
-                    ->orWhere('published_at', '<=', utc_now());
-            })
-            ->first();
+        // 使用 BlogService 获取文章，支持边缘模式
+        $post = \app\service\BlogService::getPostBySlug($keyword);
 
         if (!$post) {
             return view('error/404');
@@ -390,6 +384,7 @@ class PostController
      * 检测是否为AMP请求
      *
      * @param Request $request
+     *
      * @return bool
      */
     protected function isAmpRequest(Request $request): bool
@@ -412,9 +407,10 @@ class PostController
      * 渲染AMP文章页面
      *
      * @param Request $request
-     * @param Post $post
+     * @param Post   $post
      * @param string $authorName
-     * @param array $breadcrumbs
+     * @param array  $breadcrumbs
+     *
      * @return Response
      */
     protected function renderAmpPost(Request $request, Post $post, string $authorName, array $breadcrumbs): Response

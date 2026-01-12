@@ -58,10 +58,10 @@ class WidgetService
     /**
      * 注册小工具类型
      *
-     * @param string        $type        小工具类型
-     * @param string        $name        小工具名称
-     * @param string        $description 小工具描述
-     * @param callable|null $renderer    数据渲染器
+     * @param string        $type         小工具类型
+     * @param string        $name         小工具名称
+     * @param string        $description  小工具描述
+     * @param callable|null $renderer     数据渲染器
      * @param callable|null $htmlRenderer HTML渲染器
      *
      * @return bool 是否注册成功
@@ -111,7 +111,7 @@ class WidgetService
     /**
      * 渲染小工具数据
      *
-     * @param array $widget 小工具配置
+     * @param array  $widget   小工具配置
      * @param string $pageType 页面类型
      *
      * @return array 渲染后的小工具数据
@@ -166,13 +166,12 @@ class WidgetService
      * 获取小工具配置
      *
      * @param string $widgetType 小工具类型
-     * @param string $pageType 页面类型
+     * @param string $pageType   页面类型
      *
      * @return array 小工具配置
      */
     public static function getWidgetConfig(string $widgetType, string $pageType = 'default'): array
     {
-        // 按类型设置默认参数，避免全局默认影响其它小工具
         $defaultParamsMap = [
             'tags' => ['count' => 50, 'visible' => 30],
             'categories' => ['count' => 5],
@@ -191,6 +190,14 @@ class WidgetService
 
         try {
             $settingKey = "widget_{$widgetType}_{$pageType}";
+
+            if (\app\service\EdgeNodeService::isEdgeMode()) {
+                $cachedConfig = \app\service\EdgeNodeService::getCache($settingKey);
+                if ($cachedConfig && is_array($cachedConfig)) {
+                    return array_merge($defaultConfig, $cachedConfig);
+                }
+            }
+
             $setting = Setting::where('key', $settingKey)->first();
 
             if (!$setting && $pageType !== 'default') {
@@ -199,6 +206,11 @@ class WidgetService
 
             if ($setting) {
                 $config = json_decode($setting->value, true);
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    Log::error("[WidgetService] JSON decode failed for {$settingKey}: " . json_last_error_msg());
+
+                    return $defaultConfig;
+                }
 
                 return array_merge($defaultConfig, $config);
             }
@@ -225,20 +237,21 @@ class WidgetService
 
             $widgetType = $widget['type'] ?? '';
 
-            // 获取渲染后的小工具数据
             $widgetData = self::renderWidget($widget);
 
-            // 优先使用自定义HTML渲染器
             if (isset(self::$widgetHtmlRenderers[$widgetType]) && is_callable(self::$widgetHtmlRenderers[$widgetType])) {
                 try {
-                    return call_user_func(self::$widgetHtmlRenderers[$widgetType], $widgetData);
+                    $html = call_user_func(self::$widgetHtmlRenderers[$widgetType], $widgetData);
+
+                    return \app\util\HtmlSanitizer::sanitize($html);
                 } catch (Throwable $e) {
                     Log::error("[WidgetService] 自定义HTML渲染器执行失败: {$widgetType} - " . $e->getMessage());
                 }
             }
 
-            // 使用Twig模板渲染小工具
-            return self::renderWidgetWithTwig($widgetData);
+            $html = self::renderWidgetWithTwig($widgetData);
+
+            return \app\util\HtmlSanitizer::sanitize($html);
 
         } catch (Throwable $e) {
             Log::error('[WidgetService] 渲染小工具HTML失败: ' . $e->getMessage());
@@ -305,7 +318,7 @@ class WidgetService
     /**
      * 包装小工具HTML内容（向后兼容）
      *
-     * @param string $title 小工具标题
+     * @param string $title   小工具标题
      * @param string $content 小工具内容
      *
      * @return string 包装后的HTML
@@ -321,7 +334,7 @@ class WidgetService
     /**
      * 批量渲染小工具
      *
-     * @param array $widgets 小工具配置列表
+     * @param array  $widgets  小工具配置列表
      * @param string $pageType 页面类型
      *
      * @return array 渲染后的小工具数据列表
@@ -379,9 +392,9 @@ class WidgetService
     /**
      * 渲染小工具为HTML并缓存
      *
-     * @param array  $widget   小工具配置
+     * @param array    $widget       小工具配置
      * @param int|null $cacheMinutes 缓存分钟数，null表示使用默认缓存
-     * @param string $pageType 页面类型
+     * @param string   $pageType     页面类型
      *
      * @return string 渲染后的HTML
      */
@@ -446,6 +459,16 @@ class WidgetService
     {
         return self::getDataWrapper(function () use ($widget) {
             $count = $widget['params']['count'] ?? 5;
+
+            if (\app\service\EdgeNodeService::isEdgeMode()) {
+                $cachedCategories = \app\service\EdgeNodeService::getCache('category_list:popular');
+                if ($cachedCategories && is_array($cachedCategories)) {
+                    $widget['categories'] = array_slice($cachedCategories, 0, $count > 0 ? $count : count($cachedCategories));
+
+                    return $widget;
+                }
+            }
+
             $query = Category::withCount(['posts' => function ($q) {
                 $q->where('status', 'published');
             }])->orderBy('posts_count', 'desc');
@@ -467,6 +490,16 @@ class WidgetService
     {
         return self::getDataWrapper(function () use ($widget) {
             $count = $widget['params']['count'] ?? 50;
+
+            if (\app\service\EdgeNodeService::isEdgeMode()) {
+                $cachedTags = \app\service\EdgeNodeService::getCache('tag_list:popular');
+                if ($cachedTags && is_array($cachedTags)) {
+                    $widget['tags'] = array_slice($cachedTags, 0, $count > 0 ? $count : count($cachedTags));
+
+                    return $widget;
+                }
+            }
+
             $query = Tag::withCount(['posts' => function ($q) {
                 $q->where('status', 'published');
             }])->orderBy('posts_count', 'desc');
@@ -488,7 +521,16 @@ class WidgetService
     {
         return self::getDataWrapper(function () use ($widget) {
             $count = $widget['params']['count'] ?? 5;
-            // 使用PostgreSQL兼容的日期格式化函数
+
+            if (\app\service\EdgeNodeService::isEdgeMode()) {
+                $cachedArchive = \app\service\EdgeNodeService::getCache('archive_list');
+                if ($cachedArchive && is_array($cachedArchive)) {
+                    $widget['archive'] = array_slice($cachedArchive, 0, $count > 0 ? $count : count($cachedArchive));
+
+                    return $widget;
+                }
+            }
+
             $query = Post::selectRaw("TO_CHAR(created_at, 'YYYY-MM') as year_month, COUNT(*) as count")
                 ->where('status', 'published')
                 ->groupBy('year_month')
@@ -511,6 +553,24 @@ class WidgetService
     {
         return self::getDataWrapper(function () use ($widget) {
             $limit = $widget['params']['count'] ?? 5;
+
+            if (\app\service\EdgeNodeService::isEdgeMode()) {
+                $cachedPostIds = \app\service\EdgeNodeService::getCache('post_list:latest');
+                if ($cachedPostIds && is_array($cachedPostIds)) {
+                    $pagedIds = array_slice($cachedPostIds, 0, $limit > 0 ? $limit : count($cachedPostIds));
+                    $posts = collect();
+                    foreach ($pagedIds as $id) {
+                        $postData = \app\service\EdgeNodeService::getCache('post:' . $id);
+                        if ($postData) {
+                            $posts->push((object) $postData);
+                        }
+                    }
+                    $widget['recent_posts'] = $posts;
+
+                    return $widget;
+                }
+            }
+
             $widget['recent_posts'] = Post::where('status', 'published')
                 ->orderBy('created_at', 'desc')
                 ->take($limit)
@@ -529,24 +589,30 @@ class WidgetService
             $widgetId = $widget['widget_id'] ?? 'default';
 
             if (empty($widget['content'])) {
-                try {
-                    $settingKey = "custom_widget_html_{$widgetId}";
-                    $setting = Setting::where('key', $settingKey)->first();
+                $settingKey = "custom_widget_html_{$widgetId}";
 
-                    if ($setting) {
-                        $widget['content'] = $setting->value;
-                    } else {
-                        $widget['content'] = '<div class="widget-content p-4 bg-gray-50 rounded">
-                           <p class="text-center text-gray-500">这是一个自定义HTML小工具。</p>
-                         </div>';
+                if (\app\service\EdgeNodeService::isEdgeMode()) {
+                    $cachedContent = \app\service\EdgeNodeService::getCache($settingKey);
+                    if ($cachedContent) {
+                        $widget['content'] = $cachedContent;
+
+                        return $widget;
                     }
-                } catch (Throwable $e) {
-                    Log::error('[WidgetService] 获取自定义HTML内容失败: ' . $e->getMessage());
-                    $widget['content'] = '<div class="text-red-500">内容加载失败</div>';
+                }
+
+                $setting = Setting::where('key', $settingKey)->first();
+
+                if ($setting) {
+                    $widget['content'] = $setting->value;
+                } else {
+                    $widget['content'] = '<div class="widget-content p-4 bg-gray-50 rounded">
+                       <p class="text-center text-gray-500">这是一个自定义HTML小工具。</p>
+                         </div>';
                 }
             }
         } catch (Throwable $e) {
-            Log::error('[WidgetService] 渲染HTML小工具失败: ' . $e->getMessage());
+            Log::error('[WidgetService] 获取自定义HTML内容失败: ' . $e->getMessage());
+            $widget['content'] = '<div class="text-red-500">内容加载失败</div>';
         }
 
         return $widget;
@@ -559,6 +625,23 @@ class WidgetService
     {
         return self::getDataWrapper(function () use ($widget) {
             $limit = $widget['params']['count'] ?? 5;
+
+            if (\app\service\EdgeNodeService::isEdgeMode()) {
+                $cachedPostIds = \app\service\EdgeNodeService::getCache('post_list:popular');
+                if ($cachedPostIds && is_array($cachedPostIds)) {
+                    $pagedIds = array_slice($cachedPostIds, 0, $limit > 0 ? $limit : count($cachedPostIds));
+                    $posts = collect();
+                    foreach ($pagedIds as $id) {
+                        $postData = \app\service\EdgeNodeService::getCache('post:' . $id);
+                        if ($postData) {
+                            $posts->push((object) $postData);
+                        }
+                    }
+                    $widget['popular_posts'] = $posts;
+
+                    return $widget;
+                }
+            }
 
             try {
                 $driver = DB::connection()->getDriverName();
@@ -603,13 +686,30 @@ class WidgetService
     {
         return self::getDataWrapper(function () use ($widget) {
             $limit = $widget['params']['count'] ?? 5;
-            // 只获取已发布的文章，使用PostgreSQL兼容的随机排序
+
+            if (\app\service\EdgeNodeService::isEdgeMode()) {
+                $cachedPostIds = \app\service\EdgeNodeService::getCache('post_list:latest');
+                if ($cachedPostIds && is_array($cachedPostIds)) {
+                    shuffle($cachedPostIds);
+                    $pagedIds = array_slice($cachedPostIds, 0, $limit > 0 ? $limit : count($cachedPostIds));
+                    $posts = collect();
+                    foreach ($pagedIds as $id) {
+                        $postData = \app\service\EdgeNodeService::getCache('post:' . $id);
+                        if ($postData) {
+                            $posts->push((object) $postData);
+                        }
+                    }
+                    $widget['random_posts'] = $posts;
+
+                    return $widget;
+                }
+            }
+
             $widget['random_posts'] = Post::where('status', 'published')
                 ->orderByRaw('RANDOM()')
                 ->take($limit)
                 ->get(['id', 'title', 'slug', 'created_at']);
 
-            // 调试信息
             if ($widget['random_posts']->isEmpty()) {
                 Log::info('[WidgetService] 随机文章小工具：数据库中没有已发布的文章');
             }

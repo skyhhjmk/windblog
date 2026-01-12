@@ -74,14 +74,13 @@ class SidebarService
     public static function getSidebarByPage(string $pageKey): array
     {
         try {
-            // 获取侧边栏配置
-            $setting = Setting::where('key', self::SETTING_KEY)->first();
+            // 获取侧边栏配置 (使用 edge 兼容的 blog_config)
+            $settingValue = blog_config(self::SETTING_KEY);
 
             $sidebarConfig = [];
 
-            // 如果存在配置，尝试加载
-            if ($setting && !empty($setting->value)) {
-                $allConfigs = json_decode($setting->value, true);
+            if (!empty($settingValue)) {
+                $allConfigs = is_array($settingValue) ? $settingValue : json_decode($settingValue, true);
                 if (is_array($allConfigs)) {
                     $sidebarConfig = $allConfigs[$pageKey] ?? $allConfigs['default'] ?? [];
                 }
@@ -170,7 +169,7 @@ class SidebarService
 
         foreach ($sidebarConfig['widgets'] as $key => &$widget) {
             // 路由级可见性控制：visible_on / exclude_on
-            $isEnabled = (isset($widget['enabled']) ? (bool) $widget['enabled'] : true);
+            $isEnabled = (isset($widget['enabled']) ? (bool)$widget['enabled'] : true);
             if ($isEnabled) {
                 // 仅在指定页面显示
                 if (!empty($widget['visible_on'])) {
@@ -192,7 +191,7 @@ class SidebarService
                 try {
                     // 规范化键值：确保每个小工具具有稳定的 id/key，便于前端 data-widget-key 使用
                     if (empty($widget['id'])) {
-                        $widget['id'] = $widget['type'] ?? (is_string($key) ? $key : ('widget_' . (string) $key));
+                        $widget['id'] = $widget['type'] ?? (is_string($key) ? $key : ('widget_' . (string)$key));
                     }
                     if (empty($widget['key'])) {
                         $widget['key'] = $widget['id'];
@@ -387,5 +386,3 @@ class SidebarService
 
             return [];
         }
-    }
-}

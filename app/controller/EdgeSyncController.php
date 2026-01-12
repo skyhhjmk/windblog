@@ -43,9 +43,16 @@ class EdgeSyncController
             return json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
-        $lastSync = (int) $request->input('last_sync', 0);
         $syncService = new EdgeSyncService();
-        $result = $syncService->syncFromDatacenter();
+
+        // If in edge mode, we pull from our upstream datacenter
+        if (\app\service\EdgeNodeService::isEdgeMode()) {
+            $result = $syncService->syncFromDatacenter();
+        } else {
+            // If in datacenter mode, we provide data to the requesting edge node
+            $lastSync = (int) $request->input('last_sync', 0);
+            $result = $syncService->getSyncDataSince($lastSync);
+        }
 
         return json($result);
     }
