@@ -1358,11 +1358,11 @@
 <main class="flex-grow container mx-auto px-3 sm:px-4 pt-20 md:pt-24 pb-6 md:pb-8 blog-container">
     <div class="flex flex-col md:flex-row gap-4 sm:gap-6 md:gap-8">
         <!-- 主内容区域 - 占3/4宽度 -->
-        <div id="pjax-container" class="w-full md:w-3/4">
+        <div id="pjax-container" class="w-full md:w-3/4 flex-grow flex-shrink-0">
             {% block content %}{% endblock %}
         </div>
         <!-- 侧边栏 - 占1/4宽度，移动端隐藏 -->
-        <div id="sidebar-container" class="hidden md:block w-full md:w-1/4">
+        <div id="sidebar-container" class="hidden md:block w-full md:w-1/4 flex-shrink-0">
             {% block sidebar %}
                 {% if sidebar is defined and sidebar.widgets is defined %}
                     {% for widget in sidebar.widgets %}

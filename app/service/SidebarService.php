@@ -2,9 +2,7 @@
 
 namespace app\service;
 
-use app\model\Setting;
 use InvalidArgumentException;
-use RuntimeException;
 use support\Log;
 use support\Request;
 use Throwable;
@@ -74,16 +72,14 @@ class SidebarService
     public static function getSidebarByPage(string $pageKey): array
     {
         try {
-            // 获取侧边栏配置 (使用 edge 兼容的 blog_config)
-            $settingValue = blog_config(self::SETTING_KEY);
+            // 获取侧边栏配置
+            $allConfigs = blog_config(self::SETTING_KEY, [], true);
 
             $sidebarConfig = [];
 
-            if (!empty($settingValue)) {
-                $allConfigs = is_array($settingValue) ? $settingValue : json_decode($settingValue, true);
-                if (is_array($allConfigs)) {
-                    $sidebarConfig = $allConfigs[$pageKey] ?? $allConfigs['default'] ?? [];
-                }
+            // 如果存在配置，尝试加载
+            if (is_array($allConfigs)) {
+                $sidebarConfig = $allConfigs[$pageKey] ?? $allConfigs['default'] ?? [];
             }
 
             // 如果没有配置或配置无效，返回默认配置
@@ -236,19 +232,13 @@ class SidebarService
             unset($sidebarConfig['html']);
             unset($sidebarConfig['page_key']);
 
-            // 获取现有配置 (使用 edge 兼容的 blog_config)
-            $settingValue = blog_config(self::SETTING_KEY);
-
-            // 初始化或获取所有配置
-            $allConfigs = [];
-            if (!empty($settingValue)) {
-                $allConfigs = is_array($settingValue) ? $settingValue : json_decode($settingValue, true);
-                if (!is_array($allConfigs)) {
-                    Log::warning('[SidebarService] Invalid existing config format, initializing new array');
-                    $allConfigs = [];
-                }
-                Log::debug('[SidebarService] Loaded existing config for pages: ' . implode(', ', array_keys($allConfigs)));
+            // 获取现有配置
+            $allConfigs = blog_config(self::SETTING_KEY, [], true);
+            if (!is_array($allConfigs)) {
+                Log::warning('[SidebarService] Invalid existing config format, initializing new array');
+                $allConfigs = [];
             }
+            Log::debug('[SidebarService] Loaded existing config for pages: ' . implode(', ', array_keys($allConfigs)));
 
             // 验证小工具配置
             if (isset($sidebarConfig['widgets']) && !is_array($sidebarConfig['widgets'])) {
@@ -260,29 +250,11 @@ class SidebarService
             $allConfigs[$pageKey] = $sidebarConfig;
             Log::debug("[SidebarService] Updating config for page: {$pageKey}");
 
-            // 转换为JSON
-            $jsonConfig = json_encode($allConfigs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-            if ($jsonConfig === false) {
-                throw new RuntimeException('Failed to encode sidebar config to JSON: ' . json_last_error_msg());
-            }
+            // 使用blog_config函数保存配置
+            blog_config(self::SETTING_KEY, $allConfigs, true, true, true);
+            Log::debug("[SidebarService] Sidebar config saved for page: {$pageKey}, total pages: " . count($allConfigs));
 
-            if ($setting) {
-                // 更新现有配置
-                $setting->value = $jsonConfig;
-                $result = $setting->save();
-                Log::debug("[SidebarService] Sidebar config saved for page: {$pageKey}, total pages: " . count($allConfigs));
-
-                return $result;
-            } else {
-                // 创建新配置
-                $setting = new Setting();
-                $setting->key = self::SETTING_KEY;
-                $setting->value = $jsonConfig;
-                $result = $setting->save();
-                Log::info("[SidebarService] Initial sidebar config created for page: {$pageKey}");
-
-                return $result;
-            }
+            return true;
         } catch (Throwable $e) {
             Log::error('[SidebarService] Failed to save sidebar config: ' . $e->getMessage());
             throw $e;
@@ -297,19 +269,16 @@ class SidebarService
     public static function getSidebarPages(): array
     {
         try {
-            // 获取所有已配置的页面 (使用 edge 兼容的 blog_config)
-            $settingValue = blog_config(self::SETTING_KEY);
+            // 获取所有已配置的页面
+            $allConfigs = blog_config(self::SETTING_KEY, [], true);
 
             $pages = [];
-            if (!empty($settingValue)) {
-                $allConfigs = is_array($settingValue) ? $settingValue : json_decode($settingValue, true);
-                if (is_array($allConfigs)) {
-                    foreach (array_keys($allConfigs) as $pageKey) {
-                        $pages[] = [
-                            'key' => $pageKey,
-                            'name' => ucfirst(str_replace('_', ' ', $pageKey)),
-                        ];
-                    }
+            if (is_array($allConfigs)) {
+                foreach (array_keys($allConfigs) as $pageKey) {
+                    $pages[] = [
+                        'key' => $pageKey,
+                        'name' => ucfirst(str_replace('_', ' ', $pageKey)),
+                    ];
                 }
             }
 
