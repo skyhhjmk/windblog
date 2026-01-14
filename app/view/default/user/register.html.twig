@@ -16,7 +16,7 @@
                     </a>
                 </p>
             </div>
-            <form class="mt-8 space-y-6" id="registerForm">
+            <form class="mt-8 space-y-6" id="registerForm" method="post">
                 <input type="hidden" name="_token" value="" data-csrf-placeholder="true">
                 <div class="rounded-md shadow-sm space-y-4">
                     <div>
@@ -170,7 +170,7 @@
 
             // 禁用提交按钮
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 注册中...';
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> 注册中...';
 
             try {
                 const response = await fetch('/user/register', {

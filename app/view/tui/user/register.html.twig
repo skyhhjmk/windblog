@@ -17,7 +17,7 @@
                 </p>
             </div>
 
-            <form class="space-y-6 font-mono" id="registerForm">
+            <form class="space-y-6 font-mono" id="registerForm" method="post">
                 <input type="hidden" name="_token" value="" data-csrf-placeholder="true">
                 <div class="space-y-4">
                     <div>
@@ -160,7 +160,7 @@
             const submitBtn = document.getElementById('submitBtn');
             const formData = new FormData(this);
             submitBtn.disabled = true;
-            submitBtn.innerHTML = 'Registering...';
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Registering...';
 
             try {
                 const response = await fetch('/user/register', {
