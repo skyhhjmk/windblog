@@ -369,7 +369,7 @@ class ElasticService
                     [
                         'multi_match' => [
                             'query' => $keyword,
-                            'fields' => ['title^5', 'excerpt^3', 'content^1', 'categories_names^2', 'tags_names^2'],
+                            'fields' => ['title^5', 'excerpt^3', 'ai_summary^4', 'content^1', 'categories_names^2', 'tags_names^2'],
                             'type' => 'best_fields',
                             'operator' => 'and',
                             'analyzer' => (string) BlogService::getConfig('es.analyzer', 'standard'),

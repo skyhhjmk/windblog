@@ -827,6 +827,9 @@ class CacheService
      */
     private static function validateClearPattern(string $pattern, string $logPrefix): bool
     {
+        // 确保前缀已经初始化
+        self::prefixKey('');
+
         // 安全保护：当前缀为空且请求清理 '*' 时，需要显式确认
         if (self::$prefix === '') {
             $allowAll = filter_var(self::getEnv('CACHE_ALLOW_CLEAR_ALL', 'false'), FILTER_VALIDATE_BOOLEAN);
@@ -847,6 +850,7 @@ class CacheService
      * @param string $logPrefix         日志前缀
      *
      * @return bool 是否清除成功
+     * @throws \Throwable
      */
     private static function clearRedisCache(string $patternWithPrefix, string $logPrefix): bool
     {

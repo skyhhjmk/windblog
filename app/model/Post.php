@@ -85,20 +85,21 @@ class Post extends Model
             }
         });
 
-        // 保存后检测发布状态变化，清除相关缓存
+        // 保存后清除相关缓存
         static::saved(function (Post $post) {
             try {
-                // 检测是否为发布状态
+                // 检测是否为发布状态或AI摘要发生变化
                 $isPublished = $post->status === 'published';
+                $summaryChanged = $post->wasChanged('ai_summary');
 
                 // 检测状态是否从非发布变为发布（新发布）
                 $wasUnpublished = $post->wasChanged('status') &&
                     $post->getOriginal('status') !== 'published' &&
                     $post->status === 'published';
 
-                // 如果是发布状态的文章（新发布或已发布的更新），清除缓存
-                if ($isPublished) {
-                    Log::info("[Post.saved] Post {$post->id} published, clearing caches...");
+                // 如果是发布状态的文章（新发布或已发布的更新）或AI摘要变化，清除缓存
+                if ($isPublished || $summaryChanged) {
+                    Log::info("[Post.saved] Post {$post->id} updated, clearing caches...");
                     CacheService::clearPublishCache($post->id);
 
                     if ($wasUnpublished) {

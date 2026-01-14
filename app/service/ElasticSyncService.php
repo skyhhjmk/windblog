@@ -40,6 +40,7 @@ class ElasticSyncService
                     'id' => ['type' => 'integer'],
                     'title' => ['type' => 'text', 'analyzer' => $analyzer === 'ik_max_word' ? 'ik_max_word' : 'standard'],
                     'excerpt' => ['type' => 'text', 'analyzer' => $analyzer === 'ik_max_word' ? 'ik_max_word' : 'standard'],
+                    'ai_summary' => ['type' => 'text', 'analyzer' => $analyzer === 'ik_max_word' ? 'ik_max_word' : 'standard'],
                     'content' => ['type' => 'text', 'analyzer' => $analyzer === 'ik_max_word' ? 'ik_max_word' : 'standard'],
                     'created_at' => ['type' => 'date', 'format' => 'strict_date_optional_time||epoch_millis'],
                     'author' => ['type' => 'keyword'],
@@ -127,6 +128,7 @@ class ElasticSyncService
             'id' => (int) $post->id,
             'title' => (string) $post->title,
             'excerpt' => (string) $post->excerpt,
+            'ai_summary' => (string)$post->ai_summary,
             'content' => (string) $post->content,
             'author' => self::pickAuthor($post),
         ];

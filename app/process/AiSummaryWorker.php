@@ -266,6 +266,15 @@ class AiSummaryWorker
         $post->ai_summary = $summary;
         $post->save();
 
+        // 清理相关缓存并同步ES
+        try {
+            Log::info("[AiSummaryWorker] Post {$postId} summary updated, clearing caches...");
+            \app\service\CacheService::clearPublishCache($postId);
+            \app\service\ElasticSyncService::indexPost($post);
+        } catch (Throwable $e) {
+            Log::warning('[AiSummaryWorker] Failed to clear cache or sync ES: ' . $e->getMessage());
+        }
+
         $this->setAiMeta($postId, [
             'enabled' => (bool) ($meta['enabled'] ?? true),
             'status' => 'done',

@@ -834,7 +834,32 @@
             try {
                 const text = (value || '').toString();
                 const chars = text.length;
-                const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+                let words = 0;
+
+                if (text.trim()) {
+                    // 移除所有空白字符
+                    const trimmedText = text.replace(/\s+/g, '');
+
+                    // 统计中文字符数量
+                    const chineseChars = trimmedText.match(/[\u4e00-\u9fa5]/g) || [];
+
+                    // 统计英文单词数量（按空格分隔）
+                    const englishWords = text.trim().split(/\s+/).length;
+
+                    // 对于混合文本，使用更智能的统计方法
+                    // 如果有中文，按字符统计中文，加上英文单词数
+                    // 如果没有中文，直接使用英文单词数
+                    if (chineseChars.length > 0) {
+                        // 移除中文后，统计剩余字符（英文、数字、标点等）
+                        const nonChineseText = trimmedText.replace(/[\u4e00-\u9fa5]/g, '');
+                        // 中文按字符算，非中文部分按英文单词统计逻辑处理
+                        words = chineseChars.length + (nonChineseText ? nonChineseText.split(/\W+/).filter(Boolean).length : 0);
+                    } else {
+                        // 纯英文/数字文本，按空格分隔统计
+                        words = englishWords;
+                    }
+                }
+
                 // 简易阅读时长：按每分钟500字符估算
                 const minutes = Math.max(1, Math.ceil(chars / 500));
 
