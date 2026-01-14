@@ -3323,6 +3323,17 @@
             return true;
         }
 
+        // 确保广告单元有明确的宽度
+        function ensureAdUnitWidth(ins, container) {
+            // 为广告单元设置宽度为容器宽度
+            if (ins.style.width === '' || ins.style.width === '0px') {
+                var containerRect = container.getBoundingClientRect();
+                if (containerRect.width > 0) {
+                    ins.style.width = containerRect.width + 'px';
+                }
+            }
+        }
+
         function initSlot(ins) {
             if (!ins || ins.dataset.wbAdInited === '1') return;
             var container = ins.closest('.ad-google') || ins.parentElement;
@@ -3334,10 +3345,24 @@
 
             if (!hasUsableWidth(container)) {
                 if (attempts >= MAX_ATTEMPTS) {
-                    try {
-                        console.warn('AdSense: Container not ready after ' + attempts + ' attempts');
-                    } catch (_) {
-                    }
+                    console.warn('AdSense: Container not ready after ' + attempts + ' attempts');
+                    container.style.display = 'none';
+                    return;
+                }
+                setTimeout(function () {
+                    initSlot(ins);
+                }, 100);
+                return;
+            }
+
+            // 确保广告单元有明确的宽度
+            ensureAdUnitWidth(ins, container);
+
+            // 再次检查广告单元本身的宽度
+            var insRect = ins.getBoundingClientRect();
+            if (!insRect || insRect.width <= 0) {
+                if (attempts >= MAX_ATTEMPTS) {
+                    console.warn('AdSense: Ad unit not ready after ' + attempts + ' attempts');
                     container.style.display = 'none';
                     return;
                 }

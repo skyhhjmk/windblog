@@ -128,7 +128,7 @@ class ElasticSyncService
             'id' => (int) $post->id,
             'title' => (string) $post->title,
             'excerpt' => (string) $post->excerpt,
-            'ai_summary' => (string)$post->ai_summary,
+            'ai_summary' => (string) $post->ai_summary,
             'content' => (string) $post->content,
             'author' => self::pickAuthor($post),
         ];
