@@ -3330,8 +3330,33 @@
                 var containerRect = container.getBoundingClientRect();
                 if (containerRect.width > 0) {
                     ins.style.width = containerRect.width + 'px';
+                    ins.style.minWidth = '1px'; // 确保至少有1px宽度
                 }
             }
+        }
+
+        // 检查元素及其所有父容器是否可见
+        function isElementVisible(el) {
+            if (!el) return false;
+
+            var current = el;
+            while (current) {
+                if (current === document.body) break;
+
+                var rect = current.getBoundingClientRect();
+                if (!rect || rect.width <= 0 || rect.height <= 0) return false;
+
+                if (window.getComputedStyle) {
+                    var st = window.getComputedStyle(current);
+                    if (!st || st.display === 'none' || st.visibility === 'hidden' || parseFloat(st.opacity) === 0) {
+                        return false;
+                    }
+                }
+
+                current = current.parentElement;
+            }
+
+            return true;
         }
 
         function initSlot(ins) {
@@ -3343,9 +3368,10 @@
             attempts++;
             attemptMap.set(ins, attempts);
 
-            if (!hasUsableWidth(container)) {
+            // 检查广告单元及其所有父容器是否可见
+            if (!isElementVisible(ins) || !isElementVisible(container)) {
                 if (attempts >= MAX_ATTEMPTS) {
-                    console.warn('AdSense: Container not ready after ' + attempts + ' attempts');
+                    console.warn('AdSense: Element not visible after ' + attempts + ' attempts');
                     container.style.display = 'none';
                     return;
                 }
@@ -3358,11 +3384,19 @@
             // 确保广告单元有明确的宽度
             ensureAdUnitWidth(ins, container);
 
+            // 强制设置最小宽度和高度
+            ins.style.minWidth = '100%';
+            ins.style.minHeight = '100px';
+            ins.style.width = '100%';
+
             // 再次检查广告单元本身的宽度
             var insRect = ins.getBoundingClientRect();
-            if (!insRect || insRect.width <= 0) {
+            var containerRect = container.getBoundingClientRect();
+
+            // 确保宽度至少为1px
+            if (!insRect || insRect.width <= 1 || !containerRect || containerRect.width <= 1) {
                 if (attempts >= MAX_ATTEMPTS) {
-                    console.warn('AdSense: Ad unit not ready after ' + attempts + ' attempts');
+                    console.warn('AdSense: Ad unit width insufficient after ' + attempts + ' attempts. insRect:', insRect, 'containerRect:', containerRect);
                     container.style.display = 'none';
                     return;
                 }
@@ -3373,6 +3407,19 @@
             }
 
             try {
+                // 最后一次检查，确保广告单元在视口中
+                var isInViewport = insRect.top < window.innerHeight && insRect.bottom > 0;
+                if (!isInViewport) {
+                    if (attempts >= MAX_ATTEMPTS) {
+                        container.style.display = 'none';
+                        return;
+                    }
+                    setTimeout(function () {
+                        initSlot(ins);
+                    }, 100);
+                    return;
+                }
+
                 (adsbygoogle = window.adsbygoogle || []).push({});
                 ins.dataset.wbAdInited = '1';
                 // 2 秒后检查是否有填充内容
@@ -3387,7 +3434,7 @@
                 }, 2000);
             } catch (e) {
                 try {
-                    console.error('AdSense push error:', e);
+                    console.error('AdSense push error:', e, 'insRect:', insRect, 'containerRect:', containerRect);
                 } catch (_) {
                 }
                 container.style.display = 'none';
