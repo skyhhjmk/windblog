@@ -1264,7 +1264,7 @@
                 // 加载AI提供者和轮询组
                 function loadAIProviders() {
                     $.ajax({
-                        url: '/app/admin/ai_provider/list',
+                        url: '/app/admin/ai/providers/list',
                         type: 'GET',
                         success: function (res) {
                             let html = '<option value="">使用默认配置</option>';
