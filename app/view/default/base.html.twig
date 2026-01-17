@@ -3325,14 +3325,18 @@
 
         // 确保广告单元有明确的宽度
         function ensureAdUnitWidth(ins, container) {
+            // 首先确保容器是可见的
+            container.style.display = 'block';
+            container.style.visibility = 'visible';
+            container.style.opacity = '1';
+
             // 为广告单元设置宽度为容器宽度
-            if (ins.style.width === '' || ins.style.width === '0px') {
-                var containerRect = container.getBoundingClientRect();
-                if (containerRect.width > 0) {
-                    ins.style.width = containerRect.width + 'px';
-                    ins.style.minWidth = '1px'; // 确保至少有1px宽度
-                }
-            }
+            var containerRect = container.getBoundingClientRect();
+            var width = containerRect.width > 0 ? containerRect.width : 300; // 默认宽度300px
+
+            ins.style.width = width + 'px';
+            ins.style.minWidth = '300px'; // 确保至少有300px宽度（AdSense最小要求）
+            ins.style.maxWidth = '100%';
         }
 
         // 检查元素及其所有父容器是否可见
@@ -3368,66 +3372,89 @@
             attempts++;
             attemptMap.set(ins, attempts);
 
-            // 检查广告单元及其所有父容器是否可见
-            if (!isElementVisible(ins) || !isElementVisible(container)) {
-                if (attempts >= MAX_ATTEMPTS) {
-                    console.warn('AdSense: Element not visible after ' + attempts + ' attempts');
-                    container.style.display = 'none';
-                    return;
-                }
-                setTimeout(function () {
-                    initSlot(ins);
-                }, 100);
-                return;
-            }
+            // 首先确保容器是可见的，否则无法获取正确的尺寸
+            container.style.display = 'block';
+            container.style.visibility = 'visible';
+            container.style.opacity = '1';
+            container.style.minHeight = '100px';
 
             // 确保广告单元有明确的宽度
             ensureAdUnitWidth(ins, container);
 
-            // 强制设置最小宽度和高度
-            ins.style.minWidth = '100%';
-            ins.style.minHeight = '100px';
+            // 强制设置合适的尺寸
             ins.style.width = '100%';
+            ins.style.minWidth = '300px'; // AdSense最小宽度要求
+            ins.style.minHeight = '100px';
+            ins.style.display = 'block';
+            ins.style.visibility = 'visible';
+            ins.style.opacity = '1';
 
             // 再次检查广告单元本身的宽度
             var insRect = ins.getBoundingClientRect();
             var containerRect = container.getBoundingClientRect();
 
-            // 确保宽度至少为1px
-            if (!insRect || insRect.width <= 1 || !containerRect || containerRect.width <= 1) {
+            // 确保宽度至少为300px（AdSense最小要求）
+            if (!insRect || insRect.width < 300 || !containerRect || containerRect.width < 300) {
                 if (attempts >= MAX_ATTEMPTS) {
-                    console.warn('AdSense: Ad unit width insufficient after ' + attempts + ' attempts. insRect:', insRect, 'containerRect:', containerRect);
-                    container.style.display = 'none';
+                    console.warn('AdSense: Ad unit width insufficient after ' + attempts + ' attempts. Required min 300px, got insRect:', insRect.width || 0, 'containerRect:', containerRect.width || 0);
+                    // 不要隐藏容器，而是继续显示占位符避免布局跳动
+                    container.style.minHeight = '100px';
                     return;
                 }
                 setTimeout(function () {
                     initSlot(ins);
-                }, 100);
+                }, 200); // 增加间隔时间，避免过于频繁的尝试
                 return;
             }
 
             try {
-                // 最后一次检查，确保广告单元在视口中
-                var isInViewport = insRect.top < window.innerHeight && insRect.bottom > 0;
+                // 检查广告单元是否在视口中
+                var isInViewport = insRect.top < window.innerHeight + 200 && insRect.bottom > -200; // 提前200px准备
                 if (!isInViewport) {
                     if (attempts >= MAX_ATTEMPTS) {
-                        container.style.display = 'none';
+                        // 不要隐藏容器，而是继续观察
+                        if (!io) {
+                            // 如果还没有观察器，创建一个
+                            io = new IntersectionObserver(function (entries) {
+                                entries.forEach(function (entry) {
+                                    if (entry.isIntersecting) {
+                                        io.unobserve(entry.target);
+                                        initSlot(entry.target);
+                                    }
+                                });
+                            }, {root: null, rootMargin: '200px 0px', threshold: 0});
+                        }
+                        io.observe(ins);
                         return;
                     }
                     setTimeout(function () {
                         initSlot(ins);
-                    }, 100);
+                    }, 500); // 增加间隔时间
                     return;
                 }
 
+                // 初始化AdSense广告
+                console.log('Initializing AdSense slot with dimensions:', insRect.width, 'x', insRect.height);
                 (adsbygoogle = window.adsbygoogle || []).push({});
                 ins.dataset.wbAdInited = '1';
+
                 // 2 秒后检查是否有填充内容
                 setTimeout(function () {
                     try {
                         if (ins.innerHTML.trim() === '' || ins.offsetHeight < 50) {
-                            container.style.display = 'none';
-                            console.warn('AdSense: No ad content, hiding container');
+                            console.warn('AdSense: No ad content, keeping container for next attempt');
+                            // 不要隐藏容器，保留占位符以避免布局跳动
+                            container.style.minHeight = '100px';
+                            // 重置初始化状态，允许下次尝试
+                            delete ins.dataset.wbAdInited;
+                            // 10秒后重新尝试
+                            setTimeout(function () {
+                                initSlot(ins);
+                            }, 10000);
+                        } else {
+                            console.log('AdSense ad loaded successfully');
+                            // 广告加载成功，移除最小高度限制
+                            container.style.minHeight = '';
                         }
                     } catch (_) {
                     }
@@ -3435,9 +3462,16 @@
             } catch (e) {
                 try {
                     console.error('AdSense push error:', e, 'insRect:', insRect, 'containerRect:', containerRect);
+                    // 不要隐藏容器，保留占位符
+                    container.style.minHeight = '100px';
                 } catch (_) {
                 }
-                container.style.display = 'none';
+                // 重置初始化状态，允许下次尝试
+                delete ins.dataset.wbAdInited;
+                // 5秒后重新尝试
+                setTimeout(function () {
+                    initSlot(ins);
+                }, 5000);
             }
         }
 

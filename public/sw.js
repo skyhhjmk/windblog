@@ -359,8 +359,13 @@ self.addEventListener('fetch', event => {
         return;
     }
 
-    // CDN assets: Cache First
+    // CDN assets: Cache First, except for AdSense scripts
     if (isCdn(url)) {
+        // Don't cache AdSense scripts to avoid loading outdated versions
+        if (url.hostname === 'pagead2.googlesyndication.com' || url.pathname.includes('adsbygoogle')) {
+            log('Bypassing cache for AdSense script', {url: req.url});
+            return; // Let browser handle it directly
+        }
         log('Handling CDN asset', {url: req.url, strategy: 'cacheFirst'});
         event.respondWith(cacheFirst(req, CACHE_CDN));
         return;
