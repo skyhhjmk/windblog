@@ -3294,13 +3294,72 @@
     })();
 </script>
 
-{# 全局 Google AdSense 槽位初始化（侧边栏等） #}
+{# 全局 Google AdSense 槽位初始化（仅在侧边栏可见时加载） #}
 <script>
     (function () {
-        var MAX_ATTEMPTS = 50;
+        var MAX_ATTEMPTS = 30;
         var attemptMap = new WeakMap();
         var io = null;
         var resizeTimer = null;
+        var adsScriptLoaded = false;
+        var pendingSlots = [];
+
+        function isSidebarVisible() {
+            var sidebar = document.getElementById('sidebar-container');
+            if (!sidebar) return false;
+            var rect = sidebar.getBoundingClientRect();
+            if (!rect || rect.width <= 0 || rect.height <= 0) return false;
+            var st = window.getComputedStyle(sidebar);
+            if (!st || st.display === 'none' || st.visibility === 'hidden' || parseFloat(st.opacity) === 0) return false;
+            return true;
+        }
+
+        function isAdContainerVisible(container) {
+            if (!container || !document.body.contains(container)) return false;
+            var current = container;
+            while (current && current !== document.body) {
+                if (current.id === 'pjax-sidebar-html') return false;
+                var rect = current.getBoundingClientRect();
+                if (!rect || rect.width <= 0 || rect.height <= 0) return false;
+                var st = window.getComputedStyle(current);
+                if (st && (st.display === 'none' || st.visibility === 'hidden' || parseFloat(st.opacity) === 0)) return false;
+                current = current.parentElement;
+            }
+            return true;
+        }
+
+        function loadAdsScript(callback) {
+            if (window.__adsbygoogleLoaded) {
+                if (callback) callback();
+                return;
+            }
+            if (adsScriptLoaded) {
+                var checkLoaded = setInterval(function () {
+                    if (window.__adsbygoogleLoaded) {
+                        clearInterval(checkLoaded);
+                        if (callback) callback();
+                    }
+                }, 50);
+                setTimeout(function () {
+                    clearInterval(checkLoaded);
+                }, 5000);
+                return;
+            }
+            adsScriptLoaded = true;
+            var s = document.createElement('script');
+            s.async = true;
+            s.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4006222603298393';
+            s.crossOrigin = 'anonymous';
+            s.onload = function () {
+                window.__adsbygoogleLoaded = true;
+                if (callback) callback();
+            };
+            s.onerror = function () {
+                adsScriptLoaded = false;
+                console.error('Failed to load AdSense script');
+            };
+            document.head.appendChild(s);
+        }
 
         function inHiddenPjaxSidebar(el) {
             var p = el;
@@ -3323,19 +3382,14 @@
             return true;
         }
 
-        // 确保广告单元有明确的宽度
         function ensureAdUnitWidth(ins, container) {
-            // 首先确保容器是可见的
             container.style.display = 'block';
             container.style.visibility = 'visible';
             container.style.opacity = '1';
-
-            // 为广告单元设置宽度为容器宽度
             var containerRect = container.getBoundingClientRect();
-            var width = containerRect.width > 0 ? containerRect.width : 300; // 默认宽度300px
-
+            var width = containerRect.width > 0 ? containerRect.width : 300;
             ins.style.width = width + 'px';
-            ins.style.minWidth = '300px'; // 确保至少有300px宽度（AdSense最小要求）
+            ins.style.minWidth = '300px';
             ins.style.maxWidth = '100%';
         }
 
@@ -3434,9 +3488,36 @@
                 }
 
                 // 初始化AdSense广告
-                console.log('Initializing AdSense slot with dimensions:', insRect.width, 'x', insRect.height);
-                (adsbygoogle = window.adsbygoogle || []).push({});
-                ins.dataset.wbAdInited = '1';
+                // 额外检查元素是否真的可见且有有效尺寸
+                var finalInsRect = ins.getBoundingClientRect();
+                var finalContainerRect = container.getBoundingClientRect();
+
+                if (!finalInsRect || finalInsRect.width < 300 || finalInsRect.width <= 0 ||
+                    !finalContainerRect || finalContainerRect.width < 300 || finalContainerRect.width <= 0) {
+                    console.warn('AdSense: Visibility check failed before push, retrying later. insRect:', finalInsRect, 'containerRect:', finalContainerRect);
+                    if (attempts >= MAX_ATTEMPTS) {
+                        container.style.minHeight = '100px';
+                        return;
+                    }
+                    setTimeout(function () {
+                        initSlot(ins);
+                    }, 500);
+                    return;
+                }
+
+                console.log('Initializing AdSense slot with dimensions:', finalInsRect.width, 'x', finalInsRect.height);
+                loadAdsScript(function () {
+                    try {
+                        (adsbygoogle = window.adsbygoogle || []).push({});
+                        ins.dataset.wbAdInited = '1';
+                    } catch (e) {
+                        console.error('AdSense push error after script load:', e);
+                        delete ins.dataset.wbAdInited;
+                        setTimeout(function () {
+                            initSlot(ins);
+                        }, 5000);
+                    }
+                });
 
                 // 2 秒后检查是否有填充内容
                 setTimeout(function () {
@@ -3461,8 +3542,31 @@
                 }, 2000);
             } catch (e) {
                 try {
-                    console.error('AdSense push error:', e, 'insRect:', insRect, 'containerRect:', containerRect);
-                    // 不要隐藏容器，保留占位符
+                    var errorMsg = e.message || String(e);
+                    var availableWidthMatch = errorMsg.match(/availableWidth[=:](\d+)/);
+                    var availableWidth = availableWidthMatch ? availableWidthMatch[1] : 'unknown';
+
+                    var insStyle = window.getComputedStyle(ins);
+                    var containerStyle = window.getComputedStyle(container);
+
+                    console.error('AdSense push error:', e);
+                    console.error('AvailableWidth detected:', availableWidth);
+                    console.error('Element styles - ins:', {
+                        display: insStyle.display,
+                        visibility: insStyle.visibility,
+                        opacity: insStyle.opacity,
+                        width: insStyle.width,
+                        minWidth: insStyle.minWidth,
+                        maxWidth: insStyle.maxWidth
+                    });
+                    console.error('Container styles - container:', {
+                        display: containerStyle.display,
+                        visibility: containerStyle.visibility,
+                        opacity: containerStyle.opacity,
+                        width: containerStyle.width
+                    });
+                    console.error('Current dimensions - insRect:', insRect, 'containerRect:', containerRect);
+
                     container.style.minHeight = '100px';
                 } catch (_) {
                 }
@@ -3494,11 +3598,16 @@
         }
 
         function scanAndInit() {
+            if (!isSidebarVisible()) {
+                console.log('AdSense: Sidebar not visible, skipping ad initialization');
+                return;
+            }
             try {
                 var slots = document.querySelectorAll('.adsbygoogle[data-wb-ad="1"]');
                 slots.forEach(function (ins) {
                     if (ins.dataset.wbAdInited === '1') return;
-                    if (ins.closest('#pjax-sidebar-html')) return; // 跳过隐藏模板容器
+                    if (ins.closest('#pjax-sidebar-html')) return;
+                    if (!isAdContainerVisible(ins.closest('.ad-google'))) return;
                     observeSlot(ins);
                 });
             } catch (_) {
@@ -3506,26 +3615,41 @@
         }
 
         function bootstrap() {
+            if (!isSidebarVisible()) {
+                return;
+            }
             scanAndInit();
+        }
+
+        function delayedBootstrap() {
+            setTimeout(function () {
+                if (isSidebarVisible()) {
+                    scanAndInit();
+                }
+            }, 300);
         }
 
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', function () {
-                setTimeout(bootstrap, 100);
+                setTimeout(delayedBootstrap, 500);
             });
         } else {
-            setTimeout(bootstrap, 100);
+            setTimeout(delayedBootstrap, 500);
         }
 
         document.addEventListener('sidebar:updated', function () {
-            setTimeout(bootstrap, 100);
+            setTimeout(delayedBootstrap, 300);
         });
         document.addEventListener('page:ready', function () {
-            setTimeout(bootstrap, 100);
+            setTimeout(delayedBootstrap, 500);
         });
         window.addEventListener('resize', function () {
             clearTimeout(resizeTimer);
-            resizeTimer = setTimeout(bootstrap, 600);
+            resizeTimer = setTimeout(function () {
+                if (isSidebarVisible()) {
+                    scanAndInit();
+                }
+            }, 600);
         });
     })();
 </script>

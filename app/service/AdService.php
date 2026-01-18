@@ -171,10 +171,9 @@ class AdService
 
                 // 懒加载并避免重复加载 Adsense 脚本
                 $s = '';
-                $s .= '<div class="ad ad-google my-4" style="min-height: 100px; overflow: hidden;">';
-                $s .= '<script>(function(){if(!window.__adsbygoogleLoaded){var s=document.createElement("script");s.async=true;s.src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' . htmlspecialchars($client, ENT_QUOTES) . '";s.crossOrigin="anonymous";document.head.appendChild(s);window.__adsbygoogleLoaded=true;}})();</script>';
-                // 在全局脚本中统一初始化 .adsbygoogle 槽位，这里只渲染占位元素
-                $ins = '<ins class="adsbygoogle" data-wb-ad="1" style="' . htmlspecialchars($style, ENT_QUOTES) . '" data-ad-client="' . htmlspecialchars($client, ENT_QUOTES) . '" data-ad-slot="' . htmlspecialchars($slot, ENT_QUOTES) . '"';
+                $s .= '<div class="ad ad-google my-4" data-wb-ad-container="1" style="min-height: 100px; overflow: hidden;">';
+                // 脚本加载和初始化由 base.html.twig 中的全局广告管理器处理
+                $ins = '<ins class="adsbygoogle" data-wb-ad="1" data-wb-ad-placement="sidebar" style="' . htmlspecialchars($style, ENT_QUOTES) . '" data-ad-client="' . htmlspecialchars($client, ENT_QUOTES) . '" data-ad-slot="' . htmlspecialchars($slot, ENT_QUOTES) . '"';
                 if ($format === 'in-article') {
                     $ins .= ' data-ad-format="fluid" data-ad-layout="in-article"';
                 } elseif ($format === 'in-feed') {
