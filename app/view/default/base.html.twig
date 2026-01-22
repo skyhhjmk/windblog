@@ -3568,11 +3568,19 @@
                     console.error('Current dimensions - insRect:', insRect, 'containerRect:', containerRect);
 
                     container.style.minHeight = '100px';
+
+                    var isAvailableWidthZero = errorMsg.includes('availableWidth=0') || errorMsg.includes('No slot size');
+                    if (isAvailableWidthZero && attempts < MAX_ATTEMPTS) {
+                        console.warn('AdSense: availableWidth=0 detected, retrying in 500ms');
+                        delete ins.dataset.wbAdInited;
+                        setTimeout(function () {
+                            initSlot(ins);
+                        }, 500);
+                        return;
+                    }
                 } catch (_) {
                 }
-                // 重置初始化状态，允许下次尝试
                 delete ins.dataset.wbAdInited;
-                // 5秒后重新尝试
                 setTimeout(function () {
                     initSlot(ins);
                 }, 5000);
