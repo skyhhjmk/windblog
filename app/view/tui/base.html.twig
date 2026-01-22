@@ -455,5 +455,57 @@
 {% include 'components/settings-panel.html.twig' %}
 
 {{ blog_config('embed_body_end', '', true)|raw }}
+
+<!-- 广告初始化 -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof window.initAds === 'undefined') {
+            window.initAds = function () {
+                var adContainers = document.querySelectorAll('[data-wb-ad-container]');
+                if (adContainers.length === 0) {
+                    return;
+                }
+
+                // 检查是否已加载 Adsense 脚本
+                var adsenseLoaded = false;
+                var scripts = document.getElementsByTagName('script');
+                for (var i = 0; i < scripts.length; i++) {
+                    if (scripts[i].src.indexOf('adsbygoogle.js') !== -1) {
+                        adsenseLoaded = true;
+                        break;
+                    }
+                }
+
+                // 加载 Adsense 脚本
+                if (!adsenseLoaded) {
+                    var script = document.createElement('script');
+                    script.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-';
+                    script.async = true;
+                    script.crossOrigin = 'anonymous';
+                    document.head.appendChild(script);
+                }
+
+                // 初始化广告
+                setTimeout(function () {
+                    var ads = document.querySelectorAll('.adsbygoogle');
+                    for (var j = 0; j < ads.length; j++) {
+                        (adsbygoogle = window.adsbygoogle || []).push({});
+                    }
+                }, 100);
+            };
+
+            // 初始加载
+            window.initAds();
+
+            // PJAX 支持
+            document.addEventListener('pjax:complete', function () {
+                window.initAds();
+            });
+        } else {
+            // 已经初始化过，直接调用
+            window.initAds();
+        }
+    });
+</script>
 </body>
 </html>
