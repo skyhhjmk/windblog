@@ -102,17 +102,24 @@ class Crud extends Base
         $where = $request->get();
         $page = (int) $request->get('page');
         $page = $page > 0 ? $page : 1;
-        $table = config('database.connections.pgsql.prefix') . $this->model->getTable();
-
-        // 检测数据库类型并使用对应的表结构查询语句
         $connection = Util::db();
         $driver = $connection->getConfig('driver');
+        $table = $this->model->getTable();
 
+        // 检测数据库类型并使用对应的表结构查询语句
         if ($driver === 'pgsql') {
             // PostgreSQL查询表结构
+            $prefix = config('database.connections.pgsql.prefix');
             $allow_column = $connection->select("SELECT column_name AS Field, data_type AS Type 
                 FROM information_schema.columns 
                 WHERE table_name = ? AND table_schema = 'public'", [$table]);
+        } else {
+            // 其他数据库类型查询表结构
+            $prefix = config('database.connections.' . $driver . '.prefix');
+            $database = $connection->getConfig('database');
+            $allow_column = $connection->select('SELECT COLUMN_NAME AS Field, DATA_TYPE AS Type 
+                FROM information_schema.columns 
+                WHERE table_schema = ? AND table_name = ?', [$database, $table]);
         }
         if (!$allow_column) {
             throw new BusinessException('表不存在');
