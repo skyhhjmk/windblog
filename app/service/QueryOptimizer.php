@@ -24,7 +24,7 @@ class QueryOptimizer
      */
     public static function enableQueryLogging(): void
     {
-        Db::enableQueryLog();
+        Db::connection()->enableQueryLog();
     }
 
     /**
@@ -32,7 +32,7 @@ class QueryOptimizer
      */
     public static function getQueryLog(): array
     {
-        return Db::getQueryLog();
+        return Db::connection()->getQueryLog();
     }
 
     /**
@@ -40,7 +40,7 @@ class QueryOptimizer
      */
     public static function clearQueryLog(): void
     {
-        Db::getQueryLog();
+        Db::connection()->flushQueryLog();
         self::$queryLog = [];
     }
 

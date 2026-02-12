@@ -7,6 +7,7 @@ use app\model\Post;
 use app\model\Tag;
 use support\Log;
 use Throwable;
+use Workerman\Timer;
 
 class ElasticRebuildService
 {
@@ -19,42 +20,42 @@ class ElasticRebuildService
         try {
             // 先重建全部标签
             $tpage = 1;
-            while (true) {
+            $timer_id = Timer::add(0.1, function () use (&$tpage, $pageSize, &$timer_id) {
                 $tBatch = Tag::orderBy('id')->forPage($tpage, $pageSize)->get(['id', 'name', 'slug', 'description']);
                 if ($tBatch->isEmpty()) {
-                    break;
+                    Timer::del($timer_id);
                 }
                 foreach ($tBatch as $tag) {
                     ElasticSyncService::indexTag($tag);
                 }
                 $tpage++;
-            }
+            });
 
             // 再重建全部分类
             $cpage = 1;
-            while (true) {
+            $timer_id = Timer::add(0.1, function () use (&$cpage, $pageSize, &$timer_id) {
                 $cBatch = Category::orderBy('id')->forPage($cpage, $pageSize)->get(['id', 'name', 'slug', 'description']);
                 if ($cBatch->isEmpty()) {
-                    break;
+                    Timer::del($timer_id);
                 }
                 foreach ($cBatch as $cat) {
                     ElasticSyncService::indexCategory($cat);
                 }
                 $cpage++;
-            }
+            });
 
             // 最后重建文章
-            while (true) {
+            $timer_id = Timer::add(0.1, function () use (&$page, $pageSize, &$timer_id) {
                 $query = Post::published()->orderBy('id')->forPage($page, $pageSize)->with(['authors', 'primaryAuthor']);
                 $batch = $query->get();
                 if ($batch->isEmpty()) {
-                    break;
+                    Timer::del($timer_id);
                 }
                 foreach ($batch as $post) {
                     ElasticSyncService::indexPost($post);
                 }
                 $page++;
-            }
+            });
 
             return true;
         } catch (Throwable $e) {

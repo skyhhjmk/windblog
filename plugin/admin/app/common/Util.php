@@ -218,7 +218,7 @@ class Util
             throw new BusinessException('参数不合法，地址必须是一个字符串！');
         }
 
-        if (strpos($var, 'https://') === 0 || strpos($var, 'http://') === 0) {
+        if (str_starts_with($var, 'https://') || str_starts_with($var, 'http://')) {
             if (!filter_var($var, FILTER_VALIDATE_URL)) {
                 throw new BusinessException('参数不合法，不是合法的URL地址！');
             }

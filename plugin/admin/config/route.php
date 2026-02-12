@@ -42,6 +42,24 @@ Route::group('/app/admin', function () {
 
     Route::any('/dict/get/{name}', [DictController::class, 'get']);
 
+    // User 路由
+    Route::group('/user', function () {
+        Route::get('', [plugin\admin\app\controller\UserController::class, 'index']);
+        Route::get('/', [plugin\admin\app\controller\UserController::class, 'index']);
+        Route::get('/index', [plugin\admin\app\controller\UserController::class, 'index']);
+        Route::get('/select', [plugin\admin\app\controller\UserController::class, 'select']);
+        Route::get('/insert', [plugin\admin\app\controller\UserController::class, 'insert']);
+        Route::post('/insert', [plugin\admin\app\controller\UserController::class, 'insert']);
+        Route::get('/update', [plugin\admin\app\controller\UserController::class, 'update']);
+        Route::post('/update', [plugin\admin\app\controller\UserController::class, 'update']);
+        Route::post('/delete', [plugin\admin\app\controller\UserController::class, 'delete']);
+        Route::get('/oauthBindings', [plugin\admin\app\controller\UserController::class, 'oauthBindings']);
+        Route::post('/unbindOAuth', [plugin\admin\app\controller\UserController::class, 'unbindOAuth']);
+        Route::post('/addOAuthBinding', [plugin\admin\app\controller\UserController::class, 'addOAuthBinding']);
+        Route::post('/activate', [plugin\admin\app\controller\UserController::class, 'activate']);
+        Route::post('/resetActivationToken', [plugin\admin\app\controller\UserController::class, 'resetActivationToken']);
+    });
+
     // Link 路由
     Route::group('/link', function () {
         Route::get('', [LinkController::class, 'index']);

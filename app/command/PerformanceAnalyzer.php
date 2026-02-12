@@ -13,6 +13,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Workerman\Timer;
 
 /**
  * 性能分析命令
@@ -197,7 +198,8 @@ class PerformanceAnalyzer extends Command
         $startTime = time();
         $iteration = 0;
 
-        while (true) {
+        Timer::add(1, function () use (&$output, &$startTime, &$iteration) {
+
             $iteration++;
             $currentTime = time();
 
@@ -210,9 +212,7 @@ class PerformanceAnalyzer extends Command
             if (($currentTime - $startTime) % 60 === 0) {
                 $this->displayDetailedAnalysis($output);
             }
-
-            sleep(1);
-        }
+        });
 
         return Command::SUCCESS;
     }
